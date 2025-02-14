@@ -44,9 +44,6 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
-
-	var hs semconv.HTTPServer
-
 	if cfg.MeterProvider == nil {
 		cfg.MeterProvider = otel.GetMeterProvider()
 	}
@@ -54,7 +51,10 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		ScopeName,
 		metric.WithInstrumentationVersion(Version()),
 	)
+
 	sc := semconv.NewHTTPServer(meter)
+	var hs semconv.HTTPServer
+
 	return func(c *gin.Context) {
 		requestStartTime := time.Now()
 
