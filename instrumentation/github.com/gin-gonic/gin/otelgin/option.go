@@ -10,6 +10,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -20,6 +22,8 @@ type config struct {
 	Filters           []Filter
 	GinFilters        []GinFilter
 	SpanNameFormatter SpanNameFormatter
+	MeterProvider     metric.MeterProvider
+	MetricAttributeFn MetricAttributeFn
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -32,6 +36,10 @@ type GinFilter func(*gin.Context) bool
 
 // SpanNameFormatter is used to set span name by http.request.
 type SpanNameFormatter func(r *http.Request) string
+
+// MetricAttributeFn is used to extract additional attributes from the http.Request
+// and return them as a slice of attribute.KeyValue.
+type MetricAttributeFn func(*http.Request) []attribute.KeyValue
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -89,5 +97,21 @@ func WithGinFilter(f ...GinFilter) Option {
 func WithSpanNameFormatter(f func(r *http.Request) string) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
+	})
+}
+
+// WithMeterProvider specifies a meter provider to use for creating a meter.
+// If none is specified, the global provider is used.
+func WithMeterProvider(mp metric.MeterProvider) Option {
+	return optionFunc(func(c *config) {
+		c.MeterProvider = mp
+	})
+}
+
+// WithMetricAttributeFn specifies a function that extracts additional attributes from the http.Request
+// and returns them as a slice of attribute.KeyValue.
+func WithMetricAttributeFn(f MetricAttributeFn) Option {
+	return optionFunc(func(c *config) {
+		c.MetricAttributeFn = f
 	})
 }
