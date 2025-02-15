@@ -15,8 +15,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/contrib/propagators/b3"
 	lognoop "go.opentelemetry.io/otel/log/noop"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/propagation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -30,6 +32,7 @@ func TestNewSDK(t *testing.T) {
 		wantTracerProvider any
 		wantMeterProvider  any
 		wantLoggerProvider any
+		wantPropagators    any
 		wantErr            error
 		wantShutdownErr    error
 	}{
@@ -38,6 +41,7 @@ func TestNewSDK(t *testing.T) {
 			wantTracerProvider: tracenoop.NewTracerProvider(),
 			wantMeterProvider:  metricnoop.NewMeterProvider(),
 			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagators:    propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}),
 		},
 		{
 			name: "with-configuration",
@@ -47,11 +51,15 @@ func TestNewSDK(t *testing.T) {
 					TracerProvider: &TracerProvider{},
 					MeterProvider:  &MeterProvider{},
 					LoggerProvider: &LoggerProvider{},
+					Propagator: &Propagator{
+						Composite: []*string{ptr("b3")},
+					},
 				}),
 			},
 			wantTracerProvider: &sdktrace.TracerProvider{},
 			wantMeterProvider:  &sdkmetric.MeterProvider{},
 			wantLoggerProvider: &sdklog.LoggerProvider{},
+			wantPropagators:    b3.New(),
 		},
 		{
 			name: "with-sdk-disabled",
@@ -67,15 +75,19 @@ func TestNewSDK(t *testing.T) {
 			wantTracerProvider: tracenoop.NewTracerProvider(),
 			wantMeterProvider:  metricnoop.NewMeterProvider(),
 			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagators:    propagation.NewCompositeTextMapPropagator(),
 		},
 	}
 	for _, tt := range tests {
-		sdk, err := NewSDK(tt.cfg...)
-		require.Equal(t, tt.wantErr, err)
-		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
-		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
-		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
-		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
+		t.Run(tt.name, func(t *testing.T) {
+			sdk, err := NewSDK(tt.cfg...)
+			require.Equal(t, tt.wantErr, err)
+			assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
+			assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
+			assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
+			assert.Equal(t, tt.wantPropagators, sdk.Propagator())
+			require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
+		})
 	}
 }
 
