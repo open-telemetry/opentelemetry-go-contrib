@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package otelmongo instruments go.mongodb.org/mongo-driver/mongo.
+// Package otelmongo instruments go.mongodb.org/mongo-driver/v2/mongo.
 //
 // This package is compatible with v0.2.0 of
 // go.mongodb.org/mongo-driver/mongo.
