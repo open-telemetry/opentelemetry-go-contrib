@@ -3,8 +3,6 @@
 
 // Package otelmongo instruments go.mongodb.org/mongo-driver/v2/mongo.
 //
-// This package is compatible with v0.2.0 of
-// go.mongodb.org/mongo-driver/mongo.
 //
 // `NewMonitor` will return an event.CommandMonitor which is used to trace
 // requests.
