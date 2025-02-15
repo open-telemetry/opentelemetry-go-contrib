@@ -107,7 +107,7 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 			opts = append(opts, otlptracegrpc.WithEndpoint(*otlpConfig.Endpoint))
 		}
 
-		if u.Scheme == "http" {
+		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Insecure != nil && *otlpConfig.Insecure) {
 			opts = append(opts, otlptracegrpc.WithInsecure())
 		}
 	}
@@ -129,13 +129,11 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		opts = append(opts, otlptracegrpc.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
 
-	if otlpConfig.Certificate != nil {
-		creds, err := credentials.NewClientTLSFromFile(*otlpConfig.Certificate, "")
-		if err != nil {
-			return nil, fmt.Errorf("could not create client tls credentials: %w", err)
-		}
-		opts = append(opts, otlptracegrpc.WithTLSCredentials(creds))
+	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	if err != nil {
+		return nil, err
 	}
+	opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 
 	return otlptracegrpc.New(ctx, opts...)
 }
@@ -174,13 +172,11 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		opts = append(opts, otlptracehttp.WithHeaders(toStringMap(otlpConfig.Headers)))
 	}
 
-	if otlpConfig.Certificate != nil {
-		creds, err := createTLSConfig(*otlpConfig.Certificate)
-		if err != nil {
-			return nil, fmt.Errorf("could not create client tls credentials: %w", err)
-		}
-		opts = append(opts, otlptracehttp.WithTLSClientConfig(creds))
+	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	if err != nil {
+		return nil, err
 	}
+	opts = append(opts, otlptracehttp.WithTLSClientConfig(tlsConfig))
 
 	return otlptracehttp.New(ctx, opts...)
 }

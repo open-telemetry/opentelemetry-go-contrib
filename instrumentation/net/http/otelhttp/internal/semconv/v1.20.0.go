@@ -1,3 +1,6 @@
+// Code created by gotmpl. DO NOT MODIFY.
+// source: internal/shared/semconv/v120.0.go.tmpl
+
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -36,6 +39,10 @@ type OldHTTPServer struct{}
 // The req Host will be used to determine the server instead.
 func (o OldHTTPServer) RequestTraceAttrs(server string, req *http.Request) []attribute.KeyValue {
 	return semconvutil.HTTPServerRequest(server, req)
+}
+
+func (o OldHTTPServer) NetworkTransportAttr(network string) attribute.KeyValue {
+	return semconvutil.NetTransport(network)
 }
 
 // ResponseTraceAttrs returns trace attributes for telemetry from an HTTP response.
@@ -260,4 +267,11 @@ func (o OldHTTPClient) createMeasures(meter metric.Meter) (metric.Int64Counter, 
 	handleErr(err)
 
 	return requestBytesCounter, responseBytesCounter, latencyMeasure
+}
+
+// Attributes for httptrace.
+func (c OldHTTPClient) TraceAttributes(host string) []attribute.KeyValue {
+	return []attribute.KeyValue{
+		semconv.NetHostName(host),
+	}
 }

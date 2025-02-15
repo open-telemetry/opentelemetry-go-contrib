@@ -7,15 +7,16 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconvutil"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -43,7 +44,20 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
+	if cfg.MeterProvider == nil {
+		cfg.MeterProvider = otel.GetMeterProvider()
+	}
+	meter := cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+	)
+
+	sc := semconv.NewHTTPServer(meter)
+	var hs semconv.HTTPServer
+
 	return func(c *gin.Context) {
+		requestStartTime := time.Now()
+
 		for _, f := range cfg.Filters {
 			if !f(c.Request) {
 				// Serve the request to the next middleware
@@ -67,8 +81,8 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, c.Request)...),
-			oteltrace.WithAttributes(semconv.HTTPRoute(c.FullPath())),
+			oteltrace.WithAttributes(hs.RequestTraceAttrs(service, c.Request)...),
+			oteltrace.WithAttributes(hs.Route(c.FullPath())),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		var spanName string
@@ -90,7 +104,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Next()
 
 		status := c.Writer.Status()
-		span.SetStatus(semconvutil.HTTPServerStatus(status))
+		span.SetStatus(hs.Status(status))
 		if status > 0 {
 			span.SetAttributes(semconv.HTTPStatusCode(status))
 		}
@@ -100,6 +114,26 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 				span.RecordError(err.Err)
 			}
 		}
+
+		// Record the server-side attributes.
+		var additionalAttributes []attribute.KeyValue
+		if cfg.MetricAttributeFn != nil {
+			additionalAttributes = cfg.MetricAttributeFn(c.Request)
+		}
+
+		sc.RecordMetrics(ctx, semconv.ServerMetricData{
+			ServerName:   service,
+			ResponseSize: int64(c.Writer.Size()),
+			MetricAttributes: semconv.MetricAttributes{
+				Req:                  c.Request,
+				StatusCode:           status,
+				AdditionalAttributes: additionalAttributes,
+			},
+			MetricData: semconv.MetricData{
+				RequestSize: c.Request.ContentLength,
+				ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Millisecond),
+			},
+		})
 	}
 }
 
