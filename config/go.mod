@@ -58,5 +58,12 @@ require (
 	google.golang.org/protobuf v1.36.5 // indirect
 )
 
-// remove after v0.59.0 of autoprop
 replace go.opentelemetry.io/contrib/propagators/autoprop => ../propagators/autoprop
+
+replace go.opentelemetry.io/contrib/propagators/jaeger => ../propagators/jaeger
+
+replace go.opentelemetry.io/contrib/propagators/b3 => ../propagators/b3
+
+replace go.opentelemetry.io/contrib/propagators/aws => ../propagators/aws
+
+replace go.opentelemetry.io/contrib/propagators/ot => ../propagators/ot
