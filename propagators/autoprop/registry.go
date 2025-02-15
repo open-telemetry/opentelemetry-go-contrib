@@ -124,14 +124,7 @@ func TextMapPropagator(names ...string) (propagation.TextMapPropagator, error) {
 		unknown []string
 	)
 
-	if len(names) == 0 {
-		return NewTextMapPropagator(), nil
-	}
-
 	for _, name := range names {
-		if len(name) == 0 {
-			continue
-		}
 		if name == none {
 			// If "none" is passed in combination with any other propagator,
 			// the result still needs to be a no-op propagator. Therefore,

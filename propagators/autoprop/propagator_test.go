@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
@@ -33,20 +32,6 @@ func TestNewTextMapPropagatorInvalidEnvVal(t *testing.T) {
 func TestNewTextMapPropagatorDefault(t *testing.T) {
 	expect := []string{"traceparent", "tracestate", "baggage"}
 	assert.ElementsMatch(t, expect, NewTextMapPropagator().Fields())
-}
-
-func TestEmptyElementIsIgnored(t *testing.T) {
-	in := []string{"", "tracecontext"}
-	p, err := TextMapPropagator(in...)
-	require.NoError(t, err)
-	assert.Equal(t, propagation.TraceContext{}, p)
-}
-
-func TestEmptyElementSet(t *testing.T) {
-	in := []string{}
-	p, err := TextMapPropagator(in...)
-	require.NoError(t, err)
-	assert.Equal(t, propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}), p)
 }
 
 type ptrNoop struct{}
