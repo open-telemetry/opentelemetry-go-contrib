@@ -88,6 +88,7 @@ linters-settings:
       no-sdk-instrumentation:
         files:
           - "**/*/{bridges,instrumentation}/**/*.go"
+          - "!$test"
           - "!**/*/bridges/prometheus/*.go" # prometheus bridge is meant to use the SDK
           - "!**/*/instrumentation/runtime/*.go" # runtime instrumentation is meant to use the SDK
           - "!**/*test/*.go"
