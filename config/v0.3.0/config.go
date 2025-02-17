@@ -180,7 +180,7 @@ func createTLSConfig(caCertFile *string, clientCertFile *string, clientKeyFile *
 	return tlsConfig, nil
 }
 
-// createHeadersConfig combines the two header config fields and returns a map[string]string.
+// createHeadersConfig combines the two header config fields. Headers take precedence over headersList.
 func createHeadersConfig(headers []NameStringValuePair, headersList *string) (map[string]string, error) {
 	result := make(map[string]string)
 	if headersList != nil {
