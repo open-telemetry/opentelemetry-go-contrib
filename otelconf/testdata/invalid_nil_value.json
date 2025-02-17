@@ -1,0 +1,49 @@
+{
+    "file_format": "0.3",
+    "disabled": false,
+    "logger_provider": {
+        "processors": [
+            {
+                "batch": {
+                    "schedule_delay": 5000,
+                    "export_timeout": 30000,
+                    "max_queue_size": 2048,
+                    "max_export_batch_size": 512,
+                    "exporter": {
+                        "otlp": {
+                            "protocol": "http/protobuf",
+                            "endpoint": "http://localhost:4318/v1/logs",
+                            "certificate": "/app/cert.pem",
+                            "client_key": "/app/cert.pem",
+                            "client_certificate": "/app/cert.pem",
+                            "headers": [
+                                {
+                                    "name": "api-key",
+                                    "value": "1234"
+                                },
+                                {
+                                    "name": "nil-value"
+                                }
+                            ],
+                            "headers_list": "api-key=1234",
+                            "compression": "gzip",
+                            "timeout": 10000,
+                            "insecure": false
+                        }
+                    }
+                }
+            },
+            {
+                "simple": {
+                    "exporter": {
+                        "console": {}
+                    }
+                }
+            }
+        ],
+        "limits": {
+            "attribute_value_length_limit": 4096,
+            "attribute_count_limit": 128
+        }
+    }
+}
