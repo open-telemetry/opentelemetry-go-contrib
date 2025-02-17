@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package config // import "go.opentelemetry.io/contrib/config/v0.2.0"
+package config // import "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 
 import (
 	"fmt"
@@ -46,18 +46,18 @@ func keyVal(k string, v any) attribute.KeyValue {
 	}
 }
 
-func newResource(res *Resource) (*resource.Resource, error) {
-	if res == nil || res.Attributes == nil {
-		return resource.Default(), nil
+func newResource(res *Resource) *resource.Resource {
+	if res == nil {
+		return resource.Default()
 	}
+
 	var attrs []attribute.KeyValue
-
-	for k, v := range res.Attributes {
-		attrs = append(attrs, keyVal(k, v))
+	for _, v := range res.Attributes {
+		attrs = append(attrs, keyVal(v.Name, v.Value))
 	}
 
-	return resource.Merge(resource.Default(),
-		resource.NewWithAttributes(*res.SchemaUrl,
-			attrs...,
-		))
+	if res.SchemaUrl == nil {
+		return resource.NewSchemaless(attrs...)
+	}
+	return resource.NewWithAttributes(*res.SchemaUrl, attrs...)
 }
