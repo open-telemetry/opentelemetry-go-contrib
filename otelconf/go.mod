@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/config
+module go.opentelemetry.io/contrib/otelconf
 
 go 1.22.0
 

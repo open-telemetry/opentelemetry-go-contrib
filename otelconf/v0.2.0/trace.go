@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package config // import "go.opentelemetry.io/contrib/config/v0.3.0"
+package config // import "go.opentelemetry.io/contrib/otelconf/v0.2.0"
 
 import (
 	"context"
@@ -9,8 +9,6 @@ import (
 	"fmt"
 	"net/url"
 	"time"
-
-	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -54,14 +52,14 @@ func spanExporter(ctx context.Context, exporter SpanExporter) (sdktrace.SpanExpo
 			stdouttrace.WithPrettyPrint(),
 		)
 	}
-	if exporter.OTLP != nil && exporter.OTLP.Protocol != nil {
-		switch *exporter.OTLP.Protocol {
+	if exporter.OTLP != nil {
+		switch exporter.OTLP.Protocol {
 		case protocolProtobufHTTP:
 			return otlpHTTPSpanExporter(ctx, exporter.OTLP)
 		case protocolProtobufGRPC:
 			return otlpGRPCSpanExporter(ctx, exporter.OTLP)
 		default:
-			return nil, fmt.Errorf("unsupported protocol %q", *exporter.OTLP.Protocol)
+			return nil, fmt.Errorf("unsupported protocol %q", exporter.OTLP.Protocol)
 		}
 	}
 	return nil, errors.New("no valid span exporter")
@@ -91,8 +89,8 @@ func spanProcessor(ctx context.Context, processor SpanProcessor) (sdktrace.SpanP
 func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanExporter, error) {
 	var opts []otlptracegrpc.Option
 
-	if otlpConfig.Endpoint != nil {
-		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
+	if len(otlpConfig.Endpoint) > 0 {
+		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -104,10 +102,10 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		if u.Host != "" {
 			opts = append(opts, otlptracegrpc.WithEndpoint(u.Host))
 		} else {
-			opts = append(opts, otlptracegrpc.WithEndpoint(*otlpConfig.Endpoint))
+			opts = append(opts, otlptracegrpc.WithEndpoint(otlpConfig.Endpoint))
 		}
 
-		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Insecure != nil && *otlpConfig.Insecure) {
+		if u.Scheme == "http" {
 			opts = append(opts, otlptracegrpc.WithInsecure())
 		}
 	}
@@ -126,14 +124,8 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		opts = append(opts, otlptracegrpc.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
 	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlptracegrpc.WithHeaders(toStringMap(otlpConfig.Headers)))
+		opts = append(opts, otlptracegrpc.WithHeaders(otlpConfig.Headers))
 	}
-
-	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 
 	return otlptracegrpc.New(ctx, opts...)
 }
@@ -141,8 +133,8 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanExporter, error) {
 	var opts []otlptracehttp.Option
 
-	if otlpConfig.Endpoint != nil {
-		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
+	if len(otlpConfig.Endpoint) > 0 {
+		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err
 		}
@@ -169,14 +161,8 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		opts = append(opts, otlptracehttp.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
 	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlptracehttp.WithHeaders(toStringMap(otlpConfig.Headers)))
+		opts = append(opts, otlptracehttp.WithHeaders(otlpConfig.Headers))
 	}
-
-	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, otlptracehttp.WithTLSClientConfig(tlsConfig))
 
 	return otlptracehttp.New(ctx, opts...)
 }
