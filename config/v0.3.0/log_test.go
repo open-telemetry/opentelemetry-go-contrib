@@ -6,8 +6,6 @@ package config
 import (
 	"context"
 	"errors"
-	"fmt"
-	"net/url"
 	"path/filepath"
 	"reflect"
 	"testing"
@@ -79,12 +77,12 @@ func TestLogProcessor(t *testing.T) {
 		name          string
 		processor     LogRecordProcessor
 		args          any
-		wantErr       error
+		wantErr       string
 		wantProcessor sdklog.Processor
 	}{
 		{
 			name:    "no processor",
-			wantErr: errors.New("unsupported log processor type, must be one of simple or batch"),
+			wantErr: "unsupported log processor type, must be one of simple or batch",
 		},
 		{
 			name: "multiple processor types",
@@ -94,7 +92,7 @@ func TestLogProcessor(t *testing.T) {
 				},
 				Simple: &SimpleLogRecordProcessor{},
 			},
-			wantErr: errors.New("must not specify multiple log processor type"),
+			wantErr: "must not specify multiple log processor type",
 		},
 		{
 			name: "batch processor invalid batch size otlphttp exporter",
@@ -109,7 +107,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("invalid batch size -1"),
+			wantErr: "invalid batch size -1",
 		},
 		{
 			name: "batch processor invalid export timeout otlphttp exporter",
@@ -123,7 +121,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("invalid export timeout -2"),
+			wantErr: "invalid export timeout -2",
 		},
 		{
 			name: "batch processor invalid queue size otlphttp exporter",
@@ -138,7 +136,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("invalid queue size -3"),
+			wantErr: "invalid queue size -3",
 		},
 		{
 			name: "batch processor invalid schedule delay console exporter",
@@ -152,7 +150,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("invalid schedule delay -4"),
+			wantErr: "invalid schedule delay -4",
 		},
 		{
 			name: "batch processor invalid exporter",
@@ -161,7 +159,7 @@ func TestLogProcessor(t *testing.T) {
 					Exporter: LogRecordExporter{},
 				},
 			},
-			wantErr: errors.New("no valid log exporter"),
+			wantErr: "no valid log exporter",
 		},
 		{
 			name: "batch/console",
@@ -278,7 +276,24 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Errorf("could not create certificate authority chain from certificate"),
+			wantErr: "could not create certificate authority chain from certificate",
+		},
+		{
+			name: "batch/otlp-grpc-bad-headerslist",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							HeadersList: ptr("==="),
+						},
+					},
+				},
+			},
+			wantErr: "invalid headers list: invalid key: \"\"",
 		},
 		{
 			name: "batch/otlp-grpc-bad-client-certificate",
@@ -296,7 +311,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Errorf("could not use client certificate: %w", errors.New("tls: failed to find any PEM data in certificate input")),
+			wantErr: "could not use client certificate: tls: failed to find any PEM data in certificate input",
 		},
 		{
 			name: "batch/otlp-grpc-exporter-no-scheme",
@@ -342,7 +357,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &url.Error{Op: "parse", URL: " ", Err: errors.New("invalid URI for request")},
+			wantErr: "parse \" \": invalid URI for request",
 		},
 		{
 			name: "batch/otlp-grpc-invalid-compression",
@@ -365,7 +380,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("unsupported compression \"invalid\""),
+			wantErr: "unsupported compression \"invalid\"",
 		},
 		{
 			name: "batch/otlp-http-exporter",
@@ -422,7 +437,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Errorf("could not create certificate authority chain from certificate"),
+			wantErr: "could not create certificate authority chain from certificate",
 		},
 		{
 			name: "batch/otlp-http-bad-client-certificate",
@@ -440,7 +455,24 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Errorf("could not use client certificate: %w", errors.New("tls: failed to find any PEM data in certificate input")),
+			wantErr: "could not use client certificate: tls: failed to find any PEM data in certificate input",
+		},
+		{
+			name: "batch/otlp-http-bad-headerslist",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							HeadersList: ptr("==="),
+						},
+					},
+				},
+			},
+			wantErr: "invalid headers list: invalid key: \"\"",
 		},
 		{
 			name: "batch/otlp-http-exporter-with-path",
@@ -531,7 +563,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("unsupported protocol \"invalid\""),
+			wantErr: "unsupported protocol \"invalid\"",
 		},
 		{
 			name: "batch/otlp-http-invalid-endpoint",
@@ -554,7 +586,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &url.Error{Op: "parse", URL: " ", Err: errors.New("invalid URI for request")},
+			wantErr: "parse \" \": invalid URI for request",
 		},
 		{
 			name: "batch/otlp-http-none-compression",
@@ -600,7 +632,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("unsupported compression \"invalid\""),
+			wantErr: "unsupported compression \"invalid\"",
 		},
 		{
 			name: "simple/no-exporter",
@@ -609,7 +641,7 @@ func TestLogProcessor(t *testing.T) {
 					Exporter: LogRecordExporter{},
 				},
 			},
-			wantErr: errors.New("no valid log exporter"),
+			wantErr: "no valid log exporter",
 		},
 		{
 			name: "simple/console",
@@ -645,7 +677,12 @@ func TestLogProcessor(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := logProcessor(context.Background(), tt.processor)
-			require.Equal(t, tt.wantErr, err)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Equal(t, tt.wantErr, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
 			if tt.wantProcessor == nil {
 				require.Nil(t, got)
 			} else {
