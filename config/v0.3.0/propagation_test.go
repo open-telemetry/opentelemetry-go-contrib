@@ -142,6 +142,18 @@ func TestPropagator(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "empty propagator name",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					Propagator: &Propagator{
+						Composite: []*string{ptr(""), ptr("tracecontext")},
+					},
+				},
+			},
+			want:    nil,
+			wantErr: true,
+		},
+		{
 			name: "nil propagator name",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{

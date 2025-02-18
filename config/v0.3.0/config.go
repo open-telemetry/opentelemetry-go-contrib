@@ -94,7 +94,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, nil
 	}
 
-	propagator, err := propagator(o)
+	prop, err := propagator(o)
 	if err != nil {
 		return noopSDK, err
 	}
@@ -120,7 +120,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		meterProvider:  mp,
 		tracerProvider: tp,
 		loggerProvider: lp,
-		propagator:     propagator,
+		propagator:     prop,
 		shutdown: func(ctx context.Context) error {
 			return errors.Join(mpShutdown(ctx), tpShutdown(ctx), lpShutdown(ctx))
 		},
