@@ -184,6 +184,7 @@ func createTLSConfig(caCertFile *string, clientCertFile *string, clientKeyFile *
 func createHeadersConfig(headers []NameStringValuePair, headersList *string) (map[string]string, error) {
 	result := make(map[string]string)
 	if headersList != nil {
+		// Parsing follows https://github.com/open-telemetry/opentelemetry-configuration/blob/568e5080816d40d75792eb754fc96bde09654159/schema/type_descriptions.yaml#L584.
 		headerslist, err := baggage.Parse(*headersList)
 		if err != nil {
 			return nil, fmt.Errorf("invalid headers list: %w", err)
