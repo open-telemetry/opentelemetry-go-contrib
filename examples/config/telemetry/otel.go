@@ -30,10 +30,10 @@ var (
 
 // Setup configures the global providers for the application based on the provided config file.
 func Setup(ctx context.Context, cfgFile string) (func(context.Context) error, error) {
-	// attempts to read the config file
+	// Attempts to read the config file.
 	b, err := os.ReadFile(cfgFile)
 	if err != nil {
-		// if the file does not exist, use the default logger
+		// If the file does not exist, use the default logger.
 		if errors.Is(err, os.ErrNotExist) {
 			logger = zap.Must(zap.NewProduction())
 			logger.Info("No config file found, using default logger")
@@ -43,27 +43,27 @@ func Setup(ctx context.Context, cfgFile string) (func(context.Context) error, er
 		return nil, err
 	}
 
-	// optional: interopolate environment variables
+	// Optional: interopolate environment variables.
 	b = []byte(os.ExpandEnv(string(b)))
 
-	// parse the config
+	// Parse the contents of the configuration file.
 	conf, err := config.ParseYAML(b)
 	if err != nil {
 		return nil, err
 	}
 
-	// create the SDK with the parsed config
+	// Create the SDK with the parsed config.
 	sdk, err := config.NewSDK(config.WithContext(ctx), config.WithOpenTelemetryConfiguration(*conf))
 	if err != nil {
 		return nil, err
 	}
 
-	// set the global providers based on the parsed SDK config
+	// Set the global providers based on the parsed SDK config.
 	otel.SetTracerProvider(sdk.TracerProvider())
 	otel.SetMeterProvider(sdk.MeterProvider())
 	global.SetLoggerProvider(sdk.LoggerProvider())
 
-	// optional: create a zap logger that logs to stdout and the OTel logger
+	// Optional: create a zap logger that logs to stdout and the OTel logger.
 	loggerOnce.Do(func() {
 		core := zapcore.NewTee(
 			zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), zapcore.AddSync(os.Stdout), zapcore.InfoLevel),

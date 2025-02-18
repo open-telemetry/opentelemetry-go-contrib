@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/examples/config
 
-go 1.23.6
+go 1.22.0
 
 require (
 	go.opentelemetry.io/contrib/bridges/otelzap v0.9.0
