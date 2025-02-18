@@ -213,7 +213,7 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		} else {
 			opts = append(opts, otlpmetricgrpc.WithEndpoint(*otlpConfig.Endpoint))
 		}
-		if u.Scheme == "http" {
+		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Insecure != nil && *otlpConfig.Insecure) {
 			opts = append(opts, otlpmetricgrpc.WithInsecure())
 		}
 	}

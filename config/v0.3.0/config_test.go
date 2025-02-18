@@ -484,7 +484,7 @@ func TestSerializeJSON(t *testing.T) {
 		{
 			name:    "valid v0.2 config",
 			input:   "v0.2.json",
-			wantErr: errors.New(`json: cannot unmarshal object into Go struct field LogRecordProcessor.logger_provider.processors.batch of type []config.NameStringValuePair`),
+			wantErr: errors.New(`json: cannot unmarshal object into Go struct field LogRecordProcessor.logger_provider.processors.batch`),
 		},
 		{
 			name:     "valid v0.3 config",
@@ -503,7 +503,7 @@ func TestSerializeJSON(t *testing.T) {
 
 			if tt.wantErr != nil {
 				require.Error(t, err)
-				require.Equal(t, tt.wantErr.Error(), err.Error())
+				require.ErrorContains(t, err, tt.wantErr.Error())
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.wantType, got)

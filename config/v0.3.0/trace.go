@@ -107,7 +107,7 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 			opts = append(opts, otlptracegrpc.WithEndpoint(*otlpConfig.Endpoint))
 		}
 
-		if u.Scheme == "http" {
+		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Insecure != nil && *otlpConfig.Insecure) {
 			opts = append(opts, otlptracegrpc.WithInsecure())
 		}
 	}
