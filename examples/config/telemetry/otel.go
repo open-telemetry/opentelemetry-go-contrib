@@ -6,13 +6,10 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"os"
-	"sync"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
-	"go.opentelemetry.io/contrib/bridges/otelzap"
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	config "go.opentelemetry.io/contrib/config/v0.3.0"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log/global"
@@ -21,11 +18,8 @@ import (
 )
 
 var (
-	// Ensure that the logger is only created once.
-	loggerOnce sync.Once
-
 	// By default, use a no-op logger.
-	logger = zap.NewNop()
+	logger = slog.Default()
 )
 
 // Setup configures the global providers for the application based on the provided config file.
@@ -35,7 +29,6 @@ func Setup(ctx context.Context, cfgFile string) (func(context.Context) error, er
 	if err != nil {
 		// If the file does not exist, use the default logger.
 		if errors.Is(err, os.ErrNotExist) {
-			logger = zap.Must(zap.NewProduction())
 			logger.Info("No config file found, using default logger")
 			return func(ctx context.Context) error { return nil }, nil
 		}
@@ -63,14 +56,8 @@ func Setup(ctx context.Context, cfgFile string) (func(context.Context) error, er
 	otel.SetMeterProvider(sdk.MeterProvider())
 	global.SetLoggerProvider(sdk.LoggerProvider())
 
-	// Optional: create a zap logger that logs to stdout and the OTel logger.
-	loggerOnce.Do(func() {
-		core := zapcore.NewTee(
-			zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), zapcore.AddSync(os.Stdout), zapcore.InfoLevel),
-			otelzap.NewCore(Scope, otelzap.WithVersion(ScopeVersion), otelzap.WithLoggerProvider(global.GetLoggerProvider())),
-		)
-		logger = zap.New(core)
-	})
+	// Optional: create an OTel bridge to Go's slog.
+	logger = otelslog.NewLogger(Scope, otelslog.WithVersion(ScopeVersion), otelslog.WithLoggerProvider(sdk.LoggerProvider()))
 
 	return sdk.Shutdown, nil
 }
@@ -86,6 +73,6 @@ func Meter() metric.Meter {
 }
 
 // Logger returns the global logger for this application, which is either a noop logger (default), or a configured dual-writer.
-func Logger() *zap.Logger {
+func Logger() *slog.Logger {
 	return logger
 }

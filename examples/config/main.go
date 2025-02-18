@@ -10,8 +10,6 @@ import (
 	"os"
 	"os/signal"
 
-	"go.uber.org/zap"
-
 	"go.opentelemetry.io/contrib/examples/config/telemetry"
 )
 
@@ -34,7 +32,8 @@ func main() {
 	// Ensure telemetry is shutdown, flushing any remaining data.
 	defer func() {
 		if err := telemetryShutdown(context.Background()); err != nil {
-			logger.Fatal("Error shutting down telemetry", zap.Error(err))
+			logger.Error("Error shutting down telemetry", "error", err)
+			os.Exit(1)
 		}
 	}()
 
@@ -52,7 +51,8 @@ func main() {
 	// And here's an example of a metric.
 	counter, err := telemetry.Meter().Int64Counter("my-metric")
 	if err != nil {
-		logger.Error("Failed to create counter", zap.Error(err))
+		logger.Error("Failed to create counter", "error", err)
+		os.Exit(1)
 	}
 	counter.Add(ctx, 100)
 
