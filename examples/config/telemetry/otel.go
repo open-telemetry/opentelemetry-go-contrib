@@ -17,10 +17,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var (
-	// By default, use a no-op logger.
-	logger = slog.Default()
-)
+// By default, use a no-op logger.
+var logger = slog.Default()
 
 // Setup configures the global providers for the application based on the provided config file.
 func Setup(ctx context.Context, cfgFile string) (func(context.Context) error, error) {
