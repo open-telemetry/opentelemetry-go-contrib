@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// deprecated: use [go.opentelemetry.io/contrib/otelconf] instead.
+// Package config deprecated: use [go.opentelemetry.io/contrib/otelconf] instead.
 package config // import "go.opentelemetry.io/contrib/config/v0.2.0"
 
 import (

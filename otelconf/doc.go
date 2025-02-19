@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// package otelconf can be used to parse a configuration file that follows
+// Package otelconf can be used to parse a configuration file that follows
 // the JSON Schema defined by the OpenTelemetry Configuration schema. Different
 // versions of the schema are supported by the code in the directory that
 // matches the version number of the schema. For example, the import
