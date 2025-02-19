@@ -5,6 +5,11 @@ go 1.22.0
 require (
 	github.com/prometheus/client_golang v1.21.0
 	github.com/stretchr/testify v1.10.0
+	go.opentelemetry.io/contrib/propagators/autoprop v0.59.0
+	go.opentelemetry.io/contrib/propagators/aws v1.34.0
+	go.opentelemetry.io/contrib/propagators/b3 v1.34.0
+	go.opentelemetry.io/contrib/propagators/jaeger v1.34.0
+	go.opentelemetry.io/contrib/propagators/ot v1.34.0
 	go.opentelemetry.io/otel v1.34.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.10.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.10.0
@@ -44,6 +49,7 @@ require (
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.34.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.5.0 // indirect
+	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/net v0.35.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
@@ -51,3 +57,13 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 )
+
+replace go.opentelemetry.io/contrib/propagators/autoprop => ../propagators/autoprop
+
+replace go.opentelemetry.io/contrib/propagators/jaeger => ../propagators/jaeger
+
+replace go.opentelemetry.io/contrib/propagators/b3 => ../propagators/b3
+
+replace go.opentelemetry.io/contrib/propagators/aws => ../propagators/aws
+
+replace go.opentelemetry.io/contrib/propagators/ot => ../propagators/ot
