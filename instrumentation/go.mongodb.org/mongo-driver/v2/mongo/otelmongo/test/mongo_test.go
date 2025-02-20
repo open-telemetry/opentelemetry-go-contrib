@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
-	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/drivertest"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/drivertest"
 
 	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo"
 	"go.opentelemetry.io/otel/attribute"
@@ -103,7 +103,8 @@ func TestDBCrudOperation(t *testing.T) {
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			opts.Deployment = md
+			//nolint:staticcheck
+			opts.Deployment = md // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
 			opts.Monitor = otelmongo.NewMonitor(
 				otelmongo.WithTracerProvider(provider),
 				otelmongo.WithCommandAttributeDisabled(tc.excludeCommand),
@@ -115,7 +116,7 @@ func TestDBCrudOperation(t *testing.T) {
 			if err != nil {
 				t.FailNow()
 			}
-			
+
 			_, err = tc.operation(ctx, client.Database("test-database"))
 			if err != nil {
 				t.Error(err)
@@ -215,7 +216,8 @@ func TestDBCollectionAttribute(t *testing.T) {
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			opts.Deployment = md
+			//nolint:staticcheck
+			opts.Deployment = md // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
 			opts.Monitor = otelmongo.NewMonitor(
 				otelmongo.WithTracerProvider(provider),
 				otelmongo.WithCommandAttributeDisabled(true),
