@@ -3,7 +3,7 @@
 
 // Package config is deprecated.
 //
-// Deprecated: use [go.opentelemetry.io/contrib/otelconf] instead.
+// Deprecated: use [go.opentelemetry.io/contrib/otelconf/v0.2.0] instead.
 // This is the last release of this module.
 package config // import "go.opentelemetry.io/contrib/config/v0.2.0"
 
