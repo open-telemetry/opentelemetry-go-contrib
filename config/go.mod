@@ -1,3 +1,4 @@
+// Deprecated: use [go.opentelemetry.io/contrib/otelconf] instead.
 module go.opentelemetry.io/contrib/config
 
 go 1.22.0
