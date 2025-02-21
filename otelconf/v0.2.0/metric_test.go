@@ -6,8 +6,10 @@ package otelconf
 import (
 	"context"
 	"errors"
+	"net/http"
 	"net/url"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -1106,6 +1108,51 @@ func TestAttributeFilter(t *testing.T) {
 			for _, fail := range tt.wantFail {
 				require.False(t, got(attribute.KeyValue{Key: attribute.Key(fail), Value: attribute.StringValue("")}))
 			}
+		})
+	}
+}
+
+func TestPrometheusIPv6(t *testing.T) {
+	tests := []struct {
+		name string
+		host string
+	}{
+		{
+			name: "IPv6",
+			host: "::1",
+		},
+		{
+			name: "[IPv6]",
+			host: "[::1]",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			port := 0
+			cfg := Prometheus{
+				Host:                       &tt.host,
+				Port:                       &port,
+				WithoutScopeInfo:           ptr(true),
+				WithoutTypeSuffix:          ptr(true),
+				WithoutUnits:               ptr(true),
+				WithResourceConstantLabels: &IncludeExclude{},
+			}
+
+			rs, err := prometheusReader(context.Background(), &cfg)
+			t.Cleanup(func() {
+				require.NoError(t, rs.Shutdown(context.Background()))
+			})
+			require.NoError(t, err)
+
+			hServ := rs.(readerWithServer).server
+			assert.True(t, strings.HasPrefix(hServ.Addr, "[::1]:"))
+
+			resp, err := http.DefaultClient.Get("http://" + hServ.Addr + "/metrics")
+			t.Cleanup(func() {
+				require.NoError(t, resp.Body.Close())
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		})
 	}
 }
