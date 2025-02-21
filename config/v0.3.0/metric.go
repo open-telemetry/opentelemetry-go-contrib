@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -166,8 +167,12 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 	if otlpConfig.Timeout != nil {
 		opts = append(opts, otlpmetrichttp.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
-	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlpmetrichttp.WithHeaders(toStringMap(otlpConfig.Headers)))
+	headersConfig, err := createHeadersConfig(otlpConfig.Headers, otlpConfig.HeadersList)
+	if err != nil {
+		return nil, err
+	}
+	if len(headersConfig) > 0 {
+		opts = append(opts, otlpmetrichttp.WithHeaders(headersConfig))
 	}
 	if otlpConfig.TemporalityPreference != nil {
 		switch *otlpConfig.TemporalityPreference {
@@ -182,13 +187,11 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		}
 	}
 
-	if otlpConfig.Certificate != nil {
-		creds, err := createTLSConfig(*otlpConfig.Certificate)
-		if err != nil {
-			return nil, fmt.Errorf("could not create client tls credentials: %w", err)
-		}
-		opts = append(opts, otlpmetrichttp.WithTLSClientConfig(creds))
+	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	if err != nil {
+		return nil, err
 	}
+	opts = append(opts, otlpmetrichttp.WithTLSClientConfig(tlsConfig))
 
 	return otlpmetrichttp.New(ctx, opts...)
 }
@@ -211,7 +214,7 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		} else {
 			opts = append(opts, otlpmetricgrpc.WithEndpoint(*otlpConfig.Endpoint))
 		}
-		if u.Scheme == "http" {
+		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Insecure != nil && *otlpConfig.Insecure) {
 			opts = append(opts, otlpmetricgrpc.WithInsecure())
 		}
 	}
@@ -229,8 +232,12 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 	if otlpConfig.Timeout != nil && *otlpConfig.Timeout > 0 {
 		opts = append(opts, otlpmetricgrpc.WithTimeout(time.Millisecond*time.Duration(*otlpConfig.Timeout)))
 	}
-	if len(otlpConfig.Headers) > 0 {
-		opts = append(opts, otlpmetricgrpc.WithHeaders(toStringMap(otlpConfig.Headers)))
+	headersConfig, err := createHeadersConfig(otlpConfig.Headers, otlpConfig.HeadersList)
+	if err != nil {
+		return nil, err
+	}
+	if len(headersConfig) > 0 {
+		opts = append(opts, otlpmetricgrpc.WithHeaders(headersConfig))
 	}
 	if otlpConfig.TemporalityPreference != nil {
 		switch *otlpConfig.TemporalityPreference {
@@ -245,13 +252,11 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		}
 	}
 
-	if otlpConfig.Certificate != nil {
-		creds, err := credentials.NewClientTLSFromFile(*otlpConfig.Certificate, "")
-		if err != nil {
-			return nil, fmt.Errorf("could not create client tls credentials: %w", err)
-		}
-		opts = append(opts, otlpmetricgrpc.WithTLSCredentials(creds))
+	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	if err != nil {
+		return nil, err
 	}
+	opts = append(opts, otlpmetricgrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 
 	return otlpmetricgrpc.New(ctx, opts...)
 }
@@ -330,22 +335,29 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	reg := prometheus.NewRegistry()
 	opts = append(opts, otelprom.WithRegisterer(reg))
 
+	reader, err := otelprom.New(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating otel prometheus exporter: %w", err)
+	}
+
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
 	server := http.Server{
-		// Timeouts are necessary to make a server resilient to attacks, but ListenAndServe doesn't set any.
+		// Timeouts are necessary to make a server resilient to attacks.
 		// We use values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 10 * time.Second,
 		IdleTimeout:  120 * time.Second,
 		Handler:      mux,
 	}
-	addr := fmt.Sprintf("%s:%d", *prometheusConfig.Host, *prometheusConfig.Port)
 
-	reader, err := otelprom.New(opts...)
-	if err != nil {
-		return nil, fmt.Errorf("error creating otel prometheus exporter: %w", err)
+	// Remove surrounding "[]" from the host definition to allow users to define the host as "[::1]" or "::1".
+	host := *prometheusConfig.Host
+	if len(host) > 2 && host[0] == '[' && host[len(host)-1] == ']' {
+		host = host[1 : len(host)-1]
 	}
+
+	addr := net.JoinHostPort(host, strconv.Itoa(*prometheusConfig.Port))
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, errors.Join(
@@ -353,6 +365,9 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 			reader.Shutdown(ctx),
 		)
 	}
+
+	// Only for testing reasons, add the address to the http Server, will not be used.
+	server.Addr = lis.Addr().String()
 
 	go func() {
 		if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {

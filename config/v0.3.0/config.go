@@ -8,10 +8,12 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
 
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
@@ -151,27 +153,53 @@ func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
 	return &cfg, nil
 }
 
-func toStringMap(pairs []NameStringValuePair) map[string]string {
-	output := make(map[string]string)
-	for _, v := range pairs {
-		output[v.Name] = *v.Value
+// createTLSConfig creates a tls.Config from certificate files.
+func createTLSConfig(caCertFile *string, clientCertFile *string, clientKeyFile *string) (*tls.Config, error) {
+	tlsConfig := &tls.Config{}
+	if caCertFile != nil {
+		caText, err := os.ReadFile(*caCertFile)
+		if err != nil {
+			return nil, err
+		}
+		certPool := x509.NewCertPool()
+		if !certPool.AppendCertsFromPEM(caText) {
+			return nil, errors.New("could not create certificate authority chain from certificate")
+		}
+		tlsConfig.RootCAs = certPool
 	}
-	return output
+	if clientCertFile != nil {
+		if clientKeyFile == nil {
+			return nil, errors.New("client certificate was provided but no client key was provided")
+		}
+		clientCert, err := tls.LoadX509KeyPair(*clientCertFile, *clientKeyFile)
+		if err != nil {
+			return nil, fmt.Errorf("could not use client certificate: %w", err)
+		}
+		tlsConfig.Certificates = []tls.Certificate{clientCert}
+	}
+	return tlsConfig, nil
 }
 
-// createTLSConfig creates a tls.Config from a raw certificate bytes
-// to verify a server certificate.
-func createTLSConfig(certFile string) (*tls.Config, error) {
-	b, err := os.ReadFile(certFile)
-	if err != nil {
-		return nil, err
+// createHeadersConfig combines the two header config fields. Headers take precedence over headersList.
+func createHeadersConfig(headers []NameStringValuePair, headersList *string) (map[string]string, error) {
+	result := make(map[string]string)
+	if headersList != nil {
+		// Parsing follows https://github.com/open-telemetry/opentelemetry-configuration/blob/568e5080816d40d75792eb754fc96bde09654159/schema/type_descriptions.yaml#L584.
+		headerslist, err := baggage.Parse(*headersList)
+		if err != nil {
+			return nil, fmt.Errorf("invalid headers list: %w", err)
+		}
+		for _, kv := range headerslist.Members() {
+			result[kv.Key()] = kv.Value()
+		}
 	}
-	cp := x509.NewCertPool()
-	if ok := cp.AppendCertsFromPEM(b); !ok {
-		return nil, errors.New("failed to append certificate to the cert pool")
+	// Headers take precedence over HeadersList, so this has to be after HeadersList is processed
+	if len(headers) > 0 {
+		for _, kv := range headers {
+			if kv.Value != nil {
+				result[kv.Name] = *kv.Value
+			}
+		}
 	}
-
-	return &tls.Config{
-		RootCAs: cp,
-	}, nil
+	return result, nil
 }

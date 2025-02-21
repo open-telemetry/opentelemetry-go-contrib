@@ -1,3 +1,6 @@
+// Code created by gotmpl. DO NOT MODIFY.
+// source: internal/shared/semconv/test/v1.20.0_test.go.tmpl
+
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
@@ -236,7 +239,7 @@ func TestV120ClientMetrics(t *testing.T) {
 
 	ctx := context.Background()
 
-	client.RecordResponseSize(ctx, 200, opts.AddOptions())
+	client.RecordResponseSize(ctx, 200, opts)
 
 	client.RecordMetrics(ctx, semconv.MetricData{
 		RequestSize: 100,

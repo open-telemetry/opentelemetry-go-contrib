@@ -22,6 +22,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -653,4 +654,33 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("No-op when env var not set or empty", func(t *testing.T) {
+		for _, test := range []struct {
+			desc     string
+			envSetup func()
+		}{
+			{
+				"env var empty",
+				func() { t.Setenv("OTEL_TRACES_SAMPLER_ARG", "") },
+			},
+			{
+				"env var unset",
+				func() {
+					// t.Setenv to restore this environment variable at the end of the test
+					t.Setenv("OTEL_TRACES_SAMPLER_ARG", "")
+					// unset it during the test
+					require.NoError(t, os.Unsetenv("OTEL_TRACES_SAMPLER_ARG"))
+				},
+			},
+		} {
+			t.Run(test.desc, func(t *testing.T) {
+				test.envSetup()
+				opts, errs := getEnvOptions()
+
+				require.Empty(t, errs)
+				require.Empty(t, opts)
+			})
+		}
+	})
 }
