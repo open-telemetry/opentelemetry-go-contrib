@@ -281,8 +281,8 @@ func TestSemanticConventionOptIn(t *testing.T) {
 			assert:       assertSemconv1170,
 		},
 		{
-			name:         "mongo",
-			semconvOptIn: "mongo",
+			name:         "database",
+			semconvOptIn: "database",
 			assert:       assertSemconv1260,
 		},
 	}

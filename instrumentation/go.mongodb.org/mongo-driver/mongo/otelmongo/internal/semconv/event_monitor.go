@@ -21,8 +21,8 @@ import (
 // Constants for environment variable keys and versions.
 const (
 	semconvOptIn     = "OTEL_SEMCONV_STABILITY_OPT_IN"
-	semconvOptInDup  = "mongo/dup"
-	semconvOptIn1260 = "mongo"
+	semconvOptInDup  = "database/dup"
+	semconvOptIn1260 = "database"
 )
 
 // EventMonitor is responsible for monitoring events with a specified semantic
