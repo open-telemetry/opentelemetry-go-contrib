@@ -64,7 +64,7 @@ module-sets:
       - go.opentelemetry.io/contrib/samplers/jaegerremote
       - go.opentelemetry.io/contrib/samplers/jaegerremote/example
       - go.opentelemetry.io/contrib/samplers/probability/consistent
-  experimental-otelconf:
+  experimental-config:
     version: v0.14.0
     modules:
       - go.opentelemetry.io/contrib/config
