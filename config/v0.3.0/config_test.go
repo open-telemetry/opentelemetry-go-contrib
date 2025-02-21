@@ -5,6 +5,7 @@ package config
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"os"
@@ -483,7 +484,7 @@ func TestSerializeJSON(t *testing.T) {
 		{
 			name:    "valid v0.2 config",
 			input:   "v0.2.json",
-			wantErr: errors.New(`json: cannot unmarshal object into Go struct field LogRecordProcessor.logger_provider.processors.batch of type []config.NameStringValuePair`),
+			wantErr: errors.New(`json: cannot unmarshal object into Go struct field LogRecordProcessor.logger_provider.processors.batch`),
 		},
 		{
 			name:     "valid v0.3 config",
@@ -502,11 +503,160 @@ func TestSerializeJSON(t *testing.T) {
 
 			if tt.wantErr != nil {
 				require.Error(t, err)
-				require.Equal(t, tt.wantErr.Error(), err.Error())
+				require.ErrorContains(t, err, tt.wantErr.Error())
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.wantType, got)
 			}
+		})
+	}
+}
+
+func TestCreateTLSConfig(t *testing.T) {
+	tests := []struct {
+		name            string
+		caCertFile      *string
+		clientCertFile  *string
+		clientKeyFile   *string
+		wantErrContains string
+		want            func(*tls.Config, *testing.T)
+	}{
+		{
+			name: "no-input",
+			want: func(result *tls.Config, t *testing.T) {
+				require.Nil(t, result.Certificates)
+				require.Nil(t, result.RootCAs)
+			},
+		},
+		{
+			name:       "only-cacert-provided",
+			caCertFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
+			want: func(result *tls.Config, t *testing.T) {
+				require.Nil(t, result.Certificates)
+				require.NotNil(t, result.RootCAs)
+			},
+		},
+		{
+			name:            "nonexistent-cacert-file",
+			caCertFile:      ptr("nowhere.crt"),
+			wantErrContains: "open nowhere.crt:",
+		},
+		{
+			name:            "nonexistent-clientcert-file",
+			clientCertFile:  ptr("nowhere.crt"),
+			clientKeyFile:   ptr("nowhere.crt"),
+			wantErrContains: "could not use client certificate: open nowhere.crt:",
+		},
+		{
+			name:            "bad-cacert-file",
+			caCertFile:      ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+			wantErrContains: "could not create certificate authority chain from certificate",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := createTLSConfig(tt.caCertFile, tt.clientCertFile, tt.clientKeyFile)
+
+			if tt.wantErrContains != "" {
+				require.Contains(t, err.Error(), tt.wantErrContains)
+			} else {
+				require.NoError(t, err)
+				tt.want(got, t)
+			}
+		})
+	}
+}
+
+func TestCreateHeadersConfig(t *testing.T) {
+	tests := []struct {
+		name        string
+		headers     []NameStringValuePair
+		headersList *string
+		wantHeaders map[string]string
+		wantErr     string
+	}{
+		{
+			name:        "no headers",
+			headers:     []NameStringValuePair{},
+			headersList: nil,
+			wantHeaders: map[string]string{},
+		},
+		{
+			name:        "headerslist only",
+			headers:     []NameStringValuePair{},
+			headersList: ptr("a=b,c=d"),
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "d",
+			},
+		},
+		{
+			name: "headers only",
+			headers: []NameStringValuePair{
+				{
+					Name:  "a",
+					Value: ptr("b"),
+				},
+				{
+					Name:  "c",
+					Value: ptr("d"),
+				},
+			},
+			headersList: nil,
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "d",
+			},
+		},
+		{
+			name: "both headers and headerslist",
+			headers: []NameStringValuePair{
+				{
+					Name:  "a",
+					Value: ptr("b"),
+				},
+			},
+			headersList: ptr("c=d"),
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "d",
+			},
+		},
+		{
+			name: "headers supersedes headerslist",
+			headers: []NameStringValuePair{
+				{
+					Name:  "a",
+					Value: ptr("b"),
+				},
+				{
+					Name:  "c",
+					Value: ptr("override"),
+				},
+			},
+			headersList: ptr("c=d"),
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "override",
+			},
+		},
+		{
+			name:        "invalid headerslist",
+			headersList: ptr("==="),
+			wantErr:     "invalid headers list: invalid key: \"\"",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			headersMap, err := createHeadersConfig(tt.headers, tt.headersList)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Equal(t, tt.wantErr, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
+			require.Equal(t, tt.wantHeaders, headersMap)
 		})
 	}
 }

@@ -6,7 +6,6 @@ package gcp
 import (
 	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -57,20 +56,8 @@ type want struct {
 }
 
 func TestCloudFunctionDetect(t *testing.T) {
-	oldValue, ok := os.LookupEnv(gcpFunctionNameKey)
-	if !ok {
-		err := os.Setenv(gcpFunctionNameKey, functionName)
-		if err != nil {
-			t.Error("unable to set environment variable ", err)
-		}
-	}
-	defer func() {
-		if !ok {
-			_ = os.Unsetenv(gcpFunctionNameKey)
-		} else {
-			_ = os.Setenv(gcpFunctionNameKey, oldValue)
-		}
-	}()
+	t.Setenv(gcpFunctionNameKey, functionName)
+
 	tests := []struct {
 		name     string
 		cr       *CloudRun
@@ -143,15 +130,6 @@ func TestCloudFunctionDetect(t *testing.T) {
 }
 
 func TestNotOnCloudFunction(t *testing.T) {
-	oldValue, ok := os.LookupEnv(gcpFunctionNameKey)
-	if ok {
-		_ = os.Unsetenv(gcpFunctionNameKey)
-	}
-	defer func() {
-		if ok {
-			_ = os.Setenv(gcpFunctionNameKey, oldValue)
-		}
-	}()
 	detector := NewCloudFunction()
 	res, err := detector.Detect(context.Background())
 	if err != nil {

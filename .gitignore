@@ -1,6 +1,7 @@
 .DS_Store
 Thumbs.db
 
+.cache/
 .tools/
 venv/
 .idea/
@@ -23,7 +24,5 @@ examples/zipkin/zipkin
 
 instrumentation/google.golang.org/grpc/otelgrpc/example/server/server
 instrumentation/google.golang.org/grpc/otelgrpc/example/client/client
-
-instrgen/driver/testdata/**/*.go_pass_*
 
 tmp

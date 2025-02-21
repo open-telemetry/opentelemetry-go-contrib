@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -298,6 +299,11 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	reg := prometheus.NewRegistry()
 	opts = append(opts, otelprom.WithRegisterer(reg))
 
+	reader, err := otelprom.New(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating otel prometheus exporter: %w", err)
+	}
+
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
 	server := http.Server{
@@ -308,12 +314,14 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 		IdleTimeout:  120 * time.Second,
 		Handler:      mux,
 	}
-	addr := fmt.Sprintf("%s:%d", *prometheusConfig.Host, *prometheusConfig.Port)
 
-	reader, err := otelprom.New(opts...)
-	if err != nil {
-		return nil, fmt.Errorf("error creating otel prometheus exporter: %w", err)
+	// Remove surrounding "[]" from the host definition to allow users to define the host as "[::1]" or "::1".
+	host := *prometheusConfig.Host
+	if len(host) > 2 && host[0] == '[' && host[len(host)-1] == ']' {
+		host = host[1 : len(host)-1]
 	}
+
+	addr := net.JoinHostPort(host, strconv.Itoa(*prometheusConfig.Port))
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, errors.Join(
@@ -321,6 +329,9 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 			reader.Shutdown(ctx),
 		)
 	}
+
+	// Only for testing reasons, add the address to the http Server, will not be used.
+	server.Addr = lis.Addr().String()
 
 	go func() {
 		if err := server.Serve(lis); err != nil && errors.Is(err, http.ErrServerClosed) {
