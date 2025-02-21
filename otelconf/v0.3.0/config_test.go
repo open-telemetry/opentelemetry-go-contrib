@@ -420,11 +420,11 @@ func TestParseYAML(t *testing.T) {
 			name:  "valid v0.2 config",
 			input: "v0.2.yaml",
 			wantErr: errors.New(`yaml: unmarshal errors:
-  line 81: cannot unmarshal !!map into []config.NameStringValuePair
-  line 185: cannot unmarshal !!map into []config.NameStringValuePair
-  line 244: cannot unmarshal !!seq into config.IncludeExclude
-  line 305: cannot unmarshal !!map into []config.NameStringValuePair
-  line 408: cannot unmarshal !!map into []config.AttributeNameValue`),
+  line 81: cannot unmarshal !!map into []otelconf.NameStringValuePair
+  line 185: cannot unmarshal !!map into []otelconf.NameStringValuePair
+  line 244: cannot unmarshal !!seq into otelconf.IncludeExclude
+  line 305: cannot unmarshal !!map into []otelconf.NameStringValuePair
+  line 408: cannot unmarshal !!map into []otelconf.AttributeNameValue`),
 		},
 		{
 			name:     "valid v0.3 config",

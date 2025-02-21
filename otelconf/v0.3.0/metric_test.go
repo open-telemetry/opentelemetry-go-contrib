@@ -815,7 +815,7 @@ func TestReader(t *testing.T) {
 				switch reflect.TypeOf(tt.wantReader).String() {
 				case "*metric.PeriodicReader":
 					fieldName = "exporter"
-				case "config.readerWithServer":
+				case "otelconf.readerWithServer":
 					fieldName = "Reader"
 				default:
 					fieldName = "e"
