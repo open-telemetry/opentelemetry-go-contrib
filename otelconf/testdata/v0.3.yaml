@@ -1,0 +1,466 @@
+# kitchen-sink.yaml demonstrates all configurable surface area, including explanatory comments.
+#
+# It DOES NOT represent expected real world configuration, as it makes strange configuration
+# choices in an effort to exercise the full surface area.
+#
+# Configuration values are set to their defaults when default values are defined.
+
+# The file format version.
+file_format: "0.3"
+
+# Configure if the SDK is disabled or not. This is not required to be provided to ensure the SDK isn't disabled, the default value when this is not provided is for the SDK to be enabled.
+disabled: false
+
+# Configure general attribute limits. See also tracer_provider.limits, logger_provider.limits.
+attribute_limits:
+  # Configure max attribute value size.
+  attribute_value_length_limit: 4096
+  # Configure max attribute count.
+  attribute_count_limit: 128
+
+# Configure logger provider.
+logger_provider:
+  # Configure log record processors.
+  processors:
+    - # Configure a batch log record processor.
+      batch:
+        # Configure delay interval (in milliseconds) between two consecutive exports.
+        schedule_delay: 5000
+        # Configure maximum allowed time (in milliseconds) to export data.
+        export_timeout: 30000
+        # Configure maximum queue size.
+        max_queue_size: 2048
+        # Configure maximum batch size.
+        max_export_batch_size: 512
+        # Configure exporter.
+        exporter:
+          # Configure exporter to be OTLP.
+          otlp:
+            # Configure protocol.
+            protocol: http/protobuf
+            # Configure endpoint.
+            endpoint: http://localhost:4318/v1/logs
+            # Configure certificate.
+            certificate: /app/cert.pem
+            # Configure mTLS private client key.
+            client_key: /app/cert.pem
+            # Configure mTLS client certificate.
+            client_certificate: /app/cert.pem
+            # Configure headers. Entries have higher priority than entries from .headers_list.
+            headers:
+              - name: api-key
+                value: "1234"
+            # Configure headers. Entries have lower priority than entries from .headers.
+            # The value is a list of comma separated key-value pairs matching the format of OTEL_EXPORTER_OTLP_HEADERS. See https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#configuration-options for details.
+            headers_list: "api-key=1234"
+            # Configure compression.
+            compression: gzip
+            # Configure max time (in milliseconds) to wait for each export.
+            timeout: 10000
+            # Configure client transport security for the exporter's connection when http/https is not specified for gRPC connections.
+            insecure: false
+    - # Configure a simple log record processor.
+      simple:
+        # Configure exporter.
+        exporter:
+          # Configure exporter to be console.
+          console: {}
+  # Configure log record limits. See also attribute_limits.
+  limits:
+    # Configure max attribute value size. Overrides .attribute_limits.attribute_value_length_limit.
+    attribute_value_length_limit: 4096
+    # Configure max attribute count. Overrides .attribute_limits.attribute_count_limit.
+    attribute_count_limit: 128
+
+# Configure meter provider.
+meter_provider:
+  # Configure metric readers.
+  readers:
+    - # Configure a pull based metric reader.
+      pull:
+        # Configure exporter.
+        exporter:
+          # Configure exporter to be prometheus.
+          prometheus:
+            # Configure host.
+            host: localhost
+            # Configure port.
+            port: 9464
+            # Configure Prometheus Exporter to produce metrics without a unit suffix or UNIT metadata.
+            without_units: false
+            # Configure Prometheus Exporter to produce metrics without a type suffix.
+            without_type_suffix: false
+            # Configure Prometheus Exporter to produce metrics without a scope info metric.
+            without_scope_info: false
+            # Configure Prometheus Exporter to add resource attributes as metrics attributes.
+            with_resource_constant_labels:
+              # Configure resource attributes to be included. If not set, no resource attributes are included.
+              # Attribute keys from resources are evaluated to match as follows:
+              #  * If the value of the attribute key exactly matches.
+              #  * If the value of the attribute key matches the wildcard pattern, where '?' matches any single character and '*' matches any number of characters including none.
+              included:
+                - "service*"
+              # Configure resource attributes to be excluded. Applies after .with_resource_constant_labels.included (i.e. excluded has higher priority than included).
+              # Attribute keys from resources are evaluated to match as follows:
+              #  * If the value of the attribute key exactly matches.
+              #  * If the value of the attribute key matches the wildcard pattern, where '?' matches any single character and '*' matches any number of characters including none.
+              excluded:
+                - "service.attr1"
+      # Configure metric producers.
+      producers:
+        - # Configure metric producer to be opencensus.
+          opencensus: {}
+    - # Configure a periodic metric reader.
+      periodic:
+        # Configure delay interval (in milliseconds) between start of two consecutive exports.
+        interval: 5000
+        # Configure maximum allowed time (in milliseconds) to export data.
+        timeout: 30000
+        # Configure exporter.
+        exporter:
+          # Configure exporter to be OTLP.
+          otlp:
+            # Configure protocol.
+            protocol: http/protobuf
+            # Configure endpoint.
+            endpoint: http://localhost:4318/v1/metrics
+            # Configure certificate.
+            certificate: /app/cert.pem
+            # Configure mTLS private client key.
+            client_key: /app/cert.pem
+            # Configure mTLS client certificate.
+            client_certificate: /app/cert.pem
+            # Configure headers. Entries have higher priority than entries from .headers_list.
+            headers:
+              - name: api-key
+                value: "1234"
+            # Configure headers. Entries have lower priority than entries from .headers.
+            # The value is a list of comma separated key-value pairs matching the format of OTEL_EXPORTER_OTLP_HEADERS. See https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#configuration-options for details.
+            headers_list: "api-key=1234"
+            # Configure compression.
+            compression: gzip
+            # Configure max time (in milliseconds) to wait for each export.
+            timeout: 10000
+            # Configure client transport security for the exporter's connection when http/https is not specified for gRPC connections.
+            insecure: false
+            # Configure temporality preference.
+            temporality_preference: delta
+            # Configure default histogram aggregation.
+            default_histogram_aggregation: base2_exponential_bucket_histogram
+      # Configure metric producers.
+      producers:
+        - # Configure metric producer to be prometheus.
+          prometheus: {}
+    - # Configure a periodic metric reader.
+      periodic:
+        # Configure exporter.
+        exporter:
+          # Configure exporter to be console.
+          console: {}
+  # Configure views. Each view has a selector which determines the instrument(s) it applies to, and a configuration for the resulting stream(s).
+  views:
+    - # Configure view selector.
+      selector:
+        # Configure instrument name selection criteria.
+        instrument_name: my-instrument
+        # Configure instrument type selection criteria.
+        instrument_type: histogram
+        # Configure the instrument unit selection criteria.
+        unit: ms
+        # Configure meter name selection criteria.
+        meter_name: my-meter
+        # Configure meter version selection criteria.
+        meter_version: 1.0.0
+        # Configure meter schema url selection criteria.
+        meter_schema_url: https://opentelemetry.io/schemas/1.16.0
+      # Configure view stream.
+      stream:
+        # Configure metric name of the resulting stream(s).
+        name: new_instrument_name
+        # Configure metric description of the resulting stream(s).
+        description: new_description
+        # Configure aggregation of the resulting stream(s). Known values include: default, drop, explicit_bucket_histogram, base2_exponential_bucket_histogram, last_value, sum.
+        aggregation:
+          # Configure aggregation to be explicit_bucket_histogram.
+          explicit_bucket_histogram:
+            # Configure bucket boundaries.
+            boundaries:
+              [
+                0.0,
+                5.0,
+                10.0,
+                25.0,
+                50.0,
+                75.0,
+                100.0,
+                250.0,
+                500.0,
+                750.0,
+                1000.0,
+                2500.0,
+                5000.0,
+                7500.0,
+                10000.0
+              ]
+            # Configure record min and max.
+            record_min_max: true
+        # Configure attribute keys retained in the resulting stream(s).
+        attribute_keys:
+          # Configure list of attribute keys to include in the resulting stream(s). All other attributes are dropped. If not set, stream attributes are not configured.
+          included:
+            - key1
+            - key2
+          # Configure list of attribute keys to exclude from the resulting stream(s). Applies after .attribute_keys.included (i.e. excluded has higher priority than included).
+          excluded:
+            - key3
+
+# Configure text map context propagators.
+propagator:
+  # Configure the set of propagators to include in the composite text map propagator.
+  composite: [ tracecontext, baggage, b3, b3multi, jaeger, xray, ottrace ]
+
+# Configure tracer provider.
+tracer_provider:
+  # Configure span processors.
+  processors:
+    - # Configure a batch span processor.
+      batch:
+        # Configure delay interval (in milliseconds) between two consecutive exports.
+        schedule_delay: 5000
+        # Configure maximum allowed time (in milliseconds) to export data.
+        export_timeout: 30000
+        # Configure maximum queue size.
+        max_queue_size: 2048
+        # Configure maximum batch size.
+        max_export_batch_size: 512
+        # Configure exporter.
+        exporter:
+          # Configure exporter to be OTLP.
+          otlp:
+            # Configure protocol.
+            protocol: http/protobuf
+            # Configure endpoint.
+            endpoint: http://localhost:4318/v1/traces
+            # Configure certificate.
+            certificate: /app/cert.pem
+            # Configure mTLS private client key.
+            client_key: /app/cert.pem
+            # Configure mTLS client certificate.
+            client_certificate: /app/cert.pem
+            # Configure headers. Entries have higher priority than entries from .headers_list.
+            headers:
+              - name: api-key
+                value: "1234"
+            # Configure headers. Entries have lower priority than entries from .headers.
+            # The value is a list of comma separated key-value pairs matching the format of OTEL_EXPORTER_OTLP_HEADERS. See https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#configuration-options for details.
+            headers_list: "api-key=1234"
+            # Configure compression.
+            compression: gzip
+            # Configure max time (in milliseconds) to wait for each export.
+            timeout: 10000
+            # Configure client transport security for the exporter's connection when http/https is not specified for gRPC connections.
+            insecure: false
+    - # Configure a batch span processor.
+      batch:
+        # Configure exporter.
+        exporter:
+          # Configure exporter to be zipkin.
+          zipkin:
+            # Configure endpoint.
+            endpoint: http://localhost:9411/api/v2/spans
+            # Configure max time (in milliseconds) to wait for each export.
+            timeout: 10000
+    - # Configure a simple span processor.
+      simple:
+        # Configure exporter.
+        exporter:
+          # Configure exporter to be console.
+          console: {}
+  # Configure span limits. See also attribute_limits.
+  limits:
+    # Configure max attribute value size. Overrides .attribute_limits.attribute_value_length_limit.
+    attribute_value_length_limit: 4096
+    # Configure max attribute count. Overrides .attribute_limits.attribute_count_limit.
+    attribute_count_limit: 128
+    # Configure max span event count.
+    event_count_limit: 128
+    # Configure max span link count.
+    link_count_limit: 128
+    # Configure max attributes per span event.
+    event_attribute_count_limit: 128
+    # Configure max attributes per span link.
+    link_attribute_count_limit: 128
+  # Configure the sampler.
+  sampler:
+    # Configure sampler to be parent_based.
+    parent_based:
+      # Configure root sampler.
+      root:
+        # Configure sampler to be trace_id_ratio_based.
+        trace_id_ratio_based:
+          # Configure trace_id_ratio.
+          ratio: 0.0001
+      # Configure remote_parent_sampled sampler.
+      remote_parent_sampled:
+        # Configure sampler to be always_on.
+        always_on: {}
+      # Configure remote_parent_not_sampled sampler.
+      remote_parent_not_sampled:
+        # Configure sampler to be always_off.
+        always_off: {}
+      # Configure local_parent_sampled sampler.
+      local_parent_sampled:
+        # Configure sampler to be always_on.
+        always_on: {}
+      # Configure local_parent_not_sampled sampler.
+      local_parent_not_sampled:
+        # Configure sampler to be always_off.
+        always_off: {}
+
+# Configure resource for all signals.
+resource:
+  # Configure resource attributes. Entries have higher priority than entries from .resource.attributes_list.
+  # Entries must contain .name nand .value, and may optionally include .type, which defaults ot "string" if not set. The value must match the type. Values for .type include: string, bool, int, double, string_array, bool_array, int_array, double_array.
+  attributes:
+    - name: service.name
+      value: unknown_service
+    - name: string_key
+      value: value
+      type: string
+    - name: bool_key
+      value: true
+      type: bool
+    - name: int_key
+      value: 1
+      type: int
+    - name: double_key
+      value: 1.1
+      type: double
+    - name: string_array_key
+      value: [ "value1", "value2" ]
+      type: string_array
+    - name: bool_array_key
+      value: [ true, false ]
+      type: bool_array
+    - name: int_array_key
+      value: [ 1, 2 ]
+      type: int_array
+    - name: double_array_key
+      value: [ 1.1, 2.2 ]
+      type: double_array
+  # Configure resource attributes. Entries have lower priority than entries from .resource.attributes.
+  # The value is a list of comma separated key-value pairs matching the format of OTEL_RESOURCE_ATTRIBUTES. See https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/configuration/sdk-environment-variables.md#general-sdk-configuration for details.
+  attributes_list: "service.namespace=my-namespace,service.version=1.0.0"
+  # Configure resource detectors.
+  detectors:
+    # Configure attributes provided by resource detectors.
+    attributes:
+      # Configure list of attribute key patterns to include from resource detectors. If not set, all attributes are included.
+      # Attribute keys from resource detectors are evaluated to match as follows:
+      #  * If the value of the attribute key exactly matches.
+      #  * If the value of the attribute key matches the wildcard pattern, where '?' matches any single character and '*' matches any number of characters including none.
+      included:
+        - process.*
+      # Configure list of attribute key patterns to exclude from resource detectors. Applies after .resource.detectors.attributes.included (i.e. excluded has higher priority than included).
+      # Attribute keys from resource detectors are evaluated to match as follows:
+      #  * If the value of the attribute key exactly matches.
+      #  * If the value of the attribute key matches the wildcard pattern, where '?' matches any single character and '*' matches any number of characters including none.
+      excluded:
+        - process.command_args
+  # Configure resource schema URL.
+  schema_url: https://opentelemetry.io/schemas/1.16.0
+
+# Configure instrumentation.
+instrumentation:
+  # Configure general SemConv options that may apply to multiple languages and instrumentations.
+  # Instrumenation may merge general config options with the language specific configuration at .instrumentation.<language>.
+  general:
+    # Configure instrumentations following the peer semantic conventions.
+    # See peer semantic conventions: https://opentelemetry.io/docs/specs/semconv/attributes-registry/peer/
+    peer:
+      # Configure the service mapping for instrumentations following peer.service semantic conventions.
+      # Each entry is a key value pair where "peer" defines the IP address and "service" defines the corresponding logical name of the service.
+      # See peer.service semantic conventions: https://opentelemetry.io/docs/specs/semconv/general/attributes/#general-remote-service-attributes
+      service_mapping:
+        - peer: 1.2.3.4
+          service: FooService
+        - peer: 2.3.4.5
+          service: BarService
+    # Configure instrumentations following the http semantic conventions.
+    # See http semantic conventions: https://opentelemetry.io/docs/specs/semconv/http/
+    http:
+      # Configure instrumentations following the http client semantic conventions.
+      client:
+        # Configure headers to capture for outbound http requests.
+        request_captured_headers:
+          - Content-Type
+          - Accept
+        # Configure headers to capture for outbound http responses.
+        response_captured_headers:
+          - Content-Type
+          - Content-Encoding
+      # Configure instrumentations following the http server semantic conventions.
+      server:
+        # Configure headers to capture for inbound http requests.
+        request_captured_headers:
+          - Content-Type
+          - Accept
+        # Configure headers to capture for outbound http responses.
+        response_captured_headers:
+          - Content-Type
+          - Content-Encoding
+  # Configure C++ language-specific instrumentation libraries.
+  cpp:
+    # Configure the instrumentation corresponding to key "example".
+    example:
+      property: "value"
+  # Configure .NET language-specific instrumentation libraries.
+  dotnet:
+    # Configure the instrumentation corresponding to key "example".
+    example:
+      property: "value"
+  # Configure Erlang language-specific instrumentation libraries.
+  erlang:
+    # Configure the instrumentation corresponding to key "example".
+    example:
+      property: "value"
+  # Configure Go language-specific instrumentation libraries.
+  go:
+    # Configure the instrumentation corresponding to key "example".
+    example:
+      property: "value"
+  # Configure Java language-specific instrumentation libraries.
+  java:
+    # Configure the instrumentation corresponding to key "example".
+    example:
+      property: "value"
+  # Configure JavaScript language-specific instrumentation libraries.
+  js:
+    # Configure the instrumentation corresponding to key "example".
+    example:
+      property: "value"
+  # Configure PHP language-specific instrumentation libraries.
+  php:
+    # Configure the instrumentation corresponding to key "example".
+    example:
+      property: "value"
+  # Configure Python language-specific instrumentation libraries.
+  python:
+    # Configure the instrumentation corresponding to key "example".
+    example:
+      property: "value"
+  # Configure Ruby language-specific instrumentation libraries.
+  ruby:
+    # Configure the instrumentation corresponding to key "example".
+    example:
+      property: "value"
+  # Configure Rust language-specific instrumentation libraries.
+  rust:
+    # Configure the instrumentation corresponding to key "example".
+    example:
+      property: "value"
+  # Configure Swift language-specific instrumentation libraries.
+  swift:
+    # Configure the instrumentation corresponding to key "example".
+    example:
+      property: "value"
