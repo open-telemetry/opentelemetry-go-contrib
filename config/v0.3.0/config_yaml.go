@@ -9,6 +9,25 @@ import (
 	"reflect"
 )
 
+func (c *OpenTelemetryConfiguration) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type alias OpenTelemetryConfiguration // Prevents infinite recursion
+	aux := &alias{}
+
+	// Decode into alias
+	if err := unmarshal(aux); err != nil {
+		return err
+	}
+
+	// Check for an empty attributes list
+	if len(aux.Resource.Attributes) == 0 {
+		return fmt.Errorf("error: 'attributes' list cannot be empty")
+	}
+
+	// Assign parsed data back to actual struct
+	*c = OpenTelemetryConfiguration(*aux)
+	return nil
+}
+
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *AttributeNameValueType) UnmarshalYAML(unmarshal func(interface{}) error) error {
 	var v struct {
@@ -28,6 +47,24 @@ func (j *AttributeNameValueType) UnmarshalYAML(unmarshal func(interface{}) error
 		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValuesAttributeNameValueType, v.Value)
 	}
 	*j = AttributeNameValueType(v)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *AttributeNameValue) UnmarshalYAML(unmarshal func(interface{}) error) error {
+	type alias AttributeNameValue
+	aux := &alias{}
+
+	if err := unmarshal(aux); err != nil {
+		return err
+	}
+
+	// Check for empty name
+	if aux.Name == "" {
+		return fmt.Errorf("error: attribute 'name' cannot be empty")
+	}
+
+	*j = AttributeNameValue(*aux)
 	return nil
 }
 
