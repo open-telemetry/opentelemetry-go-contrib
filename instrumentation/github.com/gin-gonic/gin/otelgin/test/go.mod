@@ -1,6 +1,8 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/test
 
-go 1.22.0
+go 1.23.0
+
+toolchain go1.24.0
 
 require (
 	github.com/gin-gonic/gin v1.10.0
@@ -41,7 +43,7 @@ require (
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/metric v1.34.0 // indirect
 	golang.org/x/arch v0.14.0 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
+	golang.org/x/crypto v0.34.0 // indirect
 	golang.org/x/sys v0.30.0 // indirect
 	golang.org/x/text v0.22.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
