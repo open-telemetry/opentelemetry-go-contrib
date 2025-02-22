@@ -1,0 +1,13 @@
+file_format: "0.3"
+disabled: false
+logger_provider:
+  processors:
+    - batch:
+        exporter:
+          otlp:
+            protocol: http/protobuf
+            endpoint: http://localhost:4318/v1/logs
+            headers:
+              - name: api-key
+                value: "1234"
+              - value: nil-name
