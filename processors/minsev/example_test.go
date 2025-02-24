@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package minsev_test // import "go.opentelemetry.io/contrib/processors/minsev"
+package minsev_test
 
 import (
 	"context"
