@@ -41,7 +41,7 @@ func ExampleSeveritier() {
 	var processor log.Processor = log.NewBatchProcessor(nil)
 
 	// Wrap the processor so that it filters by severity level defined
-	// via environental variable.
+	// via environmental variable.
 	processor = minsev.NewLogProcessor(processor, EnvSeverity{})
 	lp := log.NewLoggerProvider(
 		log.WithProcessor(processor),
