@@ -8,7 +8,6 @@ package minsev // import "go.opentelemetry.io/contrib/processors/minsev"
 import (
 	"context"
 
-	api "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
@@ -31,16 +30,10 @@ func NewLogProcessor(downstream log.Processor, severity Severitier) *LogProcesso
 		severity = SeverityInfo
 	}
 	p := &LogProcessor{Processor: downstream, sev: severity}
-	if fp, ok := downstream.(filterProcessor); ok {
+	if fp, ok := downstream.(log.FilterProcessor); ok {
 		p.filter = fp
 	}
 	return p
-}
-
-// filterProcessor is the experimental optional interface a Processor can
-// implement (go.opentelemetry.io/otel/sdk/log/internal/x).
-type filterProcessor interface {
-	Enabled(ctx context.Context, param api.EnabledParameters) bool
 }
 
 // LogProcessor is an [log.Processor] implementation that wraps another
@@ -54,12 +47,15 @@ type filterProcessor interface {
 type LogProcessor struct {
 	log.Processor
 
-	filter filterProcessor
+	filter log.FilterProcessor
 	sev    Severitier
 }
 
-// Compile time assertion that LogProcessor implements log.Processor.
-var _ log.Processor = (*LogProcessor)(nil)
+// Compile time assertion that LogProcessor implements log.Processor and log.FilterProcessor.
+var (
+	_ log.Processor       = (*LogProcessor)(nil)
+	_ log.FilterProcessor = (*LogProcessor)(nil)
+)
 
 // OnEmit passes ctx and r to the [log.Processor] that p wraps if the severity
 // of record is greater than or equal to p.Minimum. Otherwise, record is
@@ -74,7 +70,7 @@ func (p *LogProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 // Enabled returns if the [log.Processor] that p wraps is enabled if the
 // severity of param is greater than or equal to p.Minimum. Otherwise false is
 // returned.
-func (p *LogProcessor) Enabled(ctx context.Context, param api.EnabledParameters) bool {
+func (p *LogProcessor) Enabled(ctx context.Context, param log.EnabledParameters) bool {
 	sev := param.Severity
 	if p.filter != nil {
 		return sev >= p.sev.Severity() &&
@@ -88,6 +84,6 @@ var defaultProcessor = noopProcessor{}
 type noopProcessor struct{}
 
 func (p noopProcessor) OnEmit(context.Context, *log.Record) error           { return nil }
-func (p noopProcessor) Enabled(context.Context, api.EnabledParameters) bool { return false }
+func (p noopProcessor) Enabled(context.Context, log.EnabledParameters) bool { return false }
 func (p noopProcessor) Shutdown(context.Context) error                      { return nil }
 func (p noopProcessor) ForceFlush(context.Context) error                    { return nil }
