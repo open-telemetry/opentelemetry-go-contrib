@@ -34,7 +34,7 @@ type EnvSeverity struct{}
 func (EnvSeverity) Severity() logapi.Severity { return getSeverity() }
 
 func ExampleSeveritier() {
-	// Mock an environment variable setup that would be done externally.
+	// Mock an environmental variable setup that would be done externally.
 	_ = os.Setenv(key, "error")
 
 	// Existing processor that emits telemetry.
