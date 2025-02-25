@@ -129,6 +129,7 @@ func TestCore(t *testing.T) {
 						Attributes: []log.KeyValue{
 							log.String("a", "b"),
 							log.String("fizz", "buzz"),
+							log.String("foo", "bar"),
 						},
 					},
 				},
@@ -253,7 +254,7 @@ func TestCoreWithCaller(t *testing.T) {
 	v, ok = attrs[key]
 	if !ok {
 		t.Errorf("%q attribute is missing, got = %v", key, attrs)
-	} else if want := "go.opentelemetry.io/NOPE/bridges/otelzap"; v.AsString() != want {
+	} else if want := "go.opentelemetry.io/contrib/bridges/otelzap"; v.AsString() != want {
 		t.Errorf("%q attribute has bad value, got = %v, want = %q", key, v, want)
 	}
 }
