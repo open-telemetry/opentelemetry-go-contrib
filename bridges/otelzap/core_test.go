@@ -214,7 +214,7 @@ func TestCoreWithCaller(t *testing.T) {
 		t.Fatalf("missing %q scope, got = %v", loggerName, got)
 	}
 	if len(records) != 1 {
-		t.Fatalf("should record 1 record, got = %v", records)
+		t.Fatalf("should have 1 record, got = %v", records)
 	}
 	a := records[0].Attributes
 	attrs := make(map[string]log.Value, len(a))
@@ -259,23 +259,37 @@ func TestCoreWithCaller(t *testing.T) {
 	}
 }
 
-// func TestCoreWithStacktrace(t *testing.T) {
-// 	rec := logtest.NewRecorder()
-// 	zc := NewCore(loggerName, WithLoggerProvider(rec))
-// 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
+func TestCoreWithStacktrace(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
-// 	logger.Error(testMessage)
-// 	got := rec.Result()[0].Records[0]
-// 	assert.Equal(t, testMessage, got.Body().AsString())
-// 	assert.Equal(t, log.SeverityError, got.Severity())
-// 	assert.Equal(t, zap.ErrorLevel.String(), got.SeverityText())
-// 	assert.Equal(t, 1, got.AttributesLen())
-// 	got.WalkAttributes(func(kv log.KeyValue) bool {
-// 		assert.Equal(t, string(semconv.CodeStacktraceKey), kv.Key)
-// 		assert.NotEmpty(t, kv.Value.AsString())
-// 		return true
-// 	})
-// }
+	logger.Error(testMessage)
+
+	got := rec.Result()
+	records, ok := got[logtest.Scope{Name: loggerName}]
+	if !ok {
+		t.Fatalf("missing %q scope, got = %v", loggerName, got)
+	}
+	if len(records) != 1 {
+		t.Fatalf("should have 1 record, got = %v", records)
+	}
+
+	key := string(semconv.CodeStacktraceKey)
+	var v log.Value
+	attrs := records[0].Attributes
+	for _, attr := range records[0].Attributes {
+		if attr.Key == key {
+			v = attr.Value
+		}
+	}
+	if v.Equal(log.Value{}) {
+		t.Fatalf("%q attribute is missing, got = %v", key, attrs)
+	}
+	if v.AsString() == "" {
+		t.Fatalf("%q attribute does not contain a stacktrace, got = %v", key, v)
+	}
+}
 
 // func TestNewCoreConfiguration(t *testing.T) {
 // 	t.Run("Default", func(t *testing.T) {
