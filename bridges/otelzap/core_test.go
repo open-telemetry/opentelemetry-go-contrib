@@ -12,7 +12,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
-	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -392,8 +391,10 @@ func TestSplitFuncName(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.fullFuncName, func(t *testing.T) {
 			gotFuncName, gotNamespace := splitFuncName(tc.fullFuncName)
-			assert.Equal(t, tc.wantFuncName, gotFuncName)
-			assert.Equal(t, tc.wantNamespace, gotNamespace)
+			if gotFuncName != tc.wantFuncName || gotNamespace != tc.wantNamespace {
+				t.Errorf("splitFuncName(%q) = (%q, %q), want (%q, %q)",
+					tc.fullFuncName, gotFuncName, gotNamespace, tc.wantFuncName, tc.wantNamespace)
+			}
 		})
 	}
 }
