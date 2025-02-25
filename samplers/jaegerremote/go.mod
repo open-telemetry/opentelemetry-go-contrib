@@ -1,6 +1,8 @@
 module go.opentelemetry.io/contrib/samplers/jaegerremote
 
-go 1.22.0
+go 1.23.0
+
+toolchain go1.24.0
 
 require (
 	github.com/go-logr/logr v1.4.2
@@ -8,7 +10,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel/sdk v1.34.0
 	go.opentelemetry.io/otel/trace v1.34.0
-	google.golang.org/genproto/googleapis/api v0.0.0-20250218202821-56aae31c358a
+	google.golang.org/genproto/googleapis/api v0.0.0-20250224174004-546df14abb99
 )
 
 require (
