@@ -213,44 +213,50 @@ func TestCoreWithCaller(t *testing.T) {
 	if !ok {
 		t.Fatalf("missing %q scope, got = %v", loggerName, got)
 	}
-
 	if len(records) != 1 {
 		t.Fatalf("should record 1 record, got = %v", records)
 	}
-
 	a := records[0].Attributes
 	attrs := make(map[string]log.Value, len(a))
 	for _, v := range a {
 		attrs[v.Key] = v.Value
 	}
+	var (
+		key string
+		v   log.Value
+	)
 
-	cf, ok := attrs[string(semconv.CodeFilepathKey)]
+	key = string(semconv.CodeFilepathKey)
+	v, ok = attrs[key]
 	if !ok {
-		t.Errorf("%q attribute is missing, got = %v", semconv.CodeFilepathKey, attrs)
-	} else if !strings.Contains(cf.AsString(), "core_test.go") {
-		t.Errorf("%v has bad value", cf)
+		t.Errorf("%q attribute is missing, got = %v", key, attrs)
+	} else if !strings.Contains(v.AsString(), "core_test.go") {
+		t.Errorf("%q attribute has bad value, got = %v", key, v)
 	}
 
-	// got := rec.Result()[0].Records[0]
-	// assert.Equal(t, testMessage, got.Body().AsString())
-	// assert.Equal(t, log.SeverityInfo, got.Severity())
-	// assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
-	// assert.Equal(t, 4, got.AttributesLen())
-	// got.WalkAttributes(func(kv log.KeyValue) bool {
-	// 	switch kv.Key {
-	// 	case string(semconv.CodeFilepathKey):
-	// 		assert.Contains(t, kv.Value.AsString(), "core_test.go")
-	// 	case string(semconv.CodeLineNumberKey):
-	// 		assert.Positive(t, kv.Value.AsInt64())
-	// 	case string(semconv.CodeFunctionKey):
-	// 		assert.Equal(t, t.Name(), kv.Value.AsString())
-	// 	case string(semconv.CodeNamespaceKey):
-	// 		assert.Equal(t, "go.opentelemetry.io/contrib/bridges/otelzap", kv.Value.AsString())
-	// 	default:
-	// 		assert.Fail(t, "unexpected attribute key", kv.Key)
-	// 	}
-	// 	return true
-	// })
+	key = string(semconv.CodeLineNumberKey)
+	v, ok = attrs[key]
+	if !ok {
+		t.Errorf("%q attribute is missing, got = %v", key, attrs)
+	} else if v.AsInt64() <= 0 {
+		t.Errorf("%q attribute is not a number, got = %v", key, v)
+	}
+
+	key = string(semconv.CodeFunctionKey)
+	v, ok = attrs[key]
+	if !ok {
+		t.Errorf("%q attribute is missing, got = %v", key, attrs)
+	} else if want := t.Name(); v.AsString() != want {
+		t.Errorf("%q attribute has bad value, got = %v, want = %q", key, v, want)
+	}
+
+	key = string(semconv.CodeNamespaceKey)
+	v, ok = attrs[key]
+	if !ok {
+		t.Errorf("%q attribute is missing, got = %v", key, attrs)
+	} else if want := "go.opentelemetry.io/contrib/bridges/otelzap"; v.AsString() != want {
+		t.Errorf("%q attribute has bad value, got = %v, want = %q", key, v, want)
+	}
 }
 
 // func TestCoreWithStacktrace(t *testing.T) {
