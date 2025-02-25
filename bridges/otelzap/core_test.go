@@ -17,6 +17,7 @@ import (
 	"go.uber.org/zap/zapcore"
 
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
@@ -291,42 +292,46 @@ func TestCoreWithStacktrace(t *testing.T) {
 	}
 }
 
-// func TestNewCoreConfiguration(t *testing.T) {
-// 	t.Run("Default", func(t *testing.T) {
-// 		r := logtest.NewRecorder()
-// 		prev := global.GetLoggerProvider()
-// 		defer global.SetLoggerProvider(prev)
-// 		global.SetLoggerProvider(r)
+func TestNewCoreConfiguration(t *testing.T) {
+	t.Run("Default", func(t *testing.T) {
+		rec := logtest.NewRecorder()
+		prev := global.GetLoggerProvider()
+		defer global.SetLoggerProvider(prev)
+		global.SetLoggerProvider(rec)
 
-// 		var h *Core
-// 		require.NotPanics(t, func() { h = NewCore(loggerName) })
-// 		require.NotNil(t, h.logger)
-// 		require.Len(t, r.Result(), 1)
+		NewCore(loggerName)
 
-// 		want := &logtest.ScopeRecords{Name: loggerName}
-// 		got := r.Result()[0]
-// 		assert.Equal(t, want, got)
-// 	})
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: nil,
+		}
+		got := rec.Result()
+		if err := validate(got, want); err != nil {
+			t.Error(err)
+		}
+	})
 
-// 	t.Run("Options", func(t *testing.T) {
-// 		r := logtest.NewRecorder()
-// 		var h *Core
-// 		require.NotPanics(t, func() {
-// 			h = NewCore(
-// 				loggerName,
-// 				WithLoggerProvider(r),
-// 				WithVersion("1.0.0"),
-// 				WithSchemaURL("url"),
-// 			)
-// 		})
-// 		require.NotNil(t, h.logger)
-// 		require.Len(t, r.Result(), 1)
+	t.Run("Options", func(t *testing.T) {
+		rec := logtest.NewRecorder()
+		NewCore(
+			loggerName,
+			WithLoggerProvider(rec),
+			WithVersion("1.0.0"),
+			WithSchemaURL("url"),
+		)
 
-// 		want := &logtest.ScopeRecords{Name: loggerName, Version: "1.0.0", SchemaURL: "url"}
-// 		got := r.Result()[0]
-// 		assert.Equal(t, want, got)
-// 	})
-// }
+		want := logtest.Recording{
+			logtest.Scope{
+				Name:      loggerName,
+				Version:   "1.0.0",
+				SchemaURL: "url",
+			}: nil,
+		}
+		got := rec.Result()
+		if err := validate(got, want); err != nil {
+			t.Error(err)
+		}
+	})
+}
 
 func TestConvertLevel(t *testing.T) {
 	tests := []struct {
