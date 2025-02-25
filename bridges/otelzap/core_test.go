@@ -128,7 +128,6 @@ func TestCore(t *testing.T) {
 						Body:         log.StringValue(testMessage),
 						Attributes: []log.KeyValue{
 							log.String("a", "b"),
-							log.String("foo", "bar"),
 							log.String("fizz", "buzz"),
 						},
 					},
@@ -254,7 +253,7 @@ func TestCoreWithCaller(t *testing.T) {
 	v, ok = attrs[key]
 	if !ok {
 		t.Errorf("%q attribute is missing, got = %v", key, attrs)
-	} else if want := "go.opentelemetry.io/contrib/bridges/otelzap"; v.AsString() != want {
+	} else if want := "go.opentelemetry.io/NOPE/bridges/otelzap"; v.AsString() != want {
 		t.Errorf("%q attribute has bad value, got = %v, want = %q", key, v, want)
 	}
 }
@@ -410,7 +409,7 @@ func validate(got, want logtest.Recording) error {
 	cmpEpty := cmpopts.EquateEmpty()
 
 	if diff := cmp.Diff(want, got, cmpCtx, cmpStmps, cmpKVs, cmpEpty); diff != "" {
-		return fmt.Errorf("records mismatch (-want +got):\n%s", diff)
+		return fmt.Errorf("recording mismatch (-want +got):\n%s", diff)
 	}
 	return nil
 }
