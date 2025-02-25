@@ -6,6 +6,7 @@ package otelzap
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -17,6 +18,7 @@ import (
 
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/logtest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 var (
@@ -199,33 +201,57 @@ func TestCoreEnabled(t *testing.T) {
 	}
 }
 
-// func TestCoreWithCaller(t *testing.T) {
-// 	rec := logtest.NewRecorder()
-// 	zc := NewCore(loggerName, WithLoggerProvider(rec))
-// 	logger := zap.New(zc, zap.AddCaller())
+func TestCoreWithCaller(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc, zap.AddCaller())
 
-// 	logger.Info(testMessage)
-// 	got := rec.Result()[0].Records[0]
-// 	assert.Equal(t, testMessage, got.Body().AsString())
-// 	assert.Equal(t, log.SeverityInfo, got.Severity())
-// 	assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
-// 	assert.Equal(t, 4, got.AttributesLen())
-// 	got.WalkAttributes(func(kv log.KeyValue) bool {
-// 		switch kv.Key {
-// 		case string(semconv.CodeFilepathKey):
-// 			assert.Contains(t, kv.Value.AsString(), "core_test.go")
-// 		case string(semconv.CodeLineNumberKey):
-// 			assert.Positive(t, kv.Value.AsInt64())
-// 		case string(semconv.CodeFunctionKey):
-// 			assert.Equal(t, t.Name(), kv.Value.AsString())
-// 		case string(semconv.CodeNamespaceKey):
-// 			assert.Equal(t, "go.opentelemetry.io/contrib/bridges/otelzap", kv.Value.AsString())
-// 		default:
-// 			assert.Fail(t, "unexpected attribute key", kv.Key)
-// 		}
-// 		return true
-// 	})
-// }
+	logger.Info(testMessage)
+
+	got := rec.Result()
+	records, ok := got[logtest.Scope{Name: loggerName}]
+	if !ok {
+		t.Fatalf("missing %q scope, got = %v", loggerName, got)
+	}
+
+	if len(records) != 1 {
+		t.Fatalf("should record 1 record, got = %v", records)
+	}
+
+	a := records[0].Attributes
+	attrs := make(map[string]log.Value, len(a))
+	for _, v := range a {
+		attrs[v.Key] = v.Value
+	}
+
+	cf, ok := attrs[string(semconv.CodeFilepathKey)]
+	if !ok {
+		t.Errorf("%q attribute is missing, got = %v", semconv.CodeFilepathKey, attrs)
+	} else if !strings.Contains(cf.AsString(), "core_test.go") {
+		t.Errorf("%v has bad value", cf)
+	}
+
+	// got := rec.Result()[0].Records[0]
+	// assert.Equal(t, testMessage, got.Body().AsString())
+	// assert.Equal(t, log.SeverityInfo, got.Severity())
+	// assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
+	// assert.Equal(t, 4, got.AttributesLen())
+	// got.WalkAttributes(func(kv log.KeyValue) bool {
+	// 	switch kv.Key {
+	// 	case string(semconv.CodeFilepathKey):
+	// 		assert.Contains(t, kv.Value.AsString(), "core_test.go")
+	// 	case string(semconv.CodeLineNumberKey):
+	// 		assert.Positive(t, kv.Value.AsInt64())
+	// 	case string(semconv.CodeFunctionKey):
+	// 		assert.Equal(t, t.Name(), kv.Value.AsString())
+	// 	case string(semconv.CodeNamespaceKey):
+	// 		assert.Equal(t, "go.opentelemetry.io/contrib/bridges/otelzap", kv.Value.AsString())
+	// 	default:
+	// 		assert.Fail(t, "unexpected attribute key", kv.Key)
+	// 	}
+	// 	return true
+	// })
+}
 
 // func TestCoreWithStacktrace(t *testing.T) {
 // 	rec := logtest.NewRecorder()
