@@ -381,6 +381,7 @@ func validate(got, want logtest.Recording) error {
 	return nil
 }
 
+// recordedAttributes returns record's attributes when only a single record was emitted.
 func recordedAttributes(t *testing.T, rec logtest.Recording) map[string]log.Value {
 	t.Helper()
 
