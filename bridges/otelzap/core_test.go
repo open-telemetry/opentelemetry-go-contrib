@@ -365,6 +365,7 @@ func TestSplitFuncName(t *testing.T) {
 	}
 }
 
+// validate compares got and want.
 func validate(got, want logtest.Recording) error {
 	// Compare Context.
 	cmpCtx := cmpopts.EquateComparable(context.Background(), ctx)
