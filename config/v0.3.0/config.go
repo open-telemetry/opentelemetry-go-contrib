@@ -1,6 +1,10 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package config is deprecated.
+//
+// Deprecated: use [go.opentelemetry.io/contrib/otelconf/v0.3.0] instead.
+// This is the last release of this module.
 package config // import "go.opentelemetry.io/contrib/config/v0.3.0"
 
 import (
@@ -13,6 +17,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
@@ -152,14 +157,6 @@ func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
 	return &cfg, nil
 }
 
-func toStringMap(pairs []NameStringValuePair) map[string]string {
-	output := make(map[string]string)
-	for _, v := range pairs {
-		output[v.Name] = *v.Value
-	}
-	return output
-}
-
 // createTLSConfig creates a tls.Config from certificate files.
 func createTLSConfig(caCertFile *string, clientCertFile *string, clientKeyFile *string) (*tls.Config, error) {
 	tlsConfig := &tls.Config{}
@@ -185,4 +182,28 @@ func createTLSConfig(caCertFile *string, clientCertFile *string, clientKeyFile *
 		tlsConfig.Certificates = []tls.Certificate{clientCert}
 	}
 	return tlsConfig, nil
+}
+
+// createHeadersConfig combines the two header config fields. Headers take precedence over headersList.
+func createHeadersConfig(headers []NameStringValuePair, headersList *string) (map[string]string, error) {
+	result := make(map[string]string)
+	if headersList != nil {
+		// Parsing follows https://github.com/open-telemetry/opentelemetry-configuration/blob/568e5080816d40d75792eb754fc96bde09654159/schema/type_descriptions.yaml#L584.
+		headerslist, err := baggage.Parse(*headersList)
+		if err != nil {
+			return nil, fmt.Errorf("invalid headers list: %w", err)
+		}
+		for _, kv := range headerslist.Members() {
+			result[kv.Key()] = kv.Value()
+		}
+	}
+	// Headers take precedence over HeadersList, so this has to be after HeadersList is processed
+	if len(headers) > 0 {
+		for _, kv := range headers {
+			if kv.Value != nil {
+				result[kv.Name] = *kv.Value
+			}
+		}
+	}
+	return result, nil
 }

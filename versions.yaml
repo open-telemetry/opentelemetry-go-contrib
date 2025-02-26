@@ -27,7 +27,6 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv/test
-      - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/test
       - go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace
       - go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example
       - go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/test
@@ -69,6 +68,7 @@ module-sets:
     version: v0.14.0
     modules:
       - go.opentelemetry.io/contrib/config
+      - go.opentelemetry.io/contrib/otelconf
   experimental-bridge:
     version: v0.9.0
     modules:
@@ -94,6 +94,3 @@ excluded-modules:
   - go.opentelemetry.io/contrib/examples/passthrough
   - go.opentelemetry.io/contrib/examples/prometheus
   - go.opentelemetry.io/contrib/examples/zipkin
-  - go.opentelemetry.io/contrib/instrgen
-  - go.opentelemetry.io/contrib/instrgen/driver
-  - go.opentelemetry.io/contrib/instrgen/testdata/interface

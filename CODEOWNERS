@@ -70,4 +70,3 @@ samplers/jaegerremote/                                                  @open-te
 samplers/probability/consistent/                                        @open-telemetry/go-approvers
 
 zpages/                                                                 @open-telemetry/go-approvers @dashpole
-instrgen/                                                               @open-telemetry/go-approvers @open-telemetry/go-instrumentation-approvers @MrAlias @pdelewski

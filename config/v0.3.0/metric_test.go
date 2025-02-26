@@ -7,9 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net/url"
+	"net/http"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -106,19 +107,19 @@ func TestReader(t *testing.T) {
 		name       string
 		reader     MetricReader
 		args       any
-		wantErr    error
+		wantErr    string
 		wantReader sdkmetric.Reader
 	}{
 		{
 			name:    "no reader",
-			wantErr: errors.New("no valid metric reader"),
+			wantErr: "no valid metric reader",
 		},
 		{
 			name: "pull/no-exporter",
 			reader: MetricReader{
 				Pull: &PullMetricReader{},
 			},
-			wantErr: errors.New("no valid metric exporter"),
+			wantErr: "no valid metric exporter",
 		},
 		{
 			name: "pull/prometheus-no-host",
@@ -129,7 +130,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("host must be specified"),
+			wantErr: "host must be specified",
 		},
 		{
 			name: "pull/prometheus-no-port",
@@ -142,7 +143,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("port must be specified"),
+			wantErr: "port must be specified",
 		},
 		{
 			name: "pull/prometheus",
@@ -176,7 +177,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("unsupported protocol \"http/invalid\""),
+			wantErr: "unsupported protocol \"http/invalid\"",
 		},
 		{
 			name: "periodic/otlp-grpc-exporter",
@@ -248,7 +249,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("could not create certificate authority chain from certificate"),
+			wantErr: "could not create certificate authority chain from certificate",
 		},
 		{
 			name: "periodic/otlp-grpc-bad-client-certificate",
@@ -266,7 +267,24 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Errorf("could not use client certificate: %w", errors.New("tls: failed to find any PEM data in certificate input")),
+			wantErr: "could not use client certificate: tls: failed to find any PEM data in certificate input",
+		},
+		{
+			name: "periodic/otlp-grpc-bad-headerslist",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							HeadersList: ptr("==="),
+						},
+					},
+				},
+			},
+			wantErr: "invalid headers list: invalid key: \"\"",
 		},
 		{
 			name: "periodic/otlp-grpc-exporter-no-endpoint",
@@ -341,7 +359,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &url.Error{Op: "parse", URL: " ", Err: errors.New("invalid URI for request")},
+			wantErr: "parse \" \": invalid URI for request",
 		},
 		{
 			name: "periodic/otlp-grpc-none-compression",
@@ -440,7 +458,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("unsupported temporality preference \"invalid\""),
+			wantErr: "unsupported temporality preference \"invalid\"",
 		},
 		{
 			name: "periodic/otlp-grpc-invalid-compression",
@@ -459,7 +477,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("unsupported compression \"invalid\""),
+			wantErr: "unsupported compression \"invalid\"",
 		},
 		{
 			name: "periodic/otlp-http-exporter",
@@ -512,7 +530,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("could not create certificate authority chain from certificate"),
+			wantErr: "could not create certificate authority chain from certificate",
 		},
 		{
 			name: "periodic/otlp-http-bad-client-certificate",
@@ -530,7 +548,24 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: fmt.Errorf("could not use client certificate: %w", errors.New("tls: failed to find any PEM data in certificate input")),
+			wantErr: "could not use client certificate: tls: failed to find any PEM data in certificate input",
+		},
+		{
+			name: "periodic/otlp-http-bad-headerslist",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							HeadersList: ptr("==="),
+						},
+					},
+				},
+			},
+			wantErr: "invalid headers list: invalid key: \"\"",
 		},
 		{
 			name: "periodic/otlp-http-exporter-with-path",
@@ -605,7 +640,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: &url.Error{Op: "parse", URL: " ", Err: errors.New("invalid URI for request")},
+			wantErr: "parse \" \": invalid URI for request",
 		},
 		{
 			name: "periodic/otlp-http-none-compression",
@@ -704,7 +739,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("unsupported temporality preference \"invalid\""),
+			wantErr: "unsupported temporality preference \"invalid\"",
 		},
 		{
 			name: "periodic/otlp-http-invalid-compression",
@@ -723,7 +758,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: errors.New("unsupported compression \"invalid\""),
+			wantErr: "unsupported compression \"invalid\"",
 		},
 		{
 			name: "periodic/no-exporter",
@@ -732,7 +767,7 @@ func TestReader(t *testing.T) {
 					Exporter: PushMetricExporter{},
 				},
 			},
-			wantErr: errors.New("no valid metric exporter"),
+			wantErr: "no valid metric exporter",
 		},
 		{
 			name: "periodic/console-exporter",
@@ -766,7 +801,12 @@ func TestReader(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := metricReader(context.Background(), tt.reader)
-			require.Equal(t, tt.wantErr, err)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Equal(t, tt.wantErr, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
 			if tt.wantReader == nil {
 				require.Nil(t, got)
 			} else {
@@ -1300,6 +1340,51 @@ func TestPrometheusReaderOpts(t *testing.T) {
 			opts, err := prometheusReaderOpts(&tt.cfg)
 			require.NoError(t, err)
 			require.Len(t, opts, tt.wantOptions)
+		})
+	}
+}
+
+func TestPrometheusIPv6(t *testing.T) {
+	tests := []struct {
+		name string
+		host string
+	}{
+		{
+			name: "IPv6",
+			host: "::1",
+		},
+		{
+			name: "[IPv6]",
+			host: "[::1]",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			port := 0
+			cfg := Prometheus{
+				Host:                       &tt.host,
+				Port:                       &port,
+				WithoutScopeInfo:           ptr(true),
+				WithoutTypeSuffix:          ptr(true),
+				WithoutUnits:               ptr(true),
+				WithResourceConstantLabels: &IncludeExclude{},
+			}
+
+			rs, err := prometheusReader(context.Background(), &cfg)
+			t.Cleanup(func() {
+				require.NoError(t, rs.Shutdown(context.Background()))
+			})
+			require.NoError(t, err)
+
+			hServ := rs.(readerWithServer).server
+			assert.True(t, strings.HasPrefix(hServ.Addr, "[::1]:"))
+
+			resp, err := http.DefaultClient.Get("http://" + hServ.Addr + "/metrics")
+			t.Cleanup(func() {
+				require.NoError(t, resp.Body.Close())
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		})
 	}
 }
