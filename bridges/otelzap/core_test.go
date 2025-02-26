@@ -208,51 +208,32 @@ func TestCoreWithCaller(t *testing.T) {
 
 	logger.Info(testMessage)
 
-	got := rec.Result()
-	records, ok := got[logtest.Scope{Name: loggerName}]
-	if !ok {
-		t.Fatalf("missing %q scope, got = %v", loggerName, got)
-	}
-	if len(records) != 1 {
-		t.Fatalf("should have 1 record, got = %v", records)
-	}
-	a := records[0].Attributes
-	attrs := make(map[string]log.Value, len(a))
-	for _, v := range a {
-		attrs[v.Key] = v.Value
-	}
-	var (
-		key string
-		v   log.Value
-	)
+	attrs := recordedAttributes(t, rec.Result())
+	var key string
 
 	key = string(semconv.CodeFilepathKey)
-	v, ok = attrs[key]
-	if !ok {
+	if v, ok := attrs[key]; !ok {
 		t.Errorf("%q attribute is missing, got = %v", key, attrs)
 	} else if !strings.Contains(v.AsString(), "core_test.go") {
 		t.Errorf("%q attribute has bad value, got = %v", key, v)
 	}
 
 	key = string(semconv.CodeLineNumberKey)
-	v, ok = attrs[key]
-	if !ok {
+	if v, ok := attrs[key]; !ok {
 		t.Errorf("%q attribute is missing, got = %v", key, attrs)
 	} else if v.AsInt64() <= 0 {
 		t.Errorf("%q attribute is not a number, got = %v", key, v)
 	}
 
 	key = string(semconv.CodeFunctionKey)
-	v, ok = attrs[key]
-	if !ok {
+	if v, ok := attrs[key]; !ok {
 		t.Errorf("%q attribute is missing, got = %v", key, attrs)
 	} else if want := t.Name(); v.AsString() != want {
 		t.Errorf("%q attribute has bad value, got = %v, want = %q", key, v, want)
 	}
 
 	key = string(semconv.CodeNamespaceKey)
-	v, ok = attrs[key]
-	if !ok {
+	if v, ok := attrs[key]; !ok {
 		t.Errorf("%q attribute is missing, got = %v", key, attrs)
 	} else if want := "go.opentelemetry.io/contrib/bridges/otelzap"; v.AsString() != want {
 		t.Errorf("%q attribute has bad value, got = %v, want = %q", key, v, want)
@@ -266,27 +247,12 @@ func TestCoreWithStacktrace(t *testing.T) {
 
 	logger.Error(testMessage)
 
-	got := rec.Result()
-	records, ok := got[logtest.Scope{Name: loggerName}]
-	if !ok {
-		t.Fatalf("missing %q scope, got = %v", loggerName, got)
-	}
-	if len(records) != 1 {
-		t.Fatalf("should have 1 record, got = %v", records)
-	}
+	attrs := recordedAttributes(t, rec.Result())
 
 	key := string(semconv.CodeStacktraceKey)
-	var v log.Value
-	attrs := records[0].Attributes
-	for _, attr := range records[0].Attributes {
-		if attr.Key == key {
-			v = attr.Value
-		}
-	}
-	if v.Equal(log.Value{}) {
-		t.Fatalf("%q attribute is missing, got = %v", key, attrs)
-	}
-	if v.AsString() == "" {
+	if v, ok := attrs[key]; !ok {
+		t.Errorf("%q attribute is missing, got = %v", key, attrs)
+	} else if v.AsString() == "" {
 		t.Fatalf("%q attribute does not contain a stacktrace, got = %v", key, v)
 	}
 }
@@ -397,6 +363,28 @@ func TestSplitFuncName(t *testing.T) {
 			}
 		})
 	}
+}
+
+func recordedAttributes(t *testing.T, rec logtest.Recording) map[string]log.Value {
+	t.Helper()
+
+	if len(rec) != 1 {
+		t.Fatalf("should have only 1 scope as a single logger is used, got = %v", rec)
+	}
+
+	var records []logtest.Record
+	for _, v := range rec {
+		records = v
+	}
+	if len(records) != 1 {
+		t.Fatalf("should have 1 record, got = %v", records)
+	}
+	a := records[0].Attributes
+	attrs := make(map[string]log.Value, len(a))
+	for _, v := range a {
+		attrs[v.Key] = v.Value
+	}
+	return attrs
 }
 
 func validate(got, want logtest.Recording) error {
