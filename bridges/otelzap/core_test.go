@@ -365,6 +365,22 @@ func TestSplitFuncName(t *testing.T) {
 	}
 }
 
+func validate(got, want logtest.Recording) error {
+	// Compare Context.
+	cmpCtx := cmpopts.EquateComparable(context.Background(), ctx)
+	// Ignore Timestamps.
+	cmpStmps := cmpopts.IgnoreTypes(time.Time{})
+	// Unordered compare of the key values.
+	cmpKVs := cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key })
+	// Empty and nil collections are equal.
+	cmpEpty := cmpopts.EquateEmpty()
+
+	if diff := cmp.Diff(want, got, cmpCtx, cmpStmps, cmpKVs, cmpEpty); diff != "" {
+		return fmt.Errorf("recording mismatch (-want +got):\n%s", diff)
+	}
+	return nil
+}
+
 func recordedAttributes(t *testing.T, rec logtest.Recording) map[string]log.Value {
 	t.Helper()
 
@@ -385,20 +401,4 @@ func recordedAttributes(t *testing.T, rec logtest.Recording) map[string]log.Valu
 		attrs[v.Key] = v.Value
 	}
 	return attrs
-}
-
-func validate(got, want logtest.Recording) error {
-	// Compare Context.
-	cmpCtx := cmpopts.EquateComparable(context.Background(), ctx)
-	// Ignore Timestamps.
-	cmpStmps := cmpopts.IgnoreTypes(time.Time{})
-	// Unordered compare of the key values.
-	cmpKVs := cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key })
-	// Empty and nil collections are equal.
-	cmpEpty := cmpopts.EquateEmpty()
-
-	if diff := cmp.Diff(want, got, cmpCtx, cmpStmps, cmpKVs, cmpEpty); diff != "" {
-		return fmt.Errorf("recording mismatch (-want +got):\n%s", diff)
-	}
-	return nil
 }
