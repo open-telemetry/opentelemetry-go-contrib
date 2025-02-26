@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add support for configuring `ClientCertificate` and `ClientKey` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6378)
+- Added `WithFallbackLogExporter` to allow setting a fallback log exporter when `OTEL_LOGS_EXPORTER` is unset. (#6844)
 
 ### Fixed
 
