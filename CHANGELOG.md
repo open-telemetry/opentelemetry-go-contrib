@@ -26,7 +26,6 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 ### Added
 
 - Add support for configuring `ClientCertificate` and `ClientKey` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6378)
-- Added `WithFallbackLogExporter` to allow setting a fallback log exporter when `OTEL_LOGS_EXPORTER` is unset in `go.opentelemetry.io/contrib/exporters/autoexport`. (#6844)
 - Add `WithAttributeBuilder`, `AttributeBuilder`, `DefaultAttributeBuilder`, `DynamoDBAttributeBuilder`, `SNSAttributeBuilder` to support adding attributes based on SDK input and output in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
 - Support for the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6652)
 - Added the `WithMeterProvider` option to allow passing a custom meter provider to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6648)
@@ -39,6 +38,7 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 - Support [Go 1.24]. (#6765)
 - Add support for configuring `HeadersList` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6657)
 - Add `go.opentelemetry.io/contrib/otelconf` module which is a replacement for `go.opentelemetry.io/contrib/config`. (#6796)
+- Added `WithFallbackLogExporter` to allow setting a fallback log exporter when `OTEL_LOGS_EXPORTER` is unset in `go.opentelemetry.io/contrib/exporters/autoexport`. (#6844)
 
 ### Changed
 
@@ -58,7 +58,6 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 - Fix a possible nil dereference panic in `NewSDK` of `go.opentelemetry.io/contrib/config/v0.3.0`. (#6752)
 - Fix prometheus endpoint with an IPv6 address in `go.opentelemetry.io/contrib/config`. (#6815)
 
-
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -68,7 +67,6 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 
 - Generate server metrics with semantic conventions `v1.26.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
 - Generate client metrics with semantic conventions `v1.26.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6607)
-
 
 ### Fixed
 
