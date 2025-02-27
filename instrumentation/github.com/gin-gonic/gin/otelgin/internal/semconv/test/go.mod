@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv/test
 
-go 1.22.0
+go 1.23.0
 
 require (
 	github.com/stretchr/testify v1.10.0
