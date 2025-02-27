@@ -57,6 +57,10 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 - Fix a possible nil dereference panic in `NewSDK` of `go.opentelemetry.io/contrib/config/v0.3.0`. (#6752)
 - Fix prometheus endpoint with an IPv6 address in `go.opentelemetry.io/contrib/config`. (#6815)
 
+### Removed
+
+- Drop support for [Go 1.22]. (#6853)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
