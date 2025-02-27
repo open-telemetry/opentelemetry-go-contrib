@@ -4,7 +4,7 @@ go 1.22.0
 
 require (
 	cloud.google.com/go/compute/metadata v0.6.0
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.26.0
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.27.0
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel v1.34.0
