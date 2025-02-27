@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restfu
 go 1.22.0
 
 require (
-	github.com/emicklei/go-restful/v3 v3.12.1
+	github.com/emicklei/go-restful/v3 v3.12.2
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful v0.59.0
 	go.opentelemetry.io/otel v1.34.0
