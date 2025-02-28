@@ -3,6 +3,7 @@ module go.opentelemetry.io/contrib/bridges/otellogrus
 go 1.22.0
 
 require (
+	github.com/google/go-cmp v0.7.0
 	github.com/sirupsen/logrus v1.9.3
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel/log v0.10.0
@@ -20,3 +21,5 @@ require (
 	golang.org/x/sys v0.30.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace go.opentelemetry.io/otel/log => github.com/pellared/opentelemetry-go/log v0.0.0-20250225101944-58461075a6d0
