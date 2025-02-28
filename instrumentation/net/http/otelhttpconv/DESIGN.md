@@ -25,7 +25,7 @@ attributes/metrics.
 
 The proposed design aims to:
 
-* Work with every official instrumentation, and be available to external implementors.
+* Work with every official instrumentation, and be available to external implementers.
 * Provide flexibility in its use, to allow folks the use of unstable semantic conventions if they wish.
 
 ### Interfaces
