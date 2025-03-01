@@ -74,7 +74,7 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 
 ### Changed 
 
-- Support both `go.opentelemetry.io/otel/semconv/v1.21.0` (default) and `go.opentelemetry.io/otel/semconv/v1.26.0` (opt-in) in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` per the [Database semantic convention stability migration guide](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/non-normative/db-migration.md#database-semantic-convention-stability-migration-guide) (#6172)
+- Support both `go.opentelemetry.io/otel/semconv/v1.21.0` (default) and `go.opentelemetry.io/otel/semconv/v1.26.0` (opt-in) in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` per the [Database semantic convention stability migration guide](https://github.com/open-telemetry/semantic-conventions/blob/cb11bb9bac24f4b0e95ad0f61ce01813d8ceada8/docs/non-normative/db-migration.md#database-semantic-convention-stability-migration-guide) (#6172)
 
 ## [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0] - 2024-12-12
 
