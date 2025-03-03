@@ -1,3 +1,5 @@
+// Deprecated: use go.opentelemetry.io/contrib/otelconf instead.
+// This is the last release of this module.
 module go.opentelemetry.io/contrib/config
 
 go 1.22.0
