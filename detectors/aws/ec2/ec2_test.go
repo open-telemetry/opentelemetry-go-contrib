@@ -4,14 +4,18 @@
 package ec2
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/smithy-go"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
+	"io"
 	"net/http"
 	"testing"
 	"time"
 
-	"github.com/aws/aws-sdk-go/aws/awserr"
-	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -31,9 +35,9 @@ func TestAWS_Detect(t *testing.T) {
 		Resource *resource.Resource
 	}
 
-	usWestInst := func() (ec2metadata.EC2InstanceIdentityDocument, error) {
+	usWestInst := func() (*imds.GetInstanceIdentityDocumentOutput, error) {
 		// Example from https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/instance-identity-documents.html
-		doc := ec2metadata.EC2InstanceIdentityDocument{
+		doc := imds.InstanceIdentityDocument{
 			MarketplaceProductCodes: []string{"1abc2defghijklm3nopqrs4tu"},
 			AvailabilityZone:        "us-west-2b",
 			PrivateIP:               "10.158.112.84",
@@ -47,7 +51,10 @@ func TestAWS_Detect(t *testing.T) {
 			Architecture:            "x86_64",
 		}
 
-		return doc, nil
+		return &imds.GetInstanceIdentityDocumentOutput{
+			InstanceIdentityDocument: doc,
+		}, nil
+
 	}
 
 	usWestIDLabels := []attribute.KeyValue{
@@ -65,35 +72,43 @@ func TestAWS_Detect(t *testing.T) {
 		Fields fields
 		Want   want
 	}{
-		"Unavailable": {
-			Fields: fields{Client: &clientMock{}},
-		},
 		"Instance ID Error": {
 			Fields: fields{
-				Client: &clientMock{available: true, idDoc: func() (ec2metadata.EC2InstanceIdentityDocument, error) {
-					return ec2metadata.EC2InstanceIdentityDocument{}, errors.New("id not available")
+				Client: &clientMock{idDoc: func() (*imds.GetInstanceIdentityDocumentOutput, error) {
+					return &imds.GetInstanceIdentityDocumentOutput{}, errors.New("id not available")
 				}},
 			},
 			Want: want{Error: "id not available"},
 		},
 		"Hostname Not Found": {
 			Fields: fields{
-				Client: &clientMock{available: true, idDoc: usWestInst, metadata: map[string]meta{}},
+				Client: &clientMock{idDoc: usWestInst, metadata: map[string]meta{}},
 			},
 			Want: want{Resource: resource.NewWithAttributes(semconv.SchemaURL, usWestIDLabels...)},
 		},
 		"Hostname Response Error": {
 			Fields: fields{
 				Client: &clientMock{
-					available: true,
-					idDoc:     usWestInst,
+					idDoc: usWestInst,
 					metadata: map[string]meta{
-						"hostname": {err: awserr.NewRequestFailure(awserr.New("EC2MetadataError", "failed to make EC2Metadata request", errors.New("response error")), http.StatusInternalServerError, "test-request")},
+						"hostname": {
+							err: &awshttp.ResponseError{
+								ResponseError: &smithyhttp.ResponseError{
+									Err: errors.New("EC2MetadataError"),
+									Response: &smithyhttp.Response{
+										Response: &http.Response{
+											StatusCode: 500,
+										},
+									},
+								},
+								RequestID: "test-request",
+							},
+						},
 					},
 				},
 			},
 			Want: want{
-				Error:    `partial resource: ["hostname": 500 EC2MetadataError]`,
+				Error:    `partial resource: ["hostname": 500 https response error StatusCode: 500, RequestID: test-request, EC2MetadataError]`,
 				Partial:  true,
 				Resource: resource.NewWithAttributes(semconv.SchemaURL, usWestIDLabels...),
 			},
@@ -101,8 +116,7 @@ func TestAWS_Detect(t *testing.T) {
 		"Hostname General Error": {
 			Fields: fields{
 				Client: &clientMock{
-					available: true,
-					idDoc:     usWestInst,
+					idDoc: usWestInst,
 					metadata: map[string]meta{
 						"hostname": {err: errors.New("unknown error")},
 					},
@@ -117,8 +131,7 @@ func TestAWS_Detect(t *testing.T) {
 		"All Available": {
 			Fields: fields{
 				Client: &clientMock{
-					available: true,
-					idDoc:     usWestInst,
+					idDoc: usWestInst,
 					metadata: map[string]meta{
 						"hostname": {value: "ip-12-34-56-78.us-west-2.compute.internal"},
 					},
@@ -163,9 +176,8 @@ func TestAWS_Detect(t *testing.T) {
 }
 
 type clientMock struct {
-	available bool
-	idDoc     func() (ec2metadata.EC2InstanceIdentityDocument, error)
-	metadata  map[string]meta
+	idDoc    func() (*imds.GetInstanceIdentityDocumentOutput, error)
+	metadata map[string]meta
 }
 
 type meta struct {
@@ -173,19 +185,45 @@ type meta struct {
 	value string
 }
 
-func (c *clientMock) Available() bool {
-	return c.available
-}
-
-func (c *clientMock) GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error) {
+func (c *clientMock) GetInstanceIdentityDocument(ctx context.Context, params *imds.GetInstanceIdentityDocumentInput, optFns ...func(*imds.Options)) (*imds.GetInstanceIdentityDocumentOutput, error) {
 	return c.idDoc()
 }
 
-func (c *clientMock) GetMetadata(p string) (string, error) {
-	v, ok := c.metadata[p]
+func (c *clientMock) GetMetadata(ctx context.Context, params *imds.GetMetadataInput, optFns ...func(*imds.Options)) (*imds.GetMetadataOutput, error) {
+	v, ok := c.metadata[params.Path]
 	if !ok {
-		return "", awserr.NewRequestFailure(awserr.New("EC2MetadataError", "failed to make EC2Metadata request", errors.New("response error")), http.StatusNotFound, "test-request")
+		return nil, createEC2MetadataError()
 	}
 
-	return v.value, v.err
+	if v.err != nil {
+		return nil, v.err
+	}
+
+	return &imds.GetMetadataOutput{
+		Content: io.NopCloser(bytes.NewReader([]byte(v.value))),
+	}, nil
+
+}
+
+func createEC2MetadataError() error {
+	smithyResp := &smithyhttp.Response{
+		Response: &http.Response{
+			StatusCode: http.StatusNotFound,
+			Status:     "404 Not Found",
+		},
+	}
+
+	smithyRespErr := &smithyhttp.ResponseError{
+		Response: smithyResp,
+		Err: &smithy.GenericAPIError{
+			Code:    "EC2MetadataError",
+			Message: "failed to make EC2Metadata request",
+			Fault:   smithy.FaultClient,
+		},
+	}
+
+	return &awshttp.ResponseError{
+		ResponseError: smithyRespErr,
+		RequestID:     "test-request",
+	}
 }

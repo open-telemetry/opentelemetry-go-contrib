@@ -7,11 +7,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-	"github.com/aws/aws-sdk-go/aws/awserr"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -60,10 +61,12 @@ type resourceDetector struct {
 
 // Client implements methods to capture EC2 environment metadata information.
 type Client interface {
-	Available(ctx context.Context) bool
-	GetInstanceIdentityDocument(ctx context.Context) (imds.InstanceIdentityDocument, error)
-	GetMetadata(ctx context.Context, p string) (string, error)
+	GetInstanceIdentityDocument(ctx context.Context, params *imds.GetInstanceIdentityDocumentInput, optFns ...func(*imds.Options)) (*imds.GetInstanceIdentityDocumentOutput, error)
+	GetMetadata(ctx context.Context, params *imds.GetMetadataInput, optFns ...func(*imds.Options)) (*imds.GetMetadataOutput, error)
 }
+
+// compile time assertion that imds.Client implements Client
+var _ Client = (*imds.Client)(nil)
 
 // compile time assertion that resourceDetector implements the resource.Detector interface.
 var _ resource.Detector = (*resourceDetector)(nil)
@@ -76,16 +79,12 @@ func NewResourceDetector(opts ...Option) resource.Detector {
 
 // Detect detects associated resources when running in AWS environment.
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	client, err := detector.client()
+	client, err := detector.client(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if !client.Available() {
-		return nil, nil
-	}
-
-	doc, err := client.GetInstanceIdentityDocument()
+	doc, err := client.GetInstanceIdentityDocument(ctx, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +101,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	m := &metadata{client: client}
-	m.add(semconv.HostNameKey, "hostname")
+	m.add(ctx, semconv.HostNameKey, "hostname")
 
 	attributes = append(attributes, m.attributes...)
 
@@ -123,14 +122,7 @@ func (detector *resourceDetector) client(ctx context.Context) (Client, error) {
 		return nil, err
 	}
 
-	return &imds.Client{Client: imds.NewFromConfig(cfg)}, nil
-
-	//s, err := session.NewSession()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//
-	//return ec2metadata.New(s), nil
+	return imds.NewFromConfig(cfg), nil
 }
 
 type metadata struct {
@@ -139,23 +131,35 @@ type metadata struct {
 	attributes []attribute.KeyValue
 }
 
-func (m *metadata) add(k attribute.Key, n string) {
-	v, err := m.client.GetMetadata(n)
-	if err == nil {
-		m.attributes = append(m.attributes, k.String(v))
+func (m *metadata) add(ctx context.Context, k attribute.Key, n string) {
+	metadataInput := &imds.GetMetadataInput{Path: n}
+	md, err := m.client.GetMetadata(ctx, metadataInput)
+	if err != nil {
+		m.recordError(n, err)
 		return
 	}
+	data, err := io.ReadAll(md.Content)
+	if err != nil {
+		m.recordError(n, err)
+		return
 
-	var rf awserr.RequestFailure
+	}
+	m.attributes = append(m.attributes, k.String(string(data)))
+	return
+}
+
+func (m *metadata) recordError(path string, err error) {
+	var rf *awshttp.ResponseError
 	ok := errors.As(err, &rf)
 	if !ok {
-		m.errs = append(m.errs, fmt.Errorf("%q: %w", n, err))
+		m.errs = append(m.errs, fmt.Errorf("%q: %w", path, err))
+		return
+	} else {
+	}
+
+	if rf.HTTPStatusCode() == http.StatusNotFound {
 		return
 	}
 
-	if rf.StatusCode() == http.StatusNotFound {
-		return
-	}
-
-	m.errs = append(m.errs, fmt.Errorf("%q: %d %s", n, rf.StatusCode(), rf.Code()))
+	m.errs = append(m.errs, fmt.Errorf("%q: %d %s", path, rf.HTTPStatusCode(), rf.Error()))
 }
