@@ -48,6 +48,7 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
   The `code.namespace` attribute is no longer added. (#6870)
 - The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelzap` now stores the package path-qualified function name instead of just the function name.
   The `code.namespace` attribute is no longer added. (#6870)
+- Updated AWS EC2 detector to use v2 version of go AWS SDK import `go.opentelemetry.io/contrib/detectors/aws/ec2`. (#6878)
 
 ### Deprecated
 
