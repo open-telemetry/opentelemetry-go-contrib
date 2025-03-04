@@ -61,7 +61,7 @@ type Client interface {
 	RecordError(error)
 
 	// RecordMetrics records the metrics from the provided HTTP request.
-	RecordMetrics(ctx context.Context, w *ResponseWrapper, ...ClientRecordMetricsOption)
+	RecordMetrics(ctx context.Context, w *ResponseWrapper)
 
 	// RecordSpan sets the span attributes and status code based on the HTTP
 	// request and response.
@@ -70,15 +70,7 @@ type Client interface {
 	// It remains the instrumentation's responsibility to start and end spans.
 	RecordSpan(ctx context.Context, req *http.Request, resp *http.Response)
 }
-
-// ClientRecordMetricsOption applies options to the RecordMetrics method
-type ClientRecordMetricsOption interface{}
 ```
-
-The `ClientRecordMetricsOption` allows passing optional parameters such as
-status code, additional attributes, duration of the request, ...
-Those options will be used to generate the appropriate metrics. If they are not
-provided, no metric will be generated with the empty data.
 
 #### The Server
 
@@ -98,24 +90,14 @@ type Server interface {
 	RecordSpan(ctx context.Context, req *http.Request, resp *http.Response, ...ServerRecordSpanOptions)
 }
 
-// ClientRecordMetricsOption applies options to the RecordMetrics method
-type ClientRecordMetricsOption interface{}
-
 // ServerRecordSpanOption applies options to the RecordSpan method
 type ServerRecordSpanOption interface{}
 ```
 
-The `ServerRecordMetricsOption` and `ServerRecordSpanOption` functional options
-allows passing optional parameters.
+The `ServerRecordMetricsOption` functional option allows passing optional
+parameters to be used within the `RecordSpan` method, such as the HTTP route.
 
-Those options can be:
-
-* Status Code, additional attributes, duration of the request for metrics
-* HTTP Route for the span
-
-When the data those options provide is not specified, no telemetry will be
-emitted (the metrics will not be emitted, and the span attributes will not be
-set).
+When the data those options provide is not specified, the related span attributes will not be set.
 
 #### Request and Response wrappers
 
@@ -127,24 +109,26 @@ We may provide a new package, or actual implementations within the
 `otelhttpconv` package later on. But doing so is not covered by this design
 document at the moment.
 
+Therefore external implementations will currently have to implement this logic
+themselves.
+
 ### Implementations
 
 We will provide one official implementation of the described interfaces.
 This implementation will have the following requirements:
 
 * Support for the latest semantic conventions only.
-* Support for stable metrics and attributes only.
-
+* Support for stable semantic conventions only.
 
 We may provide additional implementations later on such as:
 
 * An implementation that serves as a proxy to allow combining multiple implementations together.
-* An implementation that covers unstable metrics and attributes only.
+* An implementation that covers unstable semantic conventions.
 
 ### Usage
 
-Instrumentations should use the official implementation mentioned above by
-default.
+By default, instrumentations should use the official implementation mentioned
+above.
 They may provide an option for their users to override the used implementation
 with a custom one.
 
