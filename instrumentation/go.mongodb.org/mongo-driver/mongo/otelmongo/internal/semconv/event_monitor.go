@@ -100,7 +100,8 @@ func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
 }
 
 // sanitizeCommand converts a BSON command to a sanitized JSON string.
-// TODO: Sanitize values where possible and limit maximum size.
+// TODO: Sanitize values where possible.
+// TODO: Limit maximum size.
 func sanitizeCommand(command bson.Raw) string {
 	b, _ := bson.MarshalExtJSON(command, false, false)
 
