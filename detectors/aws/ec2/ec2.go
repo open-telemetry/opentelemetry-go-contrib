@@ -9,6 +9,9 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -61,9 +64,9 @@ type resourceDetector struct {
 
 // Client implements methods to capture EC2 environment metadata information.
 type Client interface {
-	Available() bool
-	GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)
-	GetMetadata(p string) (string, error)
+	Available(ctx context.Context) bool
+	GetInstanceIdentityDocument(ctx context.Context) (imds.InstanceIdentityDocument, error)
+	GetMetadata(ctx context.Context, p string) (string, error)
 }
 
 // compile time assertion that resourceDetector implements the resource.Detector interface.
@@ -114,17 +117,24 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), err
 }
 
-func (detector *resourceDetector) client() (Client, error) {
+func (detector *resourceDetector) client(ctx context.Context) (Client, error) {
 	if detector.c != nil {
 		return detector.c, nil
 	}
 
-	s, err := session.NewSession()
+	cfg, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	return ec2metadata.New(s), nil
+	return &imds.Client{Client: imds.NewFromConfig(cfg)}, nil
+
+	//s, err := session.NewSession()
+	//if err != nil {
+	//	return nil, err
+	//}
+	//
+	//return ec2metadata.New(s), nil
 }
 
 type metadata struct {
