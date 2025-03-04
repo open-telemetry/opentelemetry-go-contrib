@@ -34,25 +34,9 @@ We will provide two public interface that allow interacting with the
 instrumentation package.
 One for client. and one for servers. Implementations can use one, the other or both.
 
-#### The client
+#### Shared between client and server
 
 ```golang
-// Client provides an interface for HTTP Client instrumentations to set the
-// proper semantic convention attributes and metrics into their data.
-type Client interface {
-	// RecordError records an error returned by the HTTP request.
-	RecordError(error)
-
-	// RecordMetrics records the metrics from the provided HTTP request.
-	RecordMetrics(ctx context.Context, w *ResponseWrapper)
-
-	// SpanAttributes sets the span attributes based on the HTTP request and response
-	SpanAttributes(ctx context.Context, req *http.Request, resp *http.Response)
-}
-
-// ClientRecordMetricsOption applies options to the RecordMetrics method
-type ClientRecordMetricsOption interface{}
-
 // RequestWrapper provides a layer on top of `*http.Response` that tracks
 // additional information such as bytes read etc.
 type ResponseWrapper interface {
@@ -67,11 +51,71 @@ type ResponseWrapper interface {
 }
 ```
 
+#### The client
+
+```golang
+// Client provides an interface for HTTP client instrumentations to set the
+// proper semantic convention attributes and metrics into their data.
+type Client interface {
+	// RecordError records an error returned by the HTTP request.
+	RecordError(error)
+
+	// RecordMetrics records the metrics from the provided HTTP request.
+	RecordMetrics(ctx context.Context, w *ResponseWrapper, ...ClientRecordMetricsOption)
+
+	// RecordSpan sets the span attributes and status code based on the HTTP
+	// request and response.
+	// This method does not create a new span. It retrieves the current one from
+	// the context.
+	// It remains the instrumentation's responsibility to start and end spans.
+	RecordSpan(ctx context.Context, req *http.Request, resp *http.Response)
+}
+
+// ClientRecordMetricsOption applies options to the RecordMetrics method
+type ClientRecordMetricsOption interface{}
+```
+
+The `ClientRecordMetricsOption` allows passing optional parameters such as
+status code, additional attributes, duration of the request, ...
+Those options will be used to generate the appropriate metrics. If they are not
+provided, no metric will be generated with the empty data.
+
 #### The Server
 
 ```golang
+// Server provides an interface for HTTP server instrumentations to set the
+// proper semantic convention attributes and metrics into their data.
+type Server interface {
 
+	// RecordMetrics records the metrics from the provided HTTP request.
+	RecordMetrics(ctx context.Context, w *ResponseWrapper)
+
+	// RecordSpan sets the span attributes and status code based on the HTTP
+	// request and response.
+	// This method does not create a new span. It retrieves the current one from
+	// the context.
+	// It remains the instrumentation's responsibility to start and end spans.
+	RecordSpan(ctx context.Context, req *http.Request, resp *http.Response, ...ServerRecordSpanOptions)
+}
+
+// ClientRecordMetricsOption applies options to the RecordMetrics method
+type ClientRecordMetricsOption interface{}
+
+// ServerRecordSpanOption applies options to the RecordSpan method
+type ServerRecordSpanOption interface{}
 ```
+
+The `ServerRecordMetricsOption` and `ServerRecordSpanOption` functional options
+allows passing optional parameters.
+
+Those options can be:
+
+* Status Code, additional attributes, duration of the request for metrics
+* HTTP Route for the span
+
+When the data those options provide is not specified, no telemetry will be
+emitted (the metrics will not be emitted, and the span attributes will not be
+set).
 
 #### Request and Response wrappers
 
