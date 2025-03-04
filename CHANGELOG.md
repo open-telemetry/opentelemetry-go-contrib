@@ -44,6 +44,7 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 
 - Add custom attribute to the span after execution of the SDK rather than before in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
 - Support for the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6778)
+- Updated AWS EC2 detector to use v2 version of go AWS SDK import `go.opentelemetry.io/contrib/detectors/aws/ec2` (#6878)
 
 ### Deprecated
 
