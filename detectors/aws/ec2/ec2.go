@@ -13,6 +13,7 @@ import (
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
@@ -65,7 +66,7 @@ type Client interface {
 	GetMetadata(ctx context.Context, params *imds.GetMetadataInput, optFns ...func(*imds.Options)) (*imds.GetMetadataOutput, error)
 }
 
-// compile time assertion that imds.Client implements Client
+// compile time assertion that imds.Client implements Client.
 var _ Client = (*imds.Client)(nil)
 
 // compile time assertion that resourceDetector implements the resource.Detector interface.
@@ -142,10 +143,8 @@ func (m *metadata) add(ctx context.Context, k attribute.Key, n string) {
 	if err != nil {
 		m.recordError(n, err)
 		return
-
 	}
 	m.attributes = append(m.attributes, k.String(string(data)))
-	return
 }
 
 func (m *metadata) recordError(path string, err error) {
@@ -154,7 +153,6 @@ func (m *metadata) recordError(path string, err error) {
 	if !ok {
 		m.errs = append(m.errs, fmt.Errorf("%q: %w", path, err))
 		return
-	} else {
 	}
 
 	if rf.HTTPStatusCode() == http.StatusNotFound {

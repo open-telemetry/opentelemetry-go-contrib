@@ -7,14 +7,15 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
-	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
-	"github.com/aws/smithy-go"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"io"
 	"net/http"
 	"testing"
 	"time"
+
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/smithy-go"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,7 +55,6 @@ func TestAWS_Detect(t *testing.T) {
 		return &imds.GetInstanceIdentityDocumentOutput{
 			InstanceIdentityDocument: doc,
 		}, nil
-
 	}
 
 	usWestIDLabels := []attribute.KeyValue{
@@ -202,7 +202,6 @@ func (c *clientMock) GetMetadata(ctx context.Context, params *imds.GetMetadataIn
 	return &imds.GetMetadataOutput{
 		Content: io.NopCloser(bytes.NewReader([]byte(v.value))),
 	}, nil
-
 }
 
 func createEC2MetadataError() error {
