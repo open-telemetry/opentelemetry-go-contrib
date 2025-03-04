@@ -48,6 +48,13 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
   The `code.namespace` attribute is no longer added. (#6870)
 - The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelzap` now stores the package path-qualified function name instead of just the function name.
   The `code.namespace` attribute is no longer added. (#6870)
+- Improve performance by reducing allocations for common request protocols in the modules below. (#6845)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 
 ### Deprecated
 
