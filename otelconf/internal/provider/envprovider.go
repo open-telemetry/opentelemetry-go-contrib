@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package config // import "go.opentelemetry.io/contrib/config"
+package provider // import "go.opentelemetry.io/contrib/internal/provider"
 
 import (
 	"os"
@@ -13,7 +13,7 @@ const ValidationPattern = `^[a-zA-Z_][a-zA-Z0-9_]*$`
 
 var validationRegexp = regexp.MustCompile(ValidationPattern)
 
-func replaceEnvVar(uri string) []byte {
+func ReplaceEnvVar(uri string) []byte {
 	envVarName, defaultValuePtr := parseEnvVarURI(uri)
 	if !validationRegexp.MatchString(envVarName) {
 		return nil
