@@ -38,11 +38,16 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 - Support [Go 1.24]. (#6765)
 - Add support for configuring `HeadersList` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6657)
 - Add `go.opentelemetry.io/contrib/otelconf` module which is a replacement for `go.opentelemetry.io/contrib/config`. (#6796)
+- Added `WithFallbackLogExporter` to allow setting a fallback log exporter when `OTEL_LOGS_EXPORTER` is unset in `go.opentelemetry.io/contrib/exporters/autoexport`. (#6844)
 
 ### Changed
 
 - Add custom attribute to the span after execution of the SDK rather than before in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
 - Support for the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6778)
+- The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelslog` now stores the package path-qualified function name instead of just the function name.
+  The `code.namespace` attribute is no longer added. (#6870)
+- The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelzap` now stores the package path-qualified function name instead of just the function name.
+  The `code.namespace` attribute is no longer added. (#6870)
 
 ### Deprecated
 
