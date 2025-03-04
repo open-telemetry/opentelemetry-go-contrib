@@ -151,5 +151,5 @@ with a custom one.
 For example, with the `otelhttp` instrumentation for clients:
 
 ```golang
-	otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithHTTPConv(myCustomImplementation{}))
+otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithHTTPConv(myCustomImplementation{}))
 ```
