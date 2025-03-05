@@ -13,7 +13,7 @@ provided by the internal `semconvutil` package within their own
 instrumentations ([#4580](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4580)).
 This package aims to solve that by being publicly usable.
 
-This document outlines a proposal for a new instrumentation package called
+This document outlines a proposal for a new instrumentation module called
 `otelhttpconv` that will provide a way to reduce some of this code repetition,
 especially with the setup of spans and metrics and their attributes.
 
