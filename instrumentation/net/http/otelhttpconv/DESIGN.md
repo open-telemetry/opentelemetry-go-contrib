@@ -17,6 +17,24 @@ This document outlines a proposal for a new instrumentation module called
 `otelhttpconv` that will provide a way to reduce some of this code repetition,
 especially with the setup of spans and metrics and their attributes.
 
+This package will be used by every official instrumentation that handles HTTP
+requests. It may be used by external implementers as well.
+This package therefore needs to provide a clear, consistent and stable API that
+instrumentations can use, hence this document.
+
+That API will have the following requirements:
+
+* Everything it provides must be done without the external use of internal packages.
+	Even though official instrumentations can technically import internal
+	packages from different modules, external ones cannot. And doing so leads to
+	unexpected breaking changes.
+* Minimal number of breaking changes once the module is shipped.
+	While we can't publish a new module as stable directly (we may have missed
+	things), this module will need to become stable as soon as any of the HTTP
+	instrumentations become stable.
+	As our goal is to make `otelhttp` stable in 2025, stabilization should happen
+	within the same timeframe.
+
 The goal of this document is also to make future semantic convention migrations
 easier, and to allow flexibility with the use or not of unstable
 attributes/metrics.
