@@ -13,6 +13,7 @@ import (
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -20,7 +21,7 @@ import (
 )
 
 type config struct {
-	c Client
+	c client
 }
 
 // newConfig returns an appropriately configured config.
@@ -45,29 +46,36 @@ func (fn optionFunc) apply(c *config) {
 }
 
 // WithClient sets the ec2metadata client in config.
-func WithClient(t Client) Option {
+func WithClient(t client) Option {
 	return optionFunc(func(c *config) {
 		c.c = t
 	})
 }
 
-func (cfg *config) getClient() Client {
+func (cfg *config) getClient() client {
 	return cfg.c
 }
 
 // resource detector collects resource information from EC2 environment.
 type resourceDetector struct {
-	c Client
+	c client
 }
 
-// Client implements methods to capture EC2 environment metadata information.
+// Deprecated: Unnecessary public client. This will be removed in a future release.
 type Client interface {
+	Available() bool
+	GetInstanceIdentityDocument() (ec2metadata.EC2InstanceIdentityDocument, error)
+	GetMetadata(p string) (string, error)
+}
+
+// client implements methods to capture EC2 environment metadata information.
+type client interface {
 	GetInstanceIdentityDocument(ctx context.Context, params *imds.GetInstanceIdentityDocumentInput, optFns ...func(*imds.Options)) (*imds.GetInstanceIdentityDocumentOutput, error)
 	GetMetadata(ctx context.Context, params *imds.GetMetadataInput, optFns ...func(*imds.Options)) (*imds.GetMetadataOutput, error)
 }
 
-// compile time assertion that imds.Client implements Client.
-var _ Client = (*imds.Client)(nil)
+// compile time assertion that imds.Client implements client.
+var _ client = (*imds.Client)(nil)
 
 // compile time assertion that resourceDetector implements the resource.Detector interface.
 var _ resource.Detector = (*resourceDetector)(nil)
@@ -82,12 +90,13 @@ func NewResourceDetector(opts ...Option) resource.Detector {
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	client, err := detector.client(ctx)
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 
+	// Available method removed in aws-sdk-go-v2, return nil if client returns error
 	doc, err := client.GetInstanceIdentityDocument(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, nil
 	}
 
 	attributes := []attribute.KeyValue{
@@ -113,7 +122,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), err
 }
 
-func (detector *resourceDetector) client(ctx context.Context) (Client, error) {
+func (detector *resourceDetector) client(ctx context.Context) (client, error) {
 	if detector.c != nil {
 		return detector.c, nil
 	}
@@ -127,7 +136,7 @@ func (detector *resourceDetector) client(ctx context.Context) (Client, error) {
 }
 
 type metadata struct {
-	client     Client
+	client     client
 	errs       []error
 	attributes []attribute.KeyValue
 }
