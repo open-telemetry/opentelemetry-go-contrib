@@ -49,7 +49,7 @@ func replaceEnvVar(uri string) ([]byte, error) {
 		}
 	}
 	if len(val) == 0 {
-		return nil, fmt.Errorf("no value found for variable: %s", envVarName)
+		return nil, nil
 	}
 
 	out := []byte(val)

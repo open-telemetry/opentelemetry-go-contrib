@@ -48,7 +48,6 @@ func TestReplaceEnvVar(t *testing.T) {
 			name:      "unset value no default",
 			uri:       "THIS_VALUE_IS_NOT_SET",
 			wantValue: []byte(nil),
-			wantErr:   errors.New("no value found for variable: THIS_VALUE_IS_NOT_SET"),
 		},
 		{
 			name:       "invalid variable type map",
@@ -117,9 +116,15 @@ func TestReplaceEnvVars(t *testing.T) {
 			want: "data: \"val\"",
 		},
 		{
-			name:    "unset environment variable config",
-			in:      "data: ${TEST_ENV_VAR}",
-			wantErr: errors.New("no value found for variable: TEST_ENV_VAR"),
+			name: "unset environment variable config",
+			in:   "data: ${TEST_ENV_VAR}",
+			want: "data: ",
+		},
+		{
+			name:     "handle invalid yaml",
+			in:       "data: ${TEST_NOT_A_NUMBER_VALUE}",
+			setupEnv: func(t *testing.T) { t.Setenv("TEST_NOT_A_NUMBER_VALUE", "!!int NaN") },
+			wantErr:  errors.New("invalid value type: yaml: cannot decode !!str `NaN` as a !!int"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
