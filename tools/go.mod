@@ -12,9 +12,9 @@ require (
 	github.com/jcchavezs/porto v0.6.0
 	github.com/stretchr/testify v1.10.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
-	go.opentelemetry.io/build-tools/crosslink v0.19.0
-	go.opentelemetry.io/build-tools/gotmpl v0.19.0
-	go.opentelemetry.io/build-tools/multimod v0.19.0
+	go.opentelemetry.io/build-tools/crosslink v0.20.0
+	go.opentelemetry.io/build-tools/gotmpl v0.20.0
+	go.opentelemetry.io/build-tools/multimod v0.20.0
 	golang.org/x/exp v0.0.0-20250218142911-aa4b98e5adaa
 	golang.org/x/tools v0.30.0
 	golang.org/x/vuln v1.1.4
@@ -89,7 +89,7 @@ require (
 	github.com/goccy/go-yaml v1.15.23 // indirect
 	github.com/gofrs/flock v0.12.1 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
-	github.com/golangci/dupl v0.0.0-20180902072040-3e9179ac440a // indirect
+	github.com/golangci/dupl v0.0.0-20250303184901-44c6a0ba7e6c // indirect
 	github.com/golangci/go-printf-func-name v0.1.0 // indirect
 	github.com/golangci/gofmt v0.0.0-20250106114630-d62b90e6713d // indirect
 	github.com/golangci/misspell v0.6.0 // indirect
@@ -163,7 +163,7 @@ require (
 	github.com/raeperd/recvcheck v0.2.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
-	github.com/ryancurrah/gomodguard v1.3.5 // indirect
+	github.com/ryancurrah/gomodguard v1.4.1 // indirect
 	github.com/ryanrolds/sqlclosecheck v0.5.1 // indirect
 	github.com/sagikazarmark/locafero v0.7.0 // indirect
 	github.com/sagikazarmark/slog-shim v0.1.0 // indirect
@@ -208,7 +208,7 @@ require (
 	gitlab.com/bosi/decorder v0.4.2 // indirect
 	go-simpler.org/musttag v0.13.0 // indirect
 	go-simpler.org/sloglint v0.9.0 // indirect
-	go.opentelemetry.io/build-tools v0.19.0 // indirect
+	go.opentelemetry.io/build-tools v0.20.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
