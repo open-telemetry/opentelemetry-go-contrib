@@ -54,7 +54,7 @@ func replaceEnvVar(uri string) ([]byte, error) {
 
 	out := []byte(val)
 	if err := checkRawConfType(out); err != nil {
-		return nil, fmt.Errorf("invalid value type: %s", err)
+		return nil, fmt.Errorf("invalid value type: %w", err)
 	}
 
 	return out, nil

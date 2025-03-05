@@ -82,11 +82,10 @@ func TestReplaceEnvVar(t *testing.T) {
 			got, err := replaceEnvVar(tt.uri)
 			require.Equal(t, tt.wantValue, got)
 			if tt.wantErr != nil {
-				require.Equal(t, tt.wantErr, err)
+				require.ErrorContains(t, err, tt.wantErr.Error())
 			} else {
 				require.NoError(t, err)
 			}
-
 		})
 	}
 }
@@ -134,7 +133,7 @@ func TestReplaceEnvVars(t *testing.T) {
 
 			got, err := ReplaceEnvVars([]byte(tt.in))
 			if tt.wantErr != nil {
-				require.Equal(t, tt.wantErr, err)
+				require.ErrorContains(t, err, tt.wantErr.Error())
 			} else {
 				require.NoError(t, err)
 				require.Equal(t, []byte(tt.want), got)
