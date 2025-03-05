@@ -61,6 +61,8 @@ type resourceDetector struct {
 	c client
 }
 
+// Client implements methods to capture EC2 environment metadata information.
+//
 // Deprecated: Unnecessary public client. This will be removed in a future release.
 type Client interface {
 	Available() bool

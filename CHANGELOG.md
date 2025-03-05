@@ -48,13 +48,14 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
   The `code.namespace` attribute is no longer added. (#6870)
 - The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelzap` now stores the package path-qualified function name instead of just the function name.
   The `code.namespace` attribute is no longer added. (#6870)
-- Updated AWS EC2 detector to use v2 version of go AWS SDK import `go.opentelemetry.io/contrib/detectors/aws/ec2`. (#6878)
+- Updated AWS EC2 detector to use v2 version of go AWS SDK import `go.opentelemetry.io/contrib/detectors/aws/ec2`. 
+  This release still has the  AWS SDK v1 as a dependency as we deprecate the public `Client` struct. (#6878)
 
 ### Deprecated
 
 - Deprecate `WithAttributeSetter`, `AttributeSetter`, `DefaultAttributeSetter`, `DynamoDBAttributeSetter`, `SNSAttributeSetter` in favor of `WithAttributeBuilder`, `AttributeBuilder`, `DefaultAttributeBuilder`, `DynamoDBAttributeBuilder`, `SNSAttributeBuilder` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` (#6543)
 - Deprecate `go.opentelemetry.io/contrib/config` module in favor of `go.opentelemetry.io/contrib/otelconf`. This is the last release of this module. (#6796)
-- Deprecate public `Client` in `go.opentelemetry.io/contrib/detectors/aws/ec2` (#6878)
+- Deprecate public `Client` in `go.opentelemetry.io/contrib/detectors/aws/ec2`. (#6878)
 
 ### Fixed
 
