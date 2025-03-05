@@ -54,6 +54,7 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 
 - Deprecate `WithAttributeSetter`, `AttributeSetter`, `DefaultAttributeSetter`, `DynamoDBAttributeSetter`, `SNSAttributeSetter` in favor of `WithAttributeBuilder`, `AttributeBuilder`, `DefaultAttributeBuilder`, `DynamoDBAttributeBuilder`, `SNSAttributeBuilder` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` (#6543)
 - Deprecate `go.opentelemetry.io/contrib/config` module in favor of `go.opentelemetry.io/contrib/otelconf`. This is the last release of this module. (#6796)
+- Deprecate public `Client` in `go.opentelemetry.io/contrib/detectors/aws/ec2` (#6878)
 
 ### Fixed
 
