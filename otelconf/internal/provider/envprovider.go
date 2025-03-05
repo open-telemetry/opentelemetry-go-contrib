@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package provider // import "go.opentelemetry.io/contrib/internal/provider"
+package provider // import "go.opentelemetry.io/contrib/otelconf/internal/provider"
 
 import (
 	"fmt"
@@ -17,10 +17,29 @@ const ValidationPattern = `^[a-zA-Z_][a-zA-Z0-9_]*$`
 
 var validationRegexp = regexp.MustCompile(ValidationPattern)
 
-func ReplaceEnvVar(uri string) []byte {
+func ReplaceEnvVars(input []byte) ([]byte, error) {
+	re := regexp.MustCompile(`\$\{([a-zA-Z_][a-zA-Z0-9_]*[-]?.*)\}`)
+
+	replaceEnvVars := func(input []byte) ([]byte, error) {
+		var err error
+		out := re.ReplaceAllFunc(input, func(s []byte) []byte {
+			match := re.FindSubmatch(s)
+			if len(match) < 2 {
+				return s
+			}
+			var data []byte
+			data, err = replaceEnvVar(string(match[1]))
+			return data
+		})
+		return out, err
+	}
+	return replaceEnvVars(input)
+}
+
+func replaceEnvVar(uri string) ([]byte, error) {
 	envVarName, defaultValuePtr := parseEnvVarURI(uri)
 	if !validationRegexp.MatchString(envVarName) {
-		return nil
+		return nil, fmt.Errorf("invalid environment variable name: %s", envVarName)
 	}
 
 	val, exists := os.LookupEnv(envVarName)
@@ -30,15 +49,15 @@ func ReplaceEnvVar(uri string) []byte {
 		}
 	}
 	if len(val) == 0 {
-		return nil
+		return nil, fmt.Errorf("no value found for variable: %s", envVarName)
 	}
 
 	out := []byte(val)
 	if err := checkRawConfType(out); err != nil {
-		return nil
+		return nil, fmt.Errorf("invalid value type: %s", err)
 	}
 
-	return out
+	return out, nil
 }
 
 func parseEnvVarURI(uri string) (string, *string) {
