@@ -50,8 +50,8 @@ func newProbabilisticSampler(samplingRate float64) *probabilisticSampler {
 }
 
 func (s *probabilisticSampler) init(samplingRate float64) *probabilisticSampler {
-	s.sampler = trace.TraceIDRatioBased(samplingRate)
 	s.samplingRate = math.Max(0.0, math.Min(samplingRate, 1.0))
+	s.sampler = trace.TraceIDRatioBased(s.samplingRate)
 	return s
 }
 
@@ -67,7 +67,7 @@ func (s *probabilisticSampler) ShouldSample(p trace.SamplingParameters) trace.Sa
 // Equal compares with another sampler.
 func (s *probabilisticSampler) Equal(other trace.Sampler) bool {
 	if o, ok := other.(*probabilisticSampler); ok {
-		return s.samplingRate == o.samplingRate
+		return math.Abs(s.samplingRate-o.samplingRate) < 1e-9 // consider equal if within 0.000001%
 	}
 	return false
 }
