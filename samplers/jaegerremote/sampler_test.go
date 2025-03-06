@@ -101,6 +101,14 @@ func TestProbabilisticSampler(t *testing.T) {
 			)
 		}
 	})
+
+	t.Run("Equals", func(t *testing.T) {
+		sampler := newProbabilisticSampler(0.5)
+		assert.True(t, sampler.Equal(newProbabilisticSampler(0.5)))
+		assert.False(t, sampler.Equal(newProbabilisticSampler(0.0)))
+		assert.False(t, sampler.Equal(newProbabilisticSampler(0.75)))
+		assert.False(t, sampler.Equal(newProbabilisticSampler(1.0)))
+	})
 }
 
 func TestRateLimitingSampler(t *testing.T) {
