@@ -7,10 +7,10 @@ replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators
 require (
 	github.com/emicklei/go-restful/v3 v3.12.2
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/contrib/propagators/b3 v1.34.0
-	go.opentelemetry.io/otel v1.34.0
-	go.opentelemetry.io/otel/metric v1.34.0
-	go.opentelemetry.io/otel/trace v1.34.0
+	go.opentelemetry.io/contrib/propagators/b3 v1.35.0
+	go.opentelemetry.io/otel v1.35.0
+	go.opentelemetry.io/otel/metric v1.35.0
+	go.opentelemetry.io/otel/trace v1.35.0
 )
 
 require (
