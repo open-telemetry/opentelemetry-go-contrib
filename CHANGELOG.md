@@ -10,7 +10,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
+<<<<<<< HEAD
 - Drop support for [Go 1.22]. (#6853)
+||||||| parent of 666f71d5 (remove deprecated config module)
+=======
+- The deprecated `go.opentelemetry.io/contrib/config` package is removed. (#6894)
+>>>>>>> 666f71d5 (remove deprecated config module)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
