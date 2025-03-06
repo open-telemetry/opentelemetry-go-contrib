@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Jaeger remote sampler's probabilistic strategy now uses the same sampling algorithm as TraceIDRatioBased. (#6892)
+
 ### Removed
 
 - Drop support for [Go 1.22]. (#6853)
