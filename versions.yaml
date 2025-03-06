@@ -3,7 +3,7 @@
 
 module-sets:
   stable-v1:
-    version: v1.34.0
+    version: v1.35.0
     modules:
       - go.opentelemetry.io/contrib
       - go.opentelemetry.io/contrib/tools
@@ -16,7 +16,7 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
   experimental-instrumentation:
-    version: v0.59.0
+    version: v0.60.0
     modules:
       - go.opentelemetry.io/contrib/bridges/prometheus
       - go.opentelemetry.io/contrib/detectors/aws/lambda
@@ -30,6 +30,7 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace
       - go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example
       - go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/test
+      - go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/internal/semconv/test
       - go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc
       - go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example
       - go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test
@@ -38,9 +39,11 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux
       - go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/test
+      - go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconv/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
       - go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/test
+      - go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/test
@@ -54,35 +57,36 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test
+      - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconv/test
       - go.opentelemetry.io/contrib/instrumentation/host
       - go.opentelemetry.io/contrib/instrumentation/host/example
       - go.opentelemetry.io/contrib/instrumentation/runtime
       - go.opentelemetry.io/contrib/zpages
   experimental-samplers:
-    version: v0.28.0
+    version: v0.29.0
     modules:
       - go.opentelemetry.io/contrib/samplers/jaegerremote
       - go.opentelemetry.io/contrib/samplers/jaegerremote/example
       - go.opentelemetry.io/contrib/samplers/probability/consistent
   experimental-config:
-    version: v0.14.0
+    version: v0.15.0
     modules:
       - go.opentelemetry.io/contrib/config
       - go.opentelemetry.io/contrib/otelconf
   experimental-bridge:
-    version: v0.9.0
+    version: v0.10.0
     modules:
       - go.opentelemetry.io/contrib/bridges/otellogr
       - go.opentelemetry.io/contrib/bridges/otellogrus
       - go.opentelemetry.io/contrib/bridges/otelslog
       - go.opentelemetry.io/contrib/bridges/otelzap
   experimental-processors:
-    version: v0.7.0
+    version: v0.8.0
     modules:
       - go.opentelemetry.io/contrib/processors/baggagecopy
       - go.opentelemetry.io/contrib/processors/minsev
   experimental-detectors:
-    version: v0.6.0
+    version: v0.7.0
     modules:
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
 excluded-modules:

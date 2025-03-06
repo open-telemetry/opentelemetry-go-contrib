@@ -7,17 +7,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/event"
+
+	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/internal/semconv"
 )
 
 type spanKey struct {
@@ -27,34 +25,27 @@ type spanKey struct {
 
 type monitor struct {
 	sync.Mutex
-	spans map[spanKey]trace.Span
-	cfg   config
+	spans   map[spanKey]trace.Span
+	cfg     config
+	semconv semconv.EventMonitor
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
+	attrOptions := []semconv.AttributeOption{
+		semconv.WithCommandAttributeDisabled(m.cfg.CommandAttributeDisabled),
+	}
+
 	var spanName string
-
-	hostname, port := peerInfo(evt)
-
-	attrs := []attribute.KeyValue{
-		semconv.DBSystemMongoDB,
-		semconv.DBOperation(evt.CommandName),
-		semconv.DBName(evt.DatabaseName),
-		semconv.NetPeerName(hostname),
-		semconv.NetPeerPort(port),
-		semconv.NetTransportTCP,
-	}
-	if !m.cfg.CommandAttributeDisabled {
-		attrs = append(attrs, semconv.DBStatement(sanitizeCommand(evt.Command)))
-	}
 	if collection, err := extractCollection(evt); err == nil && collection != "" {
 		spanName = collection + "."
-		attrs = append(attrs, semconv.DBMongoDBCollection(collection))
+
+		attrOptions = append(attrOptions, semconv.WithCollectionName(collection))
 	}
+
 	spanName += evt.CommandName
 	opts := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(attrs...),
+		trace.WithAttributes(m.semconv.CommandStartedTraceAttrs(evt, attrOptions...)...),
 	}
 	_, span := m.cfg.Tracer.Start(ctx, spanName, opts...)
 	key := spanKey{
@@ -96,11 +87,19 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 	span.End()
 }
 
-// TODO sanitize values where possible, then re-enable `db.statement` span attributes default.
-// TODO limit maximum size.
-func sanitizeCommand(command bson.Raw) string {
-	b, _ := bson.MarshalExtJSON(command, false, false)
-	return string(b)
+// NewMonitor creates a new mongodb event CommandMonitor.
+func NewMonitor(opts ...Option) *event.CommandMonitor {
+	cfg := newConfig(opts...)
+	m := &monitor{
+		spans:   make(map[spanKey]trace.Span),
+		cfg:     cfg,
+		semconv: semconv.NewEventMonitor(),
+	}
+	return &event.CommandMonitor{
+		Started:   m.Started,
+		Succeeded: m.Succeeded,
+		Failed:    m.Failed,
+	}
 }
 
 // extractCollection extracts the collection for the given mongodb command event.
@@ -120,31 +119,4 @@ func extractCollection(evt *event.CommandStartedEvent) (string, error) {
 		return v.StringValue(), nil
 	}
 	return "", errors.New("collection name not found")
-}
-
-// NewMonitor creates a new mongodb event CommandMonitor.
-func NewMonitor(opts ...Option) *event.CommandMonitor {
-	cfg := newConfig(opts...)
-	m := &monitor{
-		spans: make(map[spanKey]trace.Span),
-		cfg:   cfg,
-	}
-	return &event.CommandMonitor{
-		Started:   m.Started,
-		Succeeded: m.Succeeded,
-		Failed:    m.Failed,
-	}
-}
-
-func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
-	hostname = evt.ConnectionID
-	port = 27017
-	if idx := strings.IndexByte(hostname, '['); idx >= 0 {
-		hostname = hostname[:idx]
-	}
-	if idx := strings.IndexByte(hostname, ':'); idx >= 0 {
-		port = func(p int, e error) int { return p }(strconv.Atoi(hostname[idx+1:]))
-		hostname = hostname[:idx]
-	}
-	return hostname, port
 }
