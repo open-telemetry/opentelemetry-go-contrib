@@ -1,14 +1,14 @@
 module go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace
 
-go 1.22.0
+go 1.23.0
 
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.59.0
-	go.opentelemetry.io/otel v1.34.0
-	go.opentelemetry.io/otel/metric v1.34.0
-	go.opentelemetry.io/otel/trace v1.34.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0
+	go.opentelemetry.io/otel v1.35.0
+	go.opentelemetry.io/otel/metric v1.35.0
+	go.opentelemetry.io/otel/trace v1.35.0
 )
 
 require (

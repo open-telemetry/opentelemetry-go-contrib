@@ -8,6 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Drop support for [Go 1.22]. (#6853)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.35.0/0.60.0/0.29.0/0.15.0/0.10.0/0.8.0/0.7.0] - 2025-03-05
+
 This release is the last to support [Go 1.22].
 The next release will require at least [Go 1.23].
 
@@ -35,6 +44,8 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 - Support for the `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable in `instrumentation/net/http/httptrace/otelhttptrace` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6720)
 - Support for the `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable in `instrumentation/github.com/emicklei/go-restful/otelrestful` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6710)
 - Added metrics support, and emit all stable metrics from the [Semantic Conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/http/http-metrics.md) in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6747)
+- Support for the `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6778)
+- Support `OTEL_SEMCONV_STABILITY_OPT_IN` to emit telemetry following both `go.opentelemetry.io/otel/semconv/v1.21.0` (default) and `go.opentelemetry.io/otel/semconv/v1.26.0` (opt-in) in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` per the [Database semantic convention stability migration guide](https://github.com/open-telemetry/semantic-conventions/blob/cb11bb9bac24f4b0e95ad0f61ce01813d8ceada8/docs/non-normative/db-migration.md#database-semantic-convention-stability-migration-guide). (#6172)
 - Support [Go 1.24]. (#6765)
 - Add support for configuring `HeadersList` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6657)
 - Add `go.opentelemetry.io/contrib/otelconf` module which is a replacement for `go.opentelemetry.io/contrib/config`. (#6796)
@@ -43,8 +54,6 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 ### Changed
 
 - Add custom attribute to the span after execution of the SDK rather than before in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
-- Support for the `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6778)
-- Support `OTEL_SEMCONV_STABILITY_OPT_IN` to emit telemetry following both `go.opentelemetry.io/otel/semconv/v1.21.0` (default) and `go.opentelemetry.io/otel/semconv/v1.26.0` (opt-in) in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` per the [Database semantic convention stability migration guide](https://github.com/open-telemetry/semantic-conventions/blob/cb11bb9bac24f4b0e95ad0f61ce01813d8ceada8/docs/non-normative/db-migration.md#database-semantic-convention-stability-migration-guide). (#6172)
 - The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelslog` now stores the package path-qualified function name instead of just the function name.
   The `code.namespace` attribute is no longer added. (#6870)
 - The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelzap` now stores the package path-qualified function name instead of just the function name.
@@ -59,7 +68,7 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 
 ### Deprecated
 
-- Deprecate `WithAttributeSetter`, `AttributeSetter`, `DefaultAttributeSetter`, `DynamoDBAttributeSetter`, `SNSAttributeSetter` in favor of `WithAttributeBuilder`, `AttributeBuilder`, `DefaultAttributeBuilder`, `DynamoDBAttributeBuilder`, `SNSAttributeBuilder` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` (#6543)
+- Deprecate `WithAttributeSetter`, `AttributeSetter`, `DefaultAttributeSetter`, `DynamoDBAttributeSetter`, `SNSAttributeSetter` in favor of `WithAttributeBuilder`, `AttributeBuilder`, `DefaultAttributeBuilder`, `DynamoDBAttributeBuilder`, `SNSAttributeBuilder` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
 - Deprecate `go.opentelemetry.io/contrib/config` module in favor of `go.opentelemetry.io/contrib/otelconf`. This is the last release of this module. (#6796)
 
 ### Fixed
@@ -69,9 +78,6 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 - Don't start spans that never end for filtered out gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#6695)
 - Fix a possible nil dereference panic in `NewSDK` of `go.opentelemetry.io/contrib/config/v0.3.0`. (#6752)
 - Fix prometheus endpoint with an IPv6 address in `go.opentelemetry.io/contrib/config`. (#6815)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.34.0/0.59.0/0.28.0/0.14.0/0.9.0/0.7.0/0.6.0] - 2025-01-17
 
@@ -1273,7 +1279,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.34.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.35.0...HEAD
+[1.35.0/0.60.0/0.29.0/0.15.0/0.10.0/0.8.0/0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.35.0
 [1.34.0/0.59.0/0.28.0/0.14.0/0.9.0/0.7.0/0.6.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.34.0
 [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.33.0
 [1.32.0/0.57.0/0.26.0/0.12.0/0.7.0/0.5.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.32.0
