@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Update `golang.org/x/crypto` to `v0.35.0` to address [GO-2025-3487]. (#6852)
+
 ### Removed
 
 - Drop support for [Go 1.22]. (#6853)
@@ -1359,3 +1363,4 @@ First official tagged release of `contrib` repository.
 [Go 1.18]: https://go.dev/doc/go1.18
 
 [GO-2024-2687]: https://pkg.go.dev/vuln/GO-2024-2687
+[GO-2025-3487]: https://pkg.go.dev/vuln/GO-2025-3487
