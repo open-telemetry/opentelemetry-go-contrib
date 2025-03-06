@@ -9,7 +9,7 @@ require (
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint v1.64.6
 	github.com/itchyny/gojq v0.12.17
-	github.com/jcchavezs/porto v0.6.0
+	github.com/jcchavezs/porto v0.7.0
 	github.com/stretchr/testify v1.10.0
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
 	go.opentelemetry.io/build-tools/crosslink v0.20.0
