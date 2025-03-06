@@ -95,3 +95,22 @@ func TestLogExporterOTLPOverInvalidProtocol(t *testing.T) {
 	_, err := NewLogExporter(context.Background())
 	assert.Error(t, err)
 }
+
+func TestLogExporterFallbackWithConsoleExporter(t *testing.T) {
+	ctx := context.Background()
+
+	fallbackExporterFactory := func(ctx context.Context) (log.Exporter, error) {
+		return stdoutlog.New()
+	}
+
+	t.Setenv("OTEL_LOGS_EXPORTER", "")
+
+	got, err := NewLogExporter(ctx, WithFallbackLogExporter(fallbackExporterFactory))
+
+	assert.NoError(t, err)
+	assert.NotNil(t, got)
+
+	assert.IsType(t, &stdoutlog.Exporter{}, got)
+
+	assert.NoError(t, got.Shutdown(ctx))
+}

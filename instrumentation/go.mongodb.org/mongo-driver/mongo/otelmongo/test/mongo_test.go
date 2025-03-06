@@ -248,3 +248,90 @@ func TestDBCollectionAttribute(t *testing.T) {
 		})
 	}
 }
+
+func assertSemconv1170(mt *mtest.T, attrs []attribute.KeyValue) {
+	mt.Helper()
+
+	assert.Contains(mt, attrs, attribute.String("db.system", "mongodb"))
+	assert.Contains(mt, attrs, attribute.String("net.peer.name", "<mock_connection>"))
+	assert.Contains(mt, attrs, attribute.Int64("net.peer.port", int64(27017)))
+	assert.Contains(mt, attrs, attribute.String("net.transport", "ip_tcp"))
+	assert.Contains(mt, attrs, attribute.String("db.name", "test-database"))
+}
+
+func assertSemconv1260(mt *mtest.T, attrs []attribute.KeyValue) {
+	mt.Helper()
+
+	assert.Contains(mt, attrs, attribute.String("db.system", "mongodb"))
+	assert.Contains(mt, attrs, attribute.String("network.peer.address", "<mock_connection>:27017"))
+	assert.Contains(mt, attrs, attribute.Int64("network.peer.port", int64(27017)))
+	assert.Contains(mt, attrs, attribute.String("network.transport", "tcp"))
+	assert.Contains(mt, attrs, attribute.String("db.namespace", "test-database"))
+}
+
+func TestSemanticConventionOptIn(t *testing.T) {
+	tt := []struct {
+		name         string
+		semconvOptIn string
+		assert       func(*mtest.T, []attribute.KeyValue)
+	}{
+		{
+			name:         "default",
+			semconvOptIn: "",
+			assert:       assertSemconv1170,
+		},
+		{
+			name:         "database",
+			semconvOptIn: "database",
+			assert:       assertSemconv1260,
+		},
+	}
+	for _, tc := range tt {
+		tc := tc
+
+		mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
+
+		mt.Run(tc.name, func(mt *mtest.T) {
+			mt.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", tc.semconvOptIn)
+
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			defer cancel()
+
+			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
+
+			addr := "mongodb://localhost:27017/?connect=direct"
+			opts := options.Client()
+			opts.Monitor = otelmongo.NewMonitor(
+				otelmongo.WithTracerProvider(provider),
+				otelmongo.WithCommandAttributeDisabled(true),
+			)
+			opts.ApplyURI(addr)
+
+			mt.ResetClient(opts)
+			mt.AddMockResponses(bson.D{{Key: "ok", Value: 1}})
+
+			db := mt.Client.Database("test-database")
+
+			_, _ = db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+
+			span.End()
+
+			spans := sr.Ended()
+			if !assert.Len(mt, spans, 2, "expected 2 spans, received %d", len(spans)) {
+				mt.FailNow()
+			}
+			assert.Len(mt, spans, 2)
+			assert.Equal(mt, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID())
+			assert.Equal(mt, spans[0].Parent().SpanID(), spans[1].SpanContext().SpanID())
+			assert.Equal(mt, span.SpanContext().SpanID(), spans[1].SpanContext().SpanID())
+
+			s := spans[0]
+			assert.Equal(mt, trace.SpanKindClient, s.SpanKind())
+
+			tc.assert(mt, s.Attributes())
+		})
+	}
+}
