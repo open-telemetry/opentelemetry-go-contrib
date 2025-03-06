@@ -20,6 +20,7 @@ package jaegerremote
 
 import (
 	"encoding/binary"
+	"math"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,7 +35,7 @@ const (
 	testFirstTimeOperationName = "firstTimeOp"
 
 	testDefaultSamplingProbability = 0.5
-	testMaxID                      = uint64(1) << 62
+	testMaxID                      = uint64(1) << 63
 	testDefaultMaxOperations       = 10
 )
 
@@ -42,18 +43,19 @@ func TestProbabilisticSampler(t *testing.T) {
 	var traceID oteltrace.TraceID
 
 	sampler := newProbabilisticSampler(0.5)
-	binary.BigEndian.PutUint64(traceID[:], testMaxID+10)
+	binary.BigEndian.PutUint64(traceID[8:], testMaxID+10)
 	result := sampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
 	assert.Equal(t, trace.Drop, result.Decision)
-	binary.BigEndian.PutUint64(traceID[:], testMaxID-20)
+	binary.BigEndian.PutUint64(traceID[8:], testMaxID-20)
 	result = sampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
 	assert.Equal(t, trace.RecordAndSample, result.Decision)
 
 	t.Run("test_64bit_id", func(t *testing.T) {
-		binary.BigEndian.PutUint64(traceID[:], (testMaxID+10)|1<<63)
+		binary.BigEndian.PutUint64(traceID[:8], math.MaxUint64)
+		binary.BigEndian.PutUint64(traceID[8:], testMaxID+10)
 		result = sampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
 		assert.Equal(t, trace.Drop, result.Decision)
-		binary.BigEndian.PutUint64(traceID[:], (testMaxID-20)|1<<63)
+		binary.BigEndian.PutUint64(traceID[8:], testMaxID-20)
 		result = sampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
 		assert.Equal(t, trace.RecordAndSample, result.Decision)
 	})
