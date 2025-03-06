@@ -19,8 +19,10 @@
 package jaegerremote
 
 import (
+	crand "crypto/rand"
 	"encoding/binary"
 	"math"
+	"math/rand"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -38,6 +40,30 @@ const (
 	testMaxID                      = uint64(1) << 63
 	testDefaultMaxOperations       = 10
 )
+
+type randomIDGenerator struct {
+	randSource *rand.Rand
+}
+
+// NewTraceID returns a non-zero trace ID from a randomly-chosen sequence.
+func (gen *randomIDGenerator) NewTraceID() oteltrace.TraceID {
+	tid := oteltrace.TraceID{}
+	for {
+		_, _ = gen.randSource.Read(tid[:])
+		if tid.IsValid() {
+			break
+		}
+	}
+	return tid
+}
+
+func defaultIDGenerator() *randomIDGenerator {
+	gen := &randomIDGenerator{}
+	var rngSeed int64
+	_ = binary.Read(crand.Reader, binary.LittleEndian, &rngSeed)
+	gen.randSource = rand.New(rand.NewSource(rngSeed))
+	return gen
+}
 
 func TestProbabilisticSampler(t *testing.T) {
 	var traceID oteltrace.TraceID
@@ -58,6 +84,22 @@ func TestProbabilisticSampler(t *testing.T) {
 		binary.BigEndian.PutUint64(traceID[8:], testMaxID-20)
 		result = sampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
 		assert.Equal(t, trace.RecordAndSample, result.Decision)
+	})
+
+	t.Run("test_parity", func(t *testing.T) {
+		numTests := 1000
+
+		sampler := newProbabilisticSampler(0.5)
+		oracle := trace.TraceIDRatioBased(0.5)
+		idGenerator := defaultIDGenerator()
+
+		for range numTests {
+			traceID := idGenerator.NewTraceID()
+			assert.Equal(t,
+				oracle.ShouldSample(trace.SamplingParameters{TraceID: traceID}),
+				sampler.ShouldSample(trace.SamplingParameters{TraceID: traceID}),
+			)
+		}
 	})
 }
 
