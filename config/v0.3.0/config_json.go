@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -338,13 +339,25 @@ func (j *Zipkin) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+func (j *AttributeNameValue) MarshalJSON() ([]byte, error) {
+	return json.Marshal(j.Value)
+}
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *AttributeNameValue) UnmarshalJSON(b []byte) error {
 	var raw map[string]interface{}
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
-	if _, ok := raw["name"]; raw != nil && !ok {
+	var name string
+	var ok bool
+	if _, ok = raw["name"]; raw != nil && !ok {
+		return errors.New("field name in AttributeNameValue: required")
+	}
+	if name, ok = raw["name"].(string); !ok {
+		return errors.New("yaml: cannot unmarshal field name in AttributeNameValue must be string")
+	}
+	if strings.TrimSpace(name) == "" {
 		return errors.New("field name in AttributeNameValue: required")
 	}
 	if _, ok := raw["value"]; raw != nil && !ok {
