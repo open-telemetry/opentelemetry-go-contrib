@@ -31,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 )
@@ -166,9 +165,9 @@ func TestTrace200(t *testing.T) {
 	assert.Equal(t, "/user/:id", span.Name())
 	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
+	assert.Contains(t, attr, attribute.String("server.address", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusOK))
-	assert.Contains(t, attr, attribute.String("http.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.request.method", "GET"))
 	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
 	assert.Empty(t, span.Events())
 	assert.Equal(t, codes.Unset, span.Status().Code)
@@ -201,7 +200,7 @@ func TestError(t *testing.T) {
 	span := spans[0]
 	assert.Equal(t, "/server_err", span.Name())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
+	assert.Contains(t, attr, attribute.String("server.address", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusInternalServerError))
 
 	// verify the error events
@@ -326,7 +325,7 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	assert.Equal(t, "/user/123", span.Name())
 	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("http.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.request.method", "GET"))
 	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
 }
 
@@ -482,12 +481,12 @@ func TestMetrics(t *testing.T) {
 			assert.Equal(t, otelgin.Version(), sm.Scope.Version)
 
 			attrs := []attribute.KeyValue{
-				semconv.NetHostName("foobar"),
-				semconv.HTTPSchemeHTTP,
-				semconv.NetProtocolName("http"),
-				semconv.NetProtocolVersion(fmt.Sprintf("1.%d", r.ProtoMinor)),
-				semconv.HTTPMethod(http.MethodGet),
-				semconv.HTTPStatusCode(200),
+				attribute.String("http.request.method", "GET"),
+				attribute.Int64("http.response.status_code", 200),
+				attribute.String("network.protocol.name", "http"),
+				attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
+				attribute.String("server.address", "foobar"),
+				attribute.String("url.scheme", "http"),
 			}
 
 			if tt.metricAttributeExtractor != nil {
@@ -495,38 +494,44 @@ func TestMetrics(t *testing.T) {
 			}
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
-				Name:        "http.server.request.size",
-				Description: "Measures the size of HTTP request messages.",
+				Name:        "http.server.request.body.size",
+				Description: "Size of HTTP server request bodies.",
 				Unit:        "By",
-				Data: metricdata.Sum[int64]{
-					DataPoints: []metricdata.DataPoint[int64]{{
-						Attributes: attribute.NewSet(attrs...), Value: 0,
-					}},
+				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
 				},
-			}, sm.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			}, sm.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
-				Name:        "http.server.response.size",
-				Description: "Measures the size of HTTP response messages.",
+				Name:        "http.server.response.body.size",
+				Description: "Size of HTTP server response bodies.",
 				Unit:        "By",
-				Data: metricdata.Sum[int64]{
-					DataPoints: []metricdata.DataPoint[int64]{{
-						Attributes: attribute.NewSet(attrs...), Value: 3,
-					}},
+				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
 				},
-			}, sm.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			}, sm.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
-				Name:        "http.server.duration",
-				Description: "Measures the duration of inbound HTTP requests.",
-				Unit:        "ms",
+				Name:        "http.server.request.duration",
+				Description: "Duration of HTTP server requests.",
+				Unit:        "s",
 				Data: metricdata.Histogram[float64]{
-					DataPoints:  []metricdata.HistogramDataPoint[float64]{{Attributes: attribute.NewSet(attrs...)}},
 					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
 				},
 			}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
