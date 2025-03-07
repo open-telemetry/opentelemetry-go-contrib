@@ -271,7 +271,7 @@ func (c HTTPClient) MetricOptions(ma MetricAttributes) map[string]MetricOpts {
 }
 
 func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts map[string]MetricOpts) {
-	if s.requestBytesCounter == nil || s.latencyMeasure == nil {
+	if s.requestBodySize == nil || s.requestDuration == nil {
 		// This will happen if an HTTPClient{} is used instead of NewHTTPClient().
 		return
 	}
