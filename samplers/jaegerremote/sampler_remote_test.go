@@ -165,7 +165,7 @@ func initAgent(t *testing.T) (*testutils.MockAgent, *Sampler) {
 
 func makeSamplingParameters(id uint64, operationName string) trace.SamplingParameters {
 	var traceID oteltrace.TraceID
-	binary.BigEndian.PutUint64(traceID[:], id)
+	binary.BigEndian.PutUint64(traceID[8:], id)
 
 	return trace.SamplingParameters{
 		TraceID: traceID,
