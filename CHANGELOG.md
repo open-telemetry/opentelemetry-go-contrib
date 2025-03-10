@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- `http.route` attribute to otelhttp server request spans, when `net/http.Request.Pattern` is set (e.g. typically by ServeMux)
+
 ### Removed
 
 - Drop support for [Go 1.22]. (#6853)

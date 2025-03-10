@@ -18,6 +18,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 )
 
 func TestHTTPClientResponse(t *testing.T) {
@@ -206,6 +207,27 @@ func TestHTTPServerRequest(t *testing.T) {
 			attribute.String("http.target", "/"),
 		},
 		HTTPServerRequest("", req))
+}
+
+func TestHTTPServerRequest_HTTPRoute(t *testing.T) {
+	var found bool
+	mux := http.NewServeMux()
+	mux.HandleFunc("/a/{variable}", func(w http.ResponseWriter, req *http.Request) {
+		for _, attr := range HTTPServerRequest("", req) {
+			if attr.Key != semconv.HTTPRouteKey {
+				continue
+			}
+			found = true
+			assert.Equal(t, "/a/{variable}", attr.Value.AsString())
+		}
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	resp, err := srv.Client().Get(srv.URL + "/a/bcd123")
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.True(t, found)
 }
 
 func TestHTTPServerRequestMetrics(t *testing.T) {
