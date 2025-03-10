@@ -301,10 +301,10 @@ func (c *httpConv) ClientRequestMetrics(req *http.Request) []attribute.KeyValue 
 // The req Host will be used to determine the server instead.
 //
 // The following attributes are always returned: "http.method", "http.scheme",
-// "http.target", "net.host.name". The following attributes are returned if they
+// "http.target", "net.host.name". The following attributes are returned if the
 // related values are defined in req: "net.host.port", "net.sock.peer.addr",
 // "net.sock.peer.port", "user_agent.original", "http.client_ip",
-// "net.protocol.name", "net.protocol.version".
+// "net.protocol.name", "net.protocol.version", "http.route".
 func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.KeyValue {
 	/* The following semantic conventions are returned if present:
 	http.method             string
@@ -324,7 +324,6 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	http.status_code                This requires the response.
 	http.request_content_length     This requires the len() of body, which can mutate it.
 	http.response_content_length    This requires the response.
-	http.route                      This is not available.
 	net.sock.peer.name              This would require a DNS lookup.
 	net.sock.host.addr              The request doesn't have access to the underlying socket.
 	net.sock.host.port              The request doesn't have access to the underlying socket.
@@ -378,6 +377,11 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 		n++
 	}
 
+	httpRoute := req.Pattern
+	if httpRoute != "" {
+		n++
+	}
+
 	attrs := make([]attribute.KeyValue, 0, n)
 
 	attrs = append(attrs, c.method(req.Method))
@@ -414,6 +418,10 @@ func (c *httpConv) ServerRequest(server string, req *http.Request) []attribute.K
 	}
 	if protoVersion != "" {
 		attrs = append(attrs, c.NetConv.NetProtocolVersion.String(protoVersion))
+	}
+
+	if httpRoute != "" {
+		attrs = append(attrs, c.HTTPRouteKey.String(httpRoute))
 	}
 
 	return attrs
