@@ -329,23 +329,23 @@ OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.3.0
 genjsonschema-cleanup:
 	rm -Rf ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 
-GENERATED_CONFIG=./config/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}/generated_config.go
+GENERATED_CONFIG=./otelconf/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}/generated_config.go
 
 # Generate structs for configuration from opentelemetry-configuration schema
 genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	mkdir -p ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
-	mkdir -p ./config/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}
+	mkdir -p ./otelconf/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}
 	curl -sSL https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION} | tar xz --strip 1 -C ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 	$(GOJSONSCHEMA) \
 		--capitalization ID \
 		--capitalization OTLP \
 		--struct-name-from-title \
-		--package config \
+		--package otelconf \
 		--only-models \
 		--output ${GENERATED_CONFIG} \
 		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/schema/opentelemetry_configuration.json
 	@echo Modify jsonschema generated files.
-	sed -f ./config/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
+	sed -f ./otelconf/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
 	mv ${GENERATED_CONFIG}.tmp ${GENERATED_CONFIG}
 	$(MAKE) genjsonschema-cleanup
 
