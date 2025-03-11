@@ -68,6 +68,12 @@ type ResponseWrapper interface {
 
 	// BytesRead contains the amount of bytes read from the response's body
 	BytesRead() int64
+
+	// BytesWritten contains the amount of bytes written to the response's body
+	BytesWritten() int64
+
+	// Error contains the last error that occured while writing
+	Error() error
 }
 ```
 
