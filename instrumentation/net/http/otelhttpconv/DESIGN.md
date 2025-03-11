@@ -58,6 +58,8 @@ One for client. and one for servers. Implementations can use one, the other or b
 // RequestWrapper provides a layer on top of `*http.Response` that tracks
 // additional information such as bytes read etc.
 type ResponseWrapper interface {
+	http.ResponseWriter
+
 	// Duration contains the duration of the HTTP request
 	Duration() time.Duration
 
@@ -86,8 +88,11 @@ type Client interface {
 	// This method does not create a new span. It retrieves the current one from
 	// the context.
 	// It remains the instrumentation's responsibility to start and end spans.
-	RecordSpan(ctx context.Context, req *http.Request, resp *http.Response)
+	RecordSpan(ctx context.Context, req *http.Request, w *ResponseWrapper, cfg ...ClientRecordSpanOption)
 }
+
+// ClientRecordSpanOption applies options to the RecordSpan method
+type ClientRecordSpanOption interface{}
 ```
 
 #### The Server
@@ -105,17 +110,19 @@ type Server interface {
 	// This method does not create a new span. It retrieves the current one from
 	// the context.
 	// It remains the instrumentation's responsibility to start and end spans.
-	RecordSpan(ctx context.Context, req *http.Request, resp *http.Response, ...ServerRecordSpanOptions)
+	RecordSpan(ctx context.Context, req *http.Request, w *ResponseWrapper, cfg ...ServerRecordSpanOption)
 }
 
 // ServerRecordSpanOption applies options to the RecordSpan method
 type ServerRecordSpanOption interface{}
 ```
 
-The `ServerRecordMetricsOption` functional option allows passing optional
-parameters to be used within the `RecordSpan` method, such as the HTTP route.
+The `ClientRecordSpanOption` and `ServerRecordSpanOption` functional options
+allows passing optional parameters to be used within the `RecordSpan` method,
+such as the HTTP route.
 
-When the data those options provide is not specified, the related span attributes will not be set.
+When the data those options provide is not specified, the related span
+attributes will not be set.
 
 #### Request and Response wrappers
 
@@ -142,6 +149,71 @@ We may provide additional implementations later on such as:
 
 * An implementation that serves as a proxy to allow combining multiple implementations together.
 * An implementation that covers unstable semantic conventions.
+
+#### Example implementation
+
+The implementation example here is kept simple for the purpose of
+understandability.
+
+The following code sample provides a simple `http.Handler` that implements the
+provided interface to instrument HTTP applications.
+
+Because both the client and server interface are very similar, a client
+implementation would be similar too.
+
+```golang
+type middleware struct {
+	operation string
+
+	tracer      trace.Tracer
+	propagators propagation.TextMapPropagator
+	meter       metric.Meter
+	httpconv    otelhttpconv.Server
+}
+
+// NewMiddleware returns a tracing and metrics instrumentation middleware.
+// The handler returned by the middleware wraps a handler
+// in a span named after the operation and enriches it with metrics.
+func NewMiddleware(operation string) func(http.Handler) http.Handler {
+	m := middleware{
+		operation:   operation,
+		tracer:      otel.Tracer("http"),
+		propagators: otel.GetTextMapPropagator(),
+		meter:       otel.Meter("http"),
+		httpconv:    otelhttpconv.NewHTTPConv(otel.Tracer("httpconv"), otel.Meter("httpconv")),
+	}
+
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			m.serveHTTP(w, r, next)
+		})
+	}
+}
+
+func (m *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http.Handler) {
+	ctx := m.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
+
+	// We keep creating the span here, as that is something we want to do before
+	// the middleware stack is run
+	ctx, span := m.tracer.Start(ctx, fmt.Sprintf("%s %s", r.Method, r.Pattern))
+	defer span.End()
+
+	// NewResponseWrapper wraps additional data into the http.ResponseWriter,
+	// such as duration, status code and quantity of bytes read.
+	rww := otelhttpconv.NewResponseWrapper(w)
+	next.ServeHTTP(rww, r.WithContext(ctx))
+
+	// RecordMetrics emits the proper semantic convention metrics
+	// With data based on the provided response wrapper
+	m.httpconv.RecordMetrics(ctx, rww)
+
+	// RecordSpan emits the proper semantic convention span attributes and events
+	// With data based on the provided response wrapper
+	// It must not create a new span. It retrieves the current one from the
+	// context.
+	m.httpconv.RecordSpan(ctx, r, rww)
+}
+```
 
 ### Usage
 
