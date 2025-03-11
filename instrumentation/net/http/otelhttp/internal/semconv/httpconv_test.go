@@ -8,6 +8,7 @@ package semconv
 
 import (
 	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"testing"
 
@@ -16,6 +17,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	semconvNew "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 func TestCurrentHttpServer_MetricAttributes(t *testing.T) {
@@ -255,4 +257,19 @@ func TestCurrentHttpClient_MetricAttributes(t *testing.T) {
 			tt.wantFunc(t, got)
 		})
 	}
+}
+
+func TestRequestTraceAttrs_HTTPRoute(t *testing.T) {
+	req := httptest.NewRequest("GET", "/high/cardinality/path/abc123", nil)
+	req.Pattern = "/high/cardinality/path/{id}"
+
+	var found bool
+	for _, attr := range (CurrentHTTPServer{}).RequestTraceAttrs("", req) {
+		if attr.Key != semconvNew.HTTPRouteKey {
+			continue
+		}
+		found = true
+		assert.Equal(t, req.Pattern, attr.Value.AsString())
+	}
+	require.True(t, found)
 }
