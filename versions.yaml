@@ -71,7 +71,6 @@ module-sets:
   experimental-config:
     version: v0.15.0
     modules:
-      - go.opentelemetry.io/contrib/config
       - go.opentelemetry.io/contrib/otelconf
   experimental-bridge:
     version: v0.10.0

@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Jaeger remote sampler's probabilistic strategy now uses the same sampling algorithm as `trace.TraceIDRatioBased` in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#6892)
 - Switched the default for `OTEL_SEMCONV_STABILITY_OPT_IN` to emit the v1.26.0 semantic conventions by default in the following modules. (#6899)
   - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
   - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
@@ -23,6 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Drop support for [Go 1.22]. (#6853)
+- The deprecated `go.opentelemetry.io/contrib/config` package is removed, use `go.opentelemetry.io/contrib/otelconf` instead. (#6894)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
