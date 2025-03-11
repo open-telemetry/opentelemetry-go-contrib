@@ -52,34 +52,21 @@ We will provide two public interface that allow interacting with the
 instrumentation package.
 One for client. and one for servers. Implementations can use one, the other or both.
 
-#### Shared between client and server
+#### The client
 
 ```golang
-// RequestWrapper provides a layer on top of `*http.Response` that tracks
+// BodyWrapper provides a layer on top of the request's body that tracks
 // additional information such as bytes read etc.
-type ResponseWrapper interface {
-	http.ResponseWriter
-
-	// Duration contains the duration of the HTTP request
-	Duration() time.Duration
-
-	// Duration contains the status code returned by the HTTP request
-	StatusCode() int
+type BodyWrapper interface {
+	io.ReadCloser
 
 	// BytesRead contains the amount of bytes read from the response's body
 	BytesRead() int64
 
-	// BytesWritten contains the amount of bytes written to the response's body
-	BytesWritten() int64
-
-	// Error contains the last error that occured while writing
+	// Error contains the last error that occured while reading
 	Error() error
 }
-```
 
-#### The client
-
-```golang
 // Client provides an interface for HTTP client instrumentations to set the
 // proper semantic convention attributes and metrics into their data.
 type Client interface {
@@ -87,14 +74,14 @@ type Client interface {
 	RecordError(error)
 
 	// RecordMetrics records the metrics from the provided HTTP request.
-	RecordMetrics(ctx context.Context, w ResponseWrapper)
+	RecordMetrics(ctx context.Context, w BodyWrapper)
 
 	// RecordSpan sets the span attributes and status code based on the HTTP
 	// request and response.
 	// This method does not create a new span. It retrieves the current one from
 	// the context.
 	// It remains the instrumentation's responsibility to start and end spans.
-	RecordSpan(ctx context.Context, req *http.Request, w ResponseWrapper, cfg ...ClientRecordSpanOption)
+	RecordSpan(ctx context.Context, req *http.Request, w BodyWrapper, cfg ...ClientRecordSpanOption)
 }
 
 // ClientRecordSpanOption applies options to the RecordSpan method
@@ -104,6 +91,24 @@ type ClientRecordSpanOption interface{}
 #### The Server
 
 ```golang
+// ResponseWrapper provides a layer on top of `*http.Response` that tracks
+// additional information such as bytes written etc.
+type ResponseWrapper interface {
+	http.ResponseWriter
+
+	// Duration contains the duration of the HTTP request
+	Duration() time.Duration
+
+	// Duration contains the status code returned by the HTTP request
+	StatusCode() int
+
+	// BytesWritten contains the amount of bytes written to the response's body
+	BytesWritten() int64
+
+	// Error contains the last error that occured while writing
+	Error() error
+}
+
 // Server provides an interface for HTTP server instrumentations to set the
 // proper semantic convention attributes and metrics into their data.
 type Server interface {
