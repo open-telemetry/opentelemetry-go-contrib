@@ -81,14 +81,14 @@ type Client interface {
 	RecordError(error)
 
 	// RecordMetrics records the metrics from the provided HTTP request.
-	RecordMetrics(ctx context.Context, w *ResponseWrapper)
+	RecordMetrics(ctx context.Context, w ResponseWrapper)
 
 	// RecordSpan sets the span attributes and status code based on the HTTP
 	// request and response.
 	// This method does not create a new span. It retrieves the current one from
 	// the context.
 	// It remains the instrumentation's responsibility to start and end spans.
-	RecordSpan(ctx context.Context, req *http.Request, w *ResponseWrapper, cfg ...ClientRecordSpanOption)
+	RecordSpan(ctx context.Context, req *http.Request, w ResponseWrapper, cfg ...ClientRecordSpanOption)
 }
 
 // ClientRecordSpanOption applies options to the RecordSpan method
@@ -103,14 +103,14 @@ type ClientRecordSpanOption interface{}
 type Server interface {
 
 	// RecordMetrics records the metrics from the provided HTTP request.
-	RecordMetrics(ctx context.Context, w *ResponseWrapper)
+	RecordMetrics(ctx context.Context, w ResponseWrapper)
 
 	// RecordSpan sets the span attributes and status code based on the HTTP
 	// request and response.
 	// This method does not create a new span. It retrieves the current one from
 	// the context.
 	// It remains the instrumentation's responsibility to start and end spans.
-	RecordSpan(ctx context.Context, req *http.Request, w *ResponseWrapper, cfg ...ServerRecordSpanOption)
+	RecordSpan(ctx context.Context, req *http.Request, w ResponseWrapper, cfg ...ServerRecordSpanOption)
 }
 
 // ServerRecordSpanOption applies options to the RecordSpan method
