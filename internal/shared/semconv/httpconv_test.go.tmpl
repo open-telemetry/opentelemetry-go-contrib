@@ -17,7 +17,6 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconvNew "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 func TestCurrentHttpServer_MetricAttributes(t *testing.T) {
@@ -265,7 +264,7 @@ func TestRequestTraceAttrs_HTTPRoute(t *testing.T) {
 
 	var found bool
 	for _, attr := range (CurrentHTTPServer{}).RequestTraceAttrs("", req) {
-		if attr.Key != semconvNew.HTTPRouteKey {
+		if attr.Key != "http.route" {
 			continue
 		}
 		found = true
