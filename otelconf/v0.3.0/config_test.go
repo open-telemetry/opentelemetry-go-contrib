@@ -450,6 +450,40 @@ func TestParseYAML(t *testing.T) {
 	}
 }
 
+func TestParseYAMLWithEnvironmentVariables(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantErr  error
+		wantType interface{}
+	}{
+		{
+			name:     "valid v0.3 config with env vars",
+			input:    "v0.3-env-var.yaml",
+			wantType: &v03OpenTelemetryConfig,
+		},
+	}
+
+	t.Setenv("OTEL_SDK_DISABLED", "false")
+	t.Setenv("OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT", "4096")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := os.ReadFile(filepath.Join("..", "testdata", tt.input))
+			require.NoError(t, err)
+
+			got, err := ParseYAML(b)
+			if tt.wantErr != nil {
+				require.Equal(t, tt.wantErr.Error(), err.Error())
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.wantType, got)
+			}
+		})
+	}
+}
+
 func TestSerializeJSON(t *testing.T) {
 	tests := []struct {
 		name     string
