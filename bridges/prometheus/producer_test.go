@@ -474,7 +474,7 @@ func TestProduce(t *testing.T) {
 			if tt.wantErr == nil {
 				assert.NoError(t, err)
 			}
-			require.Len(t, tt.expected, len(output))
+			require.Len(t, output, len(tt.expected))
 			for i := range output {
 				metricdatatest.AssertEqual(t, tt.expected[i], output[i], metricdatatest.IgnoreTimestamp())
 			}
