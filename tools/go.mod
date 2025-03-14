@@ -7,7 +7,7 @@ exclude github.com/blizzy78/varnamelen v0.6.1
 require (
 	github.com/atombender/go-jsonschema v0.17.0
 	github.com/client9/misspell v0.3.4
-	github.com/golangci/golangci-lint v1.64.6
+	github.com/golangci/golangci-lint v1.64.7
 	github.com/itchyny/gojq v0.12.17
 	github.com/jcchavezs/porto v0.7.0
 	github.com/stretchr/testify v1.10.0
@@ -26,7 +26,7 @@ require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/4meepo/tagalign v1.4.2 // indirect
 	github.com/Abirdcfly/dupword v0.1.3 // indirect
-	github.com/Antonboom/errname v1.0.0 // indirect
+	github.com/Antonboom/errname v1.1.0 // indirect
 	github.com/Antonboom/nilnil v1.0.1 // indirect
 	github.com/Antonboom/testifylint v1.5.2 // indirect
 	github.com/BurntSushi/toml v1.4.1-0.20241028111116-b7406c026f5a // indirect
@@ -48,11 +48,11 @@ require (
 	github.com/bkielbasa/cyclop v1.2.3 // indirect
 	github.com/blizzy78/varnamelen v0.8.0 // indirect
 	github.com/bombsimon/wsl/v4 v4.6.0 // indirect
-	github.com/breml/bidichk v0.3.2 // indirect
-	github.com/breml/errchkjson v0.4.0 // indirect
+	github.com/breml/bidichk v0.3.3 // indirect
+	github.com/breml/errchkjson v0.4.1 // indirect
 	github.com/butuzov/ireturn v0.3.1 // indirect
 	github.com/butuzov/mirror v1.3.0 // indirect
-	github.com/catenacyber/perfsprint v0.9.0 // indirect
+	github.com/catenacyber/perfsprint v0.9.1 // indirect
 	github.com/ccojocar/zxcvbn-go v1.0.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charithe/durationcheck v0.0.10 // indirect
@@ -71,7 +71,7 @@ require (
 	github.com/firefart/nonamedreturns v1.0.5 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
-	github.com/ghostiam/protogetter v0.3.9 // indirect
+	github.com/ghostiam/protogetter v0.3.10 // indirect
 	github.com/go-critic/go-critic v0.12.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
@@ -89,7 +89,7 @@ require (
 	github.com/goccy/go-yaml v1.15.23 // indirect
 	github.com/gofrs/flock v0.12.1 // indirect
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
-	github.com/golangci/dupl v0.0.0-20180902072040-3e9179ac440a // indirect
+	github.com/golangci/dupl v0.0.0-20250308024227-f665c8d69b32 // indirect
 	github.com/golangci/go-printf-func-name v0.1.0 // indirect
 	github.com/golangci/gofmt v0.0.0-20250106114630-d62b90e6713d // indirect
 	github.com/golangci/misspell v0.6.0 // indirect
@@ -218,7 +218,7 @@ require (
 	golang.org/x/net v0.37.0 // indirect
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
-	golang.org/x/telemetry v0.0.0-20250305155315-2a181eac97a3 // indirect
+	golang.org/x/telemetry v0.0.0-20250310203348-fdfaad844314 // indirect
 	golang.org/x/text v0.23.0 // indirect
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
