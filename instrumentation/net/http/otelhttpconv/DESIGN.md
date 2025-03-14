@@ -112,7 +112,6 @@ type ResponseWrapper interface {
 // Server provides an interface for HTTP server instrumentations to set the
 // proper semantic convention attributes and metrics into their data.
 type Server interface {
-
 	// RecordMetrics records the metrics from the provided HTTP request.
 	RecordMetrics(ctx context.Context, w ResponseWrapper)
 
