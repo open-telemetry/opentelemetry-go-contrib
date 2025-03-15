@@ -37,9 +37,9 @@ type GinFilter func(*gin.Context) bool
 // SpanNameFormatter is used to set span name by http.request.
 type SpanNameFormatter func(r *http.Request) string
 
-// MetricAttributeFn is used to extract additional attributes from the http.Request
+// MetricAttributeFn is used to extract additional attributes from the gin.Context
 // and return them as a slice of attribute.KeyValue.
-type MetricAttributeFn func(*http.Request) []attribute.KeyValue
+type MetricAttributeFn func(c *gin.Context) []attribute.KeyValue
 
 // Option specifies instrumentation configuration options.
 type Option interface {
