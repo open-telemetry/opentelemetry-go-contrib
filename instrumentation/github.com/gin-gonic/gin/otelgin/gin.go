@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	oteltrace "go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -39,7 +39,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		ScopeName,
-		oteltrace.WithInstrumentationVersion(Version()),
+		trace.WithInstrumentationVersion(Version()),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -80,10 +80,10 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(savedCtx)
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
-		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(hs.RequestTraceAttrs(service, c.Request)...),
-			oteltrace.WithAttributes(hs.Route(c.FullPath())),
-			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
+		opts := []trace.SpanStartOption{
+			trace.WithAttributes(hs.RequestTraceAttrs(service, c.Request)...),
+			trace.WithAttributes(hs.Route(c.FullPath())),
+			trace.WithSpanKind(trace.SpanKindServer),
 		}
 		var spanName string
 		if cfg.SpanNameFormatter == nil {
@@ -118,7 +118,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		// Record the server-side attributes.
 		var additionalAttributes []attribute.KeyValue
 		if cfg.MetricAttributeFn != nil {
-			additionalAttributes = cfg.MetricAttributeFn(c.Request)
+			additionalAttributes = cfg.MetricAttributeFn(c)
 		}
 
 		sc.RecordMetrics(ctx, semconv.ServerMetricData{
@@ -142,22 +142,22 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 // gin.Context.HTML function - it invokes the original function after
 // setting up the span.
 func HTML(c *gin.Context, code int, name string, obj interface{}) {
-	var tracer oteltrace.Tracer
+	var tracer trace.Tracer
 	tracerInterface, ok := c.Get(tracerKey)
 	if ok {
-		tracer, ok = tracerInterface.(oteltrace.Tracer)
+		tracer, ok = tracerInterface.(trace.Tracer)
 	}
 	if !ok {
 		tracer = otel.GetTracerProvider().Tracer(
 			ScopeName,
-			oteltrace.WithInstrumentationVersion(Version()),
+			trace.WithInstrumentationVersion(Version()),
 		)
 	}
 	savedContext := c.Request.Context()
 	defer func() {
 		c.Request = c.Request.WithContext(savedContext)
 	}()
-	opt := oteltrace.WithAttributes(attribute.String("go.template", name))
+	opt := trace.WithAttributes(attribute.String("go.template", name))
 	_, span := tracer.Start(savedContext, "gin.renderer.html", opt)
 	defer span.End()
 	c.HTML(code, name, obj)

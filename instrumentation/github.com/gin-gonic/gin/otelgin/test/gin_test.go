@@ -440,14 +440,14 @@ func TestWithGinFilter(t *testing.T) {
 func TestMetrics(t *testing.T) {
 	tests := []struct {
 		name                     string
-		metricAttributeExtractor func(*http.Request) []attribute.KeyValue
+		metricAttributeExtractor func(context2 *gin.Context) []attribute.KeyValue
 	}{
 		{"default", nil},
-		{"with metric attributes callback", func(req *http.Request) []attribute.KeyValue {
+		{"with metric attributes callback", func(c *gin.Context) []attribute.KeyValue {
 			return []attribute.KeyValue{
 				attribute.String("key1", "value1"),
 				attribute.String("key2", "value"),
-				attribute.String("method", strings.ToUpper(req.Method)),
+				attribute.String("method", strings.ToUpper(c.Request.Method)),
 			}
 		}},
 	}
@@ -470,6 +470,8 @@ func TestMetrics(t *testing.T) {
 
 			r := httptest.NewRequest("GET", "/user/123", nil)
 			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = r
 			router.ServeHTTP(w, r)
 
 			// verify metrics
@@ -491,7 +493,7 @@ func TestMetrics(t *testing.T) {
 			}
 
 			if tt.metricAttributeExtractor != nil {
-				attrs = append(attrs, tt.metricAttributeExtractor(r)...)
+				attrs = append(attrs, tt.metricAttributeExtractor(c)...)
 			}
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
