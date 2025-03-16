@@ -440,7 +440,7 @@ func TestWithGinFilter(t *testing.T) {
 func TestMetrics(t *testing.T) {
 	tests := []struct {
 		name                     string
-		metricAttributeExtractor func(context2 *gin.Context) []attribute.KeyValue
+		metricAttributeExtractor func(*gin.Context) []attribute.KeyValue
 	}{
 		{"default", nil},
 		{"with metric attributes callback", func(c *gin.Context) []attribute.KeyValue {
