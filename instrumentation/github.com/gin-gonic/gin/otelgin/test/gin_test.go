@@ -439,17 +439,30 @@ func TestWithGinFilter(t *testing.T) {
 
 func TestMetrics(t *testing.T) {
 	tests := []struct {
-		name                     string
-		metricAttributeExtractor func(*gin.Context) []attribute.KeyValue
+		name                        string
+		metricAttributeExtractor    func(*http.Request) []attribute.KeyValue
+		ginMetricAttributeExtractor func(*gin.Context) []attribute.KeyValue
 	}{
-		{"default", nil},
-		{"with metric attributes callback", func(c *gin.Context) []attribute.KeyValue {
-			return []attribute.KeyValue{
-				attribute.String("key1", "value1"),
-				attribute.String("key2", "value"),
-				attribute.String("method", strings.ToUpper(c.Request.Method)),
-			}
-		}},
+		{
+			name:                        "default",
+			metricAttributeExtractor:    nil,
+			ginMetricAttributeExtractor: nil,
+		},
+		{
+			name: "with metric attributes callback",
+			metricAttributeExtractor: func(r *http.Request) []attribute.KeyValue {
+				return []attribute.KeyValue{
+					attribute.String("key1", "value1"),
+					attribute.String("key2", "value"),
+					attribute.String("method", strings.ToUpper(r.Method)),
+				}
+			},
+			ginMetricAttributeExtractor: func(c *gin.Context) []attribute.KeyValue {
+				return []attribute.KeyValue{
+					attribute.String("key3", "value3"),
+				}
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -461,6 +474,7 @@ func TestMetrics(t *testing.T) {
 			router.Use(otelgin.Middleware("foobar",
 				otelgin.WithMeterProvider(meterProvider),
 				otelgin.WithMetricAttributeFn(tt.metricAttributeExtractor),
+				otelgin.WithGinMetricAttributeFn(tt.ginMetricAttributeExtractor),
 			))
 			router.GET("/user/:id", func(c *gin.Context) {
 				id := c.Param("id")
@@ -493,7 +507,10 @@ func TestMetrics(t *testing.T) {
 			}
 
 			if tt.metricAttributeExtractor != nil {
-				attrs = append(attrs, tt.metricAttributeExtractor(c)...)
+				attrs = append(attrs, tt.metricAttributeExtractor(r)...)
+			}
+			if tt.ginMetricAttributeExtractor != nil {
+				attrs = append(attrs, tt.ginMetricAttributeExtractor(c)...)
 			}
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{

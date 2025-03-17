@@ -17,13 +17,14 @@ import (
 )
 
 type config struct {
-	TracerProvider    oteltrace.TracerProvider
-	Propagators       propagation.TextMapPropagator
-	Filters           []Filter
-	GinFilters        []GinFilter
-	SpanNameFormatter SpanNameFormatter
-	MeterProvider     metric.MeterProvider
-	MetricAttributeFn MetricAttributeFn
+	TracerProvider       oteltrace.TracerProvider
+	Propagators          propagation.TextMapPropagator
+	Filters              []Filter
+	GinFilters           []GinFilter
+	SpanNameFormatter    SpanNameFormatter
+	MeterProvider        metric.MeterProvider
+	MetricAttributeFn    MetricAttributeFn
+	GinMetricAttributeFn GinMetricAttributeFn
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -37,9 +38,13 @@ type GinFilter func(*gin.Context) bool
 // SpanNameFormatter is used to set span name by http.request.
 type SpanNameFormatter func(r *http.Request) string
 
-// MetricAttributeFn is used to extract additional attributes from the gin.Context
+// MetricAttributeFn is used to extract additional attributes from the http.Request
 // and return them as a slice of attribute.KeyValue.
-type MetricAttributeFn func(c *gin.Context) []attribute.KeyValue
+type MetricAttributeFn func(*http.Request) []attribute.KeyValue
+
+// GinMetricAttributeFn is used to extract additional attributes from the gin.Context
+// and return them as a slice of attribute.KeyValue.
+type GinMetricAttributeFn func(*gin.Context) []attribute.KeyValue
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -113,5 +118,13 @@ func WithMeterProvider(mp metric.MeterProvider) Option {
 func WithMetricAttributeFn(f MetricAttributeFn) Option {
 	return optionFunc(func(c *config) {
 		c.MetricAttributeFn = f
+	})
+}
+
+// WithGinMetricAttributeFn specifies a function that extracts additional attributes from the gin.Context
+// and returns them as a slice of attribute.KeyValue.
+func WithGinMetricAttributeFn(f GinMetricAttributeFn) Option {
+	return optionFunc(func(c *config) {
+		c.GinMetricAttributeFn = f
 	})
 }
