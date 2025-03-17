@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Jaeger remote sampler's probabilistic strategy now uses the same sampling algorithm as `trace.TraceIDRatioBased` in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#6892)
-- otelgin: add GinMetricAttributeFn (#6932)
+- Add the `WithGinMetricAttributes` option to allow setting dynamic, per-request metric attributes based on `*gin.Context` in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6932)
 
 ### Removed
 
