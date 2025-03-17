@@ -259,16 +259,38 @@ func TestCurrentHttpClient_MetricAttributes(t *testing.T) {
 }
 
 func TestRequestTraceAttrs_HTTPRoute(t *testing.T) {
-	req := httptest.NewRequest("GET", "/high/cardinality/path/abc123", nil)
-	req.Pattern = "/high/cardinality/path/{id}"
-
-	var found bool
-	for _, attr := range (CurrentHTTPServer{}).RequestTraceAttrs("", req) {
-		if attr.Key != "http.route" {
-			continue
-		}
-		found = true
-		assert.Equal(t, req.Pattern, attr.Value.AsString())
+	tests := []struct {
+		name      string
+		pattern   string
+		wantRoute string
+	}{
+		{
+			name:      "without method",
+			pattern:   "/path/{id}",
+			wantRoute: "/path/{id}",
+		},
+		{
+			name:      "with method",
+			pattern:   "GET /path/{id}",
+			wantRoute: "/path/{id}",
+		},
 	}
-	require.True(t, found)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/path/abc123", nil)
+			req.Pattern = tt.pattern
+
+			attrs := (CurrentHTTPServer{}).RequestTraceAttrs("", req)
+
+			var gotRoute string
+			for _, attr := range attrs {
+				if attr.Key == "http.route" {
+					gotRoute = attr.Value.AsString()
+					break
+				}
+			}
+			require.Equal(t, tt.wantRoute, gotRoute)
+		})
+	}
 }
