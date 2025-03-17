@@ -265,13 +265,18 @@ func TestRequestTraceAttrs_HTTPRoute(t *testing.T) {
 		wantRoute string
 	}{
 		{
-			name:      "without method",
+			name:      "only path",
 			pattern:   "/path/{id}",
 			wantRoute: "/path/{id}",
 		},
 		{
 			name:      "with method",
 			pattern:   "GET /path/{id}",
+			wantRoute: "/path/{id}",
+		},
+		{
+			name:      "with domain",
+			pattern:   "example.com/path/{id}",
 			wantRoute: "/path/{id}",
 		},
 	}
