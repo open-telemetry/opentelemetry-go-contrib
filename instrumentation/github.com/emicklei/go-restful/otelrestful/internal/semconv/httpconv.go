@@ -250,7 +250,7 @@ func (n CurrentHTTPServer) createMeasures(meter metric.Meter) (metric.Int64Histo
 		semconvNew.HTTPServerRequestDurationName,
 		metric.WithUnit(semconvNew.HTTPServerRequestDurationUnit),
 		metric.WithDescription(semconvNew.HTTPServerRequestDurationDescription),
-		metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}),
+		metric.WithExplicitBucketBoundaries(0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10),
 	)
 	handleErr(err)
 
@@ -469,7 +469,7 @@ func (n CurrentHTTPClient) createMeasures(meter metric.Meter) (metric.Int64Histo
 		semconvNew.HTTPClientRequestDurationName,
 		metric.WithUnit(semconvNew.HTTPClientRequestDurationUnit),
 		metric.WithDescription(semconvNew.HTTPClientRequestDurationDescription),
-		metric.WithExplicitBucketBoundaries([]float64{0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10}),
+		metric.WithExplicitBucketBoundaries(0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10),
 	)
 	handleErr(err)
 
