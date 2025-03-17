@@ -287,7 +287,7 @@ func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts map[s
 
 	if s.duplicate {
 		s.requestBodySize.Record(ctx, md.RequestSize, opts["new"].MeasurementOption())
-		s.requestDuration.Record(ctx, md.ElapsedTime/1000, opts["new"].MeasurementOption())
+		s.requestDuration.Record(ctx, md.ElapsedTime/1000.0, opts["new"].MeasurementOption())
 	}
 }
 
