@@ -234,9 +234,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			span.End()
 
 			spans := sr.Ended()
-			if !assert.Len(t, spans, 2, "expected 2 spans, received %d", len(spans)) {
-				t.FailNow()
-			}
+			require.Len(t, spans, 2, "expected 2 spans, received %d", len(spans))
 			assert.Len(t, spans, 2)
 			assert.Equal(t, spans[0].SpanContext().TraceID(), spans[1].SpanContext().TraceID())
 			assert.Equal(t, spans[0].Parent().SpanID(), spans[1].SpanContext().SpanID())
