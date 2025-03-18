@@ -224,9 +224,12 @@ func TestDBCollectionAttribute(t *testing.T) {
 
 			md.AddResponses(tc.mockResponses...)
 			client, err := mongo.Connect(opts)
-			if err != nil {
-				t.FailNow()
-			}
+			require.NoError(t, err)
+			
+			defer func() {
+				err := client.Disconnect(context.Background())
+				require.NoError(t, err)
+			}()
 
 			_, err = tc.operation(ctx, client.Database("test-database"))
 			require.NoError(t, err)
