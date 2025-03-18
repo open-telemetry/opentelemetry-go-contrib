@@ -110,19 +110,16 @@ type Client interface {
 	// RecordError records an error returned by the HTTP request.
 	RecordError(error)
 
-	// RecordMetrics records the metrics from the provided HTTP request.
-	RecordMetrics(ctx context.Context, w BodyWrapper)
-
-	// RecordSpan sets the span attributes and status code based on the HTTP
-	// request and response.
+	// Record records the telemetry (spans and metrics) from the provided HTTP request.
+	//
 	// This method does not create a new span. It retrieves the current one from
 	// the context.
 	// It remains the instrumentation's responsibility to start and end spans.
-	RecordSpan(ctx context.Context, req *http.Request, w BodyWrapper, cfg ...ClientRecordSpanOption)
+	Record(ctx context.Context, req *http.Request, w BodyWrapper, cfg ...ClientRecordOption)
 }
 
-// ClientRecordSpanOption applies options to the RecordSpan method
-type ClientRecordSpanOption interface{}
+// RecordOption applies options to the Record method
+type ClientRecordOption interface{}
 ```
 
 #### The Server
@@ -131,24 +128,22 @@ type ClientRecordSpanOption interface{}
 // Server provides an interface for HTTP server instrumentations to set the
 // proper semantic convention attributes and metrics into their data.
 type Server interface {
-	// RecordMetrics records the metrics from the provided HTTP request.
-	RecordMetrics(ctx context.Context, w ResponseWrapper)
-
-	// RecordSpan sets the span attributes and status code based on the HTTP
+	// Record records the telemetry (spans and metrics) from the provided HTTP
 	// request and response.
+	//
 	// This method does not create a new span. It retrieves the current one from
 	// the context.
 	// It remains the instrumentation's responsibility to start and end spans.
-	RecordSpan(ctx context.Context, req *http.Request, w ResponseWrapper, cfg ...ServerRecordSpanOption)
+	Record(ctx context.Context, req *http.Request, w ResponseWrapper, cfg ...ServerRecordOption)
 }
 
 // ServerRecordSpanOption applies options to the RecordSpan method
-type ServerRecordSpanOption interface{}
+type ServerRecordOption interface{}
 ```
 
-The `ClientRecordSpanOption` and `ServerRecordSpanOption` functional options
-allows passing optional parameters to be used within the `RecordSpan` method,
-such as the HTTP route.
+The `ClientRecordOption` and `ServerRecordOption` functional options allows
+passing optional parameters to be used within the `Record` method, such as the
+HTTP route.
 
 When the data those options provide is not specified, the related span
 attributes will not be set.
@@ -236,15 +231,13 @@ func (m *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	rww := otelhttpconv.NewResponseWrapper(w)
 	next.ServeHTTP(rww, r.WithContext(ctx))
 
-	// RecordMetrics emits the proper semantic convention metrics
-	// With data based on the provided response wrapper
-	m.httpconv.RecordMetrics(ctx, rww)
-
-	// RecordSpan emits the proper semantic convention span attributes and events
-	// With data based on the provided response wrapper
+	// RecordMetrics emits the proper semantic convention metrics, and embeds the
+	// span with the proper attributes and events from the provided request and
+	// response wrapper.
+	//
 	// It must not create a new span. It retrieves the current one from the
 	// context.
-	m.httpconv.RecordSpan(ctx, r, rww)
+	m.httpconv.Record(ctx, r, rww)
 }
 ```
 
