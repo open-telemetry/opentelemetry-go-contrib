@@ -46,6 +46,55 @@ The proposed design aims to:
 * Work with every official instrumentation, and be available to external implementers.
 * Provide flexibility in its use, to allow folks the use of unstable semantic conventions if they wish.
 
+#### Request and Response wrappers
+
+We will provide one struct implementation which is not meant to be extensible,
+for the response and body wrappers.
+That implementation is the equivalent of the current
+[internal/shared/request](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/internal/shared/request)
+package.
+
+```golang
+// BodyWrapper provides a layer on top of the request's body that tracks
+// additional information such as bytes read etc.
+type BodyWrapper struct {
+	io.ReadCloser
+
+	// OnRead is a callback that tracks the amount of data read from the body
+	OnRead func(n int64)
+
+	// BytesRead contains the amount of bytes read from the response's body
+	BytesRead() int64
+
+	// Error contains the last error that occurred while reading
+	Error() error
+}
+
+// ResponseWrapper provides a layer on top of `*http.Response` that tracks
+// additional information such as bytes written etc.
+type ResponseWrapper struct {
+	http.ResponseWriter
+
+	// OnWrite is a callback that tracks the amount of data written to the response
+	OnWrite func(n int64)
+
+	// Duration contains the duration of the HTTP request
+	Duration() time.Duration
+
+	// Duration contains the status code returned by the HTTP request
+	StatusCode() int
+
+	// BytesWritten contains the amount of bytes written to the response's body
+	BytesWritten() int64
+
+	// Error contains the last error that occurred while writing
+	Error() error
+}
+```
+
+Note: to keep this document concise, the full implementation is not provided
+here.
+
 ### Interfaces
 
 We will provide two public interface that allow interacting with the
@@ -55,18 +104,6 @@ One for client. and one for servers. Implementations can use one, the other or b
 #### The client
 
 ```golang
-// BodyWrapper provides a layer on top of the request's body that tracks
-// additional information such as bytes read etc.
-type BodyWrapper interface {
-	io.ReadCloser
-
-	// BytesRead contains the amount of bytes read from the response's body
-	BytesRead() int64
-
-	// Error contains the last error that occurred while reading
-	Error() error
-}
-
 // Client provides an interface for HTTP client instrumentations to set the
 // proper semantic convention attributes and metrics into their data.
 type Client interface {
@@ -91,24 +128,6 @@ type ClientRecordSpanOption interface{}
 #### The Server
 
 ```golang
-// ResponseWrapper provides a layer on top of `*http.Response` that tracks
-// additional information such as bytes written etc.
-type ResponseWrapper interface {
-	http.ResponseWriter
-
-	// Duration contains the duration of the HTTP request
-	Duration() time.Duration
-
-	// Duration contains the status code returned by the HTTP request
-	StatusCode() int
-
-	// BytesWritten contains the amount of bytes written to the response's body
-	BytesWritten() int64
-
-	// Error contains the last error that occurred while writing
-	Error() error
-}
-
 // Server provides an interface for HTTP server instrumentations to set the
 // proper semantic convention attributes and metrics into their data.
 type Server interface {
@@ -133,19 +152,6 @@ such as the HTTP route.
 
 When the data those options provide is not specified, the related span
 attributes will not be set.
-
-#### Request and Response wrappers
-
-The request and response wrappers implementations will be provided by the
-[internal/request](https://pkg.go.dev/go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request)
-templates package.
-
-We may provide a new package, or actual implementations within the
-`otelhttpconv` package later on. But doing so is not covered by this design
-document at the moment.
-
-Therefore external implementations will currently have to implement this logic
-themselves.
 
 ### Implementations
 
