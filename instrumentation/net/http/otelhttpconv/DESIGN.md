@@ -153,6 +153,23 @@ such as the HTTP route.
 When the data those options provide is not specified, the related span
 attributes will not be set.
 
+### Compatibility
+
+These interfaces are kept relatively simple on purpose, so they can be used as
+foundations if folks wish to extend them with their own actual implementations.
+
+Once stable, we will not be able to change those interfaces anymore (adding,
+renaming or deleting methods), as that would break backwards compatibility with
+implementations.
+
+However, because they remain lightweight, they allow folks to do custom logic,
+such as:
+
+* A proxy that would allow combining multiple implementations together.
+* An implementation that covers unstable semantic conventions.
+* Implementations for older semantic conventions.
+* Implementations that cover custom implementations if a customer doesn't wish to use semconvs.
+
 ### Implementations
 
 We will provide one official implementation of the described interfaces.
