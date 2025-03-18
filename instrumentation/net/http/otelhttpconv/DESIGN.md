@@ -253,3 +253,31 @@ For example, with the `otelhttp` instrumentation for clients:
 ```golang
 otelhttp.NewTransport(http.DefaultTransport, otelhttp.WithHTTPConv(myCustomImplementation{}))
 ```
+
+## Alternatives
+
+### Do nothing
+
+We could do nothing and keep the current templatized implementation.
+
+That current implementation has a few issues though:
+
+* Each change in the templates requires a changelog entry that mentions **every** HTTP package, making them hard to grasp.
+* Folks have been asking for a way to use the semconv package in their own instrumentation packages.
+* The current implementation is a bit of a stability hazard that makes it hard to stabilize the otelhttp instrumentation.
+
+### Function instead of struct
+
+We could simplify things even more with a function instead of interfaces.
+
+```golang
+func RecordClient(r *http.Request, params RecordClientParameters)
+
+type RecordClientParameters struct {
+  Tracer trace.Tracer
+  Meter metric.Meter
+  Error error
+  Response *http.Response
+  Duration time.Time
+}
+```
