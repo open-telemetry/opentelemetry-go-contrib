@@ -115,6 +115,8 @@ func WithMeterProvider(mp metric.MeterProvider) Option {
 
 // WithMetricAttributeFn specifies a function that extracts additional attributes from the http.Request
 // and returns them as a slice of attribute.KeyValue.
+//
+// If attributes are duplicated between this method and `WithGinMetricAttributeFn`, the attributes in this method will be used.
 func WithMetricAttributeFn(f MetricAttributeFn) Option {
 	return optionFunc(func(c *config) {
 		c.MetricAttributeFn = f
