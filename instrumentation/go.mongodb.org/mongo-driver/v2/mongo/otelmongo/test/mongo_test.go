@@ -113,6 +113,10 @@ func TestDBCrudOperation(t *testing.T) {
 
 			md.AddResponses(tc.mockResponses...)
 			client, err := mongo.Connect(opts)
+			defer func() {
+				err := client.Disconnect(context.Background())
+				require.NoError(t, err)
+			}()
 			if err != nil {
 				t.FailNow()
 			}
