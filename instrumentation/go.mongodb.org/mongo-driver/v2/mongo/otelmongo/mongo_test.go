@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package test
+package otelmongo_test
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -30,10 +31,10 @@ func TestDBCrudOperation(t *testing.T) {
 			return assert.Equal(t, "test-collection.insert", s.Name(), "expected %s", s.Name())
 		},
 		func(s sdktrace.ReadOnlySpan) bool {
-			return assert.Contains(t, s.Attributes(), attribute.String("db.operation", "insert"))
+			return assert.Contains(t, s.Attributes(), attribute.String("db.operation.name", "insert"))
 		},
 		func(s sdktrace.ReadOnlySpan) bool {
-			return assert.Contains(t, s.Attributes(), attribute.String("db.mongodb.collection", "test-collection"))
+			return assert.Contains(t, s.Attributes(), attribute.String("db.collection.name", "test-collection"))
 		},
 		func(s sdktrace.ReadOnlySpan) bool {
 			return assert.Equal(t, codes.Unset, s.Status().Code)
@@ -56,7 +57,7 @@ func TestDBCrudOperation(t *testing.T) {
 			excludeCommand: false,
 			validators: append(commonValidators, func(s sdktrace.ReadOnlySpan) bool {
 				for _, attr := range s.Attributes() {
-					if attr.Key == "db.statement" {
+					if attr.Key == "db.query.text" {
 						return assert.Contains(t, attr.Value.AsString(), `"test-item":"test-value"`)
 					}
 				}
@@ -134,11 +135,11 @@ func TestDBCrudOperation(t *testing.T) {
 			s := spans[0]
 			assert.Equal(t, trace.SpanKindClient, s.SpanKind())
 			attrs := s.Attributes()
-			assert.Contains(t, attrs, attribute.String("db.system", "mongodb"))
-			assert.Contains(t, attrs, attribute.String("net.peer.name", "<mock_connection>"))
-			assert.Contains(t, attrs, attribute.Int64("net.peer.port", int64(27017)))
-			assert.Contains(t, attrs, attribute.String("net.transport", "ip_tcp"))
-			assert.Contains(t, attrs, attribute.String("db.name", "test-database"))
+			assert.Contains(t, attrs, attribute.String("db.system.name", "mongodb"))
+			assert.Contains(t, attrs, attribute.String("network.peer.address", "<mock_connection>"))
+			assert.Contains(t, attrs, attribute.Int64("network.peer.port", int64(27017)))
+			assert.Contains(t, attrs, attribute.String("network.transport", "tcp"))
+			assert.Contains(t, attrs, attribute.String("db.namespace", "test-database"))
 			for _, v := range tc.validators {
 				assert.True(t, v(s))
 			}
@@ -164,10 +165,10 @@ func TestDBCollectionAttribute(t *testing.T) {
 					return assert.Equal(t, "test-collection.delete", s.Name())
 				},
 				func(s sdktrace.ReadOnlySpan) bool {
-					return assert.Contains(t, s.Attributes(), attribute.String("db.operation", "delete"))
+					return assert.Contains(t, s.Attributes(), attribute.String("db.operation.name", "delete"))
 				},
 				func(s sdktrace.ReadOnlySpan) bool {
-					return assert.Contains(t, s.Attributes(), attribute.String("db.mongodb.collection", "test-collection"))
+					return assert.Contains(t, s.Attributes(), attribute.String("db.collection.name", "test-collection"))
 				},
 				func(s sdktrace.ReadOnlySpan) bool {
 					return assert.Equal(t, codes.Unset, s.Status().Code)
@@ -190,7 +191,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 					return assert.Equal(t, "listCollections", s.Name())
 				},
 				func(s sdktrace.ReadOnlySpan) bool {
-					return assert.Contains(t, s.Attributes(), attribute.String("db.operation", "listCollections"))
+					return assert.Contains(t, s.Attributes(), attribute.String("db.operation.name", "listCollections"))
 				},
 				func(s sdktrace.ReadOnlySpan) bool {
 					return assert.Equal(t, codes.Unset, s.Status().Code)
@@ -225,7 +226,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			md.AddResponses(tc.mockResponses...)
 			client, err := mongo.Connect(opts)
 			require.NoError(t, err)
-			
+
 			defer func() {
 				err := client.Disconnect(context.Background())
 				require.NoError(t, err)
@@ -246,11 +247,11 @@ func TestDBCollectionAttribute(t *testing.T) {
 			s := spans[0]
 			assert.Equal(t, trace.SpanKindClient, s.SpanKind())
 			attrs := s.Attributes()
-			assert.Contains(t, attrs, attribute.String("db.system", "mongodb"))
-			assert.Contains(t, attrs, attribute.String("net.peer.name", "<mock_connection>"))
-			assert.Contains(t, attrs, attribute.Int64("net.peer.port", int64(27017)))
-			assert.Contains(t, attrs, attribute.String("net.transport", "ip_tcp"))
-			assert.Contains(t, attrs, attribute.String("db.name", "test-database"))
+			assert.Contains(t, attrs, attribute.String("db.system.name", "mongodb"))
+			assert.Contains(t, attrs, attribute.String("network.peer.address", "<mock_connection>"))
+			assert.Contains(t, attrs, attribute.Int64("network.peer.port", int64(27017)))
+			assert.Contains(t, attrs, attribute.String("network.transport", "tcp"))
+			assert.Contains(t, attrs, attribute.String("db.namespace", "test-database"))
 			for _, v := range tc.validators {
 				assert.True(t, v(s))
 			}
