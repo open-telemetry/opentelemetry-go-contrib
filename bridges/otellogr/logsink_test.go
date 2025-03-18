@@ -422,7 +422,7 @@ func buildRecord(body log.Value, timestamp time.Time, severity log.Severity, att
 func assertRecords(t *testing.T, want, got []logtest.EmittedRecord) {
 	t.Helper()
 
-	assert.Equal(t, len(want), len(got))
+	assert.Len(t, got, len(want))
 
 	for i, j := range want {
 		logtest.AssertRecordEqual(t, j.Record, got[i].Record)

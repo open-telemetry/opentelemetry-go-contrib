@@ -384,7 +384,7 @@ func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 			recorder := httptest.NewRecorder()
 			rw := &respWriteHeaderCounter{ResponseWriter: recorder}
 			h.ServeHTTP(rw, httptest.NewRequest("GET", "/", nil))
-			require.EqualValues(t, tc.expectHeadersWritten, rw.headersWritten, "should propagate all WriteHeader calls to underlying ResponseWriter")
+			require.Equal(t, tc.expectHeadersWritten, rw.headersWritten, "should propagate all WriteHeader calls to underlying ResponseWriter")
 		})
 	}
 }

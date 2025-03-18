@@ -23,7 +23,7 @@ func TestNewTraceState(t *testing.T) {
 	otts := newTraceState()
 	require.False(t, otts.hasPValue())
 	require.False(t, otts.hasRValue())
-	require.Equal(t, "", otts.serialize())
+	require.Empty(t, otts.serialize())
 }
 
 func TestTraceStatePRValueSerialize(t *testing.T) {
@@ -98,7 +98,7 @@ func TestParseTraceStateUnsampled(t *testing.T) {
 			} else {
 				require.False(t, otts.hasRValue(), "should have no r-value")
 			}
-			require.EqualValues(t, []string(nil), otts.unknown)
+			require.Equal(t, []string(nil), otts.unknown)
 
 			if test.expectErr == nil {
 				// Require serialize to round-trip
@@ -183,7 +183,7 @@ func TestParseTraceStateSampled(t *testing.T) {
 			} else {
 				require.False(t, otts.hasRValue(), "should have no r-value")
 			}
-			require.EqualValues(t, []string(nil), otts.unknown)
+			require.Equal(t, []string(nil), otts.unknown)
 
 			if test.expectErr == nil {
 				// Require serialize to round-trip
@@ -267,7 +267,7 @@ func TestParseTraceStateExtra(t *testing.T) {
 			} else {
 				require.False(t, otts.hasRValue(), "should have no r-value")
 			}
-			require.EqualValues(t, test.extra, otts.unknown)
+			require.Equal(t, test.extra, otts.unknown)
 
 			// on success w/o r-value or p-value, serialize() should not modify
 			if !otts.hasRValue() && !otts.hasPValue() && test.expectErr == nil {

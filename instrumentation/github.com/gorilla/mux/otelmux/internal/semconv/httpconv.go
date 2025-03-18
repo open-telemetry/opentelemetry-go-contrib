@@ -22,7 +22,7 @@ import (
 
 type CurrentHTTPServer struct{}
 
-// TraceRequest returns trace attributes for an HTTP request received by a
+// RequestTraceAttrs returns trace attributes for an HTTP request received by a
 // server.
 //
 // The server must be the primary server name if it is known. For example this
@@ -96,6 +96,11 @@ func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request) [
 		count++
 	}
 
+	httpRoute := req.Pattern
+	if httpRoute != "" {
+		count++
+	}
+
 	attrs := make([]attribute.KeyValue, 0, count)
 	attrs = append(attrs,
 		semconvNew.ServerAddress(host),
@@ -136,6 +141,10 @@ func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request) [
 	}
 	if protoVersion != "" {
 		attrs = append(attrs, semconvNew.NetworkProtocolVersion(protoVersion))
+	}
+
+	if httpRoute != "" {
+		attrs = append(attrs, n.Route(httpRoute))
 	}
 
 	return attrs

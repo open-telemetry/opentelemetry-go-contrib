@@ -315,7 +315,7 @@ func TestRequiredHTTPPort(t *testing.T) {
 	}
 	for _, test := range tests {
 		got := requiredHTTPPort(test.https, test.port)
-		assert.Equal(t, test.want, got, test.https, test.port)
+		assert.Equalf(t, test.want, got, "HTTPS: %t, Port: %d", test.https, test.port)
 	}
 }
 
@@ -332,8 +332,8 @@ func TestFirstHostPort(t *testing.T) {
 
 	for _, src := range sources {
 		h, p := firstHostPort(src...)
-		assert.Equal(t, host, h, src)
-		assert.Equal(t, port, p, src)
+		assert.Equal(t, host, h, "%+v", src)
+		assert.Equal(t, port, p, "%+v", src)
 	}
 }
 

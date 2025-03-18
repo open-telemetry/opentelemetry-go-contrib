@@ -309,8 +309,8 @@ func TestB3EncodingOperations(t *testing.T) {
 	// supported by everything.
 	assert.True(t, B3Unspecified.supports(B3Unspecified))
 	for _, e := range encodings[:len(encodings)-1] {
-		assert.False(t, B3Unspecified.supports(e), e)
-		assert.True(t, e.supports(B3Unspecified), e)
+		assert.False(t, B3Unspecified.supports(e), "%+v", e)
+		assert.True(t, e.supports(B3Unspecified), "%+v", e)
 	}
 
 	// Skip the special case for B3Unspecified.
