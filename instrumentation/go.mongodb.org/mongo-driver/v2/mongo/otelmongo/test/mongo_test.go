@@ -229,9 +229,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			}
 
 			_, err = tc.operation(ctx, client.Database("test-database"))
-			if err != nil {
-				t.Error(err)
-			}
+			require.NoError(t, err)
 
 			span.End()
 
