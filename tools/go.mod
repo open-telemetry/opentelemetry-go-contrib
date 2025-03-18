@@ -5,7 +5,7 @@ go 1.23.0
 exclude github.com/blizzy78/varnamelen v0.6.1
 
 require (
-	github.com/atombender/go-jsonschema v0.17.0
+	github.com/atombender/go-jsonschema v0.18.0
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint v1.64.8
 	github.com/itchyny/gojq v0.12.17
