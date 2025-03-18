@@ -117,9 +117,7 @@ func TestDBCrudOperation(t *testing.T) {
 				err := client.Disconnect(context.Background())
 				require.NoError(t, err)
 			}()
-			if err != nil {
-				t.FailNow()
-			}
+			require.NoError(t, err)
 
 			_, err = tc.operation(ctx, client.Database("test-database"))
 			if err != nil {
