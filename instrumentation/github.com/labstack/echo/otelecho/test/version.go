@@ -5,7 +5,7 @@ package test // import "go.opentelemetry.io/contrib/instrumentation/github.com/l
 
 // Version is the current release version of the echo instrumentation test module.
 func Version() string {
-	return "0.59.0"
+	return "0.60.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

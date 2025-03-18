@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/example
 
-go 1.22.0
+go 1.23.0
 
 replace (
 	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho => ../
@@ -9,11 +9,11 @@ replace (
 
 require (
 	github.com/labstack/echo/v4 v4.13.3
-	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.59.0
-	go.opentelemetry.io/otel v1.34.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.34.0
-	go.opentelemetry.io/otel/sdk v1.34.0
-	go.opentelemetry.io/otel/trace v1.34.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho v0.60.0
+	go.opentelemetry.io/otel v1.35.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.35.0
+	go.opentelemetry.io/otel/sdk v1.35.0
+	go.opentelemetry.io/otel/trace v1.35.0
 )
 
 require (
@@ -26,10 +26,10 @@ require (
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasttemplate v1.2.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel/metric v1.34.0 // indirect
-	golang.org/x/crypto v0.33.0 // indirect
-	golang.org/x/net v0.35.0 // indirect
-	golang.org/x/sys v0.30.0 // indirect
-	golang.org/x/text v0.22.0 // indirect
-	golang.org/x/time v0.10.0 // indirect
+	go.opentelemetry.io/otel/metric v1.35.0 // indirect
+	golang.org/x/crypto v0.36.0 // indirect
+	golang.org/x/net v0.37.0 // indirect
+	golang.org/x/sys v0.31.0 // indirect
+	golang.org/x/text v0.23.0 // indirect
+	golang.org/x/time v0.11.0 // indirect
 )

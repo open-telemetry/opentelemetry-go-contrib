@@ -165,7 +165,7 @@ func initAgent(t *testing.T) (*testutils.MockAgent, *Sampler) {
 
 func makeSamplingParameters(id uint64, operationName string) trace.SamplingParameters {
 	var traceID oteltrace.TraceID
-	binary.BigEndian.PutUint64(traceID[:], id)
+	binary.BigEndian.PutUint64(traceID[8:], id)
 
 	return trace.SamplingParameters{
 		TraceID: traceID,
@@ -185,7 +185,7 @@ func TestRemotelyControlledSampler(t *testing.T) {
 	remoteSampler.UpdateSampler()
 	s1, ok := remoteSampler.sampler.(*probabilisticSampler)
 	assert.True(t, ok)
-	assert.EqualValues(t, testDefaultSamplingProbability, s1.samplingRate, "Sampler should have been updated")
+	assert.Equal(t, testDefaultSamplingProbability, s1.samplingRate, "Sampler should have been updated")
 
 	result := remoteSampler.ShouldSample(makeSamplingParameters(testMaxID+10, testOperationName))
 	assert.Equal(t, trace.Drop, result.Decision)
@@ -210,7 +210,7 @@ func TestRemotelyControlledSampler(t *testing.T) {
 
 	s2, ok := remoteSampler.sampler.(*probabilisticSampler)
 	assert.True(t, ok)
-	assert.EqualValues(t, testDefaultSamplingProbability, s2.samplingRate, "Sampler should have been updated from timer")
+	assert.Equal(t, testDefaultSamplingProbability, s2.samplingRate, "Sampler should have been updated from timer")
 }
 
 func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
@@ -543,7 +543,7 @@ func getSamplingStrategyResponse(strategyType jaeger_api_v2.SamplingStrategyType
 func TestSamplingStrategyParserImpl(t *testing.T) {
 	assertProbabilistic := func(t *testing.T, s *jaeger_api_v2.SamplingStrategyResponse) {
 		require.NotNil(t, s.GetProbabilisticSampling(), "output: %+v", s)
-		require.EqualValues(t, 0.42, s.GetProbabilisticSampling().GetSamplingRate(), "output: %+v", s)
+		require.Equal(t, 0.42, s.GetProbabilisticSampling().GetSamplingRate(), "output: %+v", s)
 	}
 	assertRateLimiting := func(t *testing.T, s *jaeger_api_v2.SamplingStrategyResponse) {
 		require.NotNil(t, s.GetRateLimitingSampling(), "output: %+v", s)
@@ -641,7 +641,7 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 			t.Setenv("OTEL_TRACES_SAMPLER_ARG", test.otelTraceSamplerArgs)
 
 			_, errs := getEnvOptions()
-			require.Equal(t, len(test.expErrs), len(errs))
+			require.Len(t, errs, len(test.expErrs))
 
 			for i := range len(errs) {
 				require.ErrorContains(t, errs[i], test.expErrs[i])

@@ -33,7 +33,7 @@ type emitArgs struct {
 
 type enabledArgs struct {
 	Ctx   context.Context
-	Param api.EnabledParameters
+	Param log.EnabledParameters
 }
 
 type processor struct {
@@ -45,12 +45,18 @@ type processor struct {
 	ShutdownCalls   []context.Context
 }
 
+// Compile time assertion that processor implements log.Processor and log.FilterProcessor.
+var (
+	_ log.Processor       = (*processor)(nil)
+	_ log.FilterProcessor = (*processor)(nil)
+)
+
 func (p *processor) OnEmit(ctx context.Context, r *log.Record) error {
 	p.OnEmitCalls = append(p.OnEmitCalls, emitArgs{ctx, r})
 	return p.ReturnErr
 }
 
-func (p *processor) Enabled(ctx context.Context, param api.EnabledParameters) bool {
+func (p *processor) Enabled(ctx context.Context, param log.EnabledParameters) bool {
 	p.EnabledCalls = append(p.EnabledCalls, enabledArgs{ctx, param})
 	return true
 }
@@ -78,19 +84,19 @@ func TestLogProcessorDynamicSeverity(t *testing.T) {
 	p := NewLogProcessor(wrapped, sev)
 
 	ctx := context.Background()
-	params := &api.EnabledParameters{Severity: api.SeverityDebug}
-	assert.False(t, p.Enabled(ctx, *params), api.SeverityDebug.String())
+	params := log.EnabledParameters{Severity: api.SeverityDebug}
+	assert.False(t, p.Enabled(ctx, params), api.SeverityDebug.String())
 
 	params.Severity = api.SeverityInfo
-	assert.True(t, p.Enabled(ctx, *params), api.SeverityInfo.String())
+	assert.True(t, p.Enabled(ctx, params), api.SeverityInfo.String())
 
 	sev.Set(SeverityError)
 
 	params.Severity = api.SeverityInfo
-	assert.False(t, p.Enabled(ctx, *params), api.SeverityInfo.String())
+	assert.False(t, p.Enabled(ctx, params), api.SeverityInfo.String())
 
 	params.Severity = api.SeverityError
-	assert.True(t, p.Enabled(ctx, *params), api.SeverityError.String())
+	assert.True(t, p.Enabled(ctx, params), api.SeverityError.String())
 }
 
 func TestLogProcessorOnEmit(t *testing.T) {
@@ -135,7 +141,7 @@ func TestLogProcessorEnabled(t *testing.T) {
 
 		p := NewLogProcessor(wrapped, SeverityTrace1)
 		ctx := context.Background()
-		param := api.EnabledParameters{}
+		param := log.EnabledParameters{}
 		for _, sev := range severities {
 			param.Severity = sev
 			assert.True(t, p.Enabled(ctx, param), sev.String())
@@ -153,7 +159,7 @@ func TestLogProcessorEnabled(t *testing.T) {
 
 		p := NewLogProcessor(wrapped, apiSev(api.SeverityFatal4+1))
 		ctx := context.Background()
-		param := api.EnabledParameters{}
+		param := log.EnabledParameters{}
 		for _, sev := range severities {
 			param.Severity = sev
 			assert.False(t, p.Enabled(ctx, param), sev.String())
@@ -170,16 +176,16 @@ func TestLogProcessorEnabled(t *testing.T) {
 		pruned := struct{ log.Processor }{wrapped} // Remove the Enabled method.
 		p := NewLogProcessor(pruned, SeverityInfo)
 		ctx := context.Background()
-		params := &api.EnabledParameters{}
+		params := log.EnabledParameters{}
 
 		params.Severity = api.SeverityDebug
-		assert.False(t, p.Enabled(ctx, *params))
+		assert.False(t, p.Enabled(ctx, params))
 
 		params.Severity = api.SeverityInfo
-		assert.True(t, p.Enabled(ctx, *params))
+		assert.True(t, p.Enabled(ctx, params))
 
 		params.Severity = api.SeverityError
-		assert.True(t, p.Enabled(ctx, *params))
+		assert.True(t, p.Enabled(ctx, params))
 
 		assert.Empty(t, wrapped.EnabledCalls)
 	})
@@ -213,7 +219,7 @@ func TestLogProcessorNilDownstream(t *testing.T) {
 	ctx := context.Background()
 	r := new(log.Record)
 	r.SetSeverity(api.SeverityTrace1)
-	param := api.EnabledParameters{Severity: api.SeverityTrace1}
+	param := log.EnabledParameters{Severity: api.SeverityTrace1}
 	assert.NotPanics(t, func() {
 		assert.NoError(t, p.OnEmit(ctx, r))
 		assert.False(t, p.Enabled(ctx, param))
@@ -225,12 +231,12 @@ func TestLogProcessorNilDownstream(t *testing.T) {
 func BenchmarkLogProcessor(b *testing.B) {
 	r := new(log.Record)
 	r.SetSeverity(api.SeverityTrace)
-	param := api.EnabledParameters{Severity: api.SeverityTrace}
+	param := log.EnabledParameters{Severity: api.SeverityTrace}
 	ctx := context.Background()
 
 	type combo interface {
 		log.Processor
-		filterProcessor
+		log.FilterProcessor
 	}
 
 	run := func(p combo) func(b *testing.B) {

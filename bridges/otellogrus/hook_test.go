@@ -485,7 +485,7 @@ func assertKeyValues(t *testing.T, want, got []log.KeyValue) {
 func assertRecords(t *testing.T, want, got []logtest.EmittedRecord) {
 	t.Helper()
 
-	assert.Equal(t, len(want), len(got))
+	assert.Len(t, got, len(want))
 
 	for i, j := range want {
 		logtest.AssertRecordEqual(t, j.Record, got[i].Record)

@@ -54,12 +54,12 @@ func TestBodyWrapperWithErrors(t *testing.T) {
 
 	data, err := io.ReadAll(bw)
 	require.Equal(t, errFirstCall, err)
-	assert.Equal(t, "", string(data))
+	assert.Empty(t, string(data))
 	require.Equal(t, errFirstCall, bw.Error())
 
 	data, err = io.ReadAll(bw)
 	require.Equal(t, errorWrapper{}, err)
-	assert.Equal(t, "", string(data))
+	assert.Empty(t, string(data))
 	require.Equal(t, errorWrapper{}, bw.Error())
 }
 
