@@ -5,13 +5,9 @@ package otelzap
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"testing"
-	"time"
 
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
@@ -161,9 +157,7 @@ func TestCore(t *testing.T) {
 			l := zap.New(zc)
 			tc.fn(l)
 			got := rec.Result()
-			if err := validate(got, tc.want); err != nil {
-				t.Error(err)
-			}
+			logtest.AssertEqual(t, got, tc.want, logtest.IgnoreTimestamp())
 		})
 	}
 }
@@ -196,9 +190,7 @@ func TestCoreEnabled(t *testing.T) {
 		},
 	}
 	got := rec.Result()
-	if err := validate(got, want); err != nil {
-		t.Error(err)
-	}
+	logtest.AssertEqual(t, got, want, logtest.IgnoreTimestamp())
 }
 
 func TestCoreWithCaller(t *testing.T) {
@@ -270,9 +262,7 @@ func TestNewCoreConfiguration(t *testing.T) {
 			logtest.Scope{Name: loggerName}: nil,
 		}
 		got := rec.Result()
-		if err := validate(got, want); err != nil {
-			t.Error(err)
-		}
+		logtest.AssertEqual(t, got, want)
 	})
 
 	t.Run("Options", func(t *testing.T) {
@@ -292,9 +282,7 @@ func TestNewCoreConfiguration(t *testing.T) {
 			}: nil,
 		}
 		got := rec.Result()
-		if err := validate(got, want); err != nil {
-			t.Error(err)
-		}
+		logtest.AssertEqual(t, got, want)
 	})
 }
 
@@ -363,23 +351,6 @@ func TestSplitFuncName(t *testing.T) {
 			}
 		})
 	}
-}
-
-// validate compares got and want.
-func validate(got, want logtest.Recording) error {
-	// Compare Context.
-	cmpCtx := cmpopts.EquateComparable(context.Background(), ctx)
-	// Ignore Timestamps.
-	cmpStmps := cmpopts.IgnoreTypes(time.Time{})
-	// Unordered compare of the key values.
-	cmpKVs := cmpopts.SortSlices(func(a, b log.KeyValue) bool { return a.Key < b.Key })
-	// Empty and nil collections are equal.
-	cmpEpty := cmpopts.EquateEmpty()
-
-	if diff := cmp.Diff(want, got, cmpCtx, cmpStmps, cmpKVs, cmpEpty); diff != "" {
-		return fmt.Errorf("recording mismatch (-want +got):\n%s", diff)
-	}
-	return nil
 }
 
 // recordedAttributes returns record's attributes when only a single record was emitted.
