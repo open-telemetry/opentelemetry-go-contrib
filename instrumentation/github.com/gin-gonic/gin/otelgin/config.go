@@ -123,6 +123,8 @@ func WithMetricAttributeFn(f MetricAttributeFn) Option {
 
 // WithGinMetricAttributeFn specifies a function that extracts additional attributes from the gin.Context
 // and returns them as a slice of attribute.KeyValue.
+//
+// If attributes are duplicated between this method and `WithMetricAttributeFn`, the attributes in this method will be used.
 func WithGinMetricAttributeFn(f GinMetricAttributeFn) Option {
 	return optionFunc(func(c *config) {
 		c.GinMetricAttributeFn = f
