@@ -63,7 +63,7 @@ type HTTPServer struct {
 // The req Host will be used to determine the server instead.
 func (s HTTPServer) RequestTraceAttrs(server string, req *http.Request) []attribute.KeyValue {
 	if s.duplicate {
-		return append(OldHTTPServer{}.RequestTraceAttrs(server, req), CurrentHTTPServer{}.RequestTraceAttrs(server, req)...)
+		return append(OldHTTPServer{}.RequestTraceAttrs(server, req), CurrentHTTPServer{}.RequestTraceAttrs(server, req, RequestTraceAttrsOpts{})...)
 	}
 	return OldHTTPServer{}.RequestTraceAttrs(server, req)
 }

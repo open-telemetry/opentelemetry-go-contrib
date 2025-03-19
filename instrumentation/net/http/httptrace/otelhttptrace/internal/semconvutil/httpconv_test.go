@@ -185,7 +185,7 @@ func TestHTTPServerRequest(t *testing.T) {
 			wantClientIP: "5.6.7.8",
 		},
 		{
-			name: "with a cl;ient IP in options",
+			name: "with a client IP in options",
 			requestModifierFn: func(r *http.Request) {
 				r.Header.Add("X-Forwarded-For", "5.6.7.8")
 			},
