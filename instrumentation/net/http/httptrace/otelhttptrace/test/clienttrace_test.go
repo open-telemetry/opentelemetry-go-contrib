@@ -93,7 +93,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 			name: "http.getconn",
 			attributes: []attribute.KeyValue{
 				attribute.Key("http.remote").String(address.String()),
-				attribute.Key("net.host.name").String(address.String()),
+				attribute.Key("server.address").String(address.String()),
 				attribute.Key("http.conn.reused").Bool(false),
 				attribute.Key("http.conn.wasidle").Bool(false),
 			},
@@ -348,7 +348,7 @@ func TestWithoutSubSpans(t *testing.T) {
 		{"http.getconn.start", func(t *testing.T, got attrMap) {
 			assert.Equal(t,
 				attribute.StringValue(fixture.Address),
-				got[attribute.Key("net.host.name")],
+				got[attribute.Key("server.address")],
 			)
 		}},
 		{"http.getconn.done", func(t *testing.T, got attrMap) {
