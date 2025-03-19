@@ -5,7 +5,7 @@ go 1.23.0
 exclude github.com/blizzy78/varnamelen v0.6.1
 
 require (
-	github.com/atombender/go-jsonschema v0.17.0
+	github.com/atombender/go-jsonschema v0.18.0
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint v1.64.8
 	github.com/itchyny/gojq v0.12.17
@@ -72,7 +72,7 @@ require (
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
 	github.com/ghostiam/protogetter v0.3.12 // indirect
-	github.com/go-critic/go-critic v0.12.0 // indirect
+	github.com/go-critic/go-critic v0.13.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
 	github.com/go-git/go-git/v5 v5.14.0 // indirect
