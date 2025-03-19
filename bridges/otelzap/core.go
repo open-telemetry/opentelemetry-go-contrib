@@ -225,6 +225,90 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	return nil
 }
 
+// WrappedCore is a [zapcore.Core] that wraps a core and sends logging records to OpenTelemetry.
+type WrappedCore struct {
+	delegate zapcore.Core
+	provider log.LoggerProvider
+}
+
+// Compile-time check *Core implements zapcore.Core.
+var _ zapcore.Core = (*WrappedCore)(nil)
+
+// Compile-time check *Core implements zapcore.CheckWriteHook.
+var _ zapcore.CheckWriteHook = (*WrappedCore)(nil)
+
+func NewWrappedCore(delegate zapcore.Core, provider log.LoggerProvider) *WrappedCore {
+	return &WrappedCore{
+		delegate: delegate,
+		provider: provider,
+	}
+}
+
+func (o *WrappedCore) Enabled(level zapcore.Level) bool {
+	return o.delegate.Enabled(level)
+}
+
+func (o *WrappedCore) With(fields []zapcore.Field) zapcore.Core {
+	// TODO: figure out if / how to interact with otel context
+	return o.delegate.With(fields)
+}
+
+func (o *WrappedCore) clone() *WrappedCore {
+	return &WrappedCore{
+		delegate: o.delegate,
+		provider: o.provider,
+	}
+}
+
+func (o *WrappedCore) Sync() error {
+	return o.delegate.Sync()
+}
+
+func (o *WrappedCore) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
+	return o.delegate.Check(ent, ce).After(ent, o)
+}
+
+func (o *WrappedCore) OnWrite(ent *zapcore.CheckedEntry, fields []zapcore.Field) {
+	ctx := context.Background()
+	r := log.Record{}
+	r.SetTimestamp(ent.Time)
+	r.SetBody(log.StringValue(ent.Message))
+	r.SetSeverity(convertLevel(ent.Level))
+	r.SetSeverityText(ent.Level.String())
+
+	if ent.Caller.Defined {
+		r.AddAttributes(
+			log.String(string(semconv.CodeFilepathKey), ent.Caller.File),
+			log.Int(string(semconv.CodeLineNumberKey), ent.Caller.Line),
+			log.String(string(semconv.CodeFunctionKey), ent.Caller.Function),
+		)
+	}
+	if ent.Stack != "" {
+		r.AddAttributes(log.String(string(semconv.CodeStacktraceKey), ent.Stack))
+	}
+	if len(fields) > 0 {
+		context, attrbuf := convertField(fields)
+		if context != nil {
+			ctx = context
+		}
+		r.AddAttributes(attrbuf...)
+	}
+
+	var logger log.Logger
+	if ent.LoggerName != "" {
+		logger = o.provider.Logger(ent.LoggerName)
+		// TODO: figure out what to do with context
+	} else {
+		logger = o.provider.Logger("unknown")
+	}
+	logger.Emit(ctx, r)
+
+}
+
+func (o *WrappedCore) Write(ent zapcore.Entry, fields []zapcore.Field) error {
+	return o.delegate.Write(ent, fields)
+}
+
 func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue) {
 	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
