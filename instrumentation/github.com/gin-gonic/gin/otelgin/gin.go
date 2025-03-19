@@ -81,7 +81,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(hs.RequestTraceAttrs(service, c.Request)...),
+			oteltrace.WithAttributes(hs.RequestTraceAttrs(service, c.Request, semconv.RequestTraceAttrsOpts{})...),
 			oteltrace.WithAttributes(hs.Route(c.FullPath())),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
