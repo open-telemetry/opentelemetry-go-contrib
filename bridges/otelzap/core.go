@@ -94,7 +94,7 @@ func WithSchemaURL(schemaURL string) Option {
 	})
 }
 
-// WithAttributes returns an [Option] that configures the instrumentation
+// WithAttributes returns an [Option] that configures the instrumentation scope
 // attributes of the [log.Logger] used by a [Core].
 func WithAttributes(attributes ...attribute.KeyValue) Option {
 	return optFunc(func(c config) config {
