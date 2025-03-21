@@ -4,6 +4,7 @@
 package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 
 import (
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -14,6 +15,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -85,7 +87,13 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			}
 
 			status := c.Response().Status
-			span.SetStatus(semconvutil.HTTPServerStatus(status))
+			if cfg.ClientErrorsAsSpanErrors {
+				if status >= 400 && status < 600 {
+					span.SetStatus(codes.Error, fmt.Sprintf("HTTP %d", status))
+				}
+			} else {
+				span.SetStatus(semconvutil.HTTPServerStatus(status))
+			}
 			if status > 0 {
 				span.SetAttributes(semconv.HTTPStatusCode(status))
 			}
