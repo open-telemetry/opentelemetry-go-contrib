@@ -11,10 +11,24 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - `http.route` attribute to otelhttp server request spans, when `net/http.Request.Pattern` is set in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`, `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` and `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6905, #6937)
+- Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#6962)
+- Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#6965)
+- Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6966)
+- Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#6967)
 
 ### Changed
 
 - Jaeger remote sampler's probabilistic strategy now uses the same sampling algorithm as `trace.TraceIDRatioBased` in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#6892)
+
+### Fixed
+
+- Record request duration in seconds rather than milliseconds for semconv v1.26.0, per [the specifications](https://github.com/open-telemetry/semantic-conventions/blob/6533b8a39e03e6925e080d5ca39234035cf87e70/docs/non-normative/http-migration.md#http-client-duration-metric) in the following packages. (#6942)
+	- `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+	- `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+	- `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+	- `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+	- `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+	- `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 
 ### Removed
 

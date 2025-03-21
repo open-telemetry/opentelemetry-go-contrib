@@ -5,9 +5,9 @@ go 1.23.0
 exclude github.com/blizzy78/varnamelen v0.6.1
 
 require (
-	github.com/atombender/go-jsonschema v0.17.0
+	github.com/atombender/go-jsonschema v0.18.0
 	github.com/client9/misspell v0.3.4
-	github.com/golangci/golangci-lint v1.64.7
+	github.com/golangci/golangci-lint v1.64.8
 	github.com/itchyny/gojq v0.12.17
 	github.com/jcchavezs/porto v0.7.0
 	github.com/stretchr/testify v1.10.0
@@ -29,7 +29,7 @@ require (
 	github.com/Antonboom/errname v1.1.0 // indirect
 	github.com/Antonboom/nilnil v1.1.0 // indirect
 	github.com/Antonboom/testifylint v1.6.0 // indirect
-	github.com/BurntSushi/toml v1.4.1-0.20250317103630-d10101f4fed8 // indirect
+	github.com/BurntSushi/toml v1.5.0 // indirect
 	github.com/Crocmagnon/fatcontext v0.7.1 // indirect
 	github.com/Djarvur/go-err113 v0.1.0 // indirect
 	github.com/GaijinEntertainment/go-exhaustruct/v3 v3.3.1 // indirect
@@ -57,11 +57,11 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charithe/durationcheck v0.0.10 // indirect
 	github.com/chavacava/garif v0.1.0 // indirect
-	github.com/ckaznocha/intrange v0.3.0 // indirect
+	github.com/ckaznocha/intrange v0.3.1 // indirect
 	github.com/cloudflare/circl v1.6.0 // indirect
 	github.com/curioswitch/go-reassign v0.3.0 // indirect
 	github.com/cyphar/filepath-securejoin v0.4.1 // indirect
-	github.com/daixiang0/gci v0.13.5 // indirect
+	github.com/daixiang0/gci v0.13.6 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/denis-tingaikin/go-header v0.5.0 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
@@ -71,8 +71,8 @@ require (
 	github.com/firefart/nonamedreturns v1.0.5 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/fzipp/gocyclo v0.6.0 // indirect
-	github.com/ghostiam/protogetter v0.3.10 // indirect
-	github.com/go-critic/go-critic v0.12.0 // indirect
+	github.com/ghostiam/protogetter v0.3.12 // indirect
+	github.com/go-critic/go-critic v0.13.0 // indirect
 	github.com/go-git/gcfg v1.5.1-0.20230307220236-3a3c6141e376 // indirect
 	github.com/go-git/go-billy/v5 v5.6.2 // indirect
 	github.com/go-git/go-git/v5 v5.14.0 // indirect
@@ -151,7 +151,7 @@ require (
 	github.com/prometheus/client_golang v1.21.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.63.0 // indirect
-	github.com/prometheus/procfs v0.15.1 // indirect
+	github.com/prometheus/procfs v0.16.0 // indirect
 	github.com/quasilyte/go-ruleguard v0.4.4 // indirect
 	github.com/quasilyte/go-ruleguard/dsl v0.3.22 // indirect
 	github.com/quasilyte/gogrep v0.5.0 // indirect
