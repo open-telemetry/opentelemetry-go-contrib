@@ -5,7 +5,10 @@ package otelzap_test
 
 import (
 	"context"
+	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
+	"go.opentelemetry.io/otel/sdk/log"
 	"os"
+	"testing"
 
 	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/otel/log/noop"
@@ -13,6 +16,43 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
+
+func TestAltAppender(t *testing.T) {
+	// Configure otel log provider, which uses simple processor and stdout exporter for simplicity
+	logExporter, err := stdoutlog.New()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	provider := log.NewLoggerProvider(
+		log.WithProcessor(log.NewSimpleProcessor(logExporter)),
+	)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	// Configure a zap core using whatever configuration you typically use
+	core := zapcore.NewCore(zapcore.NewJSONEncoder(zap.NewProductionEncoderConfig()), zapcore.AddSync(os.Stdout), zapcore.WarnLevel)
+	// Wrap the core in an otel wrapper, which bridges all logs the core decides to write (i.e. all logs for which core.Write is invoked) to the otel log provider
+	wrappedCore := otelzap.NewWrappedCore(core, provider)
+	// Create a logger from the wrapped core, and proceed as usual
+	logger := zap.New(wrappedCore).Named("my.logger")
+
+	logger.Warn("message level warn")
+	logger.Info("message level info")
+
+	// Output:
+	// {"level":"warn","ts":1742414003.3163369,"msg":"message level warn"}
+	// {"Timestamp":"2025-03-19T14:53:23.316337-05:00","ObservedTimestamp":"2025-03-19T14:53:23.316363-05:00","Severity":13,"SeverityText":"warn","Body":{"Type":"String","Value":"message level warn"},"Attributes":[],"TraceID":"00000000000000000000000000000000","SpanID":"0000000000000000","TraceFlags":"00","Resource":[{"Key":"service.name","Value":{"Type":"STRING","Value":"unknown_service:___TestAltAppender_in_go_opentelemetry_io_contrib_bridges_otelzap.test"}},{"Key":"telemetry.sdk.language","Value":{"Type":"STRING","Value":"go"}},{"Key":"telemetry.sdk.name","Value":{"Type":"STRING","Value":"opentelemetry"}},{"Key":"telemetry.sdk.version","Value":{"Type":"STRING","Value":"1.35.0"}}],"Scope":{"Name":"unknown","Version":"","SchemaURL":"","Attributes":{}},"DroppedAttributes":0}
+
+	// Notes:
+	// - Only the warn level log is written, since the core specifies zapcore.WarnLevel
+	// - The log is written to stdout twice:
+	//    - Once by the core's configured stdout writer w/ JSON encoded
+	//    - Second by the otel log provider's stdout log exporter.
+	// - Typically, the otel log provider would be configured with a batch processor and otlp exporter, which would result in the log being written to stdout once, and OTLP once.
+}
 
 func Example() {
 	// Use a working LoggerProvider implementation instead e.g. use go.opentelemetry.io/otel/sdk/log.
