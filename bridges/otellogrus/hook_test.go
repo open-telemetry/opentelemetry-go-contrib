@@ -10,6 +10,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
@@ -98,15 +99,17 @@ func TestNewHook(t *testing.T) {
 			wantLogger: provider.Logger(name),
 		},
 		{
-			name: "with a schema URL",
+			name: "with custom options",
 			options: []Option{
 				WithVersion("42.1"),
 				WithSchemaURL("https://example.com"),
+				WithAttributes(attribute.String("testattr", "testval")),
 			},
 
 			wantLogger: provider.Logger(name,
 				log.WithInstrumentationVersion("42.1"),
 				log.WithSchemaURL("https://example.com"),
+				log.WithInstrumentationAttributes(attribute.String("testattr", "testval")),
 			),
 		},
 	} {
