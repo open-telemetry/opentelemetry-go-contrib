@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#6962)
 - Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#6965)
 - Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6966)
+- Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#6967)
 
 ### Changed
 
