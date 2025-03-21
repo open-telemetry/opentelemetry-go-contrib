@@ -12,9 +12,10 @@ import (
 
 // config is used to configure the mux middleware.
 type config struct {
-	TracerProvider oteltrace.TracerProvider
-	Propagators    propagation.TextMapPropagator
-	Skipper        middleware.Skipper
+	TracerProvider           oteltrace.TracerProvider
+	Propagators              propagation.TextMapPropagator
+	Skipper                  middleware.Skipper
+	ClientErrorsAsSpanErrors bool
 }
 
 // Option specifies instrumentation configuration options.
@@ -53,5 +54,13 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 func WithSkipper(skipper middleware.Skipper) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.Skipper = skipper
+	})
+}
+
+// WithClientErrorsAsSpanErrors specifies whether all HTTP error codes (4xx and 5xx)
+// should be treated as errors in spans. By default, only 5xx are treated as errors.
+func WithClientErrorsAsSpanErrors(enabled bool) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.ClientErrorsAsSpanErrors = enabled
 	})
 }
