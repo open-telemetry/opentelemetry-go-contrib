@@ -231,7 +231,7 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 	metricdatatest.AssertEqual(t, want, sm, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 	// verify that the custom start time, which is 10 minutes in the past, is respected.
-	assert.GreaterOrEqual(t, sm.Metrics[2].Data.(metricdata.Histogram[float64]).DataPoints[0].Sum, float64(10*time.Minute/time.Millisecond))
+	assert.GreaterOrEqual(t, sm.Metrics[2].Data.(metricdata.Histogram[float64]).DataPoints[0].Sum, float64(10*time.Minute/time.Second))
 }
 
 func TestHandlerEmittedAttributes(t *testing.T) {
