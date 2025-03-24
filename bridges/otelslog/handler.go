@@ -239,7 +239,7 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 	return record
 }
 
-// Enable returns true if the Handler is enabled to log for the provided
+// Enabled returns true if the Handler is enabled to log for the provided
 // context and Level. Otherwise, false is returned if it is not enabled.
 func (h *Handler) Enabled(ctx context.Context, l slog.Level) bool {
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
