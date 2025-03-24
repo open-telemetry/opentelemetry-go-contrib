@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
@@ -231,12 +232,18 @@ func TestNewCoreConfiguration(t *testing.T) {
 				WithLoggerProvider(r),
 				WithVersion("1.0.0"),
 				WithSchemaURL("url"),
+				WithAttributes(attribute.String("testattr", "testval")),
 			)
 		})
 		require.NotNil(t, h.logger)
 		require.Len(t, r.Result(), 1)
 
-		want := &logtest.ScopeRecords{Name: loggerName, Version: "1.0.0", SchemaURL: "url"}
+		want := &logtest.ScopeRecords{
+			Name:       loggerName,
+			Version:    "1.0.0",
+			SchemaURL:  "url",
+			Attributes: attribute.NewSet(attribute.String("testattr", "testval")),
+		}
 		got := r.Result()[0]
 		assert.Equal(t, want, got)
 	})

@@ -121,6 +121,8 @@ type MetricAttributes struct {
 
 type MetricData struct {
 	RequestSize int64
+
+	// The request duration, in milliseconds
 	ElapsedTime float64
 }
 
@@ -146,7 +148,7 @@ func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 		*recordOpts = append(*recordOpts, o)
 		s.requestBodySizeHistogram.Record(ctx, md.RequestSize, *recordOpts...)
 		s.responseBodySizeHistogram.Record(ctx, md.ResponseSize, *recordOpts...)
-		s.requestDurationHistogram.Record(ctx, md.ElapsedTime, o)
+		s.requestDurationHistogram.Record(ctx, md.ElapsedTime/1000.0, o)
 		*recordOpts = (*recordOpts)[:0]
 		metricRecordOptionPool.Put(recordOpts)
 	}
@@ -277,7 +279,7 @@ func (s HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts map[s
 	}
 
 	s.requestBodySize.Record(ctx, md.RequestSize, opts["new"].MeasurementOption())
-	s.requestDuration.Record(ctx, md.ElapsedTime, opts["new"].MeasurementOption())
+	s.requestDuration.Record(ctx, md.ElapsedTime/1000, opts["new"].MeasurementOption())
 
 	if s.duplicate {
 		s.requestBytesCounter.Add(ctx, md.RequestSize, opts["old"].AddOptions())

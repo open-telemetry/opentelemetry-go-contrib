@@ -7,6 +7,7 @@ import (
 	"context"
 	"reflect"
 	"sort"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -67,12 +68,12 @@ func TestSpanProcessor(t *testing.T) {
 	}
 	// Test that no more active spans.
 	assert.Empty(t, zsp.activeSpans(spanName))
-	assert.LessOrEqual(t, 1, len(zsp.errorSpans(spanName)))
+	assert.Len(t, zsp.errorSpans(spanName), 1)
 	numLatencySamples := 0
 	for i := 0; i < defaultBoundaries.numBuckets(); i++ {
 		numLatencySamples += len(zsp.spansByLatency(spanName, i))
 	}
-	assert.LessOrEqual(t, 1, numLatencySamples)
+	assert.GreaterOrEqual(t, numLatencySamples, 1)
 }
 
 func TestSpanProcessorFuzzer(t *testing.T) {
@@ -84,58 +85,31 @@ func TestSpanProcessorFuzzer(t *testing.T) {
 
 	const numIterations = 200
 	const numSpansPerIteration = 90
+	const goroutine = 4
 
 	var wg sync.WaitGroup
-	wg.Add(4)
-	go func() {
-		for i := 0; i < numIterations; i++ {
-			assert.LessOrEqual(t, 0, len(zsp.spansPerMethod()))
-			assert.GreaterOrEqual(t, 2, len(zsp.spansPerMethod()))
-			createEndedSpans(tracerProvider.Tracer("test1"), "testSpan1", numSpansPerIteration)
-			// Call for spans names created by the other goroutines.
-			assert.LessOrEqual(t, 0, len(zsp.activeSpans("testSpan2")))
-			assert.LessOrEqual(t, 0, len(zsp.errorSpans("testSpan2")))
-			assert.LessOrEqual(t, 0, len(zsp.spansByLatency("testSpan2", 1)))
-		}
-		wg.Done()
-	}()
-	go func() {
-		for i := 0; i < numIterations; i++ {
-			assert.LessOrEqual(t, 0, len(zsp.spansPerMethod()))
-			assert.GreaterOrEqual(t, 2, len(zsp.spansPerMethod()))
-			createEndedSpans(tracerProvider.Tracer("test2"), "testSpan2", numSpansPerIteration)
-			// Call for spans names created by the other goroutines.
-			assert.LessOrEqual(t, 0, len(zsp.activeSpans("testSpan1")))
-			assert.LessOrEqual(t, 0, len(zsp.errorSpans("testSpan1")))
-			assert.LessOrEqual(t, 0, len(zsp.spansByLatency("testSpan1", 1)))
-		}
-		wg.Done()
-	}()
-	go func() {
-		for i := 0; i < numIterations; i++ {
-			assert.LessOrEqual(t, 0, len(zsp.spansPerMethod()))
-			assert.GreaterOrEqual(t, 2, len(zsp.spansPerMethod()))
-			createEndedSpans(tracerProvider.Tracer("test3"), "testSpan1", numSpansPerIteration)
-			// Call for spans names created by the other goroutines.
-			assert.LessOrEqual(t, 0, len(zsp.activeSpans("testSpan2")))
-			assert.LessOrEqual(t, 0, len(zsp.errorSpans("testSpan2")))
-			assert.LessOrEqual(t, 0, len(zsp.spansByLatency("testSpan2", 1)))
-		}
-		wg.Done()
-	}()
-	go func() {
-		for i := 0; i < numIterations; i++ {
-			assert.LessOrEqual(t, 0, len(zsp.spansPerMethod()))
-			assert.GreaterOrEqual(t, 2, len(zsp.spansPerMethod()))
-			createEndedSpans(tracerProvider.Tracer("test4"), "testSpan2", numSpansPerIteration)
-			// Call for spans names created by the other goroutines.
-			assert.LessOrEqual(t, 0, len(zsp.activeSpans("testSpan1")))
-			assert.LessOrEqual(t, 0, len(zsp.errorSpans("testSpan1")))
-			assert.LessOrEqual(t, 0, len(zsp.spansByLatency("testSpan1", 1)))
-		}
-		wg.Done()
-	}()
+	wg.Add(goroutine)
+	for g := range goroutine {
+		go func(n int) {
+			defer wg.Done()
+			tracer := tracerProvider.Tracer("test" + strconv.Itoa(1+n))
+			name := "testSpan" + strconv.Itoa(1+(n%2))
+			for range numIterations {
+				createEndedSpans(tracer, name, numSpansPerIteration)
+			}
+		}(g)
+	}
 	wg.Wait()
+
+	assert.Len(t, zsp.spansPerMethod(), 2)
+
+	assert.Empty(t, zsp.activeSpans("testSpan1"))
+	assert.GreaterOrEqual(t, len(zsp.errorSpans("testSpan1")), 1)
+	assert.GreaterOrEqual(t, len(zsp.spansByLatency("testSpan1", 1)), 1)
+
+	assert.Empty(t, zsp.activeSpans("testSpan2"))
+	assert.GreaterOrEqual(t, len(zsp.errorSpans("testSpan2")), 1)
+	assert.GreaterOrEqual(t, len(zsp.spansByLatency("testSpan2", 1)), 1)
 }
 
 func TestSpanProcessorNegativeLatency(t *testing.T) {

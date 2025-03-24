@@ -35,14 +35,16 @@ package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
 import (
 	"github.com/sirupsen/logrus"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 )
 
 type config struct {
-	provider  log.LoggerProvider
-	version   string
-	schemaURL string
+	provider   log.LoggerProvider
+	version    string
+	schemaURL  string
+	attributes []attribute.KeyValue
 
 	levels []logrus.Level
 }
@@ -72,6 +74,9 @@ func (c config) logger(name string) log.Logger {
 	if c.schemaURL != "" {
 		opts = append(opts, log.WithSchemaURL(c.schemaURL))
 	}
+	if c.attributes != nil {
+		opts = append(opts, log.WithInstrumentationAttributes(c.attributes...))
+	}
 	return c.provider.Logger(name, opts...)
 }
 
@@ -100,6 +105,15 @@ func WithVersion(version string) Option {
 func WithSchemaURL(schemaURL string) Option {
 	return optFunc(func(c config) config {
 		c.schemaURL = schemaURL
+		return c
+	})
+}
+
+// WithAttributes returns an [Option] that configures the instrumentation scope
+// attributes of the [log.Logger] used by a [Hook].
+func WithAttributes(attributes ...attribute.KeyValue) Option {
+	return optFunc(func(c config) config {
+		c.attributes = attributes
 		return c
 	})
 }
