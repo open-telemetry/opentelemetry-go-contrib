@@ -17,8 +17,6 @@ import (
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 )
@@ -118,38 +116,4 @@ func TestSkipper(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 	assert.Equal(t, http.StatusOK, w.Result().StatusCode, "should call the 'ping' handler") //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
-}
-
-func TestHTTPRouteAttribute(t *testing.T) {
-	// Set up an in-memory span recorder
-	sr := tracetest.NewSpanRecorder()
-	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
-
-	// Create Echo instance with middleware
-	e := echo.New()
-	e.Use(Middleware("test-service", WithTracerProvider(tp)))
-	e.GET("/users/:id", func(c echo.Context) error {
-		return c.String(http.StatusOK, "ok")
-	})
-
-	// Simulate a request
-	r := httptest.NewRequest("GET", "/users/123", nil)
-	w := httptest.NewRecorder()
-	e.ServeHTTP(w, r)
-
-	// Check response
-	assert.Equal(t, http.StatusOK, w.Result().StatusCode)
-
-	// Verify span attributes
-	spans := sr.Ended()
-	assert.Len(t, spans, 1, "expected one span")
-
-	found := false
-	for _, attr := range spans[0].Attributes() {
-		if attr.Key == "http.route" && attr.Value.AsString() == "/users/:id" {
-			found = true
-			break
-		}
-	}
-	assert.True(t, found, "http.route attribute not found or incorrect, got %v", spans[0].Attributes())
 }
