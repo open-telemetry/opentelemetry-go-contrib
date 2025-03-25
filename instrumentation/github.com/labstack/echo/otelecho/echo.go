@@ -64,7 +64,6 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			request.Pattern = c.Path()
 			opts := []oteltrace.SpanStartOption{
 				oteltrace.WithAttributes(hs.RequestTraceAttrs(service, request)...),
-				oteltrace.WithAttributes(hs.Route(request.Pattern)),
 				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 			}
 			spanName := spanNameFormatter(c)
@@ -95,7 +94,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 }
 
 func spanNameFormatter(c echo.Context) string {
-	method, path := strings.ToUpper(c.Request().Method), c.Path()
+	method, path := strings.ToUpper(c.Request().Method), c.Request().Pattern
 	if !slices.Contains([]string{
 		http.MethodGet, http.MethodHead,
 		http.MethodPost, http.MethodPut,
