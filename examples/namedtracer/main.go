@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package namedtracer exemplifies the use of a named OpenTelemetry tracer.
 package main
 
 import (

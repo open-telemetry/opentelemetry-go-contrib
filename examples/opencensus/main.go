@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package opencensus exemplifies the use of the OpenCensus to OpenTelemetry
+// bridge.
 package main
 
 import (
