@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
@@ -38,6 +39,7 @@ type embeddedLogger = embedded.Logger // nolint:unused  // Used below.
 
 type scope struct {
 	Name, Version, SchemaURL string
+	Attributes               attribute.Set
 }
 
 // recorder records all [log.Record]s it is ased to emit.
@@ -60,9 +62,10 @@ func (r *recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	cfg := log.NewLoggerConfig(opts...)
 
 	r.Scope = scope{
-		Name:      name,
-		Version:   cfg.InstrumentationVersion(),
-		SchemaURL: cfg.SchemaURL(),
+		Name:       name,
+		Version:    cfg.InstrumentationVersion(),
+		SchemaURL:  cfg.SchemaURL(),
+		Attributes: cfg.InstrumentationAttributes(),
 	}
 	return r
 }
@@ -481,13 +484,19 @@ func TestNewHandlerConfiguration(t *testing.T) {
 				WithVersion("ver"),
 				WithSchemaURL("url"),
 				WithSource(true),
+				WithAttributes(attribute.String("testattr", "testval")),
 			)
 		})
 		require.NotNil(t, h.logger)
 		require.IsType(t, &recorder{}, h.logger)
 
 		l := h.logger.(*recorder)
-		scope := scope{Name: "name", Version: "ver", SchemaURL: "url"}
+		scope := scope{
+			Name:       "name",
+			Version:    "ver",
+			SchemaURL:  "url",
+			Attributes: attribute.NewSet(attribute.String("testattr", "testval")),
+		}
 		assert.Equal(t, scope, l.Scope)
 	})
 }

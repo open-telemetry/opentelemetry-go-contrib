@@ -12,6 +12,7 @@ import (
 	"net/url"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -165,47 +166,91 @@ func TestHTTPClientRequestRequired(t *testing.T) {
 }
 
 func TestHTTPServerRequest(t *testing.T) {
-	got := make(chan *http.Request, 1)
-	handler := func(w http.ResponseWriter, r *http.Request) {
-		got <- r
-		w.WriteHeader(http.StatusOK)
-	}
+	for _, tt := range []struct {
+		name                  string
+		requestModifierFn     func(r *http.Request)
+		httpServerRequestOpts HTTPServerRequestOptions
 
-	srv := httptest.NewServer(http.HandlerFunc(handler))
-	defer srv.Close()
-
-	srvURL, err := url.Parse(srv.URL)
-	require.NoError(t, err)
-	srvPort, err := strconv.ParseInt(srvURL.Port(), 10, 32)
-	require.NoError(t, err)
-
-	resp, err := srv.Client().Get(srv.URL)
-	require.NoError(t, err)
-	require.NoError(t, resp.Body.Close())
-
-	req := <-got
-	peer, peerPort := splitHostPort(req.RemoteAddr)
-
-	const user = "alice"
-	req.SetBasicAuth(user, "pswrd")
-
-	const clientIP = "127.0.0.5"
-	req.Header.Add("X-Forwarded-For", clientIP)
-
-	assert.ElementsMatch(t,
-		[]attribute.KeyValue{
-			attribute.String("http.method", "GET"),
-			attribute.String("http.scheme", "http"),
-			attribute.String("net.host.name", srvURL.Hostname()),
-			attribute.Int("net.host.port", int(srvPort)),
-			attribute.String("net.sock.peer.addr", peer),
-			attribute.Int("net.sock.peer.port", peerPort),
-			attribute.String("user_agent.original", "Go-http-client/1.1"),
-			attribute.String("http.client_ip", clientIP),
-			attribute.String("net.protocol.version", "1.1"),
-			attribute.String("http.target", "/"),
+		wantClientIP string
+	}{
+		{
+			name:         "with a client IP from the network",
+			wantClientIP: "1.2.3.4",
 		},
-		HTTPServerRequest("", req))
+		{
+			name: "with a client IP from x-forwarded-for header",
+			requestModifierFn: func(r *http.Request) {
+				r.Header.Add("X-Forwarded-For", "5.6.7.8")
+			},
+			wantClientIP: "5.6.7.8",
+		},
+		{
+			name: "with a client IP in options",
+			requestModifierFn: func(r *http.Request) {
+				r.Header.Add("X-Forwarded-For", "5.6.7.8")
+			},
+			httpServerRequestOpts: HTTPServerRequestOptions{
+				HTTPClientIP: "9.8.7.6",
+			},
+			wantClientIP: "9.8.7.6",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			reqCh := make(chan *http.Request, 1)
+			handler := func(w http.ResponseWriter, r *http.Request) {
+				r.RemoteAddr = "1.2.3.4:5678"
+				reqCh <- r
+				w.WriteHeader(http.StatusOK)
+			}
+
+			srv := httptest.NewServer(http.HandlerFunc(handler))
+			defer srv.Close()
+
+			srvURL, err := url.Parse(srv.URL)
+			require.NoError(t, err)
+			srvPort, err := strconv.ParseInt(srvURL.Port(), 10, 32)
+			require.NoError(t, err)
+
+			req, err := http.NewRequest(http.MethodGet, srv.URL, nil)
+			require.NoError(t, err)
+
+			if tt.requestModifierFn != nil {
+				tt.requestModifierFn(req)
+			}
+
+			resp, err := srv.Client().Do(req)
+			require.NoError(t, err)
+			require.NoError(t, resp.Body.Close())
+
+			var got *http.Request
+			select {
+			case got = <-reqCh:
+				// All good
+			case <-time.After(5 * time.Second):
+				t.Fatal("Did not receive a signal in 5s")
+			}
+
+			peer, peerPort := splitHostPort(got.RemoteAddr)
+
+			const user = "alice"
+			got.SetBasicAuth(user, "pswrd")
+
+			assert.ElementsMatch(t,
+				[]attribute.KeyValue{
+					attribute.String("http.method", "GET"),
+					attribute.String("http.scheme", "http"),
+					attribute.String("net.host.name", srvURL.Hostname()),
+					attribute.Int("net.host.port", int(srvPort)),
+					attribute.String("net.sock.peer.addr", peer),
+					attribute.Int("net.sock.peer.port", peerPort),
+					attribute.String("user_agent.original", "Go-http-client/1.1"),
+					attribute.String("http.client_ip", tt.wantClientIP),
+					attribute.String("net.protocol.version", "1.1"),
+					attribute.String("http.target", "/"),
+				},
+				HTTPServerRequest("", got, tt.httpServerRequestOpts))
+		})
+	}
 }
 
 func TestHTTPServerRequestMetrics(t *testing.T) {
@@ -227,7 +272,13 @@ func TestHTTPServerRequestMetrics(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 
-	req := <-got
+	var req *http.Request
+	select {
+	case req = <-got:
+		// All good
+	case <-time.After(5 * time.Second):
+		t.Fatal("did not receive a signal in 5s")
+	}
 
 	assert.ElementsMatch(t,
 		[]attribute.KeyValue{
@@ -250,14 +301,14 @@ func TestHTTPServerName(t *testing.T) {
 	)
 	portStr := strconv.Itoa(port)
 	server := host + ":" + portStr
-	assert.NotPanics(t, func() { got = HTTPServerRequest(server, req) })
+	assert.NotPanics(t, func() { got = HTTPServerRequest(server, req, HTTPServerRequestOptions{}) })
 	assert.Contains(t, got, attribute.String("net.host.name", host))
 	assert.Contains(t, got, attribute.Int("net.host.port", port))
 
 	req = &http.Request{Host: "alt.host.name:" + portStr}
 	// The server parameter does not include a port, ServerRequest should use
 	// the port in the request Host field.
-	assert.NotPanics(t, func() { got = HTTPServerRequest(host, req) })
+	assert.NotPanics(t, func() { got = HTTPServerRequest(host, req, HTTPServerRequestOptions{}) })
 	assert.Contains(t, got, attribute.String("net.host.name", host))
 	assert.Contains(t, got, attribute.Int("net.host.port", port))
 }
@@ -265,7 +316,7 @@ func TestHTTPServerName(t *testing.T) {
 func TestHTTPServerRequestFailsGracefully(t *testing.T) {
 	req := new(http.Request)
 	var got []attribute.KeyValue
-	assert.NotPanics(t, func() { got = HTTPServerRequest("", req) })
+	assert.NotPanics(t, func() { got = HTTPServerRequest("", req, HTTPServerRequestOptions{}) })
 	want := []attribute.KeyValue{
 		attribute.String("http.method", "GET"),
 		attribute.String("http.scheme", "http"),

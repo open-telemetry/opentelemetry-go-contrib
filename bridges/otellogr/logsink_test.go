@@ -12,6 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
@@ -85,15 +86,17 @@ func TestNewLogSink(t *testing.T) {
 			wantScopeRecords: &logtest.ScopeRecords{Name: name},
 		},
 		{
-			name: "with version and schema URL",
+			name: "with custom options",
 			options: []Option{
 				WithVersion("1.0"),
 				WithSchemaURL("https://example.com"),
+				WithAttributes(attribute.String("testattr", "testval")),
 			},
 			wantScopeRecords: &logtest.ScopeRecords{
-				Name:      name,
-				Version:   "1.0",
-				SchemaURL: "https://example.com",
+				Name:       name,
+				Version:    "1.0",
+				SchemaURL:  "https://example.com",
+				Attributes: attribute.NewSet(attribute.String("testattr", "testval")),
 			},
 		},
 	} {

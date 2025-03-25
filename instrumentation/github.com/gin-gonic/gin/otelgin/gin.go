@@ -80,8 +80,14 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			c.Request = c.Request.WithContext(savedCtx)
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
+
+		requestTraceAttrOpts := semconv.RequestTraceAttrsOpts{
+			// Gin's ClientIP method can detect the client's IP from various headers set by proxies, and it's configurable
+			HTTPClientIP: c.ClientIP(),
+		}
+
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(hs.RequestTraceAttrs(service, c.Request)...),
+			oteltrace.WithAttributes(hs.RequestTraceAttrs(service, c.Request, requestTraceAttrOpts)...),
 			oteltrace.WithAttributes(hs.Route(c.FullPath())),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
@@ -118,7 +124,10 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		// Record the server-side attributes.
 		var additionalAttributes []attribute.KeyValue
 		if cfg.MetricAttributeFn != nil {
-			additionalAttributes = cfg.MetricAttributeFn(c.Request)
+			additionalAttributes = append(additionalAttributes, cfg.MetricAttributeFn(c.Request)...)
+		}
+		if cfg.GinMetricAttributeFn != nil {
+			additionalAttributes = append(additionalAttributes, cfg.GinMetricAttributeFn(c)...)
 		}
 
 		sc.RecordMetrics(ctx, semconv.ServerMetricData{
