@@ -286,7 +286,7 @@ func TestRequestTraceAttrs_HTTPRoute(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/path/abc123", nil)
 			req.Pattern = tt.pattern
 
-			attrs := (CurrentHTTPServer{}).RequestTraceAttrs("", req)
+			attrs := (CurrentHTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
 
 			var gotRoute string
 			for _, attr := range attrs {
@@ -296,6 +296,57 @@ func TestRequestTraceAttrs_HTTPRoute(t *testing.T) {
 				}
 			}
 			require.Equal(t, tt.wantRoute, gotRoute)
+		})
+	}
+}
+
+func TestRequestTraceAttrs_ClientIP(t *testing.T) {
+	for _, tt := range []struct {
+		name              string
+		requestModifierFn func(r *http.Request)
+		requestTraceOpts  RequestTraceAttrsOpts
+
+		wantClientIP string
+	}{
+		{
+			name:         "with a client IP from the network",
+			wantClientIP: "1.2.3.4",
+		},
+		{
+			name: "with a client IP from x-forwarded-for header",
+			requestModifierFn: func(r *http.Request) {
+				r.Header.Add("X-Forwarded-For", "5.6.7.8")
+			},
+			wantClientIP: "5.6.7.8",
+		},
+		{
+			name: "with a client IP in options",
+			requestModifierFn: func(r *http.Request) {
+				r.Header.Add("X-Forwarded-For", "5.6.7.8")
+			},
+			requestTraceOpts: RequestTraceAttrsOpts{
+				HTTPClientIP: "9.8.7.6",
+			},
+			wantClientIP: "9.8.7.6",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", "/example", nil)
+			req.RemoteAddr = "1.2.3.4:5678"
+
+			if tt.requestModifierFn != nil {
+				tt.requestModifierFn(req)
+			}
+
+			var found bool
+			for _, attr := range (CurrentHTTPServer{}).RequestTraceAttrs("", req, tt.requestTraceOpts) {
+				if attr.Key != "client.address" {
+					continue
+				}
+				found = true
+				assert.Equal(t, tt.wantClientIP, attr.Value.AsString())
+			}
+			require.True(t, found)
 		})
 	}
 }

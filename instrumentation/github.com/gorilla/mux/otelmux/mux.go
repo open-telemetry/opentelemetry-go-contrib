@@ -102,7 +102,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	ctx := tw.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	opts := []trace.SpanStartOption{
-		trace.WithAttributes(tw.semconv.RequestTraceAttrs(tw.service, r)...),
+		trace.WithAttributes(tw.semconv.RequestTraceAttrs(tw.service, r, semconv.RequestTraceAttrsOpts{})...),
 		trace.WithSpanKind(trace.SpanKindServer),
 	}
 
