@@ -4,6 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package semconvutil provides OpenTelemetry semantic convention utilites.
 package semconvutil // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconvutil"
 
 import (

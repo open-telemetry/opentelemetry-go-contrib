@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package client exemplifies the otelhttptrace package for a client.
 package main
 
 import (
