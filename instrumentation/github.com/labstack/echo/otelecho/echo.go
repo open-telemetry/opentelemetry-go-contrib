@@ -61,9 +61,10 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 				c.SetRequest(request)
 			}()
 			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
+			request.Pattern = c.Path()
 			opts := []oteltrace.SpanStartOption{
 				oteltrace.WithAttributes(hs.RequestTraceAttrs(service, request)...),
-				oteltrace.WithAttributes(hs.Route(c.Path())),
+				oteltrace.WithAttributes(hs.Route(request.Pattern)),
 				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 			}
 			spanName := spanNameFormatter(c)
