@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package example exemplifies the use of the otellambda instrumentation.
 package main
 
 import (
