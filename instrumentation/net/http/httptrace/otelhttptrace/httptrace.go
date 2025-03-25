@@ -57,7 +57,7 @@ func Extract(ctx context.Context, req *http.Request, opts ...Option) ([]attribut
 
 	semconvSrv := semconv.NewHTTPServer(nil)
 
-	attrs := append(semconvSrv.RequestTraceAttrs("", req), semconvSrv.NetworkTransportAttr("tcp")...)
+	attrs := append(semconvSrv.RequestTraceAttrs("", req, semconv.RequestTraceAttrsOpts{}), semconvSrv.NetworkTransportAttr("tcp")...)
 	attrs = append(attrs, semconvSrv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		ReadBytes: req.ContentLength,
 	})...)

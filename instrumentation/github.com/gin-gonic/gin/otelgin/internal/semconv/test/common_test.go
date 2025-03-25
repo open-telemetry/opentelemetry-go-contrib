@@ -68,5 +68,5 @@ func testTraceRequest(t *testing.T, serv semconv.HTTPServer, want func(testServe
 		clientIP:   clientIP,
 	}
 
-	assert.ElementsMatch(t, want(srvReq), serv.RequestTraceAttrs("", req))
+	assert.ElementsMatch(t, want(srvReq), serv.RequestTraceAttrs("", req, semconv.RequestTraceAttrsOpts{}))
 }
