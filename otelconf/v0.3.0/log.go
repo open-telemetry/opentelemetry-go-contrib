@@ -7,10 +7,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc/credentials"
 	"net/url"
 	"time"
-
-	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
@@ -189,6 +188,12 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		}
 		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Insecure != nil && *otlpConfig.Insecure) {
 			opts = append(opts, otlploggrpc.WithInsecure())
+		} else {
+			tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+			if err != nil {
+				return nil, err
+			}
+			opts = append(opts, otlploggrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 		}
 	}
 	if otlpConfig.Compression != nil {
@@ -210,14 +215,6 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 	}
 	if len(headersConfig) > 0 {
 		opts = append(opts, otlploggrpc.WithHeaders(headersConfig))
-	}
-
-	if otlpConfig.Certificate != nil || otlpConfig.ClientCertificate != nil || otlpConfig.ClientKey != nil {
-		tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, otlploggrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 	}
 
 	return otlploggrpc.New(ctx, opts...)

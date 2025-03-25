@@ -215,6 +215,12 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		}
 		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Insecure != nil && *otlpConfig.Insecure) {
 			opts = append(opts, otlpmetricgrpc.WithInsecure())
+		} else {
+			tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+			if err != nil {
+				return nil, err
+			}
+			opts = append(opts, otlpmetricgrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 		}
 	}
 
@@ -249,14 +255,6 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		default:
 			return nil, fmt.Errorf("unsupported temporality preference %q", *otlpConfig.TemporalityPreference)
 		}
-	}
-
-	if otlpConfig.Certificate != nil || otlpConfig.ClientCertificate != nil || otlpConfig.ClientKey != nil {
-		tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, otlpmetricgrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 	}
 
 	return otlpmetricgrpc.New(ctx, opts...)
