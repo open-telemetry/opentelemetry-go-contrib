@@ -20,6 +20,11 @@ import (
 	semconvNew "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
+type RequestTraceAttrsOpts struct {
+	// If set, this is used as value for the "http.client_ip" attribute.
+	HTTPClientIP string
+}
+
 type CurrentHTTPServer struct{}
 
 // RequestTraceAttrs returns trace attributes for an HTTP request received by a
@@ -38,7 +43,7 @@ type CurrentHTTPServer struct{}
 //
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
-func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request) []attribute.KeyValue {
+func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request, opts RequestTraceAttrsOpts) []attribute.KeyValue {
 	count := 3 // ServerAddress, Method, Scheme
 
 	var host string
@@ -65,7 +70,8 @@ func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request) [
 
 	scheme := n.scheme(req.TLS != nil)
 
-	if peer, peerPort := SplitHostPort(req.RemoteAddr); peer != "" {
+	peer, peerPort := SplitHostPort(req.RemoteAddr)
+	if peer != "" {
 		// The Go HTTP server sets RemoteAddr to "IP:port", this will not be a
 		// file-path that would be interpreted with a sock family.
 		count++
@@ -79,7 +85,17 @@ func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request) [
 		count++
 	}
 
-	clientIP := serverClientIP(req.Header.Get("X-Forwarded-For"))
+	// For client IP, use, in order:
+	// 1. The value passed in the options
+	// 2. The value in the X-Forwarded-For header
+	// 3. The peer address
+	clientIP := opts.HTTPClientIP
+	if clientIP == "" {
+		clientIP = serverClientIP(req.Header.Get("X-Forwarded-For"))
+		if clientIP == "" {
+			clientIP = peer
+		}
+	}
 	if clientIP != "" {
 		count++
 	}
