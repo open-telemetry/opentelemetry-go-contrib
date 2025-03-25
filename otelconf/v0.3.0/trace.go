@@ -7,10 +7,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc/credentials"
 	"net/url"
 	"time"
-
-	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -133,11 +132,13 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		opts = append(opts, otlptracegrpc.WithHeaders(headersConfig))
 	}
 
-	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
-	if err != nil {
-		return nil, err
+	if otlpConfig.Certificate != nil || otlpConfig.ClientCertificate != nil || otlpConfig.ClientKey != nil {
+		tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 	}
-	opts = append(opts, otlptracegrpc.WithTLSCredentials(credentials.NewTLS(tlsConfig)))
 
 	return otlptracegrpc.New(ctx, opts...)
 }
