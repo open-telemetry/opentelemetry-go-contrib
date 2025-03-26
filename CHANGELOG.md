@@ -21,7 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Jaeger remote sampler's probabilistic strategy now uses the same sampling algorithm as `trace.TraceIDRatioBased` in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#6892)
-- - Migrated `otelecho` instrumentation to use OpenTelemetry semantic conventions (`semconv`) for HTTP attributes. (#6980)
+- Support for the `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6980)
 
 ### Fixed
 
