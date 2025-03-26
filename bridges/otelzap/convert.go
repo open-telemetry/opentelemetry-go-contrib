@@ -4,7 +4,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package otelzap provides conversion functionality for logging.
 package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 
 import (
