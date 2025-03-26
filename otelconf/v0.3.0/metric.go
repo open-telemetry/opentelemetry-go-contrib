@@ -8,7 +8,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"google.golang.org/grpc/credentials"
 	"math"
 	"net"
 	"net/http"
@@ -16,6 +15,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"google.golang.org/grpc/credentials"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"

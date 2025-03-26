@@ -7,9 +7,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"google.golang.org/grpc/credentials"
 	"net/url"
 	"time"
+
+	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
