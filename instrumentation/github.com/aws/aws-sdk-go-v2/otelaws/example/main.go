@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package example exemplifies the otelaws instrumentation package.
+// Example exemplifies the otelaws instrumentation package.
 package main
 
 import (

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package example exemplifies the otelecho package.
+// Example exemplifies the otelecho package.
 package main
 
 import (

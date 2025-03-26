@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package example exemplifies the otelrestful package.
+// Example exemplifies the otelrestful package.
 package main
 
 import (

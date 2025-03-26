@@ -1,8 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package opentelemetry_server exemplifies the use of the OpenCensus
-// propagator using an OpenTelemetry client.
+// Opencensus_client exemplifies the use of the OpenCensus propagator using an
+// OpenTelemetry client.
 package main
 
 import (
