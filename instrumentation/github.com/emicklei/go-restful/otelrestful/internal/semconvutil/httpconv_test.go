@@ -7,6 +7,7 @@
 package semconvutil
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -51,8 +52,8 @@ func TestHTTPSClientRequest(t *testing.T) {
 	assert.ElementsMatch(
 		t,
 		[]attribute.KeyValue{
-			attribute.String("http.method", "GET"),
 			attribute.String("http.url", "https://127.0.0.1:443/resource"),
+			attribute.String("http.method", "GET"),
 			attribute.String("net.peer.name", "127.0.0.1"),
 		},
 		HTTPClientRequest(req),
@@ -158,8 +159,8 @@ func TestHTTPClientRequestRequired(t *testing.T) {
 	var got []attribute.KeyValue
 	assert.NotPanics(t, func() { got = HTTPClientRequest(req) })
 	want := []attribute.KeyValue{
-		attribute.String("http.method", "GET"),
 		attribute.String("http.url", ""),
+		attribute.String("http.method", "GET"),
 		attribute.String("net.peer.name", ""),
 	}
 	assert.Equal(t, want, got)
@@ -357,34 +358,82 @@ func TestRequiredHTTPPort(t *testing.T) {
 		port  int
 		want  int
 	}{
+		{true, 0, -1},
 		{true, 443, -1},
 		{true, 80, 80},
 		{true, 8081, 8081},
+		{false, 0, -1},
 		{false, 443, 443},
 		{false, 80, -1},
 		{false, 8080, 8080},
 	}
 	for _, test := range tests {
-		got := requiredHTTPPort(test.https, test.port)
-		assert.Equalf(t, test.want, got, "HTTPS: %t, Port: %d", test.https, test.port)
+		t.Run(fmt.Sprintf("https=%t, port=%d", test.https, test.port), func(t *testing.T) {
+			got := requiredHTTPPort(test.https, test.port)
+			assert.Equal(t, test.want, got)
+		})
 	}
 }
 
-func TestFirstHostPort(t *testing.T) {
-	host, port := "127.0.0.1", 8080
-	hostport := "127.0.0.1:8080"
-	sources := [][]string{
-		{hostport},
-		{"", hostport},
-		{"", "", hostport},
-		{"", "", hostport, ""},
-		{"", "", hostport, "127.0.0.3:80"},
+func TestHostPort(t *testing.T) {
+	tests := []struct {
+		name       string
+		urlHost    string
+		headerHost string
+		wantHost   string
+		wantPort   int
+	}{
+		{
+			name:     "no host and port",
+			wantHost: "",
+			wantPort: -1,
+		},
+		{
+			name:     "host in URL without port",
+			urlHost:  "example.com",
+			wantHost: "example.com",
+			wantPort: -1,
+		},
+		{
+			name:     "port in URL without host",
+			urlHost:  ":8080",
+			wantHost: "",
+			wantPort: 8080,
+		},
+		{
+			name:     "host and port are in URL",
+			urlHost:  "example.com:8080",
+			wantHost: "example.com",
+			wantPort: 8080,
+		},
+		{
+			name:       "host in a header without port",
+			headerHost: "example.com",
+			wantHost:   "example.com",
+			wantPort:   -1,
+		},
+		{
+			name:       "port in a header without host",
+			headerHost: ":8080",
+			wantHost:   "",
+			wantPort:   8080,
+		},
 	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			if test.urlHost != "" {
+				req.URL = &url.URL{Host: test.urlHost}
+			}
+			if test.headerHost != "" {
+				req.Header.Add("Host", test.headerHost)
+			}
 
-	for _, src := range sources {
-		h, p := firstHostPort(src...)
-		assert.Equal(t, host, h, "%+v", src)
-		assert.Equal(t, port, p, "%+v", src)
+			gotHost, gotPort := hostPort(req)
+
+			assert.Equal(t, test.wantHost, gotHost)
+			assert.Equal(t, test.wantPort, gotPort)
+		})
 	}
 }
 

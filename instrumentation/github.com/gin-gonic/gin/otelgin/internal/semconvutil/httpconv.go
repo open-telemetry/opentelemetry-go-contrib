@@ -208,40 +208,40 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 	net.protocol.name               The value is the Request is ignored, and the go client will always use "http".
 	net.protocol.version            The value in the Request is ignored, and the go client will always use 1.1 or 2.0.
 	*/
-	n := 3 // URL, peer name, proto, and method.
-	var h string
+	n := 3 // URL, PeerName and Method.
+
+	var url string
 	if req.URL != nil {
-		h = req.URL.Host
+		// Remove any username/password info that may be in the URL.
+		userinfo := req.URL.User
+		req.URL.User = nil
+		url = req.URL.String()
+		// Restore any username/password info that was removed.
+		req.URL.User = userinfo
 	}
-	peer, p := firstHostPort(h, req.Header.Get("Host"))
-	port := requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", p)
+
+	peer, port := hostPort(req)
+	port = requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", port)
 	if port > 0 {
 		n++
 	}
+
 	useragent := req.UserAgent()
 	if useragent != "" {
 		n++
 	}
+
 	if req.ContentLength > 0 {
 		n++
 	}
 
 	attrs := make([]attribute.KeyValue, 0, n)
+	attrs = append(attrs,
+		c.HTTPURLKey.String(url),
+		c.method(req.Method),
+		c.NetConv.PeerName(peer),
+	)
 
-	attrs = append(attrs, c.method(req.Method))
-
-	var u string
-	if req.URL != nil {
-		// Remove any username/password info that may be in the URL.
-		userinfo := req.URL.User
-		req.URL.User = nil
-		u = req.URL.String()
-		// Restore any username/password info that was removed.
-		req.URL.User = userinfo
-	}
-	attrs = append(attrs, c.HTTPURLKey.String(u))
-
-	attrs = append(attrs, c.NetConv.PeerName(peer))
 	if port > 0 {
 		attrs = append(attrs, c.NetConv.PeerPort(port))
 	}
@@ -250,8 +250,8 @@ func (c *httpConv) ClientRequest(req *http.Request) []attribute.KeyValue {
 		attrs = append(attrs, c.UserAgentOriginalKey.String(useragent))
 	}
 
-	if l := req.ContentLength; l > 0 {
-		attrs = append(attrs, c.HTTPRequestContentLengthKey.Int64(l))
+	if req.ContentLength > 0 {
+		attrs = append(attrs, c.HTTPRequestContentLengthKey.Int64(req.ContentLength))
 	}
 
 	return attrs
@@ -268,13 +268,9 @@ func (c *httpConv) ClientRequestMetrics(req *http.Request) []attribute.KeyValue 
 	net.peer.port                   int
 	*/
 
-	n := 2 // method, peer name.
-	var h string
-	if req.URL != nil {
-		h = req.URL.Host
-	}
-	peer, p := firstHostPort(h, req.Header.Get("Host"))
-	port := requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", p)
+	n := 2 // Method, PeerName.
+	peer, port := hostPort(req)
+	port = requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", port)
 	if port > 0 {
 		n++
 	}
@@ -333,9 +329,9 @@ func (c *httpConv) ServerRequest(server string, req *http.Request, opts HTTPServ
 	net.sock.peer.name              This would require a DNS lookup.
 	net.sock.host.addr              The request doesn't have access to the underlying socket.
 	net.sock.host.port              The request doesn't have access to the underlying socket.
-
 	*/
-	n := 4 // Method, scheme, proto, and host name.
+	n := 3 // Method, Scheme and HostName.
+
 	var host string
 	var p int
 	if server == "" {
@@ -394,10 +390,11 @@ func (c *httpConv) ServerRequest(server string, req *http.Request, opts HTTPServ
 	}
 
 	attrs := make([]attribute.KeyValue, 0, n)
-
-	attrs = append(attrs, c.method(req.Method))
-	attrs = append(attrs, c.scheme(req.TLS != nil))
-	attrs = append(attrs, c.NetConv.HostName(host))
+	attrs = append(attrs,
+		c.method(req.Method),
+		c.scheme(req.TLS != nil),
+		c.NetConv.HostName(host),
+	)
 
 	if hostPort > 0 {
 		attrs = append(attrs, c.NetConv.HostPort(hostPort))
@@ -534,7 +531,7 @@ func (c *httpConv) scheme(https bool) attribute.KeyValue { // nolint:revive
 }
 
 func serverClientIP(xForwardedFor string) string {
-	if idx := strings.Index(xForwardedFor, ","); idx >= 0 {
+	if idx := strings.IndexByte(xForwardedFor, ','); idx >= 0 {
 		xForwardedFor = xForwardedFor[:idx]
 	}
 	return xForwardedFor
@@ -553,15 +550,14 @@ func requiredHTTPPort(https bool, port int) int { // nolint:revive
 	return -1
 }
 
-// Return the request host and port from the first non-empty source.
-func firstHostPort(source ...string) (host string, port int) {
-	for _, hostport := range source {
-		host, port = splitHostPort(hostport)
+func hostPort(req *http.Request) (string, int) {
+	if req.URL != nil {
+		host, port := splitHostPort(req.URL.Host)
 		if host != "" || port > 0 {
-			break
+			return host, port
 		}
 	}
-	return
+	return splitHostPort(req.Header.Get("Host"))
 }
 
 // ClientStatus returns a span status code and message for an HTTP status code

@@ -170,17 +170,17 @@ func splitHostPort(hostport string) (host string, port int) {
 	port = -1
 
 	if strings.HasPrefix(hostport, "[") {
-		addrEnd := strings.LastIndex(hostport, "]")
+		addrEnd := strings.LastIndexByte(hostport, ']')
 		if addrEnd < 0 {
 			// Invalid hostport.
 			return
 		}
-		if i := strings.LastIndex(hostport[addrEnd:], ":"); i < 0 {
+		if i := strings.LastIndexByte(hostport[addrEnd:], ':'); i < 0 {
 			host = hostport[1:addrEnd]
 			return
 		}
 	} else {
-		if i := strings.LastIndex(hostport, ":"); i < 0 {
+		if i := strings.LastIndexByte(hostport, ':'); i < 0 {
 			host = hostport
 			return
 		}
