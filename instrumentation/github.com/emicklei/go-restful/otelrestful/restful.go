@@ -44,7 +44,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		spanName := route
 
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconvServer.RequestTraceAttrs(service, r)...),
+			oteltrace.WithAttributes(semconvServer.RequestTraceAttrs(service, r, semconv.RequestTraceAttrsOpts{})...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		if route != "" {
