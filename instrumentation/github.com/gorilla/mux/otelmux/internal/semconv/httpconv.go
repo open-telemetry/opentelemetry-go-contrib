@@ -114,8 +114,8 @@ func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request, o
 		count++
 	}
 
-	httpRoute := req.Pattern
-	if httpRoute != "" {
+	route := httpRoute(req.Pattern)
+	if route != "" {
 		count++
 	}
 
@@ -161,14 +161,14 @@ func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request, o
 		attrs = append(attrs, semconvNew.NetworkProtocolVersion(protoVersion))
 	}
 
-	if httpRoute != "" {
-		attrs = append(attrs, n.Route(httpRoute))
+	if route != "" {
+		attrs = append(attrs, n.Route(route))
 	}
 
 	return attrs
 }
 
-func (o CurrentHTTPServer) NetworkTransportAttr(network string) attribute.KeyValue {
+func (n CurrentHTTPServer) NetworkTransportAttr(network string) attribute.KeyValue {
 	switch network {
 	case "tcp", "tcp4", "tcp6":
 		return semconvNew.NetworkTransportTCP
