@@ -61,11 +61,11 @@ type HTTPServer struct {
 //
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
-func (s HTTPServer) RequestTraceAttrs(server string, req *http.Request) []attribute.KeyValue {
+func (s HTTPServer) RequestTraceAttrs(server string, req *http.Request, opts RequestTraceAttrsOpts) []attribute.KeyValue {
 	if s.duplicate {
-		return append(OldHTTPServer{}.RequestTraceAttrs(server, req), CurrentHTTPServer{}.RequestTraceAttrs(server, req)...)
+		return append(OldHTTPServer{}.RequestTraceAttrs(server, req), CurrentHTTPServer{}.RequestTraceAttrs(server, req, opts)...)
 	}
-	return CurrentHTTPServer{}.RequestTraceAttrs(server, req)
+	return CurrentHTTPServer{}.RequestTraceAttrs(server, req, opts)
 }
 
 func (s HTTPServer) NetworkTransportAttr(network string) []attribute.KeyValue {

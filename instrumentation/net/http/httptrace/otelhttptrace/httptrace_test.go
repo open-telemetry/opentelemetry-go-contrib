@@ -70,6 +70,7 @@ func TestRoundtrip(t *testing.T) {
 	address := ts.Listener.Addr()
 	hp := strings.Split(address.String(), ":")
 	expectedAttrs = map[attribute.Key]string{
+		"client.address":           hp[0],
 		"http.request.body.size":   "3",
 		"http.request.method":      "GET",
 		"network.peer.address":     hp[0],
