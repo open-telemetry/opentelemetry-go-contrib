@@ -26,9 +26,6 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 		var err error
 		out := re.ReplaceAllFunc(input, func(s []byte) []byte {
 			match := re.FindSubmatch(s)
-			if len(match) < 2 {
-				return s
-			}
 			var data []byte
 			data, err = replaceEnvVar(string(match[1]))
 			return data
