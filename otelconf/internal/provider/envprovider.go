@@ -42,11 +42,9 @@ func replaceEnvVar(uri string) ([]byte, error) {
 		return nil, fmt.Errorf("invalid environment variable name: %s", envVarName)
 	}
 
-	val, exists := os.LookupEnv(envVarName)
-	if !exists {
-		if defaultValuePtr != nil {
-			val = *defaultValuePtr
-		}
+	val := os.Getenv(envVarName)
+	if val == "" && defaultValuePtr != nil {
+		val = *defaultValuePtr
 	}
 	if len(val) == 0 {
 		return nil, nil
