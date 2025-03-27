@@ -141,3 +141,9 @@ func TestReplaceEnvVars(t *testing.T) {
 		})
 	}
 }
+
+func TestCheckRawConfTypeNil(t *testing.T) {
+	err := checkRawConfType([]byte{})
+	require.Error(t, err)
+	require.ErrorContains(t, err, "unsupported type=<nil> for retrieved config")
+}

@@ -72,9 +72,7 @@ func checkRawConfType(val []byte) error {
 	if err != nil {
 		return err
 	}
-	if rawConf == nil {
-		return nil
-	}
+
 	switch rawConf.(type) {
 	case int, int32, int64, float32, float64, bool, string, time.Time:
 		return nil
