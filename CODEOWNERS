@@ -31,8 +31,6 @@ bridges/prometheus/                                                     @open-te
 bridges/otelzap/                                                        @open-telemetry/go-approvers @pellared @khushijain21
 bridges/otellogr/                                                       @open-telemetry/go-approvers @scorpionknifes @pellared
 
-otelconf/                                                               @open-telemetry/go-approvers @pellared @codeboten
-
 detectors/aws/ec2                                                       @open-telemetry/go-approvers @pyohannes @akats7
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes @akats7
 detectors/aws/eks                                                       @open-telemetry/go-approvers @pyohannes
@@ -55,6 +53,8 @@ instrumentation/host/                                                   @open-te
 instrumentation/net/http/httptrace/otelhttptrace/                       @open-telemetry/go-approvers @dmathieu
 instrumentation/net/http/otelhttp/                                      @open-telemetry/go-approvers @dmathieu
 instrumentation/runtime/                                                @open-telemetry/go-approvers @dmathieu @dashpole
+
+otelconf/                                                               @open-telemetry/go-approvers @pellared @codeboten
 
 processors/baggagecopy                                                  @open-telemetry/go-approvers @codeboten @MikeGoldsmith
 processors/minsev                                                       @open-telemetry/go-approvers @MrAlias
