@@ -15,9 +15,13 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const ValidationPattern = `^[a-zA-Z_][a-zA-Z0-9_]*$`
+const validationPattern = `^[a-zA-Z_][a-zA-Z0-9_]*$`
 
-var validationRegexp = regexp.MustCompile(ValidationPattern)
+var validationRegexp = regexp.MustCompile(validationPattern)
+
+func EscapeDollarSigns(input []byte) []byte {
+	return []byte(strings.ReplaceAll(string(input), "$$", "$"))
+}
 
 func ReplaceEnvVars(input []byte) ([]byte, error) {
 	re := regexp.MustCompile(`\$\{([a-zA-Z_][a-zA-Z0-9_]*[-]?.*)\}`)
