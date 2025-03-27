@@ -31,7 +31,7 @@ bridges/prometheus/                                                     @open-te
 bridges/otelzap/                                                        @open-telemetry/go-approvers @pellared @khushijain21
 bridges/otellogr/                                                       @open-telemetry/go-approvers @scorpionknifes @pellared
 
-config/                                                                 @open-telemetry/go-approvers @pellared @codeboten
+otelconf/                                                               @open-telemetry/go-approvers @pellared @codeboten
 
 detectors/aws/ec2                                                       @open-telemetry/go-approvers @pyohannes @akats7
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes @akats7
