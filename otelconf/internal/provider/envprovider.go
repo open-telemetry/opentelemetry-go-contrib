@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package provider contains various providers
+// used to replace variables in configuration files.
 package provider // import "go.opentelemetry.io/contrib/otelconf/internal/provider"
 
 import (
