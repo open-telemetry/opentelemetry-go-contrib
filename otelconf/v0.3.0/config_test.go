@@ -404,7 +404,7 @@ var v03OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 			{Name: "bool_value", Type: &AttributeNameValueType{Value: "bool"}, Value: true},
 			{Name: "int_value", Type: &AttributeNameValueType{Value: "int"}, Value: 1},
 			{Name: "float_value", Type: &AttributeNameValueType{Value: "double"}, Value: 1.1},
-			{Name: "hex_value", Type: &AttributeNameValueType{Value: "int"}, Value: 3735928559},
+			{Name: "hex_value", Type: &AttributeNameValueType{Value: "int"}, Value: int(3735928559)},
 			{Name: "quoted_string_value", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
 			{Name: "quoted_bool_value", Type: &AttributeNameValueType{Value: "string"}, Value: "true"},
 			{Name: "quoted_int_value", Type: &AttributeNameValueType{Value: "string"}, Value: "1"},
