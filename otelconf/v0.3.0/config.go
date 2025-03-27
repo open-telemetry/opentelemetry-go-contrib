@@ -146,7 +146,7 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
 func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
-	file, err := provider.ReplaceEnvVars(file)
+	file, err := provider.ReplaceEnvVars(provider.EscapeDollarSigns(file))
 	if err != nil {
 		return nil, err
 	}

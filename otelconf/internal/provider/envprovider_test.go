@@ -20,6 +20,20 @@ func TestReplaceEnvVar(t *testing.T) {
 		wantErr    error
 	}{
 		{
+			name:       "string value",
+			envVarName: "STRING_VALUE",
+			uri:        "STRING_VALUE",
+			val:        "value",
+			wantValue:  []byte("value"),
+		},
+		{
+			name:       "bool value",
+			envVarName: "BOOL_VALUE",
+			uri:        "BOOL_VALUE",
+			val:        "true",
+			wantValue:  []byte("true"),
+		},
+		{
 			name:       "int value",
 			envVarName: "INT_VALUE",
 			uri:        "INT_VALUE",
@@ -27,11 +41,53 @@ func TestReplaceEnvVar(t *testing.T) {
 			wantValue:  []byte("1"),
 		},
 		{
-			name:       "string value",
+			name:       "float value",
+			envVarName: "FLOAT_VALUE",
+			uri:        "FLOAT_VALUE",
+			val:        "1.1",
+			wantValue:  []byte("1.1"),
+		},
+		{
+			name:       "hex value",
+			envVarName: "HEX_VALUE",
+			uri:        "HEX_VALUE",
+			val:        "0xdeadbeef",
+			wantValue:  []byte("0xdeadbeef"),
+		},
+		{
+			name:       "double quoted string value",
 			envVarName: "STRING_VALUE",
 			uri:        "STRING_VALUE",
-			val:        "this is a string",
-			wantValue:  []byte("this is a string"),
+			val:        `"value"`,
+			wantValue:  []byte(`"value"`),
+		},
+		{
+			name:       "double quoted bool value",
+			envVarName: "BOOL_VALUE",
+			uri:        "BOOL_VALUE",
+			val:        `"true"`,
+			wantValue:  []byte(`"true"`),
+		},
+		{
+			name:       "double quoted int value",
+			envVarName: "INT_VALUE",
+			uri:        "INT_VALUE",
+			val:        `"1"`,
+			wantValue:  []byte(`"1"`),
+		},
+		{
+			name:       "double quoted float value",
+			envVarName: "FLOAT_VALUE",
+			uri:        "FLOAT_VALUE",
+			val:        `"1.1"`,
+			wantValue:  []byte(`"1.1"`),
+		},
+		{
+			name:       "double quoted hex value",
+			envVarName: "HEX_VALUE",
+			uri:        "HEX_VALUE",
+			val:        `"0xdeadbeef"`,
+			wantValue:  []byte(`"0xdeadbeef"`),
 		},
 		{
 			name:      "invalid env var name",
@@ -140,6 +196,13 @@ func TestReplaceEnvVars(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestEscapeDollarSigns(t *testing.T) {
+	require.Equal(t, []byte("${KEY}"), EscapeDollarSigns([]byte("${KEY}")))
+	require.Equal(t, []byte("${KEY}"), EscapeDollarSigns([]byte("$${KEY}")))
+	require.Equal(t, []byte("$${KEY}"), EscapeDollarSigns([]byte("$$${KEY}")))
+	require.Equal(t, []byte("$${KEY}"), EscapeDollarSigns([]byte("$$$${KEY}")))
 }
 
 func TestCheckRawConfTypeNil(t *testing.T) {
