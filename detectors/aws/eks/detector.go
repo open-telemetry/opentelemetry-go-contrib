@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package eks provides a resource detector for AWS EKS.
 package eks // import "go.opentelemetry.io/contrib/detectors/aws/eks"
 
 import (

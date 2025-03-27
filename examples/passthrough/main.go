@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Passthrough exemplifies distributed context propagation.
 package main
 
 import (

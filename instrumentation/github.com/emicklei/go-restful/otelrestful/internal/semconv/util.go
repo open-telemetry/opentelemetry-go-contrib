@@ -76,6 +76,13 @@ func serverClientIP(xForwardedFor string) string {
 	return xForwardedFor
 }
 
+func httpRoute(pattern string) string {
+	if idx := strings.IndexByte(pattern, '/'); idx >= 0 {
+		return pattern[idx:]
+	}
+	return ""
+}
+
 func netProtocol(proto string) (name string, version string) {
 	name, version, _ = strings.Cut(proto, "/")
 	switch name {

@@ -1,8 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Command zipkin is an example program that creates spans
-// and uploads to openzipkin collector.
+// Zipkin is an example program that creates spans and uploads to openzipkin
+// collector.
 package main
 
 import (

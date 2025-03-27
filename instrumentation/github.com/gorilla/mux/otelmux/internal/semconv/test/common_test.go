@@ -4,6 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package test provides module isolated testing for the semconv package.
 package test
 
 import (

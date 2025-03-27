@@ -132,12 +132,13 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //
 			break
 		}
 
-		if key == pValueSubkey {
+		switch key {
+		case pValueSubkey:
 			// Note: does the spec say how to handle duplicates?
 			pval = tail[0:sepPos]
-		} else if key == rValueSubkey {
+		case rValueSubkey:
 			rval = tail[0:sepPos]
-		} else {
+		default:
 			unknown = append(unknown, ts[0:sepPos+eqPos+1])
 		}
 

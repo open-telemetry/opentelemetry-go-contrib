@@ -97,7 +97,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 		{
 			name:     "handler returning two values does not declare error as the second return value",
 			expected: errors.New("handler returns two values, but the second does not implement error"),
-			handler: func() (error, string) {
+			handler: func() (error, string) { // nolint:staticcheck  // Tests error first.
 				return nil, "hello"
 			},
 			args: []reflect.Value{reflect.ValueOf(mockContext), reflect.ValueOf(emptyPayload)},

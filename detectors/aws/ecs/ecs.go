@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package ecs provides a resource detector for AWS ECS instances.
 package ecs // import "go.opentelemetry.io/contrib/detectors/aws/ecs"
 
 import (

@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package lambda provides a resource detector for AWS Lambda.
 package lambda // import "go.opentelemetry.io/contrib/detectors/aws/lambda"
 
 import (

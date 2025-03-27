@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Server exemplifies use of the otelgrpc instrumentation for a gRPC server.
 package main
 
 import (

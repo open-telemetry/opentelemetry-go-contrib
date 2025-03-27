@@ -4,6 +4,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package semconv provides OpenTelemetry semantic convention types and
+// functionality.
 package semconv // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 
 import (
@@ -112,8 +114,8 @@ func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request, o
 		count++
 	}
 
-	httpRoute := req.Pattern
-	if httpRoute != "" {
+	route := httpRoute(req.Pattern)
+	if route != "" {
 		count++
 	}
 
@@ -159,14 +161,14 @@ func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request, o
 		attrs = append(attrs, semconvNew.NetworkProtocolVersion(protoVersion))
 	}
 
-	if httpRoute != "" {
-		attrs = append(attrs, n.Route(httpRoute))
+	if route != "" {
+		attrs = append(attrs, n.Route(route))
 	}
 
 	return attrs
 }
 
-func (o CurrentHTTPServer) NetworkTransportAttr(network string) attribute.KeyValue {
+func (n CurrentHTTPServer) NetworkTransportAttr(network string) attribute.KeyValue {
 	switch network {
 	case "tcp", "tcp4", "tcp6":
 		return semconvNew.NetworkTransportTCP
@@ -201,9 +203,11 @@ func (n CurrentHTTPServer) scheme(https bool) attribute.KeyValue { // nolint:rev
 	return semconvNew.URLScheme("http")
 }
 
-// TraceResponse returns trace attributes for telemetry from an HTTP response.
+// ResponseTraceAttrs returns trace attributes for telemetry from an HTTP
+// response.
 //
-// If any of the fields in the ResponseTelemetry are not set the attribute will be omitted.
+// If any of the fields in the ResponseTelemetry are not set the attribute will
+// be omitted.
 func (n CurrentHTTPServer) ResponseTraceAttrs(resp ResponseTelemetry) []attribute.KeyValue {
 	var count int
 
@@ -547,7 +551,7 @@ func (n CurrentHTTPClient) MetricAttributes(req *http.Request, statusCode int, a
 	return attributes
 }
 
-// Attributes for httptrace.
+// TraceAttributes returns attributes for httptrace.
 func (n CurrentHTTPClient) TraceAttributes(host string) []attribute.KeyValue {
 	return []attribute.KeyValue{
 		semconvNew.ServerAddress(host),
