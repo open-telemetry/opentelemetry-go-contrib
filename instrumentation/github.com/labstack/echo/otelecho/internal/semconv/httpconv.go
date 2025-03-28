@@ -6,7 +6,7 @@
 
 // Package semconv provides OpenTelemetry semantic convention types and
 // functionality.
-package semconv
+package semconv // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconv"
 
 import (
 	"fmt"

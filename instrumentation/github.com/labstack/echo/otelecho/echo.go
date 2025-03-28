@@ -45,7 +45,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 		cfg.Skipper = middleware.DefaultSkipper
 	}
 
-	var hs semconv.HTTPServer
+	hs := semconv.NewHTTPServer(nil)
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
