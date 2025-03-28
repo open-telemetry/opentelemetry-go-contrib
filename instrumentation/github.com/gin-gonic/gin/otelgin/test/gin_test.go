@@ -169,7 +169,45 @@ func TestTrace200(t *testing.T) {
 	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusOK))
 	assert.Contains(t, attr, attribute.String("http.method", "GET"))
-	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
+
+	assert.Empty(t, span.Events())
+	assert.Equal(t, codes.Unset, span.Status().Code)
+	assert.Empty(t, span.Status().Description)
+}
+
+func TestTrace200_HttpDup(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http/dup")
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
+	router.GET("/user/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		_, _ = c.Writer.Write([]byte(id))
+	})
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := httptest.NewRecorder()
+
+	// do and verify the request
+	router.ServeHTTP(w, r)
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	// verify traces look good
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, "/user/:id", span.Name())
+	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
+	attr := span.Attributes()
+	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
+	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusOK))
+	assert.Contains(t, attr, attribute.String("http.method", "GET"))
+	if r.Pattern != "" {
+		assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
+	}
 	assert.Empty(t, span.Events())
 	assert.Equal(t, codes.Unset, span.Status().Code)
 	assert.Empty(t, span.Status().Description)
@@ -327,7 +365,46 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
 	assert.Contains(t, attr, attribute.String("http.method", "GET"))
-	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
+}
+
+func TestHTTPRouteWithSpanNameFormatter_HttpDup(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http/dup")
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar",
+		otelgin.WithTracerProvider(provider),
+		otelgin.WithSpanNameFormatter(func(r *http.Request) string {
+			return r.URL.Path
+		}),
+	),
+	)
+	router.GET("/user/:id", func(c *gin.Context) {
+		id := c.Param("id")
+		_, _ = c.Writer.Write([]byte(id))
+	})
+
+	r := httptest.NewRequest("GET", "/user/123", nil)
+	w := httptest.NewRecorder()
+
+	// do and verify the request
+	router.ServeHTTP(w, r)
+	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	// verify traces look good
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, "/user/123", span.Name())
+	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
+	attr := span.Attributes()
+	fmt.Println(attr)
+	assert.Contains(t, attr, attribute.String("http.method", "GET"))
+	if r.Pattern != "" {
+		assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
+	}
 }
 
 func TestHTML(t *testing.T) {

@@ -87,8 +87,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}
 
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(hs.RequestTraceAttrs(service, c.Request, requestTraceAttrOpts)...),
-			oteltrace.WithAttributes(hs.Route(c.FullPath())),
+			oteltrace.WithAttributes(sc.RequestTraceAttrs(service, c.Request, requestTraceAttrOpts)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		var spanName string
