@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package xray provides an OpenTelemetry propagator for the AWS XRAY
+// propagation format.
 package xray // import "go.opentelemetry.io/contrib/propagators/aws/xray"
 
 import (
