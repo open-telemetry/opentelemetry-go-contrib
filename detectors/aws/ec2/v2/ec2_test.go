@@ -8,8 +8,13 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/http"
+	"strings"
 	"testing"
 	"time"
+
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 
 	"github.com/aws/smithy-go/middleware"
 
@@ -36,17 +41,20 @@ func (m *mockClient) GetMetadata(ctx context.Context, params *imds.GetMetadataIn
 	return args.Get(0).(*imds.GetMetadataOutput), args.Error(1)
 }
 
+type testCase struct {
+	name           string
+	metadataOutput *imds.GetMetadataOutput
+	metadataErr    error
+	docOutput      *imds.GetInstanceIdentityDocumentOutput
+	docErr         error
+	expectedAttrs  []attribute.KeyValue
+	expectedErr    error
+}
+
 func TestAWS_ResourceDetection(t *testing.T) {
 	doc := validIdentityDocument()
 
-	testCases := []struct {
-		name           string
-		metadataOutput *imds.GetMetadataOutput
-		metadataErr    error
-		docOutput      *imds.GetInstanceIdentityDocumentOutput
-		docErr         error
-		expectedAttrs  []attribute.KeyValue
-	}{
+	testCases := []testCase{
 		{
 			name:           "AllFields",
 			docOutput:      doc,
@@ -116,6 +124,39 @@ func TestAWS_InvalidClient(t *testing.T) {
 	assert.ErrorIs(t, err, errClient)
 }
 
+func Test_RecordErrors(t *testing.T) {
+	doc := validIdentityDocument()
+
+	testCases := []testCase{
+		{
+			name:        "404 returns no error",
+			docOutput:   doc,
+			metadataErr: newAwsResponseError(404),
+		},
+		{
+			name:        "502 returns error",
+			docOutput:   doc,
+			metadataErr: newAwsResponseError(502),
+			expectedErr: resource.ErrPartialResource,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			clientMock := new(mockClient)
+
+			clientMock.On("GetInstanceIdentityDocument", mock.Anything, mock.Anything, mock.Anything).
+				Return(tc.docOutput, tc.docErr)
+			clientMock.On("GetMetadata", mock.Anything, mock.Anything, mock.Anything).
+				Return(tc.metadataOutput, tc.metadataErr)
+
+			detector := &resourceDetector{c: clientMock}
+			_, err := detector.Detect(context.Background())
+			assert.ErrorIs(t, err, tc.expectedErr)
+		})
+	}
+}
+
 func validIdentityDocument() *imds.GetInstanceIdentityDocumentOutput {
 	doc := imds.InstanceIdentityDocument{
 		MarketplaceProductCodes: []string{"1abc2defghijklm3nopqrs4tu"},
@@ -140,5 +181,23 @@ func validIdentityDocument() *imds.GetInstanceIdentityDocumentOutput {
 func mockMetadataOutput(val string) *imds.GetMetadataOutput {
 	return &imds.GetMetadataOutput{
 		Content: io.NopCloser(bytes.NewReader([]byte(val))),
+	}
+}
+
+func newAwsResponseError(statusCode int) *awshttp.ResponseError {
+	err := &smithyhttp.ResponseError{
+		Response: &smithyhttp.Response{
+			Response: &http.Response{
+				StatusCode: statusCode,
+				Body:       io.NopCloser(strings.NewReader("Bad Request")),
+				Header:     http.Header{"Content-Type": []string{"application/json"}},
+			},
+		},
+		Err: errors.New("error fetching metadata"),
+	}
+
+	return &awshttp.ResponseError{
+		ResponseError: err,
+		RequestID:     "test123",
 	}
 }
