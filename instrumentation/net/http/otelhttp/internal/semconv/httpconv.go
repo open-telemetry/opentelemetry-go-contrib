@@ -142,7 +142,7 @@ func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request, o
 		}
 	}
 
-	if useragent := req.UserAgent(); useragent != "" {
+	if useragent != "" {
 		attrs = append(attrs, semconvNew.UserAgentOriginal(useragent))
 	}
 
