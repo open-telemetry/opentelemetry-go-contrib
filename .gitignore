@@ -26,3 +26,12 @@ instrumentation/google.golang.org/grpc/otelgrpc/example/server/server
 instrumentation/google.golang.org/grpc/otelgrpc/example/client/client
 
 tmp
+
+instrumentation/github.com/emicklei/go-restful/otelrestful/example/example
+instrumentation/github.com/aws/aws-lambda-go/otellambda/example/example
+instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/example/example
+instrumentation/github.com/gin-gonic/gin/otelgin/example/example
+instrumentation/github.com/gorilla/mux/otelmux/example/example
+instrumentation/github.com/labstack/echo/otelecho/example/example
+instrumentation/host/example/example
+samplers/jaegerremote/example/example
