@@ -23,7 +23,8 @@ import (
 	"math"
 	"sync"
 
-	jaeger_api_v2 "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/proto-gen/jaeger-idl/proto/api_v2"
+	jaeger_api_v2 "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2"
+
 	"go.opentelemetry.io/contrib/samplers/jaegerremote/internal/utils"
 	"go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
