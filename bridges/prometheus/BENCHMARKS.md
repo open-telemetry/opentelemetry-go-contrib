@@ -1,4 +1,4 @@
-## Summary
+# Summary
 
 Using the Prometheus bridge and the OTLP exporter adds roughly ~50% to the CPU and memory overhead of an application compared to serving a Prometheus HTTP endpoint for metrics.
 
