@@ -532,7 +532,7 @@ func (n CurrentHTTPClient) MetricAttributes(req *http.Request, statusCode int, a
 	attributes = append(attributes,
 		semconvNew.HTTPRequestMethodKey.String(standardizeHTTPMethod(req.Method)),
 		semconvNew.ServerAddress(requestHost),
-		n.scheme(req.TLS != nil),
+		n.scheme(req),
 	)
 
 	if port > 0 {
@@ -558,11 +558,17 @@ func (n CurrentHTTPClient) TraceAttributes(host string) []attribute.KeyValue {
 	}
 }
 
-func (n CurrentHTTPClient) scheme(https bool) attribute.KeyValue { // nolint:revive
-	if https {
-		return semconvNew.URLScheme("https")
+func (n CurrentHTTPClient) scheme(req *http.Request) attribute.KeyValue {
+	if req.URL == nil {
+		if req.TLS != nil {
+			return semconvNew.URLScheme("https")
+		}
+		return semconvNew.URLScheme("http")
 	}
-	return semconvNew.URLScheme("http")
+	if req.URL.Scheme == "" {
+		return semconvNew.URLScheme("http")
+	}
+	return semconvNew.URLScheme(req.URL.Scheme)
 }
 
 func isErrorStatusCode(code int) bool {
