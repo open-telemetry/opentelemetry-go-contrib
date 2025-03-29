@@ -104,17 +104,17 @@ func TestSDKIntegration(t *testing.T) {
 	assertSpan(t, sr.Ended()[0],
 		"/user/{id:[0-9]+}",
 		trace.SpanKindServer,
-		attribute.String("net.host.name", "foobar"),
-		attribute.Int("http.status_code", http.StatusOK),
-		attribute.String("http.method", "GET"),
+		attribute.String("server.address", "foobar"),
+		attribute.Int("http.response.status_code", http.StatusOK),
+		attribute.String("http.request.method", "GET"),
 		attribute.String("http.route", "/user/{id:[0-9]+}"),
 	)
 	assertSpan(t, sr.Ended()[1],
 		"/book/{title}",
 		trace.SpanKindServer,
-		attribute.String("net.host.name", "foobar"),
-		attribute.Int("http.status_code", http.StatusOK),
-		attribute.String("http.method", "GET"),
+		attribute.String("server.address", "foobar"),
+		attribute.Int("http.response.status_code", http.StatusOK),
+		attribute.String("http.request.method", "GET"),
 		attribute.String("http.route", "/book/{title}"),
 	)
 }
@@ -136,15 +136,17 @@ func TestNotFoundIsNotError(t *testing.T) {
 	assertSpan(t, sr.Ended()[0],
 		"/does/not/exist",
 		trace.SpanKindServer,
-		attribute.String("net.host.name", "foobar"),
-		attribute.Int("http.status_code", http.StatusNotFound),
-		attribute.String("http.method", "GET"),
+		attribute.String("server.address", "foobar"),
+		attribute.Int("http.response.status_code", http.StatusNotFound),
+		attribute.String("http.request.method", "GET"),
 		attribute.String("http.route", "/does/not/exist"),
 	)
 	assert.Equal(t, codes.Unset, sr.Ended()[0].Status().Code)
 }
 
 func assertSpan(t *testing.T, span sdktrace.ReadOnlySpan, name string, kind trace.SpanKind, attrs ...attribute.KeyValue) {
+	t.Helper()
+
 	assert.Equal(t, name, span.Name())
 	assert.Equal(t, kind, span.SpanKind())
 

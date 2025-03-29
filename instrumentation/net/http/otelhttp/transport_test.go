@@ -30,7 +30,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -707,12 +706,15 @@ func TestTransportMetrics(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
-			semconv.NetPeerName(host),
-			semconv.NetPeerPort(port),
-			semconv.HTTPMethod("GET"),
-			semconv.HTTPStatusCode(200),
+			attribute.String("http.request.method", "GET"),
+			attribute.Int("http.response.status_code", 200),
+			attribute.String("server.address", host),
+			attribute.Int("server.port", port),
+			attribute.String("url.scheme", "http"),
+			attribute.String("network.protocol.name", "http"),
+			attribute.String("network.protocol.version", "1.1"),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 13)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 	})
 
 	t.Run("make http request and buffer response", func(t *testing.T) {
@@ -776,12 +778,15 @@ func TestTransportMetrics(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
-			semconv.NetPeerName(host),
-			semconv.NetPeerPort(port),
-			semconv.HTTPMethod("GET"),
-			semconv.HTTPStatusCode(200),
+			attribute.String("http.request.method", "GET"),
+			attribute.Int("http.response.status_code", 200),
+			attribute.String("server.address", host),
+			attribute.Int("server.port", port),
+			attribute.String("url.scheme", "http"),
+			attribute.String("network.protocol.name", "http"),
+			attribute.String("network.protocol.version", "1.1"),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 13)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 	})
 
 	t.Run("make http request and close body before reading completely", func(t *testing.T) {
@@ -840,57 +845,61 @@ func TestTransportMetrics(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
-			semconv.NetPeerName(host),
-			semconv.NetPeerPort(port),
-			semconv.HTTPMethod("GET"),
-			semconv.HTTPStatusCode(200),
+			attribute.String("http.request.method", "GET"),
+			attribute.Int("http.response.status_code", 200),
+			attribute.String("server.address", host),
+			attribute.Int("server.port", port),
+			attribute.String("url.scheme", "http"),
+			attribute.String("network.protocol.name", "http"),
+			attribute.String("network.protocol.version", "1.1"),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 10)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 	})
 }
 
-func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set, rxBytes int64) {
+func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
 		Version: Version(),
 	}, sm.Scope)
 
-	require.Len(t, sm.Metrics, 3)
+	require.Len(t, sm.Metrics, 2)
 
-	want := metricdata.Metrics{
-		Name: "http.client.request.size",
-		Data: metricdata.Sum[int64]{
-			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 4}},
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:    ScopeName,
+			Version: Version(),
 		},
-		Description: "Measures the size of HTTP request messages.",
-		Unit:        "By",
-	}
-	metricdatatest.AssertEqual(t, want, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
-
-	want = metricdata.Metrics{
-		Name: "http.client.response.size",
-		Data: metricdata.Sum[int64]{
-			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: rxBytes}},
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "http.client.request.body.size",
+				Description: "Size of HTTP client request bodies.",
+				Unit:        "By",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attrs,
+						},
+					},
+				},
+			},
+			{
+				Name:        "http.client.request.duration",
+				Description: "Duration of HTTP client requests.",
+				Unit:        "s",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attrs,
+						},
+					},
+				},
+			},
 		},
-		Description: "Measures the size of HTTP response messages.",
-		Unit:        "By",
 	}
-	metricdatatest.AssertEqual(t, want, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
-
-	want = metricdata.Metrics{
-		Name: "http.client.duration",
-		Data: metricdata.Histogram[float64]{
-			DataPoints:  []metricdata.HistogramDataPoint[float64]{{Attributes: attrs}},
-			Temporality: metricdata.CumulativeTemporality,
-		},
-		Description: "Measures the duration of outbound HTTP requests.",
-		Unit:        "ms",
-	}
-	metricdatatest.AssertEqual(t, want, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+	metricdatatest.AssertEqual(t, want, sm, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 }
 
 func TestCustomAttributesHandling(t *testing.T) {
@@ -1002,7 +1011,7 @@ func TestDefaultAttributesHandling(t *testing.T) {
 	err = reader.Collect(ctx, &rm)
 	assert.NoError(t, err)
 
-	assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 2)
 	for _, m := range rm.ScopeMetrics[0].Metrics {
 		switch m.Name {
 		case clientRequestSize:
