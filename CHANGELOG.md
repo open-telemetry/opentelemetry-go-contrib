@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Jaeger remote sampler's probabilistic strategy now uses the same sampling algorithm as `trace.TraceIDRatioBased` in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#6892)
+- Set `url.Scheme` attribute to the request URL.Scheme when possible for http client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6938)
 
 ### Fixed
 
