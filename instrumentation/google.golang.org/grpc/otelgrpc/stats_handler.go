@@ -55,14 +55,14 @@ func (h *serverHandler) HandleConn(ctx context.Context, info stats.ConnStats) {
 
 // TagRPC can attach some information to the given context.
 func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
-	ctx = extract(ctx, h.config.Propagators)
+	ctx = extract(ctx, h.Propagators)
 
 	name, attrs := internal.ParseFullMethod(info.FullMethodName)
 	attrs = append(attrs, RPCSystemGRPC)
 
 	record := true
-	if h.config.Filter != nil {
-		record = h.config.Filter(info)
+	if h.Filter != nil {
+		record = h.Filter(info)
 	}
 
 	if record {
@@ -70,12 +70,12 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(append(attrs, h.config.SpanAttributes...)...),
+			trace.WithAttributes(append(attrs, h.SpanAttributes...)...),
 		)
 	}
 
 	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.config.MetricAttributes...),
+		metricAttrs: append(attrs, h.MetricAttributes...),
 		record:      record,
 	}
 
@@ -107,8 +107,8 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	attrs = append(attrs, RPCSystemGRPC)
 
 	record := true
-	if h.config.Filter != nil {
-		record = h.config.Filter(info)
+	if h.Filter != nil {
+		record = h.Filter(info)
 	}
 
 	if record {
@@ -116,16 +116,16 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 			ctx,
 			name,
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(append(attrs, h.config.SpanAttributes...)...),
+			trace.WithAttributes(append(attrs, h.SpanAttributes...)...),
 		)
 	}
 
 	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.config.MetricAttributes...),
+		metricAttrs: append(attrs, h.MetricAttributes...),
 		record:      record,
 	}
 
-	return inject(context.WithValue(ctx, gRPCContextKey{}, &gctx), h.config.Propagators)
+	return inject(context.WithValue(ctx, gRPCContextKey{}, &gctx), h.Propagators)
 }
 
 // HandleRPC processes the RPC stats.

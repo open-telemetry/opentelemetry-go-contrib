@@ -42,7 +42,7 @@ func TestHTTPServerDoesNotPanic(t *testing.T) {
 				req, err := http.NewRequest("GET", "http://example.com", nil)
 				require.NoError(t, err)
 
-				_ = tt.server.RequestTraceAttrs("stuff", req)
+				_ = tt.server.RequestTraceAttrs("stuff", req, RequestTraceAttrsOpts{})
 				_ = tt.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
 				tt.server.RecordMetrics(context.Background(), ServerMetricData{
 					ServerName: "stuff",
@@ -250,7 +250,7 @@ func BenchmarkRecordMetrics(b *testing.B) {
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
 			req, _ := http.NewRequest("GET", "http://example.com", nil)
-			_ = bm.server.RequestTraceAttrs("stuff", req)
+			_ = bm.server.RequestTraceAttrs("stuff", req, RequestTraceAttrsOpts{})
 			_ = bm.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
 			ctx := context.Background()
 			b.ReportAllocs()

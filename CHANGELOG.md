@@ -10,13 +10,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- `http.route` attribute to otelhttp server request spans, when `net/http.Request.Pattern` is set in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`, `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` and `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6905)
+- `http.route` attribute to otelhttp server request spans, when `net/http.Request.Pattern` is set in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`, `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` and `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6905, #6937)
 - Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#6962)
 - Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#6965)
 - Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6966)
 - Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#6967)
 - Add the `WithGinMetricAttributes` option to allow setting dynamic, per-request metric attributes based on `*gin.Context` in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6932)
+- Use Gin's own `ClientIP` method to detect the client's IP, which supports custom proxy headers in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6095)
 - Add instrumentation support for `go.mongodb.org/mongo-driver/v2` in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`(#6539)
+
 
 ### Changed
 
