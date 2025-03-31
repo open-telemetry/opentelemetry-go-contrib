@@ -23,7 +23,7 @@ module-sets:
       - go.opentelemetry.io/contrib/exporters/autoexport
       - go.opentelemetry.io/contrib/propagators/autoprop
       - go.opentelemetry.io/contrib/propagators/opencensus
-      - go.opentelemetry.io/contrib/propagators/opencensus/examples
+      - go.opentelemetry.io/contrib/propagators/opencensus/examplesx
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv/test
@@ -97,3 +97,4 @@ excluded-modules:
   - go.opentelemetry.io/contrib/examples/passthrough
   - go.opentelemetry.io/contrib/examples/prometheus
   - go.opentelemetry.io/contrib/examples/zipkin
+  - go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo
