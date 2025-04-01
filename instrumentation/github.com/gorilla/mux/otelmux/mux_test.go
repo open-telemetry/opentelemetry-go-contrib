@@ -16,6 +16,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -27,6 +28,26 @@ var sc = trace.NewSpanContext(trace.SpanContextConfig{
 	Remote:     true,
 	TraceFlags: trace.FlagsSampled,
 })
+
+func TestRequestBodyWrapper(t *testing.T) {
+	router := mux.NewRouter()
+	router.Use(Middleware("foobar"))
+	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, ok := r.Body.(*request.BodyWrapper)
+		assert.Truef(t, ok, "body should be wrapped when request is processed")
+
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	r := httptest.NewRequest("POST", "/user/123", strings.NewReader(`{"name":"John Doe","age":30}`))
+	r = r.WithContext(trace.ContextWithRemoteSpanContext(context.Background(), sc))
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	_, ok := r.Body.(*request.BodyWrapper)
+	assert.Falsef(t, ok, "body should not be wrapped after request is processed")
+}
 
 func TestPassthroughSpanFromGlobalTracer(t *testing.T) {
 	var called bool
