@@ -94,29 +94,54 @@ func TestSDKIntegration(t *testing.T) {
 	router.HandleFunc("/user/{id:[0-9]+}", ok)
 	router.HandleFunc("/book/{title}", ok)
 
-	r0 := httptest.NewRequest("GET", "/user/123", nil)
-	r1 := httptest.NewRequest("GET", "/book/foo", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, r0)
-	router.ServeHTTP(w, r1)
+	tests := []struct {
+		name     string
+		path     string
+		reqFunc  func(r *http.Request)
+		expected string
+	}{
+		{
+			name:     "user route",
+			path:     "/user/123",
+			reqFunc:  nil,
+			expected: "/user/{id:[0-9]+}",
+		},
+		{
+			name:     "book route",
+			path:     "/book/foo",
+			reqFunc:  nil,
+			expected: "/book/{title}",
+		},
+		{
+			name:     "book route with custom pattern",
+			path:     "/book/bar",
+			reqFunc:  func(r *http.Request) { r.Pattern = "/book/{custom}" },
+			expected: "/book/{custom}",
+		},
+	}
 
-	require.Len(t, sr.Ended(), 2)
-	assertSpan(t, sr.Ended()[0],
-		"/user/{id:[0-9]+}",
-		trace.SpanKindServer,
-		attribute.String("net.host.name", "foobar"),
-		attribute.Int("http.status_code", http.StatusOK),
-		attribute.String("http.method", "GET"),
-		attribute.String("http.route", "/user/{id:[0-9]+}"),
-	)
-	assertSpan(t, sr.Ended()[1],
-		"/book/{title}",
-		trace.SpanKindServer,
-		attribute.String("net.host.name", "foobar"),
-		attribute.Int("http.status_code", http.StatusOK),
-		attribute.String("http.method", "GET"),
-		attribute.String("http.route", "/book/{title}"),
-	)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer sr.Reset()
+
+			r := httptest.NewRequest("GET", tt.path, nil)
+			if tt.reqFunc != nil {
+				tt.reqFunc(r)
+			}
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, r)
+
+			assertSpan(t, sr.Ended()[0],
+				tt.expected,
+				trace.SpanKindServer,
+				attribute.String("net.host.name", "foobar"),
+				attribute.Int("http.status_code", http.StatusOK),
+				attribute.String("http.method", "GET"),
+				attribute.String("http.route", tt.expected),
+			)
+		})
+	}
 }
 
 func TestNotFoundIsNotError(t *testing.T) {
