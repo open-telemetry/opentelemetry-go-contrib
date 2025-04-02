@@ -41,6 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function in `go.opentelemetry.io/contrib/samplers/probability/consistent` is removed, use `Version` instead. (#7072)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, use `Version` function instead. (#7084)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, use `Version` function instead. (#7085)
+- The deprecated `UnaryServerInterceptor` from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` module is removed. (#7115)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -538,7 +539,6 @@ The next release will require at least [Go 1.21].
 - The deprecated `go.opentelemetry.io/contrib/instrumentation/github.com/Shopify/sarama/otelsarama` module is removed. (#4295)
 - The deprecated `go.opentelemetry.io/contrib/instrumentation/github.com/bradfitz/gomemcache/memcache/otelmemcache` module is removed. (#4295)
 - The deprecated `go.opentelemetry.io/contrib/instrumentation/github.com/gocql/gocql/otelgocql` module is removed. (#4295)
-- The deprecated `UnaryServerInterceptor` from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` module is removed. (#7115)
 
 ## [1.18.0/0.43.0/0.12.0] - 2023-08-28
 
