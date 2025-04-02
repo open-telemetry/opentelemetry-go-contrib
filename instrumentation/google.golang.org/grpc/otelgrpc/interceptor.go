@@ -8,15 +8,16 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 import (
 	"context"
 	"errors"
+	"io"
+	"net"
+	"strconv"
+
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-	"io"
-	"net"
-	"strconv"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
@@ -72,7 +73,7 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 			return invoker(ctx, method, req, reply, cc, callOpts...)
 		}
 
-		name, attr, _ := telemetryAttributes(method, cc.Target())
+		name, attr := telemetryAttributes(method, cc.Target())
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindClient),
@@ -232,7 +233,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			return streamer(ctx, desc, cc, method, callOpts...)
 		}
 
-		name, attr, _ := telemetryAttributes(method, cc.Target())
+		name, attr := telemetryAttributes(method, cc.Target())
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindClient),
@@ -339,7 +340,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		}
 
 		ctx = extract(ctx, cfg.Propagators)
-		name, attr, _ := telemetryAttributes(info.FullMethod, peerFromCtx(ctx))
+		name, attr := telemetryAttributes(info.FullMethod, peerFromCtx(ctx))
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindServer),
@@ -371,16 +372,15 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 
 // telemetryAttributes returns a span name and span and metric attributes from
 // the gRPC method and peer address.
-func telemetryAttributes(fullMethod, peerAddress string) (string, []attribute.KeyValue, []attribute.KeyValue) {
+func telemetryAttributes(fullMethod, peerAddress string) (string, []attribute.KeyValue) {
 	name, methodAttrs := internal.ParseFullMethod(fullMethod)
 	peerAttrs := peerAttr(peerAddress)
 
 	attrs := make([]attribute.KeyValue, 0, 1+len(methodAttrs)+len(peerAttrs))
 	attrs = append(attrs, RPCSystemGRPC)
 	attrs = append(attrs, methodAttrs...)
-	metricAttrs := attrs[:1+len(methodAttrs)]
 	attrs = append(attrs, peerAttrs...)
-	return name, attrs, metricAttrs
+	return name, attrs
 }
 
 // peerAttr returns attributes about the peer address.
