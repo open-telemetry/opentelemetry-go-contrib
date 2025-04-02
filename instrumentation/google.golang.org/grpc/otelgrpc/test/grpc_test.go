@@ -19,7 +19,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
-	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -83,11 +82,6 @@ func TestInterceptors(t *testing.T) {
 
 	clientStreamSR := tracetest.NewSpanRecorder()
 	clientStreamTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientStreamSR))
-
-	serverUnarySR := tracetest.NewSpanRecorder()
-	serverUnaryTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverUnarySR))
-	serverUnaryMetricReader := metric.NewManualReader()
-	serverUnaryMP := metric.NewMeterProvider(metric.WithReader(serverUnaryMetricReader))
 
 	serverStreamSR := tracetest.NewSpanRecorder()
 	serverStreamTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverStreamSR))
