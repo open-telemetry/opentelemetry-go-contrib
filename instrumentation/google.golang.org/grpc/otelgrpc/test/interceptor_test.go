@@ -16,9 +16,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -963,37 +960,6 @@ func TestStreamServerInterceptorEvents(t *testing.T) {
 			}
 		})
 	}
-}
-
-func assertServerMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code grpc_codes.Code) {
-	want := metricdata.ScopeMetrics{
-		Scope: wantInstrumentationScope,
-		Metrics: []metricdata.Metrics{
-			{
-				Name:        "rpc.server.duration",
-				Description: "Measures the duration of inbound RPC.",
-				Unit:        "ms",
-				Data: metricdata.Histogram[float64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[float64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod(name),
-								semconv.RPCService(serviceName),
-								otelgrpc.RPCSystemGRPC,
-								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
-							),
-						},
-					},
-				},
-			},
-		},
-	}
-	rm := metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), &rm)
-	assert.NoError(t, err)
-	require.Len(t, rm.ScopeMetrics, 1)
-	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
 
 func BenchmarkStreamClientInterceptor(b *testing.B) {
