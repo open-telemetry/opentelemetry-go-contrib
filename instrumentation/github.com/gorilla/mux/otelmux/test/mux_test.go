@@ -132,6 +132,7 @@ func TestSDKIntegration(t *testing.T) {
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, r)
 
+			require.Len(t, sr.Ended(), 1)
 			assertSpan(t, sr.Ended()[0],
 				tt.expected,
 				trace.SpanKindServer,
