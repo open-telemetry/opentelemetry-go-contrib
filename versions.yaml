@@ -23,7 +23,7 @@ module-sets:
       - go.opentelemetry.io/contrib/exporters/autoexport
       - go.opentelemetry.io/contrib/propagators/autoprop
       - go.opentelemetry.io/contrib/propagators/opencensus
-      - go.opentelemetry.io/contrib/propagators/opencensus/examplesx
+      - go.opentelemetry.io/contrib/propagators/opencensus/examples
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/example
       - go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv/test
