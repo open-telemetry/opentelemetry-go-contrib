@@ -979,35 +979,6 @@ func (m *mockServerStream) RecvMsg(_ interface{}) error {
 	return nil
 }
 
-// TestStreamServerInterceptor tests the server interceptor for streaming RPCs.
-func TestStreamServerInterceptor(t *testing.T) {
-	for _, check := range serverChecks {
-		name := check.grpcCode.String()
-		t.Run(name, func(t *testing.T) {
-			sr := tracetest.NewSpanRecorder()
-			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-
-			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
-			usi := otelgrpc.StreamServerInterceptor(
-				otelgrpc.WithTracerProvider(tp),
-			)
-
-			// call the stream interceptor
-			grpcErr := status.Error(check.grpcCode, check.grpcCode.String())
-			handler := func(_ interface{}, _ grpc.ServerStream) error {
-				return grpcErr
-			}
-			err := usi(&grpc_testing.SimpleRequest{}, &mockServerStream{}, &grpc.StreamServerInfo{FullMethod: name}, handler)
-			assert.Equal(t, grpcErr, err)
-
-			// validate span
-			span, ok := getSpanFromRecorder(sr, name)
-			require.True(t, ok, "missing span %s", name)
-			assertServerSpan(t, check.wantSpanCode, check.wantSpanStatusDescription, check.grpcCode, span)
-		})
-	}
-}
-
 func TestStreamServerInterceptorEvents(t *testing.T) {
 	testCases := []struct {
 		Name   string
