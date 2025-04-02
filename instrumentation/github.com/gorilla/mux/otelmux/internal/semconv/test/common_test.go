@@ -4,6 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package test provides module isolated testing for the semconv package.
 package test
 
 import (
@@ -67,5 +68,5 @@ func testTraceRequest(t *testing.T, serv semconv.HTTPServer, want func(testServe
 		clientIP:   clientIP,
 	}
 
-	assert.ElementsMatch(t, want(srvReq), serv.RequestTraceAttrs("", req))
+	assert.ElementsMatch(t, want(srvReq), serv.RequestTraceAttrs("", req, semconv.RequestTraceAttrsOpts{}))
 }

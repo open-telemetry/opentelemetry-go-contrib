@@ -59,15 +59,17 @@ import (
 
 	"github.com/go-logr/logr"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
 )
 
 type config struct {
-	provider  log.LoggerProvider
-	version   string
-	schemaURL string
+	provider   log.LoggerProvider
+	version    string
+	schemaURL  string
+	attributes []attribute.KeyValue
 
 	levelSeverity func(int) log.Severity
 }
@@ -127,6 +129,15 @@ func WithSchemaURL(schemaURL string) Option {
 	})
 }
 
+// WithAttributes returns an [Option] that configures the instrumentation scope
+// attributes of the [log.Logger] used by a [LogSink].
+func WithAttributes(attributes ...attribute.KeyValue) Option {
+	return optFunc(func(c config) config {
+		c.attributes = attributes
+		return c
+	})
+}
+
 // WithLoggerProvider returns an [Option] that configures [log.LoggerProvider]
 // used by a [LogSink] to create its [log.Logger].
 //
@@ -168,6 +179,9 @@ func NewLogSink(name string, options ...Option) *LogSink {
 	}
 	if c.schemaURL != "" {
 		opts = append(opts, log.WithSchemaURL(c.schemaURL))
+	}
+	if c.attributes != nil {
+		opts = append(opts, log.WithInstrumentationAttributes(c.attributes...))
 	}
 
 	return &LogSink{
