@@ -11,7 +11,6 @@ import (
 	"io"
 	"net"
 	"strconv"
-	"time"
 
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
@@ -23,7 +22,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -262,81 +260,6 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 		}
 		stream := wrapClientStream(s, desc, span, cfg)
 		return stream, nil
-	}
-}
-
-// UnaryServerInterceptor returns a grpc.UnaryServerInterceptor suitable
-// for use in a grpc.NewServer call.
-//
-// Deprecated: Use [NewServerHandler] instead.
-func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
-	cfg := newConfig(opts, "server")
-	tracer := cfg.TracerProvider.Tracer(
-		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
-	)
-
-	return func(
-		ctx context.Context,
-		req interface{},
-		info *grpc.UnaryServerInfo,
-		handler grpc.UnaryHandler,
-	) (interface{}, error) {
-		i := &InterceptorInfo{
-			UnaryServerInfo: info,
-			Type:            UnaryServer,
-		}
-		if cfg.InterceptorFilter != nil && !cfg.InterceptorFilter(i) {
-			return handler(ctx, req)
-		}
-
-		ctx = extract(ctx, cfg.Propagators)
-		name, attr, metricAttrs := telemetryAttributes(info.FullMethod, peerFromCtx(ctx))
-
-		startOpts := append([]trace.SpanStartOption{
-			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attr...),
-		},
-			cfg.SpanStartOptions...,
-		)
-
-		ctx, span := tracer.Start(
-			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
-			name,
-			startOpts...,
-		)
-		defer span.End()
-
-		if cfg.ReceivedEvent {
-			messageReceived.Event(ctx, 1, req)
-		}
-
-		before := time.Now()
-
-		resp, err := handler(ctx, req)
-
-		s, _ := status.FromError(err)
-		if err != nil {
-			statusCode, msg := serverStatus(s)
-			span.SetStatus(statusCode, msg)
-			if cfg.SentEvent {
-				messageSent.Event(ctx, 1, s.Proto())
-			}
-		} else {
-			if cfg.SentEvent {
-				messageSent.Event(ctx, 1, resp)
-			}
-		}
-		grpcStatusCodeAttr := statusCodeAttr(s.Code())
-		span.SetAttributes(grpcStatusCodeAttr)
-
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedTime := float64(time.Since(before)) / float64(time.Millisecond)
-
-		metricAttrs = append(metricAttrs, grpcStatusCodeAttr)
-		cfg.rpcDuration.Record(ctx, elapsedTime, metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
-
-		return resp, err
 	}
 }
 
