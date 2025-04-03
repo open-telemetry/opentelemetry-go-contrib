@@ -30,7 +30,7 @@ require (
 	github.com/Antonboom/nilnil v1.1.0 // indirect
 	github.com/Antonboom/testifylint v1.6.1 // indirect
 	github.com/BurntSushi/toml v1.5.0 // indirect
-	github.com/Crocmagnon/fatcontext v0.7.1 // indirect
+	github.com/Crocmagnon/fatcontext v0.7.2 // indirect
 	github.com/Djarvur/go-err113 v0.1.0 // indirect
 	github.com/GaijinEntertainment/go-exhaustruct/v3 v3.3.1 // indirect
 	github.com/Masterminds/semver/v3 v3.3.1 // indirect
@@ -157,7 +157,7 @@ require (
 	github.com/pjbgf/sha1cd v0.3.2 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
-	github.com/polyfloyd/go-errorlint v1.7.1 // indirect
+	github.com/polyfloyd/go-errorlint v1.8.0 // indirect
 	github.com/prometheus/client_golang v1.21.1 // indirect
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.63.0 // indirect
