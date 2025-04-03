@@ -1,4 +1,3 @@
-// Deprecated: otelecho has no Code Owner.
 module go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/test
 
 go 1.23.0
