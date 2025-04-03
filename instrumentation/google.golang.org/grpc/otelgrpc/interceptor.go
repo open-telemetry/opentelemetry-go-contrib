@@ -7,15 +7,12 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 // https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md
 import (
 	"context"
-	"errors"
-	"io"
 	"net"
 	"strconv"
 	"time"
 
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -115,155 +112,7 @@ func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
 	}
 }
 
-// clientStream  wraps around the embedded grpc.ClientStream, and intercepts the RecvMsg and
-// SendMsg method call.
-type clientStream struct {
-	grpc.ClientStream
-	desc *grpc.StreamDesc
-
-	span trace.Span
-
-	receivedEvent bool
-	sentEvent     bool
-
-	receivedMessageID int
-	sentMessageID     int
-}
-
 var _ = proto.Marshal
-
-func (w *clientStream) RecvMsg(m interface{}) error {
-	err := w.ClientStream.RecvMsg(m)
-
-	if err == nil && !w.desc.ServerStreams {
-		w.endSpan(nil)
-	} else if errors.Is(err, io.EOF) {
-		w.endSpan(nil)
-	} else if err != nil {
-		w.endSpan(err)
-	} else {
-		w.receivedMessageID++
-
-		if w.receivedEvent {
-			messageReceived.Event(w.Context(), w.receivedMessageID, m)
-		}
-	}
-
-	return err
-}
-
-func (w *clientStream) SendMsg(m interface{}) error {
-	err := w.ClientStream.SendMsg(m)
-
-	w.sentMessageID++
-
-	if w.sentEvent {
-		messageSent.Event(w.Context(), w.sentMessageID, m)
-	}
-
-	if err != nil {
-		w.endSpan(err)
-	}
-
-	return err
-}
-
-func (w *clientStream) Header() (metadata.MD, error) {
-	md, err := w.ClientStream.Header()
-	if err != nil {
-		w.endSpan(err)
-	}
-
-	return md, err
-}
-
-func (w *clientStream) CloseSend() error {
-	err := w.ClientStream.CloseSend()
-	if err != nil {
-		w.endSpan(err)
-	}
-
-	return err
-}
-
-func wrapClientStream(s grpc.ClientStream, desc *grpc.StreamDesc, span trace.Span, cfg *config) *clientStream {
-	return &clientStream{
-		ClientStream:  s,
-		span:          span,
-		desc:          desc,
-		receivedEvent: cfg.ReceivedEvent,
-		sentEvent:     cfg.SentEvent,
-	}
-}
-
-func (w *clientStream) endSpan(err error) {
-	if err != nil {
-		s, _ := status.FromError(err)
-		w.span.SetStatus(codes.Error, s.Message())
-		w.span.SetAttributes(statusCodeAttr(s.Code()))
-	} else {
-		w.span.SetAttributes(statusCodeAttr(grpc_codes.OK))
-	}
-
-	w.span.End()
-}
-
-// StreamClientInterceptor returns a grpc.StreamClientInterceptor suitable
-// for use in a grpc.NewClient call.
-//
-// Deprecated: Use [NewClientHandler] instead.
-func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
-	cfg := newConfig(opts, "client")
-	tracer := cfg.TracerProvider.Tracer(
-		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
-	)
-
-	return func(
-		ctx context.Context,
-		desc *grpc.StreamDesc,
-		cc *grpc.ClientConn,
-		method string,
-		streamer grpc.Streamer,
-		callOpts ...grpc.CallOption,
-	) (grpc.ClientStream, error) {
-		i := &InterceptorInfo{
-			Method: method,
-			Type:   StreamClient,
-		}
-		if cfg.InterceptorFilter != nil && !cfg.InterceptorFilter(i) {
-			return streamer(ctx, desc, cc, method, callOpts...)
-		}
-
-		name, attr, _ := telemetryAttributes(method, cc.Target())
-
-		startOpts := append([]trace.SpanStartOption{
-			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(attr...),
-		},
-			cfg.SpanStartOptions...,
-		)
-
-		ctx, span := tracer.Start(
-			ctx,
-			name,
-			startOpts...,
-		)
-
-		ctx = inject(ctx, cfg.Propagators)
-
-		s, err := streamer(ctx, desc, cc, method, callOpts...)
-		if err != nil {
-			grpcStatus, _ := status.FromError(err)
-			span.SetStatus(codes.Error, grpcStatus.Message())
-			span.SetAttributes(statusCodeAttr(grpcStatus.Code()))
-			span.End()
-			return s, err
-		}
-		stream := wrapClientStream(s, desc, span, cfg)
-		return stream, nil
-	}
-}
 
 // UnaryServerInterceptor returns a grpc.UnaryServerInterceptor suitable
 // for use in a grpc.NewServer call.

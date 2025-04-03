@@ -93,11 +93,3 @@ func BenchmarkUnaryClientInterceptor(b *testing.B) {
 		)),
 	}, nil)
 }
-
-func BenchmarkStreamClientInterceptor(b *testing.B) {
-	benchmark(b, []grpc.DialOption{
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
-			otelgrpc.WithTracerProvider(tracerProvider),
-		)),
-	}, nil)
-}
