@@ -76,7 +76,7 @@ func newConfig(opts []Option, role string) *config {
 
 	c.tracer = c.TracerProvider.Tracer(
 		ScopeName,
-		trace.WithInstrumentationVersion(SemVersion()),
+		trace.WithInstrumentationVersion(Version()),
 	)
 
 	c.meter = c.MeterProvider.Meter(
