@@ -41,7 +41,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function in `go.opentelemetry.io/contrib/samplers/probability/consistent` is removed, use `Version` instead. (#7072)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, use `Version` function instead. (#7084)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, use `Version` function instead. (#7085)
-- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test`, use `Version` function instead. (#7036)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test`, use `Version` function instead. (#7142)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
