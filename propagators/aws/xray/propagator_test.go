@@ -121,3 +121,9 @@ func BenchmarkPropagatorInject(b *testing.B) {
 		propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 	}
 }
+
+func TestPropagatorFields(t *testing.T) {
+	propagator := Propagator{}
+	assert.Len(t, propagator.Fields(), 1, "Fields() should return exactly one field")
+	assert.Equal(t, []string{traceHeaderKey}, propagator.Fields())
+}
