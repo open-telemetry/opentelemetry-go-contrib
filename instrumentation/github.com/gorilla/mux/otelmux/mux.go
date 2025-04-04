@@ -114,12 +114,15 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	routeStr := ""
-	route := mux.CurrentRoute(r)
-	if route != nil {
-		routeStr, _ = route.GetPathTemplate()
-		if routeStr == "" {
-			routeStr, _ = route.GetPathRegexp()
+	routeStr := r.Pattern
+
+	if routeStr == "" {
+		route := mux.CurrentRoute(r)
+		if route != nil {
+			routeStr, _ = route.GetPathTemplate()
+			if routeStr == "" {
+				routeStr, _ = route.GetPathRegexp()
+			}
 		}
 	}
 
