@@ -42,10 +42,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, use `Version` function instead. (#7084)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, use `Version` function instead. (#7085)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/test`, use `Version` function instead. (#7087)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`, use `Version` function instead. (#7089)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/zpages`, use `Version` function instead. (#7147)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/samplers/jaegerremote`, use `Version` function instead. (#7147)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/propagators/opencensus`, use `Version` function instead. (#7147)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/runtime`, use `Version` function instead. (#7147)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
