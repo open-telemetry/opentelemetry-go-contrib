@@ -77,8 +77,6 @@ func doCalls(ctx context.Context, client pb.TestServiceClient) {
 
 func TestInterceptors(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
-	clientUnarySR := tracetest.NewSpanRecorder()
-	clientUnaryTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientUnarySR))
 
 	clientStreamSR := tracetest.NewSpanRecorder()
 	clientStreamTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientStreamSR))
@@ -90,11 +88,6 @@ func TestInterceptors(t *testing.T) {
 	require.NoError(t, err, "failed to open port")
 	client := newGrpcTest(t, listener,
 		[]grpc.DialOption{
-			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
-			grpc.WithUnaryInterceptor(otelgrpc.UnaryClientInterceptor(
-				otelgrpc.WithTracerProvider(clientUnaryTP),
-				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-			)),
 			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
 			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
 				otelgrpc.WithTracerProvider(clientStreamTP),
@@ -113,10 +106,6 @@ func TestInterceptors(t *testing.T) {
 	defer cancel()
 	doCalls(ctx, client)
 
-	t.Run("UnaryClientSpans", func(t *testing.T) {
-		checkUnaryClientSpans(t, clientUnarySR.Ended(), listener.Addr().String())
-	})
-
 	t.Run("StreamClientSpans", func(t *testing.T) {
 		checkStreamClientSpans(t, clientStreamSR.Ended(), listener.Addr().String())
 	})
@@ -124,73 +113,6 @@ func TestInterceptors(t *testing.T) {
 	t.Run("StreamServerSpans", func(t *testing.T) {
 		checkStreamServerSpans(t, serverStreamSR.Ended())
 	})
-}
-
-func checkUnaryClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
-	require.Len(t, spans, 2)
-
-	host, p, err := net.SplitHostPort(addr)
-	require.NoError(t, err)
-	port, err := strconv.Atoi(p)
-	require.NoError(t, err)
-
-	emptySpan := spans[0]
-	assert.False(t, emptySpan.EndTime().IsZero())
-	assert.Equal(t, "grpc.testing.TestService/EmptyCall", emptySpan.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-			},
-		},
-	}, emptySpan.Events())
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethod("EmptyCall"),
-		semconv.RPCService("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(host),
-		semconv.NetSockPeerPort(port),
-	}, emptySpan.Attributes())
-
-	largeSpan := spans[1]
-	assert.False(t, largeSpan.EndTime().IsZero())
-	assert.Equal(t, "grpc.testing.TestService/UnaryCall", largeSpan.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				// largeReqSize from "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test" + 12 (overhead).
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				// largeRespSize from "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test" + 8 (overhead).
-			},
-		},
-	}, largeSpan.Events())
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethod("UnaryCall"),
-		semconv.RPCService("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(host),
-		semconv.NetSockPeerPort(port),
-	}, largeSpan.Attributes())
 }
 
 func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
