@@ -16,9 +16,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/sdk/metric"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
@@ -591,119 +588,6 @@ func assertServerSpan(t *testing.T, wantSpanCode codes.Code, wantSpanStatusDescr
 	assert.Equal(t, attribute.Int64Value(int64(wantGrpcCode)), codeAttr.Value)
 }
 
-// TestUnaryServerInterceptor tests the server interceptor for unary RPCs.
-func TestUnaryServerInterceptor(t *testing.T) {
-	for _, check := range serverChecks {
-		name := check.grpcCode.String()
-		t.Run(name, func(t *testing.T) {
-			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
-			sr := tracetest.NewSpanRecorder()
-			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-
-			mr := metric.NewManualReader()
-			mp := metric.NewMeterProvider(metric.WithReader(mr))
-
-			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
-			usi := otelgrpc.UnaryServerInterceptor(
-				otelgrpc.WithTracerProvider(tp),
-				otelgrpc.WithMeterProvider(mp),
-			)
-
-			serviceName := "TestGrpcService"
-			methodName := serviceName + "/" + name
-			fullMethodName := "/" + methodName
-			// call the unary interceptor
-			grpcErr := status.Error(check.grpcCode, check.grpcCode.String())
-			handler := func(_ context.Context, _ interface{}) (interface{}, error) {
-				return nil, grpcErr
-			}
-			_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{FullMethod: fullMethodName}, handler)
-			assert.Equal(t, grpcErr, err)
-
-			// validate span
-			span, ok := getSpanFromRecorder(sr, methodName)
-			require.True(t, ok, "missing span %s", methodName)
-			assertServerSpan(t, check.wantSpanCode, check.wantSpanStatusDescription, check.grpcCode, span)
-
-			// validate metric
-			assertServerMetrics(t, mr, serviceName, name, check.grpcCode)
-		})
-	}
-}
-
-func TestUnaryServerInterceptorEvents(t *testing.T) {
-	testCases := []struct {
-		Name   string
-		Events []otelgrpc.Event
-	}{
-		{
-			Name:   "No events",
-			Events: []otelgrpc.Event{},
-		},
-		{
-			Name:   "With only received events",
-			Events: []otelgrpc.Event{otelgrpc.ReceivedEvents},
-		},
-		{
-			Name:   "With only sent events",
-			Events: []otelgrpc.Event{otelgrpc.SentEvents},
-		},
-		{
-			Name:   "With both events",
-			Events: []otelgrpc.Event{otelgrpc.ReceivedEvents, otelgrpc.SentEvents},
-		},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			sr := tracetest.NewSpanRecorder()
-			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-			opts := []otelgrpc.Option{
-				otelgrpc.WithTracerProvider(tp),
-			}
-			if len(testCase.Events) > 0 {
-				opts = append(opts, otelgrpc.WithMessageEvents(testCase.Events...))
-			}
-			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
-			usi := otelgrpc.UnaryServerInterceptor(opts...)
-			grpcCode := grpc_codes.OK
-			name := grpcCode.String()
-			// call the unary interceptor
-			grpcErr := status.Error(grpcCode, name)
-			handler := func(_ context.Context, _ interface{}) (interface{}, error) {
-				return nil, grpcErr
-			}
-			_, err := usi(context.Background(), &grpc_testing.SimpleRequest{}, &grpc.UnaryServerInfo{FullMethod: name}, handler)
-			assert.Equal(t, grpcErr, err)
-
-			// validate span
-			span, ok := getSpanFromRecorder(sr, name)
-			require.True(t, ok, "missing span %s", name)
-
-			// validate events and their attributes
-			if len(testCase.Events) == 0 {
-				assert.Empty(t, span.Events())
-			} else {
-				assert.Len(t, span.Events(), len(testCase.Events))
-				for i, event := range testCase.Events {
-					switch event {
-					case otelgrpc.ReceivedEvents:
-						assert.ElementsMatch(t, []attribute.KeyValue{
-							attribute.Key("message.type").String("RECEIVED"),
-							attribute.Key("message.id").Int(1),
-						}, span.Events()[i].Attributes)
-					case otelgrpc.SentEvents:
-						assert.ElementsMatch(t, []attribute.KeyValue{
-							attribute.Key("message.type").String("SENT"),
-							attribute.Key("message.id").Int(1),
-						}, span.Events()[i].Attributes)
-					}
-				}
-			}
-		})
-	}
-}
-
 type mockServerStream struct {
 	grpc.ServerStream
 }
@@ -815,37 +699,6 @@ func TestStreamServerInterceptorEvents(t *testing.T) {
 			}
 		})
 	}
-}
-
-func assertServerMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code grpc_codes.Code) {
-	want := metricdata.ScopeMetrics{
-		Scope: wantInstrumentationScope,
-		Metrics: []metricdata.Metrics{
-			{
-				Name:        "rpc.server.duration",
-				Description: "Measures the duration of inbound RPC.",
-				Unit:        "ms",
-				Data: metricdata.Histogram[float64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[float64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod(name),
-								semconv.RPCService(serviceName),
-								otelgrpc.RPCSystemGRPC,
-								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
-							),
-						},
-					},
-				},
-			},
-		},
-	}
-	rm := metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), &rm)
-	assert.NoError(t, err)
-	require.Len(t, rm.ScopeMetrics, 1)
-	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
 
 func BenchmarkStreamClientInterceptor(b *testing.B) {
