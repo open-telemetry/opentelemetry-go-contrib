@@ -4,8 +4,11 @@
 package ot
 
 import (
+	"context"
 	"fmt"
 	"testing"
+
+	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/stretchr/testify/assert"
 
@@ -131,5 +134,28 @@ func TestOT_Extract(t *testing.T) {
 		}
 
 		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
+	}
+}
+
+func TestOT_Fields(t *testing.T) {
+	propagator := OT{}
+
+	want := []string{traceIDHeader, spanIDHeader, sampledHeader}
+
+	got := propagator.Fields()
+
+	assert.Equal(t, want, got)
+
+	// Cross-check with Inject() behavior
+	ctx := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{1},
+		SpanID:  trace.SpanID{1},
+	})
+
+	carrier := propagation.MapCarrier{}
+	propagator.Inject(trace.ContextWithSpanContext(context.Background(), ctx), carrier)
+
+	for _, field := range got {
+		assert.Contains(t, carrier, field, "Each field returned by Fields() should be set by Inject()")
 	}
 }
