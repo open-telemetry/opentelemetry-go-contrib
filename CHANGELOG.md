@@ -50,6 +50,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test`, use `Version` function instead. (#7092)
 - The deprecated `UnaryServerInterceptor` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed, use `NewServerHandler` instead. (#7115)
 - The deprecated `DynamoDBAttributeSetter` function is removed `opentelemetry-go-contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/dynamodbattributes.go` , use `Version` function instead.(#7128)
+- The deprecated `SNSAttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use `SNSAttributeBuilder` function instead. (#7136)
 - The deprecated `AttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use the `AttributeBuilder` function instead. (#7137)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use `Version` function instead. (#7154)
 
