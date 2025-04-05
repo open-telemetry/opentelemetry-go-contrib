@@ -43,8 +43,8 @@ Now your `TracerProvider` will have the following resource attributes and attach
 | Resource Attribute | Example Value |
 | --- | --- |
 | `cloud.provider` | aws
-|`cloud.region` | us-east-1 
-|`faas.name` | MyLambdaFunction 
+|`cloud.region` | us-east-1
+|`faas.name` | MyLambdaFunction
 |`faas.version` | $LATEST
 |`faas.instance` | 2021/06/28/[$LATEST]2f399eb14537447da05ab2a2e39309de
 |`faas.max_memory`| 128
