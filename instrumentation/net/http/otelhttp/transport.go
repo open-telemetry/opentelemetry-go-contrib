@@ -141,6 +141,20 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 		span.SetStatus(codes.Error, err.Error())
 		span.End()
+
+		// metrics
+		metricOpts := t.semconv.MetricOptions(semconv.MetricAttributes{
+			Req:                  r,
+			AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
+		})
+
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+		t.semconv.RecordMetrics(ctx, semconv.MetricData{
+			RequestSize: bw.BytesRead(),
+			ElapsedTime: elapsedTime,
+		}, metricOpts)
+
 		return res, err
 	}
 
