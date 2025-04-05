@@ -1,17 +1,22 @@
 receivers:
-  jaeger:
+  otlp:
     protocols:
       grpc:
-    remote_sampling:
-      host_endpoint: "0.0.0.0:5778" # default port
-      insecure: true
-      strategy_file: "/etc/strategies.json"
-
+extensions:
+  jaegerremotesampling:
+    source:
+      reload_interval: 30s
+      file: "/etc/strategies.json"
+    http:
+      endpoint: 0.0.0.0:5778
+   
 exporters:
   debug:
 
 service:
+  extensions:
+    - jaegerremotesampling
   pipelines:
     traces:
-      receivers: [ jaeger ]
+      receivers: [ otlp ]
       exporters: [ debug ]

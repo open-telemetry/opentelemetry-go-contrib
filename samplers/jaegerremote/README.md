@@ -68,12 +68,3 @@ It will print the entire Jaeger remote sampler structure every 10 seconds, this 
 ```shell
 $ go run .
 ```
-
-## Update generated Jaeger code
-
-Code is generated using the .proto files from [jaeger-idl](https://github.com/jaegertracing/jaeger-idl).
-In case [sampling.proto](./jaeger-idl/proto/api_v2/sampling.proto) is modified these have to be regenerated.
-
-```shell
-$ make proto-gen
-```
