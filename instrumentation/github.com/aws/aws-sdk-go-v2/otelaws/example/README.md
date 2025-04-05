@@ -2,7 +2,6 @@
 
 A simple example to demonstrate the AWS SDK V2 for Go instrumentation. In this example, container `aws-sdk-client` initializes a S3 client and a DynamoDB client and runs 2 basic operations: `listS3Buckets` and `listDynamodbTables`.
 
-
 These instructions assume you have
 [docker-compose](https://docs.docker.com/compose/) installed and setup, and [AWS credential](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-files.html) configured.
 
@@ -17,6 +16,7 @@ These instructions assume you have
     ```sh
     docker-compose logs
     ```
+    
 3. After inspecting the client logs, the example can be cleaned up by running:
 
     ```sh
