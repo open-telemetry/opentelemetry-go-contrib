@@ -178,3 +178,10 @@ func TestJaeger_Extract(t *testing.T) {
 		assert.Equal(t, test.debug, debugFromContext(ctx))
 	}
 }
+
+func TestJaeger_Fields(t *testing.T) {
+	j := &Jaeger{}
+	fields := j.Fields()
+	assert.Len(t, fields, 1)
+	assert.Contains(t, fields, jaegerHeader)
+}
