@@ -105,7 +105,6 @@ func TestDynamodbTags(t *testing.T) {
 	})
 }
 
-
 func TestDynamodbTagsCustomBuilder(t *testing.T) {
 	cases := struct {
 		responseStatus     int
