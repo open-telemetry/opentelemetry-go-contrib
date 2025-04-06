@@ -35,15 +35,15 @@ func TestRespWriterFlush(t *testing.T) {
 
 type nonFlushableResponseWriter struct{}
 
-func (_ nonFlushableResponseWriter) Header() http.Header {
+func (nonFlushableResponseWriter) Header() http.Header {
 	return http.Header{}
 }
 
-func (_ nonFlushableResponseWriter) Write([]byte) (int, error) {
+func (nonFlushableResponseWriter) Write([]byte) (int, error) {
 	return 0, nil
 }
 
-func (_ nonFlushableResponseWriter) WriteHeader(int) {}
+func (nonFlushableResponseWriter) WriteHeader(int) {}
 
 func TestRespWriterFlushNoFlusher(t *testing.T) {
 	rw := NewRespWriterWrapper(nonFlushableResponseWriter{}, func(int64) {})

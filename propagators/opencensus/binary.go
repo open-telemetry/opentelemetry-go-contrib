@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package opencensus provides an OpenCensus trace context propagator.
 package opencensus // import "go.opentelemetry.io/contrib/propagators/opencensus"
 
 import (

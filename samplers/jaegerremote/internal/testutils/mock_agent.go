@@ -16,6 +16,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package testutils provides testing utilities for the jaegerremote sampler
+// package.
 package testutils // import "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/testutils"
 
 import (

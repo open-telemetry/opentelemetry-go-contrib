@@ -31,8 +31,7 @@ type config struct {
 // be traced. A Filter must return true if the request should be traced.
 type Filter func(*http.Request) bool
 
-// Adding new Filter parameter (*gin.Context)
-// gin.Context has FullPath() method, which returns a matched route full path.
+// GinFilter filters an [net/http.Request] based on content of a [gin.Context].
 type GinFilter func(*gin.Context) bool
 
 // SpanNameFormatter is used to set span name by http.request.

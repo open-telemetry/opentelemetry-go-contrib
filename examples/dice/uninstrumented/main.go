@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Uninstrumented provides an example rolldice service that is not instrumented
+// with observability.
 package main
 
 import (
