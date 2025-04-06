@@ -8,7 +8,6 @@ import (
 	"errors"
 	"io"
 	"net"
-	"strings"
 	"testing"
 	"time"
 
@@ -41,21 +40,6 @@ func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnl
 		}
 	}
 	return nil, false
-}
-
-type mockUICInvoker struct {
-	ctx context.Context
-}
-
-func (mcuici *mockUICInvoker) invoker(ctx context.Context, method string, req, reply interface{}, cc *grpc.ClientConn, opts ...grpc.CallOption) error {
-	mcuici.ctx = ctx
-
-	// if method contains error name, mock error return
-	if strings.Contains(method, "error") {
-		return status.Error(grpc_codes.Internal, "internal error")
-	}
-
-	return nil
 }
 
 func ctxDialer() func(context.Context, string) (net.Conn, error) {
