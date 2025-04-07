@@ -75,6 +75,27 @@ func TestTracerPovider(t *testing.T) {
 			wantProvider: noop.NewTracerProvider(),
 			wantErr:      errors.Join(errors.New("must not specify multiple span processor type"), errors.New("must not specify multiple exporters")),
 		},
+		{
+			name: "invalid-sampler-config",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					TracerProvider: &TracerProvider{
+						Processors: []SpanProcessor{
+							{
+								Simple: &SimpleSpanProcessor{
+									Exporter: SpanExporter{
+										Console: Console{},
+									},
+								},
+							},
+						},
+						Sampler: &Sampler{},
+					},
+				},
+			},
+			wantProvider: noop.NewTracerProvider(),
+			wantErr:      errInvalidSamplerConfiguration,
+		},
 	}
 	for _, tt := range tests {
 		tp, shutdown, err := tracerProvider(tt.cfg, resource.Default())
