@@ -94,7 +94,7 @@ func TestTracerPovider(t *testing.T) {
 				},
 			},
 			wantProvider: noop.NewTracerProvider(),
-			wantErr:      errInvalidSamplerConfiguration,
+			wantErr:      errors.Join(errInvalidSamplerConfiguration),
 		},
 	}
 	for _, tt := range tests {
