@@ -809,6 +809,25 @@ func TestSampler(t *testing.T) {
 				sdktrace.WithRemoteParentSampled(sdktrace.TraceIDRatioBased(0.009)),
 			),
 		},
+		{
+			name: "sampler configuration with many errors",
+			sampler: &Sampler{
+				ParentBased: &SamplerParentBased{
+					Root:                   &Sampler{},
+					RemoteParentNotSampled: &Sampler{},
+					RemoteParentSampled:    &Sampler{},
+					LocalParentNotSampled:  &Sampler{},
+					LocalParentSampled:     &Sampler{},
+				},
+			},
+			wantError: errors.Join(
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+			),
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := sampler(tt.sampler)
