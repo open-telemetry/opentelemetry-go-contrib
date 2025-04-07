@@ -58,6 +58,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/runtime`, use `Version` function instead. (#7147)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use `Version` function instead. (#7154)
 - The deprecated `DefaultAttributeSetter` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` is removed, use the `DefaultAttributeBuilder` function instead. (#7127)
+- The deprecated `UnaryClientInterceptor` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` use `NewClientHandler` function instead. (#7125)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
