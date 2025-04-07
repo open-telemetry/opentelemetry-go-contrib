@@ -11,7 +11,6 @@ import (
 	"io"
 	"net"
 	"strconv"
-	"time"
 
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
@@ -23,7 +22,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -47,73 +45,6 @@ var (
 	messageSent     = messageType(RPCMessageTypeSent)
 	messageReceived = messageType(RPCMessageTypeReceived)
 )
-
-// UnaryClientInterceptor returns a grpc.UnaryClientInterceptor suitable
-// for use in a grpc.NewClient call.
-//
-// Deprecated: Use [NewClientHandler] instead.
-func UnaryClientInterceptor(opts ...Option) grpc.UnaryClientInterceptor {
-	cfg := newConfig(opts, "client")
-	tracer := cfg.TracerProvider.Tracer(
-		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
-	)
-
-	return func(
-		ctx context.Context,
-		method string,
-		req, reply interface{},
-		cc *grpc.ClientConn,
-		invoker grpc.UnaryInvoker,
-		callOpts ...grpc.CallOption,
-	) error {
-		i := &InterceptorInfo{
-			Method: method,
-			Type:   UnaryClient,
-		}
-		if cfg.InterceptorFilter != nil && !cfg.InterceptorFilter(i) {
-			return invoker(ctx, method, req, reply, cc, callOpts...)
-		}
-
-		name, attr, _ := telemetryAttributes(method, cc.Target())
-
-		startOpts := append([]trace.SpanStartOption{
-			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(attr...),
-		},
-			cfg.SpanStartOptions...,
-		)
-
-		ctx, span := tracer.Start(
-			ctx,
-			name,
-			startOpts...,
-		)
-		defer span.End()
-
-		ctx = inject(ctx, cfg.Propagators)
-
-		if cfg.SentEvent {
-			messageSent.Event(ctx, 1, req)
-		}
-
-		err := invoker(ctx, method, req, reply, cc, callOpts...)
-
-		if cfg.ReceivedEvent {
-			messageReceived.Event(ctx, 1, reply)
-		}
-
-		if err != nil {
-			s, _ := status.FromError(err)
-			span.SetStatus(codes.Error, s.Message())
-			span.SetAttributes(statusCodeAttr(s.Code()))
-		} else {
-			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
-		}
-
-		return err
-	}
-}
 
 // clientStream  wraps around the embedded grpc.ClientStream, and intercepts the RecvMsg and
 // SendMsg method call.
@@ -235,7 +166,7 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 			return streamer(ctx, desc, cc, method, callOpts...)
 		}
 
-		name, attr, _ := telemetryAttributes(method, cc.Target())
+		name, attr := telemetryAttributes(method, cc.Target())
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindClient),
@@ -262,81 +193,6 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 		}
 		stream := wrapClientStream(s, desc, span, cfg)
 		return stream, nil
-	}
-}
-
-// UnaryServerInterceptor returns a grpc.UnaryServerInterceptor suitable
-// for use in a grpc.NewServer call.
-//
-// Deprecated: Use [NewServerHandler] instead.
-func UnaryServerInterceptor(opts ...Option) grpc.UnaryServerInterceptor {
-	cfg := newConfig(opts, "server")
-	tracer := cfg.TracerProvider.Tracer(
-		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
-	)
-
-	return func(
-		ctx context.Context,
-		req interface{},
-		info *grpc.UnaryServerInfo,
-		handler grpc.UnaryHandler,
-	) (interface{}, error) {
-		i := &InterceptorInfo{
-			UnaryServerInfo: info,
-			Type:            UnaryServer,
-		}
-		if cfg.InterceptorFilter != nil && !cfg.InterceptorFilter(i) {
-			return handler(ctx, req)
-		}
-
-		ctx = extract(ctx, cfg.Propagators)
-		name, attr, metricAttrs := telemetryAttributes(info.FullMethod, peerFromCtx(ctx))
-
-		startOpts := append([]trace.SpanStartOption{
-			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attr...),
-		},
-			cfg.SpanStartOptions...,
-		)
-
-		ctx, span := tracer.Start(
-			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
-			name,
-			startOpts...,
-		)
-		defer span.End()
-
-		if cfg.ReceivedEvent {
-			messageReceived.Event(ctx, 1, req)
-		}
-
-		before := time.Now()
-
-		resp, err := handler(ctx, req)
-
-		s, _ := status.FromError(err)
-		if err != nil {
-			statusCode, msg := serverStatus(s)
-			span.SetStatus(statusCode, msg)
-			if cfg.SentEvent {
-				messageSent.Event(ctx, 1, s.Proto())
-			}
-		} else {
-			if cfg.SentEvent {
-				messageSent.Event(ctx, 1, resp)
-			}
-		}
-		grpcStatusCodeAttr := statusCodeAttr(s.Code())
-		span.SetAttributes(grpcStatusCodeAttr)
-
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedTime := float64(time.Since(before)) / float64(time.Millisecond)
-
-		metricAttrs = append(metricAttrs, grpcStatusCodeAttr)
-		cfg.rpcDuration.Record(ctx, elapsedTime, metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
-
-		return resp, err
 	}
 }
 
@@ -417,7 +273,7 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 		}
 
 		ctx = extract(ctx, cfg.Propagators)
-		name, attr, _ := telemetryAttributes(info.FullMethod, peerFromCtx(ctx))
+		name, attr := telemetryAttributes(info.FullMethod, peerFromCtx(ctx))
 
 		startOpts := append([]trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindServer),
@@ -449,16 +305,15 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 
 // telemetryAttributes returns a span name and span and metric attributes from
 // the gRPC method and peer address.
-func telemetryAttributes(fullMethod, peerAddress string) (string, []attribute.KeyValue, []attribute.KeyValue) {
+func telemetryAttributes(fullMethod, peerAddress string) (string, []attribute.KeyValue) {
 	name, methodAttrs := internal.ParseFullMethod(fullMethod)
 	peerAttrs := peerAttr(peerAddress)
 
 	attrs := make([]attribute.KeyValue, 0, 1+len(methodAttrs)+len(peerAttrs))
 	attrs = append(attrs, RPCSystemGRPC)
 	attrs = append(attrs, methodAttrs...)
-	metricAttrs := attrs[:1+len(methodAttrs)]
 	attrs = append(attrs, peerAttrs...)
-	return name, attrs, metricAttrs
+	return name, attrs
 }
 
 // peerAttr returns attributes about the peer address.
