@@ -26,12 +26,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Record request duration in seconds rather than milliseconds for semconv v1.26.0, per [the specifications](https://github.com/open-telemetry/semantic-conventions/blob/6533b8a39e03e6925e080d5ca39234035cf87e70/docs/non-normative/http-migration.md#http-client-duration-metric) in the following packages. (#6942)
-	- `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
-	- `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
-	- `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
-	- `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
-	- `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
-	- `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+- Cleaned up indentations under `Unreleased/Fixed` of `./CHANGELOG.md`. (#7163)
+- Removed a duplicate instance of the `Changed` subheader under `1.18.0/0.43.0/0.12.0` in `./CHANGELOG.md`. (#7163)
 
 ### Removed
 
@@ -573,9 +575,6 @@ The next release will require at least [Go 1.21].
 
 - Change interceptors in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to disable `SENT`/`RECEIVED` events.
   Use `WithMessageEvents()` to turn back on. (#3964)
-
-### Changed
-
 - `go.opentelemetry.io/contrib/detectors/gcp`: Detect `faas.instance` instead of `faas.id`, since `faas.id` is being removed. (#4198)
 
 ### Fixed
