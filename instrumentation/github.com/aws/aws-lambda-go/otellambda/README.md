@@ -12,6 +12,7 @@ go get -u go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-
 ```
 
 ## example
+
 See [./example](https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main/instrumentation/github.com/aws/aws-lambda-go/otellambda/example)
 
 ## Usage
@@ -41,6 +42,7 @@ func main() {
 ```
 
 Now use the provided wrapper to instrument your basic Lambda function:
+
 ```go
 // Add import
 import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
@@ -103,7 +105,7 @@ func main() {
 
 - For more information on OpenTelemetry, visit: <https://opentelemetry.io/>
 - For more about OpenTelemetry Go: <https://github.com/open-telemetry/opentelemetry-go>
-- For help or feedback on this project, join us in [GitHub Discussions][discussions-url] 
+- For help or feedback on this project, join us in [GitHub Discussions][discussions-url]
 
 ## License
 
