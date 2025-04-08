@@ -23,7 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Jaeger remote sampler's probabilistic strategy now uses the same sampling algorithm as `trace.TraceIDRatioBased` in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#6892)
-- Switched the default for `OTEL_SEMCONV_STABILITY_OPT_IN` to emit the v1.26.0 semantic conventions by default in the following modules. (#6899)
+- Switched the default for `OTEL_SEMCONV_STABILITY_OPT_IN` to emit the v1.26.0 semantic conventions by default in the following modules.
   - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
   - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
   - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
@@ -31,10 +31,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 
-  The `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable can be
-  still used to emit both the v1.20.0 and v1.26.0 semantic conventions.
-  It is however impossible to emit only the 1.20.0 semantic conventions, as the
-  next release will drop support for that environment variable.
+  The `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable can be still used to emit both the v1.20.0 and v1.26.0 semantic conventions.
+  It is however impossible to emit only the 1.20.0 semantic conventions, as the next release will drop support for that environment variable. (#6899)
+- Update the Jaeger remote sampler to use "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2" in  `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#7061)
 
 ### Fixed
 
@@ -82,6 +81,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters/interceptor` package is removed, use `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters` instead. (#7110)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`, use `Version` function instead. (#7143)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test`, use `Version` function instead. (#7143)
+- The deprecated `SQSAttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package, use `SQSAttributeBuilder` instead. (#7145)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
