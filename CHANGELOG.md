@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#6967)
 - Add the `WithGinMetricAttributes` option to allow setting dynamic, per-request metric attributes based on `*gin.Context` in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6932)
 - Use Gin's own `ClientIP` method to detect the client's IP, which supports custom proxy headers in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6095)
+- Added test for Fields in `go.opentelemetry.io/contrib/propagators/jaeger`. (#7119)
 
 ### Changed
 
@@ -26,12 +27,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Record request duration in seconds rather than milliseconds for semconv v1.26.0, per [the specifications](https://github.com/open-telemetry/semantic-conventions/blob/6533b8a39e03e6925e080d5ca39234035cf87e70/docs/non-normative/http-migration.md#http-client-duration-metric) in the following packages. (#6942)
-	- `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
-	- `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
-	- `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
-	- `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
-	- `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
-	- `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+- Cleaned up indentations under `Unreleased/Fixed` of `./CHANGELOG.md`. (#7163)
+- Removed a duplicate instance of the `Changed` subheader under `1.18.0/0.43.0/0.12.0` in `./CHANGELOG.md`. (#7163)
 
 - Check for TLS related options to be set before creating TLS config `go.opentelemetry.io/contrib/otelconf`. (#7000)
 
@@ -39,7 +42,34 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Drop support for [Go 1.22]. (#6853)
 - The deprecated `go.opentelemetry.io/contrib/config` package is removed, use `go.opentelemetry.io/contrib/otelconf` instead. (#6894)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`, use `Version` function instead. (#7058)
 - The deprecated `SemVersion` function in `go.opentelemetry.io/contrib/samplers/probability/consistent` is removed, use `Version` instead. (#7072)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, use `Version` function instead. (#7084)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, use `Version` function instead. (#7085)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test`, use `Version` function instead. (#7142)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/test`, use `Version` function instead. (#7086)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`, use `Version` function instead. (#7140)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/test`, use `Version` function instead. (#7087)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`, use `Version` function instead. (#7089)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/test`, use `Version` function instead. (#7090)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`, use `Version` function instead. (#7091)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test`, use `Version` function instead. (#7092)
+- The deprecated `UnaryServerInterceptor` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed, use `NewServerHandler` instead. (#7115)
+- The deprecated `DynamoDBAttributeSetter` function is removed `opentelemetry-go-contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/dynamodbattributes.go` , use `Version` function instead.(#7128)
+- The deprecated `SNSAttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use `SNSAttributeBuilder` function instead. (#7136)
+- The deprecated `AttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use the `AttributeBuilder` function instead. (#7137)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/zpages`, use `Version` function instead. (#7147)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/samplers/jaegerremote`, use `Version` function instead. (#7147)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/propagators/opencensus`, use `Version` function instead. (#7147)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/runtime`, use `Version` function instead. (#7147)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use `Version` function instead. (#7154)
+- The deprecated `DefaultAttributeSetter` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` is removed, use the `DefaultAttributeBuilder` function instead. (#7127)
+- The deprecated `UnaryClientInterceptor` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` use `NewClientHandler` function instead. (#7125)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, use `Version` function instead. (#7144)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/test`, use `Version` function instead. (#7144)
+- The deprecated `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters/interceptor` package is removed, use `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters` instead. (#7110)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`, use `Version` function instead. (#7143)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test`, use `Version` function instead. (#7143)
 
 ### Fixed
 
@@ -555,9 +585,6 @@ The next release will require at least [Go 1.21].
 
 - Change interceptors in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to disable `SENT`/`RECEIVED` events.
   Use `WithMessageEvents()` to turn back on. (#3964)
-
-### Changed
-
 - `go.opentelemetry.io/contrib/detectors/gcp`: Detect `faas.instance` instead of `faas.id`, since `faas.id` is being removed. (#4198)
 
 ### Fixed
