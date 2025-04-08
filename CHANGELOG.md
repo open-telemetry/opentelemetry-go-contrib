@@ -33,6 +33,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 	- `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
 	- `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 
+- Check for TLS related options to be set before creating TLS config `go.opentelemetry.io/contrib/otelconf`. (#7000)
+
 ### Removed
 
 - Drop support for [Go 1.22]. (#6853)
@@ -40,8 +42,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function in `go.opentelemetry.io/contrib/samplers/probability/consistent` is removed, use `Version` instead. (#7072)
 
 ### Fixed
-
-- Do not set TLS settings for grpc client if `insecure` is set to `true` in `go.opentelemetry.io/contrib/otelconf`. (#7000)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
