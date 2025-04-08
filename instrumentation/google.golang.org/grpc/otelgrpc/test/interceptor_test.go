@@ -334,7 +334,7 @@ func eventAttrMap(events []trace.Event) []map[attribute.Key]attribute.Value {
 	return maps
 }
 
-// serverChecks can't be removed in #7105. Should be removed when issue #7106 is fixed.
+// TODO: Remove when issue #7106 is fixed.
 var serverChecks = []struct {
 	grpcCode                  grpc_codes.Code
 	wantSpanCode              codes.Code
