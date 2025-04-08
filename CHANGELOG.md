@@ -18,11 +18,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `WithGinMetricAttributes` option to allow setting dynamic, per-request metric attributes based on `*gin.Context` in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6932)
 - Use Gin's own `ClientIP` method to detect the client's IP, which supports custom proxy headers in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6095)
 - Added test for Fields in `go.opentelemetry.io/contrib/propagators/jaeger`. (#7119)
+- Allow configuring samplers in `go.opentelemetry.io/contrib/otelconf`. (#7148)
 
 ### Changed
 
 - Jaeger remote sampler's probabilistic strategy now uses the same sampling algorithm as `trace.TraceIDRatioBased` in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#6892)
-- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test` package. Use `Version` instead.
 
 ### Fixed
 
@@ -42,6 +42,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `go.opentelemetry.io/contrib/config` package is removed, use `go.opentelemetry.io/contrib/otelconf` instead. (#6894)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`, use `Version` function instead. (#7058)
 - The deprecated `SemVersion` function in `go.opentelemetry.io/contrib/samplers/probability/consistent` is removed, use `Version` instead. (#7072)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test` package, use `Version` instead. (#7077)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, use `Version` function instead. (#7084)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, use `Version` function instead. (#7085)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test`, use `Version` function instead. (#7142)
@@ -63,6 +64,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use `Version` function instead. (#7154)
 - The deprecated `DefaultAttributeSetter` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` is removed, use the `DefaultAttributeBuilder` function instead. (#7127)
 - The deprecated `UnaryClientInterceptor` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` use `NewClientHandler` function instead. (#7125)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, use `Version` function instead. (#7167)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, use `Version` function instead. (#7144)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/test`, use `Version` function instead. (#7144)
 - The deprecated `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters/interceptor` package is removed, use `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters` instead. (#7110)
