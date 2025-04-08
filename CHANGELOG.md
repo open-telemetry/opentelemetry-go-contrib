@@ -30,6 +30,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+- Improve performance by reducing allocations for http request when using `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` in the modules below. (#7180)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 
   The `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable can be still used to emit both the v1.20.0 and v1.26.0 semantic conventions.
   It is however impossible to emit only the 1.20.0 semantic conventions, as the next release will drop support for that environment variable. (#6899)
