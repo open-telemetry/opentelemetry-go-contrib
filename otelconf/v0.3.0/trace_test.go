@@ -75,6 +75,27 @@ func TestTracerPovider(t *testing.T) {
 			wantProvider: noop.NewTracerProvider(),
 			wantErr:      errors.Join(errors.New("must not specify multiple span processor type"), errors.New("must not specify multiple exporters")),
 		},
+		{
+			name: "invalid-sampler-config",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					TracerProvider: &TracerProvider{
+						Processors: []SpanProcessor{
+							{
+								Simple: &SimpleSpanProcessor{
+									Exporter: SpanExporter{
+										Console: Console{},
+									},
+								},
+							},
+						},
+						Sampler: &Sampler{},
+					},
+				},
+			},
+			wantProvider: noop.NewTracerProvider(),
+			wantErr:      errors.Join(errInvalidSamplerConfiguration),
+		},
 	}
 	for _, tt := range tests {
 		tp, shutdown, err := tracerProvider(tt.cfg, resource.Default())
@@ -696,6 +717,128 @@ func TestSpanProcessor(t *testing.T) {
 				gotExporterType := reflect.Indirect(reflect.ValueOf(got)).FieldByName(fieldName).Elem().Type()
 				require.Equal(t, wantExporterType.String(), gotExporterType.String())
 			}
+		})
+	}
+}
+
+func TestSampler(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		sampler     *Sampler
+		wantSampler sdktrace.Sampler
+		wantError   error
+	}{
+		{
+			name:        "no sampler configuration, return default",
+			sampler:     nil,
+			wantSampler: sdktrace.ParentBased(sdktrace.AlwaysSample()),
+		},
+		{
+			name:        "invalid sampler configuration, return error",
+			sampler:     &Sampler{},
+			wantSampler: nil,
+			wantError:   errInvalidSamplerConfiguration,
+		},
+		{
+			name: "sampler configuration always on",
+			sampler: &Sampler{
+				AlwaysOn: SamplerAlwaysOn{},
+			},
+			wantSampler: sdktrace.AlwaysSample(),
+		},
+		{
+			name: "sampler configuration always off",
+			sampler: &Sampler{
+				AlwaysOff: SamplerAlwaysOff{},
+			},
+			wantSampler: sdktrace.NeverSample(),
+		},
+		{
+			name: "sampler configuration trace ID ratio",
+			sampler: &Sampler{
+				TraceIDRatioBased: &SamplerTraceIDRatioBased{
+					Ratio: ptr(0.54),
+				},
+			},
+			wantSampler: sdktrace.TraceIDRatioBased(0.54),
+		},
+		{
+			name: "sampler configuration trace ID ratio no ratio",
+			sampler: &Sampler{
+				TraceIDRatioBased: &SamplerTraceIDRatioBased{},
+			},
+			wantSampler: sdktrace.TraceIDRatioBased(1),
+		},
+		{
+			name: "sampler configuration parent based no options",
+			sampler: &Sampler{
+				ParentBased: &SamplerParentBased{},
+			},
+			wantSampler: sdktrace.ParentBased(sdktrace.AlwaysSample()),
+		},
+		{
+			name: "sampler configuration parent based many options",
+			sampler: &Sampler{
+				ParentBased: &SamplerParentBased{
+					Root: &Sampler{
+						AlwaysOff: SamplerAlwaysOff{},
+					},
+					RemoteParentNotSampled: &Sampler{
+						AlwaysOn: SamplerAlwaysOn{},
+					},
+					RemoteParentSampled: &Sampler{
+						TraceIDRatioBased: &SamplerTraceIDRatioBased{
+							Ratio: ptr(0.009),
+						},
+					},
+					LocalParentNotSampled: &Sampler{
+						AlwaysOff: SamplerAlwaysOff{},
+					},
+					LocalParentSampled: &Sampler{
+						TraceIDRatioBased: &SamplerTraceIDRatioBased{
+							Ratio: ptr(0.05),
+						},
+					},
+				},
+			},
+			wantSampler: sdktrace.ParentBased(
+				sdktrace.NeverSample(),
+				sdktrace.WithLocalParentNotSampled(sdktrace.NeverSample()),
+				sdktrace.WithLocalParentSampled(sdktrace.TraceIDRatioBased(0.05)),
+				sdktrace.WithRemoteParentNotSampled(sdktrace.AlwaysSample()),
+				sdktrace.WithRemoteParentSampled(sdktrace.TraceIDRatioBased(0.009)),
+			),
+		},
+		{
+			name: "sampler configuration with many errors",
+			sampler: &Sampler{
+				ParentBased: &SamplerParentBased{
+					Root:                   &Sampler{},
+					RemoteParentNotSampled: &Sampler{},
+					RemoteParentSampled:    &Sampler{},
+					LocalParentNotSampled:  &Sampler{},
+					LocalParentSampled:     &Sampler{},
+				},
+			},
+			wantError: errors.Join(
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+			),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := sampler(tt.sampler)
+			if tt.wantError != nil {
+				require.Error(t, err)
+				require.EqualError(t, err, tt.wantError.Error())
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tt.wantSampler, got)
 		})
 	}
 }
