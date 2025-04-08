@@ -146,16 +146,11 @@ func (h *clientHandler) HandleConn(context.Context, stats.ConnStats) {
 
 func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool) { // nolint: revive  // isServer is not a control flag.
 	span := trace.SpanFromContext(ctx)
-	var metricAttrs []attribute.KeyValue
 	var messageId int64
 
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
-	if gctx != nil {
-		if !gctx.record {
-			return
-		}
-		metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
-		metricAttrs = append(metricAttrs, gctx.metricAttrs...)
+	if gctx != nil && !gctx.record {
+		return
 	}
 
 	switch rs := rs.(type) {
@@ -163,7 +158,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	case *stats.InPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.inMessages, 1)
-			c.rpcInBytes.Record(ctx, int64(rs.Length), metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
+			c.rpcInBytes.Record(ctx, int64(rs.Length), metric.WithAttributeSet(attribute.NewSet(gctx.metricAttrs...)))
 		}
 
 		if c.ReceivedEvent {
@@ -179,7 +174,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	case *stats.OutPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.outMessages, 1)
-			c.rpcOutBytes.Record(ctx, int64(rs.Length), metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
+			c.rpcOutBytes.Record(ctx, int64(rs.Length), metric.WithAttributeSet(attribute.NewSet(gctx.metricAttrs...)))
 		}
 
 		if c.SentEvent {
@@ -215,18 +210,22 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 		span.SetAttributes(rpcStatusAttr)
 		span.End()
 
+		var metricAttrs []attribute.KeyValue
+		if gctx != nil {
+			metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
+			metricAttrs = append(metricAttrs, gctx.metricAttrs...)
+		}
 		metricAttrs = append(metricAttrs, rpcStatusAttr)
-		// Allocate vararg slice once.
-		recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
+		recordOpts := metric.WithAttributeSet(attribute.NewSet(metricAttrs...))
 
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		// Measure right before calling Record() to capture as much elapsed time as possible.
 		elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Millisecond)
 
-		c.rpcDuration.Record(ctx, elapsedTime, recordOpts...)
+		c.rpcDuration.Record(ctx, elapsedTime, recordOpts)
 		if gctx != nil {
-			c.rpcInMessages.Record(ctx, atomic.LoadInt64(&gctx.inMessages), recordOpts...)
-			c.rpcOutMessages.Record(ctx, atomic.LoadInt64(&gctx.outMessages), recordOpts...)
+			c.rpcInMessages.Record(ctx, atomic.LoadInt64(&gctx.inMessages), recordOpts)
+			c.rpcOutMessages.Record(ctx, atomic.LoadInt64(&gctx.outMessages), recordOpts)
 		}
 	default:
 		return
