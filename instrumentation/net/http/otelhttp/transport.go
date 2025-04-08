@@ -129,6 +129,16 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	res, err := t.rt.RoundTrip(r)
+
+	metricAttributes := semconv.MetricAttributes{
+		Req:                  r,
+		AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
+	}
+
+	metricData := semconv.MetricData{
+		RequestSize: bw.BytesRead(),
+	}
+
 	if err != nil {
 		// set error type attribute if the error is part of the predefined
 		// error types.
@@ -143,27 +153,18 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		span.End()
 
 		// metrics
-		metricOpts := t.semconv.MetricOptions(semconv.MetricAttributes{
-			Req:                  r,
-			AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
-		})
+		metricOpts := t.semconv.MetricOptions(metricAttributes)
 
-		// Use floating point division here for higher precision (instead of Millisecond method).
-		elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
-		t.semconv.RecordMetrics(ctx, semconv.MetricData{
-			RequestSize: bw.BytesRead(),
-			ElapsedTime: elapsedTime,
-		}, metricOpts)
+		// set transport record metrics
+		t.recordMetrics(ctx, requestStartTime, metricData, metricOpts)
 
 		return res, err
 	}
 
+	metricAttributes.StatusCode = res.StatusCode
+
 	// metrics
-	metricOpts := t.semconv.MetricOptions(semconv.MetricAttributes{
-		Req:                  r,
-		StatusCode:           res.StatusCode,
-		AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
-	})
+	metricOpts := t.semconv.MetricOptions(metricAttributes)
 
 	// For handling response bytes we leverage a callback when the client reads the http response
 	readRecordFunc := func(n int64) {
@@ -176,15 +177,19 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	res.Body = newWrappedBody(span, readRecordFunc, res.Body)
 
+	// set transport record metrics
+	t.recordMetrics(ctx, requestStartTime, metricData, metricOpts)
+
+	return res, nil
+}
+
+func (t *Transport) recordMetrics(ctx context.Context, requestStartTime time.Time, metricData semconv.MetricData, metricOpts map[string]semconv.MetricOpts) {
 	// Use floating point division here for higher precision (instead of Millisecond method).
 	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
 
-	t.semconv.RecordMetrics(ctx, semconv.MetricData{
-		RequestSize: bw.BytesRead(),
-		ElapsedTime: elapsedTime,
-	}, metricOpts)
+	metricData.ElapsedTime = elapsedTime
 
-	return res, nil
+	t.semconv.RecordMetrics(ctx, metricData, metricOpts)
 }
 
 func (t *Transport) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
