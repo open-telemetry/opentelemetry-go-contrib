@@ -51,14 +51,14 @@ The Collector uses the Jaeger receiver to host the strategy file. Note you do no
 Run the OpenTelemetry Collector using docker-compose:
 
 ```shell
-$ docker-compose up -d
+docker-compose up -d
 ```
 
 You can fetch the strategy file using curl:
 
 ```shell
-$ curl 'localhost:5778/sampling?service=foo'
-$ curl 'localhost:5778/sampling?service=myService'
+curl 'localhost:5778/sampling?service=foo'
+curl 'localhost:5778/sampling?service=myService'
 ```
 
 Run the Go program.
@@ -66,5 +66,5 @@ This program will start with an initial sampling percentage of 50% and tries to 
 It will print the entire Jaeger remote sampler structure every 10 seconds, this allows you to observe the internal sampler.
 
 ```shell
-$ go run .
+go run .
 ```
