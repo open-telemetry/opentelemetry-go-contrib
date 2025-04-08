@@ -35,8 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 - Cleaned up indentations under `Unreleased/Fixed` of `./CHANGELOG.md`. (#7163)
 - Removed a duplicate instance of the `Changed` subheader under `1.18.0/0.43.0/0.12.0` in `./CHANGELOG.md`. (#7163)
-
-- Check for TLS related options to be set before creating TLS config `go.opentelemetry.io/contrib/otelconf`. (#7000)
+- Check for TLS related options to be set before creating TLS config `go.opentelemetry.io/contrib/otelconf`. (#6984)
 
 ### Removed
 
