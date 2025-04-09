@@ -34,6 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable can be still used to emit both the v1.20.0 and v1.26.0 semantic conventions.
   It is however impossible to emit only the 1.20.0 semantic conventions, as the next release will drop support for that environment variable. (#6899)
 - Update the Jaeger remote sampler to use "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2" in  `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#7061)
+- Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7186)
 
 ### Fixed
 
