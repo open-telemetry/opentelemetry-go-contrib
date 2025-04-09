@@ -158,7 +158,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	case *stats.InPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.inMessages, 1)
-			c.rpcInBytes.Record(ctx, int64(rs.Length), metric.WithAttributeSet(attribute.NewSet(gctx.metricAttrs...)))
+			c.rpcInBytes.Record(ctx, int64(rs.Length), metric.WithAttributes(gctx.metricAttrs...))
 		}
 
 		if c.ReceivedEvent {
@@ -174,7 +174,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	case *stats.OutPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.outMessages, 1)
-			c.rpcOutBytes.Record(ctx, int64(rs.Length), metric.WithAttributeSet(attribute.NewSet(gctx.metricAttrs...)))
+			c.rpcOutBytes.Record(ctx, int64(rs.Length), metric.WithAttributes(gctx.metricAttrs...))
 		}
 
 		if c.SentEvent {
