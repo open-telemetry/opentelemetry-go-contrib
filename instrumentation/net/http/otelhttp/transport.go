@@ -135,9 +135,27 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
 	}
 
-	metricData := semconv.MetricData{
-		RequestSize: bw.BytesRead(),
-	}
+	// defer metrics recording function to record the metrics on error or no error
+	defer func() {
+		// metrics
+		metricOpts := t.semconv.MetricOptions(metricAttributes)
+
+		metricData := semconv.MetricData{
+			RequestSize: bw.BytesRead(),
+		}
+
+		if err == nil {
+			// For handling response bytes we leverage a callback when the client reads the http response
+			readRecordFunc := func(n int64) {
+				t.semconv.RecordResponseSize(ctx, n, metricOpts)
+			}
+
+			res.Body = newWrappedBody(span, readRecordFunc, res.Body)
+		}
+
+		// set transport record metrics
+		t.recordMetrics(ctx, requestStartTime, metricData, metricOpts)
+	}()
 
 	if err != nil {
 		// set error type attribute if the error is part of the predefined
@@ -152,33 +170,14 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		span.SetStatus(codes.Error, err.Error())
 		span.End()
 
-		// metrics
-		metricOpts := t.semconv.MetricOptions(metricAttributes)
-
-		// set transport record metrics
-		t.recordMetrics(ctx, requestStartTime, metricData, metricOpts)
-
 		return res, err
 	}
 
 	metricAttributes.StatusCode = res.StatusCode
 
-	// metrics
-	metricOpts := t.semconv.MetricOptions(metricAttributes)
-
-	// For handling response bytes we leverage a callback when the client reads the http response
-	readRecordFunc := func(n int64) {
-		t.semconv.RecordResponseSize(ctx, n, metricOpts)
-	}
-
 	// traces
 	span.SetAttributes(t.semconv.ResponseTraceAttrs(res)...)
 	span.SetStatus(t.semconv.Status(res.StatusCode))
-
-	res.Body = newWrappedBody(span, readRecordFunc, res.Body)
-
-	// set transport record metrics
-	t.recordMetrics(ctx, requestStartTime, metricData, metricOpts)
 
 	return res, nil
 }
