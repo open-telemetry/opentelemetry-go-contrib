@@ -145,13 +145,13 @@ func (h *clientHandler) HandleConn(context.Context, stats.ConnStats) {
 }
 
 func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool) { // nolint: revive  // isServer is not a control flag.
-	span := trace.SpanFromContext(ctx)
-	var messageId int64
-
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
 	if gctx != nil && !gctx.record {
 		return
 	}
+
+	span := trace.SpanFromContext(ctx)
+	var messageId int64
 
 	switch rs := rs.(type) {
 	case *stats.Begin:
