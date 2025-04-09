@@ -141,13 +141,13 @@ func TestHandlerBasics(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	attrs := attribute.NewSet(
-		semconv.NetHostName(r.Host),
-		semconv.HTTPSchemeHTTP,
-		semconv.NetProtocolName("http"),
-		semconv.NetProtocolVersion(fmt.Sprintf("1.%d", r.ProtoMinor)),
-		semconv.HTTPMethod("GET"),
+		attribute.String("http.request.method", "GET"),
+		attribute.Int64("http.response.status_code", 200),
+		attribute.String("network.protocol.name", "http"),
+		attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
+		attribute.String("server.address", r.Host),
+		attribute.String("url.scheme", "http"),
 		attribute.String("test", "attribute"),
-		semconv.HTTPStatusCode(200),
 	)
 	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 
@@ -181,43 +181,57 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 
 	require.Len(t, sm.Metrics, 3)
 
-	want := metricdata.Metrics{
-		Name:        "http.server.request.size",
-		Description: "Measures the size of HTTP request messages.",
-		Unit:        "By",
-		Data: metricdata.Sum[int64]{
-			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 0}},
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
+	want := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name:    ScopeName,
+			Version: Version(),
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "http.server.request.body.size",
+				Description: "Size of HTTP server request bodies.",
+				Unit:        "By",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attrs,
+						},
+					},
+				},
+			},
+			{
+				Name:        "http.server.response.body.size",
+				Description: "Size of HTTP server response bodies.",
+				Unit:        "By",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attrs,
+						},
+					},
+				},
+			},
+			{
+				Name:        "http.server.request.duration",
+				Description: "Duration of HTTP server requests.",
+				Unit:        "s",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attrs,
+						},
+					},
+				},
+			},
 		},
 	}
-	metricdatatest.AssertEqual(t, want, sm.Metrics[0], metricdatatest.IgnoreTimestamp())
-
-	want = metricdata.Metrics{
-		Name:        "http.server.response.size",
-		Description: "Measures the size of HTTP response messages.",
-		Unit:        "By",
-		Data: metricdata.Sum[int64]{
-			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 11}},
-			Temporality: metricdata.CumulativeTemporality,
-			IsMonotonic: true,
-		},
-	}
-	metricdatatest.AssertEqual(t, want, sm.Metrics[1], metricdatatest.IgnoreTimestamp())
-
-	want = metricdata.Metrics{
-		Name:        "http.server.duration",
-		Description: "Measures the duration of inbound HTTP requests.",
-		Unit:        "ms",
-		Data: metricdata.Histogram[float64]{
-			DataPoints:  []metricdata.HistogramDataPoint[float64]{{Attributes: attrs}},
-			Temporality: metricdata.CumulativeTemporality,
-		},
-	}
-	metricdatatest.AssertEqual(t, want, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+	metricdatatest.AssertEqual(t, want, sm, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 	// verify that the custom start time, which is 10 minutes in the past, is respected.
-	assert.GreaterOrEqual(t, sm.Metrics[2].Data.(metricdata.Histogram[float64]).DataPoints[0].Sum, float64(10*time.Minute/time.Millisecond))
+	assert.GreaterOrEqual(t, sm.Metrics[2].Data.(metricdata.Histogram[float64]).DataPoints[0].Sum, float64(10*time.Minute/time.Second))
 }
 
 func TestHandlerEmittedAttributes(t *testing.T) {
@@ -232,7 +246,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			},
 			attributes: []attribute.KeyValue{
-				attribute.Int("http.status_code", http.StatusOK),
+				attribute.Int("http.response.status_code", http.StatusOK),
 			},
 		},
 		{
@@ -241,7 +255,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 				w.WriteHeader(http.StatusBadRequest)
 			},
 			attributes: []attribute.KeyValue{
-				attribute.Int("http.status_code", http.StatusBadRequest),
+				attribute.Int("http.response.status_code", http.StatusBadRequest),
 			},
 		},
 		{
@@ -249,7 +263,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 			handler: func(w http.ResponseWriter, r *http.Request) {
 			},
 			attributes: []attribute.KeyValue{
-				attribute.Int("http.status_code", http.StatusOK),
+				attribute.Int("http.response.status_code", http.StatusOK),
 			},
 		},
 		{
@@ -259,7 +273,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			},
 			attributes: []attribute.KeyValue{
-				attribute.Int("http.status_code", http.StatusInternalServerError),
+				attribute.Int("http.response.status_code", http.StatusInternalServerError),
 			},
 		},
 	}
