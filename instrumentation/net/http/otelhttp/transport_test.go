@@ -958,6 +958,62 @@ func TestCustomAttributesHandling(t *testing.T) {
 	}
 }
 
+func TestMetricsExistenceOnRequestError(t *testing.T) {
+	var rm metricdata.ResourceMetrics
+	const (
+		clientRequestSize = "http.client.request.size"
+		clientDuration    = "http.client.duration"
+	)
+	ctx := context.TODO()
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	defer func() {
+		err := provider.Shutdown(ctx)
+		if err != nil {
+			t.Errorf("Error shutting down provider: %v", err)
+		}
+	}()
+
+	transport := NewTransport(http.DefaultTransport, WithMeterProvider(provider))
+	client := http.Client{Transport: transport}
+
+	// simulate an error by closing the server
+	// before the request is made
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	ts.Close()
+
+	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	require.NoError(t, err)
+
+	_, err = client.Do(r)
+	require.Error(t, err)
+
+	err = reader.Collect(ctx, &rm)
+	assert.NoError(t, err)
+
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+	metricsFound := 0
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch m.Name {
+		case clientRequestSize:
+			d, ok := m.Data.(metricdata.Sum[int64])
+			assert.True(t, ok)
+			assert.Len(t, d.DataPoints, 1)
+			metricsFound++
+		case clientDuration:
+			d, ok := m.Data.(metricdata.Histogram[float64])
+			assert.True(t, ok)
+			assert.Len(t, d.DataPoints, 1)
+			metricsFound++
+		}
+	}
+
+	// make sure client request size and duration metrics is recorded
+	assert.Equal(t, 2, metricsFound, "Expected both metrics to be recorded")
+}
+
 func TestDefaultAttributesHandling(t *testing.T) {
 	var rm metricdata.ResourceMetrics
 	const (
