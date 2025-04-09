@@ -129,7 +129,6 @@ func TestPropagatorFields(t *testing.T) {
 }
 
 func TestXrayExtract(t *testing.T) {
-
 	// Define test cases
 	testCases := []struct {
 		name            string
@@ -176,7 +175,6 @@ func TestXrayExtract(t *testing.T) {
 			expectValid: false,
 		},
 	}
-
 	for _, testCase := range testCases {
 
 		// Create propagator
