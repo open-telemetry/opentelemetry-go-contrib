@@ -63,7 +63,8 @@ printf "Update done:\n\n"
 # Build directories that contain main package. These directories are different than
 # directories that contain go.mod files.
 printf "Build examples:\n"
-EXAMPLES=$(./get_main_pkgs.sh ./examples)
+
+EXAMPLES=$(find ./examples -type f -name go.mod -exec dirname {} \;)
 for ex in $EXAMPLES; do
 	printf "  Build $ex in ${DIR_TMP}/${ex}\n"
 	(cd "${DIR_TMP}/${ex}" && \
