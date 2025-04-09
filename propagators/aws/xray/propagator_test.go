@@ -176,7 +176,6 @@ func TestXrayExtract(t *testing.T) {
 		},
 	}
 	for _, testCase := range testCases {
-
 		// Create propagator
 		prop := &Propagator{}
 
@@ -210,7 +209,6 @@ func TestXrayExtract(t *testing.T) {
 			// For invalid cases, context should be unchanged
 			assert.Equal(t, originalCtx, resultCtx)
 		}
-
 	}
 }
 
@@ -228,9 +226,7 @@ func (m *MockCarrier) Get(key string) string {
 	return m.headers[key]
 }
 
-func (m *MockCarrier) Set(key string, value string) {
-
-}
+func (m *MockCarrier) Set(key string, value string) {}
 
 func (m *MockCarrier) Keys() []string {
 	return []string{}
