@@ -6,11 +6,12 @@ package otelrestful // import "go.opentelemetry.io/contrib/instrumentation/githu
 import (
 	"github.com/emicklei/go-restful/v3"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconv"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconv"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconvutil"
 )
 
 // ScopeName is the instrumentation scope name.
@@ -45,7 +46,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		spanName := route
 
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, r, semconvutil.HTTPServerRequestOptions{})...),
+			oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, r, semconvutil.HTTPServerRequestOptions{}, nil)...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 		if route != "" {
