@@ -38,7 +38,7 @@ $(TOOLS)/%: $(TOOLS_MOD_DIR)/go.mod | $(TOOLS)
 	$(GO) build -o $@ $(PACKAGE)
 
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
-$(GOLANGCI_LINT): PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
+$(GOLANGCI_LINT): PACKAGE=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
 MISSPELL = $(TOOLS)/misspell
 $(MISSPELL): PACKAGE=github.com/client9/misspell/cmd/misspell
@@ -352,3 +352,8 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 .PHONY: codespell
 codespell: $(CODESPELL)
 	@$(DOCKERPY) $(CODESPELL)
+
+MARKDOWNIMAGE := $(shell awk '$$4=="markdown" {print $$2}' $(DEPENDENCIES_DOCKERFILE))
+.PHONY: lint-markdown
+lint-markdown:
+	docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" $(MARKDOWNIMAGE) -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md

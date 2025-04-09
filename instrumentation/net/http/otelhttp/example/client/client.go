@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Client exemplifies the otelhttp instrumentation for a client.
 package main
 
 import (
