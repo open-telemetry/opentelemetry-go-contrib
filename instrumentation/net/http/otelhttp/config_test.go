@@ -60,24 +60,25 @@ func TestBasicFilter(t *testing.T) {
 func TestSpanNameFormatter(t *testing.T) {
 	testCases := []struct {
 		name      string
-		formatter func(s string, r *http.Request) string
+		formatter otelhttp.SpanNameFormatter
 		operation string
 		expected  string
 	}{
 		{
-			name: "default handler formatter",
-			formatter: func(operation string, _ *http.Request) string {
-				return operation
-			},
+			name:      "default handler formatter",
+			formatter: otelhttp.SpanNameFromOperation,
 			operation: "test_operation",
 			expected:  "test_operation",
 		},
 		{
-			name: "default transport formatter",
-			formatter: func(_ string, r *http.Request) string {
-				return "HTTP " + r.Method
-			},
-			expected: "HTTP GET",
+			name:      "default transport formatter",
+			formatter: otelhttp.SpanNameFromMethod,
+			expected:  "HTTP GET",
+		},
+		{
+			name:      "request pattern formatter",
+			formatter: otelhttp.SpanNameFromPattern,
+			expected:  "GET /hello/{thing}",
 		},
 		{
 			name: "custom formatter",
@@ -85,7 +86,7 @@ func TestSpanNameFormatter(t *testing.T) {
 				return r.URL.Path
 			},
 			operation: "",
-			expected:  "/hello",
+			expected:  "/hello/world",
 		},
 	}
 
@@ -100,13 +101,15 @@ func TestSpanNameFormatter(t *testing.T) {
 					t.Fatal(err)
 				}
 			})
+			mux := http.NewServeMux()
+			mux.Handle("GET /hello/{thing}", handler)
 			h := otelhttp.NewHandler(
-				handler,
+				mux,
 				tc.operation,
 				otelhttp.WithTracerProvider(provider),
 				otelhttp.WithSpanNameFormatter(tc.formatter),
 			)
-			r, err := http.NewRequest(http.MethodGet, "http://localhost/hello", nil)
+			r, err := http.NewRequest(http.MethodGet, "http://localhost/hello/world", nil)
 			if err != nil {
 				t.Fatal(err)
 			}

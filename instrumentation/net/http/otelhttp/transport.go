@@ -56,7 +56,7 @@ func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 
 	defaultOpts := []Option{
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindClient)),
-		WithSpanNameFormatter(defaultTransportFormatter),
+		WithSpanNameFormatter(SpanNameFromMethod),
 	}
 
 	c := newConfig(append(defaultOpts, opts...)...)
@@ -74,10 +74,6 @@ func (t *Transport) applyConfig(c *config) {
 	t.clientTrace = c.ClientTrace
 	t.semconv = semconv.NewHTTPClient(c.Meter)
 	t.metricAttributesFn = c.MetricAttributesFn
-}
-
-func defaultTransportFormatter(_ string, r *http.Request) string {
-	return "HTTP " + r.Method
 }
 
 // RoundTrip creates a Span and propagates its context via the provided request's headers
