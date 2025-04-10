@@ -32,4 +32,6 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
     - name: Lint Markdown
-      run: make lint-markdown
+      uses: docker://avtodev/markdown-lint:v1@sha256:6aeedc2f49138ce7a1cd0adffc1b1c0321b841dc2102408967d9301c031949ee
+      with:
+        args: ${{needs.changedfiles.outputs.md}}
