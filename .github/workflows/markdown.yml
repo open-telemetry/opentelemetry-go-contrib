@@ -18,13 +18,4 @@ jobs:
       uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
 
     - name: Lint Markdown
-      id: markdownlint
-      run: make lint-markdown > ./markdownlint.txt
-
-    - name: Create Issue From File
-      if: steps.markdownlint.outputs.exit_code != 0
-      uses: peter-evans/create-issue-from-file@e8ef132d6df98ed982188e460ebb3b5d4ef3a9cd #v5
-      with:
-        title: Markdown Lint Report
-        content-filepath: ./markdownlint.txt
-        labels: report, bot-generated
+      run: make lint-markdown
