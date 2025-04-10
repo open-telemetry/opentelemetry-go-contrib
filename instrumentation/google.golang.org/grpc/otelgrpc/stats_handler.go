@@ -161,7 +161,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 			c.rpcInBytes.Record(ctx, int64(rs.Length), metric.WithAttributes(gctx.metricAttrs...))
 		}
 
-		if c.ReceivedEvent {
+		if c.ReceivedEvent && span.IsRecording() {
 			span.AddEvent("message",
 				trace.WithAttributes(
 					semconv.MessageTypeReceived,
@@ -177,7 +177,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 			c.rpcOutBytes.Record(ctx, int64(rs.Length), metric.WithAttributes(gctx.metricAttrs...))
 		}
 
-		if c.SentEvent {
+		if c.SentEvent && span.IsRecording() {
 			span.AddEvent("message",
 				trace.WithAttributes(
 					semconv.MessageTypeSent,
@@ -189,26 +189,33 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 		}
 	case *stats.OutTrailer:
 	case *stats.OutHeader:
-		if p, ok := peer.FromContext(ctx); ok {
-			span.SetAttributes(peerAttr(p.Addr.String())...)
+		if span.IsRecording() {
+			if p, ok := peer.FromContext(ctx); ok {
+				span.SetAttributes(peerAttr(p.Addr.String())...)
+			}
 		}
 	case *stats.End:
 		var rpcStatusAttr attribute.KeyValue
 
+		var s *status.Status
 		if rs.Error != nil {
-			s, _ := status.FromError(rs.Error)
-			if isServer {
-				statusCode, msg := serverStatus(s)
-				span.SetStatus(statusCode, msg)
-			} else {
-				span.SetStatus(codes.Error, s.Message())
-			}
+			s, _ = status.FromError(rs.Error)
 			rpcStatusAttr = semconv.RPCGRPCStatusCodeKey.Int(int(s.Code()))
 		} else {
 			rpcStatusAttr = semconv.RPCGRPCStatusCodeKey.Int(int(grpc_codes.OK))
 		}
-		span.SetAttributes(rpcStatusAttr)
-		span.End()
+		if span.IsRecording() {
+			if s != nil {
+				if isServer {
+					statusCode, msg := serverStatus(s)
+					span.SetStatus(statusCode, msg)
+				} else {
+					span.SetStatus(codes.Error, s.Message())
+				}
+			}
+			span.SetAttributes(rpcStatusAttr)
+			span.End()
+		}
 
 		var metricAttrs []attribute.KeyValue
 		if gctx != nil {
