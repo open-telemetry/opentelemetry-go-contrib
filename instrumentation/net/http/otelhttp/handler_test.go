@@ -437,6 +437,60 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[0].Parent().SpanID())
 }
 
+func TestWithSpanNameFormatter(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+
+		formatter    func(operation string, r *http.Request) string
+		wantSpanName string
+	}{
+		{
+			name:         "with the default span name formatter",
+			wantSpanName: "test_handler",
+		},
+		{
+			name: "with a custom span name formatter",
+			formatter: func(op string, r *http.Request) string {
+				return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+			},
+			wantSpanName: "GET /",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			spanRecorder := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(
+				sdktrace.WithSpanProcessor(spanRecorder),
+			)
+
+			opts := []Option{
+				WithTracerProvider(provider),
+			}
+			if tt.formatter != nil {
+				opts = append(opts, WithSpanNameFormatter(tt.formatter))
+			}
+
+			h := NewHandler(
+				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					// Nothing to do here
+				}), "test_handler",
+				opts...,
+			)
+
+			r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+			require.NoError(t, err)
+
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, r)
+			assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
+
+			assert.NoError(t, spanRecorder.ForceFlush(context.Background()))
+			spans := spanRecorder.Ended()
+			assert.Len(t, spans, 1)
+			assert.Equal(t, tt.wantSpanName, spans[0].Name())
+		})
+	}
+}
+
 func TestWithPublicEndpoint(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(
