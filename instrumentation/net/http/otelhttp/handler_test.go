@@ -453,7 +453,14 @@ func TestWithSpanNameFormatter(t *testing.T) {
 			formatter: func(op string, r *http.Request) string {
 				return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 			},
-			wantSpanName: "GET /",
+			wantSpanName: "GET /foo/123",
+		},
+		{
+			name: "with a custom span name formatter using the pattern",
+			formatter: func(op string, r *http.Request) string {
+				return fmt.Sprintf("%s %s", r.Method, r.Pattern)
+			},
+			wantSpanName: "GET /foo/{id}",
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -469,14 +476,13 @@ func TestWithSpanNameFormatter(t *testing.T) {
 				opts = append(opts, WithSpanNameFormatter(tt.formatter))
 			}
 
-			h := NewHandler(
-				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-					// Nothing to do here
-				}), "test_handler",
-				opts...,
-			)
+			mux := http.NewServeMux()
+			mux.Handle("/foo/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Nothing to do here
+			}))
+			h := NewHandler(mux, "test_handler", opts...)
 
-			r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+			r, err := http.NewRequest(http.MethodGet, "http://localhost/foo/123", nil)
 			require.NoError(t, err)
 
 			rr := httptest.NewRecorder()
