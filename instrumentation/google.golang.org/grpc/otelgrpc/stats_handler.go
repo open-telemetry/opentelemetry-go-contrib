@@ -223,16 +223,17 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 			metricAttrs = append(metricAttrs, gctx.metricAttrs...)
 		}
 		metricAttrs = append(metricAttrs, rpcStatusAttr)
-		recordOpts := metric.WithAttributeSet(attribute.NewSet(metricAttrs...))
+		// Allocate vararg slice once.
+		recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
 
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		// Measure right before calling Record() to capture as much elapsed time as possible.
 		elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Millisecond)
 
-		c.rpcDuration.Record(ctx, elapsedTime, recordOpts)
+		c.rpcDuration.Record(ctx, elapsedTime, recordOpts...)
 		if gctx != nil {
-			c.rpcInMessages.Record(ctx, atomic.LoadInt64(&gctx.inMessages), recordOpts)
-			c.rpcOutMessages.Record(ctx, atomic.LoadInt64(&gctx.outMessages), recordOpts)
+			c.rpcInMessages.Record(ctx, atomic.LoadInt64(&gctx.inMessages), recordOpts...)
+			c.rpcOutMessages.Record(ctx, atomic.LoadInt64(&gctx.outMessages), recordOpts...)
 		}
 	default:
 		return
