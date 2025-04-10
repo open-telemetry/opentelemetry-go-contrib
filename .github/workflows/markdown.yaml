@@ -1,0 +1,30 @@
+name: Markdown
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+  schedule:
+  # Everyday at 9:00 AM.
+  - cron: "0 9 * * *"
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  lint-markdown:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@v4
+
+    - name: Lint Markdown
+      run: make lint-markdown || echo "Markdown Lint failed" > ./markdownlint.txt
+      continue-on-error: true
+
+    - name: Create Issue From File
+      if: failure()
+      uses: peter-evans/create-issue-from-file@v5
+      with:
+        title: Markdown Lint Report
+        content-filepath: ./markdownlint.txt
+        labels: report, bot-generated
