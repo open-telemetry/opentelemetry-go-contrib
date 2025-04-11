@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/stretchr/testify/assert"
@@ -76,7 +77,7 @@ func TestAwsXrayExtract(t *testing.T) {
 			test.parentSpanID, traceHeaderDelimiter, sampleFlagKey, kvDelimiter, test.samplingFlag,
 		}, "")
 
-		sc, err := extract(headerVal)
+		_, sc, err := extract(context.Background(), headerVal)
 
 		info := []interface{}{
 			"trace ID: %q, parent span ID: %q, sampling flag: %q",
@@ -90,6 +91,149 @@ func TestAwsXrayExtract(t *testing.T) {
 		}
 
 		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
+	}
+}
+
+func TestAwsXrayExtractWithLineage(t *testing.T) {
+	testData := []struct {
+		lineage string
+
+		expectedBaggage map[string]string
+	}{
+		{
+			lineage: "32767:e65a2c4d:255",
+			expectedBaggage: map[string]string{
+				"Lineage": "32767:e65a2c4d:255",
+			},
+		},
+		{
+			lineage: "32767:e65a2c4d:255",
+			expectedBaggage: map[string]string{
+				"Lineage": "32767:e65a2c4d:255",
+				"cat":     "bark",
+				"dog":     "meow",
+			},
+		},
+		{
+			lineage:         "1::",
+			expectedBaggage: map[string]string{},
+		},
+		{
+			lineage:         "1",
+			expectedBaggage: map[string]string{},
+		},
+		{
+			lineage:         "",
+			expectedBaggage: map[string]string{},
+		},
+		{
+			lineage:         ":",
+			expectedBaggage: map[string]string{},
+		},
+		{
+			lineage:         "::",
+			expectedBaggage: map[string]string{},
+		},
+		{
+			lineage:         "1:badc0de:13",
+			expectedBaggage: map[string]string{},
+		},
+		{
+			lineage:         ":fbadc0de:13",
+			expectedBaggage: map[string]string{},
+		},
+		{
+			lineage:         "1:fbadc0de:",
+			expectedBaggage: map[string]string{},
+		},
+		{
+			lineage:         "1::1",
+			expectedBaggage: map[string]string{},
+		},
+		{
+			lineage:         "65535:fbadc0de:255",
+			expectedBaggage: map[string]string{},
+		},
+		{
+			lineage:         "-213:e65a2c4d:255",
+			expectedBaggage: map[string]string{},
+		},
+		{
+			lineage:         "213:e65a2c4d:-22",
+			expectedBaggage: map[string]string{},
+		},
+	}
+
+	p := Propagator{}
+
+	for _, test := range testData {
+		carrier := make(map[string]string)
+		members := []baggage.Member{}
+		expectedSpanContext := trace.NewSpanContext(trace.SpanContextConfig{
+			TraceID:    traceID,
+			SpanID:     parentSpanID,
+			TraceFlags: trace.TraceFlags(0x00),
+			Remote:     true,
+		})
+
+		for key, value := range test.expectedBaggage {
+			member, _ := baggage.NewMember(key, value)
+			members = append(members, member)
+		}
+
+		expectedBaggage, _ := baggage.New(members...)
+		carrier[traceHeaderKey] = "Root=1-8a3c60f7-d188f8fa79d48a391a778fa6;Parent=53995c3f42cd8ad8;Sampled=0;Lineage=" + test.lineage
+
+		ctx := baggage.ContextWithBaggage(context.Background(), expectedBaggage)
+
+		if len(test.expectedBaggage) == 0 {
+			ctx = context.Background()
+		}
+
+		actualContext := p.Extract(ctx, propagation.MapCarrier(carrier))
+		spanContext := trace.SpanContextFromContext(actualContext)
+
+		assert.Equal(t, baggage.FromContext(actualContext), expectedBaggage)
+		assert.Equal(t, spanContext, expectedSpanContext)
+	}
+}
+
+func TestAwsXrayInjectWithLineage(t *testing.T) {
+	testData := []struct {
+		expectedBaggage map[string]string
+	}{
+		{
+			expectedBaggage: map[string]string{
+				"Lineage": "32767:e65a2c4d:255",
+				"cat":     "bark",
+				"dog":     "meow",
+			},
+		},
+		{
+			expectedBaggage: map[string]string{
+				"Lineage": "32767:e65a2c4d:255",
+			},
+		},
+	}
+
+	p := Propagator{}
+
+	for _, test := range testData {
+		carrier := make(map[string]string)
+		members := []baggage.Member{}
+
+		for key, value := range test.expectedBaggage {
+			member, _ := baggage.NewMember(key, value)
+			members = append(members, member)
+		}
+
+		expectedBaggage, _ := baggage.New(members...)
+
+		carrier[traceHeaderKey] = "Root=1-8a3c60f7-d188f8fa79d48a391a778fa6;Parent=53995c3f42cd8ad8;Sampled=0;Lineage=32767:e65a2c4d:255"
+
+		p.Inject(baggage.ContextWithBaggage(context.Background(), expectedBaggage), propagation.MapCarrier(carrier))
+
+		assert.Equal(t, carrier[traceHeaderKey], "Root=1-8a3c60f7-d188f8fa79d48a391a778fa6;Parent=53995c3f42cd8ad8;Sampled=0;Lineage=32767:e65a2c4d:255")
 	}
 }
 
