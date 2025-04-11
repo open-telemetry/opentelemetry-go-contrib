@@ -44,6 +44,7 @@ func NewEventMonitor() EventMonitor {
 type AttributeOptions struct {
 	collectionName           string
 	commandAttributeDisabled bool
+	commandAttributes        []attribute.KeyValue
 }
 
 // AttributeOption is a function type that modifies AttributeOptions.
@@ -62,6 +63,13 @@ func WithCollectionName(collName string) AttributeOption {
 func WithCommandAttributeDisabled(disabled bool) AttributeOption {
 	return func(opts *AttributeOptions) {
 		opts.commandAttributeDisabled = disabled
+	}
+}
+
+// WithCommandAttributes is a functional option to set command attributes.
+func WithCommandAttributes(attrs ...attribute.KeyValue) AttributeOption {
+	return func(opts *AttributeOptions) {
+		opts.commandAttributes = attrs
 	}
 }
 
@@ -135,6 +143,12 @@ func commandStartedTraceAttrsV1260(evt *event.CommandStartedEvent, setters ...At
 		attrs = append(attrs, semconv1260.DBCollectionName(opts.collectionName))
 	}
 
+	if opts.commandAttributes != nil {
+		for _, attr := range opts.commandAttributes {
+			attrs = append(attrs, attr)
+		}
+	}
+
 	return attrs
 }
 
@@ -162,6 +176,12 @@ func commandStartedTraceAttrsV1210(evt *event.CommandStartedEvent, setters ...At
 
 	if opts.collectionName != "" {
 		attrs = append(attrs, semconv1210.DBMongoDBCollection(opts.collectionName))
+	}
+
+	if opts.commandAttributes != nil {
+		for _, attr := range opts.commandAttributes {
+			attrs = append(attrs, attr)
+		}
 	}
 
 	return attrs

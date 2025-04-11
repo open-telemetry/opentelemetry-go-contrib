@@ -4,7 +4,9 @@
 package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 
 import (
+	"go.mongodb.org/mongo-driver/event"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -13,11 +15,13 @@ const ScopeName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mo
 
 // config is used to configure the mongo tracer.
 type config struct {
-	TracerProvider trace.TracerProvider
-
-	Tracer trace.Tracer
-
+	TracerProvider           trace.TracerProvider
+	Tracer                   trace.Tracer
 	CommandAttributeDisabled bool
+
+	// CommandAttributesFn is a function that returns a list of attributes using
+	// the CommandStartedEvent. This is used to add custom attributes to the span.
+	CommandAttributesFn func(event *event.CommandStartedEvent) []attribute.KeyValue
 }
 
 // newConfig returns a config with all Options set.
@@ -64,5 +68,14 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 func WithCommandAttributeDisabled(disabled bool) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.CommandAttributeDisabled = disabled
+	})
+}
+
+// WithCommandAttributesFn specifies a function that returns a list of
+// attributes using the CommandStartedEvent. This is used to add custom
+// attributes to the span.
+func WithCommandAttributesFn(fn func(event *event.CommandStartedEvent) []attribute.KeyValue) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.CommandAttributesFn = fn
 	})
 }
