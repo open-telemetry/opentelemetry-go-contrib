@@ -136,17 +136,17 @@ func commandStartedTraceAttrsV1260(evt *event.CommandStartedEvent, setters ...At
 	attrs = append(attrs, semconv1260.NetworkPeerAddress(net.JoinHostPort(hostname, strconv.Itoa(port))))
 
 	if !opts.commandAttributeDisabled {
-		attrs = append(attrs, semconv1260.DBQueryText(sanitizeCommand(evt.Command)))
+		if opts.commandAttributes != nil {
+			for _, attr := range opts.commandAttributes {
+				attrs = append(attrs, attr)
+			}
+		} else {
+			attrs = append(attrs, semconv1260.DBQueryText(sanitizeCommand(evt.Command)))
+		}
 	}
 
 	if opts.collectionName != "" {
 		attrs = append(attrs, semconv1260.DBCollectionName(opts.collectionName))
-	}
-
-	if opts.commandAttributes != nil {
-		for _, attr := range opts.commandAttributes {
-			attrs = append(attrs, attr)
-		}
 	}
 
 	return attrs
@@ -171,17 +171,17 @@ func commandStartedTraceAttrsV1210(evt *event.CommandStartedEvent, setters ...At
 	attrs = append(attrs, semconv1210.NetPeerName(hostname))
 
 	if !opts.commandAttributeDisabled {
-		attrs = append(attrs, semconv1210.DBStatement(sanitizeCommand(evt.Command)))
+		if opts.commandAttributes != nil {
+			for _, attr := range opts.commandAttributes {
+				attrs = append(attrs, attr)
+			}
+		} else {
+			attrs = append(attrs, semconv1210.DBStatement(sanitizeCommand(evt.Command)))
+		}
 	}
 
 	if opts.collectionName != "" {
 		attrs = append(attrs, semconv1210.DBMongoDBCollection(opts.collectionName))
-	}
-
-	if opts.commandAttributes != nil {
-		for _, attr := range opts.commandAttributes {
-			attrs = append(attrs, attr)
-		}
 	}
 
 	return attrs

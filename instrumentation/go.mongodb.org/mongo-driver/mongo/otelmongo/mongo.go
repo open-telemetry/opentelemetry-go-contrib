@@ -35,12 +35,7 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		semconv.WithCommandAttributeDisabled(m.cfg.CommandAttributeDisabled),
 	}
 
-	// TODO: there should be a default CommandAttributesFn that is used when
-	// TODO: CommandAttributeDisabled is false. This would arguably be a breaking
-	// TODO: change.
-	//
-	// TODO: E.g., https://github.com/mongodb/anser/blob/main/apm/otel_monitor.go
-	if !m.cfg.CommandAttributeDisabled && m.cfg.CommandAttributesFn != nil {
+	if m.cfg.CommandAttributesFn != nil {
 		attrOptions = append(attrOptions, semconv.WithCommandAttributes(m.cfg.CommandAttributesFn(evt)...))
 	}
 
