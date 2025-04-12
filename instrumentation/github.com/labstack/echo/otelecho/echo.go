@@ -11,12 +11,13 @@ import (
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconvutil"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconvutil"
 )
 
 const (
@@ -61,7 +62,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			}()
 			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
 			opts := []oteltrace.SpanStartOption{
-				oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, request, semconvutil.HTTPServerRequestOptions{})...),
+				oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, request, semconvutil.HTTPServerRequestOptions{}, nil)...),
 				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 			}
 			if path := c.Path(); path != "" {
