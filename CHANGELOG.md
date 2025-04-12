@@ -41,7 +41,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable can be still used to emit both the v1.20.0 and v1.26.0 semantic conventions.
   It is however impossible to emit only the 1.20.0 semantic conventions, as the next release will drop support for that environment variable. (#6899)
 - Update the Jaeger remote sampler to use "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2" in  `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#7061)
-- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test` package. Use `Version` instead.
 - Update `http.route` attribute to support `request.Pattern` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7108)
 
 ### Fixed
@@ -62,6 +61,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `go.opentelemetry.io/contrib/config` package is removed, use `go.opentelemetry.io/contrib/otelconf` instead. (#6894)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`, use `Version` function instead. (#7058)
 - The deprecated `SemVersion` function in `go.opentelemetry.io/contrib/samplers/probability/consistent` is removed, use `Version` instead. (#7072)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test` package, use `Version` instead. (#7077)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, use `Version` function instead. (#7084)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, use `Version` function instead. (#7085)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test`, use `Version` function instead. (#7142)
@@ -83,11 +83,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use `Version` function instead. (#7154)
 - The deprecated `DefaultAttributeSetter` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` is removed, use the `DefaultAttributeBuilder` function instead. (#7127)
 - The deprecated `UnaryClientInterceptor` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` use `NewClientHandler` function instead. (#7125)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, use `Version` function instead. (#7167)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, use `Version` function instead. (#7144)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/test`, use `Version` function instead. (#7144)
 - The deprecated `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters/interceptor` package is removed, use `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters` instead. (#7110)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`, use `Version` function instead. (#7143)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test`, use `Version` function instead. (#7143)
+- The deprecated `SQSAttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package, use `SQSAttributeBuilder` instead. (#7145)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
