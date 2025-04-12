@@ -18,10 +18,29 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `WithGinMetricAttributes` option to allow setting dynamic, per-request metric attributes based on `*gin.Context` in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6932)
 - Use Gin's own `ClientIP` method to detect the client's IP, which supports custom proxy headers in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6095)
 - Added test for Fields in `go.opentelemetry.io/contrib/propagators/jaeger`. (#7119)
+- Allow configuring samplers in `go.opentelemetry.io/contrib/otelconf`. (#7148)
 
 ### Changed
 
 - Jaeger remote sampler's probabilistic strategy now uses the same sampling algorithm as `trace.TraceIDRatioBased` in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#6892)
+- Switched the default for `OTEL_SEMCONV_STABILITY_OPT_IN` to emit the v1.26.0 semantic conventions by default in the following modules.
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+- Improve performance by reducing allocations for http request when using `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` in the modules below. (#7180)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+
+  The `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable can be still used to emit both the v1.20.0 and v1.26.0 semantic conventions.
+  It is however impossible to emit only the 1.20.0 semantic conventions, as the next release will drop support for that environment variable. (#6899)
+- Update the Jaeger remote sampler to use "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2" in  `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#7061)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test` package. Use `Version` instead.
 - Update `http.route` attribute to support `request.Pattern` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7108)
 
