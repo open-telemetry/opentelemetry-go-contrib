@@ -157,7 +157,7 @@ migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs
 - Don't start spans that never end for filtered out gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#6695)
 - Fix a possible nil dereference panic in `NewSDK` of `go.opentelemetry.io/contrib/config/v0.3.0`. (#6752)
 - Fix prometheus endpoint with an IPv6 address in `go.opentelemetry.io/contrib/config`. (#6815)
-- Fixed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` by considering the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable for trace attributes.
+- Fixed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` by considering the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable for trace attributes. (#7215)
 
 ## [1.34.0/0.59.0/0.28.0/0.14.0/0.9.0/0.7.0/0.6.0] - 2025-01-17
 
