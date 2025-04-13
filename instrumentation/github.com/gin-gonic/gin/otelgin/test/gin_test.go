@@ -18,6 +18,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
 	"golang.org/x/net/context"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
@@ -553,6 +554,49 @@ func TestMetrics(t *testing.T) {
 					},
 				},
 			}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+		})
+	}
+}
+
+func TestServerWithSemConvStabilityOptIn(t *testing.T) {
+	tests := []struct {
+		name                 string
+		setEnv               bool
+		wantExistsHTTPMethod bool
+	}{
+		{
+			"not set",
+			false,
+			false,
+		},
+		{
+			"set to http/dup",
+			true,
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv(semconv.OTelSemConvStabilityOptIn, "http/dup")
+			}
+
+			attrs := semconv.NewHTTPServer(nil).
+				RequestTraceAttrs("foobar",
+					httptest.NewRequest("GET", "/user/123", nil),
+					semconv.RequestTraceAttrsOpts{
+						HTTPClientIP: "127.0.0.1",
+					})
+
+			var existsHTTPMethod bool
+			for _, attr := range attrs {
+				if attr.Key == "http.method" {
+					existsHTTPMethod = true
+					break
+				}
+			}
+			assert.Equal(t, tt.wantExistsHTTPMethod, existsHTTPMethod)
 		})
 	}
 }
