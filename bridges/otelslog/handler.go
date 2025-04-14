@@ -11,7 +11,8 @@
 //
 //   - Time is set as the Timestamp.
 //   - Message is set as the Body using a [log.StringValue].
-//   - Level is transformed and set as the Severity and SeverityText.
+//   - Level is transformed and set as the Severity. The SeverityText is also
+//     set.
 //   - PC is dropped.
 //   - Attr are transformed and set as the Attributes.
 //
