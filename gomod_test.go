@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-var expectedGoVersion = "go 1.23.0"
+const expectedGoVersion = "go 1.23.0"
 
 func TestAllGoModVersions(t *testing.T) {
 	var modFiles []string
