@@ -4,6 +4,7 @@
 package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 import (
+	"cmp"
 	"context"
 	"net/http"
 	"net/http/httptrace"
@@ -174,9 +175,13 @@ func WithMessageEvents(events ...event) Option {
 	})
 }
 
-// WithSpanNameFormatter takes a function that will be called on every
+// WithSpanNameFormatter takes a [SpanNameFormatter] function that will be called on every
 // request and the returned string will become the Span Name.
-func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
+//
+// When using `http.ServeMux` (or any middleware that sets `request.Pattern`),
+// the span name formatter will run twice. Once when the span is created, and
+// once after the middleware, so the pattern can be used.
+func WithSpanNameFormatter(f SpanNameFormatter) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
 	})
@@ -204,4 +209,25 @@ func WithMetricAttributesFn(metricAttributesFn func(r *http.Request) []attribute
 	return optionFunc(func(c *config) {
 		c.MetricAttributesFn = metricAttributesFn
 	})
+}
+
+// SpanNameFormatter returns the span name to use for a given request.
+type SpanNameFormatter = func(operation string, r *http.Request) string
+
+// SpanNameFromOperation always uses the operation name as the span name.
+// It is the default formatter for handlers.
+func SpanNameFromOperation(operation string, _ *http.Request) string {
+	return operation
+}
+
+// SpanNameFromPattern uses the matched request pattern as the span name.
+// It falls back to the operation name if there is no pattern.
+func SpanNameFromPattern(operation string, r *http.Request) string {
+	return cmp.Or(r.Pattern, operation)
+}
+
+// SpanNameFromMethod uses "HTTP " + the request method as the span name.
+// It is the default formatter for transports.
+func SpanNameFromMethod(_ string, r *http.Request) string {
+	return "HTTP " + r.Method
 }

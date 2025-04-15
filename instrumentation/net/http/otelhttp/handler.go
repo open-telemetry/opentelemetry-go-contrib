@@ -28,16 +28,12 @@ type middleware struct {
 	readEvent          bool
 	writeEvent         bool
 	filters            []Filter
-	spanNameFormatter  func(string, *http.Request) string
+	spanNameFormatter  SpanNameFormatter
 	publicEndpoint     bool
 	publicEndpointFn   func(*http.Request) bool
 	metricAttributesFn func(*http.Request) []attribute.KeyValue
 
 	semconv semconv.HTTPServer
-}
-
-func defaultHandlerFormatter(operation string, _ *http.Request) string {
-	return operation
 }
 
 // NewHandler wraps the passed handler in a span named after the operation and
@@ -56,7 +52,7 @@ func NewMiddleware(operation string, opts ...Option) func(http.Handler) http.Han
 
 	defaultOpts := []Option{
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
-		WithSpanNameFormatter(defaultHandlerFormatter),
+		WithSpanNameFormatter(SpanNameFromOperation),
 	}
 
 	c := newConfig(append(defaultOpts, opts...)...)
@@ -176,7 +172,12 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		ctx = ContextWithLabeler(ctx, labeler)
 	}
 
-	next.ServeHTTP(w, r.WithContext(ctx))
+	r = r.WithContext(ctx)
+	next.ServeHTTP(w, r)
+
+	if r.Pattern != "" {
+		span.SetName(h.spanNameFormatter(h.operation, r))
+	}
 
 	statusCode := rww.StatusCode()
 	bytesWritten := rww.BytesWritten()
