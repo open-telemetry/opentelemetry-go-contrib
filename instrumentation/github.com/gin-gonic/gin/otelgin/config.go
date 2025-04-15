@@ -56,8 +56,8 @@ type Filter func(*http.Request) bool
 // GinFilter filters an [net/http.Request] based on content of a [gin.Context].
 type GinFilter func(*gin.Context) bool
 
-// SpanNameFormatter is a function that takes a gin.Context and returns a string
-type SpanNameFormatter func(c *gin.Context) string
+// SpanNameFormatter is a function that takes a gin.Context and returns a string.
+type SpanNameFormatter func(*gin.Context) string
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
 // and return them as a slice of attribute.KeyValue.
