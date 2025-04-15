@@ -6,6 +6,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"html/template"
@@ -18,7 +19,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
