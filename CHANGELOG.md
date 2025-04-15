@@ -53,7 +53,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 - Cleaned up indentations under `Unreleased/Fixed` of `./CHANGELOG.md`. (#7163)
 - Removed a duplicate instance of the `Changed` subheader under `1.18.0/0.43.0/0.12.0` in `./CHANGELOG.md`. (#7163)
-- Fixed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` by considering the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable for trace attributes. (#7215)
+- Fixed handling of the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7215)
 
 ### Removed
 
