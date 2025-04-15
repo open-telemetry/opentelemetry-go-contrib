@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
-
-// Example exemplifies the otelrestful package.
-package main
+package otelrestful_test
 
 import (
 	"context"
@@ -40,7 +38,7 @@ func (u userResource) WebService() *restful.WebService {
 	return ws
 }
 
-func main() {
+func Example() {
 	tp, err := initTracer()
 	if err != nil {
 		log.Fatal(err)

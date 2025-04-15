@@ -151,8 +151,8 @@ func TestHTTPClientTraceAttributes(t *testing.T) {
 			optinVal: "http/dup",
 
 			wantAttributes: []attribute.KeyValue{
-				attribute.String("net.host.name", "example.com"),
 				attribute.String("server.address", "example.com"),
+				attribute.String("net.host.name", "example.com"),
 			},
 		},
 	} {
@@ -188,8 +188,8 @@ func TestClientTraceAttributes(t *testing.T) {
 			host:     "example.com",
 
 			wantAttributes: []attribute.KeyValue{
-				attribute.String("net.host.name", "example.com"),
 				attribute.String("server.address", "example.com"),
+				attribute.String("net.host.name", "example.com"),
 			},
 		},
 	} {
