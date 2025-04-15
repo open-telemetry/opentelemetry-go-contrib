@@ -96,7 +96,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
 
-		spanName := cfg.SpanNameFormatter(c.FullPath(), c.Request)
+		spanName := cfg.SpanNameFormatter(c)
 		if spanName == "" {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
 		}

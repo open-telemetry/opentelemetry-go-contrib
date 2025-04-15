@@ -294,7 +294,7 @@ func TestSpanName(t *testing.T) {
 		// Test for invalid method
 		{"INVALID", "/user/:id", "/user/1", nil, "HTTP /user/:id"},
 		// Test for custom span name formatter
-		{http.MethodGet, "/user/:id", "/user/1", func(_ string, r *http.Request) string { return r.URL.Path }, "/user/1"},
+		{http.MethodGet, "/user/:id", "/user/1", func(c *gin.Context) string { return c.Request.URL.Path }, "/user/1"},
 	}
 	for _, tc := range testCases {
 		t.Run(fmt.Sprintf("method: %s, route: %s, requestPath: %s", tc.method, tc.route, tc.requestPath), func(t *testing.T) {
@@ -319,8 +319,8 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	router := gin.New()
 	router.Use(otelgin.Middleware("foobar",
 		otelgin.WithTracerProvider(provider),
-		otelgin.WithSpanNameFormatter(func(path string, r *http.Request) string {
-			return r.URL.Path
+		otelgin.WithSpanNameFormatter(func(c *gin.Context) string {
+			return c.Request.URL.Path
 		}),
 	),
 	)

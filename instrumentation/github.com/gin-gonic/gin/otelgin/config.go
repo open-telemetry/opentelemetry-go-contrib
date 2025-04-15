@@ -30,8 +30,8 @@ type config struct {
 }
 
 // defaultSpanNameFormatter is the default span name formatter.
-var defaultSpanNameFormatter = func(path string, r *http.Request) string {
-	method := strings.ToUpper(r.Method)
+var defaultSpanNameFormatter SpanNameFormatter = func(c *gin.Context) string {
+	method := strings.ToUpper(c.Request.Method)
 	if !slices.Contains([]string{
 		http.MethodGet, http.MethodHead,
 		http.MethodPost, http.MethodPut,
@@ -42,7 +42,7 @@ var defaultSpanNameFormatter = func(path string, r *http.Request) string {
 		method = "HTTP"
 	}
 
-	if path != "" {
+	if path := c.FullPath(); path != "" {
 		return method + " " + path
 	}
 
@@ -56,8 +56,8 @@ type Filter func(*http.Request) bool
 // GinFilter filters an [net/http.Request] based on content of a [gin.Context].
 type GinFilter func(*gin.Context) bool
 
-// SpanNameFormatter is used to set span name by gin's FullPath() and http.request.
-type SpanNameFormatter func(path string, r *http.Request) string
+// SpanNameFormatter is a function that takes a gin.Context and returns a string
+type SpanNameFormatter func(c *gin.Context) string
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
 // and return them as a slice of attribute.KeyValue.
