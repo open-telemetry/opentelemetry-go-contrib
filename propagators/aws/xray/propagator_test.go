@@ -28,69 +28,155 @@ var (
 )
 
 func TestAwsXrayExtract(t *testing.T) {
-	testData := []struct {
-		traceID      string
-		parentSpanID string
-		samplingFlag string
-		expected     trace.SpanContextConfig
-		err          error
-	}{
-		{
-			xrayTraceID, parentID64Str, notSampled,
-			trace.SpanContextConfig{
-				TraceID:    traceID,
-				SpanID:     parentSpanID,
-				TraceFlags: traceFlagNone,
+	// Test the public Extract method
+	t.Run("Public Extract Method", func(t *testing.T) {
+		// Define test cases
+		testCases := []struct {
+			name            string
+			headerValue     string
+			expectedTraceID string
+			expectedSpanID  string
+			expectedFlags   trace.TraceFlags
+			expectValid     bool
+		}{
+			{
+				name:            "Valid X-Ray header with sampling enabled",
+				headerValue:     "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1",
+				expectedTraceID: "5759e988bd862e3fe1be46a994272793",
+				expectedSpanID:  "53995c3f42cd8ad8",
+				expectedFlags:   trace.FlagsSampled,
+				expectValid:     true,
 			},
-			nil,
-		},
-		{
-			xrayTraceID, parentID64Str, isSampled,
-			trace.SpanContextConfig{
-				TraceID:    traceID,
-				SpanID:     parentSpanID,
-				TraceFlags: traceFlagSampled,
+			{
+				name:            "Valid X-Ray header with sampling disabled",
+				headerValue:     "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=0",
+				expectedTraceID: "5759e988bd862e3fe1be46a994272793",
+				expectedSpanID:  "53995c3f42cd8ad8",
+				expectedFlags:   traceFlagNone,
+				expectValid:     true,
 			},
-			nil,
-		},
-		{
-			xrayTraceID, zeroSpanIDStr, isSampled,
-			trace.SpanContextConfig{},
-			errInvalidSpanIDLength,
-		},
-		{
-			xrayTraceIDIncorrectLength, parentID64Str, isSampled,
-			trace.SpanContextConfig{},
-			errLengthTraceIDHeader,
-		},
-		{
-			wrongVersionTraceHeaderID, parentID64Str, isSampled,
-			trace.SpanContextConfig{},
-			errInvalidTraceIDVersion,
-		},
-	}
-
-	for _, test := range testData {
-		headerVal := strings.Join([]string{
-			traceIDKey, kvDelimiter, test.traceID, traceHeaderDelimiter, parentIDKey, kvDelimiter,
-			test.parentSpanID, traceHeaderDelimiter, sampleFlagKey, kvDelimiter, test.samplingFlag,
-		}, "")
-
-		sc, err := extract(headerVal)
-
-		info := []interface{}{
-			"trace ID: %q, parent span ID: %q, sampling flag: %q",
-			test.traceID,
-			test.parentSpanID,
-			test.samplingFlag,
+			{
+				name:        "Missing header",
+				headerValue: "",
+				expectValid: false,
+			},
+			{
+				name:        "Malformed trace ID",
+				headerValue: "Root=1x5759e988xbd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1",
+				expectValid: false,
+			},
+			{
+				name:        "Invalid version in trace ID",
+				headerValue: "Root=2-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1",
+				expectValid: false,
+			},
+			{
+				name:        "Missing parent ID",
+				headerValue: "Root=1-5759e988-bd862e3fe1be46a994272793;Sampled=1",
+				expectValid: false,
+			},
 		}
 
-		if !assert.Equal(t, test.err, err, info...) {
-			continue
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				// Create propagator
+				prop := &Propagator{}
+
+				// Create original context
+				originalCtx := context.Background()
+
+				// Create carrier with header
+				headers := map[string]string{}
+				if tc.headerValue != "" {
+					headers[traceHeaderKey] = tc.headerValue
+				}
+				carrier := NewMockCarrier(headers)
+
+				// Call Extract
+				resultCtx := prop.Extract(originalCtx, carrier)
+
+				// Verify results based on expectValid
+				if tc.expectValid {
+					sc := trace.SpanFromContext(resultCtx).SpanContext()
+
+					expectedTraceID, _ := trace.TraceIDFromHex(tc.expectedTraceID)
+					expectedSpanID, _ := trace.SpanIDFromHex(tc.expectedSpanID)
+
+					assert.Equal(t, expectedTraceID, sc.TraceID())
+					assert.Equal(t, expectedSpanID, sc.SpanID())
+					assert.Equal(t, tc.expectedFlags, sc.TraceFlags())
+				} else {
+					assert.Equal(t, originalCtx, resultCtx)
+				}
+			})
+		}
+	})
+
+	t.Run("Helper extract method", func(t *testing.T) {
+		testData := []struct {
+			traceID      string
+			parentSpanID string
+			samplingFlag string
+			expected     trace.SpanContextConfig
+			err          error
+		}{
+			{
+				xrayTraceID, parentID64Str, notSampled,
+				trace.SpanContextConfig{
+					TraceID:    traceID,
+					SpanID:     parentSpanID,
+					TraceFlags: traceFlagNone,
+				},
+				nil,
+			},
+			{
+				xrayTraceID, parentID64Str, isSampled,
+				trace.SpanContextConfig{
+					TraceID:    traceID,
+					SpanID:     parentSpanID,
+					TraceFlags: traceFlagSampled,
+				},
+				nil,
+			},
+			{
+				xrayTraceID, zeroSpanIDStr, isSampled,
+				trace.SpanContextConfig{},
+				errInvalidSpanIDLength,
+			},
+			{
+				xrayTraceIDIncorrectLength, parentID64Str, isSampled,
+				trace.SpanContextConfig{},
+				errLengthTraceIDHeader,
+			},
+			{
+				wrongVersionTraceHeaderID, parentID64Str, isSampled,
+				trace.SpanContextConfig{},
+				errInvalidTraceIDVersion,
+			},
 		}
 
-		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
-	}
+		for _, test := range testData {
+			headerVal := strings.Join([]string{
+				traceIDKey, kvDelimiter, test.traceID, traceHeaderDelimiter, parentIDKey, kvDelimiter,
+				test.parentSpanID, traceHeaderDelimiter, sampleFlagKey, kvDelimiter, test.samplingFlag,
+			}, "")
+
+			sc, err := extract(headerVal)
+
+			info := []interface{}{
+				"trace ID: %q, parent span ID: %q, sampling flag: %q",
+				test.traceID,
+				test.parentSpanID,
+				test.samplingFlag,
+			}
+
+			if !assert.Equal(t, test.err, err, info...) {
+				continue
+			}
+
+			assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
+		}
+	})
 }
 
 func BenchmarkPropagatorExtract(b *testing.B) {
