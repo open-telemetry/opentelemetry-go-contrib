@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"fmt"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"net"
@@ -706,7 +707,8 @@ func TestLogProcessor(t *testing.T) {
 }
 
 func Test_otlpGRPCLogExporter(t *testing.T) {
-	grpc.NewServer()
+	port, err := findRandomPort()
+	require.Nil(t, err)
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLP
@@ -723,7 +725,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
-					Endpoint:    ptr("localhost:4317"),
+					Endpoint:    ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression: ptr("gzip"),
 					Timeout:     ptr(1000),
 					Insecure:    ptr(true),
@@ -740,7 +742,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
-					Endpoint:    ptr("localhost:4317"),
+					Endpoint:    ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression: ptr("gzip"),
 					Timeout:     ptr(1000),
 					Certificate: ptr("testdata/server-certs/server.crt"),
@@ -757,7 +759,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:          ptr("grpc"),
-					Endpoint:          ptr("localhost:4317"),
+					Endpoint:          ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression:       ptr("gzip"),
 					Timeout:           ptr(1000),
 					Certificate:       ptr("testdata/server-certs/server.crt"),
@@ -907,4 +909,20 @@ func createGRPCServer(tlsMode string) (*grpc.Server, error) {
 
 	srv := grpc.NewServer(opts...)
 	return srv, nil
+}
+
+func findRandomPort() (int, error) {
+	l, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		return 0, err
+	}
+
+	port := l.Addr().(*net.TCPAddr).Port
+
+	err = l.Close()
+	if err != nil {
+		return 0, err
+	}
+
+	return port, nil
 }

@@ -1396,7 +1396,8 @@ func TestPrometheusIPv6(t *testing.T) {
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {
-	grpc.NewServer()
+	port, err := findRandomPort()
+	require.Nil(t, err)
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLPMetric
@@ -1412,7 +1413,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLPMetric{
 					Protocol:    ptr("grpc"),
-					Endpoint:    ptr("localhost:4317"),
+					Endpoint:    ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression: ptr("gzip"),
 					Timeout:     ptr(1000),
 					Insecure:    ptr(true),
@@ -1428,7 +1429,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLPMetric{
 					Protocol:    ptr("grpc"),
-					Endpoint:    ptr("localhost:4317"),
+					Endpoint:    ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression: ptr("gzip"),
 					Timeout:     ptr(1000),
 					Certificate: ptr("testdata/server-certs/server.crt"),
@@ -1444,7 +1445,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLPMetric{
 					Protocol:          ptr("grpc"),
-					Endpoint:          ptr("localhost:4317"),
+					Endpoint:          ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression:       ptr("gzip"),
 					Timeout:           ptr(1000),
 					Certificate:       ptr("testdata/server-certs/server.crt"),

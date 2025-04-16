@@ -6,6 +6,7 @@ package otelconf
 import (
 	"context"
 	"errors"
+	"fmt"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tpb "go.opentelemetry.io/proto/otlp/trace/v1"
@@ -850,7 +851,8 @@ func TestSampler(t *testing.T) {
 }
 
 func Test_otlpGRPCTraceExporter(t *testing.T) {
-	grpc.NewServer()
+	port, err := findRandomPort()
+	require.NoError(t, err)
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLP
@@ -866,7 +868,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
-					Endpoint:    ptr("localhost:4317"),
+					Endpoint:    ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression: ptr("gzip"),
 					Timeout:     ptr(1000),
 					Insecure:    ptr(true),
@@ -882,7 +884,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
-					Endpoint:    ptr("localhost:4317"),
+					Endpoint:    ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression: ptr("gzip"),
 					Timeout:     ptr(1000),
 					Certificate: ptr("testdata/server-certs/server.crt"),
@@ -898,7 +900,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:          ptr("grpc"),
-					Endpoint:          ptr("localhost:4317"),
+					Endpoint:          ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression:       ptr("gzip"),
 					Timeout:           ptr(1000),
 					Certificate:       ptr("testdata/server-certs/server.crt"),
