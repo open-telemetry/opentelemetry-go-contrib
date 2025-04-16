@@ -30,10 +30,19 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+- Improve performance by reducing allocations for http request when using `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` in the modules below. (#7180)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 
   The `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable can be still used to emit both the v1.20.0 and v1.26.0 semantic conventions.
   It is however impossible to emit only the 1.20.0 semantic conventions, as the next release will drop support for that environment variable. (#6899)
 - Update the Jaeger remote sampler to use "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2" in  `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#7061)
+- Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7186)
+- Update `http.route` attribute to support `request.Pattern` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7108)
 
 ### Fixed
 
@@ -46,6 +55,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 - Cleaned up indentations under `Unreleased/Fixed` of `./CHANGELOG.md`. (#7163)
 - Removed a duplicate instance of the `Changed` subheader under `1.18.0/0.43.0/0.12.0` in `./CHANGELOG.md`. (#7163)
+- Check for TLS related options to be set before creating TLS config `go.opentelemetry.io/contrib/otelconf`. (#6984)
+- Fixed handling of the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7215)
 
 ### Removed
 
@@ -82,6 +93,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`, use `Version` function instead. (#7143)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test`, use `Version` function instead. (#7143)
 - The deprecated `SQSAttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package, use `SQSAttributeBuilder` instead. (#7145)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/host` package, use `Version` instead. (#7203)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
