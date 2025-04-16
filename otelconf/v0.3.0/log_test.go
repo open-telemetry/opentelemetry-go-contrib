@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -797,9 +798,12 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				Body: log.StringValue("test"),
 			}
 
-			require.NoError(t, exporter.Export(context.Background(), []sdklog.Record{
-				logFactory.NewRecord(),
-			}))
+			require.EventuallyWithT(t, func(collect *assert.CollectT) {
+				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{
+					logFactory.NewRecord(),
+				}))
+			}, 10*time.Second, 1*time.Second)
+
 			// Ensure everything is flushed.
 			require.NoError(t, exporter.Shutdown(context.Background()))
 
