@@ -6,8 +6,14 @@ package otelconf
 import (
 	"context"
 	"errors"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	tpb "go.opentelemetry.io/proto/otlp/trace/v1"
+	"google.golang.org/grpc"
+	"net"
 	"path/filepath"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -841,4 +847,170 @@ func TestSampler(t *testing.T) {
 			require.Equal(t, tt.wantSampler, got)
 		})
 	}
+}
+
+func Test_otlpGRPCTraceExporter(t *testing.T) {
+	grpc.NewServer()
+	type args struct {
+		ctx        context.Context
+		otlpConfig *OTLP
+	}
+	tests := []struct {
+		name    string
+		args    args
+		wantErr string
+	}{
+		{
+			name: "no TLS config",
+			args: args{
+				ctx: context.Background(),
+				otlpConfig: &OTLP{
+					Protocol:    ptr("grpc"),
+					Endpoint:    ptr("localhost:4317"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(1000),
+					Insecure:    ptr(true),
+					Headers: []NameStringValuePair{
+						{Name: "test", Value: ptr("test1")},
+					},
+				},
+			},
+		},
+		{
+			name: "with TLS config",
+			args: args{
+				ctx: context.Background(),
+				otlpConfig: &OTLP{
+					Protocol:    ptr("grpc"),
+					Endpoint:    ptr("localhost:4317"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(1000),
+					Certificate: ptr("testdata/server-certs/server.crt"),
+					Headers: []NameStringValuePair{
+						{Name: "test", Value: ptr("test1")},
+					},
+				},
+			},
+		},
+		{
+			name: "with TLS config and client key",
+			args: args{
+				ctx: context.Background(),
+				otlpConfig: &OTLP{
+					Protocol:          ptr("grpc"),
+					Endpoint:          ptr("localhost:4317"),
+					Compression:       ptr("gzip"),
+					Timeout:           ptr(1000),
+					Certificate:       ptr("testdata/server-certs/server.crt"),
+					ClientKey:         ptr("testdata/client-certs/client.key"),
+					ClientCertificate: ptr("testdata/client-certs/client.crt"),
+					Headers: []NameStringValuePair{
+						{Name: "test", Value: ptr("test1")},
+					},
+				},
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tlsMode := ""
+			if tt.args.otlpConfig.Insecure == nil || !*tt.args.otlpConfig.Insecure {
+				tlsMode = "TLS"
+			}
+			if tt.args.otlpConfig.ClientCertificate != nil && *tt.args.otlpConfig.ClientCertificate != "" {
+				tlsMode = "mTLS"
+			}
+			col, err := newGRPCTraceCollector(*tt.args.otlpConfig.Endpoint, tlsMode)
+			require.Nil(t, err)
+
+			exporter, err := otlpGRPCSpanExporter(tt.args.ctx, tt.args.otlpConfig)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Equal(t, tt.wantErr, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
+
+			input := tracetest.SpanStubs{
+				{
+					Name: "test-span",
+				},
+			}
+
+			require.NoError(t, exporter.ExportSpans(context.Background(), input.Snapshots()))
+			// Ensure everything is flushed.
+			require.NoError(t, exporter.Shutdown(context.Background()))
+
+			// verify the reception of the sent data item
+			require.Len(t, col.storage.data, 1)
+			col.srv.Stop()
+		})
+	}
+}
+
+// traceStorage stores uploaded OTLP trace data in their proto form.
+type traceStorage struct {
+	dataMu sync.Mutex
+	data   []*tpb.ResourceSpans
+}
+
+// Add adds the request to the Storage.
+func (s *traceStorage) Add(request *v1.ExportTraceServiceRequest) {
+	s.dataMu.Lock()
+	defer s.dataMu.Unlock()
+	s.data = append(s.data, request.ResourceSpans...)
+}
+
+// grpcTraceCollector is an OTLP gRPC server that collects all requests it receives.
+type grpcTraceCollector struct {
+	v1.UnimplementedTraceServiceServer
+
+	storage *traceStorage
+
+	listener net.Listener
+	srv      *grpc.Server
+}
+
+var _ v1.TraceServiceServer = (*grpcTraceCollector)(nil)
+
+// newGRPCTraceCollector returns a *grpcTraceCollector that is listening at the provided
+// endpoint.
+//
+// If endpoint is an empty string, the returned collector will be listening on
+// the localhost interface at an OS chosen port.
+func newGRPCTraceCollector(endpoint string, tlsMode string) (*grpcTraceCollector, error) {
+	if endpoint == "" {
+		endpoint = "localhost:0"
+	}
+
+	c := &grpcTraceCollector{
+		storage: &traceStorage{},
+	}
+
+	var err error
+	c.listener, err = net.Listen("tcp", endpoint)
+	if err != nil {
+		return nil, err
+	}
+
+	srv, err := createGRPCServer(tlsMode)
+	if err != nil {
+		return nil, err
+	}
+
+	c.srv = srv
+	v1.RegisterTraceServiceServer(c.srv, c)
+	go func() { _ = c.srv.Serve(c.listener) }()
+
+	return c, nil
+}
+
+// Export handles the export req.
+func (c *grpcTraceCollector) Export(
+	_ context.Context,
+	req *v1.ExportTraceServiceRequest,
+) (*v1.ExportTraceServiceResponse, error) {
+	c.storage.Add(req)
+
+	return &v1.ExportTraceServiceResponse{}, nil
 }
