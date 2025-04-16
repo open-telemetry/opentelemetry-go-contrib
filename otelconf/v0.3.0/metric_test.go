@@ -1482,7 +1482,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			require.Nil(t, err)
 
 			require.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{
+				require.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{
 					Resource: res,
 					ScopeMetrics: []metricdata.ScopeMetrics{
 						{
