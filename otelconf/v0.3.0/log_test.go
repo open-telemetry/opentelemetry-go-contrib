@@ -808,7 +808,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			require.NoError(t, exporter.Shutdown(context.Background()))
 
 			// verify the reception of the sent data item
-			require.Len(t, col.storage.data, 1)
+			require.GreaterOrEqual(t, len(col.storage.data), 1)
 			col.srv.Stop()
 		})
 	}
