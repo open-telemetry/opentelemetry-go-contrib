@@ -279,7 +279,7 @@ func TestSpanName(t *testing.T) {
 		route             string
 		requestPath       string
 		spanNameFormatter otelgin.SpanNameFormatter
-		expectedSpanName  string
+		wantSpanName      string
 	}{
 		// Test for standard methods
 		{http.MethodGet, "/user/:id", "/user/1", nil, "GET /user/:id"},
@@ -308,7 +308,7 @@ func TestSpanName(t *testing.T) {
 			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(tc.method, tc.requestPath, nil))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
-			assert.Equal(t, tc.expectedSpanName, sr.Ended()[0].Name(), "span name not correct")
+			assert.Equal(t, tc.wantSpanName, sr.Ended()[0].Name(), "span name not correct")
 		})
 	}
 }
