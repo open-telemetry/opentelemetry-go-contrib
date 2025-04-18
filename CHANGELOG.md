@@ -69,6 +69,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test` package, use `Version` instead. (#7077)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, use `Version` function instead. (#7084)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, use `Version` function instead. (#7085)
+- The deprecated `StreamClientInterceptor` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/interceptor.go`. (#7126)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test`, use `Version` function instead. (#7142)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/test`, use `Version` function instead. (#7086)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`, use `Version` function instead. (#7140)
