@@ -388,40 +388,6 @@ func TestHTML(t *testing.T) {
 	assert.Contains(t, tspan.Attributes(), attribute.String("go.template", "hello"))
 }
 
-func TestWithFilter(t *testing.T) {
-	t.Run("custom filter filtering route", func(t *testing.T) {
-		sr := tracetest.NewSpanRecorder()
-		otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
-
-		router := gin.New()
-		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
-		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
-		router.GET("/healthcheck", func(c *gin.Context) {})
-
-		r := httptest.NewRequest("GET", "/healthcheck", nil)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, r)
-		assert.Empty(t, sr.Ended())
-	})
-
-	t.Run("custom filter not filtering route", func(t *testing.T) {
-		sr := tracetest.NewSpanRecorder()
-		otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
-
-		router := gin.New()
-		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
-		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
-		router.GET("/user/:id", func(c *gin.Context) {})
-
-		r := httptest.NewRequest("GET", "/user/123", nil)
-		w := httptest.NewRecorder()
-
-		router.ServeHTTP(w, r)
-		assert.Len(t, sr.Ended(), 1)
-	})
-}
-
 func TestWithGinFilter(t *testing.T) {
 	t.Run("custom filter filtering route", func(t *testing.T) {
 		sr := tracetest.NewSpanRecorder()
@@ -429,7 +395,7 @@ func TestWithGinFilter(t *testing.T) {
 
 		router := gin.New()
 		f := func(c *gin.Context) bool { return c.Request.URL.Path != "/healthcheck" }
-		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
+		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
 		router.GET("/healthcheck", func(c *gin.Context) {})
 
 		r := httptest.NewRequest("GET", "/healthcheck", nil)
@@ -445,7 +411,7 @@ func TestWithGinFilter(t *testing.T) {
 
 		router := gin.New()
 		f := func(c *gin.Context) bool { return c.Request.URL.Path != "/user/:id" }
-		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
+		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
 		router.GET("/user/:id", func(c *gin.Context) {})
 
 		r := httptest.NewRequest("GET", "/user/123", nil)
@@ -458,27 +424,20 @@ func TestWithGinFilter(t *testing.T) {
 
 func TestMetrics(t *testing.T) {
 	tests := []struct {
-		name                        string
-		metricAttributeExtractor    func(*http.Request) []attribute.KeyValue
-		ginMetricAttributeExtractor func(*gin.Context) []attribute.KeyValue
+		name                     string
+		metricAttributeExtractor func(*gin.Context) []attribute.KeyValue
 	}{
 		{
-			name:                        "default",
-			metricAttributeExtractor:    nil,
-			ginMetricAttributeExtractor: nil,
+			name:                     "default",
+			metricAttributeExtractor: nil,
 		},
 		{
 			name: "with metric attributes callback",
-			metricAttributeExtractor: func(r *http.Request) []attribute.KeyValue {
+			metricAttributeExtractor: func(c *gin.Context) []attribute.KeyValue {
 				return []attribute.KeyValue{
 					attribute.String("key1", "value1"),
 					attribute.String("key2", "value"),
-					attribute.String("method", strings.ToUpper(r.Method)),
-				}
-			},
-			ginMetricAttributeExtractor: func(c *gin.Context) []attribute.KeyValue {
-				return []attribute.KeyValue{
-					attribute.String("key3", "value3"),
+					attribute.String("method", strings.ToUpper(c.Request.Method)),
 				}
 			},
 		},
@@ -493,7 +452,6 @@ func TestMetrics(t *testing.T) {
 			router.Use(otelgin.Middleware("foobar",
 				otelgin.WithMeterProvider(meterProvider),
 				otelgin.WithMetricAttributeFn(tt.metricAttributeExtractor),
-				otelgin.WithGinMetricAttributeFn(tt.ginMetricAttributeExtractor),
 			))
 			router.GET("/user/:id", func(c *gin.Context) {
 				id := c.Param("id")
@@ -526,10 +484,7 @@ func TestMetrics(t *testing.T) {
 			}
 
 			if tt.metricAttributeExtractor != nil {
-				attrs = append(attrs, tt.metricAttributeExtractor(r)...)
-			}
-			if tt.ginMetricAttributeExtractor != nil {
-				attrs = append(attrs, tt.ginMetricAttributeExtractor(c)...)
+				attrs = append(attrs, tt.metricAttributeExtractor(c)...)
 			}
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
