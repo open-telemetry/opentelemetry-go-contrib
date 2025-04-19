@@ -21,11 +21,9 @@ import (
 type config struct {
 	TracerProvider       oteltrace.TracerProvider
 	Propagators          propagation.TextMapPropagator
-	Filters              []Filter
 	GinFilters           []GinFilter
 	SpanNameFormatter    SpanNameFormatter
 	MeterProvider        metric.MeterProvider
-	MetricAttributeFn    MetricAttributeFn
 	GinMetricAttributeFn GinMetricAttributeFn
 }
 
@@ -49,19 +47,11 @@ var defaultSpanNameFormatter SpanNameFormatter = func(c *gin.Context) string {
 	return method
 }
 
-// Filter is a predicate used to determine whether a given http.request should
-// be traced. A Filter must return true if the request should be traced.
-type Filter func(*http.Request) bool
-
 // GinFilter filters an [net/http.Request] based on content of a [gin.Context].
 type GinFilter func(*gin.Context) bool
 
 // SpanNameFormatter is used by `WithSpanNameFormatter` to customize the request's span name.
 type SpanNameFormatter func(*gin.Context) string
-
-// MetricAttributeFn is used to extract additional attributes from the http.Request
-// and return them as a slice of attribute.KeyValue.
-type MetricAttributeFn func(*http.Request) []attribute.KeyValue
 
 // GinMetricAttributeFn is used to extract additional attributes from the gin.Context
 // and return them as a slice of attribute.KeyValue.
@@ -99,18 +89,6 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	})
 }
 
-// WithFilter adds a filter to the list of filters used by the handler.
-// If any filter indicates to exclude a request then the request will not be
-// traced. All gin and net/http filters must allow a request to be traced for a Span to be created.
-// If no filters are provided then all requests are traced.
-// Filters will be invoked for each processed request, it is advised to make them
-// simple and fast.
-func WithFilter(f ...Filter) Option {
-	return optionFunc(func(c *config) {
-		c.Filters = append(c.Filters, f...)
-	})
-}
-
 // WithGinFilter adds a gin filter to the list of filters used by the handler.
 func WithGinFilter(f ...GinFilter) Option {
 	return optionFunc(func(c *config) {
@@ -131,16 +109,6 @@ func WithSpanNameFormatter(f SpanNameFormatter) Option {
 func WithMeterProvider(mp metric.MeterProvider) Option {
 	return optionFunc(func(c *config) {
 		c.MeterProvider = mp
-	})
-}
-
-// WithMetricAttributeFn specifies a function that extracts additional attributes from the http.Request
-// and returns them as a slice of attribute.KeyValue.
-//
-// If attributes are duplicated between this method and `WithGinMetricAttributeFn`, the attributes in this method will be overridden.
-func WithMetricAttributeFn(f MetricAttributeFn) Option {
-	return optionFunc(func(c *config) {
-		c.MetricAttributeFn = f
 	})
 }
 

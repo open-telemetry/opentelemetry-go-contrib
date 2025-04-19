@@ -61,14 +61,6 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		requestStartTime := time.Now()
 
-		for _, f := range cfg.Filters {
-			if !f(c.Request) {
-				// Serve the request to the next middleware
-				// if a filter rejects the request.
-				c.Next()
-				return
-			}
-		}
 		for _, f := range cfg.GinFilters {
 			if !f(c) {
 				// Serve the request to the next middleware
@@ -122,9 +114,6 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 		// Record the server-side attributes.
 		var additionalAttributes []attribute.KeyValue
-		if cfg.MetricAttributeFn != nil {
-			additionalAttributes = append(additionalAttributes, cfg.MetricAttributeFn(c.Request)...)
-		}
 		if cfg.GinMetricAttributeFn != nil {
 			additionalAttributes = append(additionalAttributes, cfg.GinMetricAttributeFn(c)...)
 		}
