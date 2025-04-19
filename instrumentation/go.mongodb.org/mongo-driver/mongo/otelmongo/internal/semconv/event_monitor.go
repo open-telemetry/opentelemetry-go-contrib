@@ -44,6 +44,7 @@ func NewEventMonitor() EventMonitor {
 type AttributeOptions struct {
 	collectionName           string
 	commandAttributeDisabled bool
+	commandAttributes        []attribute.KeyValue
 }
 
 // AttributeOption is a function type that modifies AttributeOptions.
@@ -62,6 +63,13 @@ func WithCollectionName(collName string) AttributeOption {
 func WithCommandAttributeDisabled(disabled bool) AttributeOption {
 	return func(opts *AttributeOptions) {
 		opts.commandAttributeDisabled = disabled
+	}
+}
+
+// WithCommandAttributes is a functional option to set command attributes.
+func WithCommandAttributes(attrs ...attribute.KeyValue) AttributeOption {
+	return func(opts *AttributeOptions) {
+		opts.commandAttributes = attrs
 	}
 }
 
@@ -128,7 +136,13 @@ func commandStartedTraceAttrsV1260(evt *event.CommandStartedEvent, setters ...At
 	attrs = append(attrs, semconv1260.NetworkPeerAddress(net.JoinHostPort(hostname, strconv.Itoa(port))))
 
 	if !opts.commandAttributeDisabled {
-		attrs = append(attrs, semconv1260.DBQueryText(sanitizeCommand(evt.Command)))
+		if opts.commandAttributes != nil {
+			for _, attr := range opts.commandAttributes {
+				attrs = append(attrs, attr)
+			}
+		} else {
+			attrs = append(attrs, semconv1260.DBQueryText(sanitizeCommand(evt.Command)))
+		}
 	}
 
 	if opts.collectionName != "" {
@@ -157,7 +171,13 @@ func commandStartedTraceAttrsV1210(evt *event.CommandStartedEvent, setters ...At
 	attrs = append(attrs, semconv1210.NetPeerName(hostname))
 
 	if !opts.commandAttributeDisabled {
-		attrs = append(attrs, semconv1210.DBStatement(sanitizeCommand(evt.Command)))
+		if opts.commandAttributes != nil {
+			for _, attr := range opts.commandAttributes {
+				attrs = append(attrs, attr)
+			}
+		} else {
+			attrs = append(attrs, semconv1210.DBStatement(sanitizeCommand(evt.Command)))
+		}
 	}
 
 	if opts.collectionName != "" {
