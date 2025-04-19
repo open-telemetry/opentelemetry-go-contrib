@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Use Gin's own `ClientIP` method to detect the client's IP, which supports custom proxy headers in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6095)
 - Added test for Fields in `go.opentelemetry.io/contrib/propagators/jaeger`. (#7119)
 - Allow configuring samplers in `go.opentelemetry.io/contrib/otelconf`. (#7148)
+- Slog log bridge now sets `SeverityText` attribute using source value in `go.opentelemetry.io/contrib/bridges/otelslog`. (#7198)
 
 ### Changed
 
@@ -43,6 +44,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Update the Jaeger remote sampler to use "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2" in  `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#7061)
 - Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7186)
 - Update `http.route` attribute to support `request.Pattern` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7108)
+- Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6381)
 
 ### Fixed
 
@@ -56,6 +58,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Cleaned up indentations under `Unreleased/Fixed` of `./CHANGELOG.md`. (#7163)
 - Removed a duplicate instance of the `Changed` subheader under `1.18.0/0.43.0/0.12.0` in `./CHANGELOG.md`. (#7163)
 - Check for TLS related options to be set before creating TLS config `go.opentelemetry.io/contrib/otelconf`. (#6984)
+- Fixed handling of the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7215)
 
 ### Removed
 
