@@ -395,7 +395,7 @@ func TestWithGinFilter(t *testing.T) {
 
 		router := gin.New()
 		f := func(c *gin.Context) bool { return c.Request.URL.Path != "/healthcheck" }
-		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
+		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
 		router.GET("/healthcheck", func(c *gin.Context) {})
 
 		r := httptest.NewRequest("GET", "/healthcheck", nil)
@@ -411,7 +411,7 @@ func TestWithGinFilter(t *testing.T) {
 
 		router := gin.New()
 		f := func(c *gin.Context) bool { return c.Request.URL.Path != "/user/:id" }
-		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
+		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
 		router.GET("/user/:id", func(c *gin.Context) {})
 
 		r := httptest.NewRequest("GET", "/user/123", nil)
@@ -424,16 +424,16 @@ func TestWithGinFilter(t *testing.T) {
 
 func TestMetrics(t *testing.T) {
 	tests := []struct {
-		name                        string
-		ginMetricAttributeExtractor func(*gin.Context) []attribute.KeyValue
+		name                     string
+		metricAttributeExtractor func(*gin.Context) []attribute.KeyValue
 	}{
 		{
-			name:                        "default",
-			ginMetricAttributeExtractor: nil,
+			name:                     "default",
+			metricAttributeExtractor: nil,
 		},
 		{
 			name: "with metric attributes callback",
-			ginMetricAttributeExtractor: func(c *gin.Context) []attribute.KeyValue {
+			metricAttributeExtractor: func(c *gin.Context) []attribute.KeyValue {
 				return []attribute.KeyValue{
 					attribute.String("key1", "value1"),
 					attribute.String("key2", "value"),
@@ -451,7 +451,7 @@ func TestMetrics(t *testing.T) {
 			router := gin.New()
 			router.Use(otelgin.Middleware("foobar",
 				otelgin.WithMeterProvider(meterProvider),
-				otelgin.WithGinMetricAttributeFn(tt.ginMetricAttributeExtractor),
+				otelgin.WithMetricAttributeFn(tt.metricAttributeExtractor),
 			))
 			router.GET("/user/:id", func(c *gin.Context) {
 				id := c.Param("id")
@@ -483,8 +483,8 @@ func TestMetrics(t *testing.T) {
 				attribute.String("url.scheme", "http"),
 			}
 
-			if tt.ginMetricAttributeExtractor != nil {
-				attrs = append(attrs, tt.ginMetricAttributeExtractor(c)...)
+			if tt.metricAttributeExtractor != nil {
+				attrs = append(attrs, tt.metricAttributeExtractor(c)...)
 			}
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{

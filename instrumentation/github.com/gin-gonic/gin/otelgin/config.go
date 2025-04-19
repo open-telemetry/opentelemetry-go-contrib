@@ -19,12 +19,12 @@ import (
 )
 
 type config struct {
-	TracerProvider       oteltrace.TracerProvider
-	Propagators          propagation.TextMapPropagator
-	GinFilters           []GinFilter
-	SpanNameFormatter    SpanNameFormatter
-	MeterProvider        metric.MeterProvider
-	GinMetricAttributeFn GinMetricAttributeFn
+	TracerProvider    oteltrace.TracerProvider
+	Propagators       propagation.TextMapPropagator
+	Filters           []Filter
+	SpanNameFormatter SpanNameFormatter
+	MeterProvider     metric.MeterProvider
+	MetricAttributeFn MetricAttributeFn
 }
 
 // defaultSpanNameFormatter is the default span name formatter.
@@ -47,15 +47,15 @@ var defaultSpanNameFormatter SpanNameFormatter = func(c *gin.Context) string {
 	return method
 }
 
-// GinFilter filters an [net/http.Request] based on content of a [gin.Context].
-type GinFilter func(*gin.Context) bool
+// Filter filters an [net/http.Request] based on content of a [gin.Context].
+type Filter func(*gin.Context) bool
 
 // SpanNameFormatter is used by `WithSpanNameFormatter` to customize the request's span name.
 type SpanNameFormatter func(*gin.Context) string
 
-// GinMetricAttributeFn is used to extract additional attributes from the gin.Context
+// MetricAttributeFn is used to extract additional attributes from the gin.Context
 // and return them as a slice of attribute.KeyValue.
-type GinMetricAttributeFn func(*gin.Context) []attribute.KeyValue
+type MetricAttributeFn func(*gin.Context) []attribute.KeyValue
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -89,10 +89,10 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	})
 }
 
-// WithGinFilter adds a gin filter to the list of filters used by the handler.
-func WithGinFilter(f ...GinFilter) Option {
+// WithFilter adds a gin filter to the list of filters used by the handler.
+func WithFilter(f ...Filter) Option {
 	return optionFunc(func(c *config) {
-		c.GinFilters = append(c.GinFilters, f...)
+		c.Filters = append(c.Filters, f...)
 	})
 }
 
@@ -112,12 +112,12 @@ func WithMeterProvider(mp metric.MeterProvider) Option {
 	})
 }
 
-// WithGinMetricAttributeFn specifies a function that extracts additional attributes from the gin.Context
+// WithMetricAttributeFn specifies a function that extracts additional attributes from the gin.Context
 // and returns them as a slice of attribute.KeyValue.
 //
 // If attributes are duplicated between this method and `WithMetricAttributeFn`, the attributes in this method will be used.
-func WithGinMetricAttributeFn(f GinMetricAttributeFn) Option {
+func WithMetricAttributeFn(f MetricAttributeFn) Option {
 	return optionFunc(func(c *config) {
-		c.GinMetricAttributeFn = f
+		c.MetricAttributeFn = f
 	})
 }
