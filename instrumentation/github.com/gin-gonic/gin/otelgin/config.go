@@ -7,6 +7,8 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -27,6 +29,26 @@ type config struct {
 	GinMetricAttributeFn GinMetricAttributeFn
 }
 
+// defaultSpanNameFormatter is the default span name formatter.
+var defaultSpanNameFormatter SpanNameFormatter = func(c *gin.Context) string {
+	method := strings.ToUpper(c.Request.Method)
+	if !slices.Contains([]string{
+		http.MethodGet, http.MethodHead,
+		http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete,
+		http.MethodConnect, http.MethodOptions,
+		http.MethodTrace,
+	}, method) {
+		method = "HTTP"
+	}
+
+	if path := c.FullPath(); path != "" {
+		return method + " " + path
+	}
+
+	return method
+}
+
 // Filter is a predicate used to determine whether a given http.request should
 // be traced. A Filter must return true if the request should be traced.
 type Filter func(*http.Request) bool
@@ -34,8 +56,8 @@ type Filter func(*http.Request) bool
 // GinFilter filters an [net/http.Request] based on content of a [gin.Context].
 type GinFilter func(*gin.Context) bool
 
-// SpanNameFormatter is used to set span name by http.request.
-type SpanNameFormatter func(r *http.Request) string
+// SpanNameFormatter is used by `WithSpanNameFormatter` to customize the request's span name.
+type SpanNameFormatter func(*gin.Context) string
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
 // and return them as a slice of attribute.KeyValue.
@@ -98,7 +120,7 @@ func WithGinFilter(f ...GinFilter) Option {
 
 // WithSpanNameFormatter takes a function that will be called on every
 // request and the returned string will become the Span Name.
-func WithSpanNameFormatter(f func(r *http.Request) string) Option {
+func WithSpanNameFormatter(f SpanNameFormatter) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
 	})
