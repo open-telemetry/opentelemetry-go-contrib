@@ -852,8 +852,6 @@ func TestSampler(t *testing.T) {
 }
 
 func Test_otlpGRPCTraceExporter(t *testing.T) {
-	port, err := findRandomPort()
-	require.NoError(t, err)
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLP
@@ -869,7 +867,6 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
-					Endpoint:    ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression: ptr("gzip"),
 					Timeout:     ptr(1000),
 					Insecure:    ptr(true),
@@ -885,7 +882,6 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
-					Endpoint:    ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression: ptr("gzip"),
 					Timeout:     ptr(1000),
 					Certificate: ptr("testdata/server-certs/server.crt"),
@@ -901,7 +897,6 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:          ptr("grpc"),
-					Endpoint:          ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression:       ptr("gzip"),
 					Timeout:           ptr(1000),
 					Certificate:       ptr("testdata/server-certs/server.crt"),
@@ -916,6 +911,10 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			port, err := findRandomPort()
+			require.NoError(t, err)
+
+			tt.args.otlpConfig.Endpoint = ptr(fmt.Sprintf("localhost:%d", port))
 			tlsMode := ""
 			if tt.args.otlpConfig.Insecure == nil || !*tt.args.otlpConfig.Insecure {
 				tlsMode = "TLS"
@@ -996,12 +995,12 @@ func newGRPCTraceCollector(endpoint string, tlsMode string) (*grpcTraceCollector
 	var err error
 	c.listener, err = net.Listen("tcp", endpoint)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not listen on endpoint '%s': %w", endpoint, err)
 	}
 
 	srv, err := createGRPCServer(tlsMode)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not create gRPC server: %w", err)
 	}
 
 	c.srv = srv
