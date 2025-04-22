@@ -7,16 +7,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	tpb "go.opentelemetry.io/proto/otlp/trace/v1"
-	"google.golang.org/grpc"
 	"net"
 	"path/filepath"
 	"reflect"
 	"sync"
 	"testing"
 	"time"
+
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	tpb "go.opentelemetry.io/proto/otlp/trace/v1"
+	"google.golang.org/grpc"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -915,6 +916,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			require.NoError(t, err)
 
 			tt.args.otlpConfig.Endpoint = ptr(fmt.Sprintf("localhost:%d", port))
+
 			tlsMode := ""
 			if tt.args.otlpConfig.Insecure == nil || !*tt.args.otlpConfig.Insecure {
 				tlsMode = "TLS"

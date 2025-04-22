@@ -9,8 +9,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 	"net"
 	"os"
 	"path/filepath"
@@ -18,6 +16,9 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -708,8 +709,6 @@ func TestLogProcessor(t *testing.T) {
 }
 
 func Test_otlpGRPCLogExporter(t *testing.T) {
-	port, err := findRandomPort()
-	require.Nil(t, err)
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLP
@@ -726,7 +725,6 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
-					Endpoint:    ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Insecure:    ptr(true),
@@ -743,7 +741,6 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
-					Endpoint:    ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Certificate: ptr("testdata/server-certs/server.crt"),
@@ -760,7 +757,6 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: context.Background(),
 				otlpConfig: &OTLP{
 					Protocol:          ptr("grpc"),
-					Endpoint:          ptr(fmt.Sprintf("localhost:%d", port)),
 					Compression:       ptr("gzip"),
 					Timeout:           ptr(5000),
 					Certificate:       ptr("testdata/server-certs/server.crt"),
@@ -776,6 +772,11 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			port, err := findRandomPort()
+			require.NoError(t, err)
+
+			tt.args.otlpConfig.Endpoint = ptr(fmt.Sprintf("localhost:%d", port))
+
 			tlsMode := ""
 			if tt.args.otlpConfig.Insecure == nil || !*tt.args.otlpConfig.Insecure {
 				tlsMode = "TLS"
