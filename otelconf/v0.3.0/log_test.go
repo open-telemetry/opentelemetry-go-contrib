@@ -17,12 +17,8 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
@@ -33,6 +29,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 func TestLoggerProvider(t *testing.T) {

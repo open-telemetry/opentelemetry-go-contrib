@@ -14,21 +14,19 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	tpb "go.opentelemetry.io/proto/otlp/trace/v1"
-	"google.golang.org/grpc"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
+	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	tpb "go.opentelemetry.io/proto/otlp/trace/v1"
+	"google.golang.org/grpc"
 )
 
 func TestTracerPovider(t *testing.T) {

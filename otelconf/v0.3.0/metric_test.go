@@ -16,14 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"go.opentelemetry.io/otel/sdk/metric/metricdata"
-	v1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	"google.golang.org/grpc"
-
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -33,7 +27,11 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
+	v1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
+	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
+	"google.golang.org/grpc"
 )
 
 func TestMeterProvider(t *testing.T) {
@@ -1469,7 +1467,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				tlsMode = "mTLS"
 			}
 			col, err := newGRPCMetricCollector(*tt.args.otlpConfig.Endpoint, tlsMode)
-			require.Nil(t, err)
+			require.NoError(t, err)
 
 			exporter, err := otlpGRPCMetricExporter(tt.args.ctx, tt.args.otlpConfig)
 			if tt.wantErr != "" {
