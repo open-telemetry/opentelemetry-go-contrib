@@ -16,6 +16,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -26,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel/trace/noop"
 	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tpb "go.opentelemetry.io/proto/otlp/trace/v1"
-	"google.golang.org/grpc"
 )
 
 func TestTracerPovider(t *testing.T) {

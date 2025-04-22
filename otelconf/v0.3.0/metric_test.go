@@ -18,6 +18,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -31,7 +33,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	v1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
-	"google.golang.org/grpc"
 )
 
 func TestMeterProvider(t *testing.T) {
