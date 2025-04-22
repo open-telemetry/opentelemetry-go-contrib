@@ -785,7 +785,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				tlsMode = "mTLS"
 			}
 			col, err := newGRPCLogsCollector(*tt.args.otlpConfig.Endpoint, tlsMode)
-			require.Nil(t, err)
+			require.NoError(t, err)
 
 			exporter, err := otlpGRPCLogExporter(tt.args.ctx, tt.args.otlpConfig)
 			if tt.wantErr != "" {

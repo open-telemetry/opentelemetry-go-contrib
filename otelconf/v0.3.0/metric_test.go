@@ -1457,7 +1457,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			port, err := findRandomPort()
-			require.Nil(t, err)
+			require.NoError(t, err)
 
 			tt.args.otlpConfig.Endpoint = ptr(fmt.Sprintf("localhost:%d", port))
 
@@ -1480,7 +1480,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			}
 
 			res, err := resource.New(context.Background())
-			require.Nil(t, err)
+			require.NoError(t, err)
 
 			require.EventuallyWithT(t, func(collect *assert.CollectT) {
 				require.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{
