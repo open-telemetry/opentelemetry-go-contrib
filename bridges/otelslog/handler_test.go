@@ -94,6 +94,9 @@ func (r *recorder) Results() []map[string]any {
 		if lvl := r.Severity(); lvl != 0 {
 			m[slog.LevelKey] = lvl - 9
 		}
+		if st := r.SeverityText(); st != "" {
+			m["severityText"] = st
+		}
 		if body := r.Body(); body.Kind() != log.KindEmpty {
 			m[slog.MessageKey] = value2Result(body)
 		}
@@ -254,6 +257,7 @@ func TestSLogHandler(t *testing.T) {
 			checks: [][]check{{
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "INFO"),
 				hasAttr("any", "{data:1}"),
 				hasAttr("bool", true),
 				hasAttr("duration", int64(time.Minute)),
@@ -270,16 +274,18 @@ func TestSLogHandler(t *testing.T) {
 			name:        "multi-messages",
 			explanation: withSource("this test expects multiple independent messages"),
 			f: func(l *slog.Logger) {
-				l.Info("one")
-				l.Info("two")
+				l.Warn("one")
+				l.Debug("two")
 			},
 			checks: [][]check{{
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "WARN"),
 				hasAttr(slog.MessageKey, "one"),
 			}, {
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "DEBUG"),
 				hasAttr(slog.MessageKey, "two"),
 			}},
 		},
@@ -346,6 +352,7 @@ func TestSLogHandler(t *testing.T) {
 			checks: [][]check{{
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "INFO"),
 				hasAttr(slog.MessageKey, "msg"),
 				missingKey("a"),
 				missingKey("c"),
