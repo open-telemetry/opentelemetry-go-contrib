@@ -14,7 +14,7 @@ import (
 var expectedGoVersion string
 
 func main() {
-	expectedGoVersion = os.Getenv("EXPECTED_GO_VERSION")
+	expectedGoVersion = os.Getenv("MINIMUM_GO_VERSION")
 	if expectedGoVersion == "" {
 		log.Fatal("MINIMUM_GO_VERSION environment variable is not set")
 	}
