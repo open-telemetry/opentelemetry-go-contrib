@@ -66,6 +66,7 @@ type SpanNameFormatter func(*gin.Context) string
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
 // and return them as a slice of attribute.KeyValue.
+// Deprecated: use GinMetricAttributeFn instead.
 // v0.61.0 is the last version to support this type.
 // v0.62.0 will remove this type.
 type MetricAttributeFn func(*http.Request) []attribute.KeyValue
