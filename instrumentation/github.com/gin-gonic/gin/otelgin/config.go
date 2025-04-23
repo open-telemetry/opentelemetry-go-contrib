@@ -51,9 +51,14 @@ var defaultSpanNameFormatter SpanNameFormatter = func(c *gin.Context) string {
 
 // Filter is a predicate used to determine whether a given http.request should
 // be traced. A Filter must return true if the request should be traced.
+// Deprecated: use GinFilter instead.
+// v0.61.0 is the last version to support this.
+// v0.62.0 will remove this type.
 type Filter func(*http.Request) bool
 
 // GinFilter filters an [net/http.Request] based on content of a [gin.Context].
+// v0.62.0 is the last version to support this type.
+// v0.63.0 will rename this type to [Filter] and remove the old type.
 type GinFilter func(*gin.Context) bool
 
 // SpanNameFormatter is used by `WithSpanNameFormatter` to customize the request's span name.
@@ -61,10 +66,14 @@ type SpanNameFormatter func(*gin.Context) string
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
 // and return them as a slice of attribute.KeyValue.
+// v0.61.0 is the last version to support this type.
+// v0.62.0 will remove this type.
 type MetricAttributeFn func(*http.Request) []attribute.KeyValue
 
 // GinMetricAttributeFn is used to extract additional attributes from the gin.Context
 // and return them as a slice of attribute.KeyValue.
+// v0.62.0 is the last version to support this type.
+// v0.63.0 will rename this type to [MetricAttributeFn] and remove the old type.
 type GinMetricAttributeFn func(*gin.Context) []attribute.KeyValue
 
 // Option specifies instrumentation configuration options.
@@ -105,6 +114,9 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 // If no filters are provided then all requests are traced.
 // Filters will be invoked for each processed request, it is advised to make them
 // simple and fast.
+// Deprecated: use WithGinFilter instead.
+// v0.61.0 is the last version to support this.
+// v0.62.0 will remove this function.
 func WithFilter(f ...Filter) Option {
 	return optionFunc(func(c *config) {
 		c.Filters = append(c.Filters, f...)
@@ -112,6 +124,8 @@ func WithFilter(f ...Filter) Option {
 }
 
 // WithGinFilter adds a gin filter to the list of filters used by the handler.
+// v0.62.0 is the last version to support the old WithGinFilter method.
+// v0.63.0 will rename this method to WithFilter and remove the old method.
 func WithGinFilter(f ...GinFilter) Option {
 	return optionFunc(func(c *config) {
 		c.GinFilters = append(c.GinFilters, f...)
@@ -138,6 +152,9 @@ func WithMeterProvider(mp metric.MeterProvider) Option {
 // and returns them as a slice of attribute.KeyValue.
 //
 // If attributes are duplicated between this method and `WithGinMetricAttributeFn`, the attributes in this method will be overridden.
+// Deprecated: use WithGinMetricAttributeFn instead.
+// v0.61.0 is the last version to support this function.
+// v0.62.0 will remove this function.
 func WithMetricAttributeFn(f MetricAttributeFn) Option {
 	return optionFunc(func(c *config) {
 		c.MetricAttributeFn = f
@@ -148,6 +165,8 @@ func WithMetricAttributeFn(f MetricAttributeFn) Option {
 // and returns them as a slice of attribute.KeyValue.
 //
 // If attributes are duplicated between this method and `WithMetricAttributeFn`, the attributes in this method will be used.
+// v0.62.0 is the last version to support this function.
+// v0.63.0 will rename this function to WithMetricAttributeFn and remove the old function.
 func WithGinMetricAttributeFn(f GinMetricAttributeFn) Option {
 	return optionFunc(func(c *config) {
 		c.GinMetricAttributeFn = f
