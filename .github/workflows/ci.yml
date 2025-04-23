@@ -53,7 +53,7 @@ jobs:
     - name: Generate
       run: make generate
     - name: Run linters
-      run: make toolchain-check license-check lint vanity-import-check
+      run: make toolchain-check license-check lint vanity-import-check verify-goversion
     - name: Build
       run: make build
     - name: Check clean repository
