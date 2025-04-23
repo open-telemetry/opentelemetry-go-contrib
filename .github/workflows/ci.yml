@@ -15,6 +15,12 @@ env:
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
   DEFAULT_GO_VERSION: "~1.24.0"
+
+  # Minimum Go version to use for the project. This should be the minimum
+  # version of Go that the project supports. This is used to ensure that
+  # the code is compatible with the minimum version of Go.
+  # see: https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/tools/verifygoversion
+  MINIMUM_GO_VERSION: "go 1.23.0"
 jobs:
   lint:
     runs-on: ubuntu-latest

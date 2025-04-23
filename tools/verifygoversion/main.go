@@ -1,6 +1,7 @@
-package main
+package main // import "go.opentelemetry.io/contrib/tools/verifygoversion"
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -8,18 +9,30 @@ import (
 	"strings"
 )
 
-const expectedGoVersion = "go 1.23.0"
+var expectedGoVersion string
 
 func main() {
-	if err := verifyGoVersion(); err != nil {
+	expectedGoVersion = os.Getenv("MINIMUM_GO_VERSION")
+	if expectedGoVersion == "" {
+		log.Fatal("MINIMUM_GO_VERSION environment variable is not set")
+	}
+
+	root, err := os.Getwd()
+	if err != nil {
 		log.Fatal(err)
+	}
+
+	log.Println("Current working directory:", root)
+
+	if err := verifyGoVersion(root); err != nil {
+		os.Exit(1)
 	}
 }
 
-func verifyGoVersion() error {
+func verifyGoVersion(root string) error {
 	var modFiles []string
 
-	err := filepath.Walk(".", func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -31,21 +44,21 @@ func verifyGoVersion() error {
 		return nil
 	})
 	if err != nil {
-		return nil
+		return fmt.Errorf("error walking the path %q: %v", root, err)
 	}
 	if len(modFiles) == 0 {
-		return fmt.Errorf("the ")
+		return fmt.Errorf("there is no go.mod file in the current directory")
 	}
 
 	for _, file := range modFiles {
 		bytes, err := os.ReadFile(file)
 		if err != nil {
-			return err
+			err = errors.Join(err, fmt.Errorf("error reading %s: %v", file, err))
 		}
 
 		content := string(bytes)
 		if strings.Contains(content, "toolchain") {
-			return fmt.Errorf("xxx")
+			err = errors.Join(err, fmt.Errorf("toolchain is not supported in %s", file))
 		}
 
 		contents := strings.Split(content, "\n")
@@ -56,16 +69,22 @@ func verifyGoVersion() error {
 			if strings.HasPrefix(line, "go ") {
 				goVersionFound = true
 				if line != expectedGoVersion {
-					return fmt.Errorf("xxxx")
+					err = errors.Join(err, fmt.Errorf("expected %s in %s, but found %s", expectedGoVersion, file, line))
 				}
 				break
 			}
 		}
 
 		if !goVersionFound {
-			return fmt.Errorf("xxxx")
+			err = errors.Join(err, fmt.Errorf("expected %s in %s, but not found", expectedGoVersion, file))
+		}
+
+		if err != nil {
+			log.Println("Verification failed:", err)
+		} else {
+			log.Println("Verification succeeded:", file)
 		}
 	}
 
-	return nil
+	return err
 }
