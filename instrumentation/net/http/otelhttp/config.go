@@ -179,7 +179,7 @@ func WithMessageEvents(events ...event) Option {
 //
 // When using [http.ServeMux] (or any middleware that sets the Pattern of [http.Request]),
 // the span name formatter will run twice. Once when the span is created, and
-// once after the middleware, so the pattern can be used.
+// second time after the middleware, so the pattern can be used.
 func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
