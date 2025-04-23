@@ -1,3 +1,11 @@
+github.com/MrAlias/semconv-go v0.0.0-20250423175828-6e12f68bba93 h1:KTRJAnSqrCVeMcvnALrpyqSzIulOSdRvdDaufVo/Lx8=
+github.com/MrAlias/semconv-go v0.0.0-20250423175828-6e12f68bba93/go.mod h1:WttzAU035NFUz87x02joKWkfKgjA5CkcYPIduTRGHNI=
+github.com/MrAlias/semconv-go v0.0.0-20250423182713-dbae8bcc6cf4 h1:wBQ66sUvbSiVEFiGPVHiw0INW6KItxwY8RZuvONe3z0=
+github.com/MrAlias/semconv-go v0.0.0-20250423182713-dbae8bcc6cf4/go.mod h1:WttzAU035NFUz87x02joKWkfKgjA5CkcYPIduTRGHNI=
+github.com/MrAlias/semconv-go v0.0.0-20250423184450-beb08c266ed0 h1:r2lGWFKrBs30m7bo5sezjE++cuPJhZsogjgM7f1P0J4=
+github.com/MrAlias/semconv-go v0.0.0-20250423184450-beb08c266ed0/go.mod h1:WttzAU035NFUz87x02joKWkfKgjA5CkcYPIduTRGHNI=
+github.com/MrAlias/semconv-go v0.0.0-20250423184919-541c4b3517ee h1:m7DtUMvggKI+bMP6gxYVf4wCRrZsAr9YEEYblgUQm4Q=
+github.com/MrAlias/semconv-go v0.0.0-20250423184919-541c4b3517ee/go.mod h1:WttzAU035NFUz87x02joKWkfKgjA5CkcYPIduTRGHNI=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
