@@ -75,14 +75,6 @@ func TestExtract(t *testing.T) {
 			wantSpanID:  "1234567890abcdef",
 			wantSampled: false,
 		},
-		// {
-		// 	name:        "Invalid Sampled value",
-		// 	headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=maybe",
-		// 	wantValid:   true,
-		// 	wantTraceID: "abcdef121234567890abcdef12345678",
-		// 	wantSpanID:  "1234567890abcdef",
-		// 	wantSampled: false,
-		// },
 		{
 			name:      "Malformed key-value pair - missing '='",
 			headerVal: "Root=1-abcdef12-1234567890abcdef12345678;BrokenKeyValue;Sampled=1",
