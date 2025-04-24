@@ -4,12 +4,13 @@
 // Package xray provides an OpenTelemetry propagator for the AWS XRAY
 // propagation format.
 package xray // import "go.opentelemetry.io/contrib/propagators/aws/xray"
-
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -18,9 +19,11 @@ const (
 	traceHeaderKey       = "X-Amzn-Trace-Id"
 	traceHeaderDelimiter = ";"
 	kvDelimiter          = "="
+	lineageDelimiter     = ":"
 	traceIDKey           = "Root"
 	sampleFlagKey        = "Sampled"
 	parentIDKey          = "Parent"
+	lineageKey           = "Lineage"
 	traceIDVersion       = "1"
 	traceIDDelimiter     = "-"
 	isSampled            = "1"
@@ -33,6 +36,14 @@ const (
 	traceIDDelimitterIndex2 = 10
 	traceIDFirstPartLength  = 8
 	sampledFlagLength       = 1
+
+	lineageMaxLength   = 18
+	lineageMinLength   = 12
+	lineageHashLength  = 8
+	lineageMaxCounter1 = 32767
+	lineageMaxCounter2 = 255
+	lineageMinCounter  = 0
+	invalidLineage     = "-1:11111111:0"
 )
 
 var (
@@ -68,34 +79,45 @@ func (xray Propagator) Inject(ctx context.Context, carrier propagation.TextMapCa
 	if sc.TraceFlags() == traceFlagSampled {
 		samplingFlag = isSampled
 	}
+
 	headers := []string{
 		traceIDKey, kvDelimiter, xrayTraceID, traceHeaderDelimiter, parentIDKey,
 		kvDelimiter, parentID.String(), traceHeaderDelimiter, sampleFlagKey, kvDelimiter, samplingFlag,
 	}
 
-	carrier.Set(traceHeaderKey, strings.Join(headers, ""))
+	contextBaggage := baggage.FromContext(ctx)
+	lineage := contextBaggage.Member(lineageKey)
+
+	if lineage.Key() != "" {
+		headers = append(headers, traceHeaderDelimiter, lineageKey, kvDelimiter, lineage.Value())
+	}
+
+	carrier.Set(traceHeaderKey, strings.Join(headers, "")[:256])
 }
 
 // Extract gets a context from the carrier if it contains AWS X-Ray headers.
 func (xray Propagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	// extract tracing information
 	if header := carrier.Get(traceHeaderKey); header != "" {
-		sc, err := extract(header)
+		newContext, sc, err := extract(ctx, header)
 		if err == nil && sc.IsValid() {
-			return trace.ContextWithRemoteSpanContext(ctx, sc)
+			return trace.ContextWithRemoteSpanContext(newContext, sc)
 		}
 	}
 	return ctx
 }
 
 // extract extracts Span Context from context.
-func extract(headerVal string) (trace.SpanContext, error) {
+func extract(ctx context.Context, headerVal string) (context.Context, trace.SpanContext, error) {
 	var (
 		scc            = trace.SpanContextConfig{}
 		err            error
 		delimiterIndex int
 		part           string
 	)
+
+	currBaggage := baggage.FromContext(ctx)
+
 	pos := 0
 	for pos < len(headerVal) {
 		delimiterIndex = indexOf(headerVal, traceHeaderDelimiter, pos)
@@ -109,26 +131,38 @@ func extract(headerVal string) (trace.SpanContext, error) {
 		}
 		equalsIndex := strings.Index(part, kvDelimiter)
 		if equalsIndex < 0 {
-			return empty, errInvalidTraceHeader
+			return ctx, empty, errInvalidTraceHeader
 		}
 		value := part[equalsIndex+1:]
 		if strings.HasPrefix(part, traceIDKey) {
 			scc.TraceID, err = parseTraceID(value)
 			if err != nil {
-				return empty, err
+				return ctx, empty, err
 			}
 		} else if strings.HasPrefix(part, parentIDKey) {
 			// extract parentId
 			scc.SpanID, err = trace.SpanIDFromHex(value)
 			if err != nil {
-				return empty, errInvalidSpanIDLength
+				return ctx, empty, errInvalidSpanIDLength
 			}
 		} else if strings.HasPrefix(part, sampleFlagKey) {
 			// extract traceflag
 			scc.TraceFlags = parseTraceFlag(value)
+		} else if strings.HasPrefix(part, lineageKey) {
+			// extract lineage
+			lineageHeader := parseLineageHeader(value)
+			if isValidLineage(lineageHeader) {
+				lineageBaggage, _ := baggage.NewMember(lineageKey, lineageHeader)
+				currBaggage, _ = currBaggage.SetMember(lineageBaggage)
+			}
 		}
 	}
-	return trace.NewSpanContext(scc), nil
+
+	if currBaggage.Len() > 0 {
+		ctx = baggage.ContextWithBaggage(ctx, currBaggage)
+	}
+
+	return ctx, trace.NewSpanContext(scc), nil
 }
 
 // indexOf returns position of the first occurrence of a substr in str starting at pos index.
@@ -167,6 +201,40 @@ func parseTraceFlag(xraySampledFlag string) trace.TraceFlags {
 		return traceFlagNone
 	}
 	return trace.FlagsSampled
+}
+
+func parseLineageHeader(xrayLineageHeader string) string {
+	numOfDelimiters := strings.Count(xrayLineageHeader, lineageDelimiter)
+	if len(xrayLineageHeader) < lineageMinLength ||
+		len(xrayLineageHeader) > lineageMaxLength ||
+		numOfDelimiters != 2 {
+		return invalidLineage
+	}
+
+	return xrayLineageHeader
+}
+
+func isValidLineage(lineage string) bool {
+	split := strings.Split(lineage, lineageDelimiter)
+	hash := split[1]
+	counter1 := parseIntWithBase(split[0], 10)
+	counter2 := parseIntWithBase(split[2], 10)
+
+	isHashValid := len(hash) == lineageHashLength && parseIntWithBase(hash, 16) != -1
+	isValidCounter2 := counter2 <= lineageMaxCounter2 && counter2 >= lineageMinCounter
+	isValidCounter1 := counter1 <= lineageMaxCounter1 && counter1 >= lineageMinCounter
+
+	return isHashValid && isValidCounter1 && isValidCounter2
+}
+
+func parseIntWithBase(s string, base int) int64 {
+	val, err := strconv.ParseInt(s, base, 64)
+
+	if err != nil {
+		return -1
+	}
+
+	return val
 }
 
 // Fields returns list of fields used by HTTPTextFormat.
