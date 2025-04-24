@@ -7,17 +7,15 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
 	"net"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"sync"
 	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -942,9 +940,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				},
 			}
 
-			require.EventuallyWithT(t, func(collect *assert.CollectT) {
-				require.NoError(collect, exporter.ExportSpans(context.Background(), input.Snapshots()))
-			}, 10*time.Second, 1*time.Second)
+			require.NoError(t, exporter.ExportSpans(context.Background(), input.Snapshots()))
 
 			// Ensure everything is flushed.
 			require.NoError(t, exporter.Shutdown(context.Background()))

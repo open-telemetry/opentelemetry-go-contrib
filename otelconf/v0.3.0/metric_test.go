@@ -1482,27 +1482,25 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			res, err := resource.New(context.Background())
 			require.NoError(t, err)
 
-			require.EventuallyWithT(t, func(collect *assert.CollectT) {
-				require.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{
-					Resource: res,
-					ScopeMetrics: []metricdata.ScopeMetrics{
-						{
-							Metrics: []metricdata.Metrics{
-								{
-									Name: "test-metric",
-									Data: metricdata.Gauge[int64]{
-										DataPoints: []metricdata.DataPoint[int64]{
-											{
-												Value: 1,
-											},
+			require.NoError(t, exporter.Export(context.Background(), &metricdata.ResourceMetrics{
+				Resource: res,
+				ScopeMetrics: []metricdata.ScopeMetrics{
+					{
+						Metrics: []metricdata.Metrics{
+							{
+								Name: "test-metric",
+								Data: metricdata.Gauge[int64]{
+									DataPoints: []metricdata.DataPoint[int64]{
+										{
+											Value: 1,
 										},
 									},
 								},
 							},
 						},
 					},
-				}))
-			}, 10*time.Second, 1*time.Second)
+				},
+			}))
 
 			// Ensure everything is flushed.
 			require.NoError(t, exporter.Shutdown(context.Background()))

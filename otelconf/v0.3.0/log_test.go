@@ -8,6 +8,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"net"
 	"os"
 	"path/filepath"
@@ -15,12 +19,6 @@ import (
 	"strings"
 	"sync"
 	"testing"
-	"time"
-
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
@@ -800,11 +798,9 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				Body: log.StringValue("test"),
 			}
 
-			require.EventuallyWithT(t, func(collect *assert.CollectT) {
-				require.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{
-					logFactory.NewRecord(),
-				}))
-			}, 10*time.Second, 1*time.Second)
+			require.NoError(t, exporter.Export(context.Background(), []sdklog.Record{
+				logFactory.NewRecord(),
+			}))
 
 			// Ensure everything is flushed.
 			require.NoError(t, exporter.Shutdown(context.Background()))
