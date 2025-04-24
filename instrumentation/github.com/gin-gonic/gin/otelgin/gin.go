@@ -47,13 +47,16 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	if cfg.MeterProvider == nil {
 		cfg.MeterProvider = otel.GetMeterProvider()
 	}
+	if cfg.SpanNameFormatter == nil {
+		cfg.SpanNameFormatter = defaultSpanNameFormatter
+	}
+
 	meter := cfg.MeterProvider.Meter(
 		ScopeName,
 		metric.WithInstrumentationVersion(Version()),
 	)
 
 	sc := semconv.NewHTTPServer(meter)
-	var hs semconv.HTTPServer
 
 	return func(c *gin.Context) {
 		requestStartTime := time.Now()
@@ -87,16 +90,12 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}
 
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(hs.RequestTraceAttrs(service, c.Request, requestTraceAttrOpts)...),
-			oteltrace.WithAttributes(hs.Route(c.FullPath())),
+			oteltrace.WithAttributes(sc.RequestTraceAttrs(service, c.Request, requestTraceAttrOpts)...),
+			oteltrace.WithAttributes(sc.Route(c.FullPath())),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
-		var spanName string
-		if cfg.SpanNameFormatter == nil {
-			spanName = c.FullPath()
-		} else {
-			spanName = cfg.SpanNameFormatter(c.Request)
-		}
+
+		spanName := cfg.SpanNameFormatter(c)
 		if spanName == "" {
 			spanName = fmt.Sprintf("HTTP %s route not found", c.Request.Method)
 		}
@@ -110,7 +109,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Next()
 
 		status := c.Writer.Status()
-		span.SetStatus(hs.Status(status))
+		span.SetStatus(sc.Status(status))
 		if status > 0 {
 			span.SetAttributes(semconv.HTTPStatusCode(status))
 		}
