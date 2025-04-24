@@ -1455,10 +1455,10 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			port, err := findRandomPort()
+			n, err := net.Listen("tcp", "localhost:0")
 			require.NoError(t, err)
 
-			tt.args.otlpConfig.Endpoint = ptr(fmt.Sprintf("localhost:%d", port))
+			tt.args.otlpConfig.Endpoint = ptr(strings.ReplaceAll(n.Addr().String(), "127.0.0.1", "localhost"))
 
 			tlsMode := ""
 			if tt.args.otlpConfig.Insecure == nil || !*tt.args.otlpConfig.Insecure {
@@ -1467,8 +1467,9 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			if tt.args.otlpConfig.ClientCertificate != nil && *tt.args.otlpConfig.ClientCertificate != "" {
 				tlsMode = "mTLS"
 			}
-			col, err := newGRPCMetricCollector(*tt.args.otlpConfig.Endpoint, tlsMode)
+			col, err := newGRPCMetricCollector(n, tlsMode)
 			require.NoError(t, err)
+			defer col.srv.Stop()
 
 			exporter, err := otlpGRPCMetricExporter(tt.args.ctx, tt.args.otlpConfig)
 			if tt.wantErr != "" {
@@ -1508,7 +1509,6 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 
 			// verify the reception of the sent data item
 			require.GreaterOrEqual(t, len(col.storage.data), 1)
-			col.srv.Stop()
 		})
 	}
 }
@@ -1543,19 +1543,10 @@ var _ v1.MetricsServiceServer = (*grpcMetricCollector)(nil)
 //
 // If endpoint is an empty string, the returned collector will be listening on
 // the localhost interface at an OS chosen port.
-func newGRPCMetricCollector(endpoint string, tlsMode string) (*grpcMetricCollector, error) {
-	if endpoint == "" {
-		endpoint = "localhost:0"
-	}
-
+func newGRPCMetricCollector(listener net.Listener, tlsMode string) (*grpcMetricCollector, error) {
 	c := &grpcMetricCollector{
-		storage: &metricStorage{},
-	}
-
-	var err error
-	c.listener, err = net.Listen("tcp", endpoint)
-	if err != nil {
-		return nil, err
+		storage:  &metricStorage{},
+		listener: listener,
 	}
 
 	srv, err := createGRPCServer(tlsMode)

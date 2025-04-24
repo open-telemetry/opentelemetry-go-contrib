@@ -8,11 +8,11 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"net"
 	"os"
 	"path/filepath"
 	"reflect"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -771,10 +771,10 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			port, err := findRandomPort()
+			n, err := net.Listen("tcp", "localhost:0")
 			require.NoError(t, err)
 
-			tt.args.otlpConfig.Endpoint = ptr(fmt.Sprintf("localhost:%d", port))
+			tt.args.otlpConfig.Endpoint = ptr(strings.ReplaceAll(n.Addr().String(), "127.0.0.1", "localhost"))
 
 			tlsMode := ""
 			if tt.args.otlpConfig.Insecure == nil || !*tt.args.otlpConfig.Insecure {
@@ -783,8 +783,10 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			if tt.args.otlpConfig.ClientCertificate != nil && *tt.args.otlpConfig.ClientCertificate != "" {
 				tlsMode = "mTLS"
 			}
-			col, err := newGRPCLogsCollector(*tt.args.otlpConfig.Endpoint, tlsMode)
+
+			col, err := newGRPCLogsCollector(n, tlsMode)
 			require.NoError(t, err)
+			defer col.srv.Stop()
 
 			exporter, err := otlpGRPCLogExporter(tt.args.ctx, tt.args.otlpConfig)
 			if tt.wantErr != "" {
@@ -809,7 +811,6 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 
 			// verify the reception of the sent data item
 			require.GreaterOrEqual(t, len(col.storage.data), 1)
-			col.srv.Stop()
 		})
 	}
 }
@@ -844,19 +845,10 @@ var _ collogpb.LogsServiceServer = (*grpcLogsCollector)(nil)
 //
 // If endpoint is an empty string, the returned collector will be listening on
 // the localhost interface at an OS chosen port.
-func newGRPCLogsCollector(endpoint string, tlsMode string) (*grpcLogsCollector, error) {
-	if endpoint == "" {
-		endpoint = "localhost:0"
-	}
-
+func newGRPCLogsCollector(listener net.Listener, tlsMode string) (*grpcLogsCollector, error) {
 	c := &grpcLogsCollector{
-		storage: &logsStorage{},
-	}
-
-	var err error
-	c.listener, err = net.Listen("tcp", endpoint)
-	if err != nil {
-		return nil, err
+		storage:  &logsStorage{},
+		listener: listener,
 	}
 
 	srv, err := createGRPCServer(tlsMode)
