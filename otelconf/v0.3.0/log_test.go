@@ -805,8 +805,8 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
 
-			col, err := newGRPCLogsCollector(n, serverOpts)
-			require.NoError(t, err)
+			col := newGRPCLogsCollector(n, serverOpts)
+
 			t.Cleanup(func() {
 				col.srv.Stop()
 			})
@@ -845,7 +845,7 @@ var _ collogpb.LogsServiceServer = (*grpcLogsCollector)(nil)
 //
 // If endpoint is an empty string, the returned collector will be listening on
 // the localhost interface at an OS chosen port.
-func newGRPCLogsCollector(listener net.Listener, serverOptions []grpc.ServerOption) (*grpcLogsCollector, error) {
+func newGRPCLogsCollector(listener net.Listener, serverOptions []grpc.ServerOption) *grpcLogsCollector {
 	c := &grpcLogsCollector{
 		listener: listener,
 		srv:      grpc.NewServer(serverOptions...),
@@ -854,7 +854,7 @@ func newGRPCLogsCollector(listener net.Listener, serverOptions []grpc.ServerOpti
 	collogpb.RegisterLogsServiceServer(c.srv, c)
 	go func() { _ = c.srv.Serve(c.listener) }()
 
-	return c, nil
+	return c
 }
 
 // Export handles the export req.

@@ -9,7 +9,6 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"google.golang.org/grpc/credentials"
 	"net"
 	"net/http"
 	"os"
@@ -22,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -1497,8 +1497,8 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
 
-			col, err := newGRPCMetricCollector(n, serverOpts)
-			require.NoError(t, err)
+			col := newGRPCMetricCollector(n, serverOpts)
+
 			t.Cleanup(func() {
 				col.srv.Stop()
 			})
@@ -1552,7 +1552,7 @@ var _ v1.MetricsServiceServer = (*grpcMetricCollector)(nil)
 //
 // If endpoint is an empty string, the returned collector will be listening on
 // the localhost interface at an OS chosen port.
-func newGRPCMetricCollector(listener net.Listener, serverOptions []grpc.ServerOption) (*grpcMetricCollector, error) {
+func newGRPCMetricCollector(listener net.Listener, serverOptions []grpc.ServerOption) *grpcMetricCollector {
 	c := &grpcMetricCollector{
 		listener: listener,
 		srv:      grpc.NewServer(serverOptions...),
@@ -1561,7 +1561,7 @@ func newGRPCMetricCollector(listener net.Listener, serverOptions []grpc.ServerOp
 	v1.RegisterMetricsServiceServer(c.srv, c)
 	go func() { _ = c.srv.Serve(c.listener) }()
 
-	return c, nil
+	return c
 }
 
 // Export handles the export req.

@@ -8,7 +8,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"google.golang.org/grpc/credentials"
 	"net"
 	"os"
 	"path/filepath"
@@ -20,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -953,8 +953,8 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
 
-			col, err := newGRPCTraceCollector(n, serverOpts)
-			require.NoError(t, err)
+			col := newGRPCTraceCollector(n, serverOpts)
+
 			t.Cleanup(func() {
 				col.srv.Stop()
 			})
@@ -993,7 +993,7 @@ var _ v1.TraceServiceServer = (*grpcTraceCollector)(nil)
 //
 // If endpoint is an empty string, the returned collector will be listening on
 // the localhost interface at an OS chosen port.
-func newGRPCTraceCollector(listener net.Listener, serverOptions []grpc.ServerOption) (*grpcTraceCollector, error) {
+func newGRPCTraceCollector(listener net.Listener, serverOptions []grpc.ServerOption) *grpcTraceCollector {
 	c := &grpcTraceCollector{
 		listener: listener,
 		srv:      grpc.NewServer(serverOptions...),
@@ -1002,7 +1002,7 @@ func newGRPCTraceCollector(listener net.Listener, serverOptions []grpc.ServerOpt
 	v1.RegisterTraceServiceServer(c.srv, c)
 	go func() { _ = c.srv.Serve(c.listener) }()
 
-	return c, nil
+	return c
 }
 
 // Export handles the export req.
