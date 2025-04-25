@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
@@ -63,9 +63,9 @@ func NewServerHandler(opts ...Option) stats.Handler {
 
 	var err error
 	h.duration, err = meter.Float64Histogram(
-		"rpc.server.duration",
-		metric.WithDescription("Measures the duration of inbound RPC."),
-		metric.WithUnit("ms"),
+		semconv.RPCServerDurationName,
+		metric.WithDescription(semconv.RPCServerDurationDescription),
+		metric.WithUnit(semconv.RPCServerDurationUnit),
 	)
 	if err != nil {
 		otel.Handle(err)
@@ -75,9 +75,9 @@ func NewServerHandler(opts ...Option) stats.Handler {
 	}
 
 	h.inSize, err = meter.Int64Histogram(
-		"rpc.server.request.size",
-		metric.WithDescription("Measures size of RPC request messages (uncompressed)."),
-		metric.WithUnit("By"),
+		semconv.RPCServerRequestSizeName,
+		metric.WithDescription(semconv.RPCServerRequestSizeDescription),
+		metric.WithUnit(semconv.RPCServerRequestSizeUnit),
 	)
 	if err != nil {
 		otel.Handle(err)
@@ -87,9 +87,9 @@ func NewServerHandler(opts ...Option) stats.Handler {
 	}
 
 	h.outSize, err = meter.Int64Histogram(
-		"rpc.server.response.size",
-		metric.WithDescription("Measures size of RPC response messages (uncompressed)."),
-		metric.WithUnit("By"),
+		semconv.RPCServerResponseSizeName,
+		metric.WithDescription(semconv.RPCServerResponseSizeDescription),
+		metric.WithUnit(semconv.RPCServerResponseSizeUnit),
 	)
 	if err != nil {
 		otel.Handle(err)
@@ -99,9 +99,9 @@ func NewServerHandler(opts ...Option) stats.Handler {
 	}
 
 	h.inMsg, err = meter.Int64Histogram(
-		"rpc.server.requests_per_rpc",
-		metric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
-		metric.WithUnit("{count}"),
+		semconv.RPCServerRequestsPerRPCName,
+		metric.WithDescription(semconv.RPCServerRequestsPerRPCDescription),
+		metric.WithUnit(semconv.RPCServerRequestsPerRPCUnit),
 	)
 	if err != nil {
 		otel.Handle(err)
@@ -111,9 +111,9 @@ func NewServerHandler(opts ...Option) stats.Handler {
 	}
 
 	h.outMsg, err = meter.Int64Histogram(
-		"rpc.server.responses_per_rpc",
-		metric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
-		metric.WithUnit("{count}"),
+		semconv.RPCServerResponsesPerRPCName,
+		metric.WithDescription(semconv.RPCServerResponsesPerRPCDescription),
+		metric.WithUnit(semconv.RPCServerResponsesPerRPCUnit),
 	)
 	if err != nil {
 		otel.Handle(err)
@@ -198,9 +198,9 @@ func NewClientHandler(opts ...Option) stats.Handler {
 
 	var err error
 	h.duration, err = meter.Float64Histogram(
-		"rpc.client.duration",
-		metric.WithDescription("Measures the duration of inbound RPC."),
-		metric.WithUnit("ms"),
+		semconv.RPCClientDurationName,
+		metric.WithDescription(semconv.RPCClientDurationDescription),
+		metric.WithUnit(semconv.RPCClientDurationUnit),
 	)
 	if err != nil {
 		otel.Handle(err)
@@ -210,9 +210,9 @@ func NewClientHandler(opts ...Option) stats.Handler {
 	}
 
 	h.outSize, err = meter.Int64Histogram(
-		"rpc.client.request.size",
-		metric.WithDescription("Measures size of RPC request messages (uncompressed)."),
-		metric.WithUnit("By"),
+		semconv.RPCClientRequestSizeName,
+		metric.WithDescription(semconv.RPCClientRequestSizeDescription),
+		metric.WithUnit(semconv.RPCClientRequestSizeUnit),
 	)
 	if err != nil {
 		otel.Handle(err)
@@ -222,9 +222,9 @@ func NewClientHandler(opts ...Option) stats.Handler {
 	}
 
 	h.inSize, err = meter.Int64Histogram(
-		"rpc.client.response.size",
-		metric.WithDescription("Measures size of RPC response messages (uncompressed)."),
-		metric.WithUnit("By"),
+		semconv.RPCClientResponseSizeName,
+		metric.WithDescription(semconv.RPCClientResponseSizeDescription),
+		metric.WithUnit(semconv.RPCClientResponseSizeUnit),
 	)
 	if err != nil {
 		otel.Handle(err)
@@ -234,9 +234,9 @@ func NewClientHandler(opts ...Option) stats.Handler {
 	}
 
 	h.outMsg, err = meter.Int64Histogram(
-		"rpc.client.requests_per_rpc",
-		metric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
-		metric.WithUnit("{count}"),
+		semconv.RPCClientRequestsPerRPCName,
+		metric.WithDescription(semconv.RPCClientRequestsPerRPCDescription),
+		metric.WithUnit(semconv.RPCClientRequestsPerRPCUnit),
 	)
 	if err != nil {
 		otel.Handle(err)
@@ -246,9 +246,9 @@ func NewClientHandler(opts ...Option) stats.Handler {
 	}
 
 	h.inMsg, err = meter.Int64Histogram(
-		"rpc.client.responses_per_rpc",
-		metric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
-		metric.WithUnit("{count}"),
+		semconv.RPCClientResponsesPerRPCName,
+		metric.WithDescription(semconv.RPCClientResponsesPerRPCDescription),
+		metric.WithUnit(semconv.RPCClientResponsesPerRPCUnit),
 	)
 	if err != nil {
 		otel.Handle(err)
@@ -333,10 +333,10 @@ func (c *config) handleRPC(
 		if c.ReceivedEvent && span.IsRecording() {
 			span.AddEvent("message",
 				trace.WithAttributes(
-					semconv.MessageTypeReceived,
-					semconv.MessageIDKey.Int64(messageId),
-					semconv.MessageCompressedSizeKey.Int(rs.CompressedLength),
-					semconv.MessageUncompressedSizeKey.Int(rs.Length),
+					semconv.RPCMessageTypeReceived,
+					semconv.RPCMessageIDKey.Int64(messageId),
+					semconv.RPCMessageCompressedSizeKey.Int(rs.CompressedLength),
+					semconv.RPCMessageUncompressedSizeKey.Int(rs.Length),
 				),
 			)
 		}
@@ -349,10 +349,10 @@ func (c *config) handleRPC(
 		if c.SentEvent && span.IsRecording() {
 			span.AddEvent("message",
 				trace.WithAttributes(
-					semconv.MessageTypeSent,
-					semconv.MessageIDKey.Int64(messageId),
-					semconv.MessageCompressedSizeKey.Int(rs.CompressedLength),
-					semconv.MessageUncompressedSizeKey.Int(rs.Length),
+					semconv.RPCMessageTypeSent,
+					semconv.RPCMessageIDKey.Int64(messageId),
+					semconv.RPCMessageCompressedSizeKey.Int(rs.CompressedLength),
+					semconv.RPCMessageUncompressedSizeKey.Int(rs.Length),
 				),
 			)
 		}
