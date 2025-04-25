@@ -5,10 +5,14 @@ package otelconf
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"google.golang.org/grpc/credentials"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -1399,8 +1403,9 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 		otlpConfig *OTLPMetric
 	}
 	tests := []struct {
-		name string
-		args args
+		name           string
+		args           args
+		grpcServerOpts func() ([]grpc.ServerOption, error)
 	}{
 		{
 			name: "no TLS config",
@@ -1416,6 +1421,9 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 					},
 				},
 			},
+			grpcServerOpts: func() ([]grpc.ServerOption, error) {
+				return []grpc.ServerOption{}, nil
+			},
 		},
 		{
 			name: "with TLS config",
@@ -1430,6 +1438,15 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 						{Name: "test", Value: ptr("test1")},
 					},
 				},
+			},
+			grpcServerOpts: func() ([]grpc.ServerOption, error) {
+				opts := []grpc.ServerOption{}
+				tlsCreds, err := credentials.NewServerTLSFromFile("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				if err != nil {
+					return nil, err
+				}
+				opts = append(opts, grpc.Creds(tlsCreds))
+				return opts, nil
 			},
 		},
 		{
@@ -1448,6 +1465,26 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 					},
 				},
 			},
+			grpcServerOpts: func() ([]grpc.ServerOption, error) {
+				opts := []grpc.ServerOption{}
+				cert, err := tls.LoadX509KeyPair("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				if err != nil {
+					return nil, err
+				}
+				caCert, err := os.ReadFile("testdata/ca.crt")
+				if err != nil {
+					return nil, err
+				}
+				caCertPool := x509.NewCertPool()
+				caCertPool.AppendCertsFromPEM(caCert)
+				tlsCreds := credentials.NewTLS(&tls.Config{
+					Certificates: []tls.Certificate{cert},
+					ClientCAs:    caCertPool,
+					ClientAuth:   tls.RequireAndVerifyClientCert,
+				})
+				opts = append(opts, grpc.Creds(tlsCreds))
+				return opts, nil
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -1457,14 +1494,10 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 
 			tt.args.otlpConfig.Endpoint = ptr(strings.ReplaceAll(n.Addr().String(), "127.0.0.1", "localhost"))
 
-			tlsMode := ""
-			if tt.args.otlpConfig.Insecure == nil || !*tt.args.otlpConfig.Insecure {
-				tlsMode = "TLS"
-			}
-			if tt.args.otlpConfig.ClientCertificate != nil && *tt.args.otlpConfig.ClientCertificate != "" {
-				tlsMode = "mTLS"
-			}
-			col, err := newGRPCMetricCollector(n, tlsMode)
+			serverOpts, err := tt.grpcServerOpts()
+			require.NoError(t, err)
+
+			col, err := newGRPCMetricCollector(n, serverOpts)
 			require.NoError(t, err)
 			t.Cleanup(func() {
 				col.srv.Stop()
@@ -1519,17 +1552,12 @@ var _ v1.MetricsServiceServer = (*grpcMetricCollector)(nil)
 //
 // If endpoint is an empty string, the returned collector will be listening on
 // the localhost interface at an OS chosen port.
-func newGRPCMetricCollector(listener net.Listener, tlsMode string) (*grpcMetricCollector, error) {
+func newGRPCMetricCollector(listener net.Listener, serverOptions []grpc.ServerOption) (*grpcMetricCollector, error) {
 	c := &grpcMetricCollector{
 		listener: listener,
+		srv:      grpc.NewServer(serverOptions...),
 	}
 
-	srv, err := createGRPCServer(tlsMode)
-	if err != nil {
-		return nil, err
-	}
-
-	c.srv = srv
 	v1.RegisterMetricsServiceServer(c.srv, c)
 	go func() { _ = c.srv.Serve(c.listener) }()
 
