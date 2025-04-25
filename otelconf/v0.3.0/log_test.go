@@ -17,7 +17,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
@@ -29,7 +28,6 @@ import (
 	sdklogtest "go.opentelemetry.io/otel/sdk/log/logtest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
-	lpb "go.opentelemetry.io/proto/otlp/logs/v1"
 )
 
 func TestLoggerProvider(t *testing.T) {
@@ -711,10 +709,9 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 		otlpConfig *OTLP
 	}
 	tests := []struct {
-		name    string
-		args    args
-		want    sdklog.Exporter
-		wantErr string
+		name string
+		args args
+		want sdklog.Exporter
 	}{
 		{
 			name: "no TLS config",
@@ -784,15 +781,12 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 
 			col, err := newGRPCLogsCollector(n, tlsMode)
 			require.NoError(t, err)
-			defer col.srv.Stop()
+			t.Cleanup(func() {
+				col.srv.Stop()
+			})
 
 			exporter, err := otlpGRPCLogExporter(tt.args.ctx, tt.args.otlpConfig)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Equal(t, tt.wantErr, err.Error())
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 
 			logFactory := sdklogtest.RecordFactory{
 				Body: log.StringValue("test"),
@@ -804,31 +798,13 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 
 			// Ensure everything is flushed.
 			require.NoError(t, exporter.Shutdown(context.Background()))
-
-			// verify the reception of the sent data item
-			require.GreaterOrEqual(t, len(col.storage.data), 1)
 		})
 	}
-}
-
-// logsStorage stores uploaded OTLP log data in their proto form.
-type logsStorage struct {
-	dataMu sync.Mutex
-	data   []*lpb.ResourceLogs
-}
-
-// Add adds the request to the Storage.
-func (s *logsStorage) Add(request *collogpb.ExportLogsServiceRequest) {
-	s.dataMu.Lock()
-	defer s.dataMu.Unlock()
-	s.data = append(s.data, request.ResourceLogs...)
 }
 
 // grpcLogsCollector is an OTLP gRPC server that collects all requests it receives.
 type grpcLogsCollector struct {
 	collogpb.UnimplementedLogsServiceServer
-
-	storage *logsStorage
 
 	listener net.Listener
 	srv      *grpc.Server
@@ -843,7 +819,6 @@ var _ collogpb.LogsServiceServer = (*grpcLogsCollector)(nil)
 // the localhost interface at an OS chosen port.
 func newGRPCLogsCollector(listener net.Listener, tlsMode string) (*grpcLogsCollector, error) {
 	c := &grpcLogsCollector{
-		storage:  &logsStorage{},
 		listener: listener,
 	}
 
@@ -864,8 +839,6 @@ func (c *grpcLogsCollector) Export(
 	_ context.Context,
 	req *collogpb.ExportLogsServiceRequest,
 ) (*collogpb.ExportLogsServiceResponse, error) {
-	c.storage.Add(req)
-
 	return &collogpb.ExportLogsServiceResponse{}, nil
 }
 

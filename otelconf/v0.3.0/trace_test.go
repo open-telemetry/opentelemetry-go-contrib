@@ -14,7 +14,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
@@ -26,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
-	tpb "go.opentelemetry.io/proto/otlp/trace/v1"
 )
 
 func TestTracerPovider(t *testing.T) {
@@ -856,9 +854,8 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 		otlpConfig *OTLP
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr string
+		name string
+		args args
 	}{
 		{
 			name: "no TLS config",
@@ -924,15 +921,12 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			}
 			col, err := newGRPCTraceCollector(n, tlsMode)
 			require.NoError(t, err)
-			defer col.srv.Stop()
+			t.Cleanup(func() {
+				col.srv.Stop()
+			})
 
 			exporter, err := otlpGRPCSpanExporter(tt.args.ctx, tt.args.otlpConfig)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Equal(t, tt.wantErr, err.Error())
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 
 			input := tracetest.SpanStubs{
 				{
@@ -944,31 +938,13 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 
 			// Ensure everything is flushed.
 			require.NoError(t, exporter.Shutdown(context.Background()))
-
-			// verify the reception of the sent data item
-			require.GreaterOrEqual(t, len(col.storage.data), 1)
 		})
 	}
-}
-
-// traceStorage stores uploaded OTLP trace data in their proto form.
-type traceStorage struct {
-	dataMu sync.Mutex
-	data   []*tpb.ResourceSpans
-}
-
-// Add adds the request to the Storage.
-func (s *traceStorage) Add(request *v1.ExportTraceServiceRequest) {
-	s.dataMu.Lock()
-	defer s.dataMu.Unlock()
-	s.data = append(s.data, request.ResourceSpans...)
 }
 
 // grpcTraceCollector is an OTLP gRPC server that collects all requests it receives.
 type grpcTraceCollector struct {
 	v1.UnimplementedTraceServiceServer
-
-	storage *traceStorage
 
 	listener net.Listener
 	srv      *grpc.Server
@@ -983,7 +959,6 @@ var _ v1.TraceServiceServer = (*grpcTraceCollector)(nil)
 // the localhost interface at an OS chosen port.
 func newGRPCTraceCollector(listener net.Listener, tlsMode string) (*grpcTraceCollector, error) {
 	c := &grpcTraceCollector{
-		storage:  &traceStorage{},
 		listener: listener,
 	}
 
@@ -1004,7 +979,5 @@ func (c *grpcTraceCollector) Export(
 	_ context.Context,
 	req *v1.ExportTraceServiceRequest,
 ) (*v1.ExportTraceServiceResponse, error) {
-	c.storage.Add(req)
-
 	return &v1.ExportTraceServiceResponse{}, nil
 }

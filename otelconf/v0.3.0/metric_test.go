@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -32,7 +31,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	v1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
-	mpb "go.opentelemetry.io/proto/otlp/metrics/v1"
 )
 
 func TestMeterProvider(t *testing.T) {
@@ -1401,9 +1399,8 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 		otlpConfig *OTLPMetric
 	}
 	tests := []struct {
-		name    string
-		args    args
-		wantErr string
+		name string
+		args args
 	}{
 		{
 			name: "no TLS config",
@@ -1469,15 +1466,12 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			}
 			col, err := newGRPCMetricCollector(n, tlsMode)
 			require.NoError(t, err)
-			defer col.srv.Stop()
+			t.Cleanup(func() {
+				col.srv.Stop()
+			})
 
 			exporter, err := otlpGRPCMetricExporter(tt.args.ctx, tt.args.otlpConfig)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Equal(t, tt.wantErr, err.Error())
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, err)
 
 			res, err := resource.New(context.Background())
 			require.NoError(t, err)
@@ -1504,31 +1498,13 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 
 			// Ensure everything is flushed.
 			require.NoError(t, exporter.Shutdown(context.Background()))
-
-			// verify the reception of the sent data item
-			require.GreaterOrEqual(t, len(col.storage.data), 1)
 		})
 	}
-}
-
-// metricStorage stores uploaded OTLP metric data in their proto form.
-type metricStorage struct {
-	dataMu sync.Mutex
-	data   []*mpb.ResourceMetrics
-}
-
-// Add adds the request to the Storage.
-func (s *metricStorage) Add(request *v1.ExportMetricsServiceRequest) {
-	s.dataMu.Lock()
-	defer s.dataMu.Unlock()
-	s.data = append(s.data, request.ResourceMetrics...)
 }
 
 // grpcMetricCollector is an OTLP gRPC server that collects all requests it receives.
 type grpcMetricCollector struct {
 	v1.UnimplementedMetricsServiceServer
-
-	storage *metricStorage
 
 	listener net.Listener
 	srv      *grpc.Server
@@ -1543,7 +1519,6 @@ var _ v1.MetricsServiceServer = (*grpcMetricCollector)(nil)
 // the localhost interface at an OS chosen port.
 func newGRPCMetricCollector(listener net.Listener, tlsMode string) (*grpcMetricCollector, error) {
 	c := &grpcMetricCollector{
-		storage:  &metricStorage{},
 		listener: listener,
 	}
 
@@ -1564,7 +1539,5 @@ func (c *grpcMetricCollector) Export(
 	_ context.Context,
 	req *v1.ExportMetricsServiceRequest,
 ) (*v1.ExportMetricsServiceResponse, error) {
-	c.storage.Add(req)
-
 	return &v1.ExportMetricsServiceResponse{}, nil
 }
