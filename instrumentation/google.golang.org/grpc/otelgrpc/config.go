@@ -13,12 +13,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const (
-	// ScopeName is the instrumentation scope name.
-	ScopeName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	// GRPCStatusCodeKey is convention for numeric status code of a gRPC request.
-	GRPCStatusCodeKey = attribute.Key("rpc.grpc.status_code")
-)
+// ScopeName is the instrumentation scope name.
+const ScopeName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 // InterceptorFilter is a predicate used to determine whether a given request in
 // interceptor info should be instrumented. A InterceptorFilter must return true if

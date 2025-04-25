@@ -139,7 +139,7 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	ctx = extract(ctx, h.Propagators)
 
 	name, attrs := internal.ParseFullMethod(info.FullMethodName)
-	attrs = append(attrs, RPCSystemGRPC)
+	attrs = append(attrs, semconv.RPCSystemGRPC)
 
 	record := true
 	if h.Filter != nil {
@@ -263,7 +263,7 @@ func NewClientHandler(opts ...Option) stats.Handler {
 // TagRPC can attach some information to the given context.
 func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
 	name, attrs := internal.ParseFullMethod(info.FullMethodName)
-	attrs = append(attrs, RPCSystemGRPC)
+	attrs = append(attrs, semconv.RPCSystemGRPC)
 
 	record := true
 	if h.Filter != nil {
@@ -360,7 +360,7 @@ func (c *config) handleRPC(
 	case *stats.OutHeader:
 		if span.IsRecording() {
 			if p, ok := peer.FromContext(ctx); ok {
-				span.SetAttributes(peerAttr(p.Addr.String())...)
+				span.SetAttributes(serverAddrAttrs(p.Addr.String())...)
 			}
 		}
 	case *stats.End:

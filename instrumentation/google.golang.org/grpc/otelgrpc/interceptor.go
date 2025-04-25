@@ -22,7 +22,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -37,13 +37,13 @@ func (m messageType) Event(ctx context.Context, id int, _ interface{}) {
 	}
 	span.AddEvent("message", trace.WithAttributes(
 		attribute.KeyValue(m),
-		RPCMessageIDKey.Int(id),
+		semconv.RPCMessageIDKey.Int(id),
 	))
 }
 
 var (
-	messageSent     = messageType(RPCMessageTypeSent)
-	messageReceived = messageType(RPCMessageTypeReceived)
+	messageSent     = messageType(semconv.RPCMessageTypeSent)
+	messageReceived = messageType(semconv.RPCMessageTypeReceived)
 )
 
 // clientStream  wraps around the embedded grpc.ClientStream, and intercepts the RecvMsg and
@@ -305,46 +305,32 @@ func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
 
 // telemetryAttributes returns a span name and span and metric attributes from
 // the gRPC method and peer address.
-func telemetryAttributes(fullMethod, peerAddress string) (string, []attribute.KeyValue) {
+func telemetryAttributes(fullMethod, sererAddr string) (string, []attribute.KeyValue) {
 	name, methodAttrs := internal.ParseFullMethod(fullMethod)
-	peerAttrs := peerAttr(peerAddress)
+	srvAttrs := serverAddrAttrs(sererAddr)
 
-	attrs := make([]attribute.KeyValue, 0, 1+len(methodAttrs)+len(peerAttrs))
-	attrs = append(attrs, RPCSystemGRPC)
+	attrs := make([]attribute.KeyValue, 0, 1+len(methodAttrs)+len(srvAttrs))
+	attrs = append(attrs, semconv.RPCSystemGRPC)
 	attrs = append(attrs, methodAttrs...)
-	attrs = append(attrs, peerAttrs...)
+	attrs = append(attrs, srvAttrs...)
 	return name, attrs
 }
 
-// peerAttr returns attributes about the peer address.
-func peerAttr(addr string) []attribute.KeyValue {
-	host, p, err := net.SplitHostPort(addr)
+// serverAddrAttrs returns the server address attributes for the hostport.
+func serverAddrAttrs(hostport string) []attribute.KeyValue {
+	h, pStr, err := net.SplitHostPort(hostport)
 	if err != nil {
-		return nil
+		// The server.address attribute is required.
+		return []attribute.KeyValue{semconv.ServerAddress(hostport)}
 	}
-
-	if host == "" {
-		host = "127.0.0.1"
-	}
-	port, err := strconv.Atoi(p)
+	p, err := strconv.Atoi(pStr)
 	if err != nil {
-		return nil
+		return []attribute.KeyValue{semconv.ServerAddress(h)}
 	}
-
-	var attr []attribute.KeyValue
-	if ip := net.ParseIP(host); ip != nil {
-		attr = []attribute.KeyValue{
-			semconv.NetSockPeerAddr(host),
-			semconv.NetSockPeerPort(port),
-		}
-	} else {
-		attr = []attribute.KeyValue{
-			semconv.NetPeerName(host),
-			semconv.NetPeerPort(port),
-		}
+	return []attribute.KeyValue{
+		semconv.ServerAddress(h),
+		semconv.ServerPort(p),
 	}
-
-	return attr
 }
 
 // peerFromCtx returns a peer address from a context, if one exists.
@@ -358,7 +344,7 @@ func peerFromCtx(ctx context.Context) string {
 
 // statusCodeAttr returns status code attribute based on given gRPC code.
 func statusCodeAttr(c grpc_codes.Code) attribute.KeyValue {
-	return GRPCStatusCodeKey.Int64(int64(c))
+	return semconv.RPCGRPCStatusCodeKey.Int64(int64(c))
 }
 
 // serverStatus returns a span status code and message for a given gRPC
