@@ -144,7 +144,7 @@ func (w *clientStream) endSpan(err error) {
 //
 // Deprecated: Use [NewClientHandler] instead.
 func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
-	cfg := newConfig(opts, "client")
+	cfg := newConfig(opts)
 	tracer := cfg.TracerProvider.Tracer(
 		ScopeName,
 		trace.WithInstrumentationVersion(Version()),
@@ -251,7 +251,7 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream, cfg *config) *s
 //
 // Deprecated: Use [NewServerHandler] instead.
 func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
-	cfg := newConfig(opts, "server")
+	cfg := newConfig(opts)
 	tracer := cfg.TracerProvider.Tracer(
 		ScopeName,
 		trace.WithInstrumentationVersion(Version()),
