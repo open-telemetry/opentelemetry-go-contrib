@@ -45,7 +45,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7186)
 - Update `http.route` attribute to support `request.Pattern` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7108)
 - Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6381)
-- Set `url.Scheme` attribute to the request URL.Scheme when possible for http client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6938)
+- Set `url.scheme` attribute to the request URL.Scheme when possible for HTTP client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6938)
 
 ### Fixed
 
