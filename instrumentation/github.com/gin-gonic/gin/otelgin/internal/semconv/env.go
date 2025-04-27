@@ -173,7 +173,7 @@ func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 
 func NewHTTPServer(meter metric.Meter) HTTPServer {
 	env := strings.ToLower(os.Getenv(OTelSemConvStabilityOptIn))
-	duplicate := env == "http/dup"
+	duplicate := strings.Contains(env, "http/dup")
 	server := HTTPServer{
 		duplicate: duplicate,
 	}
@@ -199,7 +199,7 @@ type HTTPClient struct {
 
 func NewHTTPClient(meter metric.Meter) HTTPClient {
 	env := strings.ToLower(os.Getenv(OTelSemConvStabilityOptIn))
-	duplicate := env == "http/dup"
+	duplicate := strings.Contains(env, "http/dup")
 	client := HTTPClient{
 		duplicate: duplicate,
 	}
