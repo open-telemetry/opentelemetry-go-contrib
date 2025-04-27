@@ -122,6 +122,9 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 		// Record the server-side attributes.
 		var additionalAttributes []attribute.KeyValue
+		if c.FullPath() != "" {
+			additionalAttributes = append(additionalAttributes, sc.Route(c.FullPath()))
+		}
 		if cfg.MetricAttributeFn != nil {
 			additionalAttributes = append(additionalAttributes, cfg.MetricAttributeFn(c.Request)...)
 		}
