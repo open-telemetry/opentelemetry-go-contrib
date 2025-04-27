@@ -79,7 +79,7 @@ func TestServerNetworkTransportAttr(t *testing.T) {
 			wantAttributes: []attribute.KeyValue{
 				attribute.String("net.transport", "ip_tcp"),
 				attribute.String("network.transport", "tcp"),
-      },
+			},
 		},
 		{
 			name:     "with mixed categories",
