@@ -82,7 +82,7 @@ func (m EventMonitor) CommandStartedTraceAttrs(
 	evt *event.CommandStartedEvent,
 	opts ...AttributeOption,
 ) []attribute.KeyValue {
-	// Dup implies both v1.2.60 and v1.2.10
+	// Dup implies both v1.26.0 and v1.21.0
 	if hasOptIn(m.version, semconvOptInDup) {
 		return append(
 			commandStartedTraceAttrsV1260(evt, opts...),
@@ -90,12 +90,12 @@ func (m EventMonitor) CommandStartedTraceAttrs(
 		)
 	}
 
-	// Check for the 1.2.60 opt-in
+	// Check for the 1.26.0 opt-in
 	if hasOptIn(m.version, semconvOptIn1260) {
 		return commandStartedTraceAttrsV1260(evt, opts...)
 	}
 
-	// Fallback to v1.2.10
+	// Fallback to v1.21.0
 	return commandStartedTraceAttrsV1210(evt, opts...)
 }
 
