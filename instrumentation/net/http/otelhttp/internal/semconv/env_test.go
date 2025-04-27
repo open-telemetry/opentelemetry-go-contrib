@@ -81,6 +81,16 @@ func TestServerNetworkTransportAttr(t *testing.T) {
 				attribute.String("network.transport", "tcp"),
 			},
 		},
+		{
+			name:     "without a mixed categories",
+			optinVal: "http/dup,database",
+			network:  "tcp",
+
+			wantAttributes: []attribute.KeyValue{
+				attribute.String("net.transport", "ip_tcp"),
+				attribute.String("network.transport", "tcp"),
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Setenv(OTelSemConvStabilityOptIn, tt.optinVal)
@@ -149,6 +159,15 @@ func TestHTTPClientTraceAttributes(t *testing.T) {
 		{
 			name:     "with optin set to duplicate",
 			optinVal: "http/dup",
+
+			wantAttributes: []attribute.KeyValue{
+				attribute.String("server.address", "example.com"),
+				attribute.String("net.host.name", "example.com"),
+			},
+		},
+		{
+			name:     "with mixed categories",
+			optinVal: "http/dup,database",
 
 			wantAttributes: []attribute.KeyValue{
 				attribute.String("server.address", "example.com"),

@@ -65,20 +65,38 @@ func WithCommandAttributeDisabled(disabled bool) AttributeOption {
 	}
 }
 
+// hasOptIn returns true if the comma-separated version string contains the
+// exact optIn value.
+func hasOptIn(version, optIn string) bool {
+	for _, v := range strings.Split(version, ",") {
+		if strings.TrimSpace(v) == optIn {
+			return true
+		}
+	}
+	return false
+}
+
 // CommandStartedTraceAttrs generates trace attributes for a CommandStartedEvent
 // based on the EventMonitor version.
 func (m EventMonitor) CommandStartedTraceAttrs(
 	evt *event.CommandStartedEvent,
 	opts ...AttributeOption,
 ) []attribute.KeyValue {
-	switch m.version {
-	case semconvOptIn1260:
-		return commandStartedTraceAttrsV1260(evt, opts...)
-	case semconvOptInDup:
-		return append(commandStartedTraceAttrsV1260(evt, opts...), commandStartedTraceAttrsV1210(evt, opts...)...)
-	default:
-		return commandStartedTraceAttrsV1210(evt, opts...)
+	// Dup implies both v1.2.60 and v1.2.10
+	if hasOptIn(m.version, semconvOptInDup) {
+		return append(
+			commandStartedTraceAttrsV1260(evt, opts...),
+			commandStartedTraceAttrsV1210(evt, opts...)...,
+		)
 	}
+
+	// Check for the 1.2.60 opt-in
+	if hasOptIn(m.version, semconvOptIn1260) {
+		return commandStartedTraceAttrsV1260(evt, opts...)
+	}
+
+	// Fallback to v1.2.10
+	return commandStartedTraceAttrsV1210(evt, opts...)
 }
 
 // peerInfo extracts the hostname and port from a CommandStartedEvent.
