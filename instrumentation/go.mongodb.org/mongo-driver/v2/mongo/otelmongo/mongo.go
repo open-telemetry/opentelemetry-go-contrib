@@ -6,7 +6,6 @@ package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mong
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
