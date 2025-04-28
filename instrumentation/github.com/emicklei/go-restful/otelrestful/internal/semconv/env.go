@@ -171,9 +171,20 @@ func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	}
 }
 
+// hasOptIn returns true if the comma-separated version string contains the
+// exact optIn value.
+func hasOptIn(version, optIn string) bool {
+	for _, v := range strings.Split(version, ",") {
+		if strings.TrimSpace(v) == optIn {
+			return true
+		}
+	}
+	return false
+}
+
 func NewHTTPServer(meter metric.Meter) HTTPServer {
 	env := strings.ToLower(os.Getenv(OTelSemConvStabilityOptIn))
-	duplicate := env == "http/dup"
+	duplicate := hasOptIn(env, "http/dup")
 	server := HTTPServer{
 		duplicate: duplicate,
 	}
@@ -199,7 +210,7 @@ type HTTPClient struct {
 
 func NewHTTPClient(meter metric.Meter) HTTPClient {
 	env := strings.ToLower(os.Getenv(OTelSemConvStabilityOptIn))
-	duplicate := env == "http/dup"
+	duplicate := hasOptIn(env, "http/dup")
 	client := HTTPClient{
 		duplicate: duplicate,
 	}

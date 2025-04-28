@@ -135,6 +135,12 @@ func TestCommandStartedTraceAttrs(t *testing.T) {
 			version:   "database/dup",
 			want:      append(v1210, v1260...),
 		},
+		{
+			name:      "mixed categories",
+			initAttrs: []attribute.KeyValue{},
+			version:   "database/dup,http",
+			want:      append(v1210, v1260...),
+		},
 	}
 
 	for _, test := range tests {
