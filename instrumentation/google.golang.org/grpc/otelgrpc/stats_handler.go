@@ -13,9 +13,11 @@ import (
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"go.opentelemetry.io/otel/trace"
 
@@ -33,12 +35,91 @@ type gRPCContext struct {
 
 type serverHandler struct {
 	*config
+
+	tracer trace.Tracer
+
+	duration metric.Float64Histogram
+	inSize   metric.Int64Histogram
+	outSize  metric.Int64Histogram
+	inMsg    metric.Int64Histogram
+	outMsg   metric.Int64Histogram
 }
 
 // NewServerHandler creates a stats.Handler for a gRPC server.
 func NewServerHandler(opts ...Option) stats.Handler {
-	h := &serverHandler{
-		config: newConfig(opts, "server"),
+	c := newConfig(opts)
+	h := &serverHandler{config: c}
+
+	h.tracer = c.TracerProvider.Tracer(
+		ScopeName,
+		trace.WithInstrumentationVersion(Version()),
+	)
+
+	meter := c.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+		metric.WithSchemaURL(semconv.SchemaURL),
+	)
+
+	var err error
+	h.duration, err = meter.Float64Histogram(
+		"rpc.server.duration",
+		metric.WithDescription("Measures the duration of inbound RPC."),
+		metric.WithUnit("ms"),
+	)
+	if err != nil {
+		otel.Handle(err)
+		if h.duration == nil {
+			h.duration = noop.Float64Histogram{}
+		}
+	}
+
+	h.inSize, err = meter.Int64Histogram(
+		"rpc.server.request.size",
+		metric.WithDescription("Measures size of RPC request messages (uncompressed)."),
+		metric.WithUnit("By"),
+	)
+	if err != nil {
+		otel.Handle(err)
+		if h.inSize == nil {
+			h.inSize = noop.Int64Histogram{}
+		}
+	}
+
+	h.outSize, err = meter.Int64Histogram(
+		"rpc.server.response.size",
+		metric.WithDescription("Measures size of RPC response messages (uncompressed)."),
+		metric.WithUnit("By"),
+	)
+	if err != nil {
+		otel.Handle(err)
+		if h.outSize == nil {
+			h.outSize = noop.Int64Histogram{}
+		}
+	}
+
+	h.inMsg, err = meter.Int64Histogram(
+		"rpc.server.requests_per_rpc",
+		metric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
+		metric.WithUnit("{count}"),
+	)
+	if err != nil {
+		otel.Handle(err)
+		if h.inMsg == nil {
+			h.inMsg = noop.Int64Histogram{}
+		}
+	}
+
+	h.outMsg, err = meter.Int64Histogram(
+		"rpc.server.responses_per_rpc",
+		metric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
+		metric.WithUnit("{count}"),
+	)
+	if err != nil {
+		otel.Handle(err)
+		if h.outMsg == nil {
+			h.outMsg = noop.Int64Histogram{}
+		}
 	}
 
 	return h
@@ -84,18 +165,96 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 // HandleRPC processes the RPC stats.
 func (h *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	isServer := true
-	h.handleRPC(ctx, rs, isServer)
+	h.handleRPC(ctx, rs, h.duration, h.inSize, h.outSize, h.inMsg, h.outMsg, serverStatus)
 }
 
 type clientHandler struct {
 	*config
+
+	tracer trace.Tracer
+
+	duration metric.Float64Histogram
+	inSize   metric.Int64Histogram
+	outSize  metric.Int64Histogram
+	inMsg    metric.Int64Histogram
+	outMsg   metric.Int64Histogram
 }
 
 // NewClientHandler creates a stats.Handler for a gRPC client.
 func NewClientHandler(opts ...Option) stats.Handler {
-	h := &clientHandler{
-		config: newConfig(opts, "client"),
+	c := newConfig(opts)
+	h := &clientHandler{config: c}
+
+	h.tracer = c.TracerProvider.Tracer(
+		ScopeName,
+		trace.WithInstrumentationVersion(Version()),
+	)
+
+	meter := c.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+		metric.WithSchemaURL(semconv.SchemaURL),
+	)
+
+	var err error
+	h.duration, err = meter.Float64Histogram(
+		"rpc.client.duration",
+		metric.WithDescription("Measures the duration of inbound RPC."),
+		metric.WithUnit("ms"),
+	)
+	if err != nil {
+		otel.Handle(err)
+		if h.duration == nil {
+			h.duration = noop.Float64Histogram{}
+		}
+	}
+
+	h.outSize, err = meter.Int64Histogram(
+		"rpc.client.request.size",
+		metric.WithDescription("Measures size of RPC request messages (uncompressed)."),
+		metric.WithUnit("By"),
+	)
+	if err != nil {
+		otel.Handle(err)
+		if h.outSize == nil {
+			h.outSize = noop.Int64Histogram{}
+		}
+	}
+
+	h.inSize, err = meter.Int64Histogram(
+		"rpc.client.response.size",
+		metric.WithDescription("Measures size of RPC response messages (uncompressed)."),
+		metric.WithUnit("By"),
+	)
+	if err != nil {
+		otel.Handle(err)
+		if h.inSize == nil {
+			h.inSize = noop.Int64Histogram{}
+		}
+	}
+
+	h.outMsg, err = meter.Int64Histogram(
+		"rpc.client.requests_per_rpc",
+		metric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
+		metric.WithUnit("{count}"),
+	)
+	if err != nil {
+		otel.Handle(err)
+		if h.outMsg == nil {
+			h.outMsg = noop.Int64Histogram{}
+		}
+	}
+
+	h.inMsg, err = meter.Int64Histogram(
+		"rpc.client.responses_per_rpc",
+		metric.WithDescription("Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs."),
+		metric.WithUnit("{count}"),
+	)
+	if err != nil {
+		otel.Handle(err)
+		if h.inMsg == nil {
+			h.inMsg = noop.Int64Histogram{}
+		}
 	}
 
 	return h
@@ -130,8 +289,12 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 // HandleRPC processes the RPC stats.
 func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	isServer := false
-	h.handleRPC(ctx, rs, isServer)
+	h.handleRPC(
+		ctx, rs, h.duration, h.inSize, h.outSize, h.inMsg, h.outMsg,
+		func(s *status.Status) (codes.Code, string) {
+			return codes.Error, s.Message()
+		},
+	)
 }
 
 // TagConn can attach some information to the given context.
@@ -144,7 +307,13 @@ func (h *clientHandler) HandleConn(context.Context, stats.ConnStats) {
 	// no-op
 }
 
-func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool) { // nolint: revive  // isServer is not a control flag.
+func (c *config) handleRPC(
+	ctx context.Context,
+	rs stats.RPCStats,
+	duration metric.Float64Histogram,
+	inSize, outSize, inMsg, outMsg metric.Int64Histogram,
+	recordStatus func(*status.Status) (codes.Code, string),
+) {
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
 	if gctx != nil && !gctx.record {
 		return
@@ -158,7 +327,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	case *stats.InPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.inMessages, 1)
-			c.rpcInBytes.Record(ctx, int64(rs.Length), metric.WithAttributes(gctx.metricAttrs...))
+			inSize.Record(ctx, int64(rs.Length), metric.WithAttributes(gctx.metricAttrs...))
 		}
 
 		if c.ReceivedEvent && span.IsRecording() {
@@ -174,7 +343,7 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 	case *stats.OutPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.outMessages, 1)
-			c.rpcOutBytes.Record(ctx, int64(rs.Length), metric.WithAttributes(gctx.metricAttrs...))
+			outSize.Record(ctx, int64(rs.Length), metric.WithAttributes(gctx.metricAttrs...))
 		}
 
 		if c.SentEvent && span.IsRecording() {
@@ -206,12 +375,8 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 		}
 		if span.IsRecording() {
 			if s != nil {
-				if isServer {
-					statusCode, msg := serverStatus(s)
-					span.SetStatus(statusCode, msg)
-				} else {
-					span.SetStatus(codes.Error, s.Message())
-				}
+				c, m := recordStatus(s)
+				span.SetStatus(c, m)
 			}
 			span.SetAttributes(rpcStatusAttr)
 			span.End()
@@ -230,10 +395,10 @@ func (c *config) handleRPC(ctx context.Context, rs stats.RPCStats, isServer bool
 		// Measure right before calling Record() to capture as much elapsed time as possible.
 		elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Millisecond)
 
-		c.rpcDuration.Record(ctx, elapsedTime, recordOpts...)
+		duration.Record(ctx, elapsedTime, recordOpts...)
 		if gctx != nil {
-			c.rpcInMessages.Record(ctx, atomic.LoadInt64(&gctx.inMessages), recordOpts...)
-			c.rpcOutMessages.Record(ctx, atomic.LoadInt64(&gctx.outMessages), recordOpts...)
+			inMsg.Record(ctx, atomic.LoadInt64(&gctx.inMessages), recordOpts...)
+			outMsg.Record(ctx, atomic.LoadInt64(&gctx.outMessages), recordOpts...)
 		}
 	default:
 		return
