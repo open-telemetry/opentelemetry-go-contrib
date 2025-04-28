@@ -46,7 +46,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Update `http.route` attribute to support `request.Pattern` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7108)
 - Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6381)
 - Set `url.scheme` attribute to the request URL.Scheme when possible for HTTP client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6938)
-- In `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, mark the `Filter` and `MetricAttributeFn` types as well as the `WithFilter` and `WithMetricAttributeFn` functions as deprecated. (#7244)
 
 ### Fixed
 
@@ -98,6 +97,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test`, use `Version` function instead. (#7143)
 - The deprecated `SQSAttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package, use `SQSAttributeBuilder` instead. (#7145)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/host` package, use `Version` instead. (#7203)
+- In `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, mark the `Filter` and `MetricAttributeFn` types as well as the `WithFilter` and `WithMetricAttributeFn` functions as deprecated. (#7244)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
