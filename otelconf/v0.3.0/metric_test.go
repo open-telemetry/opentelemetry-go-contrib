@@ -1492,6 +1492,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			n, err := net.Listen("tcp", "localhost:0")
 			require.NoError(t, err)
 
+			// this is a workaround, as providing 127.0.0.1 resulted in an "invalid URI for request" error
 			tt.args.otlpConfig.Endpoint = ptr(strings.ReplaceAll(n.Addr().String(), "127.0.0.1", "localhost"))
 
 			serverOpts, err := tt.grpcServerOpts()
