@@ -1506,8 +1506,8 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			res, err := resource.New(context.Background())
 			require.NoError(t, err)
 
-			require.EventuallyWithT(t, func(collect *assert.CollectT) {
-				require.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{
+			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+				assert.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{
 					Resource: res,
 					ScopeMetrics: []metricdata.ScopeMetrics{
 						{

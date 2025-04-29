@@ -815,8 +815,8 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				Body: log.StringValue("test"),
 			}
 
-			require.EventuallyWithT(t, func(collect *assert.CollectT) {
-				require.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{
+			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{
 					logFactory.NewRecord(),
 				}))
 			}, 10*time.Second, 1*time.Second)
