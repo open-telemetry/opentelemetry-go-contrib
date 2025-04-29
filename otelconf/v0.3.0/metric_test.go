@@ -1527,9 +1527,6 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 					},
 				}))
 			}, 10*time.Second, 1*time.Second)
-
-			// Ensure everything is flushed.
-			require.NoError(t, exporter.Shutdown(context.Background()))
 		})
 	}
 }

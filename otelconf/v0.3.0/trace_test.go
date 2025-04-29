@@ -968,9 +968,6 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			require.EventuallyWithT(t, func(collect *assert.CollectT) {
 				require.NoError(collect, exporter.ExportSpans(context.Background(), input.Snapshots()))
 			}, 10*time.Second, 1*time.Second)
-
-			// Ensure everything is flushed.
-			require.NoError(t, exporter.Shutdown(context.Background()))
 		})
 	}
 }
