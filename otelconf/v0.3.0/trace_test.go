@@ -953,11 +953,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
 
-			col := newGRPCTraceCollector(n, serverOpts)
-
-			t.Cleanup(func() {
-				col.srv.Stop()
-			})
+			startGRPCTraceCollector(t, n, serverOpts)
 
 			exporter, err := otlpGRPCSpanExporter(tt.args.ctx, tt.args.otlpConfig)
 			require.NoError(t, err)
@@ -981,34 +977,31 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 // grpcTraceCollector is an OTLP gRPC server that collects all requests it receives.
 type grpcTraceCollector struct {
 	v1.UnimplementedTraceServiceServer
-
-	listener net.Listener
-	srv      *grpc.Server
 }
 
 var _ v1.TraceServiceServer = (*grpcTraceCollector)(nil)
 
-// newGRPCTraceCollector returns a *grpcTraceCollector that is listening at the provided
+// startGRPCTraceCollector returns a *grpcTraceCollector that is listening at the provided
 // endpoint.
 //
 // If endpoint is an empty string, the returned collector will be listening on
 // the localhost interface at an OS chosen port.
-func newGRPCTraceCollector(listener net.Listener, serverOptions []grpc.ServerOption) *grpcTraceCollector {
-	c := &grpcTraceCollector{
-		listener: listener,
-		srv:      grpc.NewServer(serverOptions...),
-	}
+func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions []grpc.ServerOption) {
+	srv := grpc.NewServer(serverOptions...)
+	c := &grpcTraceCollector{}
 
-	v1.RegisterTraceServiceServer(c.srv, c)
-	go func() { _ = c.srv.Serve(c.listener) }()
+	v1.RegisterTraceServiceServer(srv, c)
+	go func() { _ = srv.Serve(listener) }()
 
-	return c
+	t.Cleanup(func() {
+		srv.Stop()
+	})
 }
 
 // Export handles the export req.
 func (c *grpcTraceCollector) Export(
 	_ context.Context,
-	req *v1.ExportTraceServiceRequest,
+	_ *v1.ExportTraceServiceRequest,
 ) (*v1.ExportTraceServiceResponse, error) {
 	return &v1.ExportTraceServiceResponse{}, nil
 }

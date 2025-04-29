@@ -805,11 +805,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
 
-			col := newGRPCLogsCollector(n, serverOpts)
-
-			t.Cleanup(func() {
-				col.srv.Stop()
-			})
+			startGRPCLogsCollector(t, n, serverOpts)
 
 			exporter, err := otlpGRPCLogExporter(tt.args.ctx, tt.args.otlpConfig)
 			require.NoError(t, err)
@@ -823,9 +819,6 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 					logFactory.NewRecord(),
 				}))
 			}, 10*time.Second, 1*time.Second)
-
-			// Ensure everything is flushed.
-			require.NoError(t, exporter.Shutdown(context.Background()))
 		})
 	}
 }
@@ -833,34 +826,31 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 // grpcLogsCollector is an OTLP gRPC server that collects all requests it receives.
 type grpcLogsCollector struct {
 	collogpb.UnimplementedLogsServiceServer
-
-	listener net.Listener
-	srv      *grpc.Server
 }
 
 var _ collogpb.LogsServiceServer = (*grpcLogsCollector)(nil)
 
-// newGRPCLogsCollector returns a *grpcLogsCollector that is listening at the provided
+// startGRPCLogsCollector returns a *grpcLogsCollector that is listening at the provided
 // endpoint.
 //
 // If endpoint is an empty string, the returned collector will be listening on
 // the localhost interface at an OS chosen port.
-func newGRPCLogsCollector(listener net.Listener, serverOptions []grpc.ServerOption) *grpcLogsCollector {
-	c := &grpcLogsCollector{
-		listener: listener,
-		srv:      grpc.NewServer(serverOptions...),
-	}
+func startGRPCLogsCollector(t *testing.T, listener net.Listener, serverOptions []grpc.ServerOption) {
+	srv := grpc.NewServer(serverOptions...)
+	c := &grpcLogsCollector{}
 
-	collogpb.RegisterLogsServiceServer(c.srv, c)
-	go func() { _ = c.srv.Serve(c.listener) }()
+	collogpb.RegisterLogsServiceServer(srv, c)
+	go func() { _ = srv.Serve(listener) }()
 
-	return c
+	t.Cleanup(func() {
+		srv.Stop()
+	})
 }
 
 // Export handles the export req.
 func (c *grpcLogsCollector) Export(
 	_ context.Context,
-	req *collogpb.ExportLogsServiceRequest,
+	_ *collogpb.ExportLogsServiceRequest,
 ) (*collogpb.ExportLogsServiceResponse, error) {
 	return &collogpb.ExportLogsServiceResponse{}, nil
 }

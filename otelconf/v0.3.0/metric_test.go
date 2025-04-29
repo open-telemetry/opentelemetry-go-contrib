@@ -1497,11 +1497,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
 
-			col := newGRPCMetricCollector(n, serverOpts)
-
-			t.Cleanup(func() {
-				col.srv.Stop()
-			})
+			startGRPCMetricCollector(t, n, serverOpts)
 
 			exporter, err := otlpGRPCMetricExporter(tt.args.ctx, tt.args.otlpConfig)
 			require.NoError(t, err)
@@ -1540,34 +1536,31 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 // grpcMetricCollector is an OTLP gRPC server that collects all requests it receives.
 type grpcMetricCollector struct {
 	v1.UnimplementedMetricsServiceServer
-
-	listener net.Listener
-	srv      *grpc.Server
 }
 
 var _ v1.MetricsServiceServer = (*grpcMetricCollector)(nil)
 
-// newGRPCMetricCollector returns a *grpcMetricCollector that is listening at the provided
+// startGRPCMetricCollector returns a *grpcMetricCollector that is listening at the provided
 // endpoint.
 //
 // If endpoint is an empty string, the returned collector will be listening on
 // the localhost interface at an OS chosen port.
-func newGRPCMetricCollector(listener net.Listener, serverOptions []grpc.ServerOption) *grpcMetricCollector {
-	c := &grpcMetricCollector{
-		listener: listener,
-		srv:      grpc.NewServer(serverOptions...),
-	}
+func startGRPCMetricCollector(t *testing.T, listener net.Listener, serverOptions []grpc.ServerOption) {
+	srv := grpc.NewServer(serverOptions...)
+	c := &grpcMetricCollector{}
 
-	v1.RegisterMetricsServiceServer(c.srv, c)
-	go func() { _ = c.srv.Serve(c.listener) }()
+	v1.RegisterMetricsServiceServer(srv, c)
+	go func() { _ = srv.Serve(listener) }()
 
-	return c
+	t.Cleanup(func() {
+		srv.Stop()
+	})
 }
 
 // Export handles the export req.
 func (c *grpcMetricCollector) Export(
 	_ context.Context,
-	req *v1.ExportMetricsServiceRequest,
+	_ *v1.ExportMetricsServiceRequest,
 ) (*v1.ExportMetricsServiceResponse, error) {
 	return &v1.ExportMetricsServiceResponse{}, nil
 }
