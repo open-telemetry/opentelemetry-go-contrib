@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added test for Fields in `go.opentelemetry.io/contrib/propagators/jaeger`. (#7119)
 - Allow configuring samplers in `go.opentelemetry.io/contrib/otelconf`. (#7148)
 - Slog log bridge now sets `SeverityText` attribute using source value in `go.opentelemetry.io/contrib/bridges/otelslog`. (#7198)
-- Add `http.route` attribute to gin http server metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7275)
+- Add `http.route` metric attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7275)
 
 ### Changed
 
