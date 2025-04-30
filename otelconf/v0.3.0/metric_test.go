@@ -5,9 +5,13 @@ package otelconf
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -16,6 +20,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -26,7 +32,9 @@ import (
 	"go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
+	v1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 )
 
 func TestMeterProvider(t *testing.T) {
@@ -1387,4 +1395,170 @@ func TestPrometheusIPv6(t *testing.T) {
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		})
 	}
+}
+
+func Test_otlpGRPCMetricExporter(t *testing.T) {
+	type args struct {
+		ctx        context.Context
+		otlpConfig *OTLPMetric
+	}
+	tests := []struct {
+		name           string
+		args           args
+		grpcServerOpts func() ([]grpc.ServerOption, error)
+	}{
+		{
+			name: "no TLS config",
+			args: args{
+				ctx: context.Background(),
+				otlpConfig: &OTLPMetric{
+					Protocol:    ptr("grpc"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(5000),
+					Insecure:    ptr(true),
+					Headers: []NameStringValuePair{
+						{Name: "test", Value: ptr("test1")},
+					},
+				},
+			},
+			grpcServerOpts: func() ([]grpc.ServerOption, error) {
+				return []grpc.ServerOption{}, nil
+			},
+		},
+		{
+			name: "with TLS config",
+			args: args{
+				ctx: context.Background(),
+				otlpConfig: &OTLPMetric{
+					Protocol:    ptr("grpc"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(5000),
+					Certificate: ptr("testdata/server-certs/server.crt"),
+					Headers: []NameStringValuePair{
+						{Name: "test", Value: ptr("test1")},
+					},
+				},
+			},
+			grpcServerOpts: func() ([]grpc.ServerOption, error) {
+				opts := []grpc.ServerOption{}
+				tlsCreds, err := credentials.NewServerTLSFromFile("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				if err != nil {
+					return nil, err
+				}
+				opts = append(opts, grpc.Creds(tlsCreds))
+				return opts, nil
+			},
+		},
+		{
+			name: "with TLS config and client key",
+			args: args{
+				ctx: context.Background(),
+				otlpConfig: &OTLPMetric{
+					Protocol:          ptr("grpc"),
+					Compression:       ptr("gzip"),
+					Timeout:           ptr(5000),
+					Certificate:       ptr("testdata/server-certs/server.crt"),
+					ClientKey:         ptr("testdata/client-certs/client.key"),
+					ClientCertificate: ptr("testdata/client-certs/client.crt"),
+					Headers: []NameStringValuePair{
+						{Name: "test", Value: ptr("test1")},
+					},
+				},
+			},
+			grpcServerOpts: func() ([]grpc.ServerOption, error) {
+				opts := []grpc.ServerOption{}
+				cert, err := tls.LoadX509KeyPair("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				if err != nil {
+					return nil, err
+				}
+				caCert, err := os.ReadFile("testdata/ca.crt")
+				if err != nil {
+					return nil, err
+				}
+				caCertPool := x509.NewCertPool()
+				caCertPool.AppendCertsFromPEM(caCert)
+				tlsCreds := credentials.NewTLS(&tls.Config{
+					Certificates: []tls.Certificate{cert},
+					ClientCAs:    caCertPool,
+					ClientAuth:   tls.RequireAndVerifyClientCert,
+				})
+				opts = append(opts, grpc.Creds(tlsCreds))
+				return opts, nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n, err := net.Listen("tcp", "localhost:0")
+			require.NoError(t, err)
+
+			// this is a workaround, as providing 127.0.0.1 resulted in an "invalid URI for request" error
+			tt.args.otlpConfig.Endpoint = ptr(strings.ReplaceAll(n.Addr().String(), "127.0.0.1", "localhost"))
+
+			serverOpts, err := tt.grpcServerOpts()
+			require.NoError(t, err)
+
+			startGRPCMetricCollector(t, n, serverOpts)
+
+			exporter, err := otlpGRPCMetricExporter(tt.args.ctx, tt.args.otlpConfig)
+			require.NoError(t, err)
+
+			res, err := resource.New(context.Background())
+			require.NoError(t, err)
+
+			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+				assert.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{
+					Resource: res,
+					ScopeMetrics: []metricdata.ScopeMetrics{
+						{
+							Metrics: []metricdata.Metrics{
+								{
+									Name: "test-metric",
+									Data: metricdata.Gauge[int64]{
+										DataPoints: []metricdata.DataPoint[int64]{
+											{
+												Value: 1,
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				}))
+			}, 10*time.Second, 1*time.Second)
+		})
+	}
+}
+
+// grpcMetricCollector is an OTLP gRPC server that collects all requests it receives.
+type grpcMetricCollector struct {
+	v1.UnimplementedMetricsServiceServer
+}
+
+var _ v1.MetricsServiceServer = (*grpcMetricCollector)(nil)
+
+// startGRPCMetricCollector returns a *grpcMetricCollector that is listening at the provided
+// endpoint.
+//
+// If endpoint is an empty string, the returned collector will be listening on
+// the localhost interface at an OS chosen port.
+func startGRPCMetricCollector(t *testing.T, listener net.Listener, serverOptions []grpc.ServerOption) {
+	srv := grpc.NewServer(serverOptions...)
+	c := &grpcMetricCollector{}
+
+	v1.RegisterMetricsServiceServer(srv, c)
+	go func() { _ = srv.Serve(listener) }()
+
+	t.Cleanup(func() {
+		srv.Stop()
+	})
+}
+
+// Export handles the export req.
+func (c *grpcMetricCollector) Export(
+	_ context.Context,
+	_ *v1.ExportMetricsServiceRequest,
+) (*v1.ExportMetricsServiceResponse, error) {
+	return &v1.ExportMetricsServiceResponse{}, nil
 }
