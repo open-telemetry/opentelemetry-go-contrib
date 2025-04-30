@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	grpc_codes "google.golang.org/grpc/codes"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 
@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 )
 
 func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
@@ -64,14 +64,14 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 	}
 }
 
-func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code grpc_codes.Code) {
+func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code codes.Code) {
 	want := metricdata.ScopeMetrics{
 		Scope: wantInstrumentationScope,
 		Metrics: []metricdata.Metrics{
 			{
-				Name:        "rpc.server.duration",
-				Description: "Measures the duration of inbound RPC.",
-				Unit:        "ms",
+				Name:        string(semconv.RPCServerDurationName),
+				Description: string(semconv.RPCServerDurationDescription),
+				Unit:        string(semconv.RPCServerDurationUnit),
 				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
@@ -79,8 +79,8 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod(name),
 								semconv.RPCService(serviceName),
-								otelgrpc.RPCSystemGRPC,
-								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
+								semconv.RPCSystemGRPC,
+								semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
 								testMetricAttr,
 							),
 						},
@@ -88,9 +88,9 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 				},
 			},
 			{
-				Name:        "rpc.server.requests_per_rpc",
-				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
-				Unit:        "{count}",
+				Name:        string(semconv.RPCServerRequestsPerRPCName),
+				Description: string(semconv.RPCServerRequestsPerRPCDescription),
+				Unit:        string(semconv.RPCServerRequestsPerRPCUnit),
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -98,8 +98,8 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod(name),
 								semconv.RPCService(serviceName),
-								otelgrpc.RPCSystemGRPC,
-								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
+								semconv.RPCSystemGRPC,
+								semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
 								testMetricAttr,
 							),
 						},
@@ -107,9 +107,9 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 				},
 			},
 			{
-				Name:        "rpc.server.responses_per_rpc",
-				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
-				Unit:        "{count}",
+				Name:        string(semconv.RPCServerResponsesPerRPCName),
+				Description: string(semconv.RPCServerResponsesPerRPCDescription),
+				Unit:        string(semconv.RPCServerResponsesPerRPCUnit),
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -117,8 +117,8 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod(name),
 								semconv.RPCService(serviceName),
-								otelgrpc.RPCSystemGRPC,
-								otelgrpc.GRPCStatusCodeKey.Int64(int64(code)),
+								semconv.RPCSystemGRPC,
+								semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
 								testMetricAttr,
 							),
 						},

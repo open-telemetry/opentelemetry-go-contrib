@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -21,14 +20,14 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 
 	pb "google.golang.org/grpc/interop/grpc_testing"
 )
 
 var wantInstrumentationScope = instrumentation.Scope{
 	Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
-	SchemaURL: "https://opentelemetry.io/schemas/1.17.0",
+	SchemaURL: semconv.SchemaURL,
 	Version:   otelgrpc.Version(),
 }
 
@@ -131,29 +130,29 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr strin
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		// client does not record an event for the server response.
@@ -161,10 +160,10 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr strin
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethod("StreamingInputCall"),
 		semconv.RPCService("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(host),
-		semconv.NetSockPeerPort(port),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
 	}, streamInput.Attributes())
 
 	streamOutput := spans[1]
@@ -175,46 +174,46 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr strin
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 	}, streamOutput.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethod("StreamingOutputCall"),
 		semconv.RPCService("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(host),
-		semconv.NetSockPeerPort(port),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
 	}, streamOutput.Attributes())
 
 	pingPong := spans[2]
@@ -224,67 +223,67 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr strin
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 	}, pingPong.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethod("FullDuplexCall"),
 		semconv.RPCService("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(host),
-		semconv.NetSockPeerPort(port),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
 	}, pingPong.Attributes())
 }
 
@@ -299,48 +298,48 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 	}, streamInput.Events())
-	port, ok := findAttribute(streamInput.Attributes(), semconv.NetSockPeerPortKey)
+	port, ok := findAttribute(streamInput.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethod("StreamingInputCall"),
 		semconv.RPCService("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr("127.0.0.1"),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress("127.0.0.1"),
 		port,
 	}, streamInput.Attributes())
 
@@ -352,49 +351,49 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 	}, streamOutput.Events())
 
-	port, ok = findAttribute(streamOutput.Attributes(), semconv.NetSockPeerPortKey)
+	port, ok = findAttribute(streamOutput.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethod("StreamingOutputCall"),
 		semconv.RPCService("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr("127.0.0.1"),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress("127.0.0.1"),
 		port,
 	}, streamOutput.Attributes())
 
@@ -405,68 +404,68 @@ func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("SENT"),
 			},
 		},
 	}, pingPong.Events())
-	port, ok = findAttribute(pingPong.Attributes(), semconv.NetSockPeerPortKey)
+	port, ok = findAttribute(pingPong.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethod("FullDuplexCall"),
 		semconv.RPCService("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr("127.0.0.1"),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress("127.0.0.1"),
 		port,
 	}, pingPong.Attributes())
 }

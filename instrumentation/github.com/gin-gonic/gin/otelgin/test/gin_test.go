@@ -461,11 +461,24 @@ func TestMetrics(t *testing.T) {
 		name                        string
 		metricAttributeExtractor    func(*http.Request) []attribute.KeyValue
 		ginMetricAttributeExtractor func(*gin.Context) []attribute.KeyValue
+		requestTarget               string
+		wantRouteAttr               string
+		wantStatus                  int64
 	}{
 		{
 			name:                        "default",
 			metricAttributeExtractor:    nil,
 			ginMetricAttributeExtractor: nil,
+			requestTarget:               "/user/123",
+			wantRouteAttr:               "/user/:id",
+			wantStatus:                  200,
+		},
+		{
+			name:                        "request target not exist",
+			metricAttributeExtractor:    nil,
+			ginMetricAttributeExtractor: nil,
+			requestTarget:               "/abc/123",
+			wantStatus:                  404,
 		},
 		{
 			name: "with metric attributes callback",
@@ -481,6 +494,9 @@ func TestMetrics(t *testing.T) {
 					attribute.String("key3", "value3"),
 				}
 			},
+			requestTarget: "/user/123",
+			wantRouteAttr: "/user/:id",
+			wantStatus:    200,
 		},
 	}
 
@@ -501,7 +517,7 @@ func TestMetrics(t *testing.T) {
 				_, _ = c.Writer.Write([]byte(id))
 			})
 
-			r := httptest.NewRequest("GET", "/user/123", nil)
+			r := httptest.NewRequest("GET", tt.requestTarget, nil)
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 			c.Request = r
@@ -518,11 +534,14 @@ func TestMetrics(t *testing.T) {
 
 			attrs := []attribute.KeyValue{
 				attribute.String("http.request.method", "GET"),
-				attribute.Int64("http.response.status_code", 200),
+				attribute.Int64("http.response.status_code", tt.wantStatus),
 				attribute.String("network.protocol.name", "http"),
 				attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
 				attribute.String("server.address", "foobar"),
 				attribute.String("url.scheme", "http"),
+			}
+			if tt.wantRouteAttr != "" {
+				attrs = append(attrs, attribute.String("http.route", tt.wantRouteAttr))
 			}
 
 			if tt.metricAttributeExtractor != nil {
