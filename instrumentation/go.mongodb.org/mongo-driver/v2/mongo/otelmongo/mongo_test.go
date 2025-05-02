@@ -258,6 +258,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 		})
 	}
 }
+
 func TestPeerInfo(t *testing.T) {
 	tests := []struct {
 		name         string
