@@ -135,15 +135,38 @@ func NewMonitor(opts ...Option) *event.CommandMonitor {
 	}
 }
 
+// peerInfo will parse the hostname and port from the mongo connection ID.
 func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
 	hostname = evt.ConnectionID
-	port = 27017
-	if idx := strings.IndexByte(hostname, '['); idx >= 0 {
-		hostname = hostname[:idx]
+	port = 27017 // Default MongoDB port
+
+	if strings.HasPrefix(hostname, "[") {
+		// IPv6 address with square brackets
+		if idx := strings.LastIndex(hostname, "]:"); idx >= 0 {
+			// IPv6 address with port
+			// e.g. [::1]:27017
+			port, _ = strconv.Atoi(hostname[idx+2:])
+			hostname = hostname[1:idx]
+		} else if strings.HasSuffix(hostname, "]") {
+			// IPv6 address without port
+			// e.g. [::1]
+			hostname = hostname[1 : len(hostname)-1]
+		}
+	} else if strings.Contains(hostname, ":") {
+		// IPv6 address without square brackets
+		if idx := strings.LastIndex(hostname, ":"); !(idx >= 0 && strings.Count(hostname, ":") > 1) {
+			// IPv4 or hostname with port
+			// This logic also excludes IPv6 addresses without ports, e.g. ::1
+			port, _ = strconv.Atoi(hostname[idx+1:])
+			hostname = hostname[:idx]
+		}
+	} else {
+		// IPv4 or hostname without port
+		if idx := strings.LastIndex(hostname, ":"); idx >= 0 {
+			port, _ = strconv.Atoi(hostname[idx+1:])
+			hostname = hostname[:idx]
+		}
 	}
-	if idx := strings.IndexByte(hostname, ':'); idx >= 0 {
-		port, _ = strconv.Atoi(hostname[idx+1:])
-		hostname = hostname[:idx]
-	}
+
 	return hostname, port
 }

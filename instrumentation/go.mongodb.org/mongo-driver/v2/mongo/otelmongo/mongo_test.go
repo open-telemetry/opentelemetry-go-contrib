@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelmongo_test
+package otelmongo
 
 import (
 	"context"
@@ -11,11 +11,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/event"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/drivertest"
 
-	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -106,9 +106,9 @@ func TestDBCrudOperation(t *testing.T) {
 			opts := options.Client()
 			//nolint:staticcheck
 			opts.Deployment = md // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
-			opts.Monitor = otelmongo.NewMonitor(
-				otelmongo.WithTracerProvider(provider),
-				otelmongo.WithCommandAttributeDisabled(tc.excludeCommand),
+			opts.Monitor = NewMonitor(
+				WithTracerProvider(provider),
+				WithCommandAttributeDisabled(tc.excludeCommand),
 			)
 			opts.ApplyURI(addr)
 
@@ -217,9 +217,9 @@ func TestDBCollectionAttribute(t *testing.T) {
 			opts := options.Client()
 			//nolint:staticcheck
 			opts.Deployment = md // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
-			opts.Monitor = otelmongo.NewMonitor(
-				otelmongo.WithTracerProvider(provider),
-				otelmongo.WithCommandAttributeDisabled(true),
+			opts.Monitor = NewMonitor(
+				WithTracerProvider(provider),
+				WithCommandAttributeDisabled(true),
 			)
 			opts.ApplyURI(addr)
 
@@ -255,6 +255,70 @@ func TestDBCollectionAttribute(t *testing.T) {
 			for _, v := range tc.validators {
 				assert.True(t, v(s))
 			}
+		})
+	}
+}
+func TestPeerInfo(t *testing.T) {
+	tests := []struct {
+		name         string
+		connectionID string
+		expectedHost string
+		expectedPort int
+	}{
+		{
+			name:         "IPv4 with port",
+			connectionID: "127.0.0.1:27018",
+			expectedHost: "127.0.0.1",
+			expectedPort: 27018,
+		},
+		{
+			name:         "IPv4 without port",
+			connectionID: "127.0.0.1",
+			expectedHost: "127.0.0.1",
+			expectedPort: 27017,
+		},
+		{
+			name:         "IPv6 with port",
+			connectionID: "[::1]:27019",
+			expectedHost: "::1",
+			expectedPort: 27019,
+		},
+		{
+			name:         "IPv6 without port with square brackets",
+			connectionID: "[::1]",
+			expectedHost: "::1",
+			expectedPort: 27017,
+		},
+		{
+			name:         "IPv6 without port",
+			connectionID: "::1",
+			expectedHost: "::1",
+			expectedPort: 27017,
+		},
+		{
+			name:         "Hostname with port",
+			connectionID: "example.com:27020",
+			expectedHost: "example.com",
+			expectedPort: 27020,
+		},
+		{
+			name:         "Hostname without port",
+			connectionID: "example.com",
+			expectedHost: "example.com",
+			expectedPort: 27017,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			evt := &event.CommandStartedEvent{
+				ConnectionID: tc.connectionID,
+			}
+			host, port := peerInfo(evt)
+			assert.Equal(t, tc.expectedHost, host)
+			assert.Equal(t, tc.expectedPort, port)
 		})
 	}
 }
