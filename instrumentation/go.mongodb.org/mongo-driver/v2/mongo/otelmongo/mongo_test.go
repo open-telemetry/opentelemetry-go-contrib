@@ -286,7 +286,7 @@ func TestPeerInfo(t *testing.T) {
 		{
 			name:         "IPv6 without port with square brackets",
 			connectionID: "[::1]",
-			expectedHost: "::1",
+			expectedHost: "[::1]",
 			expectedPort: 27017,
 		},
 		{
