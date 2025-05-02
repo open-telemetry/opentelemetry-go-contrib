@@ -142,7 +142,7 @@ func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
 		hostname = hostname[:idx]
 	}
 	if idx := strings.IndexByte(hostname, ':'); idx >= 0 {
-		port = func(p int, e error) int { return p }(strconv.Atoi(hostname[idx+1:]))
+		port, _ = strconv.Atoi(hostname[idx+1:])
 		hostname = hostname[:idx]
 	}
 	return hostname, port
