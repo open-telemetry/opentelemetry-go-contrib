@@ -31,6 +31,7 @@ const (
 // server handling the request.
 func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	cfg := config{}
+
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
@@ -94,6 +95,8 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			oteltrace.WithAttributes(sc.Route(c.FullPath())),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 		}
+
+		opts = append(opts, cfg.SpanStartOptions...)
 
 		spanName := cfg.SpanNameFormatter(c)
 		if spanName == "" {

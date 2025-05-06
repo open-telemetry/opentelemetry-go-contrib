@@ -268,6 +268,31 @@ func TestSpanStatus(t *testing.T) {
 	})
 }
 
+func TestWithSpanOptions_CustomAttributesAndSpanKind(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	customAttr := attribute.String("custom.key", "custom.value")
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar",
+		otelgin.WithTracerProvider(provider),
+		otelgin.WithSpanStartOptions(trace.WithAttributes(customAttr)),
+	))
+	router.GET("/test", func(c *gin.Context) {})
+
+	r := httptest.NewRequest("GET", "/test", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+
+	span := spans[0]
+	assert.Contains(t, span.Attributes(), customAttr)
+	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
+}
+
 func TestSpanName(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(
