@@ -53,8 +53,8 @@ github.com/ashanbrown/forbidigo v1.6.0 h1:D3aewfM37Yb3pxHujIPSpTf6oQk9sc9WZi8ger
 github.com/ashanbrown/forbidigo v1.6.0/go.mod h1:Y8j9jy9ZYAEHXdu723cUlraTqbzjKF1MUyfOKL+AjcU=
 github.com/ashanbrown/makezero v1.2.0 h1:/2Lp1bypdmK9wDIq7uWBlDF1iMUpIIS4A+pF6C9IEUU=
 github.com/ashanbrown/makezero v1.2.0/go.mod h1:dxlPhHbDMC6N6xICzFBSK+4njQDdK8euNO0qjQMtGY4=
-github.com/atombender/go-jsonschema v0.18.0 h1:bhjEuAhSeTqvB+qmeDSH0IoaNhoXRf9CipwvheYXhKY=
-github.com/atombender/go-jsonschema v0.18.0/go.mod h1:vRU51z8g59v55qvZwF4T6ZEiLgrJUa/LT7WIKuxJfOM=
+github.com/atombender/go-jsonschema v0.19.0 h1:G2bfQ3J0dfkT2fqlBDE4KrXbRy8P7NGGXj3K8fwXoFk=
+github.com/atombender/go-jsonschema v0.19.0/go.mod h1:iyzfj/FBSPRfwDA3tcz0zAhVGje2NlBAcpBnPQqbqY0=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1 h1:HwpRHbFMcZLEVr42D4p7XBqjyuxQH5SMiErDT4WkJ2k=
 github.com/aymanbagabas/go-osc52/v2 v2.0.1/go.mod h1:uYgXzlJ7ZpABp8OJ+exZzJJhRNQ2ASbcXHWsFqH8hp8=
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
