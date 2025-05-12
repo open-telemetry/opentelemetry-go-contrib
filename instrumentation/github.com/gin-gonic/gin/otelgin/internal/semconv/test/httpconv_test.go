@@ -78,47 +78,49 @@ func TestNewServerRecordMetrics(t *testing.T) {
 		attribute.String("url.scheme", "http"),
 	)
 
-	// the CurrentHTTPServer version
-	expectedCurrentScopeMetric := metricdata.ScopeMetrics{
+	// The OldHTTPServer version
+	expectedOldScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name: "test",
 		},
 		Metrics: []metricdata.Metrics{
 			{
-				Name:        "http.server.request.body.size",
-				Description: "Size of HTTP server request bodies.",
+				Name:        "http.server.request.size",
+				Description: "Measures the size of HTTP request messages.",
 				Unit:        "By",
-				Data: metricdata.Histogram[int64]{
+				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
 						{
-							Attributes: currAttrs,
+							Attributes: oldAttrs,
 						},
 					},
 				},
 			},
 			{
-				Name:        "http.server.response.body.size",
-				Description: "Size of HTTP server response bodies.",
+				Name:        "http.server.response.size",
+				Description: "Measures the size of HTTP response messages.",
 				Unit:        "By",
-				Data: metricdata.Histogram[int64]{
+				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
 						{
-							Attributes: currAttrs,
+							Attributes: oldAttrs,
 						},
 					},
 				},
 			},
 			{
-				Name:        "http.server.request.duration",
-				Description: "Duration of HTTP server requests.",
-				Unit:        "s",
+				Name:        "http.server.duration",
+				Description: "Measures the duration of inbound HTTP requests.",
+				Unit:        "ms",
 				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
-							Attributes: currAttrs,
+							Attributes: oldAttrs,
 						},
 					},
 				},
@@ -126,46 +128,44 @@ func TestNewServerRecordMetrics(t *testing.T) {
 		},
 	}
 
-	// The OldHTTPServer version
-	expectedOldScopeMetric := expectedCurrentScopeMetric
-	expectedOldScopeMetric.Metrics = append(expectedOldScopeMetric.Metrics, []metricdata.Metrics{
+	// the CurrentHTTPServer version
+	expectedCurrentScopeMetric := expectedOldScopeMetric
+	expectedCurrentScopeMetric.Metrics = append(expectedCurrentScopeMetric.Metrics, []metricdata.Metrics{
 		{
-			Name:        "http.server.request.size",
-			Description: "Measures the size of HTTP request messages.",
+			Name:        "http.server.request.body.size",
+			Description: "Size of HTTP server request bodies.",
 			Unit:        "By",
-			Data: metricdata.Sum[int64]{
+			Data: metricdata.Histogram[int64]{
 				Temporality: metricdata.CumulativeTemporality,
-				IsMonotonic: true,
-				DataPoints: []metricdata.DataPoint[int64]{
+				DataPoints: []metricdata.HistogramDataPoint[int64]{
 					{
-						Attributes: oldAttrs,
+						Attributes: currAttrs,
 					},
 				},
 			},
 		},
 		{
-			Name:        "http.server.response.size",
-			Description: "Measures the size of HTTP response messages.",
+			Name:        "http.server.response.body.size",
+			Description: "Size of HTTP server response bodies.",
 			Unit:        "By",
-			Data: metricdata.Sum[int64]{
+			Data: metricdata.Histogram[int64]{
 				Temporality: metricdata.CumulativeTemporality,
-				IsMonotonic: true,
-				DataPoints: []metricdata.DataPoint[int64]{
+				DataPoints: []metricdata.HistogramDataPoint[int64]{
 					{
-						Attributes: oldAttrs,
+						Attributes: currAttrs,
 					},
 				},
 			},
 		},
 		{
-			Name:        "http.server.duration",
-			Description: "Measures the duration of inbound HTTP requests.",
-			Unit:        "ms",
+			Name:        "http.server.request.duration",
+			Description: "Duration of HTTP server requests.",
+			Unit:        "s",
 			Data: metricdata.Histogram[float64]{
 				Temporality: metricdata.CumulativeTemporality,
 				DataPoints: []metricdata.HistogramDataPoint[float64]{
 					{
-						Attributes: oldAttrs,
+						Attributes: currAttrs,
 					},
 				},
 			},
@@ -199,7 +199,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 
 				// because of OldHTTPServer
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
-				metricdatatest.AssertEqual(t, expectedCurrentScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(t, expectedOldScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			},
 		},
 		{
@@ -221,7 +221,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				require.Len(t, rm.ScopeMetrics, 1)
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 6)
-				metricdatatest.AssertEqual(t, expectedOldScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(t, expectedCurrentScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			},
 		},
 	}
@@ -305,7 +305,7 @@ func TestNewTraceResponse(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got := semconv.CurrentHTTPServer{}.ResponseTraceAttrs(tt.resp)
+			got := semconv.CurrentHTTPServer{}.ResponseTraceAttrs(tt.resp, []attribute.KeyValue{})
 			assert.ElementsMatch(t, tt.want, got)
 		})
 	}
@@ -366,7 +366,7 @@ func TestClientRequest(t *testing.T) {
 		attribute.Int("server.port", 8888),
 		attribute.String("network.protocol.version", "1.1"),
 	}
-	got := semconv.CurrentHTTPClient{}.RequestTraceAttrs(req)
+	got := semconv.CurrentHTTPClient{}.RequestTraceAttrs(req, []attribute.KeyValue{})
 	assert.ElementsMatch(t, want, got)
 }
 
@@ -380,7 +380,7 @@ func TestClientResponse(t *testing.T) {
 	}
 
 	for _, tt := range testcases {
-		got := semconv.CurrentHTTPClient{}.ResponseTraceAttrs(&tt.resp)
+		got := semconv.CurrentHTTPClient{}.ResponseTraceAttrs(&tt.resp, []attribute.KeyValue{})
 		assert.ElementsMatch(t, tt.want, got)
 	}
 }
@@ -416,34 +416,35 @@ func TestNewClientRecordMetrics(t *testing.T) {
 		attribute.String("url.scheme", "http"),
 	)
 
-	// the CurrentHTTPClient version
-	expectedCurrentScopeMetric := metricdata.ScopeMetrics{
+	// The OldHTTPClient version
+	expectedOldScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name: "test",
 		},
 		Metrics: []metricdata.Metrics{
 			{
-				Name:        "http.client.request.body.size",
-				Description: "Size of HTTP client request bodies.",
+				Name:        "http.client.request.size",
+				Description: "Measures the size of HTTP request messages.",
 				Unit:        "By",
-				Data: metricdata.Histogram[int64]{
+				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{
 						{
-							Attributes: currAttrs,
+							Attributes: oldAttrs,
 						},
 					},
 				},
 			},
 			{
-				Name:        "http.client.request.duration",
-				Description: "Duration of HTTP client requests.",
-				Unit:        "s",
+				Name:        "http.client.duration",
+				Description: "Measures the duration of outbound HTTP requests.",
+				Unit:        "ms",
 				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
-							Attributes: currAttrs,
+							Attributes: oldAttrs,
 						},
 					},
 				},
@@ -451,32 +452,31 @@ func TestNewClientRecordMetrics(t *testing.T) {
 		},
 	}
 
-	// The OldHTTPClient version
-	expectedOldScopeMetric := expectedCurrentScopeMetric
-	expectedOldScopeMetric.Metrics = append(expectedOldScopeMetric.Metrics, []metricdata.Metrics{
+	// the CurrentHTTPClient version
+	expectedCurrentScopeMetric := expectedOldScopeMetric
+	expectedCurrentScopeMetric.Metrics = append(expectedCurrentScopeMetric.Metrics, []metricdata.Metrics{
 		{
-			Name:        "http.client.request.size",
-			Description: "Measures the size of HTTP request messages.",
+			Name:        "http.client.request.body.size",
+			Description: "Size of HTTP client request bodies.",
 			Unit:        "By",
-			Data: metricdata.Sum[int64]{
+			Data: metricdata.Histogram[int64]{
 				Temporality: metricdata.CumulativeTemporality,
-				IsMonotonic: true,
-				DataPoints: []metricdata.DataPoint[int64]{
+				DataPoints: []metricdata.HistogramDataPoint[int64]{
 					{
-						Attributes: oldAttrs,
+						Attributes: currAttrs,
 					},
 				},
 			},
 		},
 		{
-			Name:        "http.client.duration",
-			Description: "Measures the duration of outbound HTTP requests.",
-			Unit:        "ms",
+			Name:        "http.client.request.duration",
+			Description: "Duration of HTTP client requests.",
+			Unit:        "s",
 			Data: metricdata.Histogram[float64]{
 				Temporality: metricdata.CumulativeTemporality,
 				DataPoints: []metricdata.HistogramDataPoint[float64]{
 					{
-						Attributes: oldAttrs,
+						Attributes: currAttrs,
 					},
 				},
 			},
@@ -508,8 +508,9 @@ func TestNewClientRecordMetrics(t *testing.T) {
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				require.Len(t, rm.ScopeMetrics, 1)
 
+				// because of OldHTTPClient
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
-				metricdatatest.AssertEqual(t, expectedCurrentScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(t, expectedOldScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			},
 		},
 		{
@@ -531,7 +532,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				require.Len(t, rm.ScopeMetrics, 1)
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 4)
-				metricdatatest.AssertEqual(t, expectedOldScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(t, expectedCurrentScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			},
 		},
 	}
@@ -594,6 +595,9 @@ func TestClientRecordResponseSize(t *testing.T) {
 		},
 	}
 
+	// the CurrentHTTPClient version
+	expectedCurrentScopeMetric := expectedOldScopeMetric
+
 	tests := []struct {
 		name       string
 		setEnv     bool
@@ -617,7 +621,11 @@ func TestClientRecordResponseSize(t *testing.T) {
 				return semconv.NewHTTPClient(mp.Meter("test"))
 			},
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
-				require.Empty(t, rm.ScopeMetrics)
+				require.Len(t, rm.ScopeMetrics, 1)
+
+				// because of OldHTTPClient
+				require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+				metricdatatest.AssertEqual(t, expectedOldScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			},
 		},
 		{
@@ -639,7 +647,7 @@ func TestClientRecordResponseSize(t *testing.T) {
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				require.Len(t, rm.ScopeMetrics, 1)
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
-				metricdatatest.AssertEqual(t, expectedOldScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+				metricdatatest.AssertEqual(t, expectedCurrentScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 			},
 		},
 	}

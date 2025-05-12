@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 )
@@ -35,6 +36,10 @@ func TestRoundtrip(t *testing.T) {
 
 			actualAttrs := make(map[attribute.Key]string)
 			for _, attr := range attrs {
+				if attr.Key == semconv.NetSockPeerPortKey {
+					// Peer port will be non-deterministic
+					continue
+				}
 				if expectedAttrs[attr.Key] == "any" {
 					actualAttrs[attr.Key] = expectedAttrs[attr.Key]
 				} else {
@@ -70,18 +75,17 @@ func TestRoundtrip(t *testing.T) {
 	address := ts.Listener.Addr()
 	hp := strings.Split(address.String(), ":")
 	expectedAttrs = map[attribute.Key]string{
-		"client.address":           hp[0],
-		"http.request.body.size":   "3",
-		"http.request.method":      "GET",
-		"network.peer.address":     hp[0],
-		"network.peer.port":        "any",
-		"network.protocol.version": "1.1",
-		"network.transport":        "tcp",
-		"server.address":           "127.0.0.1",
-		"server.port":              hp[1],
-		"url.path":                 "/",
-		"url.scheme":               "http",
-		"user_agent.original":      "Go-http-client/1.1",
+		semconv.NetHostNameKey:              hp[0],
+		semconv.NetHostPortKey:              hp[1],
+		semconv.NetProtocolVersionKey:       "1.1",
+		semconv.HTTPMethodKey:               "GET",
+		semconv.HTTPSchemeKey:               "http",
+		semconv.HTTPTargetKey:               "/",
+		semconv.HTTPRequestContentLengthKey: "3",
+		semconv.HTTPClientIPKey:             hp[0],
+		semconv.NetSockPeerAddrKey:          hp[0],
+		semconv.NetTransportKey:             "ip_tcp",
+		semconv.UserAgentOriginalKey:        "Go-http-client/1.1",
 	}
 
 	client := ts.Client()

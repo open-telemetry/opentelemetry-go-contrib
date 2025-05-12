@@ -706,15 +706,12 @@ func TestTransportMetrics(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
-			attribute.String("http.request.method", "GET"),
-			attribute.Int("http.response.status_code", 200),
-			attribute.String("server.address", host),
-			attribute.Int("server.port", port),
-			attribute.String("url.scheme", "http"),
-			attribute.String("network.protocol.name", "http"),
-			attribute.String("network.protocol.version", "1.1"),
+			attribute.String("http.method", "GET"),
+			attribute.Int("http.status_code", 200),
+			attribute.String("net.peer.name", host),
+			attribute.Int("net.peer.port", port),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 13)
 	})
 
 	t.Run("make http request and buffer response", func(t *testing.T) {
@@ -778,15 +775,12 @@ func TestTransportMetrics(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
-			attribute.String("http.request.method", "GET"),
-			attribute.Int("http.response.status_code", 200),
-			attribute.String("server.address", host),
-			attribute.Int("server.port", port),
-			attribute.String("url.scheme", "http"),
-			attribute.String("network.protocol.name", "http"),
-			attribute.String("network.protocol.version", "1.1"),
+			attribute.String("http.method", "GET"),
+			attribute.Int("http.status_code", 200),
+			attribute.String("net.peer.name", host),
+			attribute.Int("net.peer.port", port),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 13)
 	})
 
 	t.Run("make http request and close body before reading completely", func(t *testing.T) {
@@ -845,25 +839,24 @@ func TestTransportMetrics(t *testing.T) {
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
-			attribute.String("http.request.method", "GET"),
-			attribute.Int("http.response.status_code", 200),
-			attribute.String("server.address", host),
-			attribute.Int("server.port", port),
-			attribute.String("url.scheme", "http"),
-			attribute.String("network.protocol.name", "http"),
-			attribute.String("network.protocol.version", "1.1"),
+			attribute.String("http.method", "GET"),
+			attribute.Int("http.status_code", 200),
+			attribute.String("net.peer.name", host),
+			attribute.Int("net.peer.port", port),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs, 10)
 	})
 }
 
-func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
+func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set, rxBytes int64) {
+	t.Helper()
+
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
 		Version: Version(),
 	}, sm.Scope)
 
-	require.Len(t, sm.Metrics, 2)
+	require.Len(t, sm.Metrics, 3)
 
 	want := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
@@ -872,29 +865,32 @@ func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs at
 		},
 		Metrics: []metricdata.Metrics{
 			{
-				Name:        "http.client.request.body.size",
-				Description: "Size of HTTP client request bodies.",
+				Name:        "http.client.request.size",
+				Description: "Measures the size of HTTP request messages.",
 				Unit:        "By",
-				Data: metricdata.Histogram[int64]{
+				Data: metricdata.Sum[int64]{
+					DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 4}},
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
-						{
-							Attributes: attrs,
-						},
-					},
+					IsMonotonic: true,
 				},
 			},
 			{
-				Name:        "http.client.request.duration",
-				Description: "Duration of HTTP client requests.",
-				Unit:        "s",
-				Data: metricdata.Histogram[float64]{
+				Name:        "http.client.response.size",
+				Description: "Measures the size of HTTP response messages.",
+				Unit:        "By",
+				Data: metricdata.Sum[int64]{
+					DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: rxBytes}},
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[float64]{
-						{
-							Attributes: attrs,
-						},
-					},
+					IsMonotonic: true,
+				},
+			},
+			{
+				Name:        "http.client.duration",
+				Description: "Measures the duration of outbound HTTP requests.",
+				Unit:        "ms",
+				Data: metricdata.Histogram[float64]{
+					DataPoints:  []metricdata.HistogramDataPoint[float64]{{Attributes: attrs}},
+					Temporality: metricdata.CumulativeTemporality,
 				},
 			},
 		},
@@ -1011,7 +1007,7 @@ func TestDefaultAttributesHandling(t *testing.T) {
 	err = reader.Collect(ctx, &rm)
 	assert.NoError(t, err)
 
-	assert.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)
 	for _, m := range rm.ScopeMetrics[0].Metrics {
 		switch m.Name {
 		case clientRequestSize:

@@ -95,9 +95,9 @@ func TestChildSpanNames(t *testing.T) {
 		t,
 		spans[0],
 		"/user/{id:[0-9]+}",
-		attribute.String("server.address", "foobar"),
-		attribute.Int("http.response.status_code", http.StatusOK),
-		attribute.String("http.request.method", "GET"),
+		attribute.String("net.host.name", "foobar"),
+		attribute.Int("http.status_code", http.StatusOK),
+		attribute.String("http.method", "GET"),
 		attribute.String("http.route", "/user/{id:[0-9]+}"),
 	)
 
@@ -110,9 +110,9 @@ func TestChildSpanNames(t *testing.T) {
 		t,
 		spans[1],
 		"/book/{title}",
-		attribute.String("server.address", "foobar"),
-		attribute.Int("http.response.status_code", http.StatusOK),
-		attribute.String("http.request.method", "GET"),
+		attribute.String("net.host.name", "foobar"),
+		attribute.Int("http.status_code", http.StatusOK),
+		attribute.String("http.method", "GET"),
 		attribute.String("http.route", "/book/{title}"),
 	)
 }

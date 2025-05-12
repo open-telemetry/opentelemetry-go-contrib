@@ -68,7 +68,7 @@ func TestServerNetworkTransportAttr(t *testing.T) {
 			network: "tcp",
 
 			wantAttributes: []attribute.KeyValue{
-				attribute.String("network.transport", "tcp"),
+				attribute.String("net.transport", "ip_tcp"),
 			},
 		},
 		{

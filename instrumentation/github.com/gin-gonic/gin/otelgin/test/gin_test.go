@@ -21,7 +21,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -166,9 +165,9 @@ func TestTrace200(t *testing.T) {
 	assert.Equal(t, "GET /user/:id", span.Name())
 	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("server.address", "foobar"))
+	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusOK))
-	assert.Contains(t, attr, attribute.String("http.request.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.method", "GET"))
 	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
 	assert.Empty(t, span.Events())
 	assert.Equal(t, codes.Unset, span.Status().Code)
@@ -201,7 +200,7 @@ func TestError(t *testing.T) {
 	span := spans[0]
 	assert.Equal(t, "GET /server_err", span.Name())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("server.address", "foobar"))
+	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusInternalServerError))
 
 	// verify the error events
@@ -345,7 +344,7 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	assert.Equal(t, "/user/123", span.Name())
 	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("http.request.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.method", "GET"))
 	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
 }
 
@@ -533,12 +532,12 @@ func TestMetrics(t *testing.T) {
 			assert.Equal(t, otelgin.Version(), sm.Scope.Version)
 
 			attrs := []attribute.KeyValue{
-				attribute.String("http.request.method", "GET"),
-				attribute.Int64("http.response.status_code", tt.wantStatus),
-				attribute.String("network.protocol.name", "http"),
-				attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
-				attribute.String("server.address", "foobar"),
-				attribute.String("url.scheme", "http"),
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "http"),
+				attribute.Int64("http.status_code", tt.wantStatus),
+				attribute.String("net.protocol.name", "http"),
+				attribute.String("net.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
+				attribute.String("net.host.name", "foobar"),
 			}
 			if tt.wantRouteAttr != "" {
 				attrs = append(attrs, attribute.String("http.route", tt.wantRouteAttr))
@@ -552,37 +551,35 @@ func TestMetrics(t *testing.T) {
 			}
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
-				Name:        "http.server.request.body.size",
-				Description: "Size of HTTP server request bodies.",
+				Name:        "http.server.request.size",
+				Description: "Measures the size of HTTP request messages.",
 				Unit:        "By",
-				Data: metricdata.Histogram[int64]{
+				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(attrs...),
-						},
-					},
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{{
+						Attributes: attribute.NewSet(attrs...), Value: 0,
+					}},
 				},
 			}, sm.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
-				Name:        "http.server.response.body.size",
-				Description: "Size of HTTP server response bodies.",
+				Name:        "http.server.response.size",
+				Description: "Measures the size of HTTP response messages.",
 				Unit:        "By",
-				Data: metricdata.Histogram[int64]{
+				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(attrs...),
-						},
-					},
+					IsMonotonic: true,
+					DataPoints: []metricdata.DataPoint[int64]{{
+						Attributes: attribute.NewSet(attrs...), Value: 3,
+					}},
 				},
 			}, sm.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
-				Name:        "http.server.request.duration",
-				Description: "Duration of HTTP server requests.",
-				Unit:        "s",
+				Name:        "http.server.duration",
+				Description: "Measures the duration of inbound HTTP requests.",
+				Unit:        "ms",
 				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
@@ -592,49 +589,6 @@ func TestMetrics(t *testing.T) {
 					},
 				},
 			}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
-		})
-	}
-}
-
-func TestServerWithSemConvStabilityOptIn(t *testing.T) {
-	tests := []struct {
-		name                 string
-		setEnv               bool
-		wantExistsHTTPMethod bool
-	}{
-		{
-			"not set",
-			false,
-			false,
-		},
-		{
-			"set to http/dup",
-			true,
-			true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.setEnv {
-				t.Setenv(semconv.OTelSemConvStabilityOptIn, "http/dup")
-			}
-
-			attrs := semconv.NewHTTPServer(nil).
-				RequestTraceAttrs("foobar",
-					httptest.NewRequest("GET", "/user/123", nil),
-					semconv.RequestTraceAttrsOpts{
-						HTTPClientIP: "127.0.0.1",
-					})
-
-			var existsHTTPMethod bool
-			for _, attr := range attrs {
-				if attr.Key == "http.method" {
-					existsHTTPMethod = true
-					break
-				}
-			}
-			assert.Equal(t, tt.wantExistsHTTPMethod, existsHTTPMethod)
 		})
 	}
 }

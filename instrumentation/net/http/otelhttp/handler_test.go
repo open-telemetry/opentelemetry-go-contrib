@@ -141,13 +141,13 @@ func TestHandlerBasics(t *testing.T) {
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	attrs := attribute.NewSet(
-		attribute.String("http.request.method", "GET"),
-		attribute.Int64("http.response.status_code", 200),
-		attribute.String("network.protocol.name", "http"),
-		attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
-		attribute.String("server.address", r.Host),
-		attribute.String("url.scheme", "http"),
+		semconv.NetHostName(r.Host),
+		semconv.HTTPSchemeHTTP,
+		semconv.NetProtocolName("http"),
+		semconv.NetProtocolVersion(fmt.Sprintf("1.%d", r.ProtoMinor)),
+		semconv.HTTPMethod("GET"),
 		attribute.String("test", "attribute"),
+		semconv.HTTPStatusCode(200),
 	)
 	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 
@@ -174,6 +174,8 @@ func TestHandlerBasics(t *testing.T) {
 }
 
 func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
+	t.Helper()
+
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
 		Version: Version(),
@@ -188,42 +190,32 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 		},
 		Metrics: []metricdata.Metrics{
 			{
-				Name:        "http.server.request.body.size",
-				Description: "Size of HTTP server request bodies.",
+				Name:        "http.server.request.size",
+				Description: "Measures the size of HTTP request messages.",
 				Unit:        "By",
-				Data: metricdata.Histogram[int64]{
+				Data: metricdata.Sum[int64]{
+					DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 0}},
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
-						{
-							Attributes: attrs,
-						},
-					},
+					IsMonotonic: true,
 				},
 			},
 			{
-				Name:        "http.server.response.body.size",
-				Description: "Size of HTTP server response bodies.",
+				Name:        "http.server.response.size",
+				Description: "Measures the size of HTTP response messages.",
 				Unit:        "By",
-				Data: metricdata.Histogram[int64]{
+				Data: metricdata.Sum[int64]{
+					DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: 11}},
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
-						{
-							Attributes: attrs,
-						},
-					},
+					IsMonotonic: true,
 				},
 			},
 			{
-				Name:        "http.server.request.duration",
-				Description: "Duration of HTTP server requests.",
-				Unit:        "s",
+				Name:        "http.server.duration",
+				Description: "Measures the duration of inbound HTTP requests.",
+				Unit:        "ms",
 				Data: metricdata.Histogram[float64]{
+					DataPoints:  []metricdata.HistogramDataPoint[float64]{{Attributes: attrs}},
 					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[float64]{
-						{
-							Attributes: attrs,
-						},
-					},
 				},
 			},
 		},
@@ -246,7 +238,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			},
 			attributes: []attribute.KeyValue{
-				attribute.Int("http.response.status_code", http.StatusOK),
+				attribute.Int("http.status_code", http.StatusOK),
 			},
 		},
 		{
@@ -255,7 +247,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 				w.WriteHeader(http.StatusBadRequest)
 			},
 			attributes: []attribute.KeyValue{
-				attribute.Int("http.response.status_code", http.StatusBadRequest),
+				attribute.Int("http.status_code", http.StatusBadRequest),
 			},
 		},
 		{
@@ -263,7 +255,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 			handler: func(w http.ResponseWriter, r *http.Request) {
 			},
 			attributes: []attribute.KeyValue{
-				attribute.Int("http.response.status_code", http.StatusOK),
+				attribute.Int("http.status_code", http.StatusOK),
 			},
 		},
 		{
@@ -273,7 +265,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 				w.WriteHeader(http.StatusOK)
 			},
 			attributes: []attribute.KeyValue{
-				attribute.Int("http.response.status_code", http.StatusInternalServerError),
+				attribute.Int("http.status_code", http.StatusInternalServerError),
 			},
 		},
 	}

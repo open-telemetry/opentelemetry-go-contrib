@@ -305,7 +305,7 @@ func TestRequestTraceAttrs_HTTPRoute(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/path/abc123", nil)
 			req.Pattern = tt.pattern
 
-			attrs := (CurrentHTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
+			attrs := (CurrentHTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{}, []attribute.KeyValue{})
 
 			var gotRoute string
 			for _, attr := range attrs {
@@ -358,7 +358,7 @@ func TestRequestTraceAttrs_ClientIP(t *testing.T) {
 			}
 
 			var found bool
-			for _, attr := range (CurrentHTTPServer{}).RequestTraceAttrs("", req, tt.requestTraceOpts) {
+			for _, attr := range (CurrentHTTPServer{}).RequestTraceAttrs("", req, tt.requestTraceOpts, []attribute.KeyValue{}) {
 				if attr.Key != "client.address" {
 					continue
 				}

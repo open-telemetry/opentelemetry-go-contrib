@@ -136,9 +136,9 @@ func TestSDKIntegration(t *testing.T) {
 			assertSpan(t, sr.Ended()[0],
 				tt.expected,
 				trace.SpanKindServer,
-				attribute.String("server.address", "foobar"),
-				attribute.Int("http.response.status_code", http.StatusOK),
-				attribute.String("http.request.method", "GET"),
+				attribute.String("net.host.name", "foobar"),
+				attribute.Int("http.status_code", http.StatusOK),
+				attribute.String("http.method", "GET"),
 				attribute.String("http.route", tt.expected),
 			)
 		})
@@ -162,9 +162,9 @@ func TestNotFoundIsNotError(t *testing.T) {
 	assertSpan(t, sr.Ended()[0],
 		"/does/not/exist",
 		trace.SpanKindServer,
-		attribute.String("server.address", "foobar"),
-		attribute.Int("http.response.status_code", http.StatusNotFound),
-		attribute.String("http.request.method", "GET"),
+		attribute.String("net.host.name", "foobar"),
+		attribute.Int("http.status_code", http.StatusNotFound),
+		attribute.String("http.method", "GET"),
 		attribute.String("http.route", "/does/not/exist"),
 	)
 	assert.Equal(t, codes.Unset, sr.Ended()[0].Status().Code)

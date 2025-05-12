@@ -45,7 +45,7 @@ type CurrentHTTPServer struct{}
 //
 // If the primary server name is not known, server should be an empty string.
 // The req Host will be used to determine the server instead.
-func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request, opts RequestTraceAttrsOpts) []attribute.KeyValue {
+func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request, opts RequestTraceAttrsOpts, attrs []attribute.KeyValue) []attribute.KeyValue {
 	count := 3 // ServerAddress, Method, Scheme
 
 	var host string
@@ -119,7 +119,6 @@ func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request, o
 		count++
 	}
 
-	attrs := make([]attribute.KeyValue, 0, count)
 	attrs = append(attrs,
 		semconvNew.ServerAddress(host),
 		method,
@@ -208,7 +207,7 @@ func (n CurrentHTTPServer) scheme(https bool) attribute.KeyValue { // nolint:rev
 //
 // If any of the fields in the ResponseTelemetry are not set the attribute will
 // be omitted.
-func (n CurrentHTTPServer) ResponseTraceAttrs(resp ResponseTelemetry) []attribute.KeyValue {
+func (n CurrentHTTPServer) ResponseTraceAttrs(resp ResponseTelemetry, attrs []attribute.KeyValue) []attribute.KeyValue {
 	var count int
 
 	if resp.ReadBytes > 0 {
@@ -221,25 +220,23 @@ func (n CurrentHTTPServer) ResponseTraceAttrs(resp ResponseTelemetry) []attribut
 		count++
 	}
 
-	attributes := make([]attribute.KeyValue, 0, count)
-
 	if resp.ReadBytes > 0 {
-		attributes = append(attributes,
+		attrs = append(attrs,
 			semconvNew.HTTPRequestBodySize(int(resp.ReadBytes)),
 		)
 	}
 	if resp.WriteBytes > 0 {
-		attributes = append(attributes,
+		attrs = append(attrs,
 			semconvNew.HTTPResponseBodySize(int(resp.WriteBytes)),
 		)
 	}
 	if resp.StatusCode > 0 {
-		attributes = append(attributes,
+		attrs = append(attrs,
 			semconvNew.HTTPResponseStatusCode(resp.StatusCode),
 		)
 	}
 
-	return attributes
+	return attrs
 }
 
 // Route returns the attribute for the route.
@@ -331,7 +328,7 @@ func (n CurrentHTTPServer) MetricAttributes(server string, req *http.Request, st
 type CurrentHTTPClient struct{}
 
 // RequestTraceAttrs returns trace attributes for an HTTP request made by a client.
-func (n CurrentHTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
+func (n CurrentHTTPClient) RequestTraceAttrs(req *http.Request, attrs []attribute.KeyValue) []attribute.KeyValue {
 	/*
 	   below attributes are returned:
 	   - http.request.method
@@ -342,7 +339,6 @@ func (n CurrentHTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyV
 	   - network.protocol.name
 	   - network.protocol.version
 	*/
-	numOfAttributes := 3 // URL, server address, proto, and method.
 
 	var urlHost string
 	if req.URL != nil {
@@ -358,28 +354,8 @@ func (n CurrentHTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyV
 	}
 
 	eligiblePort := requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", requestPort)
-	if eligiblePort > 0 {
-		numOfAttributes++
-	}
-	useragent := req.UserAgent()
-	if useragent != "" {
-		numOfAttributes++
-	}
-
 	protoName, protoVersion := netProtocol(req.Proto)
-	if protoName != "" && protoName != "http" {
-		numOfAttributes++
-	}
-	if protoVersion != "" {
-		numOfAttributes++
-	}
-
 	method, originalMethod := n.method(req.Method)
-	if originalMethod != (attribute.KeyValue{}) {
-		numOfAttributes++
-	}
-
-	attrs := make([]attribute.KeyValue, 0, numOfAttributes)
 
 	attrs = append(attrs, method)
 	if originalMethod != (attribute.KeyValue{}) {
@@ -413,22 +389,13 @@ func (n CurrentHTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyV
 }
 
 // ResponseTraceAttrs returns trace attributes for an HTTP response made by a client.
-func (n CurrentHTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue {
+func (n CurrentHTTPClient) ResponseTraceAttrs(resp *http.Response, attrs []attribute.KeyValue) []attribute.KeyValue {
 	/*
 	   below attributes are returned:
 	   - http.response.status_code
 	   - error.type
 	*/
-	var count int
-	if resp.StatusCode > 0 {
-		count++
-	}
 
-	if isErrorStatusCode(resp.StatusCode) {
-		count++
-	}
-
-	attrs := make([]attribute.KeyValue, 0, count)
 	if resp.StatusCode > 0 {
 		attrs = append(attrs, semconvNew.HTTPResponseStatusCode(resp.StatusCode))
 	}
