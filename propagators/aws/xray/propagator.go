@@ -65,7 +65,7 @@ func (xray Propagator) Inject(ctx context.Context, carrier propagation.TextMapCa
 		traceIDDelimiter + otTraceID[traceIDFirstPartLength:]
 	parentID := sc.SpanID()
 	samplingFlag := notSampled
-	if sc.TraceFlags() == traceFlagSampled {
+	if sc.TraceFlags().IsSampled() {
 		samplingFlag = isSampled
 	}
 	headers := []string{
@@ -163,10 +163,10 @@ func parseTraceID(xrayTraceID string) (trace.TraceID, error) {
 
 // parseTraceFlag returns a parsed trace flag.
 func parseTraceFlag(xraySampledFlag string) trace.TraceFlags {
-	if len(xraySampledFlag) == sampledFlagLength && xraySampledFlag != isSampled {
-		return traceFlagNone
+	if xraySampledFlag == isSampled {
+		return trace.FlagsSampled
 	}
-	return trace.FlagsSampled
+	return trace.FlagsSampled.WithSampled(false)
 }
 
 // Fields returns list of fields used by HTTPTextFormat.

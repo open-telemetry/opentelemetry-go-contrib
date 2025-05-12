@@ -50,6 +50,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions have been upgraded from `v1.17.0` to `v1.30.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7270)
   - All `net.peer.*` and `net.host.*` attributes are now set to correct `server.*` attributes.
   - No `net.socket.*` attributes are set.
+- AWS Xray propagator now only samples when `Sampled=1`. (#7262)
 
 ### Fixed
 
