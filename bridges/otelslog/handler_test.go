@@ -450,16 +450,15 @@ func TestSLogHandler(t *testing.T) {
 			}
 		})
 	}
+}
 
-	t.Run("slogtest.TestHandler", func(t *testing.T) {
-		r := new(recorder)
-		h := NewHandler("", WithLoggerProvider(r))
-
-		// TODO: use slogtest.Run when Go 1.21 is no longer supported.
-		err := slogtest.TestHandler(h, r.Results)
-		if err != nil {
-			t.Fatal(err)
-		}
+func TestSlogtest(t *testing.T) {
+	r := new(recorder)
+	slogtest.Run(t, func(t *testing.T) slog.Handler {
+		r = new(recorder)
+		return NewHandler("", WithLoggerProvider(r))
+	}, func(t *testing.T) map[string]any {
+		return r.Results()[0]
 	})
 }
 

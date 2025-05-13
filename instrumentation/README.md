@@ -48,6 +48,7 @@ The following instrumentation packages are provided for popular Go packages and 
 | [github.com/gorilla/mux](./github.com/gorilla/mux/otelmux) |  | ✓ |
 | [github.com/labstack/echo](./github.com/labstack/echo/otelecho) |  | ✓ |
 | [go.mongodb.org/mongo-driver](./go.mongodb.org/mongo-driver/mongo/otelmongo) |  | ✓ |
+| [go.mongodb.org/mongo-driver/v2](./go.mongodb.org/mongo-driver/v2/mongo/otelmongo) |  | ✓ |
 | [google.golang.org/grpc](./google.golang.org/grpc/otelgrpc) | ✓ | ✓ |
 | [host](./host) | ✓ |  |
 | [net/http](./net/http/otelhttp) | ✓ | ✓ |
