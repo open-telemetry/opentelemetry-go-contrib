@@ -5,7 +5,7 @@ go 1.23.0
 exclude github.com/blizzy78/varnamelen v0.6.1
 
 require (
-	github.com/atombender/go-jsonschema v0.18.0
+	github.com/atombender/go-jsonschema v0.20.0
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint/v2 v2.1.6
 	github.com/itchyny/gojq v0.12.17
@@ -186,6 +186,7 @@ require (
 	github.com/sivchari/containedctx v1.0.3 // indirect
 	github.com/skeema/knownhosts v1.3.1 // indirect
 	github.com/sonatard/noctx v0.3.3 // indirect
+	github.com/sosodev/duration v1.3.1 // indirect
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/sourcegraph/go-diff v0.7.0 // indirect
 	github.com/spf13/afero v1.14.0 // indirect
