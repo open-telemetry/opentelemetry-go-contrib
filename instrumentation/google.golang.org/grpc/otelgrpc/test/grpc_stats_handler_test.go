@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -157,29 +157,29 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(0),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(0),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(0),
+				semconv.RPCMessageUncompressedSizeKey.Int(0),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(0),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(0),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(0),
+				semconv.RPCMessageUncompressedSizeKey.Int(0),
 			},
 		},
 	}, emptySpan.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("EmptyCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(host),
-		semconv.NetSockPeerPort(port),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
 		testSpanAttr,
 	}, emptySpan.Attributes())
 
@@ -190,29 +190,29 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(271840),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(271840),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(271840),
+				semconv.RPCMessageUncompressedSizeKey.Int(271840),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(314167),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(314167),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(314167),
+				semconv.RPCMessageUncompressedSizeKey.Int(314167),
 			},
 		},
 	}, largeSpan.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("UnaryCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(host),
-		semconv.NetSockPeerPort(port),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
 		testSpanAttr,
 	}, largeSpan.Attributes())
 
@@ -223,46 +223,46 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(27190),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(27190),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(27190),
+				semconv.RPCMessageUncompressedSizeKey.Int(27190),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(12),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(12),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(12),
+				semconv.RPCMessageUncompressedSizeKey.Int(12),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(1834),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(1834),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(1834),
+				semconv.RPCMessageUncompressedSizeKey.Int(1834),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(45912),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(45912),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(45912),
+				semconv.RPCMessageUncompressedSizeKey.Int(45912),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(4),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(4),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(4),
+				semconv.RPCMessageUncompressedSizeKey.Int(4),
 			},
 		},
 		// client does not record an event for the server response.
@@ -270,10 +270,10 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("StreamingInputCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(host),
-		semconv.NetSockPeerPort(port),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
 		testSpanAttr,
 	}, streamInput.Attributes())
 
@@ -284,56 +284,56 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(21),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(21),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(21),
+				semconv.RPCMessageUncompressedSizeKey.Int(21),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(31423),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(31423),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(31423),
+				semconv.RPCMessageUncompressedSizeKey.Int(31423),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(13),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(13),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(13),
+				semconv.RPCMessageUncompressedSizeKey.Int(13),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(2659),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(2659),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(2659),
+				semconv.RPCMessageUncompressedSizeKey.Int(2659),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(58987),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(58987),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(58987),
+				semconv.RPCMessageUncompressedSizeKey.Int(58987),
 			},
 		},
 	}, streamOutput.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("StreamingOutputCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(host),
-		semconv.NetSockPeerPort(port),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
 		testSpanAttr,
 	}, streamOutput.Attributes())
 
@@ -344,83 +344,83 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(27196),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(27196),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(27196),
+				semconv.RPCMessageUncompressedSizeKey.Int(27196),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(31423),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(31423),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(31423),
+				semconv.RPCMessageUncompressedSizeKey.Int(31423),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(16),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(16),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(16),
+				semconv.RPCMessageUncompressedSizeKey.Int(16),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(13),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(13),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(13),
+				semconv.RPCMessageUncompressedSizeKey.Int(13),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(1839),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(1839),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(1839),
+				semconv.RPCMessageUncompressedSizeKey.Int(1839),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(2659),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(2659),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(2659),
+				semconv.RPCMessageUncompressedSizeKey.Int(2659),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(45918),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(45918),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(45918),
+				semconv.RPCMessageUncompressedSizeKey.Int(45918),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(58987),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(58987),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(58987),
+				semconv.RPCMessageUncompressedSizeKey.Int(58987),
 			},
 		},
 	}, pingPong.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("FullDuplexCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr(host),
-		semconv.NetSockPeerPort(port),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress(host),
+		semconv.ServerPort(port),
 		testSpanAttr,
 	}, pingPong.Attributes())
 }
@@ -435,30 +435,30 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(0),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(0),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(0),
+				semconv.RPCMessageUncompressedSizeKey.Int(0),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(0),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(0),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(0),
+				semconv.RPCMessageUncompressedSizeKey.Int(0),
 			},
 		},
 	}, emptySpan.Events())
-	port, ok := findAttribute(emptySpan.Attributes(), semconv.NetSockPeerPortKey)
+	port, ok := findAttribute(emptySpan.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("EmptyCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr("127.0.0.1"),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress("127.0.0.1"),
 		port,
 		testSpanAttr,
 	}, emptySpan.Attributes())
@@ -470,30 +470,30 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(271840),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(271840),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageCompressedSizeKey.Int(271840),
+				semconv.RPCMessageUncompressedSizeKey.Int(271840),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(314167),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(314167),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageCompressedSizeKey.Int(314167),
+				semconv.RPCMessageUncompressedSizeKey.Int(314167),
 			},
 		},
 	}, largeSpan.Events())
-	port, ok = findAttribute(largeSpan.Attributes(), semconv.NetSockPeerPortKey)
+	port, ok = findAttribute(largeSpan.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("UnaryCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr("127.0.0.1"),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress("127.0.0.1"),
 		port,
 		testSpanAttr,
 	}, largeSpan.Attributes())
@@ -505,58 +505,58 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(27190),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(27190),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(27190),
+				semconv.RPCMessageUncompressedSizeKey.Int(27190),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(12),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(12),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(12),
+				semconv.RPCMessageUncompressedSizeKey.Int(12),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(1834),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(1834),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(1834),
+				semconv.RPCMessageUncompressedSizeKey.Int(1834),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(45912),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(45912),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(45912),
+				semconv.RPCMessageUncompressedSizeKey.Int(45912),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(4),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(4),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(4),
+				semconv.RPCMessageUncompressedSizeKey.Int(4),
 			},
 		},
 		// client does not record an event for the server response.
 	}, streamInput.Events())
-	port, ok = findAttribute(streamInput.Attributes(), semconv.NetSockPeerPortKey)
+	port, ok = findAttribute(streamInput.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("StreamingInputCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr("127.0.0.1"),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress("127.0.0.1"),
 		port,
 		testSpanAttr,
 	}, streamInput.Attributes())
@@ -568,57 +568,57 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(21),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(21),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(21),
+				semconv.RPCMessageUncompressedSizeKey.Int(21),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(31423),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(31423),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(31423),
+				semconv.RPCMessageUncompressedSizeKey.Int(31423),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(13),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(13),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(13),
+				semconv.RPCMessageUncompressedSizeKey.Int(13),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(2659),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(2659),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(2659),
+				semconv.RPCMessageUncompressedSizeKey.Int(2659),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(58987),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(58987),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(58987),
+				semconv.RPCMessageUncompressedSizeKey.Int(58987),
 			},
 		},
 	}, streamOutput.Events())
-	port, ok = findAttribute(streamOutput.Attributes(), semconv.NetSockPeerPortKey)
+	port, ok = findAttribute(streamOutput.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("StreamingOutputCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr("127.0.0.1"),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress("127.0.0.1"),
 		port,
 		testSpanAttr,
 	}, streamOutput.Attributes())
@@ -630,84 +630,84 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(27196),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(27196),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(27196),
+				semconv.RPCMessageUncompressedSizeKey.Int(27196),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(1),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(31423),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(31423),
+				semconv.RPCMessageIDKey.Int(1),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(31423),
+				semconv.RPCMessageUncompressedSizeKey.Int(31423),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(16),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(16),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(16),
+				semconv.RPCMessageUncompressedSizeKey.Int(16),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(2),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(13),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(13),
+				semconv.RPCMessageIDKey.Int(2),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(13),
+				semconv.RPCMessageUncompressedSizeKey.Int(13),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(1839),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(1839),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(1839),
+				semconv.RPCMessageUncompressedSizeKey.Int(1839),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(3),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(2659),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(2659),
+				semconv.RPCMessageIDKey.Int(3),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(2659),
+				semconv.RPCMessageUncompressedSizeKey.Int(2659),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("RECEIVED"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(45918),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(45918),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("RECEIVED"),
+				semconv.RPCMessageCompressedSizeKey.Int(45918),
+				semconv.RPCMessageUncompressedSizeKey.Int(45918),
 			},
 		},
 		{
 			Name: "message",
 			Attributes: []attribute.KeyValue{
-				otelgrpc.RPCMessageIDKey.Int(4),
-				otelgrpc.RPCMessageTypeKey.String("SENT"),
-				otelgrpc.RPCMessageCompressedSizeKey.Int(58987),
-				otelgrpc.RPCMessageUncompressedSizeKey.Int(58987),
+				semconv.RPCMessageIDKey.Int(4),
+				semconv.RPCMessageTypeKey.String("SENT"),
+				semconv.RPCMessageCompressedSizeKey.Int(58987),
+				semconv.RPCMessageUncompressedSizeKey.Int(58987),
 			},
 		},
 	}, pingPong.Events())
-	port, ok = findAttribute(pingPong.Attributes(), semconv.NetSockPeerPortKey)
+	port, ok = findAttribute(pingPong.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("FullDuplexCall"),
 		semconv.RPCServiceKey.String("grpc.testing.TestService"),
-		otelgrpc.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(codes.OK)),
-		semconv.NetSockPeerAddr("127.0.0.1"),
+		semconv.RPCSystemGRPC,
+		semconv.RPCGRPCStatusCodeOk,
+		semconv.ServerAddress("127.0.0.1"),
 		port,
 		testSpanAttr,
 	}, pingPong.Attributes())
@@ -723,13 +723,13 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 		Scope: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
 			Version:   otelgrpc.Version(),
-			SchemaURL: "https://opentelemetry.io/schemas/1.17.0",
+			SchemaURL: semconv.SchemaURL,
 		},
 		Metrics: []metricdata.Metrics{
 			{
-				Name:        "rpc.client.duration",
-				Description: "Measures the duration of inbound RPC.",
-				Unit:        "ms",
+				Name:        semconv.RPCClientDurationName,
+				Description: semconv.RPCClientDurationDescription,
+				Unit:        semconv.RPCClientDurationUnit,
 				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
@@ -777,9 +777,9 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        "rpc.client.request.size",
-				Description: "Measures size of RPC request messages (uncompressed).",
-				Unit:        "By",
+				Name:        semconv.RPCClientRequestSizeName,
+				Description: semconv.RPCClientRequestSizeDescription,
+				Unit:        semconv.RPCClientRequestSizeUnit,
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -852,9 +852,9 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        "rpc.client.response.size",
-				Description: "Measures size of RPC response messages (uncompressed).",
-				Unit:        "By",
+				Name:        semconv.RPCClientResponseSizeName,
+				Description: semconv.RPCClientResponseSizeDescription,
+				Unit:        semconv.RPCClientResponseSizeUnit,
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -927,9 +927,9 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        "rpc.client.requests_per_rpc",
-				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
-				Unit:        "{count}",
+				Name:        semconv.RPCClientRequestsPerRPCName,
+				Description: semconv.RPCClientRequestsPerRPCDescription,
+				Unit:        semconv.RPCClientRequestsPerRPCUnit,
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -1007,9 +1007,9 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        "rpc.client.responses_per_rpc",
-				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
-				Unit:        "{count}",
+				Name:        semconv.RPCClientResponsesPerRPCName,
+				Description: semconv.RPCClientResponsesPerRPCDescription,
+				Unit:        semconv.RPCClientResponsesPerRPCUnit,
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -1101,13 +1101,13 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 		Scope: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
 			Version:   otelgrpc.Version(),
-			SchemaURL: "https://opentelemetry.io/schemas/1.17.0",
+			SchemaURL: semconv.SchemaURL,
 		},
 		Metrics: []metricdata.Metrics{
 			{
-				Name:        "rpc.server.duration",
-				Description: "Measures the duration of inbound RPC.",
-				Unit:        "ms",
+				Name:        semconv.RPCServerDurationName,
+				Description: semconv.RPCServerDurationDescription,
+				Unit:        semconv.RPCServerDurationUnit,
 				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
@@ -1155,9 +1155,9 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        "rpc.server.request.size",
-				Description: "Measures size of RPC request messages (uncompressed).",
-				Unit:        "By",
+				Name:        semconv.RPCServerRequestSizeName,
+				Description: semconv.RPCServerRequestSizeDescription,
+				Unit:        semconv.RPCServerRequestSizeUnit,
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -1230,9 +1230,9 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        "rpc.server.response.size",
-				Description: "Measures size of RPC response messages (uncompressed).",
-				Unit:        "By",
+				Name:        semconv.RPCServerResponseSizeName,
+				Description: semconv.RPCServerResponseSizeDescription,
+				Unit:        semconv.RPCServerResponseSizeUnit,
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -1305,9 +1305,9 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        "rpc.server.requests_per_rpc",
-				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
-				Unit:        "{count}",
+				Name:        semconv.RPCServerRequestsPerRPCName,
+				Description: semconv.RPCServerRequestsPerRPCDescription,
+				Unit:        semconv.RPCServerRequestsPerRPCUnit,
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -1385,9 +1385,9 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        "rpc.server.responses_per_rpc",
-				Description: "Measures the number of messages received per RPC. Should be 1 for all non-streaming RPCs.",
-				Unit:        "{count}",
+				Name:        semconv.RPCServerResponsesPerRPCName,
+				Description: semconv.RPCServerResponsesPerRPCDescription,
+				Unit:        semconv.RPCServerResponsesPerRPCUnit,
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{

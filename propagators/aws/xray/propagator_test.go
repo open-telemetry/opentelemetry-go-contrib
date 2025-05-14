@@ -6,90 +6,145 @@ package xray
 import (
 	"context"
 	"net/http"
-	"strings"
 	"testing"
-
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/propagation"
 
 	"github.com/stretchr/testify/assert"
 
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
-var (
-	traceID                    = trace.TraceID{0x8a, 0x3c, 0x60, 0xf7, 0xd1, 0x88, 0xf8, 0xfa, 0x79, 0xd4, 0x8a, 0x39, 0x1a, 0x77, 0x8f, 0xa6}
-	xrayTraceID                = "1-8a3c60f7-d188f8fa79d48a391a778fa6"
-	xrayTraceIDIncorrectLength = "1-82138-1203123"
-	parentID64Str              = "53995c3f42cd8ad8"
-	parentSpanID               = trace.SpanID{0x53, 0x99, 0x5c, 0x3f, 0x42, 0xcd, 0x8a, 0xd8}
-	zeroSpanIDStr              = "0000000000000000"
-	wrongVersionTraceHeaderID  = "5b00000000b000000000000000000000000"
-)
+func TestExtract(t *testing.T) {
+	type extractTestCase struct {
+		name        string
+		headerVal   string
+		wantValid   bool
+		wantTraceID string
+		wantSpanID  string
+		wantSampled bool
+	}
 
-func TestAwsXrayExtract(t *testing.T) {
-	testData := []struct {
-		traceID      string
-		parentSpanID string
-		samplingFlag string
-		expected     trace.SpanContextConfig
-		err          error
-	}{
+	tests := []extractTestCase{
 		{
-			xrayTraceID, parentID64Str, notSampled,
-			trace.SpanContextConfig{
-				TraceID:    traceID,
-				SpanID:     parentSpanID,
-				TraceFlags: traceFlagNone,
-			},
-			nil,
+			name:        "Valid header - sampled",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=1",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: true,
 		},
 		{
-			xrayTraceID, parentID64Str, isSampled,
-			trace.SpanContextConfig{
-				TraceID:    traceID,
-				SpanID:     parentSpanID,
-				TraceFlags: traceFlagSampled,
-			},
-			nil,
+			name:        "Valid header - not sampled",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=0",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: false,
 		},
 		{
-			xrayTraceID, zeroSpanIDStr, isSampled,
-			trace.SpanContextConfig{},
-			errInvalidSpanIDLength,
+			name:        "Valid header - sample requested",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=?",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: false,
 		},
 		{
-			xrayTraceIDIncorrectLength, parentID64Str, isSampled,
-			trace.SpanContextConfig{},
-			errLengthTraceIDHeader,
+			name:      "Empty header - no trace info",
+			headerVal: "",
+			wantValid: false,
 		},
 		{
-			wrongVersionTraceHeaderID, parentID64Str, isSampled,
-			trace.SpanContextConfig{},
-			errInvalidTraceIDVersion,
+			name:      "Malformed TraceID - too short",
+			headerVal: "Root=1-abc-123;Parent=1234567890abcdef;Sampled=1",
+			wantValid: false,
+		},
+		{
+			name:      "Malformed TraceID - missing delimiters",
+			headerVal: "Root=1abcdef121234567890abcdef12345678;Parent=1234567890abcdef;Sampled=1",
+			wantValid: false,
+		},
+		{
+			name:      "Invalid TraceID version",
+			headerVal: "Root=2-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=1",
+			wantValid: false,
+		},
+		{
+			name:      "Invalid SpanID format",
+			headerVal: "Root=1-abcdef12-1234567890abcdef12345678;Parent=bad-spanid;Sampled=1",
+			wantValid: false,
+		},
+		{
+			name:        "Missing Sampled",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: false,
+		},
+		{
+			name:        "Unknown Sampled value",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=other",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: false,
+		},
+		{
+			name:      "Malformed key-value pair - missing '='",
+			headerVal: "Root=1-abcdef12-1234567890abcdef12345678;BrokenKeyValue;Sampled=1",
+			wantValid: false,
+		},
+		{
+			name:      "Only Sampled key",
+			headerVal: "Sampled=1",
+			wantValid: false,
+		},
+		{
+			name:      "Missing Root key",
+			headerVal: "Parent=1234567890abcdef;Sampled=1",
+			wantValid: false,
+		},
+		{
+			name:        "Trailing semicolon",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=1;",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: true,
 		},
 	}
 
-	for _, test := range testData {
-		headerVal := strings.Join([]string{
-			traceIDKey, kvDelimiter, test.traceID, traceHeaderDelimiter, parentIDKey, kvDelimiter,
-			test.parentSpanID, traceHeaderDelimiter, sampleFlagKey, kvDelimiter, test.samplingFlag,
-		}, "")
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			carrier := propagation.MapCarrier{}
+			if tc.headerVal != "" {
+				carrier.Set("X-Amzn-Trace-Id", tc.headerVal)
+			}
 
-		sc, err := extract(headerVal)
+			// prop := P
 
-		info := []interface{}{
-			"trace ID: %q, parent span ID: %q, sampling flag: %q",
-			test.traceID,
-			test.parentSpanID,
-			test.samplingFlag,
-		}
+			ctx := Propagator{}.Extract(context.Background(), carrier)
+			sc := trace.SpanContextFromContext(ctx)
 
-		if !assert.Equal(t, test.err, err, info...) {
-			continue
-		}
+			if sc.IsValid() != tc.wantValid {
+				t.Fatalf("expected valid=%v, got %v", tc.wantValid, sc.IsValid())
+			}
 
-		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
+			if tc.wantValid {
+				if got := sc.TraceID().String(); got != tc.wantTraceID {
+					t.Errorf("expected TraceID %q, got %q", tc.wantTraceID, got)
+				}
+				if got := sc.SpanID().String(); got != tc.wantSpanID {
+					t.Errorf("expected SpanID %q, got %q", tc.wantSpanID, got)
+				}
+				if got := sc.IsSampled(); got != tc.wantSampled {
+					t.Log("name-->> ", tc.name)
+					t.Errorf("expected sampled=%v, got %v", tc.wantSampled, got)
+				}
+			}
+		})
 	}
 }
 
