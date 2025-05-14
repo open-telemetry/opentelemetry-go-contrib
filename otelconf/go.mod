@@ -23,7 +23,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.35.0
 	go.opentelemetry.io/otel/trace v1.35.0
 	go.opentelemetry.io/proto/otlp v1.6.0
-	google.golang.org/grpc v1.72.0
+	google.golang.org/grpc v1.72.1
 	sigs.k8s.io/yaml v1.4.0
 )
 
