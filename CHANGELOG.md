@@ -107,6 +107,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `GRPCStatusCodeKey` constant from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed.
   Use `semconv.RPCGRPCStatusCodeKey` from `go.opentelemetry.io/otel/semconv/*` instead. (#7270)
 
+### Deprecated
+
+- Deprecate `WithFilter` option and `Filter` type in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. Use `GinFilter` option instead. (#7244)
+- Deprecate `WithMetricAttributeFn` option and `MetricAttributeFn` type in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. Use `WithGinMetricAttributeFn` option instead. (#7244)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

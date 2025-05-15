@@ -52,6 +52,8 @@ var defaultSpanNameFormatter SpanNameFormatter = func(c *gin.Context) string {
 
 // Filter is a predicate used to determine whether a given http.request should
 // be traced. A Filter must return true if the request should be traced.
+//
+// Deprecated: use [GinFilter] instead.
 type Filter func(*http.Request) bool
 
 // GinFilter filters an [net/http.Request] based on content of a [gin.Context].
@@ -62,6 +64,8 @@ type SpanNameFormatter func(*gin.Context) string
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
 // and return them as a slice of attribute.KeyValue.
+//
+// Deprecated: use [GinMetricAttributeFn] instead.
 type MetricAttributeFn func(*http.Request) []attribute.KeyValue
 
 // GinMetricAttributeFn is used to extract additional attributes from the gin.Context
@@ -114,6 +118,8 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 // If no filters are provided then all requests are traced.
 // Filters will be invoked for each processed request, it is advised to make them
 // simple and fast.
+//
+// Deprecated: use [WithGinFilter] instead.
 func WithFilter(f ...Filter) Option {
 	return optionFunc(func(c *config) {
 		c.Filters = append(c.Filters, f...)
@@ -147,6 +153,8 @@ func WithMeterProvider(mp metric.MeterProvider) Option {
 // and returns them as a slice of attribute.KeyValue.
 //
 // If attributes are duplicated between this method and `WithGinMetricAttributeFn`, the attributes in this method will be overridden.
+//
+// Deprecated: use [WithGinMetricAttributeFn] instead.
 func WithMetricAttributeFn(f MetricAttributeFn) Option {
 	return optionFunc(func(c *config) {
 		c.MetricAttributeFn = f
