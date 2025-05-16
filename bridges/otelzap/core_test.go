@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 )
 
 var (
@@ -39,16 +39,18 @@ func TestCore(t *testing.T) {
 
 	t.Run("Write", func(t *testing.T) {
 		logger.Info(testMessage, zap.String(testKey, testValue))
-		got := rec.Result()[0].Records[0]
-		assert.Equal(t, testMessage, got.Body().AsString())
-		assert.Equal(t, log.SeverityInfo, got.Severity())
-		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
-		assert.Equal(t, 1, got.AttributesLen())
-		got.WalkAttributes(func(kv log.KeyValue) bool {
-			assert.Equal(t, testKey, kv.Key)
-			assert.Equal(t, testValue, value2Result(kv.Value))
-			return true
-		})
+
+		result := rec.Result()
+		require.Len(t, result, 1)
+		require.Len(t, result[logtest.Scope{Name: "name"}], 1)
+		got := result[logtest.Scope{Name: "name"}][0]
+
+		assert.Equal(t, testMessage, got.Body.AsString())
+		assert.Equal(t, log.SeverityInfo, got.Severity)
+		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
+		assert.Equal(t, []log.KeyValue{
+			log.String(testKey, testValue),
+		}, got.Attributes)
 	})
 
 	rec.Reset()
@@ -57,8 +59,11 @@ func TestCore(t *testing.T) {
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, testEntry, true)
 		logger.Info(testMessage, zap.Any("ctx", ctx))
-		got := rec.Result()[0].Records[0]
-		assert.Equal(t, got.Context(), ctx)
+
+		got := rec.Result()
+		records := got[logtest.Scope{Name: "name"}]
+		require.Len(t, records, 1)
+		assert.Equal(t, records[0].Context, ctx)
 	})
 
 	rec.Reset()
@@ -68,8 +73,11 @@ func TestCore(t *testing.T) {
 		ctx = context.WithValue(ctx, testEntry, false)
 		childlogger := logger.With(zap.Reflect("ctx", ctx))
 		childlogger.Info(testMessage)
-		got := rec.Result()[0].Records[0]
-		assert.Equal(t, got.Context(), ctx)
+
+		got := rec.Result()
+		records := got[logtest.Scope{Name: "name"}]
+		require.Len(t, records, 1)
+		assert.Equal(t, records[0].Context, ctx)
 	})
 
 	rec.Reset()
@@ -80,19 +88,18 @@ func TestCore(t *testing.T) {
 		childlogger := logger.With(zap.String(testCases[0][0], testCases[0][1]))
 		childlogger.Info(testMessage, zap.String(testCases[1][0], testCases[1][1]))
 
-		got := rec.Result()[0].Records[0]
-		assert.Equal(t, testMessage, got.Body().AsString())
-		assert.Equal(t, log.SeverityInfo, got.Severity())
-		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
-		assert.Equal(t, 2, got.AttributesLen())
+		result := rec.Result()
+		require.Len(t, result, 1)
+		require.Len(t, result[logtest.Scope{Name: "name"}], 1)
+		got := result[logtest.Scope{Name: "name"}][0]
 
-		index := 0
-		got.WalkAttributes(func(kv log.KeyValue) bool {
-			assert.Equal(t, testCases[index][0], kv.Key)
-			assert.Equal(t, testCases[index][1], value2Result(kv.Value))
-			index++
-			return true
-		})
+		assert.Equal(t, testMessage, got.Body.AsString())
+		assert.Equal(t, log.SeverityInfo, got.Severity)
+		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
+		assert.Equal(t, []log.KeyValue{
+			log.String("test1", "value1"),
+			log.String("test2", "value2"),
+		}, got.Attributes)
 	})
 
 	rec.Reset()
@@ -102,14 +109,17 @@ func TestCore(t *testing.T) {
 		childlogger := logger.Named(name)
 		childlogger.Info(testMessage, zap.String(testKey, testValue))
 
-		found := false
-		for _, got := range rec.Result() {
-			found = got.Name == name
-			if found {
-				break
-			}
-		}
-		assert.True(t, found)
+		result := rec.Result()
+		require.Len(t, result, 2)
+		require.Len(t, result[logtest.Scope{Name: "my/pkg"}], 1)
+		got := result[logtest.Scope{Name: "my/pkg"}][0]
+
+		assert.Equal(t, testMessage, got.Body.AsString())
+		assert.Equal(t, log.SeverityInfo, got.Severity)
+		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
+		assert.Equal(t, []log.KeyValue{
+			log.String(testKey, testValue),
+		}, got.Attributes)
 	})
 
 	rec.Reset()
@@ -120,19 +130,19 @@ func TestCore(t *testing.T) {
 		childlogger2 := childlogger.With(zap.String(testCases[1][0], testCases[1][1]))
 		childlogger2.Info(testMessage, zap.String(testCases[2][0], testCases[2][1]))
 
-		got := rec.Result()[0].Records[0]
-		assert.Equal(t, testMessage, got.Body().AsString())
-		assert.Equal(t, log.SeverityInfo, got.Severity())
-		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
-		assert.Equal(t, 3, got.AttributesLen())
+		result := rec.Result()
+		require.Len(t, result, 2)
+		require.Len(t, result[logtest.Scope{Name: "name"}], 1)
+		got := result[logtest.Scope{Name: "name"}][0]
 
-		index := 0
-		got.WalkAttributes(func(kv log.KeyValue) bool {
-			assert.Equal(t, testCases[index][0], kv.Key)
-			assert.Equal(t, testCases[index][1], value2Result(kv.Value))
-			index++
-			return true
-		})
+		assert.Equal(t, testMessage, got.Body.AsString())
+		assert.Equal(t, log.SeverityInfo, got.Severity)
+		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
+		assert.Equal(t, []log.KeyValue{
+			log.String("test1", "value1"),
+			log.String("test2", "value2"),
+			log.String("test3", "value3"),
+		}, got.Attributes)
 	})
 }
 
@@ -145,21 +155,25 @@ func TestCoreEnabled(t *testing.T) {
 	logger := zap.New(NewCore(loggerName, WithLoggerProvider(r)))
 
 	logger.Debug(testMessage)
-	assert.Empty(t, r.Result()[0].Records)
+	assert.Empty(t, r.Result()[logtest.Scope{Name: "name"}])
 
 	if ce := logger.Check(zap.DebugLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-	assert.Empty(t, r.Result()[0].Records)
+	assert.Empty(t, r.Result()[logtest.Scope{Name: "name"}])
 
 	if ce := logger.Check(zap.InfoLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-	require.Len(t, r.Result()[0].Records, 1)
-	got := r.Result()[0].Records[0]
-	assert.Equal(t, testMessage, got.Body().AsString())
-	assert.Equal(t, log.SeverityInfo, got.Severity())
-	assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
+
+	result := r.Result()
+	require.Len(t, result, 1)
+	require.Len(t, result[logtest.Scope{Name: "name"}], 1)
+	got := result[logtest.Scope{Name: "name"}][0]
+
+	assert.Equal(t, testMessage, got.Body.AsString())
+	assert.Equal(t, log.SeverityInfo, got.Severity)
+	assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
 }
 
 func TestCoreWithCaller(t *testing.T) {
@@ -168,24 +182,24 @@ func TestCoreWithCaller(t *testing.T) {
 	logger := zap.New(zc, zap.AddCaller())
 
 	logger.Info(testMessage)
-	got := rec.Result()[0].Records[0]
-	assert.Equal(t, testMessage, got.Body().AsString())
-	assert.Equal(t, log.SeverityInfo, got.Severity())
-	assert.Equal(t, zap.InfoLevel.String(), got.SeverityText())
-	assert.Equal(t, 3, got.AttributesLen())
-	got.WalkAttributes(func(kv log.KeyValue) bool {
-		switch kv.Key {
-		case string(semconv.CodeFilepathKey):
-			assert.Contains(t, kv.Value.AsString(), "core_test.go")
-		case string(semconv.CodeLineNumberKey):
-			assert.Positive(t, kv.Value.AsInt64())
-		case string(semconv.CodeFunctionKey):
-			assert.Equal(t, "go.opentelemetry.io/contrib/bridges/otelzap."+t.Name(), kv.Value.AsString())
-		default:
-			assert.Fail(t, "unexpected attribute key", kv.Key)
-		}
-		return true
-	})
+	result := rec.Result()
+	require.Len(t, result, 1)
+	require.Len(t, result[logtest.Scope{Name: "name"}], 1)
+	got := result[logtest.Scope{Name: "name"}][0]
+
+	assert.Equal(t, testMessage, got.Body.AsString())
+	assert.Equal(t, log.SeverityInfo, got.Severity)
+	assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
+
+	assert.Len(t, got.Attributes, 3)
+	assert.Equal(t, string(semconv.CodeFilepathKey), got.Attributes[0].Key)
+	assert.Contains(t, got.Attributes[0].Value.AsString(), "core_test.go")
+
+	assert.Equal(t, string(semconv.CodeLineNumberKey), got.Attributes[1].Key)
+	assert.Positive(t, got.Attributes[1].Value.AsInt64())
+
+	assert.Equal(t, string(semconv.CodeFunctionKey), got.Attributes[2].Key)
+	assert.Positive(t, "go.opentelemetry.io/contrib/bridges/otelzap."+t.Name(), got.Attributes[2].Value.AsString())
 }
 
 func TestCoreWithStacktrace(t *testing.T) {
@@ -194,16 +208,18 @@ func TestCoreWithStacktrace(t *testing.T) {
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
 	logger.Error(testMessage)
-	got := rec.Result()[0].Records[0]
-	assert.Equal(t, testMessage, got.Body().AsString())
-	assert.Equal(t, log.SeverityError, got.Severity())
-	assert.Equal(t, zap.ErrorLevel.String(), got.SeverityText())
-	assert.Equal(t, 1, got.AttributesLen())
-	got.WalkAttributes(func(kv log.KeyValue) bool {
-		assert.Equal(t, string(semconv.CodeStacktraceKey), kv.Key)
-		assert.NotEmpty(t, kv.Value.AsString())
-		return true
-	})
+	result := rec.Result()
+	require.Len(t, result, 1)
+	require.Len(t, result[logtest.Scope{Name: "name"}], 1)
+	got := result[logtest.Scope{Name: "name"}][0]
+
+	assert.Equal(t, testMessage, got.Body.AsString())
+	assert.Equal(t, log.SeverityError, got.Severity)
+	assert.Equal(t, zap.ErrorLevel.String(), got.SeverityText)
+
+	assert.Len(t, got.Attributes, 1)
+	assert.Equal(t, string(semconv.CodeStacktraceKey), got.Attributes[0].Key)
+	assert.NotEmpty(t, got.Attributes[0].Value.AsString())
 }
 
 func TestNewCoreConfiguration(t *testing.T) {
@@ -218,9 +234,10 @@ func TestNewCoreConfiguration(t *testing.T) {
 		require.NotNil(t, h.logger)
 		require.Len(t, r.Result(), 1)
 
-		want := &logtest.ScopeRecords{Name: loggerName}
-		got := r.Result()[0]
-		assert.Equal(t, want, got)
+		want := logtest.Recording{
+			logtest.Scope{Name: "name"}: nil,
+		}
+		logtest.AssertEqual(t, want, r.Result())
 	})
 
 	t.Run("Options", func(t *testing.T) {
@@ -238,14 +255,15 @@ func TestNewCoreConfiguration(t *testing.T) {
 		require.NotNil(t, h.logger)
 		require.Len(t, r.Result(), 1)
 
-		want := &logtest.ScopeRecords{
-			Name:       loggerName,
-			Version:    "1.0.0",
-			SchemaURL:  "url",
-			Attributes: attribute.NewSet(attribute.String("testattr", "testval")),
+		want := logtest.Recording{
+			logtest.Scope{
+				Name:       "name",
+				Version:    "1.0.0",
+				SchemaURL:  "url",
+				Attributes: attribute.NewSet(attribute.String("testattr", "testval")),
+			}: nil,
 		}
-		got := r.Result()[0]
-		assert.Equal(t, want, got)
+		logtest.AssertEqual(t, want, r.Result())
 	})
 }
 
