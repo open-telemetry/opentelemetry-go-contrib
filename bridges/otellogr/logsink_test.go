@@ -77,13 +77,15 @@ func TestNewLogSink(t *testing.T) {
 	const name = "name"
 
 	for _, tt := range []struct {
-		name             string
-		options          []Option
-		wantScopeRecords *logtest.ScopeRecords
+		name          string
+		options       []Option
+		wantRecording logtest.Recording
 	}{
 		{
-			name:             "with default options",
-			wantScopeRecords: &logtest.ScopeRecords{Name: name},
+			name: "with default options",
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: nil,
+			},
 		},
 		{
 			name: "with custom options",
@@ -92,29 +94,30 @@ func TestNewLogSink(t *testing.T) {
 				WithSchemaURL("https://example.com"),
 				WithAttributes(attribute.String("testattr", "testval")),
 			},
-			wantScopeRecords: &logtest.ScopeRecords{
-				Name:       name,
-				Version:    "1.0",
-				SchemaURL:  "https://example.com",
-				Attributes: attribute.NewSet(attribute.String("testattr", "testval")),
+			wantRecording: logtest.Recording{
+				logtest.Scope{
+					Name:       name,
+					Version:    "1.0",
+					SchemaURL:  "https://example.com",
+					Attributes: attribute.NewSet(attribute.String("testattr", "testval")),
+				}: nil,
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			provider := logtest.NewRecorder()
+			recorder := logtest.NewRecorder()
 
 			var l *LogSink
 			require.NotPanics(t, func() {
 				l = NewLogSink(name, append(
 					tt.options,
-					WithLoggerProvider(provider),
+					WithLoggerProvider(recorder),
 				)...)
 			})
 			require.NotNil(t, l)
-			require.Len(t, provider.Result(), 1)
+			require.Len(t, recorder.Result(), 1)
 
-			got := provider.Result()[0]
-			assert.Equal(t, tt.wantScopeRecords, got)
+			logtest.AssertEqual(t, tt.wantRecording, recorder.Result())
 		})
 	}
 }
@@ -126,13 +129,13 @@ func TestLogSink(t *testing.T) {
 		name          string
 		f             func(*logr.Logger)
 		levelSeverity func(int) log.Severity
-		wantRecords   map[string][]log.Record
+		wantRecording logtest.Recording
 	}{
 		{
 			name: "no_log",
 			f:    func(l *logr.Logger) {},
-			wantRecords: map[string][]log.Record{
-				name: {},
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: []logtest.Record{},
 			},
 		},
 		{
@@ -140,9 +143,9 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.Info("msg")
 			},
-			wantRecords: map[string][]log.Record{
-				name: {
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityInfo, nil),
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: []logtest.Record{
+					buildRecord(log.StringValue("msg"), log.SeverityInfo, nil),
 				},
 			},
 		},
@@ -154,12 +157,12 @@ func TestLogSink(t *testing.T) {
 				l.V(2).Info("msg")
 				l.V(3).Info("msg")
 			},
-			wantRecords: map[string][]log.Record{
-				name: {
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityInfo, nil),
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityDebug, nil),
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityTrace, nil),
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityTrace, nil),
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: []logtest.Record{
+					buildRecord(log.StringValue("msg"), log.SeverityInfo, nil),
+					buildRecord(log.StringValue("msg"), log.SeverityDebug, nil),
+					buildRecord(log.StringValue("msg"), log.SeverityTrace, nil),
+					buildRecord(log.StringValue("msg"), log.SeverityTrace, nil),
 				},
 			},
 		},
@@ -180,11 +183,11 @@ func TestLogSink(t *testing.T) {
 					return log.SeverityInfo
 				}
 			},
-			wantRecords: map[string][]log.Record{
-				name: {
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityInfo, nil),
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityError, nil),
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityWarn, nil),
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: []logtest.Record{
+					buildRecord(log.StringValue("msg"), log.SeverityInfo, nil),
+					buildRecord(log.StringValue("msg"), log.SeverityError, nil),
+					buildRecord(log.StringValue("msg"), log.SeverityWarn, nil),
 				},
 			},
 		},
@@ -202,9 +205,9 @@ func TestLogSink(t *testing.T) {
 					"uint64", uint64(3),
 				)
 			},
-			wantRecords: map[string][]log.Record{
-				name: {
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityInfo, []log.KeyValue{
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: []logtest.Record{
+					buildRecord(log.StringValue("msg"), log.SeverityInfo, []log.KeyValue{
 						log.String("struct", "{data:1}"),
 						log.Bool("bool", true),
 						log.Int64("duration", 60_000_000_000),
@@ -222,9 +225,10 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithName("test").Info("info message with name")
 			},
-			wantRecords: map[string][]log.Record{
-				name + "/test": {
-					buildRecord(log.StringValue("info message with name"), time.Time{}, log.SeverityInfo, nil),
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: nil,
+				logtest.Scope{Name: name + "/test"}: []logtest.Record{
+					buildRecord(log.StringValue("info message with name"), log.SeverityInfo, nil),
 				},
 			},
 		},
@@ -233,9 +237,11 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithName("test").WithName("test").Info("info message with name")
 			},
-			wantRecords: map[string][]log.Record{
-				name + "/test/test": {
-					buildRecord(log.StringValue("info message with name"), time.Time{}, log.SeverityInfo, nil),
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}:           nil,
+				logtest.Scope{Name: name + "/test"}: nil,
+				logtest.Scope{Name: name + "/test/test"}: []logtest.Record{
+					buildRecord(log.StringValue("info message with name"), log.SeverityInfo, nil),
 				},
 			},
 		},
@@ -244,9 +250,9 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithValues("key", "value").Info("info message with attrs")
 			},
-			wantRecords: map[string][]log.Record{
-				name: {
-					buildRecord(log.StringValue("info message with attrs"), time.Time{}, log.SeverityInfo, []log.KeyValue{
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: []logtest.Record{
+					buildRecord(log.StringValue("info message with attrs"), log.SeverityInfo, []log.KeyValue{
 						log.String("key", "value"),
 					}),
 				},
@@ -257,9 +263,9 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.WithValues("key1", "value1").Info("info message with attrs", "key2", "value2")
 			},
-			wantRecords: map[string][]log.Record{
-				name: {
-					buildRecord(log.StringValue("info message with attrs"), time.Time{}, log.SeverityInfo, []log.KeyValue{
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: []logtest.Record{
+					buildRecord(log.StringValue("info message with attrs"), log.SeverityInfo, []log.KeyValue{
 						log.String("key1", "value1"),
 						log.String("key2", "value2"),
 					}),
@@ -272,9 +278,9 @@ func TestLogSink(t *testing.T) {
 				var p *int
 				l.WithValues("key", "value", "nil_pointer", p).Info("info message with attrs")
 			},
-			wantRecords: map[string][]log.Record{
-				name: {
-					buildRecord(log.StringValue("info message with attrs"), time.Time{}, log.SeverityInfo, []log.KeyValue{
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: []logtest.Record{
+					buildRecord(log.StringValue("info message with attrs"), log.SeverityInfo, []log.KeyValue{
 						log.String("key", "value"),
 						log.Empty("nil_pointer"),
 					}),
@@ -286,9 +292,9 @@ func TestLogSink(t *testing.T) {
 			f: func(l *logr.Logger) {
 				l.Error(errors.New("test"), "error message")
 			},
-			wantRecords: map[string][]log.Record{
-				name: {
-					buildRecord(log.StringValue("error message"), time.Time{}, log.SeverityError, []log.KeyValue{
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: []logtest.Record{
+					buildRecord(log.StringValue("error message"), log.SeverityError, []log.KeyValue{
 						{Key: "exception.message", Value: log.StringValue("test")},
 					}),
 				},
@@ -308,9 +314,9 @@ func TestLogSink(t *testing.T) {
 					"uint64", uint64(3),
 				)
 			},
-			wantRecords: map[string][]log.Record{
-				name: {
-					buildRecord(log.StringValue("msg"), time.Time{}, log.SeverityError, []log.KeyValue{
+			wantRecording: logtest.Recording{
+				logtest.Scope{Name: name}: []logtest.Record{
+					buildRecord(log.StringValue("msg"), log.SeverityError, []log.KeyValue{
 						{Key: "exception.message", Value: log.StringValue("test error")},
 						log.String("struct", "{data:1}"),
 						log.Bool("bool", true),
@@ -334,23 +340,7 @@ func TestLogSink(t *testing.T) {
 			l := logr.New(ls)
 			tt.f(&l)
 
-			for k, v := range tt.wantRecords {
-				found := false
-
-				want := make([]logtest.EmittedRecord, len(v))
-				for i := range want {
-					want[i] = logtest.EmittedRecord{Record: v[i]}
-				}
-
-				for _, s := range rec.Result() {
-					if k == s.Name {
-						assertRecords(t, want, s.Records)
-						found = true
-					}
-				}
-
-				assert.Truef(t, found, "want to find records with a scope named %q", k)
-			}
+			logtest.AssertEqual(t, tt.wantRecording, rec.Result())
 		})
 	}
 }
@@ -382,9 +372,10 @@ func TestLogSinkCtxInInfo(t *testing.T) {
 			l.Info("msg", tt.keyValues...)
 			require.Len(t, rec.Result(), 1)
 
-			got := rec.Result()[0]
-			require.Len(t, got.Records, 1)
-			tt.wantCtxFunc(got.Records[0].Context())
+			got := rec.Result()
+			records := got[logtest.Scope{Name: "name"}]
+			require.Len(t, records, 1)
+			tt.wantCtxFunc(records[0].Context)
 		})
 	}
 }
@@ -412,23 +403,13 @@ func TestLogSinkEnabled(t *testing.T) {
 	assert.False(t, ls.Enabled(1))
 }
 
-func buildRecord(body log.Value, timestamp time.Time, severity log.Severity, attrs []log.KeyValue) log.Record {
-	var record log.Record
-	record.SetBody(body)
-	record.SetTimestamp(timestamp)
-	record.SetSeverity(severity)
-	record.AddAttributes(attrs...)
-
-	return record
-}
-
-func assertRecords(t *testing.T, want, got []logtest.EmittedRecord) {
-	t.Helper()
-
-	assert.Len(t, got, len(want))
-
-	for i, j := range want {
-		logtest.AssertRecordEqual(t, j.Record, got[i].Record)
+func buildRecord(body log.Value, severity log.Severity, attrs []log.KeyValue) logtest.Record {
+	return logtest.Record{
+		Context:    context.Background(),
+		Body:       body,
+		Timestamp:  time.Time{},
+		Severity:   severity,
+		Attributes: attrs,
 	}
 }
 
