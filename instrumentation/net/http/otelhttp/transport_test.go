@@ -486,6 +486,82 @@ func TestTransportUsesFormatter(t *testing.T) {
 	}
 }
 
+func TestTransportWithSemConvStabilityOptIn(t *testing.T) {
+	tests := []struct {
+		name                       string
+		semConvStabilityOptInValue string
+		expected                   func(host string, port int) []attribute.KeyValue
+	}{
+		{
+			name:                       "without opt-in",
+			semConvStabilityOptInValue: "",
+			expected: func(host string, port int) []attribute.KeyValue {
+				return []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("url.full", fmt.Sprintf("http://%s:%d", host, port)),
+					attribute.String("server.address", host),
+					attribute.Int("server.port", port),
+					attribute.String("network.protocol.version", "1.1"),
+					attribute.Int("http.response.status_code", 200),
+				}
+			},
+		},
+		{
+			name:                       "with http/dup opt-in",
+			semConvStabilityOptInValue: "http/dup",
+			expected: func(host string, port int) []attribute.KeyValue {
+				return []attribute.KeyValue{
+					// New semantic conventions
+					attribute.String("http.request.method", "GET"),
+					attribute.String("url.full", fmt.Sprintf("http://%s:%d", host, port)),
+					attribute.String("server.address", host),
+					attribute.Int("server.port", port),
+					attribute.String("network.protocol.version", "1.1"),
+					// Old semantic conventions
+					attribute.String("http.method", "GET"),
+					attribute.String("http.url", fmt.Sprintf("http://%s:%d", host, port)),
+					attribute.String("net.peer.name", host),
+					attribute.Int("net.peer.port", port),
+					attribute.Int("http.response.status_code", 200),
+					attribute.Int("http.status_code", 200),
+				}
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", tt.semConvStabilityOptInValue)
+			spanRecorder := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+			ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer ts.Close()
+
+			r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+			require.NoError(t, err)
+
+			host, portStr, err := net.SplitHostPort(strings.TrimPrefix(ts.URL, "http://"))
+			require.NoError(t, err)
+			port, err := strconv.Atoi(portStr)
+			require.NoError(t, err)
+
+			c := http.Client{Transport: NewTransport(
+				http.DefaultTransport,
+				WithTracerProvider(provider),
+			)}
+			resp, err := c.Do(r)
+			require.NoError(t, err)
+			_ = resp.Body.Close()
+
+			spans := spanRecorder.Ended()
+			require.Len(t, spans, 1)
+			attrs := spans[0].Attributes()
+			assert.ElementsMatch(t, attrs, tt.expected(host, port))
+		})
+	}
+}
+
 func TestTransportErrorStatus(t *testing.T) {
 	// Prepare tracing stuff.
 	spanRecorder := tracetest.NewSpanRecorder()
