@@ -795,6 +795,68 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 	}
 }
 
+func TestHandlerWithSemConvStabilityOptIn(t *testing.T) {
+	tests := []struct {
+		name                       string
+		semConvStabilityOptInValue string
+		expected                   []attribute.KeyValue
+	}{
+		{
+			name:                       "without opt-in",
+			semConvStabilityOptInValue: "",
+			expected: []attribute.KeyValue{
+				attribute.String("http.request.method", "GET"),
+				attribute.String("url.scheme", "http"),
+				attribute.String("server.address", "localhost"),
+				attribute.String("network.protocol.version", "1.1"),
+				attribute.String("url.path", "/"),
+				attribute.Int("http.response.status_code", 200),
+			},
+		},
+		{
+			name:                       "with http/dup opt-in",
+			semConvStabilityOptInValue: "http/dup",
+			expected: []attribute.KeyValue{
+				// New semantic conventions
+				attribute.String("http.request.method", "GET"),
+				attribute.String("url.scheme", "http"),
+				attribute.String("server.address", "localhost"),
+				attribute.String("network.protocol.version", "1.1"),
+				attribute.String("url.path", "/"),
+				attribute.Int("http.response.status_code", 200),
+				// Old semantic conventions
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "http"),
+				attribute.String("net.host.name", "localhost"),
+				attribute.String("net.protocol.version", "1.1"),
+				attribute.String("http.target", "/"),
+				attribute.Int("http.status_code", 200),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", tt.semConvStabilityOptInValue)
+			spanRecorder := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+			h := NewHandler(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				}),
+				"test_handler",
+				WithTracerProvider(provider),
+			)
+			r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+			require.NoError(t, err)
+			h.ServeHTTP(httptest.NewRecorder(), r)
+			spans := spanRecorder.Ended()
+			require.Len(t, spans, 1)
+			assert.ElementsMatch(t, spans[0].Attributes(), tt.expected)
+		})
+	}
+}
+
 func BenchmarkHandlerServeHTTP(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()
