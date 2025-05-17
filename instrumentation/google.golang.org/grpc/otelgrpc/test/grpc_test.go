@@ -17,19 +17,12 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 
 	pb "google.golang.org/grpc/interop/grpc_testing"
 )
-
-var wantInstrumentationScope = instrumentation.Scope{
-	Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
-	SchemaURL: "https://opentelemetry.io/schemas/1.17.0",
-	Version:   otelgrpc.Version(),
-}
 
 // newGrpcTest creates a grpc server, starts it, and returns the client, closes everything down during test cleanup.
 func newGrpcTest(t testing.TB, listener net.Listener, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) pb.TestServiceClient {
