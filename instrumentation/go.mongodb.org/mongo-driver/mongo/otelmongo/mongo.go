@@ -35,6 +35,10 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		semconv.WithCommandAttributeDisabled(m.cfg.CommandAttributeDisabled),
 	}
 
+	if m.cfg.CommandAttributesFn != nil {
+		attrOptions = append(attrOptions, semconv.WithCommandAttributes(m.cfg.CommandAttributesFn(evt)...))
+	}
+
 	var spanName string
 	if collection, err := extractCollection(evt); err == nil && collection != "" {
 		spanName = collection + "."
