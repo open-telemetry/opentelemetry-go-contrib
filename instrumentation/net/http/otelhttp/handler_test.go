@@ -437,6 +437,66 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[0].Parent().SpanID())
 }
 
+func TestWithSpanNameFormatter(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+
+		formatter    func(operation string, r *http.Request) string
+		wantSpanName string
+	}{
+		{
+			name:         "with the default span name formatter",
+			wantSpanName: "test_handler",
+		},
+		{
+			name: "with a custom span name formatter",
+			formatter: func(op string, r *http.Request) string {
+				return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+			},
+			wantSpanName: "GET /foo/123",
+		},
+		{
+			name: "with a custom span name formatter using the pattern",
+			formatter: func(op string, r *http.Request) string {
+				return fmt.Sprintf("%s %s", r.Method, r.Pattern)
+			},
+			wantSpanName: "GET /foo/{id}",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			spanRecorder := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(
+				sdktrace.WithSpanProcessor(spanRecorder),
+			)
+
+			opts := []Option{
+				WithTracerProvider(provider),
+			}
+			if tt.formatter != nil {
+				opts = append(opts, WithSpanNameFormatter(tt.formatter))
+			}
+
+			mux := http.NewServeMux()
+			mux.Handle("/foo/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				// Nothing to do here
+			}))
+			h := NewHandler(mux, "test_handler", opts...)
+
+			r, err := http.NewRequest(http.MethodGet, "http://localhost/foo/123", nil)
+			require.NoError(t, err)
+
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, r)
+			assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
+
+			assert.NoError(t, spanRecorder.ForceFlush(context.Background()))
+			spans := spanRecorder.Ended()
+			assert.Len(t, spans, 1)
+			assert.Equal(t, tt.wantSpanName, spans[0].Name())
+		})
+	}
+}
+
 func TestWithPublicEndpoint(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(
@@ -732,6 +792,68 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
 			}
 		}
+	}
+}
+
+func TestHandlerWithSemConvStabilityOptIn(t *testing.T) {
+	tests := []struct {
+		name                       string
+		semConvStabilityOptInValue string
+		expected                   []attribute.KeyValue
+	}{
+		{
+			name:                       "without opt-in",
+			semConvStabilityOptInValue: "",
+			expected: []attribute.KeyValue{
+				attribute.String("http.request.method", "GET"),
+				attribute.String("url.scheme", "http"),
+				attribute.String("server.address", "localhost"),
+				attribute.String("network.protocol.version", "1.1"),
+				attribute.String("url.path", "/"),
+				attribute.Int("http.response.status_code", 200),
+			},
+		},
+		{
+			name:                       "with http/dup opt-in",
+			semConvStabilityOptInValue: "http/dup",
+			expected: []attribute.KeyValue{
+				// New semantic conventions
+				attribute.String("http.request.method", "GET"),
+				attribute.String("url.scheme", "http"),
+				attribute.String("server.address", "localhost"),
+				attribute.String("network.protocol.version", "1.1"),
+				attribute.String("url.path", "/"),
+				attribute.Int("http.response.status_code", 200),
+				// Old semantic conventions
+				attribute.String("http.method", "GET"),
+				attribute.String("http.scheme", "http"),
+				attribute.String("net.host.name", "localhost"),
+				attribute.String("net.protocol.version", "1.1"),
+				attribute.String("http.target", "/"),
+				attribute.Int("http.status_code", 200),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", tt.semConvStabilityOptInValue)
+			spanRecorder := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+			h := NewHandler(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				}),
+				"test_handler",
+				WithTracerProvider(provider),
+			)
+			r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+			require.NoError(t, err)
+			h.ServeHTTP(httptest.NewRecorder(), r)
+			spans := spanRecorder.Ended()
+			require.Len(t, spans, 1)
+			assert.ElementsMatch(t, spans[0].Attributes(), tt.expected)
+		})
 	}
 }
 
