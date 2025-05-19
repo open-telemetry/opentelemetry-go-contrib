@@ -407,7 +407,6 @@ func buildRecord(body log.Value, severity log.Severity, attrs []log.KeyValue) lo
 	return logtest.Record{
 		Context:    context.Background(),
 		Body:       body,
-		Timestamp:  time.Time{},
 		Severity:   severity,
 		Attributes: attrs,
 	}
