@@ -987,8 +987,13 @@ func TestMetricsExistenceOnRequestError(t *testing.T) {
 	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
 	require.NoError(t, err)
 
-	_, err = client.Do(r)
-	require.Error(t, err)
+	resp, err := client.Do(r)
+	if err == nil {
+		if e := resp.Body.Close(); e != nil {
+			t.Errorf("close response body: %v", e)
+		}
+		t.Fatal("transport should have returned an error, it didn't")
+	}
 
 	err = reader.Collect(ctx, &rm)
 	assert.NoError(t, err)
