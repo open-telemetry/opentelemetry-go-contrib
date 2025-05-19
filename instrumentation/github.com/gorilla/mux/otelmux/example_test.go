@@ -1,8 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Example exemplifies the otelmux package.
-package main
+package otelmux_test
 
 import (
 	"context"
@@ -23,7 +22,7 @@ import (
 
 var tracer = otel.Tracer("mux-server")
 
-func main() {
+func Example() {
 	tp, err := initTracer()
 	if err != nil {
 		log.Fatal(err)
