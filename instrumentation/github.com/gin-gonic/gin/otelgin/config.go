@@ -21,6 +21,7 @@ import (
 type config struct {
 	TracerProvider       oteltrace.TracerProvider
 	Propagators          propagation.TextMapPropagator
+	SpanStartOptions     []oteltrace.SpanStartOption
 	Filters              []Filter
 	GinFilters           []GinFilter
 	SpanNameFormatter    SpanNameFormatter
@@ -86,6 +87,14 @@ func WithPropagators(propagators propagation.TextMapPropagator) Option {
 		if propagators != nil {
 			cfg.Propagators = propagators
 		}
+	})
+}
+
+// WithSpanStartOptions configures an additional set of
+// trace.SpanStartOptions, which are applied to each new span.
+func WithSpanStartOptions(opts ...oteltrace.SpanStartOption) Option {
+	return optionFunc(func(c *config) {
+		c.SpanStartOptions = append(c.SpanStartOptions, opts...)
 	})
 }
 

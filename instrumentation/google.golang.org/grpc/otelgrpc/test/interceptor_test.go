@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/stretchr/testify/assert"
@@ -172,11 +172,11 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 
 	expectedAttr := []attribute.KeyValue{
 		semconv.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
+		semconv.RPCGRPCStatusCodeOk,
 		semconv.RPCService("github.com.serviceName"),
 		semconv.RPCMethod("bar"),
-		semconv.NetPeerName("fake"),
-		semconv.NetPeerPort(8906),
+		semconv.ServerAddress("fake"),
+		semconv.ServerPort(8906),
 		attribute.Bool("custom", true),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
@@ -188,10 +188,10 @@ func TestStreamClientInterceptorOnBIDIStream(t *testing.T) {
 		validate := func(eventName string, attrs []attribute.KeyValue) {
 			for _, kv := range attrs {
 				k, v := kv.Key, kv.Value
-				if k == otelgrpc.RPCMessageTypeKey && v.AsString() != eventName {
+				if k == semconv.RPCMessageTypeKey && v.AsString() != eventName {
 					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, v.AsString())
 				}
-				if k == otelgrpc.RPCMessageIDKey && v != attribute.IntValue(msgID) {
+				if k == semconv.RPCMessageIDKey && v != attribute.IntValue(msgID) {
 					t.Errorf("invalid id for message event expected %d received %d", msgID, v.AsInt64())
 				}
 			}
@@ -237,15 +237,15 @@ func TestStreamClientInterceptorEvents(t *testing.T) {
 				case otelgrpc.SentEvents:
 					eventsAttr = append(eventsAttr,
 						map[attribute.Key]attribute.Value{
-							otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
-							otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
+							semconv.RPCMessageTypeKey: attribute.StringValue("SENT"),
+							semconv.RPCMessageIDKey:   attribute.IntValue(1),
 						},
 					)
 				case otelgrpc.ReceivedEvents:
 					eventsAttr = append(eventsAttr,
 						map[attribute.Key]attribute.Value{
-							otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
-							otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
+							semconv.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+							semconv.RPCMessageIDKey:   attribute.IntValue(1),
 						},
 					)
 				}
@@ -312,11 +312,11 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 
 	expectedAttr := []attribute.KeyValue{
 		semconv.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.OK)),
+		semconv.RPCGRPCStatusCodeOk,
 		semconv.RPCService("github.com.serviceName"),
 		semconv.RPCMethod("bar"),
-		semconv.NetPeerName("fake"),
-		semconv.NetPeerPort(8906),
+		semconv.ServerAddress("fake"),
+		semconv.ServerPort(8906),
 		attribute.Bool("custom", true),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
@@ -329,10 +329,10 @@ func TestStreamClientInterceptorOnUnidirectionalClientServerStream(t *testing.T)
 		validate := func(eventName string, attrs []attribute.KeyValue) {
 			for _, kv := range attrs {
 				k, v := kv.Key, kv.Value
-				if k == otelgrpc.RPCMessageTypeKey && v.AsString() != eventName {
+				if k == semconv.RPCMessageTypeKey && v.AsString() != eventName {
 					t.Errorf("invalid event on index: %d expecting %s event, receive %s event", i, eventName, v.AsString())
 				}
-				if k == otelgrpc.RPCMessageIDKey && v != attribute.IntValue(msgID) {
+				if k == semconv.RPCMessageIDKey && v != attribute.IntValue(msgID) {
 					t.Errorf("invalid id for message event expected %d received %d", msgID, v.AsInt64())
 				}
 			}
@@ -452,11 +452,11 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 
 	expectedAttr := []attribute.KeyValue{
 		semconv.RPCSystemGRPC,
-		otelgrpc.GRPCStatusCodeKey.Int64(int64(grpc_codes.Unknown)),
+		semconv.RPCGRPCStatusCodeUnknown,
 		semconv.RPCService("github.com.serviceName"),
 		semconv.RPCMethod("bar"),
-		semconv.NetPeerName("fake"),
-		semconv.NetPeerPort(8906),
+		semconv.ServerAddress("fake"),
+		semconv.ServerPort(8906),
 	}
 	assert.ElementsMatch(t, expectedAttr, span.Attributes())
 	assert.Equal(t, codes.Error, span.Status().Code)
@@ -562,7 +562,7 @@ func assertServerSpan(t *testing.T, wantSpanCode codes.Code, wantSpanStatusDescr
 	// validate grpc code span attribute
 	var codeAttr attribute.KeyValue
 	for _, a := range span.Attributes() {
-		if a.Key == otelgrpc.GRPCStatusCodeKey {
+		if a.Key == semconv.RPCGRPCStatusCodeKey {
 			codeAttr = a
 			break
 		}
@@ -668,13 +668,13 @@ func TestStreamServerInterceptorEvents(t *testing.T) {
 					switch event {
 					case otelgrpc.SentEvents:
 						eventsAttr = append(eventsAttr, map[attribute.Key]attribute.Value{
-							otelgrpc.RPCMessageTypeKey: attribute.StringValue("SENT"),
-							otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
+							semconv.RPCMessageTypeKey: attribute.StringValue("SENT"),
+							semconv.RPCMessageIDKey:   attribute.IntValue(1),
 						})
 					case otelgrpc.ReceivedEvents:
 						eventsAttr = append(eventsAttr, map[attribute.Key]attribute.Value{
-							otelgrpc.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
-							otelgrpc.RPCMessageIDKey:   attribute.IntValue(1),
+							semconv.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
+							semconv.RPCMessageIDKey:   attribute.IntValue(1),
 						})
 					}
 				}

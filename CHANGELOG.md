@@ -20,6 +20,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added test for Fields in `go.opentelemetry.io/contrib/propagators/jaeger`. (#7119)
 - Allow configuring samplers in `go.opentelemetry.io/contrib/otelconf`. (#7148)
 - Slog log bridge now sets `SeverityText` attribute using source value in `go.opentelemetry.io/contrib/bridges/otelslog`. (#7198)
+- Add `http.route` metric attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7275)
+- Add the `WithSpanStartOptions` option to add custom options to new spans `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7261)
+- Add instrumentation support for `go.mongodb.org/mongo-driver/v2` in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#6539)
+- Rerun the span name formatter after the request ran if a `req.Pattern` is set, so the span name can include it in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#7192)
 
 ### Changed
 
@@ -46,6 +50,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Update `http.route` attribute to support `request.Pattern` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7108)
 - Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6381)
 - Set `url.scheme` attribute to the request URL.Scheme when possible for HTTP client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6938)
+- The semantic conventions have been upgraded from `v1.17.0` to `v1.30.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7270)
+  - All `net.peer.*` and `net.host.*` attributes are now set to correct `server.*` attributes.
+  - No `net.socket.*` attributes are set.
+- Only sample spans when `Sampled=1` in `go.opentelemetry.io/contrib/propagators/aws/xray`. (#7318)
 
 ### Fixed
 
@@ -104,6 +112,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test`, use `Version` function instead. (#7143)
 - The deprecated `SQSAttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package, use `SQSAttributeBuilder` instead. (#7145)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/host` package, use `Version` instead. (#7203)
+- The `GRPCStatusCodeKey` constant from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed.
+  Use `semconv.RPCGRPCStatusCodeKey` from `go.opentelemetry.io/otel/semconv/*` instead. (#7270)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

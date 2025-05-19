@@ -43,6 +43,14 @@ func TestExtract(t *testing.T) {
 			wantSampled: false,
 		},
 		{
+			name:        "Valid header - sample requested",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=?",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: false,
+		},
+		{
 			name:      "Empty header - no trace info",
 			headerVal: "",
 			wantValid: false,
@@ -70,6 +78,14 @@ func TestExtract(t *testing.T) {
 		{
 			name:        "Missing Sampled",
 			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: false,
+		},
+		{
+			name:        "Unknown Sampled value",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=other",
 			wantValid:   true,
 			wantTraceID: "abcdef121234567890abcdef12345678",
 			wantSpanID:  "1234567890abcdef",
