@@ -165,7 +165,7 @@ release.
 After releasing verify that examples build outside of the repository.
 
 ```sh
-./verify_examples.sh
+./tools/verify_examples.sh
 ```
 
 The script copies examples into a different directory removes any `replace` declarations in `go.mod` and builds them.

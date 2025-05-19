@@ -94,29 +94,55 @@ func TestSDKIntegration(t *testing.T) {
 	router.HandleFunc("/user/{id:[0-9]+}", ok)
 	router.HandleFunc("/book/{title}", ok)
 
-	r0 := httptest.NewRequest("GET", "/user/123", nil)
-	r1 := httptest.NewRequest("GET", "/book/foo", nil)
-	w := httptest.NewRecorder()
-	router.ServeHTTP(w, r0)
-	router.ServeHTTP(w, r1)
+	tests := []struct {
+		name     string
+		path     string
+		reqFunc  func(r *http.Request)
+		expected string
+	}{
+		{
+			name:     "user route",
+			path:     "/user/123",
+			reqFunc:  nil,
+			expected: "/user/{id:[0-9]+}",
+		},
+		{
+			name:     "book route",
+			path:     "/book/foo",
+			reqFunc:  nil,
+			expected: "/book/{title}",
+		},
+		{
+			name:     "book route with custom pattern",
+			path:     "/book/bar",
+			reqFunc:  func(r *http.Request) { r.Pattern = "/book/{custom}" },
+			expected: "/book/{custom}",
+		},
+	}
 
-	require.Len(t, sr.Ended(), 2)
-	assertSpan(t, sr.Ended()[0],
-		"/user/{id:[0-9]+}",
-		trace.SpanKindServer,
-		attribute.String("net.host.name", "foobar"),
-		attribute.Int("http.status_code", http.StatusOK),
-		attribute.String("http.method", "GET"),
-		attribute.String("http.route", "/user/{id:[0-9]+}"),
-	)
-	assertSpan(t, sr.Ended()[1],
-		"/book/{title}",
-		trace.SpanKindServer,
-		attribute.String("net.host.name", "foobar"),
-		attribute.Int("http.status_code", http.StatusOK),
-		attribute.String("http.method", "GET"),
-		attribute.String("http.route", "/book/{title}"),
-	)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer sr.Reset()
+
+			r := httptest.NewRequest("GET", tt.path, nil)
+			if tt.reqFunc != nil {
+				tt.reqFunc(r)
+			}
+
+			w := httptest.NewRecorder()
+			router.ServeHTTP(w, r)
+
+			require.Len(t, sr.Ended(), 1)
+			assertSpan(t, sr.Ended()[0],
+				tt.expected,
+				trace.SpanKindServer,
+				attribute.String("server.address", "foobar"),
+				attribute.Int("http.response.status_code", http.StatusOK),
+				attribute.String("http.request.method", "GET"),
+				attribute.String("http.route", tt.expected),
+			)
+		})
+	}
 }
 
 func TestNotFoundIsNotError(t *testing.T) {
@@ -136,15 +162,17 @@ func TestNotFoundIsNotError(t *testing.T) {
 	assertSpan(t, sr.Ended()[0],
 		"/does/not/exist",
 		trace.SpanKindServer,
-		attribute.String("net.host.name", "foobar"),
-		attribute.Int("http.status_code", http.StatusNotFound),
-		attribute.String("http.method", "GET"),
+		attribute.String("server.address", "foobar"),
+		attribute.Int("http.response.status_code", http.StatusNotFound),
+		attribute.String("http.request.method", "GET"),
 		attribute.String("http.route", "/does/not/exist"),
 	)
 	assert.Equal(t, codes.Unset, sr.Ended()[0].Status().Code)
 }
 
 func assertSpan(t *testing.T, span sdktrace.ReadOnlySpan, name string, kind trace.SpanKind, attrs ...attribute.KeyValue) {
+	t.Helper()
+
 	assert.Equal(t, name, span.Name())
 	assert.Equal(t, kind, span.SpanKind())
 

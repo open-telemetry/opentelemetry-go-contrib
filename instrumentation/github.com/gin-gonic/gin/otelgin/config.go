@@ -7,6 +7,8 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -19,12 +21,33 @@ import (
 type config struct {
 	TracerProvider       oteltrace.TracerProvider
 	Propagators          propagation.TextMapPropagator
+	SpanStartOptions     []oteltrace.SpanStartOption
 	Filters              []Filter
 	GinFilters           []GinFilter
 	SpanNameFormatter    SpanNameFormatter
 	MeterProvider        metric.MeterProvider
 	MetricAttributeFn    MetricAttributeFn
 	GinMetricAttributeFn GinMetricAttributeFn
+}
+
+// defaultSpanNameFormatter is the default span name formatter.
+var defaultSpanNameFormatter SpanNameFormatter = func(c *gin.Context) string {
+	method := strings.ToUpper(c.Request.Method)
+	if !slices.Contains([]string{
+		http.MethodGet, http.MethodHead,
+		http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete,
+		http.MethodConnect, http.MethodOptions,
+		http.MethodTrace,
+	}, method) {
+		method = "HTTP"
+	}
+
+	if path := c.FullPath(); path != "" {
+		return method + " " + path
+	}
+
+	return method
 }
 
 // Filter is a predicate used to determine whether a given http.request should
@@ -34,8 +57,8 @@ type Filter func(*http.Request) bool
 // GinFilter filters an [net/http.Request] based on content of a [gin.Context].
 type GinFilter func(*gin.Context) bool
 
-// SpanNameFormatter is used to set span name by http.request.
-type SpanNameFormatter func(r *http.Request) string
+// SpanNameFormatter is used by `WithSpanNameFormatter` to customize the request's span name.
+type SpanNameFormatter func(*gin.Context) string
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
 // and return them as a slice of attribute.KeyValue.
@@ -64,6 +87,14 @@ func WithPropagators(propagators propagation.TextMapPropagator) Option {
 		if propagators != nil {
 			cfg.Propagators = propagators
 		}
+	})
+}
+
+// WithSpanStartOptions configures an additional set of
+// trace.SpanStartOptions, which are applied to each new span.
+func WithSpanStartOptions(opts ...oteltrace.SpanStartOption) Option {
+	return optionFunc(func(c *config) {
+		c.SpanStartOptions = append(c.SpanStartOptions, opts...)
 	})
 }
 
@@ -98,7 +129,7 @@ func WithGinFilter(f ...GinFilter) Option {
 
 // WithSpanNameFormatter takes a function that will be called on every
 // request and the returned string will become the Span Name.
-func WithSpanNameFormatter(f func(r *http.Request) string) Option {
+func WithSpanNameFormatter(f SpanNameFormatter) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
 	})

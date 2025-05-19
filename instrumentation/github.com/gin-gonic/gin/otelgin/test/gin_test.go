@@ -6,6 +6,7 @@
 package test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"html/template"
@@ -18,9 +19,9 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"golang.org/x/net/context"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
 	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -31,7 +32,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 )
@@ -163,12 +163,12 @@ func TestTrace200(t *testing.T) {
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	span := spans[0]
-	assert.Equal(t, "/user/:id", span.Name())
+	assert.Equal(t, "GET /user/:id", span.Name())
 	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
+	assert.Contains(t, attr, attribute.String("server.address", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusOK))
-	assert.Contains(t, attr, attribute.String("http.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.request.method", "GET"))
 	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
 	assert.Empty(t, span.Events())
 	assert.Equal(t, codes.Unset, span.Status().Code)
@@ -199,9 +199,9 @@ func TestError(t *testing.T) {
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	span := spans[0]
-	assert.Equal(t, "/server_err", span.Name())
+	assert.Equal(t, "GET /server_err", span.Name())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("net.host.name", "foobar"))
+	assert.Contains(t, attr, attribute.String("server.address", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.status_code", http.StatusInternalServerError))
 
 	// verify the error events
@@ -268,25 +268,69 @@ func TestSpanStatus(t *testing.T) {
 	})
 }
 
+func TestWithSpanOptions_CustomAttributesAndSpanKind(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	customAttr := attribute.String("custom.key", "custom.value")
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar",
+		otelgin.WithTracerProvider(provider),
+		otelgin.WithSpanStartOptions(trace.WithAttributes(customAttr)),
+	))
+	router.GET("/test", func(c *gin.Context) {})
+
+	r := httptest.NewRequest("GET", "/test", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+
+	span := spans[0]
+	assert.Contains(t, span.Attributes(), customAttr)
+	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
+}
+
 func TestSpanName(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sr),
+	)
+
 	testCases := []struct {
+		method            string
+		route             string
 		requestPath       string
 		spanNameFormatter otelgin.SpanNameFormatter
 		wantSpanName      string
 	}{
-		{"/user/1", nil, "/user/:id"},
-		{"/user/1", func(r *http.Request) string { return r.URL.Path }, "/user/1"},
+		// Test for standard methods
+		{http.MethodGet, "/user/:id", "/user/1", nil, "GET /user/:id"},
+		{http.MethodPost, "/user/:id", "/user/1", nil, "POST /user/:id"},
+		{http.MethodPut, "/user/:id", "/user/1", nil, "PUT /user/:id"},
+		{http.MethodPatch, "/user/:id", "/user/1", nil, "PATCH /user/:id"},
+		{http.MethodDelete, "/user/:id", "/user/1", nil, "DELETE /user/:id"},
+		{http.MethodConnect, "/user/:id", "/user/1", nil, "CONNECT /user/:id"},
+		{http.MethodOptions, "/user/:id", "/user/1", nil, "OPTIONS /user/:id"},
+		{http.MethodTrace, "/user/:id", "/user/1", nil, "TRACE /user/:id"},
+		// Test for no route
+		{http.MethodGet, "", "/user/1", nil, "GET"},
+		// Test for invalid method
+		{"INVALID", "/user/:id", "/user/1", nil, "HTTP /user/:id"},
+		// Test for custom span name formatter
+		{http.MethodGet, "/user/:id", "/user/1", func(c *gin.Context) string { return c.Request.URL.Path }, "/user/1"},
 	}
 	for _, tc := range testCases {
-		t.Run(tc.requestPath, func(t *testing.T) {
-			sr := tracetest.NewSpanRecorder()
-			provider := sdktrace.NewTracerProvider()
-			provider.RegisterSpanProcessor(sr)
+		t.Run(fmt.Sprintf("method: %s, route: %s, requestPath: %s", tc.method, tc.route, tc.requestPath), func(t *testing.T) {
+			defer sr.Reset()
+
 			router := gin.New()
 			router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider), otelgin.WithSpanNameFormatter(tc.spanNameFormatter)))
-			router.GET("/user/:id", func(c *gin.Context) {})
+			router.Handle(tc.method, tc.route, func(c *gin.Context) {})
 
-			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", tc.requestPath, nil))
+			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(tc.method, tc.requestPath, nil))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
 			assert.Equal(t, tc.wantSpanName, sr.Ended()[0].Name(), "span name not correct")
@@ -301,8 +345,8 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	router := gin.New()
 	router.Use(otelgin.Middleware("foobar",
 		otelgin.WithTracerProvider(provider),
-		otelgin.WithSpanNameFormatter(func(r *http.Request) string {
-			return r.URL.Path
+		otelgin.WithSpanNameFormatter(func(c *gin.Context) string {
+			return c.Request.URL.Path
 		}),
 	),
 	)
@@ -326,7 +370,7 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	assert.Equal(t, "/user/123", span.Name())
 	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
 	attr := span.Attributes()
-	assert.Contains(t, attr, attribute.String("http.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.request.method", "GET"))
 	assert.Contains(t, attr, attribute.String("http.route", "/user/:id"))
 }
 
@@ -442,11 +486,24 @@ func TestMetrics(t *testing.T) {
 		name                        string
 		metricAttributeExtractor    func(*http.Request) []attribute.KeyValue
 		ginMetricAttributeExtractor func(*gin.Context) []attribute.KeyValue
+		requestTarget               string
+		wantRouteAttr               string
+		wantStatus                  int64
 	}{
 		{
 			name:                        "default",
 			metricAttributeExtractor:    nil,
 			ginMetricAttributeExtractor: nil,
+			requestTarget:               "/user/123",
+			wantRouteAttr:               "/user/:id",
+			wantStatus:                  200,
+		},
+		{
+			name:                        "request target not exist",
+			metricAttributeExtractor:    nil,
+			ginMetricAttributeExtractor: nil,
+			requestTarget:               "/abc/123",
+			wantStatus:                  404,
 		},
 		{
 			name: "with metric attributes callback",
@@ -462,6 +519,9 @@ func TestMetrics(t *testing.T) {
 					attribute.String("key3", "value3"),
 				}
 			},
+			requestTarget: "/user/123",
+			wantRouteAttr: "/user/:id",
+			wantStatus:    200,
 		},
 	}
 
@@ -482,7 +542,7 @@ func TestMetrics(t *testing.T) {
 				_, _ = c.Writer.Write([]byte(id))
 			})
 
-			r := httptest.NewRequest("GET", "/user/123", nil)
+			r := httptest.NewRequest("GET", tt.requestTarget, nil)
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 			c.Request = r
@@ -498,12 +558,15 @@ func TestMetrics(t *testing.T) {
 			assert.Equal(t, otelgin.Version(), sm.Scope.Version)
 
 			attrs := []attribute.KeyValue{
-				semconv.NetHostName("foobar"),
-				semconv.HTTPSchemeHTTP,
-				semconv.NetProtocolName("http"),
-				semconv.NetProtocolVersion(fmt.Sprintf("1.%d", r.ProtoMinor)),
-				semconv.HTTPMethod(http.MethodGet),
-				semconv.HTTPStatusCode(200),
+				attribute.String("http.request.method", "GET"),
+				attribute.Int64("http.response.status_code", tt.wantStatus),
+				attribute.String("network.protocol.name", "http"),
+				attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
+				attribute.String("server.address", "foobar"),
+				attribute.String("url.scheme", "http"),
+			}
+			if tt.wantRouteAttr != "" {
+				attrs = append(attrs, attribute.String("http.route", tt.wantRouteAttr))
 			}
 
 			if tt.metricAttributeExtractor != nil {
@@ -514,40 +577,89 @@ func TestMetrics(t *testing.T) {
 			}
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
-				Name:        "http.server.request.size",
-				Description: "Measures the size of HTTP request messages.",
+				Name:        "http.server.request.body.size",
+				Description: "Size of HTTP server request bodies.",
 				Unit:        "By",
-				Data: metricdata.Sum[int64]{
-					DataPoints: []metricdata.DataPoint[int64]{{
-						Attributes: attribute.NewSet(attrs...), Value: 0,
-					}},
+				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
 				},
-			}, sm.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			}, sm.Metrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
-				Name:        "http.server.response.size",
-				Description: "Measures the size of HTTP response messages.",
+				Name:        "http.server.response.body.size",
+				Description: "Size of HTTP server response bodies.",
 				Unit:        "By",
-				Data: metricdata.Sum[int64]{
-					DataPoints: []metricdata.DataPoint[int64]{{
-						Attributes: attribute.NewSet(attrs...), Value: 3,
-					}},
+				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
-					IsMonotonic: true,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
 				},
-			}, sm.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreExemplars())
+			}, sm.Metrics[1], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 
 			metricdatatest.AssertEqual(t, metricdata.Metrics{
-				Name:        "http.server.duration",
-				Description: "Measures the duration of inbound HTTP requests.",
-				Unit:        "ms",
+				Name:        "http.server.request.duration",
+				Description: "Duration of HTTP server requests.",
+				Unit:        "s",
 				Data: metricdata.Histogram[float64]{
-					DataPoints:  []metricdata.HistogramDataPoint[float64]{{Attributes: attribute.NewSet(attrs...)}},
 					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
 				},
 			}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+		})
+	}
+}
+
+func TestServerWithSemConvStabilityOptIn(t *testing.T) {
+	tests := []struct {
+		name                 string
+		setEnv               bool
+		wantExistsHTTPMethod bool
+	}{
+		{
+			"not set",
+			false,
+			false,
+		},
+		{
+			"set to http/dup",
+			true,
+			true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.setEnv {
+				t.Setenv(semconv.OTelSemConvStabilityOptIn, "http/dup")
+			}
+
+			attrs := semconv.NewHTTPServer(nil).
+				RequestTraceAttrs("foobar",
+					httptest.NewRequest("GET", "/user/123", nil),
+					semconv.RequestTraceAttrsOpts{
+						HTTPClientIP: "127.0.0.1",
+					})
+
+			var existsHTTPMethod bool
+			for _, attr := range attrs {
+				if attr.Key == "http.method" {
+					existsHTTPMethod = true
+					break
+				}
+			}
+			assert.Equal(t, tt.wantExistsHTTPMethod, existsHTTPMethod)
 		})
 	}
 }
