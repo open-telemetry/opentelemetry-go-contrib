@@ -22,7 +22,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Jaeger remote sampler's probabilistic strategy now uses the same sampling algorithm as `trace.TraceIDRatioBased` in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#6892)
 - The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test` package. Use `Version` instead.
-- The example for the `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` package is moved to be documented in the package itself. (#7121)
 
 ### Fixed
 
