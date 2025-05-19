@@ -6,7 +6,7 @@ require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/client_model v0.6.2
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/otel v1.35.1-0.20250515231152-1556ff2aeb34
+	go.opentelemetry.io/otel v1.35.1-0.20250519063005-af189e5a37c1
 	go.opentelemetry.io/otel/sdk v1.35.1-0.20250515231152-1556ff2aeb34
 	go.opentelemetry.io/otel/sdk/metric v1.35.1-0.20250515231152-1556ff2aeb34
 )
