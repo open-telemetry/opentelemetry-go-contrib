@@ -981,46 +981,79 @@ func TestTransportMetrics(t *testing.T) {
 		err = reader.Collect(context.Background(), &rm)
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
-		foundMap := make(map[string]struct{})
-		for _, m := range rm.ScopeMetrics[0].Metrics {
-			switch m.Name {
-			case "http.client.request.body.size":
-				foundMap[m.Name] = struct{}{}
-				d, ok := m.Data.(metricdata.Histogram[int64])
-				require.True(t, ok)
-				require.Len(t, d.DataPoints, 1)
-				assert.Equal(t, attrsNew, d.DataPoints[0].Attributes)
-			case "http.client.request.duration":
-				foundMap[m.Name] = struct{}{}
-				d, ok := m.Data.(metricdata.Histogram[float64])
-				require.True(t, ok)
-				require.Len(t, d.DataPoints, 1)
-				assert.Equal(t, attrsNew, d.DataPoints[0].Attributes)
-			case "http.client.request.size":
-				foundMap[m.Name] = struct{}{}
-				d, ok := m.Data.(metricdata.Sum[int64])
-				require.True(t, ok)
-				require.Len(t, d.DataPoints, 1)
-				assert.Equal(t, attrsOld, d.DataPoints[0].Attributes)
-			case "http.client.duration":
-				foundMap[m.Name] = struct{}{}
-				d, ok := m.Data.(metricdata.Histogram[float64])
-				require.True(t, ok)
-				require.Len(t, d.DataPoints, 1)
-				assert.Equal(t, attrsOld, d.DataPoints[0].Attributes)
-			}
+
+		expected := metricdata.ScopeMetrics{
+			Scope: instrumentation.Scope{
+				Name:    ScopeName,
+				Version: Version(),
+			},
+			Metrics: []metricdata.Metrics{
+				{
+					Name: "http.client.request.body.size",
+					Unit: "By",
+					Data: metricdata.Histogram[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[int64]{
+							{
+								Attributes: attrsNew,
+							},
+						},
+					},
+				},
+				{
+					Name: "http.client.request.duration",
+					Unit: "s",
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attrsNew,
+							},
+						},
+					},
+				},
+				{
+					Name: "http.client.request.size",
+					Unit: "By",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attrsOld,
+							},
+						},
+					},
+				},
+				{
+					Name: "http.client.response.size",
+					Unit: "By",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attrsOld,
+							},
+						},
+					},
+				},
+				{
+					Name:        "http.client.duration",
+					Description: "Measures the duration of outbound HTTP requests.",
+					Unit:        "ms",
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attrsOld,
+							},
+						},
+					},
+				},
+			},
 		}
-		for _, m := range []string{
-			// new
-			"http.client.request.body.size",
-			"http.client.request.duration",
-			// old
-			"http.client.request.size",
-			"http.client.duration",
-		} {
-			_, ok := foundMap[m]
-			assert.Truef(t, ok, "%q not found", m)
-		}
+		metricdatatest.AssertEqual(t, expected, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 	})
 }
 
