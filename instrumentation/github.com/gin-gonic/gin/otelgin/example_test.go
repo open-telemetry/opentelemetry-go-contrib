@@ -1,8 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Example exemplifies the otelgin package.
-package main
+package otelgin_test
 
 import (
 	"context"
@@ -23,7 +22,7 @@ import (
 
 var tracer = otel.Tracer("gin-server")
 
-func main() {
+func Example() {
 	tp, err := initTracer()
 	if err != nil {
 		log.Fatal(err)
