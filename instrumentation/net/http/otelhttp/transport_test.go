@@ -931,6 +931,97 @@ func TestTransportMetrics(t *testing.T) {
 		)
 		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 	})
+
+	t.Run("make http request with http/dup opt-in and check both new and old metrics", func(t *testing.T) {
+		t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http/dup")
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write(responseBody)
+			require.NoError(t, err)
+		}))
+		defer ts.Close()
+
+		tr := NewTransport(
+			http.DefaultTransport,
+			WithMeterProvider(meterProvider),
+		)
+		c := http.Client{Transport: tr}
+		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		require.NoError(t, err)
+		res, err := c.Do(r)
+		require.NoError(t, err)
+		_, err = io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.NoError(t, res.Body.Close())
+		host, portStr, err := net.SplitHostPort(r.Host)
+		require.NoError(t, err)
+		port, err := strconv.Atoi(portStr)
+		require.NoError(t, err)
+
+		attrsNew := attribute.NewSet(
+			attribute.String("http.request.method", "GET"),
+			attribute.Int("http.response.status_code", 200),
+			attribute.String("server.address", host),
+			attribute.Int("server.port", port),
+			attribute.String("url.scheme", "http"),
+			attribute.String("network.protocol.name", "http"),
+			attribute.String("network.protocol.version", "1.1"),
+		)
+		attrsOld := attribute.NewSet(
+			attribute.String("http.method", "GET"),
+			attribute.Int("http.status_code", 200),
+			attribute.String("net.peer.name", host),
+			attribute.Int("net.peer.port", port),
+		)
+
+		rm := metricdata.ResourceMetrics{}
+		err = reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+		foundMap := make(map[string]struct{})
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			switch m.Name {
+			case "http.client.request.body.size":
+				foundMap[m.Name] = struct{}{}
+				d, ok := m.Data.(metricdata.Histogram[int64])
+				require.True(t, ok)
+				require.Len(t, d.DataPoints, 1)
+				assert.Equal(t, attrsNew, d.DataPoints[0].Attributes)
+			case "http.client.request.duration":
+				foundMap[m.Name] = struct{}{}
+				d, ok := m.Data.(metricdata.Histogram[float64])
+				require.True(t, ok)
+				require.Len(t, d.DataPoints, 1)
+				assert.Equal(t, attrsNew, d.DataPoints[0].Attributes)
+			case "http.client.request.size":
+				foundMap[m.Name] = struct{}{}
+				d, ok := m.Data.(metricdata.Sum[int64])
+				require.True(t, ok)
+				require.Len(t, d.DataPoints, 1)
+				assert.Equal(t, attrsOld, d.DataPoints[0].Attributes)
+			case "http.client.duration":
+				foundMap[m.Name] = struct{}{}
+				d, ok := m.Data.(metricdata.Histogram[float64])
+				require.True(t, ok)
+				require.Len(t, d.DataPoints, 1)
+				assert.Equal(t, attrsOld, d.DataPoints[0].Attributes)
+			}
+		}
+		for _, m := range []string{
+			// new
+			"http.client.request.body.size",
+			"http.client.request.duration",
+			// old
+			"http.client.request.size",
+			"http.client.duration",
+		} {
+			_, ok := foundMap[m]
+			assert.Truef(t, ok, "%q not found", m)
+		}
+	})
 }
 
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
