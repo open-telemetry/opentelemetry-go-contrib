@@ -1,7 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Example exemplifies the otelgin package.
 package otelgin_test
 
 import (
