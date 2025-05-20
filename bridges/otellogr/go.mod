@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	github.com/go-logr/logr v1.4.2
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/otel v1.35.1-0.20250519195454-e57879908fbd
+	go.opentelemetry.io/otel v1.35.1-0.20250520085448-fe523bd15a09
 	go.opentelemetry.io/otel/log v0.11.1-0.20250515231152-1556ff2aeb34
 	go.opentelemetry.io/otel/log/logtest v0.0.0-20250515231152-1556ff2aeb34
 )
