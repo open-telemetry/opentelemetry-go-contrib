@@ -979,9 +979,7 @@ func TestMetricsExistenceOnRequestError(t *testing.T) {
 
 	// simulate an error by closing the server
 	// before the request is made
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		w.WriteHeader(http.StatusOK)
-	}))
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	ts.Close()
 
 	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
@@ -992,12 +990,14 @@ func TestMetricsExistenceOnRequestError(t *testing.T) {
 		if e := resp.Body.Close(); e != nil {
 			t.Errorf("close response body: %v", e)
 		}
-		t.Fatal("transport should have returned an error, it didn't")
 	}
+
+	require.Error(t, err)
 
 	err = reader.Collect(ctx, &rm)
 	assert.NoError(t, err)
 
+	t.Logf("Metrics: %v\n", rm.ScopeMetrics[0].Metrics)
 	assert.Len(t, rm.ScopeMetrics[0].Metrics, 2)
 	metricsFound := 0
 	for _, m := range rm.ScopeMetrics[0].Metrics {
