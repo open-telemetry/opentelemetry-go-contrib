@@ -37,11 +37,9 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo
       - go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux
-      - go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconv/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
-      - go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho
@@ -55,7 +53,6 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful
-      - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconv/test
       - go.opentelemetry.io/contrib/instrumentation/host
