@@ -20,7 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
   - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
   - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
-  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 - Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#6962)
 - Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#6965)
 - Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6966)
