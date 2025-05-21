@@ -989,8 +989,9 @@ func TestTransportMetrics(t *testing.T) {
 			},
 			Metrics: []metricdata.Metrics{
 				{
-					Name: "http.client.request.body.size",
-					Unit: "By",
+					Name:        "http.client.request.body.size",
+					Description: "Size of HTTP client request bodies.",
+					Unit:        "By",
 					Data: metricdata.Histogram[int64]{
 						Temporality: metricdata.CumulativeTemporality,
 						DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -1001,8 +1002,9 @@ func TestTransportMetrics(t *testing.T) {
 					},
 				},
 				{
-					Name: "http.client.request.duration",
-					Unit: "s",
+					Name:        "http.client.request.duration",
+					Description: "Duration of HTTP client requests.",
+					Unit:        "s",
 					Data: metricdata.Histogram[float64]{
 						Temporality: metricdata.CumulativeTemporality,
 						DataPoints: []metricdata.HistogramDataPoint[float64]{
@@ -1013,8 +1015,9 @@ func TestTransportMetrics(t *testing.T) {
 					},
 				},
 				{
-					Name: "http.client.request.size",
-					Unit: "By",
+					Name:        "http.client.request.size",
+					Description: "Measures the size of HTTP request messages.",
+					Unit:        "By",
 					Data: metricdata.Sum[int64]{
 						Temporality: metricdata.CumulativeTemporality,
 						IsMonotonic: true,
@@ -1026,8 +1029,9 @@ func TestTransportMetrics(t *testing.T) {
 					},
 				},
 				{
-					Name: "http.client.response.size",
-					Unit: "By",
+					Name:        "http.client.response.size",
+					Description: "Measures the size of HTTP response messages.",
+					Unit:        "By",
 					Data: metricdata.Sum[int64]{
 						Temporality: metricdata.CumulativeTemporality,
 						IsMonotonic: true,
