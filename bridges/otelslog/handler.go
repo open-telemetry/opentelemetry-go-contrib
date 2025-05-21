@@ -11,7 +11,7 @@
 //
 //   - Time is set as the Timestamp.
 //   - Message is set as the Body using a [log.StringValue].
-//   - Level is transformed and set as the Severity. The SeverityText is not
+//   - Level is transformed and set as the Severity. The SeverityText is also
 //     set.
 //   - PC is dropped.
 //   - Attr are transformed and set as the Attributes.
@@ -202,6 +202,7 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
 	record.SetSeverity(log.Severity(r.Level + sevOffset))
+	record.SetSeverityText(r.Level.String())
 
 	if h.source {
 		fs := runtime.CallersFrames([]uintptr{r.PC})

@@ -94,6 +94,9 @@ func (r *recorder) Results() []map[string]any {
 		if lvl := r.Severity(); lvl != 0 {
 			m[slog.LevelKey] = lvl - 9
 		}
+		if st := r.SeverityText(); st != "" {
+			m["severityText"] = st
+		}
 		if body := r.Body(); body.Kind() != log.KindEmpty {
 			m[slog.MessageKey] = value2Result(body)
 		}
@@ -254,6 +257,7 @@ func TestSLogHandler(t *testing.T) {
 			checks: [][]check{{
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "INFO"),
 				hasAttr("any", "{data:1}"),
 				hasAttr("bool", true),
 				hasAttr("duration", int64(time.Minute)),
@@ -270,16 +274,18 @@ func TestSLogHandler(t *testing.T) {
 			name:        "multi-messages",
 			explanation: withSource("this test expects multiple independent messages"),
 			f: func(l *slog.Logger) {
-				l.Info("one")
-				l.Info("two")
+				l.Warn("one")
+				l.Debug("two")
 			},
 			checks: [][]check{{
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "WARN"),
 				hasAttr(slog.MessageKey, "one"),
 			}, {
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "DEBUG"),
 				hasAttr(slog.MessageKey, "two"),
 			}},
 		},
@@ -346,6 +352,7 @@ func TestSLogHandler(t *testing.T) {
 			checks: [][]check{{
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "INFO"),
 				hasAttr(slog.MessageKey, "msg"),
 				missingKey("a"),
 				missingKey("c"),
@@ -443,16 +450,15 @@ func TestSLogHandler(t *testing.T) {
 			}
 		})
 	}
+}
 
-	t.Run("slogtest.TestHandler", func(t *testing.T) {
-		r := new(recorder)
-		h := NewHandler("", WithLoggerProvider(r))
-
-		// TODO: use slogtest.Run when Go 1.21 is no longer supported.
-		err := slogtest.TestHandler(h, r.Results)
-		if err != nil {
-			t.Fatal(err)
-		}
+func TestSlogtest(t *testing.T) {
+	r := new(recorder)
+	slogtest.Run(t, func(t *testing.T) slog.Handler {
+		r = new(recorder)
+		return NewHandler("", WithLoggerProvider(r))
+	}, func(t *testing.T) map[string]any {
+		return r.Results()[0]
 	})
 }
 
