@@ -75,6 +75,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`.
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`.
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+- Record `http.client.request.body.size` and `http.client.request.duration` metrics on transport round trip errors in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` (#6940)
 
 ### Removed
 
