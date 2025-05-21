@@ -420,7 +420,7 @@ func TestWithFilter(t *testing.T) {
 
 		router := gin.New()
 		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
-		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
+		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f))) //nolint:staticcheck // The WithFilter option is currently deprecated.
 		router.GET("/healthcheck", func(c *gin.Context) {})
 
 		r := httptest.NewRequest("GET", "/healthcheck", nil)
@@ -436,7 +436,7 @@ func TestWithFilter(t *testing.T) {
 
 		router := gin.New()
 		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
-		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
+		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f))) //nolint:staticcheck // The WithFilter option is currently deprecated.
 		router.GET("/user/:id", func(c *gin.Context) {})
 
 		r := httptest.NewRequest("GET", "/user/123", nil)
@@ -533,7 +533,7 @@ func TestMetrics(t *testing.T) {
 			router := gin.New()
 			router.Use(otelgin.Middleware("foobar",
 				otelgin.WithMeterProvider(meterProvider),
-				otelgin.WithMetricAttributeFn(tt.metricAttributeExtractor),
+				otelgin.WithMetricAttributeFn(tt.metricAttributeExtractor), //nolint:staticcheck  // The WithMetricAttributeFn option is currently deprecated.
 				otelgin.WithGinMetricAttributeFn(tt.ginMetricAttributeExtractor),
 			))
 			router.GET("/user/:id", func(c *gin.Context) {
