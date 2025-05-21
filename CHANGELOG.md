@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- `http.route` attribute to otelhttp server request spans, when `net/http.Request.Pattern` is set in the following modules.  (#6905, #6937)
+- `http.route` attribute to otelhttp server request spans, when `net/http.Request.Pattern` is set in the modules below.  (#6905, #6937)
   - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
   - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
   - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
