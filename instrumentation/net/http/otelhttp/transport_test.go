@@ -931,6 +931,134 @@ func TestTransportMetrics(t *testing.T) {
 		)
 		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 	})
+
+	t.Run("make http request with http/dup opt-in and check both new and old metrics", func(t *testing.T) {
+		t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http/dup")
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(http.StatusOK)
+			_, err := w.Write(responseBody)
+			assert.NoError(t, err)
+		}))
+		defer ts.Close()
+
+		tr := NewTransport(
+			http.DefaultTransport,
+			WithMeterProvider(meterProvider),
+		)
+		c := http.Client{Transport: tr}
+		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		require.NoError(t, err)
+		res, err := c.Do(r)
+		require.NoError(t, err)
+		_, err = io.ReadAll(res.Body)
+		require.NoError(t, err)
+		require.NoError(t, res.Body.Close())
+		host, portStr, err := net.SplitHostPort(r.Host)
+		require.NoError(t, err)
+		port, err := strconv.Atoi(portStr)
+		require.NoError(t, err)
+
+		attrsNew := attribute.NewSet(
+			attribute.String("http.request.method", "GET"),
+			attribute.Int("http.response.status_code", 200),
+			attribute.String("server.address", host),
+			attribute.Int("server.port", port),
+			attribute.String("url.scheme", "http"),
+			attribute.String("network.protocol.name", "http"),
+			attribute.String("network.protocol.version", "1.1"),
+		)
+		attrsOld := attribute.NewSet(
+			attribute.String("http.method", "GET"),
+			attribute.Int("http.status_code", 200),
+			attribute.String("net.peer.name", host),
+			attribute.Int("net.peer.port", port),
+		)
+
+		rm := metricdata.ResourceMetrics{}
+		err = reader.Collect(context.Background(), &rm)
+		require.NoError(t, err)
+		require.Len(t, rm.ScopeMetrics, 1)
+
+		expected := metricdata.ScopeMetrics{
+			Scope: instrumentation.Scope{
+				Name:    ScopeName,
+				Version: Version(),
+			},
+			Metrics: []metricdata.Metrics{
+				{
+					Name:        "http.client.request.body.size",
+					Description: "Size of HTTP client request bodies.",
+					Unit:        "By",
+					Data: metricdata.Histogram[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[int64]{
+							{
+								Attributes: attrsNew,
+							},
+						},
+					},
+				},
+				{
+					Name:        "http.client.request.duration",
+					Description: "Duration of HTTP client requests.",
+					Unit:        "s",
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attrsNew,
+							},
+						},
+					},
+				},
+				{
+					Name:        "http.client.request.size",
+					Description: "Measures the size of HTTP request messages.",
+					Unit:        "By",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attrsOld,
+							},
+						},
+					},
+				},
+				{
+					Name:        "http.client.response.size",
+					Description: "Measures the size of HTTP response messages.",
+					Unit:        "By",
+					Data: metricdata.Sum[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						IsMonotonic: true,
+						DataPoints: []metricdata.DataPoint[int64]{
+							{
+								Attributes: attrsOld,
+							},
+						},
+					},
+				},
+				{
+					Name:        "http.client.duration",
+					Description: "Measures the duration of outbound HTTP requests.",
+					Unit:        "ms",
+					Data: metricdata.Histogram[float64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[float64]{
+							{
+								Attributes: attrsOld,
+							},
+						},
+					},
+				},
+			},
+		}
+		metricdatatest.AssertEqual(t, expected, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+	})
 }
 
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
