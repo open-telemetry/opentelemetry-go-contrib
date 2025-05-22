@@ -153,8 +153,12 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 			res.Body = newWrappedBody(span, readRecordFunc, res.Body)
 		}
 
-		// set transport record metrics
-		t.recordMetrics(ctx, requestStartTime, metricData, metricOpts)
+		// Use floating point division here for higher precision (instead of Millisecond method).
+		elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+
+		metricData.ElapsedTime = elapsedTime
+
+		t.semconv.RecordMetrics(ctx, metricData, metricOpts)
 	}()
 
 	if err != nil {
@@ -180,15 +184,6 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	span.SetStatus(t.semconv.Status(res.StatusCode))
 
 	return res, nil
-}
-
-func (t *Transport) recordMetrics(ctx context.Context, requestStartTime time.Time, metricData semconv.MetricData, metricOpts map[string]semconv.MetricOpts) {
-	// Use floating point division here for higher precision (instead of Millisecond method).
-	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
-
-	metricData.ElapsedTime = elapsedTime
-
-	t.semconv.RecordMetrics(ctx, metricData, metricOpts)
 }
 
 func (t *Transport) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
