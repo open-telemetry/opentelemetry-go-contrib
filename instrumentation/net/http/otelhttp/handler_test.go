@@ -941,7 +941,8 @@ func TestHandlerWithSemConvStabilityOptIn(t *testing.T) {
 			require.Len(t, spans, 1)
 			assert.ElementsMatch(t, spans[0].Attributes(), tt.expectedSpanAttributes)
 			rm := metricdata.ResourceMetrics{}
-			metricRecorder.Collect(context.Background(), &rm)
+			err = metricRecorder.Collect(context.Background(), &rm)
+			require.NoError(t, err)
 			require.Len(t, rm.ScopeMetrics, 1)
 			metricdatatest.AssertEqual(t, tt.expectedMetrics, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
