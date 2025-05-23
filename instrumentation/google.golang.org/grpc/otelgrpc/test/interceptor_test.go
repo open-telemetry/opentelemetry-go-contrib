@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/stretchr/testify/assert"
