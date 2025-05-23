@@ -31,7 +31,9 @@ if [ "$(git tag --contains $(git log -1 --pretty=format:"%H"))" = "" ] ; then
 	printf "\n\nError: HEAD is not pointing to a tagged version"
 fi
 
-make ${TOOLS_DIR}/gojq
+# Run make from repo root to build gojq
+make -C .. .tools/gojq
+
 
 DIR_TMP="${GOPATH}/src/oteltmp/"
 rm -rf $DIR_TMP
