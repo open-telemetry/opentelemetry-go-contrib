@@ -570,6 +570,7 @@ func assertServerSpan(t *testing.T, wantSpanCode codes.Code, wantSpanStatusDescr
 	require.True(t, codeAttr.Valid(), "attributes contain gRPC status code")
 	assert.Equal(t, attribute.Int64Value(int64(wantGrpcCode)), codeAttr.Value)
 }
+
 func BenchmarkStreamClientInterceptor(b *testing.B) {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(b, err, "failed to open port")
