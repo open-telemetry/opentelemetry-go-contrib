@@ -139,63 +139,6 @@ func (w *clientStream) endSpan(err error) {
 	w.span.End()
 }
 
-// StreamClientInterceptor returns a grpc.StreamClientInterceptor suitable
-// for use in a grpc.NewClient call.
-//
-// Deprecated: Use [NewClientHandler] instead.
-func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
-	cfg := newConfig(opts)
-	tracer := cfg.TracerProvider.Tracer(
-		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
-	)
-
-	return func(
-		ctx context.Context,
-		desc *grpc.StreamDesc,
-		cc *grpc.ClientConn,
-		method string,
-		streamer grpc.Streamer,
-		callOpts ...grpc.CallOption,
-	) (grpc.ClientStream, error) {
-		i := &InterceptorInfo{
-			Method: method,
-			Type:   StreamClient,
-		}
-		if cfg.InterceptorFilter != nil && !cfg.InterceptorFilter(i) {
-			return streamer(ctx, desc, cc, method, callOpts...)
-		}
-
-		name, attr := telemetryAttributes(method, cc.Target())
-
-		startOpts := append([]trace.SpanStartOption{
-			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(attr...),
-		},
-			cfg.SpanStartOptions...,
-		)
-
-		ctx, span := tracer.Start(
-			ctx,
-			name,
-			startOpts...,
-		)
-
-		ctx = inject(ctx, cfg.Propagators)
-
-		s, err := streamer(ctx, desc, cc, method, callOpts...)
-		if err != nil {
-			grpcStatus, _ := status.FromError(err)
-			span.SetStatus(codes.Error, grpcStatus.Message())
-			span.SetAttributes(statusCodeAttr(grpcStatus.Code()))
-			span.End()
-			return s, err
-		}
-		stream := wrapClientStream(s, desc, span, cfg)
-		return stream, nil
-	}
-}
-
 // serverStream wraps around the embedded grpc.ServerStream, and intercepts the RecvMsg and
 // SendMsg method call.
 type serverStream struct {
@@ -237,6 +180,7 @@ func (w *serverStream) SendMsg(m interface{}) error {
 	return err
 }
 
+//nolint:unused
 func wrapServerStream(ctx context.Context, ss grpc.ServerStream, cfg *config) *serverStream {
 	return &serverStream{
 		ServerStream:  ss,
@@ -248,9 +192,11 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream, cfg *config) *s
 
 // telemetryAttributes returns a span name and span and metric attributes from
 // the gRPC method and peer address.
-func telemetryAttributes(fullMethod, sererAddr string) (string, []attribute.KeyValue) {
+//
+//nolint:unused
+func telemetryAttributes(fullMethod, serverAddr string) (string, []attribute.KeyValue) {
 	name, methodAttrs := internal.ParseFullMethod(fullMethod)
-	srvAttrs := serverAddrAttrs(sererAddr)
+	srvAttrs := serverAddrAttrs(serverAddr)
 
 	attrs := make([]attribute.KeyValue, 0, 1+len(methodAttrs)+len(srvAttrs))
 	attrs = append(attrs, semconv.RPCSystemGRPC)
