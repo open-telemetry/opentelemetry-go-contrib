@@ -246,63 +246,6 @@ func wrapServerStream(ctx context.Context, ss grpc.ServerStream, cfg *config) *s
 	}
 }
 
-// StreamServerInterceptor returns a grpc.StreamServerInterceptor suitable
-// for use in a grpc.NewServer call.
-//
-// Deprecated: Use [NewServerHandler] instead.
-func StreamServerInterceptor(opts ...Option) grpc.StreamServerInterceptor {
-	cfg := newConfig(opts)
-	tracer := cfg.TracerProvider.Tracer(
-		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
-	)
-
-	return func(
-		srv interface{},
-		ss grpc.ServerStream,
-		info *grpc.StreamServerInfo,
-		handler grpc.StreamHandler,
-	) error {
-		ctx := ss.Context()
-		i := &InterceptorInfo{
-			StreamServerInfo: info,
-			Type:             StreamServer,
-		}
-		if cfg.InterceptorFilter != nil && !cfg.InterceptorFilter(i) {
-			return handler(srv, wrapServerStream(ctx, ss, cfg))
-		}
-
-		ctx = extract(ctx, cfg.Propagators)
-		name, attr := telemetryAttributes(info.FullMethod, peerFromCtx(ctx))
-
-		startOpts := append([]trace.SpanStartOption{
-			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(attr...),
-		},
-			cfg.SpanStartOptions...,
-		)
-
-		ctx, span := tracer.Start(
-			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
-			name,
-			startOpts...,
-		)
-		defer span.End()
-
-		err := handler(srv, wrapServerStream(ctx, ss, cfg))
-		if err != nil {
-			s, _ := status.FromError(err)
-			statusCode, msg := serverStatus(s)
-			span.SetStatus(statusCode, msg)
-			span.SetAttributes(statusCodeAttr(s.Code()))
-		} else {
-			span.SetAttributes(statusCodeAttr(grpc_codes.OK))
-		}
-
-		return err
-	}
-}
-
 // telemetryAttributes returns a span name and span and metric attributes from
 // the gRPC method and peer address.
 func telemetryAttributes(fullMethod, sererAddr string) (string, []attribute.KeyValue) {
