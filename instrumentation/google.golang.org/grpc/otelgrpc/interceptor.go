@@ -139,8 +139,67 @@ func (w *clientStream) endSpan(err error) {
 	w.span.End()
 }
 
+// StreamClientInterceptor returns a grpc.StreamClientInterceptor suitable
+// for use in a grpc.NewClient call.
+//
+// Deprecated: Use [NewClientHandler] instead.
+func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
+	cfg := newConfig(opts)
+	tracer := cfg.TracerProvider.Tracer(
+		ScopeName,
+		trace.WithInstrumentationVersion(Version()),
+	)
+
+	return func(
+		ctx context.Context,
+		desc *grpc.StreamDesc,
+		cc *grpc.ClientConn,
+		method string,
+		streamer grpc.Streamer,
+		callOpts ...grpc.CallOption,
+	) (grpc.ClientStream, error) {
+		i := &InterceptorInfo{
+			Method: method,
+			Type:   StreamClient,
+		}
+		if cfg.InterceptorFilter != nil && !cfg.InterceptorFilter(i) {
+			return streamer(ctx, desc, cc, method, callOpts...)
+		}
+
+		name, attr := telemetryAttributes(method, cc.Target())
+
+		startOpts := append([]trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithAttributes(attr...),
+		},
+			cfg.SpanStartOptions...,
+		)
+
+		ctx, span := tracer.Start(
+			ctx,
+			name,
+			startOpts...,
+		)
+
+		ctx = inject(ctx, cfg.Propagators)
+
+		s, err := streamer(ctx, desc, cc, method, callOpts...)
+		if err != nil {
+			grpcStatus, _ := status.FromError(err)
+			span.SetStatus(codes.Error, grpcStatus.Message())
+			span.SetAttributes(statusCodeAttr(grpcStatus.Code()))
+			span.End()
+			return s, err
+		}
+		stream := wrapClientStream(s, desc, span, cfg)
+		return stream, nil
+	}
+}
+
 // serverStream wraps around the embedded grpc.ServerStream, and intercepts the RecvMsg and
 // SendMsg method call.
+//
+//nolint:unused
 type serverStream struct {
 	grpc.ServerStream
 	ctx context.Context
@@ -152,6 +211,7 @@ type serverStream struct {
 	sentEvent     bool
 }
 
+//nolint:unused
 func (w *serverStream) Context() context.Context {
 	return w.ctx
 }
@@ -223,6 +283,8 @@ func serverAddrAttrs(hostport string) []attribute.KeyValue {
 }
 
 // peerFromCtx returns a peer address from a context, if one exists.
+//
+//nolint:unused
 func peerFromCtx(ctx context.Context) string {
 	p, ok := peer.FromContext(ctx)
 	if !ok {
