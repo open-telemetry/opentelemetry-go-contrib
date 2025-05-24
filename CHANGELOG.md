@@ -9,6 +9,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Fixed
+
 - Record all non-failure metrics on transport round trip errors in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` (#7146)
 
 <!-- Released section -->
