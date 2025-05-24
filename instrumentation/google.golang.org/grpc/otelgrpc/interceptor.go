@@ -15,7 +15,6 @@ import (
 	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
 
@@ -196,64 +195,8 @@ func StreamClientInterceptor(opts ...Option) grpc.StreamClientInterceptor {
 	}
 }
 
-// serverStream wraps around the embedded grpc.ServerStream, and intercepts the RecvMsg and
-// SendMsg method call.
-//
-//nolint:unused
-type serverStream struct {
-	grpc.ServerStream
-	ctx context.Context
-
-	receivedMessageID int
-	sentMessageID     int
-
-	receivedEvent bool
-	sentEvent     bool
-}
-
-//nolint:unused
-func (w *serverStream) Context() context.Context {
-	return w.ctx
-}
-
-func (w *serverStream) RecvMsg(m interface{}) error {
-	err := w.ServerStream.RecvMsg(m)
-
-	if err == nil {
-		w.receivedMessageID++
-		if w.receivedEvent {
-			messageReceived.Event(w.Context(), w.receivedMessageID, m)
-		}
-	}
-
-	return err
-}
-
-func (w *serverStream) SendMsg(m interface{}) error {
-	err := w.ServerStream.SendMsg(m)
-
-	w.sentMessageID++
-	if w.sentEvent {
-		messageSent.Event(w.Context(), w.sentMessageID, m)
-	}
-
-	return err
-}
-
-//nolint:unused
-func wrapServerStream(ctx context.Context, ss grpc.ServerStream, cfg *config) *serverStream {
-	return &serverStream{
-		ServerStream:  ss,
-		ctx:           ctx,
-		receivedEvent: cfg.ReceivedEvent,
-		sentEvent:     cfg.SentEvent,
-	}
-}
-
 // telemetryAttributes returns a span name and span and metric attributes from
 // the gRPC method and peer address.
-//
-//nolint:unused
 func telemetryAttributes(fullMethod, serverAddr string) (string, []attribute.KeyValue) {
 	name, methodAttrs := internal.ParseFullMethod(fullMethod)
 	srvAttrs := serverAddrAttrs(serverAddr)
@@ -280,17 +223,6 @@ func serverAddrAttrs(hostport string) []attribute.KeyValue {
 		semconv.ServerAddress(h),
 		semconv.ServerPort(p),
 	}
-}
-
-// peerFromCtx returns a peer address from a context, if one exists.
-//
-//nolint:unused
-func peerFromCtx(ctx context.Context) string {
-	p, ok := peer.FromContext(ctx)
-	if !ok {
-		return ""
-	}
-	return p.Addr.String()
 }
 
 // statusCodeAttr returns status code attribute based on given gRPC code.
