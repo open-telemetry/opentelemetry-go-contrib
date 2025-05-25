@@ -5,10 +5,12 @@
 
 set -euo pipefail
 
-cd $(dirname $0)
-TOOLS_DIR=$(pwd)/.tools
-GOPATH=$(go env GOPATH)
+# Get the repository root directory (parent of tools directory)
+SCRIPT_DIR=$(dirname "$0")
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
+TOOLS_DIR="$REPO_ROOT/.tools"
 
+GOPATH=$(go env GOPATH)
 if [ -z "${GOPATH}" ] ; then
 	printf "GOPATH is not defined.\n"
 	exit -1
@@ -31,8 +33,9 @@ if [ "$(git tag --contains $(git log -1 --pretty=format:"%H"))" = "" ] ; then
 	printf "\n\nError: HEAD is not pointing to a tagged version"
 fi
 
-# Run make from repo root to build gojq
-make -C .. .tools/gojq
+
+make ${TOOLS_DIR}/gojq
+
 
 
 DIR_TMP="${GOPATH}/src/oteltmp/"
