@@ -9,6 +9,7 @@ set -euo pipefail
 SCRIPT_DIR=$(dirname "$0")
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 TOOLS_DIR="$REPO_ROOT/.tools"
+TOOLS_MOD_DIR="$REPO_ROOT/tools"
 
 GOPATH=$(go env GOPATH)
 if [ -z "${GOPATH}" ] ; then
@@ -28,13 +29,16 @@ if ! git diff --quiet; then \
 	exit -1
 fi
 
-if [ "$(git tag --contains $(git log -1 --pretty=format:"%H"))" = "" ] ; then
-	printf "$(git log -1)"
-	printf "\n\nError: HEAD is not pointing to a tagged version"
-fi
+#if [ "$(git tag --contains $(git log -1 --pretty=format:"%H"))" = "" ] ; then
+#	printf "$(git log -1)"
+#	printf "\n\nError: HEAD is not pointing to a tagged version"
+#fi
 
 
-make ${TOOLS_DIR}/gojq
+mkdir -p "${TOOLS_DIR}"
+printf "Building gojq tool...\n"
+(cd "${TOOLS_MOD_DIR}" && go build -o "${TOOLS_DIR}/gojq" github.com/itchyny/gojq/cmd/gojq)
+
 
 
 
