@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
 
@@ -13,73 +12,88 @@ TOOLS_MOD_DIR="$REPO_ROOT/tools"
 
 GOPATH=$(go env GOPATH)
 if [ -z "${GOPATH}" ] ; then
-	printf "GOPATH is not defined.\n"
+	echo "GOPATH is not defined."
 	exit -1
 fi
 
 if [ ! -d "${GOPATH}" ] ; then
-	printf "GOPATH ${GOPATH} is invalid \n"
+	echo "GOPATH ${GOPATH} is invalid"
 	exit -1
 fi
+
+# Change to repository root for the rest of the operations
+cd "$REPO_ROOT"
 
 # Pre-requisites
 if ! git diff --quiet; then \
 	git status
-	printf "\n\nError: working tree is not clean\n"
+	echo ""
+	echo "Error: working tree is not clean"
 	exit -1
 fi
 
+# Comment out this check for testing since you're not on a tagged version
 #if [ "$(git tag --contains $(git log -1 --pretty=format:"%H"))" = "" ] ; then
-#	printf "$(git log -1)"
-#	printf "\n\nError: HEAD is not pointing to a tagged version"
+#	echo "$(git log -1)"
+#	echo ""
+#	echo "Error: HEAD is not pointing to a tagged version"
 #fi
 
-
+# Build gojq tool directly instead of using make
 mkdir -p "${TOOLS_DIR}"
-printf "Building gojq tool...\n"
+echo "Building gojq tool..."
 (cd "${TOOLS_MOD_DIR}" && go build -o "${TOOLS_DIR}/gojq" github.com/itchyny/gojq/cmd/gojq)
-
-
-
 
 DIR_TMP="${GOPATH}/src/oteltmp/"
 rm -rf $DIR_TMP
 mkdir -p $DIR_TMP
 
-printf "Copy examples to ${DIR_TMP}\n"
+echo "Copy examples to ${DIR_TMP}"
 cp -a ./examples ${DIR_TMP}
 
 # Update go.mod files
-printf "Update go.mod: rename module and remove replace\n"
-
+echo "Update go.mod: rename module and remove replace"
 PACKAGE_DIRS=$(find . -mindepth 2 -type f -name 'go.mod' -exec dirname {} \; | egrep 'examples' | sed 's/^\.\///' | sort)
 
 for dir in $PACKAGE_DIRS; do
-	printf "  Update go.mod for $dir\n"
+	echo "  Update go.mod for $dir"
+	
+	# Check if the directory exists in the temporary location
+	if [ ! -d "${DIR_TMP}/${dir}" ]; then
+		echo "    Skipping $dir - directory not found in temporary location"
+		continue
+	fi
+	
 	(cd "${DIR_TMP}/${dir}" && \
-	 # replaces is ("mod1" "mod2" …)
-	 replaces=($(go mod edit -json | ${TOOLS_DIR}/gojq '.Replace[].Old.Path' || true))
-	 # strip double quotes
-	 replaces=("${replaces[@]%\"}") && \
-	 replaces=("${replaces[@]#\"}") && \
-	 # make an array (-dropreplace=mod1 -dropreplace=mod2 …)
-	 dropreplaces=("${replaces[@]/#/-dropreplace=}") && \
-	 go mod edit -module "oteltmp/${dir}" "${dropreplaces[@]}" && \
+	 # Get replaces, handle case where there are no replaces (returns null)
+	 replaces_json=$(go mod edit -json | ${TOOLS_DIR}/gojq '.Replace // []' 2>/dev/null || echo '[]')
+	 replaces=($(echo "$replaces_json" | ${TOOLS_DIR}/gojq -r '.[].Old.Path' 2>/dev/null || true))
+	 
+	 # Only process if there are actual replaces
+	 if [ ${#replaces[@]} -gt 0 ] && [ "${replaces[0]}" != "" ]; then
+		 # make an array (-dropreplace=mod1 -dropreplace=mod2 …)
+		 dropreplaces=("${replaces[@]/#/-dropreplace=}")
+		 go mod edit -module "oteltmp/${dir}" "${dropreplaces[@]}"
+	 else
+		 go mod edit -module "oteltmp/${dir}"
+	 fi
+	 
 	 go mod tidy)
 done
-printf "Update done:\n\n"
+
+echo "Update done:"
+echo ""
 
 # Build directories that contain main package. These directories are different than
 # directories that contain go.mod files.
-printf "Build examples:\n"
-
+echo "Build examples:"
 EXAMPLES=$(find ./examples -type f -name go.mod -exec dirname {} \;)
 for ex in $EXAMPLES; do
-	printf "  Build $ex in ${DIR_TMP}/${ex}\n"
+	echo "  Build $ex in ${DIR_TMP}/${ex}"
 	(cd "${DIR_TMP}/${ex}" && \
 	 go build .)
 done
 
 # Cleanup
-printf "Remove copied files.\n"
+echo "Remove copied files."
 rm -rf $DIR_TMP
