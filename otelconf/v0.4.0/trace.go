@@ -24,10 +24,10 @@ import (
 var errInvalidSamplerConfiguration = errors.New("invalid sampler configuration")
 
 func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProvider, shutdownFunc, error) {
-	if cfg.opentelemetryConfig.TracerProvider == nil {
+	provider, ok := cfg.opentelemetryConfig.TracerProvider.(*TracerProviderJson)
+	if provider == nil {
 		return noop.NewTracerProvider(), noopShutdown, nil
 	}
-	provider, ok := cfg.opentelemetryConfig.TracerProvider.(*TracerProviderJson)
 	if !ok {
 		return noop.NewTracerProvider(), noopShutdown, errors.New("invalid tracer provider")
 	}

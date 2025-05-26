@@ -39,10 +39,10 @@ var zeroScope instrumentation.Scope
 const instrumentKindUndefined = sdkmetric.InstrumentKind(0)
 
 func meterProvider(cfg configOptions, res *resource.Resource) (metric.MeterProvider, shutdownFunc, error) {
-	if cfg.opentelemetryConfig.MeterProvider == nil {
+	provider, ok := cfg.opentelemetryConfig.MeterProvider.(*MeterProviderJson)
+	if provider == nil {
 		return noop.NewMeterProvider(), noopShutdown, nil
 	}
-	provider, ok := cfg.opentelemetryConfig.MeterProvider.(*MeterProviderJson)
 	if !ok {
 		return noop.NewMeterProvider(), noopShutdown, errors.New("invalid meter provider")
 	}
