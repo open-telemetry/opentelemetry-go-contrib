@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- - Fix data race when writing log entries with `context.Context` fields in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7368)
+- Fix data race when writing log entries with `context.Context` fields in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7368)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
