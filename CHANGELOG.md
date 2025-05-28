@@ -17,6 +17,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions have been upgraded from `v1.30.0` to `v1.33.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7361)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/ec2`. (#7373)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#7376)
+- The semantic conventions have been upgraded in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` to `v1.32.0`. (#7393)
+- The semantic conventions have been upgraded in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` to `v1.32.0`. (#7393)
 
 ### Fixed
 
