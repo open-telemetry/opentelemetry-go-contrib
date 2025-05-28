@@ -11,7 +11,7 @@ import (
 	"github.com/aws/smithy-go/middleware"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 // SNSAttributeBuilder sets SNS specific attributes depending on the SNS operation is being performed.
