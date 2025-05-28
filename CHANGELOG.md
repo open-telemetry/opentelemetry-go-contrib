@@ -16,6 +16,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The semantic conventions have been upgraded from `v1.30.0` to `v1.33.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7361)
 
+### Deprecated
+
+- `AttributeCPUTimeUser` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeCPUTimeSystem` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeCPUTimeOther` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeCPUTimeIdle` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeMemoryAvailable` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeMemoryUsed` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeNetworkTransmit` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeNetworkReceive` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+
 ### Fixed
 
 - Fix data race when writing log entries with `context.Context` fields in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7368)

@@ -64,20 +64,28 @@ func (o metricProviderOption) apply(c *config) {
 var (
 	// Attribute sets for CPU time measurements.
 
-	AttributeCPUTimeUser   = attribute.NewSet(attribute.String("state", "user"))
+	// Deprecated: Use go.opentelemetry.io/otel/semconv instead.
+	AttributeCPUTimeUser = attribute.NewSet(attribute.String("state", "user"))
+	// Deprecated: Use go.opentelemetry.io/otel/semconv instead.
 	AttributeCPUTimeSystem = attribute.NewSet(attribute.String("state", "system"))
-	AttributeCPUTimeOther  = attribute.NewSet(attribute.String("state", "other"))
-	AttributeCPUTimeIdle   = attribute.NewSet(attribute.String("state", "idle"))
+	// Deprecated: Use go.opentelemetry.io/otel/semconv instead.
+	AttributeCPUTimeOther = attribute.NewSet(attribute.String("state", "other"))
+	// Deprecated: Use go.opentelemetry.io/otel/semconv instead.
+	AttributeCPUTimeIdle = attribute.NewSet(attribute.String("state", "idle"))
 
 	// Attribute sets used for Memory measurements.
 
+	// Deprecated: Use go.opentelemetry.io/otel/semconv instead.
 	AttributeMemoryAvailable = attribute.NewSet(attribute.String("state", "available"))
-	AttributeMemoryUsed      = attribute.NewSet(attribute.String("state", "used"))
+	// Deprecated: Use go.opentelemetry.io/otel/semconv instead.
+	AttributeMemoryUsed = attribute.NewSet(attribute.String("state", "used"))
 
 	// Attribute sets used for Network measurements.
 
+	// Deprecated: Use go.opentelemetry.io/otel/semconv instead.
 	AttributeNetworkTransmit = attribute.NewSet(attribute.String("direction", "transmit"))
-	AttributeNetworkReceive  = attribute.NewSet(attribute.String("direction", "receive"))
+	// Deprecated: Use go.opentelemetry.io/otel/semconv instead.
+	AttributeNetworkReceive = attribute.NewSet(attribute.String("direction", "receive"))
 )
 
 // newConfig computes a config from a list of Options.
