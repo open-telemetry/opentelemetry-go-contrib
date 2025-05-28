@@ -5,6 +5,7 @@ package otelzap
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -140,6 +141,38 @@ func TestCore(t *testing.T) {
 			log.String("test1", "value1"),
 			log.String("test2", "value2"),
 			log.String("test3", "value3"),
+		}, got.Attributes)
+	})
+}
+
+func TestCoreConcurrentSafe(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc)
+
+	t.Run("Write", func(t *testing.T) {
+		var wg sync.WaitGroup
+		const n = 2
+		wg.Add(n)
+		ctx := context.Background()
+		for i := 0; i < n; i++ {
+			go func() {
+				defer wg.Done()
+				logger.Info(testMessage, zap.String(testKey, testValue), zap.Any("ctx", ctx))
+			}()
+		}
+		wg.Wait()
+
+		result := rec.Result()
+		require.Len(t, result, 1)
+		require.Len(t, result[logtest.Scope{Name: "name"}], 2)
+		got := result[logtest.Scope{Name: "name"}][0]
+
+		assert.Equal(t, testMessage, got.Body.AsString())
+		assert.Equal(t, log.SeverityInfo, got.Severity)
+		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
+		assert.Equal(t, []log.KeyValue{
+			log.String(testKey, testValue),
 		}, got.Attributes)
 	})
 }
