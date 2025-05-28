@@ -14,7 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
-	semconv1260 "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 func TestNewEventMonitor(t *testing.T) {
@@ -95,7 +95,7 @@ func TestCommandStartedTraceAttrs(t *testing.T) {
 	}
 
 	v1260 := []attribute.KeyValue{
-		semconv1260.DBSystemMongoDB,
+		semconv.DBSystemNameMongoDB,
 		{Key: "db.operation.name", Value: attribute.StringValue(opName)},
 		{Key: "db.namespace", Value: attribute.StringValue(dbNamespace)},
 		{Key: "db.query.text", Value: attribute.StringValue(stmt)},
