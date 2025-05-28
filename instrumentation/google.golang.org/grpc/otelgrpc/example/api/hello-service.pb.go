@@ -5,11 +5,9 @@
 Package api is a generated protocol buffer package.
 
 It is generated from these files:
-
 	hello-service.proto
 
 It has these top-level messages:
-
 	HelloRequest
 	HelloResponse
 */
