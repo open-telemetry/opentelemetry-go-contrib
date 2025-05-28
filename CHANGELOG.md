@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- The deprecated `StreamServerInterceptor` function from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed. (#7362)
+
 ### Changed
 
 - The semantic conventions have been upgraded from `v1.30.0` to `v1.33.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7361)
