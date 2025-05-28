@@ -15,6 +15,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - The semantic conventions have been upgraded from `v1.30.0` to `v1.33.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7361)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#7383)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7383)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7383)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#7383)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#7383)
 
 ### Fixed
 
