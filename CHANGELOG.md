@@ -16,6 +16,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The semantic conventions have been upgraded from `v1.30.0` to `v1.33.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7361)
 - The semantic conventions have been `go.opentelemetry.io/contrib/instrumentation/host` to `v1.32.0`. (#7390)
+  - The description of `process.cpu.time` is updated to comply with semantic conventions.
+  - `process.cpu.time` now uses the `state` attribute instead of `cpu.mode`.
+  - The `system.cpu.time` metric is renamed to `cpu.time`.
+  - `cpu.time` now uses the `state` attribute instead of `cpu.mode`.
+  - `system.memory.usage` now uses the `state` attribute instead of `system.memory.state`.
+  - `system.memory.utilization` now uses the `state` attribute instead of `system.memory.state`.
+  - The `system.memory.state` attribute (now `state`) value of `available` is now `free` instead.
 
 ### Deprecated
 
