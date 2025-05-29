@@ -223,10 +223,11 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	if ent.Stack != "" {
 		r.AddAttributes(log.String(string(semconv.CodeStacktraceKey), ent.Stack))
 	}
+	emitCtx := o.ctx
 	if len(fields) > 0 {
 		ctx, attrbuf := convertField(fields)
 		if ctx != nil {
-			o.ctx = ctx
+			emitCtx = ctx
 		}
 		r.AddAttributes(attrbuf...)
 	}
@@ -235,7 +236,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	if ent.LoggerName != "" {
 		logger = o.provider.Logger(ent.LoggerName, o.opts...)
 	}
-	logger.Emit(o.ctx, r)
+	logger.Emit(emitCtx, r)
 	return nil
 }
 
