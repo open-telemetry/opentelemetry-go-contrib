@@ -42,7 +42,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 type config struct {
@@ -215,9 +215,9 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.AddAttributes(o.attr...)
 	if ent.Caller.Defined {
 		r.AddAttributes(
-			log.String(string(semconv.CodeFilepathKey), ent.Caller.File),
+			log.String(string(semconv.CodeFilePathKey), ent.Caller.File),
 			log.Int(string(semconv.CodeLineNumberKey), ent.Caller.Line),
-			log.String(string(semconv.CodeFunctionKey), ent.Caller.Function),
+			log.String(string(semconv.CodeFunctionNameKey), ent.Caller.Function),
 		)
 	}
 	if ent.Stack != "" {
