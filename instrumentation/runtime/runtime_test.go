@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"go.opentelemetry.io/otel/semconv/v1.34.0/goconv"
 )
 
 func TestRefreshGoCollector(t *testing.T) {
@@ -84,26 +85,30 @@ func TestRuntimeWithLimit(t *testing.T) {
 		},
 		Metrics: []metricdata.Metrics{
 			{
-				Name:        "go.memory.used",
-				Description: "Memory used by the Go runtime.",
-				Unit:        "By",
+				Name:        goconv.MemoryUsed{}.Name(),
+				Description: goconv.MemoryUsed{}.Description(),
+				Unit:        goconv.MemoryUsed{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
 					DataPoints: []metricdata.DataPoint[int64]{
 						{
-							Attributes: attribute.NewSet(attribute.String("go.memory.type", "stack")),
+							Attributes: attribute.NewSet(
+								goconv.MemoryUsed{}.AttrMemoryType(goconv.MemoryTypeStack),
+							),
 						},
 						{
-							Attributes: attribute.NewSet(attribute.String("go.memory.type", "other")),
+							Attributes: attribute.NewSet(
+								goconv.MemoryUsed{}.AttrMemoryType(goconv.MemoryTypeOther),
+							),
 						},
 					},
 				},
 			},
 			{
-				Name:        "go.memory.limit",
-				Description: "Go runtime memory limit configured by the user, if a limit exists.",
-				Unit:        "By",
+				Name:        goconv.MemoryLimit{}.Name(),
+				Description: goconv.MemoryLimit{}.Description(),
+				Unit:        goconv.MemoryLimit{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
@@ -111,9 +116,9 @@ func TestRuntimeWithLimit(t *testing.T) {
 				},
 			},
 			{
-				Name:        "go.memory.allocated",
-				Description: "Memory allocated to the heap by the application.",
-				Unit:        "By",
+				Name:        goconv.MemoryAllocated{}.Name(),
+				Description: goconv.MemoryAllocated{}.Description(),
+				Unit:        goconv.MemoryAllocated{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
@@ -121,9 +126,9 @@ func TestRuntimeWithLimit(t *testing.T) {
 				},
 			},
 			{
-				Name:        "go.memory.allocations",
-				Description: "Count of allocations to the heap by the application.",
-				Unit:        "{allocation}",
+				Name:        goconv.MemoryAllocations{}.Name(),
+				Description: goconv.MemoryAllocations{}.Description(),
+				Unit:        goconv.MemoryAllocations{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
@@ -131,9 +136,9 @@ func TestRuntimeWithLimit(t *testing.T) {
 				},
 			},
 			{
-				Name:        "go.memory.gc.goal",
-				Description: "Heap size target for the end of the GC cycle.",
-				Unit:        "By",
+				Name:        goconv.MemoryGCGoal{}.Name(),
+				Description: goconv.MemoryGCGoal{}.Description(),
+				Unit:        goconv.MemoryGCGoal{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
@@ -141,9 +146,9 @@ func TestRuntimeWithLimit(t *testing.T) {
 				},
 			},
 			{
-				Name:        "go.goroutine.count",
-				Description: "Count of live goroutines.",
-				Unit:        "{goroutine}",
+				Name:        goconv.GoroutineCount{}.Name(),
+				Description: goconv.GoroutineCount{}.Description(),
+				Unit:        goconv.GoroutineCount{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
@@ -151,9 +156,9 @@ func TestRuntimeWithLimit(t *testing.T) {
 				},
 			},
 			{
-				Name:        "go.processor.limit",
-				Description: "The number of OS threads that can execute user-level Go code simultaneously.",
-				Unit:        "{thread}",
+				Name:        goconv.ProcessorLimit{}.Name(),
+				Description: goconv.ProcessorLimit{}.Description(),
+				Unit:        goconv.ProcessorLimit{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
@@ -161,9 +166,9 @@ func TestRuntimeWithLimit(t *testing.T) {
 				},
 			},
 			{
-				Name:        "go.config.gogc",
-				Description: "Heap size target percentage configured by the user, otherwise 100.",
-				Unit:        "%",
+				Name:        goconv.ConfigGogc{}.Name(),
+				Description: goconv.ConfigGogc{}.Description(),
+				Unit:        goconv.ConfigGogc{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
