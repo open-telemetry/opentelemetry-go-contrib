@@ -24,7 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions have been upgraded from `v1.27.0` to `v1.32.0` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#7387)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7389)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/gcp`. (#7378)
-- The semantic conventions have been `go.opentelemetry.io/contrib/instrumentation/host` to `v1.32.0`. (#7390)
+- The semantic conventions in `go.opentelemetry.io/contrib/instrumentation/host` have been upgraded to `v1.32.0`. (#7390)
   - The description of `process.cpu.time` is updated to comply with semantic conventions.
   - `process.cpu.time` now uses the `state` attribute instead of `cpu.mode`.
   - The `system.cpu.time` metric is renamed to `cpu.time`.
