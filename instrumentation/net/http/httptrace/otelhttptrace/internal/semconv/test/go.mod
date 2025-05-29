@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/internal/semconv/test
 
-go 1.23.6
+go 1.23.0
 
 replace go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace => ../../../
 
