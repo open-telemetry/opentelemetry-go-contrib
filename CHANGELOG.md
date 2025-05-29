@@ -12,6 +12,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add test for `xray Propagator Inject` function in `opentelemetry-go-contrib/propagators/aws/xray` .
 
+### Removed
+
+- The deprecated `StreamServerInterceptor` function from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed. (#7362)
+
+### Changed
+
+- The semantic conventions have been upgraded from `v1.30.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7361)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/ec2`. (#7373)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/ecs`. (#7374)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#7376)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#7361)
+- The semantic conventions have been upgraded from `v1.27.0` to `v1.32.0` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#7387)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7389)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/gcp`. (#7378)
+
+### Fixed
+
+- Fix data race when writing log entries with `context.Context` fields in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7368)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
