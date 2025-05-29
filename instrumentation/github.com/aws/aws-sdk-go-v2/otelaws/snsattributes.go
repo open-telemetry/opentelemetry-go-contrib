@@ -22,14 +22,14 @@ func SNSAttributeBuilder(ctx context.Context, in middleware.InitializeInput, out
 	case *sns.PublishBatchInput:
 		snsAttributes = append(snsAttributes,
 			semconv.MessagingDestinationName(extractDestinationName(v.TopicArn, nil)),
-			semconv.MessagingOperationTypePublish,
+			semconv.MessagingOperationTypeSend,
 			semconv.MessagingOperationName("publish_batch_input"),
 			semconv.MessagingBatchMessageCount(len(v.PublishBatchRequestEntries)),
 		)
 	case *sns.PublishInput:
 		snsAttributes = append(snsAttributes,
 			semconv.MessagingDestinationName(extractDestinationName(v.TopicArn, v.TargetArn)),
-			semconv.MessagingOperationTypePublish,
+			semconv.MessagingOperationTypeSend,
 			semconv.MessagingOperationName("publish_input"),
 		)
 	}
