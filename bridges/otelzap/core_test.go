@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 var (
@@ -285,9 +285,9 @@ func TestCoreWithCaller(t *testing.T) {
 				Severity:     log.SeverityInfo,
 				SeverityText: zap.InfoLevel.String(),
 				Attributes: []log.KeyValue{
-					log.String(string(semconv.CodeFilepathKey), "core_test.go"), // The real filepth will vary based on the test environment. However, it should end with "core_test.go".
+					log.String(string(semconv.CodeFilePathKey), "core_test.go"), // The real filepth will vary based on the test environment. However, it should end with "core_test.go".
 					log.Int64(string(semconv.CodeLineNumberKey), 1),             // Line number will vary.
-					log.String(string(semconv.CodeFunctionKey), "go.opentelemetry.io/contrib/bridges/otelzap."+t.Name()),
+					log.String(string(semconv.CodeFunctionNameKey), "go.opentelemetry.io/contrib/bridges/otelzap."+t.Name()),
 				},
 			},
 		},
@@ -303,7 +303,7 @@ func TestCoreWithCaller(t *testing.T) {
 					// Adjust the line number to be non-zero, as it will vary based on the test environment.
 					cp.Attributes[i].Value = log.Int64Value(1) // Set to 1 for consistency in tests.
 				}
-				if attr.Key == string(semconv.CodeFilepathKey) && strings.HasSuffix(attr.Value.AsString(), "core_test.go") {
+				if attr.Key == string(semconv.CodeFilePathKey) && strings.HasSuffix(attr.Value.AsString(), "core_test.go") {
 					// Trim the prefix, as it will vary based on the test environment.
 					cp.Attributes[i].Value = log.StringValue("core_test.go")
 				}

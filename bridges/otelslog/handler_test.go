@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 var now = time.Now()
@@ -418,8 +418,8 @@ func TestSLogHandler(t *testing.T) {
 				r.PC = pc
 			},
 			checks: [][]check{{
-				hasAttr(string(semconv.CodeFilepathKey), file),
-				hasAttr(string(semconv.CodeFunctionKey), funcName),
+				hasAttr(string(semconv.CodeFilePathKey), file),
+				hasAttr(string(semconv.CodeFunctionNameKey), funcName),
 				hasAttr(string(semconv.CodeLineNumberKey), int64(line)),
 			}},
 			options: []Option{WithSource(true)},
