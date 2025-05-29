@@ -17,6 +17,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions have been upgraded from `v1.30.0` to `v1.33.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7361)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/ec2`. (#7373)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#7376)
+- The semantic conventions have been upgraded in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` to `v1.32.0`. (#7394)
+  - The `messaging.system=AmazonSQS` attribute has been corrected to `messaging.system=aws.sqs`.
+  - The `net.peer.addr` attribute key has been upgraded to `server.address`.
+  - The `http.status_code` attribute key has been upgraded to `http.response.status_code`.
+  - The `db.system=dynamodb` attribute has been corrected to `db.system.name=aws.dynamodb`.
+  - The deprecated `messaging.operation.type=publish` attribute has been corrected to `messaging.operation.type=send`.
 
 ### Fixed
 
