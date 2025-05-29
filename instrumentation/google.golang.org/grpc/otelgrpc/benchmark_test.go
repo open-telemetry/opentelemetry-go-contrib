@@ -70,14 +70,6 @@ func BenchmarkNoInstrumentation(b *testing.B) {
 	benchmark(b, nil, nil)
 }
 
-func BenchmarkStreamServerInterceptor(b *testing.B) {
-	benchmark(b, nil, []grpc.ServerOption{
-		grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(
-			otelgrpc.WithTracerProvider(tracerProvider),
-		)),
-	})
-}
-
 func BenchmarkStreamClientInterceptor(b *testing.B) {
 	benchmark(b, []grpc.DialOption{
 		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(

@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/samplers/jaegerremote
 go 1.23.0
 
 require (
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/gogo/protobuf v1.3.2
 	github.com/jaegertracing/jaeger-idl v0.5.0
 	github.com/stretchr/testify v1.10.0
