@@ -54,7 +54,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 // NewLogger returns a new [slog.Logger] backed by a new [Handler]. See
@@ -208,8 +208,8 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
 		f, _ := fs.Next()
 		record.AddAttributes(
-			log.String(string(semconv.CodeFilepathKey), f.File),
-			log.String(string(semconv.CodeFunctionKey), f.Function),
+			log.String(string(semconv.CodeFilePathKey), f.File),
+			log.String(string(semconv.CodeFunctionNameKey), f.Function),
 			log.Int(string(semconv.CodeLineNumberKey), f.Line),
 		)
 	}
