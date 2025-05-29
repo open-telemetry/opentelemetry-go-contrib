@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/ec2`. (#7373)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/ecs`. (#7374)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#7376)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/gcp`. (#7378)
 
 ### Fixed
 
