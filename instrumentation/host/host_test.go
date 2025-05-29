@@ -7,7 +7,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -26,13 +25,13 @@ func TestHostMetrics(t *testing.T) {
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
 	err := host.Start(host.WithMeterProvider(mp))
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	rm := metricdata.ResourceMetrics{}
 	err = reader.Collect(context.Background(), &rm)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 
-	expectedScopeMetric := metricdata.ScopeMetrics{
+	want := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:    host.ScopeName,
 			Version: host.Version(),
@@ -127,5 +126,5 @@ func TestHostMetrics(t *testing.T) {
 			},
 		},
 	}
-	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
