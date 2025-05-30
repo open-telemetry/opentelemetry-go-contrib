@@ -891,14 +891,14 @@ func TestHandlerWithSemConvStabilityOptIn(t *testing.T) {
 	tests := []struct {
 		name                       string
 		semConvStabilityOptInValue string
-		expectedSpanAttributes     []attribute.KeyValue
-		expectedMetrics            metricdata.ScopeMetrics
+		wantSpanAttributes         []attribute.KeyValue
+		wantMetrics                metricdata.ScopeMetrics
 	}{
 		{
 			name:                       "without opt-in",
 			semConvStabilityOptInValue: "",
-			expectedSpanAttributes:     newSpanAttrs,
-			expectedMetrics: metricdata.ScopeMetrics{
+			wantSpanAttributes:         newSpanAttrs,
+			wantMetrics: metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:    ScopeName,
 					Version: Version(),
@@ -909,8 +909,8 @@ func TestHandlerWithSemConvStabilityOptIn(t *testing.T) {
 		{
 			name:                       "with http/dup opt-in",
 			semConvStabilityOptInValue: "http/dup",
-			expectedSpanAttributes:     append(newSpanAttrs, oldSpanAttrs...),
-			expectedMetrics: metricdata.ScopeMetrics{
+			wantSpanAttributes:         append(newSpanAttrs, oldSpanAttrs...),
+			wantMetrics: metricdata.ScopeMetrics{
 				Scope: instrumentation.Scope{
 					Name:    ScopeName,
 					Version: Version(),
@@ -939,12 +939,12 @@ func TestHandlerWithSemConvStabilityOptIn(t *testing.T) {
 			h.ServeHTTP(httptest.NewRecorder(), r)
 			spans := spanRecorder.Ended()
 			require.Len(t, spans, 1)
-			assert.ElementsMatch(t, spans[0].Attributes(), tt.expectedSpanAttributes)
+			assert.ElementsMatch(t, spans[0].Attributes(), tt.wantSpanAttributes)
 			rm := metricdata.ResourceMetrics{}
 			err = metricRecorder.Collect(context.Background(), &rm)
 			require.NoError(t, err)
 			require.Len(t, rm.ScopeMetrics, 1)
-			metricdatatest.AssertEqual(t, tt.expectedMetrics, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			metricdatatest.AssertEqual(t, tt.wantMetrics, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	}
 }
