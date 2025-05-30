@@ -30,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - The `http.status_code` attribute key has been upgraded to `http.response.status_code`.
   - The `db.system=dynamodb` attribute has been corrected to `db.system.name=aws.dynamodb`.
   - The deprecated `messaging.operation.type=publish` attribute has been corrected to `messaging.operation.type=send`.
+- The semantic conventions have been upgraded from `v1.21.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7400)
 
 ### Fixed
 
