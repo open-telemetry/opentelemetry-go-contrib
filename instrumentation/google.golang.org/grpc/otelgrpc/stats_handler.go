@@ -112,11 +112,21 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 
 	if record {
+		opts := []trace.SpanStartOption{
+			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithAttributes(append(attrs, h.SpanAttributes...)...),
+		}
+		if h.PublicEndpoint || (h.PublicEndpointFn != nil && h.PublicEndpointFn(ctx, info)) {
+			opts = append(opts, trace.WithNewRoot())
+			// Linking incoming span context if any for public endpoint.
+			if s := trace.SpanContextFromContext(ctx); s.IsValid() && s.IsRemote() {
+				opts = append(opts, trace.WithLinks(trace.Link{SpanContext: s}))
+			}
+		}
 		ctx, _ = h.tracer.Start(
 			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
 			name,
-			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(append(attrs, h.SpanAttributes...)...),
+			opts...,
 		)
 	}
 
