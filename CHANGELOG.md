@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed 
+
+- `Renovate`: skip commit upgrades of otel-go. (#7405)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
