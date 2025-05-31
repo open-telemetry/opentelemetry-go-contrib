@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add test for `Propagator.Inject` function in `opentelemetry-go-contrib/propagators/aws/xray`. (#7399)
+
 ### Removed
 
 - The deprecated `StreamServerInterceptor` function from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed. (#7362)
@@ -26,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/gcp`. (#7378)
 - The semantic conventions have been upgraded in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` to `v1.32.0`. (#7393)
 - The semantic conventions have been upgraded in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` to `v1.32.0`. (#7393)
+- The semantic conventions have been upgraded from `v1.21.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7400)
 
 ### Fixed
 
