@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 func TestOperationAttr(t *testing.T) {
@@ -62,7 +62,7 @@ func TestDefaultAttributeBuilderOnSupportedService(t *testing.T) {
 		},
 	}, middleware.InitializeOutput{})
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.MessagingSystem("AmazonSQS"),
-		semconv.NetPeerName(testQueueURL),
+		semconv.MessagingSystemAWSSQS,
+		semconv.ServerAddress(testQueueURL),
 	}, attr)
 }
