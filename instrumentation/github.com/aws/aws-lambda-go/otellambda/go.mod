@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/
 go 1.23.0
 
 require (
-	github.com/aws/aws-lambda-go v1.48.0
+	github.com/aws/aws-lambda-go v1.49.0
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/otel v1.36.0
 	go.opentelemetry.io/otel/trace v1.36.0
