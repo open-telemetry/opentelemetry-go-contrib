@@ -19,7 +19,7 @@ import (
 // To disable this feature set the OTEL_GO_X_DEPRECATED_RUNTIME_METRICS environment variable
 // to the case-insensitive string value of "false" (i.e. "False" and "FALSE"
 // will also enable this).
-var DeprecatedRuntimeMetrics = newFeature("DEPRECATED_RUNTIME_METRICS", true)
+var DeprecatedRuntimeMetrics = newFeature("DEPRECATED_RUNTIME_METRICS", false)
 
 // BoolFeature is an experimental feature control flag. It provides a uniform way
 // to interact with these feature flags and parse their values.
