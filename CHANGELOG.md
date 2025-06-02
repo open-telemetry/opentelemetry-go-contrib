@@ -24,6 +24,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions have been upgraded from `v1.27.0` to `v1.32.0` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#7387)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7389)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/gcp`. (#7378)
+- The semantic conventions have been upgraded in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` to `v1.32.0`. (#7393)
+- The semantic conventions have been upgraded in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` to `v1.32.0`. (#7393)
 - The semantic conventions have been upgraded in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` to `v1.32.0`. (#7394)
   - The `messaging.system=AmazonSQS` attribute has been corrected to `messaging.system=aws.sqs`.
   - The `net.peer.addr` attribute key has been upgraded to `server.address`.
