@@ -45,7 +45,6 @@ func (f BoolFeature) Enabled() bool {
 	v := os.Getenv(f.key)
 
 	val, err := strconv.ParseBool(v)
-
 	if err != nil {
 		return f.defaultVal
 	}
