@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add public endpoint configuration options in `opentelemetry-go-contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7407)
+- Add the `WithPublicEndpoint` and `WithPublicEndpointFn` options to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7407)
 
 ### Removed
 
