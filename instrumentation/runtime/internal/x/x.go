@@ -16,8 +16,8 @@ import (
 // runtime metrics should be produced. During development of the new
 // conventions, it is enabled by default.
 //
-// To disable this feature set the OTEL_GO_X_DEPRECATED_RUNTIME_METRICS environment variable
-// to the case-insensitive string value of "false" (i.e. "False" and "FALSE"
+// To enable this feature set the OTEL_GO_X_DEPRECATED_RUNTIME_METRICS environment variable
+// to the case-insensitive string value of "true" (i.e. "True" and "TRUE"
 // will also enable this).
 var DeprecatedRuntimeMetrics = newFeature("DEPRECATED_RUNTIME_METRICS", false)
 
