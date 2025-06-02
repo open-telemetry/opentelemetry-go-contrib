@@ -256,7 +256,8 @@ func TestLogSink(t *testing.T) {
 						Severity: log.SeverityInfo,
 						Attributes: []log.KeyValue{
 							log.String("key", "value"),
-						}},
+						},
+					},
 				},
 			},
 		},
@@ -273,7 +274,8 @@ func TestLogSink(t *testing.T) {
 						Attributes: []log.KeyValue{
 							log.String("key1", "value1"),
 							log.String("key2", "value2"),
-						}},
+						},
+					},
 				},
 			},
 		},
