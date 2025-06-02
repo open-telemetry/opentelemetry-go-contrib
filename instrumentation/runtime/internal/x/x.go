@@ -9,7 +9,7 @@ package x // import "go.opentelemetry.io/contrib/instrumentation/runtime/interna
 
 import (
 	"os"
-	"strings"
+	"strconv"
 )
 
 // DeprecatedRuntimeMetrics is an experimental feature flag that defines if the deprecated
@@ -43,11 +43,12 @@ func (f BoolFeature) Key() string { return f.key }
 // Enabled returns if the feature is enabled.
 func (f BoolFeature) Enabled() bool {
 	v := os.Getenv(f.key)
-	if strings.ToLower(v) == "false" {
-		return false
+
+	val, err := strconv.ParseBool(v)
+
+	if err != nil {
+		return f.defaultVal
 	}
-	if strings.ToLower(v) == "true" {
-		return true
-	}
-	return f.defaultVal
+
+	return val
 }
