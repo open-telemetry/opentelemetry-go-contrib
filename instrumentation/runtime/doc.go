@@ -15,7 +15,7 @@
 //	go.config.gogc          %             Heap size target percentage configured by the user, otherwise 100.
 
 // When the OTEL_GO_X_DEPRECATED_RUNTIME_METRICS environment variable is set to
-// true, the following deprecated metrics produced are:
+// true, the following deprecated metrics are produced:
 //
 //	runtime.go.cgo.calls         -          Number of cgo calls made by the current process
 //	runtime.go.gc.count          -          Number of completed garbage collection cycles
