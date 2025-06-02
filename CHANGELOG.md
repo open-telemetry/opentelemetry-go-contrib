@@ -10,7 +10,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add test for `Propagator.Inject` function in `go.opentelemetry.io/contrib/propagators/aws/xray`. (#7399)
 
 ### Removed
 
