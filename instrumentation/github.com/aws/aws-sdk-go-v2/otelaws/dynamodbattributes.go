@@ -11,12 +11,12 @@ import (
 	"github.com/aws/smithy-go/middleware"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 // DynamoDBAttributeBuilder sets DynamoDB specific attributes depending on the DynamoDB operation being performed.
 func DynamoDBAttributeBuilder(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue {
-	dynamodbAttributes := []attribute.KeyValue{semconv.DBSystemDynamoDB}
+	dynamodbAttributes := []attribute.KeyValue{semconv.DBSystemNameAWSDynamoDB}
 
 	switch v := in.Parameters.(type) {
 	case *dynamodb.GetItemInput:
