@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 
 	pb "google.golang.org/grpc/interop/grpc_testing"
 )
@@ -80,9 +80,6 @@ func TestInterceptors(t *testing.T) {
 	clientStreamSR := tracetest.NewSpanRecorder()
 	clientStreamTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientStreamSR))
 
-	serverStreamSR := tracetest.NewSpanRecorder()
-	serverStreamTP := trace.NewTracerProvider(trace.WithSpanProcessor(serverStreamSR))
-
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err, "failed to open port")
 	client := newGrpcTest(t, listener,
@@ -93,13 +90,7 @@ func TestInterceptors(t *testing.T) {
 				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
 			)),
 		},
-		[]grpc.ServerOption{
-			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
-			grpc.StreamInterceptor(otelgrpc.StreamServerInterceptor(
-				otelgrpc.WithTracerProvider(serverStreamTP),
-				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-			)),
-		},
+		[]grpc.ServerOption{},
 	)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -107,10 +98,6 @@ func TestInterceptors(t *testing.T) {
 
 	t.Run("StreamClientSpans", func(t *testing.T) {
 		checkStreamClientSpans(t, clientStreamSR.Ended(), listener.Addr().String())
-	})
-
-	t.Run("StreamServerSpans", func(t *testing.T) {
-		checkStreamServerSpans(t, serverStreamSR.Ended())
 	})
 }
 
@@ -284,189 +271,6 @@ func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr strin
 		semconv.RPCGRPCStatusCodeOk,
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
-	}, pingPong.Attributes())
-}
-
-func checkStreamServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
-	require.Len(t, spans, 3)
-
-	streamInput := spans[0]
-	assert.False(t, streamInput.EndTime().IsZero())
-	assert.Equal(t, "grpc.testing.TestService/StreamingInputCall", streamInput.Name())
-	// sizes from reqSizes in "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test".
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-			},
-		},
-	}, streamInput.Events())
-	port, ok := findAttribute(streamInput.Attributes(), semconv.ServerPortKey)
-	assert.True(t, ok)
-
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethod("StreamingInputCall"),
-		semconv.RPCService("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC,
-		semconv.RPCGRPCStatusCodeOk,
-		semconv.ServerAddress("127.0.0.1"),
-		port,
-	}, streamInput.Attributes())
-
-	streamOutput := spans[1]
-	assert.False(t, streamOutput.EndTime().IsZero())
-	assert.Equal(t, "grpc.testing.TestService/StreamingOutputCall", streamOutput.Name())
-	// sizes from respSizes in "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test".
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("SENT"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("SENT"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("SENT"),
-			},
-		},
-	}, streamOutput.Events())
-
-	port, ok = findAttribute(streamOutput.Attributes(), semconv.ServerPortKey)
-	assert.True(t, ok)
-
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethod("StreamingOutputCall"),
-		semconv.RPCService("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC,
-		semconv.RPCGRPCStatusCodeOk,
-		semconv.ServerAddress("127.0.0.1"),
-		port,
-	}, streamOutput.Attributes())
-
-	pingPong := spans[2]
-	assert.False(t, pingPong.EndTime().IsZero())
-	assert.Equal(t, "grpc.testing.TestService/FullDuplexCall", pingPong.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("SENT"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("SENT"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("SENT"),
-			},
-		},
-	}, pingPong.Events())
-	port, ok = findAttribute(pingPong.Attributes(), semconv.ServerPortKey)
-	assert.True(t, ok)
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethod("FullDuplexCall"),
-		semconv.RPCService("grpc.testing.TestService"),
-		semconv.RPCSystemGRPC,
-		semconv.RPCGRPCStatusCodeOk,
-		semconv.ServerAddress("127.0.0.1"),
-		port,
 	}, pingPong.Attributes())
 }
 

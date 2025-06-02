@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 var now = time.Now()
@@ -418,8 +418,8 @@ func TestSLogHandler(t *testing.T) {
 				r.PC = pc
 			},
 			checks: [][]check{{
-				hasAttr(string(semconv.CodeFilepathKey), file),
-				hasAttr(string(semconv.CodeFunctionKey), funcName),
+				hasAttr(string(semconv.CodeFilePathKey), file),
+				hasAttr(string(semconv.CodeFunctionNameKey), funcName),
 				hasAttr(string(semconv.CodeLineNumberKey), int64(line)),
 			}},
 			options: []Option{WithSource(true)},
@@ -519,149 +519,4 @@ func TestHandlerEnabled(t *testing.T) {
 
 	ctx = context.WithValue(ctx, enableKey, true)
 	assert.True(t, h.Enabled(ctx, slog.LevelDebug), "context not passed")
-}
-
-func BenchmarkHandler(b *testing.B) {
-	var (
-		h   slog.Handler
-		err error
-	)
-
-	attrs10 := []slog.Attr{
-		slog.String("1", "1"),
-		slog.Int64("2", 2),
-		slog.Int("3", 3),
-		slog.Uint64("4", 4),
-		slog.Float64("5", 5.),
-		slog.Bool("6", true),
-		slog.Time("7", time.Now()),
-		slog.Duration("8", time.Second),
-		slog.Any("9", 9),
-		slog.Any("10", "10"),
-	}
-	attrs5 := attrs10[:5]
-	record := slog.NewRecord(time.Now(), slog.LevelInfo, "body", 0)
-	ctx := context.Background()
-
-	b.Run("Handle", func(b *testing.B) {
-		handlers := make([]*Handler, b.N)
-		for i := range handlers {
-			handlers[i] = NewHandler("")
-		}
-
-		b.ReportAllocs()
-		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
-			err = handlers[n].Handle(ctx, record)
-		}
-	})
-
-	b.Run("WithAttrs", func(b *testing.B) {
-		b.Run("5", func(b *testing.B) {
-			handlers := make([]*Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("")
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				h = handlers[n].WithAttrs(attrs5)
-			}
-		})
-		b.Run("10", func(b *testing.B) {
-			handlers := make([]*Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("")
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				h = handlers[n].WithAttrs(attrs10)
-			}
-		})
-	})
-
-	b.Run("WithGroup", func(b *testing.B) {
-		handlers := make([]*Handler, b.N)
-		for i := range handlers {
-			handlers[i] = NewHandler("")
-		}
-
-		b.ReportAllocs()
-		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
-			h = handlers[n].WithGroup("group")
-		}
-	})
-
-	b.Run("WithGroup.WithAttrs", func(b *testing.B) {
-		b.Run("5", func(b *testing.B) {
-			handlers := make([]*Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("")
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				h = handlers[n].WithGroup("group").WithAttrs(attrs5)
-			}
-		})
-		b.Run("10", func(b *testing.B) {
-			handlers := make([]*Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("")
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				h = handlers[n].WithGroup("group").WithAttrs(attrs10)
-			}
-		})
-	})
-
-	b.Run("(WithGroup.WithAttrs).Handle", func(b *testing.B) {
-		b.Run("5", func(b *testing.B) {
-			handlers := make([]slog.Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("").WithGroup("group").WithAttrs(attrs5)
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				err = handlers[n].Handle(ctx, record)
-			}
-		})
-		b.Run("10", func(b *testing.B) {
-			handlers := make([]slog.Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("").WithGroup("group").WithAttrs(attrs10)
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				err = handlers[n].Handle(ctx, record)
-			}
-		})
-	})
-
-	b.Run("(WithSource).Handle", func(b *testing.B) {
-		handlers := make([]*Handler, b.N)
-		for i := range handlers {
-			handlers[i] = NewHandler("", WithSource(true))
-		}
-
-		b.ReportAllocs()
-		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
-			err = handlers[n].Handle(ctx, record)
-		}
-	})
-
-	_, _ = h, err
 }

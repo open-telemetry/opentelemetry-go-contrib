@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/stretchr/testify/assert"
@@ -27,7 +27,6 @@ import (
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
 	"google.golang.org/grpc/test/bufconn"
 
 	"google.golang.org/grpc/interop/grpc_testing"
@@ -570,119 +569,6 @@ func assertServerSpan(t *testing.T, wantSpanCode codes.Code, wantSpanStatusDescr
 
 	require.True(t, codeAttr.Valid(), "attributes contain gRPC status code")
 	assert.Equal(t, attribute.Int64Value(int64(wantGrpcCode)), codeAttr.Value)
-}
-
-type mockServerStream struct {
-	grpc.ServerStream
-}
-
-func (m *mockServerStream) Context() context.Context { return context.Background() }
-
-func (m *mockServerStream) SendMsg(_ interface{}) error {
-	return nil
-}
-
-func (m *mockServerStream) RecvMsg(_ interface{}) error {
-	return nil
-}
-
-// TestStreamServerInterceptor tests the server interceptor for streaming RPCs.
-func TestStreamServerInterceptor(t *testing.T) {
-	for _, check := range serverChecks {
-		name := check.grpcCode.String()
-		t.Run(name, func(t *testing.T) {
-			sr := tracetest.NewSpanRecorder()
-			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-
-			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
-			usi := otelgrpc.StreamServerInterceptor(
-				otelgrpc.WithTracerProvider(tp),
-			)
-
-			// call the stream interceptor
-			grpcErr := status.Error(check.grpcCode, check.grpcCode.String())
-			handler := func(_ interface{}, _ grpc.ServerStream) error {
-				return grpcErr
-			}
-			err := usi(&grpc_testing.SimpleRequest{}, &mockServerStream{}, &grpc.StreamServerInfo{FullMethod: name}, handler)
-			assert.Equal(t, grpcErr, err)
-
-			// validate span
-			span, ok := getSpanFromRecorder(sr, name)
-			require.True(t, ok, "missing span %s", name)
-			assertServerSpan(t, check.wantSpanCode, check.wantSpanStatusDescription, check.grpcCode, span)
-		})
-	}
-}
-
-func TestStreamServerInterceptorEvents(t *testing.T) {
-	testCases := []struct {
-		Name   string
-		Events []otelgrpc.Event
-	}{
-		{Name: "With events", Events: []otelgrpc.Event{otelgrpc.ReceivedEvents, otelgrpc.SentEvents}},
-		{Name: "With only sent events", Events: []otelgrpc.Event{otelgrpc.SentEvents}},
-		{Name: "With only received events", Events: []otelgrpc.Event{otelgrpc.ReceivedEvents}},
-		{Name: "No events", Events: []otelgrpc.Event{}},
-	}
-
-	for _, testCase := range testCases {
-		t.Run(testCase.Name, func(t *testing.T) {
-			sr := tracetest.NewSpanRecorder()
-			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
-			opts := []otelgrpc.Option{
-				otelgrpc.WithTracerProvider(tp),
-			}
-			if len(testCase.Events) > 0 {
-				opts = append(opts, otelgrpc.WithMessageEvents(testCase.Events...))
-			}
-			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
-			usi := otelgrpc.StreamServerInterceptor(opts...)
-			stream := &mockServerStream{}
-
-			grpcCode := grpc_codes.OK
-			name := grpcCode.String()
-			// call the stream interceptor
-			grpcErr := status.Error(grpcCode, name)
-			handler := func(_ interface{}, handlerStream grpc.ServerStream) error {
-				var msg grpc_testing.SimpleRequest
-				err := handlerStream.RecvMsg(&msg)
-				require.NoError(t, err)
-				err = handlerStream.SendMsg(&msg)
-				require.NoError(t, err)
-				return grpcErr
-			}
-
-			err := usi(&grpc_testing.SimpleRequest{}, stream, &grpc.StreamServerInfo{FullMethod: name}, handler)
-			require.Equal(t, grpcErr, err)
-
-			// validate span
-			span, ok := getSpanFromRecorder(sr, name)
-			require.True(t, ok, "missing span %s", name)
-
-			if len(testCase.Events) == 0 {
-				assert.Empty(t, span.Events())
-			} else {
-				var eventsAttr []map[attribute.Key]attribute.Value
-				for _, event := range testCase.Events {
-					switch event {
-					case otelgrpc.SentEvents:
-						eventsAttr = append(eventsAttr, map[attribute.Key]attribute.Value{
-							semconv.RPCMessageTypeKey: attribute.StringValue("SENT"),
-							semconv.RPCMessageIDKey:   attribute.IntValue(1),
-						})
-					case otelgrpc.ReceivedEvents:
-						eventsAttr = append(eventsAttr, map[attribute.Key]attribute.Value{
-							semconv.RPCMessageTypeKey: attribute.StringValue("RECEIVED"),
-							semconv.RPCMessageIDKey:   attribute.IntValue(1),
-						})
-					}
-				}
-				assert.Len(t, span.Events(), len(eventsAttr))
-				assert.Equal(t, eventsAttr, eventAttrMap(span.Events()))
-			}
-		})
-	}
 }
 
 func BenchmarkStreamClientInterceptor(b *testing.B) {
