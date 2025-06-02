@@ -29,6 +29,34 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7383)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#7383)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#7383)
+- The semantic conventions have been upgraded from `v1.21.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7400)
+- The semantic conventions in `go.opentelemetry.io/contrib/instrumentation/host` have been upgraded to `v1.32.0`. (#7390)
+  - The description of `process.cpu.time` is updated to comply with semantic conventions.
+  - `process.cpu.time` now uses the `state` attribute instead of `cpu.mode`.
+  - The `system.cpu.time` metric is renamed to `cpu.time`.
+  - `cpu.time` now uses the `state` attribute instead of `cpu.mode`.
+  - `system.memory.usage` now uses the `state` attribute instead of `system.memory.state`.
+  - `system.memory.utilization` now uses the `state` attribute instead of `system.memory.state`.
+  - The `system.memory.state` attribute (now `state`) value of `available` is now `free` instead.
+
+### Deprecated
+
+- `AttributeCPUTimeUser` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeCPUTimeSystem` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeCPUTimeOther` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeCPUTimeIdle` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeMemoryAvailable` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeMemoryUsed` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeNetworkTransmit` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeNetworkReceive` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
 
 ### Fixed
 
