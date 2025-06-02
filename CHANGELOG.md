@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add public endpoint configuration options in `opentelemetry-go-contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7407)
+
 ### Removed
 
 - The deprecated `StreamServerInterceptor` function from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed. (#7362)
