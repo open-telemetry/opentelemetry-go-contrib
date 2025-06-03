@@ -137,7 +137,7 @@ func TestAppendMiddlewares(t *testing.T) {
 			assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 			assert.Equal(t, c.expectedError, span.Status().Code)
 			attrs := span.Attributes()
-			assert.Contains(t, attrs, attribute.Int("http.status_code", c.expectedStatusCode))
+			assert.Contains(t, attrs, attribute.Int("http.response.status_code", c.expectedStatusCode))
 			if c.expectedRequestID != "" {
 				assert.Contains(t, attrs, attribute.String("aws.request_id", c.expectedRequestID))
 			}
