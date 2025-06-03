@@ -4,46 +4,31 @@
     "config:recommended"
   ],
   "ignorePaths": [],
-  "labels": [
-    "Skip Changelog",
-    "dependencies"
-  ],
+  "labels": ["Skip Changelog", "dependencies"],
   "separateMajorMinor": true,
-  "postUpdateOptions": [
+  "postUpdateOptions" : [
     "gomodTidy"
   ],
   "packageRules": [
     {
-      "matchManagers": [
-        "gomod"
-      ],
-      "matchDepTypes": [
-        "indirect"
-      ],
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
       "enabled": true
     },
     {
-      "matchPackageNames": [
-        "go.opentelemetry.io/build-tools/**"
-      ],
+      "matchPackageNames": ["go.opentelemetry.io/build-tools/**"],
       "groupName": "build-tools"
     },
     {
-      "matchPackageNames": [
-        "google.golang.org/genproto/googleapis/**"
-      ],
+      "matchPackageNames": ["google.golang.org/genproto/googleapis/**"],
       "groupName": "googleapis"
     },
     {
-      "matchPackageNames": [
-        "golang.org/x/**"
-      ],
+      "matchPackageNames": ["golang.org/x/**"],
       "groupName": "golang.org/x"
     },
     {
-      "matchPackageNames": [
-        "go.opentelemetry.io/otel/**"
-      ],
+      "matchPackageNames": ["go.opentelemetry.io/otel/**"],
       "allowedVersions": "/^v\\d+\\.\\d+\\.\\d+$/"
     }
   ]
