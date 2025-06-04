@@ -5,6 +5,7 @@ package minsev
 
 import (
 	"context"
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -106,7 +107,10 @@ func TestLogProcessorOnEmit(t *testing.T) {
 		p := NewLogProcessor(wrapped, SeverityTrace1)
 		ctx := context.Background()
 		r := &log.Record{}
-		for _, sev := range severities {
+
+		sevs := slices.Clone(severities)
+		sevs = append(sevs, api.Severity(-100), api.Severity(100)) // Include severities below and above the OpenTelemetry range.
+		for _, sev := range sevs {
 			r.SetSeverity(sev)
 			assert.ErrorIs(t, p.OnEmit(ctx, r), assert.AnError, sev.String())
 
@@ -142,7 +146,10 @@ func TestLogProcessorEnabled(t *testing.T) {
 		p := NewLogProcessor(wrapped, SeverityTrace1)
 		ctx := context.Background()
 		param := log.EnabledParameters{}
-		for _, sev := range severities {
+
+		sevs := slices.Clone(severities)
+		sevs = append(sevs, api.Severity(-100), api.Severity(100)) // Include severities below and above the OpenTelemetry range.
+		for _, sev := range sevs {
 			param.Severity = sev
 			assert.True(t, p.Enabled(ctx, param), sev.String())
 
@@ -186,6 +193,12 @@ func TestLogProcessorEnabled(t *testing.T) {
 
 		params.Severity = api.SeverityError
 		assert.True(t, p.Enabled(ctx, params))
+
+		params.Severity = api.Severity(-100)
+		assert.True(t, p.Enabled(ctx, params), "Severity below of the range of OpenTelemetry log severities should be enabled")
+
+		params.Severity = api.Severity(100)
+		assert.True(t, p.Enabled(ctx, params), "Severity above of the range of OpenTelemetry log severities should be enabled")
 
 		assert.Empty(t, wrapped.EnabledCalls)
 	})

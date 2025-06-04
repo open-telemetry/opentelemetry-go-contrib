@@ -69,6 +69,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix data race when writing log entries with `context.Context` fields in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7368)
+- Fix `LogProcessor` in `go.opentelemetry.io/contrib/processors/minsev` so that it filters out only the records with `Severity` in the 
+`log.SeverityTrace1`..`log.SeverityFatal4` range. (#?)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
