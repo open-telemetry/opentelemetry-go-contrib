@@ -1,3 +1,4 @@
+
 #!/bin/bash
 # Copyright The OpenTelemetry Authors
 # SPDX-License-Identifier: Apache-2.0
@@ -8,7 +9,6 @@ set -euo pipefail
 SCRIPT_DIR=$(dirname "$0")
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 TOOLS_DIR="$REPO_ROOT/.tools"
-TOOLS_MOD_DIR="$REPO_ROOT/tools"
 
 GOPATH=$(go env GOPATH)
 if [ -z "${GOPATH}" ] ; then
@@ -32,17 +32,22 @@ if ! git diff --quiet; then \
 	exit -1
 fi
 
-# Comment out this check for testing since you're not on a tagged version
-#if [ "$(git tag --contains $(git log -1 --pretty=format:"%H"))" = "" ] ; then
-#	echo "$(git log -1)"
-#	echo ""
-#	echo "Error: HEAD is not pointing to a tagged version"
-#fi
 
-# Build gojq tool directly instead of using make
-mkdir -p "${TOOLS_DIR}"
-echo "Building gojq tool..."
-(cd "${TOOLS_MOD_DIR}" && go build -o "${TOOLS_DIR}/gojq" github.com/itchyny/gojq/cmd/gojq)
+if [ "$(git tag --contains $(git log -1 --pretty=format:"%H"))" = "" ] ; then
+	echo "$(git log -1)"
+	echo ""
+	echo "Error: HEAD is not pointing to a tagged version"
+fi
+
+
+make ${TOOLS_DIR}/gojq
+
+DIR_TMP="${GOPATH}/src/oteltmp/"
+rm -rf $DIR_TMP
+mkdir -p $DIR_TMP
+
+echo "Copy examples to ${DIR_TMP}"
+cp -a ./examples ${DIR_TMP}
 
 DIR_TMP="${GOPATH}/src/oteltmp/"
 rm -rf $DIR_TMP
