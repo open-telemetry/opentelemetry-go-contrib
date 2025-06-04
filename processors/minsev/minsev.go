@@ -60,7 +60,7 @@ var (
 
 // OnEmit drops records with severity less than the one returned by [Severitier]
 // and inside the [logapi.SeverityTrace1]..[logapi.SeverityFatal4] range.
-// If the severity of record is greater than or equal to he one returned by [Severitier],
+// If the severity of record is greater than or equal to the one returned by [Severitier],
 // it calls the wrapped [log.Processor] with ctx and record.
 func (p *LogProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 	sev := record.Severity()
