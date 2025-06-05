@@ -19,7 +19,7 @@ To temporarily re-enable the deprecated metrics:
 export OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=true
 ```
 
-After two additional releases, the deprecated runtime metrics will be removed,
+In the next release, the deprecated runtime metrics will be removed,
 and setting the environment variable will no longer have any effect.
 
 The value set must be the case-insensitive string of `"true"` to enable the
