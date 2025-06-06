@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- `go.opentelemetry.io/contrib/instrumentation/runtime` now produces the new metrics by default. Set `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=true` environment variable to additionally produce the deprecated metrics. (#7418)
 - The semantic conventions have been upgraded from `v1.30.0` to `v1.32.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7361)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/ec2`. (#7373)
 - The semantic conventions have been upgraded from `v1.26.0` to `v1.32.0` in `go.opentelemetry.io/contrib/detectors/aws/eks`. (#7375)
