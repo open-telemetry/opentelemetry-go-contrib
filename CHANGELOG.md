@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the `WithPublicEndpoint` and `WithPublicEndpointFn` options to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7407)
+- Increased test coverage for `prometheusReader` function, including IPv6 and edge-case handling. (#7440)
 
 ### Removed
 

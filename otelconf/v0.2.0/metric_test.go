@@ -1156,3 +1156,81 @@ func TestPrometheusIPv6(t *testing.T) {
 		})
 	}
 }
+
+func TestPrometheusReader_ErrorCases(t *testing.T) {
+	tests := []struct {
+		name   string
+		config *Prometheus
+		errMsg string
+	}{
+		{
+			name:   "missing host",
+			config: &Prometheus{Port: ptr(8080)},
+			errMsg: "host must be specified",
+		},
+		{
+			name:   "missing port",
+			config: &Prometheus{Host: ptr("localhost")},
+			errMsg: "port must be specified",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader, err := prometheusReader(context.Background(), tt.config)
+			assert.Error(t, err)
+			assert.Contains(t, err.Error(), tt.errMsg)
+			assert.Nil(t, reader)
+		})
+	}
+}
+
+func TestPrometheusReader_ConfigurationOptions(t *testing.T) {
+	host := "localhost"
+	port := 0
+
+	cfg := &Prometheus{
+		Host:              &host,
+		Port:              &port,
+		WithoutScopeInfo:  ptr(true),
+		WithoutTypeSuffix: ptr(true),
+		WithoutUnits:      ptr(true),
+		WithResourceConstantLabels: &IncludeExclude{
+			Included: []string{"service.name"},
+			Excluded: []string{"host.name"},
+		},
+	}
+
+	reader, err := prometheusReader(context.Background(), cfg)
+	require.NoError(t, err)
+	require.NotNil(t, reader)
+
+	t.Cleanup(func() {
+		require.NoError(t, reader.Shutdown(context.Background()))
+	})
+
+	server := reader.(readerWithServer).server
+	resp, err := http.DefaultClient.Get("http://" + server.Addr + "/metrics")
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, resp.Body.Close())
+	})
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestPrometheusReader_ServerTimeouts(t *testing.T) {
+	host := "localhost"
+	port := 0
+	cfg := &Prometheus{Host: &host, Port: &port}
+
+	reader, err := prometheusReader(context.Background(), cfg)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		require.NoError(t, reader.Shutdown(context.Background()))
+	})
+
+	server := reader.(readerWithServer).server
+	assert.Equal(t, 5*time.Second, server.ReadTimeout)
+	assert.Equal(t, 10*time.Second, server.WriteTimeout)
+	assert.Equal(t, 120*time.Second, server.IdleTimeout)
+}
