@@ -148,6 +148,172 @@ func TestExtract(t *testing.T) {
 	}
 }
 
+func TestInject(t *testing.T) {
+	type injectTestCase struct {
+		name          string
+		traceID       string
+		spanID        string
+		traceFlags    trace.TraceFlags
+		wantHeaderVal string
+		wantHeaderSet bool
+	}
+
+	tests := []injectTestCase{
+		{
+			name:          "Valid span context - sampled",
+			traceID:       "abcdef121234567890abcdef12345678",
+			spanID:        "1234567890abcdef",
+			traceFlags:    trace.FlagsSampled,
+			wantHeaderVal: "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=1",
+			wantHeaderSet: true,
+		},
+		{
+			name:          "Valid span context - not sampled",
+			traceID:       "abcdef121234567890abcdef12345678",
+			spanID:        "1234567890abcdef",
+			traceFlags:    0,
+			wantHeaderVal: "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=0",
+			wantHeaderSet: true,
+		},
+		{
+			name:          "Different trace and span IDs - sampled",
+			traceID:       "fedcba098765432100fedcba09876543",
+			spanID:        "fedcba0987654321",
+			traceFlags:    trace.FlagsSampled,
+			wantHeaderVal: "Root=1-fedcba09-8765432100fedcba09876543;Parent=fedcba0987654321;Sampled=1",
+			wantHeaderSet: true,
+		},
+		{
+			name:          "Minimum valid trace and span - not sampled",
+			traceID:       "00000000000000000000000000000001",
+			spanID:        "0000000000000001",
+			traceFlags:    0,
+			wantHeaderVal: "Root=1-00000000-000000000000000000000001;Parent=0000000000000001;Sampled=0",
+			wantHeaderSet: true,
+		},
+		{
+			name:          "Maximum valid trace and span - sampled",
+			traceID:       "ffffffffffffffffffffffffffffffff",
+			spanID:        "ffffffffffffffff",
+			traceFlags:    trace.FlagsSampled,
+			wantHeaderVal: "Root=1-ffffffff-ffffffffffffffffffffffff;Parent=ffffffffffffffff;Sampled=1",
+			wantHeaderSet: true,
+		},
+		{
+			name:          "Complex hex pattern - not sampled",
+			traceID:       "a1b2c3d4e5f6789012345678901abcde",
+			spanID:        "a1b2c3d4e5f67890",
+			traceFlags:    0,
+			wantHeaderVal: "Root=1-a1b2c3d4-e5f6789012345678901abcde;Parent=a1b2c3d4e5f67890;Sampled=0",
+			wantHeaderSet: true,
+		},
+		{
+			name:          "Invalid trace ID - empty",
+			traceID:       "",
+			spanID:        "1234567890abcdef",
+			traceFlags:    trace.FlagsSampled,
+			wantHeaderSet: false,
+		},
+		{
+			name:          "Invalid span ID - empty",
+			traceID:       "abcdef121234567890abcdef12345678",
+			spanID:        "",
+			traceFlags:    trace.FlagsSampled,
+			wantHeaderSet: false,
+		},
+		{
+			name:          "Both invalid - empty trace and span IDs",
+			traceID:       "",
+			spanID:        "",
+			traceFlags:    trace.FlagsSampled,
+			wantHeaderSet: false,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			propagator := Propagator{}
+			carrier := propagation.MapCarrier{}
+
+			var ctx context.Context
+
+			if tc.traceID != "" && tc.spanID != "" {
+				traceID, err := trace.TraceIDFromHex(tc.traceID)
+				if err != nil {
+					t.Fatalf("failed to parse trace ID: %v", err)
+				}
+
+				spanID, err := trace.SpanIDFromHex(tc.spanID)
+				if err != nil {
+					t.Fatalf("failed to parse span ID: %v", err)
+				}
+
+				sc := trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    traceID,
+					SpanID:     spanID,
+					TraceFlags: tc.traceFlags,
+				})
+
+				ctx = trace.ContextWithSpanContext(context.Background(), sc)
+			} else {
+				ctx = context.Background()
+			}
+
+			propagator.Inject(ctx, carrier)
+
+			headerVal := carrier.Get(traceHeaderKey)
+
+			if tc.wantHeaderSet {
+				if headerVal == "" {
+					t.Errorf("expected header to be set, but it was empty")
+				}
+				if headerVal != tc.wantHeaderVal {
+					t.Errorf("expected header value %q, got %q", tc.wantHeaderVal, headerVal)
+				}
+			} else {
+				if headerVal != "" {
+					t.Errorf("expected no header to be set, but got %q", headerVal)
+				}
+			}
+		})
+	}
+}
+
+func TestInjectWithNoSpanContext(t *testing.T) {
+	t.Parallel()
+
+	propagator := Propagator{}
+	carrier := propagation.MapCarrier{}
+
+	ctx := context.Background()
+
+	propagator.Inject(ctx, carrier)
+
+	headerVal := carrier.Get(traceHeaderKey)
+	if headerVal != "" {
+		t.Errorf("expected no header to be set when no span context exists, but got %q", headerVal)
+	}
+}
+
+func TestInjectWithInvalidSpanContext(t *testing.T) {
+	t.Parallel()
+
+	propagator := Propagator{}
+	carrier := propagation.MapCarrier{}
+
+	sc := trace.SpanContext{}
+	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+
+	propagator.Inject(ctx, carrier)
+
+	headerVal := carrier.Get(traceHeaderKey)
+	if headerVal != "" {
+		t.Errorf("expected no header to be set when span context is invalid, but got %q", headerVal)
+	}
+}
+
 func BenchmarkPropagatorExtract(b *testing.B) {
 	propagator := Propagator{}
 

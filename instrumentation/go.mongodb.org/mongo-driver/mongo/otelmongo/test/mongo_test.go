@@ -259,10 +259,10 @@ func assertSemconv1170(mt *mtest.T, attrs []attribute.KeyValue) {
 	assert.Contains(mt, attrs, attribute.String("db.name", "test-database"))
 }
 
-func assertSemconv1260(mt *mtest.T, attrs []attribute.KeyValue) {
+func assertSemconv(mt *mtest.T, attrs []attribute.KeyValue) {
 	mt.Helper()
 
-	assert.Contains(mt, attrs, attribute.String("db.system", "mongodb"))
+	assert.Contains(mt, attrs, attribute.String("db.system.name", "mongodb"))
 	assert.Contains(mt, attrs, attribute.String("network.peer.address", "<mock_connection>:27017"))
 	assert.Contains(mt, attrs, attribute.Int64("network.peer.port", int64(27017)))
 	assert.Contains(mt, attrs, attribute.String("network.transport", "tcp"))
@@ -283,7 +283,7 @@ func TestSemanticConventionOptIn(t *testing.T) {
 		{
 			name:         "database",
 			semconvOptIn: "database",
-			assert:       assertSemconv1260,
+			assert:       assertSemconv,
 		},
 	}
 	for _, tc := range tt {

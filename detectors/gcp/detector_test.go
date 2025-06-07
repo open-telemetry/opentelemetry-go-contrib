@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 func TestDetect(t *testing.T) {
@@ -80,8 +80,8 @@ func TestDetect(t *testing.T) {
 				semconv.CloudPlatformGCPComputeEngine,
 				semconv.HostID("1472385723456792345"),
 				semconv.HostName("my-gke-node-1234"),
-				semconv.GCPGceInstanceNameKey.String("my-gke-node-1234"),
-				semconv.GCPGceInstanceHostnameKey.String("hostname"),
+				semconv.GCPGCEInstanceNameKey.String("my-gke-node-1234"),
+				semconv.GCPGCEInstanceHostnameKey.String("hostname"),
 				semconv.HostType("n1-standard1"),
 				semconv.CloudRegion("us-central1"),
 				semconv.CloudAvailabilityZone("us-central1-c"),

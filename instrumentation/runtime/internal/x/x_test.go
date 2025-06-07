@@ -21,7 +21,7 @@ func TestDeprecatedRuntimeMetrics(t *testing.T) {
 	t.Run("False", run(setenv(key, "False"), assertEnabled(DeprecatedRuntimeMetrics, false)))
 	t.Run("FALSE", run(setenv(key, "FALSE"), assertEnabled(DeprecatedRuntimeMetrics, false)))
 	t.Run("1", run(setenv(key, "1"), assertEnabled(DeprecatedRuntimeMetrics, true)))
-	t.Run("empty", run(assertEnabled(DeprecatedRuntimeMetrics, true)))
+	t.Run("empty", run(assertEnabled(DeprecatedRuntimeMetrics, false)))
 }
 
 func run(steps ...func(*testing.T)) func(*testing.T) {
