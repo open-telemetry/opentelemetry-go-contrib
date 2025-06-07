@@ -1397,6 +1397,88 @@ func TestPrometheusIPv6(t *testing.T) {
 	}
 }
 
+func TestPrometheusReader_ErrorCases(t *testing.T) {
+	t.Run("missing host", func(t *testing.T) {
+		port := 8080
+		cfg := Prometheus{Port: &port}
+
+		_, err := prometheusReader(context.Background(), &cfg)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "host must be specified")
+	})
+
+	t.Run("missing port", func(t *testing.T) {
+		host := "localhost"
+		cfg := Prometheus{Host: &host}
+
+		_, err := prometheusReader(context.Background(), &cfg)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "port must be specified")
+	})
+
+	t.Run("invalid port", func(t *testing.T) {
+		host := "localhost"
+		port := 99999 // invalid port
+		cfg := Prometheus{
+			Host:                       &host,
+			Port:                       &port,
+			WithoutScopeInfo:           ptr(true),
+			WithoutTypeSuffix:          ptr(true),
+			WithoutUnits:               ptr(true),
+			WithResourceConstantLabels: &IncludeExclude{},
+		}
+
+		_, err := prometheusReader(context.Background(), &cfg)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "binding address")
+	})
+}
+
+func TestPrometheusReader_HostParsing(t *testing.T) {
+	tests := []struct {
+		name string
+		host string
+	}{
+		{
+			name: "regular host",
+			host: "localhost",
+		},
+		{
+			name: "IPv4",
+			host: "127.0.0.1",
+		},
+		{
+			name: "single char",
+			host: "a",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			port := 0
+			cfg := Prometheus{
+				Host:                       &tt.host,
+				Port:                       &port,
+				WithoutScopeInfo:           ptr(true),
+				WithoutTypeSuffix:          ptr(true),
+				WithoutUnits:               ptr(true),
+				WithResourceConstantLabels: &IncludeExclude{},
+			}
+
+			rs, err := prometheusReader(context.Background(), &cfg)
+			if err != nil {
+				return
+			}
+			t.Cleanup(func() {
+				require.NoError(t, rs.Shutdown(context.Background()))
+			})
+
+			hServ := rs.(readerWithServer).server
+			assert.NotEmpty(t, hServ.Addr)
+		})
+	}
+}
+
 func Test_otlpGRPCMetricExporter(t *testing.T) {
 	type args struct {
 		ctx        context.Context
