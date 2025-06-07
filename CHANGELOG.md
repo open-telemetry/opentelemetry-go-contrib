@@ -8,11 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-
-
 ### Added
 
 - Add the `WithPublicEndpoint` and `WithPublicEndpointFn` options to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7407)
+- Increased test coverage for `prometheusReader` function, including IPv6 and edge-case handling. (#7440)
 
 ### Removed
 
@@ -77,12 +76,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix data race when writing log entries with `context.Context` fields in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7368)
 
-
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
-### Added
-
-- Increased test coverage for `prometheusReader` function, including IPv6 and edge-case handling. (#7440)
 
 ## [1.36.0/0.61.0/0.30.0/0.16.0/0.11.0/0.9.0/0.8.0] - 2025-05-21
 
