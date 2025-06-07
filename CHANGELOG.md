@@ -7,14 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
-
-### Added 
-
-- ## [Unreleased]
-
 ### Added
 
 - Increased test coverage for `prometheusReader` function, including IPv6 and edge-case handling. (#7440)
