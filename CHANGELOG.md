@@ -11,6 +11,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
+### Added 
+
+- Increased test coverage for prometheusReader func `go.opentelemetry.io/otelconf/v0.2.0/` and `go.opentelemetry.io/otelconf/v0.3.0/`. (#7440)
+
 ## [1.36.0/0.61.0/0.30.0/0.16.0/0.11.0/0.9.0/0.8.0] - 2025-05-21
 
 ### Added
