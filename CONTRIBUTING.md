@@ -22,9 +22,10 @@ To become a Code Owner, you will need to meet the following requirements.
 
 1. You will need to be a [member of the OpenTelemetry organization] and maintain that membership.
 2. You need to have good working knowledge of the code you are sponsoring and any project that that code instruments or is based on.
+3. You will need to become a [triager] of OpenTelemetry Go and maintain this role.
 
-If you are not an existing member, this is not an immediate disqualification.
-You will need to engage with the OpenTelemetry community so you can achieve this membership in the process of becoming a Code Owner.
+If you are not an existing member and triager, this is not an immediate disqualification.
+You will need to engage with the OpenTelemetry community so you can achieve this membership and role in the process of becoming a Code Owner.
 
 It is best to have resolved at least an issue related to the module, contributed directly to the module, and/or reviewed module PRs.
 How much interaction with the module is required before becoming a Code Owner is up to the existing Code Owners.
@@ -33,6 +34,7 @@ Code Ownership is ultimately up to the judgement of the existing Code Owners and
 Meeting the above requirements is not a guarantee to be granted Code Ownership.
 
 [member of the OpenTelemetry organization]: https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#member
+[triager]: https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#triager
 
 ### Responsibilities
 
@@ -82,8 +84,15 @@ Please follow [Contributing to opentelemetry-go](https://github.com/open-telemet
 
 Triagers:
 
+- [Alex Boten](https://github.com/codeboten), Honeycomb
 - [Alex Kats](https://github.com/akats7), Capital One
 - [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
+- [Flc゛](https://github.com/flc1125), Independent
+- [Johannes Tax](https://github.com/pyohannes), Bitpanda
+- [Khushi Jain](https://github.com/khushijain21), Elastic
+- [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
+- [Preston Vasquez](https://github.com/prestonvasquez), MongoDB
+- [Yuri Shkuro](https://github.com/yurishkuro), Meta
 
 Approvers:
 
