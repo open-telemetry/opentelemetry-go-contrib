@@ -22,8 +22,8 @@ DEPENDENCIES_DOCKERFILE=./dependencies.Dockerfile
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
-precommit: generate toolchain-check license-check misspell go-mod-tidy golangci-lint-fix test-default
-ci: generate toolchain-check license-check lint vanity-import-check build test-default check-clean-work-tree test-coverage
+precommit: generate toolchain-check license-check misspell go-mod-tidy golangci-lint-fix verify-goversion test-default
+ci: generate toolchain-check license-check lint vanity-import-check verify-goversion build test-default check-clean-work-tree test-coverage
 
 # Tools
 
@@ -73,7 +73,10 @@ $(GOJSONSCHEMA): PACKAGE=github.com/atombender/go-jsonschema
 GOVULNCHECK = $(TOOLS)/govulncheck
 $(GOVULNCHECK): PACKAGE=golang.org/x/vuln/cmd/govulncheck
 
-tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(MULTIMOD) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK)
+VERIFYGOVERSION = $(TOOLS)/verifygoversion
+$(VERIFYGOVERSION): PACKAGE=go.opentelemetry.io/contrib/$(TOOLS_MOD_DIR)/verifygoversion
+
+tools: $(GOLANGCI_LINT) $(MISSPELL) $(GOCOVMERGE) $(STRINGER) $(PORTO) $(GOJQ) $(MULTIMOD) $(CROSSLINK) $(GOTMPL) $(GORELEASE) $(GOJSONSCHEMA) $(GOVULNCHECK) $(VERIFYGOVERSION)
 
 # Virtualized python tools via docker
 
@@ -357,3 +360,7 @@ MARKDOWNIMAGE := $(shell awk '$$4=="markdown" {print $$2}' $(DEPENDENCIES_DOCKER
 .PHONY: lint-markdown
 lint-markdown:
 	docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" $(MARKDOWNIMAGE) -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md
+
+.PHONY: verifygoversion
+verify-goversion: $(VERIFYGOVERSION)
+	$(VERIFYGOVERSION)
