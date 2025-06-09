@@ -44,7 +44,9 @@ func Start(opts ...Option) error {
 		metric.WithInstrumentationVersion(Version()),
 	)
 	if x.DeprecatedRuntimeMetrics.Enabled() {
-		return deprecatedruntime.Start(meter, c.MinimumReadMemStatsInterval)
+		if err := deprecatedruntime.Start(meter, c.MinimumReadMemStatsInterval); err != nil {
+			return err
+		}
 	}
 	memoryUsed, err := goconv.NewMemoryUsed(meter)
 	if err != nil {

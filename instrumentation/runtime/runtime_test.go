@@ -63,7 +63,6 @@ func TestRuntimeWithLimit(t *testing.T) {
 	// buffer for allocating memory
 	var buffer [][]byte
 	_ = allocateMemory(buffer)
-	t.Setenv("OTEL_GO_X_DEPRECATED_RUNTIME_METRICS", "false")
 	debug.SetMemoryLimit(1234567890)
 	// reset to default
 	defer debug.SetMemoryLimit(math.MaxInt64)
