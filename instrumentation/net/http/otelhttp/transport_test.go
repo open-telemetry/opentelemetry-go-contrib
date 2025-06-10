@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
+	"net/url"
 	"runtime"
 	"strconv"
 	"strings"
@@ -562,7 +563,7 @@ func TestTransportWithSemConvStabilityOptIn(t *testing.T) {
 	}
 }
 
-func TestTransportErrorStatus(t *testing.T) {
+func TestTransportError(t *testing.T) {
 	// Prepare tracing stuff.
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
@@ -589,6 +590,11 @@ func TestTransportErrorStatus(t *testing.T) {
 		t.Fatal("transport should have returned an error, it didn't")
 	}
 
+	uri, err := url.Parse(server.URL)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(uri.Port())
+	require.NoError(t, err)
+
 	// Check span.
 	spans := spanRecorder.Ended()
 	if len(spans) != 1 {
@@ -599,6 +605,19 @@ func TestTransportErrorStatus(t *testing.T) {
 	if span.EndTime().IsZero() {
 		t.Errorf("span should be ended; it isn't")
 	}
+
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		attribute.String("http.request.method", "GET"),
+		attribute.String("url.full", server.URL),
+		attribute.String("server.address", "127.0.0.1"),
+		attribute.Int("server.port", port),
+		attribute.String("network.protocol.version", "1.1"),
+		attribute.String("error.type", "*net.OpError"),
+	}, span.Attributes())
+
+	assert.Len(t, span.Events(), 1)
+	event := span.Events()[0]
+	assert.Equal(t, "exception", event.Name)
 
 	if got := span.Status().Code; got != codes.Error {
 		t.Errorf("expected error status code on span; got: %q", got)
