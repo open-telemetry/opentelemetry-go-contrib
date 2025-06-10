@@ -74,6 +74,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix data race when writing log entries with `context.Context` fields in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7368)
+- Fix recording errors when the Transport's RoundTrip returns one in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#7456)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
