@@ -48,7 +48,6 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/example
-      - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test
