@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package test
+package otelgrpc_test
 
 import (
 	"context"
@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -569,23 +568,4 @@ func assertServerSpan(t *testing.T, wantSpanCode codes.Code, wantSpanStatusDescr
 
 	require.True(t, codeAttr.Valid(), "attributes contain gRPC status code")
 	assert.Equal(t, attribute.Int64Value(int64(wantGrpcCode)), codeAttr.Value)
-}
-
-func BenchmarkStreamClientInterceptor(b *testing.B) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(b, err, "failed to open port")
-	client := newGrpcTest(b, listener,
-		[]grpc.DialOption{
-			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
-			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor()),
-		},
-		[]grpc.ServerOption{},
-	)
-
-	b.ResetTimer()
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	for i := 0; i < b.N; i++ {
-		test.DoClientStreaming(ctx, client)
-	}
 }
