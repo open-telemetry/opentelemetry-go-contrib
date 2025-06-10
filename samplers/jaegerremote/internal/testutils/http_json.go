@@ -16,8 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package utils provides utilities for the jaegerremote package.
-package utils // import "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/utils"
+package testutils // import "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/testutils"
 
 import (
 	"encoding/json"
@@ -26,17 +25,17 @@ import (
 	"net/http"
 )
 
-// GetJSON makes an HTTP call to the specified URL and parses the returned JSON into `out`.
-func GetJSON(url string, out interface{}) error {
+// getJSON makes an HTTP call to the specified URL and parses the returned JSON into `out`.
+func getJSON(url string, out interface{}) error {
 	resp, err := http.Get(url) //nolint:gosec // False positive G107: Potential HTTP request made with variable url
 	if err != nil {
 		return err
 	}
-	return ReadJSON(resp, out)
+	return readJSON(resp, out)
 }
 
-// ReadJSON reads JSON from http.Response and parses it into `out`.
-func ReadJSON(resp *http.Response, out interface{}) error {
+// readJSON reads JSON from http.Response and parses it into `out`.
+func readJSON(resp *http.Response, out interface{}) error {
 	defer resp.Body.Close()
 
 	if resp.StatusCode >= 400 {

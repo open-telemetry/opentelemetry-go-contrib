@@ -27,7 +27,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
+	"go.opentelemetry.io/otel/semconv/v1.32.0/rpcconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
@@ -727,9 +728,9 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 		},
 		Metrics: []metricdata.Metrics{
 			{
-				Name:        semconv.RPCClientDurationName,
-				Description: semconv.RPCClientDurationDescription,
-				Unit:        semconv.RPCClientDurationUnit,
+				Name:        rpcconv.ClientDuration{}.Name(),
+				Description: rpcconv.ClientDuration{}.Description(),
+				Unit:        rpcconv.ClientDuration{}.Unit(),
 				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
@@ -777,9 +778,9 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        semconv.RPCClientRequestSizeName,
-				Description: semconv.RPCClientRequestSizeDescription,
-				Unit:        semconv.RPCClientRequestSizeUnit,
+				Name:        rpcconv.ClientRequestSize{}.Name(),
+				Description: rpcconv.ClientRequestSize{}.Description(),
+				Unit:        rpcconv.ClientRequestSize{}.Unit(),
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -852,9 +853,9 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        semconv.RPCClientResponseSizeName,
-				Description: semconv.RPCClientResponseSizeDescription,
-				Unit:        semconv.RPCClientResponseSizeUnit,
+				Name:        rpcconv.ClientResponseSize{}.Name(),
+				Description: rpcconv.ClientResponseSize{}.Description(),
+				Unit:        rpcconv.ClientResponseSize{}.Unit(),
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -927,9 +928,9 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        semconv.RPCClientRequestsPerRPCName,
-				Description: semconv.RPCClientRequestsPerRPCDescription,
-				Unit:        semconv.RPCClientRequestsPerRPCUnit,
+				Name:        rpcconv.ClientRequestsPerRPC{}.Name(),
+				Description: rpcconv.ClientRequestsPerRPC{}.Description(),
+				Unit:        rpcconv.ClientRequestsPerRPC{}.Unit(),
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -1007,9 +1008,9 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        semconv.RPCClientResponsesPerRPCName,
-				Description: semconv.RPCClientResponsesPerRPCDescription,
-				Unit:        semconv.RPCClientResponsesPerRPCUnit,
+				Name:        rpcconv.ClientResponsesPerRPC{}.Name(),
+				Description: rpcconv.ClientResponsesPerRPC{}.Description(),
+				Unit:        rpcconv.ClientResponsesPerRPC{}.Unit(),
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -1105,9 +1106,9 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 		},
 		Metrics: []metricdata.Metrics{
 			{
-				Name:        semconv.RPCServerDurationName,
-				Description: semconv.RPCServerDurationDescription,
-				Unit:        semconv.RPCServerDurationUnit,
+				Name:        rpcconv.ServerDuration{}.Name(),
+				Description: rpcconv.ServerDuration{}.Description(),
+				Unit:        rpcconv.ServerDuration{}.Unit(),
 				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
@@ -1155,9 +1156,9 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        semconv.RPCServerRequestSizeName,
-				Description: semconv.RPCServerRequestSizeDescription,
-				Unit:        semconv.RPCServerRequestSizeUnit,
+				Name:        rpcconv.ServerRequestSize{}.Name(),
+				Description: rpcconv.ServerRequestSize{}.Description(),
+				Unit:        rpcconv.ServerRequestSize{}.Unit(),
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -1230,9 +1231,9 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        semconv.RPCServerResponseSizeName,
-				Description: semconv.RPCServerResponseSizeDescription,
-				Unit:        semconv.RPCServerResponseSizeUnit,
+				Name:        rpcconv.ServerResponseSize{}.Name(),
+				Description: rpcconv.ServerResponseSize{}.Description(),
+				Unit:        rpcconv.ServerResponseSize{}.Unit(),
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -1305,9 +1306,9 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        semconv.RPCServerRequestsPerRPCName,
-				Description: semconv.RPCServerRequestsPerRPCDescription,
-				Unit:        semconv.RPCServerRequestsPerRPCUnit,
+				Name:        rpcconv.ServerRequestsPerRPC{}.Name(),
+				Description: rpcconv.ServerRequestsPerRPC{}.Description(),
+				Unit:        rpcconv.ServerRequestsPerRPC{}.Unit(),
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
@@ -1385,9 +1386,9 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 				},
 			},
 			{
-				Name:        semconv.RPCServerResponsesPerRPCName,
-				Description: semconv.RPCServerResponsesPerRPCDescription,
-				Unit:        semconv.RPCServerResponsesPerRPCUnit,
+				Name:        rpcconv.ServerResponsesPerRPC{}.Name(),
+				Description: rpcconv.ServerResponsesPerRPC{}.Description(),
+				Unit:        rpcconv.ServerResponsesPerRPC{}.Unit(),
 				Data: metricdata.Histogram[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[int64]{
