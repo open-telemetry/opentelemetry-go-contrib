@@ -1397,23 +1397,23 @@ func TestPrometheusIPv6(t *testing.T) {
 	}
 }
 
-func TestPrometheusReader_ErrorCases(t *testing.T) {
+func TestPrometheusReaderErrorCases(t *testing.T) {
 	t.Run("missing host", func(t *testing.T) {
 		port := 8080
 		cfg := Prometheus{Port: &port}
-
-		_, err := prometheusReader(context.Background(), &cfg)
+		reader, err := prometheusReader(context.Background(), &cfg)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "host must be specified")
+		assert.ErrorContains(t, err, "host must be specified")
+		assert.Nil(t, reader)
 	})
 
 	t.Run("missing port", func(t *testing.T) {
 		host := "localhost"
 		cfg := Prometheus{Host: &host}
-
-		_, err := prometheusReader(context.Background(), &cfg)
+		reader, err := prometheusReader(context.Background(), &cfg)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "port must be specified")
+		assert.ErrorContains(t, err, "port must be specified")
+		assert.Nil(t, reader)
 	})
 
 	t.Run("invalid port", func(t *testing.T) {
@@ -1427,14 +1427,14 @@ func TestPrometheusReader_ErrorCases(t *testing.T) {
 			WithoutUnits:               ptr(true),
 			WithResourceConstantLabels: &IncludeExclude{},
 		}
-
-		_, err := prometheusReader(context.Background(), &cfg)
+		reader, err := prometheusReader(context.Background(), &cfg)
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "binding address")
+		assert.ErrorContains(t, err, "binding address")
+		assert.Nil(t, reader)
 	})
 }
 
-func TestPrometheusReader_HostParsing(t *testing.T) {
+func TestPrometheusReaderHostParsing(t *testing.T) {
 	tests := []struct {
 		name string
 		host string
@@ -1451,6 +1451,14 @@ func TestPrometheusReader_HostParsing(t *testing.T) {
 			name: "single char",
 			host: "a",
 		},
+		{
+			name: "IPv6 with brackets",
+			host: "[::1]",
+		},
+		{
+			name: "IPv6 without brackets",
+			host: "::1",
+		},
 	}
 
 	for _, tt := range tests {
@@ -1465,16 +1473,29 @@ func TestPrometheusReader_HostParsing(t *testing.T) {
 				WithResourceConstantLabels: &IncludeExclude{},
 			}
 
-			rs, err := prometheusReader(context.Background(), &cfg)
+			reader, err := prometheusReader(context.Background(), &cfg)
 			if err != nil {
 				return
 			}
+
 			t.Cleanup(func() {
-				require.NoError(t, rs.Shutdown(context.Background()))
+				require.NoError(t, reader.Shutdown(context.Background()))
 			})
 
-			hServ := rs.(readerWithServer).server
-			assert.NotEmpty(t, hServ.Addr)
+			server := reader.(readerWithServer).server
+			assert.NotEmpty(t, server.Addr)
+
+			expectedHost := tt.host
+			if len(tt.host) > 2 && tt.host[0] == '[' && tt.host[len(tt.host)-1] == ']' {
+				expectedHost = tt.host[1 : len(tt.host)-1]
+			}
+
+			if expectedHost == "localhost" {
+				assert.True(t, strings.Contains(server.Addr, "localhost") || strings.Contains(server.Addr, "127.0.0.1"),
+					"server address %s should contain localhost or 127.0.0.1", server.Addr)
+			} else {
+				assert.Contains(t, server.Addr, expectedHost)
+			}
 		})
 	}
 }
