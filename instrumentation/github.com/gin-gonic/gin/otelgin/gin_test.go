@@ -3,7 +3,7 @@
 
 // Based on https://github.com/DataDog/dd-trace-go/blob/8fb554ff7cf694267f9077ae35e27ce4689ed8b6/contrib/gin-gonic/gin/gintrace_test.go
 
-package test
+package otelgin_test
 
 import (
 	"context"
