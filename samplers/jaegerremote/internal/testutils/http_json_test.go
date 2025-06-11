@@ -16,7 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package utils
+package testutils
 
 import (
 	"net/http"
@@ -41,7 +41,7 @@ func TestGetJSON(t *testing.T) {
 	defer server.Close()
 
 	var s testJSONStruct
-	err := GetJSON(server.URL, &s)
+	err := getJSON(server.URL, &s)
 	require.NoError(t, err)
 
 	assert.Equal(t, "Bender", s.Name)
@@ -50,7 +50,7 @@ func TestGetJSON(t *testing.T) {
 
 func TestGetJSONErrors(t *testing.T) {
 	var s testJSONStruct
-	err := GetJSON("localhost:0", &s)
+	err := getJSON("localhost:0", &s)
 	assert.Error(t, err)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -58,6 +58,6 @@ func TestGetJSONErrors(t *testing.T) {
 	}))
 	defer server.Close()
 
-	err = GetJSON(server.URL, &s)
+	err = getJSON(server.URL, &s)
 	assert.Error(t, err)
 }
