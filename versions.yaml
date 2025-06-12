@@ -35,7 +35,6 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux
       - go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
-      - go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/example
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/test
