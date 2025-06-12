@@ -29,10 +29,13 @@ You will need to engage with the OpenTelemetry community so you can achieve this
 It is best to have resolved at least an issue related to the module, contributed directly to the module, and/or reviewed module PRs.
 How much interaction with the module is required before becoming a Code Owner is up to the existing Code Owners.
 
+As part of being added as a Code Owner, you will be granted the [triager] role, allowing you to manage issues and PRs associated with the owned module.
+
 Code Ownership is ultimately up to the judgement of the existing Code Owners and Maintainers of this repository.
 Meeting the above requirements is not a guarantee to be granted Code Ownership.
 
 [member of the OpenTelemetry organization]: https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#member
+[triager]: https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#triager
 
 ### Responsibilities
 
@@ -82,8 +85,15 @@ Please follow [Contributing to opentelemetry-go](https://github.com/open-telemet
 
 Triagers:
 
+- [Alex Boten](https://github.com/codeboten), Honeycomb
 - [Alex Kats](https://github.com/akats7), Capital One
 - [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
+- [Flc゛](https://github.com/flc1125), Independent
+- [Johannes Tax](https://github.com/pyohannes), Bitpanda
+- [Khushi Jain](https://github.com/khushijain21), Elastic
+- [Mike Goldsmith](https://github.com/MikeGoldsmith), Honeycomb
+- [Preston Vasquez](https://github.com/prestonvasquez), MongoDB
+- [Yuri Shkuro](https://github.com/yurishkuro), Meta
 
 Approvers:
 
