@@ -37,7 +37,6 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho
       - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/example
-      - go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/test
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda
       - go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/example
