@@ -15,11 +15,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 )
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
@@ -264,6 +265,15 @@ func TestEndBeforeStartWithoutSubSpansDoesNotPanic(t *testing.T) {
 	// no spans created because we were just using background context without span
 	// and Start wasn't called which would have started a span
 	require.Empty(t, sr.Ended())
+}
+
+func TestGot100ContinueInvokeBeforeFirstByte(t *testing.T) {
+	// It is possible that Got100Continue is called before GotFirstResponseByte.
+	// Also as there is no guarantee provided in the ClientTrace docs that GotFirstResponseByte should be called before
+	// Got100Continue this edge case should be covered.
+
+	clienTrace := otelhttptrace.NewClientTrace(context.Background())
+	clienTrace.Got100Continue()
 }
 
 type clientTraceTestFixture struct {
