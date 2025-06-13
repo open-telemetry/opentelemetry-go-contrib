@@ -372,6 +372,7 @@ func (ct *clientTracer) wait100Continue() {
 	if ct.useSpans {
 		span = ct.span("http.send")
 	}
+	// It's possible that Wait100Continue is called before GotFirstResponseByte at which point span can be `nil`.
 	if span != nil {
 		span.AddEvent("GOT 100 - Wait")
 	}
@@ -382,6 +383,7 @@ func (ct *clientTracer) got1xxResponse(code int, header textproto.MIMEHeader) er
 	if ct.useSpans {
 		span = ct.span("http.receive")
 	}
+	// It's possible that Got1xxResponse is called before GotFirstResponseByte at which point span can be `nil`.
 	if span != nil {
 		span.AddEvent("GOT 1xx", trace.WithAttributes(
 			HTTPStatus.Int(code),
