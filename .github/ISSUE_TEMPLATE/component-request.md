@@ -1,7 +1,7 @@
 ---
 name: Component Request
 about: Suggest component to include in this project
-title: Request to Add <component-name>
+title: New Component: <component-name>
 labels: 'enhancement'
 assignees: ''
 
