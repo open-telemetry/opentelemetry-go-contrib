@@ -7,43 +7,31 @@ assignees: ''
 
 ---
 
-## Background
+### Problem Statement
 
-**Package Link**: <add link to package here>
+A clear and concise description of what the problem is.
 
-<describe how this package is commonly used>
+#### Why can this component not be hosted in a different repository?
 
-### Why can this instrumentation not be hosted in a different repository?
+Describe the attempts to host it a different repository (preferably native to the component).
 
-## Proposed Solution
+### Proposed Solution
 
-<add a high-level description of how instrumentation can wrap or hook-in to the package>
+A clear and concise description of what you want to happen.
 
-### Tracing
+#### Alternatives
 
-- attributes:
-  - <add proposed attributes or remove>
-- events:
-  - <add proposed events or remove>
-- links:
-  - <add proposed links or remove>
+A clear and concise description of any alternative solutions or features you've considered.
 
-### Metrics
+#### Prior Art
 
-Instruments
+A clear and concise list of any similar and existing solutions from other projects that provide context to possible solutions.
 
-- <instrument name>: <describe what the instrument will measure>
-  - type: <propose instrument type information>
-  - unit: <propose instrument unit>
-  - description: <propose instrument description>
-  - attributes:
-    - <add proposed attributes or remove>
+### Additional Context
 
-### Prior Art
+Add any other information about the request here.
 
-- <list other established instrumentation for this package that can be referenced>
-
-## Tasks
+### Tasks
 
 - Code complete:
   - [ ] Comprehensive unit tests.
