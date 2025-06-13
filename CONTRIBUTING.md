@@ -99,7 +99,7 @@ This will ensure the instrumentation reaches all package users, and is continuou
 If component cannot be directly included in the package it is related to, it should be hosted in a dedicated public repository owned by its maintainer(s).
 This will appropriately assign maintenance responsibilities for the instrumentation and ensure these maintainers have the needed privilege to maintain the code.
 
-The last place component should be hosted is here in this repository as a seperate Go module.
+The last place component should be hosted is here in this repository as a separate Go module.
 Maintaining components here hampers the development of OpenTelemetry for Go and therefore should be avoided.
 When instrumentation cannot be included in a target package and there is good reason to not host it in a separate and dedicated repository a [new component or instrumentation request](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/new/choose) should be filed.
 The request needs to be accepted before any pull requests for the component can be considered for merging.
