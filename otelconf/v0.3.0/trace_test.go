@@ -967,13 +967,15 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
 				err := exporter.ExportSpans(context.Background(), input.Snapshots())
-				assert.NoError(collect, err)
 				if err != nil {
 					// TODO remove this again, just adding this to hopefully get more info on why this fails randomly
+					t.Log("Detected error in ExportSpans():", err.Error())
+					t.Log("Trying to connect via net.Dial")
 					if _, err := net.Dial("tcp", n.Addr().String()); err != nil {
 						t.Log(err.Error())
 					}
 				}
+				assert.NoError(collect, err)
 			}, 10*time.Second, 100*time.Millisecond)
 		})
 	}
