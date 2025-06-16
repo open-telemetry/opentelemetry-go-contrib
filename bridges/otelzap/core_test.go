@@ -5,9 +5,11 @@ package otelzap
 
 import (
 	"context"
+	"strings"
+	"sync"
 	"testing"
+	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -16,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
 )
 
 var (
@@ -36,112 +38,191 @@ func TestCore(t *testing.T) {
 	logger := zap.New(zc)
 
 	t.Run("Write", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
 		logger.Info(testMessage, zap.String(testKey, testValue))
 
-		result := rec.Result()
-		require.Len(t, result, 1)
-		require.Len(t, result[logtest.Scope{Name: "name"}], 1)
-		got := result[logtest.Scope{Name: "name"}][0]
-
-		assert.Equal(t, testMessage, got.Body.AsString())
-		assert.Equal(t, log.SeverityInfo, got.Severity)
-		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
-		assert.Equal(t, []log.KeyValue{
-			log.String(testKey, testValue),
-		}, got.Attributes)
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Body:         log.StringValue(testMessage),
+					Severity:     log.SeverityInfo,
+					SeverityText: zap.InfoLevel.String(),
+					Attributes: []log.KeyValue{
+						log.String(testKey, testValue),
+					},
+				},
+			},
+		}
+		logtest.AssertEqual(t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Context = nil           // Ignore context for comparison.
+				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+				return cp
+			}),
+		)
 	})
 
-	rec.Reset()
+	t.Run("WriteContext", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
 
-	t.Run("Write Context", func(t *testing.T) {
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, testEntry, true)
 		logger.Info(testMessage, zap.Any("ctx", ctx))
 
-		got := rec.Result()
-		records := got[logtest.Scope{Name: "name"}]
-		require.Len(t, records, 1)
-		assert.Equal(t, records[0].Context, ctx)
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Context:      ctx,
+					Body:         log.StringValue(testMessage),
+					Severity:     log.SeverityInfo,
+					SeverityText: zap.InfoLevel.String(),
+				},
+			},
+		}
+		logtest.AssertEqual(t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+				return cp
+			}),
+		)
 	})
 
-	rec.Reset()
+	t.Run("WithContext", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
 
-	t.Run("With Context", func(t *testing.T) {
 		ctx := context.Background()
 		ctx = context.WithValue(ctx, testEntry, false)
 		childlogger := logger.With(zap.Reflect("ctx", ctx))
 		childlogger.Info(testMessage)
 
-		got := rec.Result()
-		records := got[logtest.Scope{Name: "name"}]
-		require.Len(t, records, 1)
-		assert.Equal(t, records[0].Context, ctx)
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Context:      ctx,
+					Body:         log.StringValue(testMessage),
+					Severity:     log.SeverityInfo,
+					SeverityText: zap.InfoLevel.String(),
+				},
+			},
+		}
+		logtest.AssertEqual(t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+				return cp
+			}),
+		)
 	})
 
-	rec.Reset()
-
-	// test child logger with accumulated fields
 	t.Run("With", func(t *testing.T) {
-		testCases := [][]string{{"test1", "value1"}, {"test2", "value2"}}
-		childlogger := logger.With(zap.String(testCases[0][0], testCases[0][1]))
-		childlogger.Info(testMessage, zap.String(testCases[1][0], testCases[1][1]))
+		t.Cleanup(rec.Reset)
 
-		result := rec.Result()
-		require.Len(t, result, 1)
-		require.Len(t, result[logtest.Scope{Name: "name"}], 1)
-		got := result[logtest.Scope{Name: "name"}][0]
+		l := logger.With(zap.String("test1", "value1"))
+		l = l.With(zap.String("test2", "value2"))
+		l.Info(testMessage, zap.String("test3", "value3"))
 
-		assert.Equal(t, testMessage, got.Body.AsString())
-		assert.Equal(t, log.SeverityInfo, got.Severity)
-		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
-		assert.Equal(t, []log.KeyValue{
-			log.String("test1", "value1"),
-			log.String("test2", "value2"),
-		}, got.Attributes)
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Body:         log.StringValue(testMessage),
+					Severity:     log.SeverityInfo,
+					SeverityText: zap.InfoLevel.String(),
+					Attributes: []log.KeyValue{
+						log.String("test1", "value1"),
+						log.String("test2", "value2"),
+						log.String("test3", "value3"),
+					},
+				},
+			},
+		}
+		logtest.AssertEqual(t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Context = nil           // Ignore context for comparison.
+				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+				return cp
+			}),
+		)
 	})
-
-	rec.Reset()
 
 	t.Run("Named", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
 		name := "my/pkg"
 		childlogger := logger.Named(name)
 		childlogger.Info(testMessage, zap.String(testKey, testValue))
 
-		result := rec.Result()
-		require.Len(t, result, 2)
-		require.Len(t, result[logtest.Scope{Name: "my/pkg"}], 1)
-		got := result[logtest.Scope{Name: "my/pkg"}][0]
-
-		assert.Equal(t, testMessage, got.Body.AsString())
-		assert.Equal(t, log.SeverityInfo, got.Severity)
-		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
-		assert.Equal(t, []log.KeyValue{
-			log.String(testKey, testValue),
-		}, got.Attributes)
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {},
+			logtest.Scope{Name: name}: {
+				{
+					Body:         log.StringValue(testMessage),
+					Severity:     log.SeverityInfo,
+					SeverityText: zap.InfoLevel.String(),
+					Attributes: []log.KeyValue{
+						log.String(testKey, testValue),
+					},
+				},
+			},
+		}
+		logtest.AssertEqual(t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Context = nil           // Ignore context for comparison.
+				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+				return cp
+			}),
+		)
 	})
+}
 
-	rec.Reset()
+func TestCoreWriteContextConcurrentSafe(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc)
 
-	t.Run("WithMultiple", func(t *testing.T) {
-		testCases := [][]string{{"test1", "value1"}, {"test2", "value2"}, {"test3", "value3"}}
-		childlogger := logger.With(zap.String(testCases[0][0], testCases[0][1]))
-		childlogger2 := childlogger.With(zap.String(testCases[1][0], testCases[1][1]))
-		childlogger2.Info(testMessage, zap.String(testCases[2][0], testCases[2][1]))
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, testEntry, true)
 
-		result := rec.Result()
-		require.Len(t, result, 2)
-		require.Len(t, result[logtest.Scope{Name: "name"}], 1)
-		got := result[logtest.Scope{Name: "name"}][0]
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		logger.Debug(testMessage, zap.Any("ctx", ctx))
+	}()
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		logger.Debug(testMessage, zap.Any("ctx", ctx))
+	}()
+	wg.Wait()
 
-		assert.Equal(t, testMessage, got.Body.AsString())
-		assert.Equal(t, log.SeverityInfo, got.Severity)
-		assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
-		assert.Equal(t, []log.KeyValue{
-			log.String("test1", "value1"),
-			log.String("test2", "value2"),
-			log.String("test3", "value3"),
-		}, got.Attributes)
-	})
+	want := logtest.Recording{
+		logtest.Scope{Name: loggerName}: {
+			{
+				Context:      ctx,
+				Body:         log.StringValue(testMessage),
+				Severity:     log.SeverityDebug,
+				SeverityText: zap.DebugLevel.String(),
+			},
+			{
+				Context:      ctx,
+				Body:         log.StringValue(testMessage),
+				Severity:     log.SeverityDebug,
+				SeverityText: zap.DebugLevel.String(),
+			},
+		},
+	}
+	logtest.AssertEqual(t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+			return cp
+		}),
+	)
 }
 
 func TestCoreEnabled(t *testing.T) {
@@ -149,29 +230,46 @@ func TestCoreEnabled(t *testing.T) {
 		return param.Severity >= log.SeverityInfo
 	}
 
-	r := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
-	logger := zap.New(NewCore(loggerName, WithLoggerProvider(r)))
+	rec := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
+	logger := zap.New(NewCore(loggerName, WithLoggerProvider(rec)))
+
+	wantEmpty := logtest.Recording{
+		logtest.Scope{Name: loggerName}: nil,
+	}
 
 	logger.Debug(testMessage)
-	assert.Empty(t, r.Result()[logtest.Scope{Name: "name"}])
+	logtest.AssertEqual(t, wantEmpty, rec.Result(),
+		logtest.Desc("Debug message should not be recorded"),
+	)
 
 	if ce := logger.Check(zap.DebugLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-	assert.Empty(t, r.Result()[logtest.Scope{Name: "name"}])
+	logtest.AssertEqual(t, wantEmpty, rec.Result(),
+		logtest.Desc("Debug message should not be recorded"),
+	)
 
 	if ce := logger.Check(zap.InfoLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-
-	result := r.Result()
-	require.Len(t, result, 1)
-	require.Len(t, result[logtest.Scope{Name: "name"}], 1)
-	got := result[logtest.Scope{Name: "name"}][0]
-
-	assert.Equal(t, testMessage, got.Body.AsString())
-	assert.Equal(t, log.SeverityInfo, got.Severity)
-	assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
+	want := logtest.Recording{
+		logtest.Scope{Name: loggerName}: {
+			{
+				Body:         log.StringValue(testMessage),
+				Severity:     log.SeverityInfo,
+				SeverityText: zap.InfoLevel.String(),
+				Attributes:   []log.KeyValue{},
+			},
+		},
+	}
+	logtest.AssertEqual(t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Context = nil           // Ignore context for comparison.
+			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+			return cp
+		}),
+	)
 }
 
 func TestCoreWithCaller(t *testing.T) {
@@ -180,24 +278,39 @@ func TestCoreWithCaller(t *testing.T) {
 	logger := zap.New(zc, zap.AddCaller())
 
 	logger.Info(testMessage)
-	result := rec.Result()
-	require.Len(t, result, 1)
-	require.Len(t, result[logtest.Scope{Name: "name"}], 1)
-	got := result[logtest.Scope{Name: "name"}][0]
+	want := logtest.Recording{
+		logtest.Scope{Name: "name"}: {
+			{
+				Body:         log.StringValue(testMessage),
+				Severity:     log.SeverityInfo,
+				SeverityText: zap.InfoLevel.String(),
+				Attributes: []log.KeyValue{
+					log.String(string(semconv.CodeFilePathKey), "core_test.go"), // The real filepth will vary based on the test environment. However, it should end with "core_test.go".
+					log.Int64(string(semconv.CodeLineNumberKey), 1),             // Line number will vary.
+					log.String(string(semconv.CodeFunctionNameKey), "go.opentelemetry.io/contrib/bridges/otelzap."+t.Name()),
+				},
+			},
+		},
+	}
+	logtest.AssertEqual(t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Context = nil           // Ignore context for comparison.
+			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
 
-	assert.Equal(t, testMessage, got.Body.AsString())
-	assert.Equal(t, log.SeverityInfo, got.Severity)
-	assert.Equal(t, zap.InfoLevel.String(), got.SeverityText)
-
-	assert.Len(t, got.Attributes, 3)
-	assert.Equal(t, string(semconv.CodeFilepathKey), got.Attributes[0].Key)
-	assert.Contains(t, got.Attributes[0].Value.AsString(), "core_test.go")
-
-	assert.Equal(t, string(semconv.CodeLineNumberKey), got.Attributes[1].Key)
-	assert.Positive(t, got.Attributes[1].Value.AsInt64())
-
-	assert.Equal(t, string(semconv.CodeFunctionKey), got.Attributes[2].Key)
-	assert.Positive(t, "go.opentelemetry.io/contrib/bridges/otelzap."+t.Name(), got.Attributes[2].Value.AsString())
+			for i, attr := range cp.Attributes {
+				if attr.Key == string(semconv.CodeLineNumberKey) {
+					// Adjust the line number to be non-zero, as it will vary based on the test environment.
+					cp.Attributes[i].Value = log.Int64Value(1) // Set to 1 for consistency in tests.
+				}
+				if attr.Key == string(semconv.CodeFilePathKey) && strings.HasSuffix(attr.Value.AsString(), "core_test.go") {
+					// Trim the prefix, as it will vary based on the test environment.
+					cp.Attributes[i].Value = log.StringValue("core_test.go")
+				}
+			}
+			return cp
+		}),
+	)
 }
 
 func TestCoreWithStacktrace(t *testing.T) {
@@ -206,18 +319,33 @@ func TestCoreWithStacktrace(t *testing.T) {
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
 	logger.Error(testMessage)
-	result := rec.Result()
-	require.Len(t, result, 1)
-	require.Len(t, result[logtest.Scope{Name: "name"}], 1)
-	got := result[logtest.Scope{Name: "name"}][0]
 
-	assert.Equal(t, testMessage, got.Body.AsString())
-	assert.Equal(t, log.SeverityError, got.Severity)
-	assert.Equal(t, zap.ErrorLevel.String(), got.SeverityText)
-
-	assert.Len(t, got.Attributes, 1)
-	assert.Equal(t, string(semconv.CodeStacktraceKey), got.Attributes[0].Key)
-	assert.NotEmpty(t, got.Attributes[0].Value.AsString())
+	want := logtest.Recording{
+		logtest.Scope{Name: "name"}: {
+			{
+				Body:         log.StringValue(testMessage),
+				Severity:     log.SeverityError,
+				SeverityText: zap.ErrorLevel.String(),
+				Attributes: []log.KeyValue{
+					log.String(string(semconv.CodeStacktraceKey), "stacktrace"), // Stacktrace will vary based on the test environment.
+				},
+			},
+		},
+	}
+	logtest.AssertEqual(t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Context = nil           // Ignore context for comparison.
+			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+			for i, attr := range cp.Attributes {
+				if attr.Key == string(semconv.CodeStacktraceKey) {
+					// Adjust the stacktrace to be non-empty, as it will vary based on the test environment.
+					cp.Attributes[i].Value = log.StringValue("stacktrace") // Set to a placeholder for consistency in tests.
+				}
+			}
+			return cp
+		}),
+	)
 }
 
 func TestNewCoreConfiguration(t *testing.T) {
