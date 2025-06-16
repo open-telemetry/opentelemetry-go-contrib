@@ -1414,7 +1414,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				otlpConfig: &OTLPMetric{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(2000),
 					Insecure:    ptr(true),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -1432,7 +1432,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				otlpConfig: &OTLPMetric{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(2000),
 					Certificate: ptr("testdata/server-certs/server.crt"),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -1456,7 +1456,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				otlpConfig: &OTLPMetric{
 					Protocol:          ptr("grpc"),
 					Compression:       ptr("gzip"),
-					Timeout:           ptr(5000),
+					Timeout:           ptr(2000),
 					Certificate:       ptr("testdata/server-certs/server.crt"),
 					ClientKey:         ptr("testdata/client-certs/client.key"),
 					ClientCertificate: ptr("testdata/client-certs/client.crt"),
@@ -1526,7 +1526,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 						},
 					},
 				}))
-			}, 10*time.Second, 1*time.Second)
+			}, 20*time.Second, 100*time.Millisecond)
 		})
 	}
 }

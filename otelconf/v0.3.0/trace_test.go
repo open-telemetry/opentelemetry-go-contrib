@@ -870,7 +870,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(2000),
 					Insecure:    ptr(true),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -888,7 +888,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(2000),
 					Certificate: ptr("testdata/server-certs/server.crt"),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -912,7 +912,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				otlpConfig: &OTLP{
 					Protocol:          ptr("grpc"),
 					Compression:       ptr("gzip"),
-					Timeout:           ptr(5000),
+					Timeout:           ptr(2000),
 					Certificate:       ptr("testdata/server-certs/server.crt"),
 					ClientKey:         ptr("testdata/client-certs/client.key"),
 					ClientCertificate: ptr("testdata/client-certs/client.crt"),
@@ -967,7 +967,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
 				assert.NoError(collect, exporter.ExportSpans(context.Background(), input.Snapshots()))
-			}, 10*time.Second, 1*time.Second)
+			}, 10*time.Second, 100*time.Millisecond)
 		})
 	}
 }

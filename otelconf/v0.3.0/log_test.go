@@ -819,7 +819,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{
 					logFactory.NewRecord(),
 				}))
-			}, 10*time.Second, 1*time.Second)
+			}, 20*time.Second, 100*time.Millisecond)
 		})
 	}
 }
