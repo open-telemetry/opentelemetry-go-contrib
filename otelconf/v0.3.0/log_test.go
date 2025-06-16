@@ -841,10 +841,15 @@ func startGRPCLogsCollector(t *testing.T, listener net.Listener, serverOptions [
 	c := &grpcLogsCollector{}
 
 	collogpb.RegisterLogsServiceServer(srv, c)
-	go func() { _ = srv.Serve(listener) }()
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.Stop()
+		srv.GracefulStop()
+		if err := <-errCh; err != nil && err != grpc.ErrServerStopped {
+			assert.NoError(t, err)
+		}
 	})
 }
 
