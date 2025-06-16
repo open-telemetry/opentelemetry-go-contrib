@@ -31,6 +31,10 @@ A clear and concise list of any similar and existing solutions from other projec
 
 Add any other information about the request here.
 
+### Code Owners
+
+Name at least one person matching the [Code Owners requirements](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/CONTRIBUTING.md#code-owners) (this can be you) who will maintain the component.
+
 ### Tasks
 
 - Code complete:
