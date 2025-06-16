@@ -272,7 +272,7 @@ func TestNoClientTraceCallGuarantee(t *testing.T) {
 		// It is possible that Got100Continue is called before GotFirstResponseByte.
 		// Also as there is no guarantee provided in the ClientTrace docs that GotFirstResponseByte should be called before
 		// Got100Continue this edge case should be covered.
-		require.NotPanics(t, func() {
+		assert.NotPanics(t, func() {
 			clientTrace := otelhttptrace.NewClientTrace(context.Background())
 			clientTrace.Got100Continue()
 		})
@@ -280,10 +280,10 @@ func TestNoClientTraceCallGuarantee(t *testing.T) {
 	t.Run("Got1xxResponse", func(t *testing.T) {
 		clientTrace := otelhttptrace.NewClientTrace(context.Background())
 		err := clientTrace.Got1xxResponse(http.StatusNoContent, nil)
-		require.NoError(t, err)
+		assert.NoError(t, err)
 	})
 	t.Run("Wait100Continue", func(t *testing.T) {
-		require.NotPanics(t, func() {
+		assert.NotPanics(t, func() {
 			clientTrace := otelhttptrace.NewClientTrace(context.Background())
 			clientTrace.Wait100Continue()
 		})
