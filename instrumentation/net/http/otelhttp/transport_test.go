@@ -1173,18 +1173,13 @@ func TestCustomAttributesHandling(t *testing.T) {
 
 func TestMetricsExistenceOnRequestError(t *testing.T) {
 	var rm metricdata.ResourceMetrics
-	const (
-		clientRequestSize = "http.client.request.body.size"
-		clientDuration    = "http.client.request.duration"
-	)
-	ctx := context.TODO()
+
+	ctx := context.Background()
 	reader := sdkmetric.NewManualReader()
 	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	defer func() {
 		err := provider.Shutdown(ctx)
-		if err != nil {
-			t.Errorf("Error shutting down provider: %v", err)
-		}
+		assert.NoError(t, err)
 	}()
 
 	transport := NewTransport(http.DefaultTransport, WithMeterProvider(provider))
@@ -1200,28 +1195,17 @@ func TestMetricsExistenceOnRequestError(t *testing.T) {
 
 	resp, err := client.Do(r)
 	if err == nil {
-		if e := resp.Body.Close(); e != nil {
-			t.Errorf("close response body: %v", e)
-		}
+		e := resp.Body.Close()
+		assert.NoError(t, e)
 	}
 
 	require.Error(t, err)
 
 	err = reader.Collect(ctx, &rm)
-	assert.NoError(t, err)
-
-	metricsFound := 0
-	for _, m := range rm.ScopeMetrics[0].Metrics {
-		switch m.Name {
-		case clientRequestSize:
-			metricsFound++
-		case clientDuration:
-			metricsFound++
-		}
-	}
+	require.NoError(t, err)
 
 	// make sure client request size and duration metrics is recorded
-	assert.Equal(t, 2, metricsFound, "expected both request size and duration metrics to be recorded")
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 2, "should record client request size and duration metrics")
 }
 
 func TestDefaultAttributesHandling(t *testing.T) {
