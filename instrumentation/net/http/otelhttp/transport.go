@@ -130,7 +130,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	res, err := t.rt.RoundTrip(r)
 
-	// defer metrics recording function to record the metrics on error or no error
+	// Defer metrics recording function to record the metrics on error or no error.
 	defer func() {
 		metricAttributes := semconv.MetricAttributes{
 			Req:                  r,
