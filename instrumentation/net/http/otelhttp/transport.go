@@ -137,6 +137,10 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 			AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
 		}
 
+		if err == nil {
+			metricAttributes.StatusCode = res.StatusCode
+		}
+
 		metricOpts := t.semconv.MetricOptions(metricAttributes)
 
 		metricData := semconv.MetricData{
@@ -150,7 +154,6 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 			}
 
 			res.Body = newWrappedBody(span, readRecordFunc, res.Body)
-			metricAttributes.StatusCode = res.StatusCode
 		}
 
 		// Use floating point division here for higher precision (instead of Millisecond method).
