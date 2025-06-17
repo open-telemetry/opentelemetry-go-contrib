@@ -130,14 +130,13 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	res, err := t.rt.RoundTrip(r)
 
-	metricAttributes := semconv.MetricAttributes{
-		Req:                  r,
-		AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
-	}
-
 	// defer metrics recording function to record the metrics on error or no error
 	defer func() {
-		// metrics
+		metricAttributes := semconv.MetricAttributes{
+			Req:                  r,
+			AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
+		}
+
 		metricOpts := t.semconv.MetricOptions(metricAttributes)
 
 		metricData := semconv.MetricData{
@@ -151,6 +150,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 			}
 
 			res.Body = newWrappedBody(span, readRecordFunc, res.Body)
+			metricAttributes.StatusCode = res.StatusCode
 		}
 
 		// Use floating point division here for higher precision (instead of Millisecond method).
@@ -176,8 +176,6 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 		return res, err
 	}
-
-	metricAttributes.StatusCode = res.StatusCode
 
 	// traces
 	span.SetAttributes(t.semconv.ResponseTraceAttrs(res)...)
