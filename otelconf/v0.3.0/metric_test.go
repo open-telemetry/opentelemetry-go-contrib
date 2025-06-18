@@ -1554,7 +1554,7 @@ func startGRPCMetricCollector(t *testing.T, listener net.Listener, serverOptions
 
 	t.Cleanup(func() {
 		srv.GracefulStop()
-		if err := <-errCh; err != nil && err != grpc.ErrServerStopped {
+		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			assert.NoError(t, err)
 		}
 	})
