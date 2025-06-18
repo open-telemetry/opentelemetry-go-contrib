@@ -4,7 +4,7 @@
 package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 // gRPC tracing middleware
-// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/trace/semantic_conventions/rpc.md
+// https://opentelemetry.io/docs/specs/semconv/rpc/
 import (
 	"context"
 	"errors"
