@@ -65,6 +65,10 @@ func NewResourceDetector() resource.Detector {
 // Detect returns a Resource describing the Amazon EKS environment being run in.
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	if detector.err != nil {
+		if errors.Is(detector.err, rest.ErrNotInCluster) {
+			return resource.Empty(), nil
+		}
+
 		return nil, detector.err
 	}
 
