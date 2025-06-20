@@ -5,7 +5,7 @@ go 1.23.0
 require (
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/otel v1.36.1-0.20250528182540-e25861aa7b3a
+	go.opentelemetry.io/otel v1.36.1-0.20250620180422-770617c73a73
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.12.2
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.12.2
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.36.0

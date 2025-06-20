@@ -46,8 +46,8 @@ github.com/stretchr/testify v1.10.0 h1:Xv5erBjTwe/5IxqUQTdXv5kgmIvbHo3QQyRwhJsOf
 github.com/stretchr/testify v1.10.0/go.mod h1:r2ic/lqez/lEtzL7wO/rwa5dbSLXVDPFyf8C91i36aY=
 go.opentelemetry.io/auto/sdk v1.1.0 h1:cH53jehLUN6UFLY71z+NDOiNJqDdPRaXzTel0sJySYA=
 go.opentelemetry.io/auto/sdk v1.1.0/go.mod h1:3wSPjt5PWp2RhlCcmmOial7AvC4DQqZb7a7wCow3W8A=
-go.opentelemetry.io/otel v1.36.1-0.20250528182540-e25861aa7b3a h1:8uHOsh1V1JuFbkvnmDCQ9taknlhNHqfHT40ycLoK2Dc=
-go.opentelemetry.io/otel v1.36.1-0.20250528182540-e25861aa7b3a/go.mod h1:9ZHRSbpL6dB9wjsvbGlU8hlCBibGGk6H5AEZSYogN30=
+go.opentelemetry.io/otel v1.36.1-0.20250620180422-770617c73a73 h1:v+QgA2Qd1o0LZH/OP/vginQNg6GTJ7ek5KQT1pfN3Fk=
+go.opentelemetry.io/otel v1.36.1-0.20250620180422-770617c73a73/go.mod h1:9ZHRSbpL6dB9wjsvbGlU8hlCBibGGk6H5AEZSYogN30=
 go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.12.2 h1:06ZeJRe5BnYXceSM9Vya83XXVaNGe3H1QqsvqRANQq8=
 go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.12.2/go.mod h1:DvPtKE63knkDVP88qpatBj81JxN+w1bqfVbsbCbj1WY=
 go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.12.2 h1:tPLwQlXbJ8NSOfZc4OkgU5h2A38M4c9kfHSVc4PFQGs=
