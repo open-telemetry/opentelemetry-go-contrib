@@ -12,7 +12,7 @@ import (
 	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
 
-	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )
 
 func TestSQSDeleteMessageBatchInput(t *testing.T) {

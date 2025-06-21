@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 
 	"github.com/stretchr/testify/assert"
 )

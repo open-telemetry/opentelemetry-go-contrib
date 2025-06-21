@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )
 
 // Constants for environment variable keys and versions.

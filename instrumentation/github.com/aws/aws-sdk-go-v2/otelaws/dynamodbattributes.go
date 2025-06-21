@@ -11,7 +11,7 @@ import (
 	"github.com/aws/smithy-go/middleware"
 
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )
 
 // DynamoDBAttributeBuilder sets DynamoDB specific attributes depending on the DynamoDB operation being performed.

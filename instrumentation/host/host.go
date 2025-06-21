@@ -19,9 +19,9 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/semconv/v1.32.0/cpuconv"
-	"go.opentelemetry.io/otel/semconv/v1.32.0/processconv"
-	"go.opentelemetry.io/otel/semconv/v1.32.0/systemconv"
+	"go.opentelemetry.io/otel/semconv/v1.34.0/cpuconv"
+	"go.opentelemetry.io/otel/semconv/v1.34.0/processconv"
+	"go.opentelemetry.io/otel/semconv/v1.34.0/systemconv"
 )
 
 // ScopeName is the instrumentation scope name.
