@@ -819,7 +819,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{
 					logFactory.NewRecord(),
 				}))
-			}, 10*time.Second, 1*time.Second)
+			}, 20*time.Second, 100*time.Millisecond)
 		})
 	}
 }
@@ -841,10 +841,15 @@ func startGRPCLogsCollector(t *testing.T, listener net.Listener, serverOptions [
 	c := &grpcLogsCollector{}
 
 	collogpb.RegisterLogsServiceServer(srv, c)
-	go func() { _ = srv.Serve(listener) }()
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.Stop()
+		srv.GracefulStop()
+		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			assert.NoError(t, err)
+		}
 	})
 }
 

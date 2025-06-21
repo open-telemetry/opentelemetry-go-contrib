@@ -870,7 +870,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(2000),
 					Insecure:    ptr(true),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -888,7 +888,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(2000),
 					Certificate: ptr("testdata/server-certs/server.crt"),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -912,7 +912,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				otlpConfig: &OTLP{
 					Protocol:          ptr("grpc"),
 					Compression:       ptr("gzip"),
-					Timeout:           ptr(5000),
+					Timeout:           ptr(2000),
 					Certificate:       ptr("testdata/server-certs/server.crt"),
 					ClientKey:         ptr("testdata/client-certs/client.key"),
 					ClientCertificate: ptr("testdata/client-certs/client.crt"),
@@ -966,8 +966,17 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			}
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.ExportSpans(context.Background(), input.Snapshots()))
-			}, 10*time.Second, 1*time.Second)
+				err := exporter.ExportSpans(context.Background(), input.Snapshots())
+				if err != nil {
+					// TODO remove this again, just adding this to hopefully get more info on why this fails randomly
+					t.Log("Detected error in ExportSpans():", err.Error())
+					t.Log("Trying to connect via net.Dial")
+					if _, err := net.Dial("tcp", n.Addr().String()); err != nil {
+						t.Log(err.Error())
+					}
+				}
+				assert.NoError(collect, err)
+			}, 10*time.Second, 100*time.Millisecond)
 		})
 	}
 }
@@ -989,10 +998,15 @@ func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions 
 	c := &grpcTraceCollector{}
 
 	v1.RegisterTraceServiceServer(srv, c)
-	go func() { _ = srv.Serve(listener) }()
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.Stop()
+		srv.GracefulStop()
+		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			assert.NoError(t, err)
+		}
 	})
 }
 
