@@ -42,7 +42,7 @@ type scope struct {
 	Attributes               attribute.Set
 }
 
-// recorder records all [log.Record]s it is ased to emit.
+// recorder records all [log.Record]s it is asked to emit.
 type recorder struct {
 	embedded.LoggerProvider
 	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
