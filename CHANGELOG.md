@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the `WithPublicEndpoint` and `WithPublicEndpointFn` options to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7407)
+- Add new `instrumentation/runtimemetrics` providing a comprehensive view into Golang runtime/metrics instrumentation. ([#7499](https://github.com/open-telemetry/opentelemetry-go-contrib/pull/7499))
 
 ### Removed
 
