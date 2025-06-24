@@ -10,10 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"k8s.io/client-go/rest"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )
 
 type MockDetectorUtils struct {
@@ -77,6 +78,16 @@ func TestNotEKS(t *testing.T) {
 	detectorUtils.On("fileExists", k8sTokenPath).Return(false)
 
 	detector := resourceDetector{utils: detectorUtils}
+	r, err := detector.Detect(context.Background())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), r, "Resource object should be empty")
+	detectorUtils.AssertExpectations(t)
+}
+
+// Tests EKS resource detector not running K8S at all.
+func TestNotK8S(t *testing.T) {
+	detectorUtils := new(MockDetectorUtils)
+	detector := resourceDetector{utils: detectorUtils, err: rest.ErrNotInCluster}
 	r, err := detector.Detect(context.Background())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), r, "Resource object should be empty")

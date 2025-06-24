@@ -14,9 +14,9 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.32.0/cpuconv"
-	"go.opentelemetry.io/otel/semconv/v1.32.0/processconv"
-	"go.opentelemetry.io/otel/semconv/v1.32.0/systemconv"
+	"go.opentelemetry.io/otel/semconv/v1.34.0/cpuconv"
+	"go.opentelemetry.io/otel/semconv/v1.34.0/processconv"
+	"go.opentelemetry.io/otel/semconv/v1.34.0/systemconv"
 
 	"go.opentelemetry.io/contrib/instrumentation/host"
 )
@@ -81,7 +81,7 @@ func TestHostMetrics(t *testing.T) {
 				Name:        systemconv.MemoryUsage{}.Name(),
 				Description: systemconv.MemoryUsage{}.Description(),
 				Unit:        systemconv.MemoryUsage{}.Unit(),
-				Data: metricdata.Gauge[int64]{
+				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
 						{Attributes: attribute.NewSet(
 							systemconv.MemoryUsage{}.AttrMemoryState(systemconv.MemoryStateUsed),
@@ -90,6 +90,8 @@ func TestHostMetrics(t *testing.T) {
 							systemconv.MemoryUsage{}.AttrMemoryState(systemconv.MemoryStateFree),
 						)},
 					},
+					Temporality: metricdata.CumulativeTemporality,
+					IsMonotonic: false,
 				},
 			},
 			{
