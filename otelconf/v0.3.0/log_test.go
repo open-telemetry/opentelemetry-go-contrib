@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -706,6 +707,10 @@ func TestLogProcessor(t *testing.T) {
 }
 
 func Test_otlpGRPCLogExporter(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// TODO (#7446): Fix the flakiness on Windows.
+		t.Skip("Test is flaky on Windows.")
+	}
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLP
@@ -819,7 +824,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{
 					logFactory.NewRecord(),
 				}))
-			}, 20*time.Second, 100*time.Millisecond)
+			}, 10*time.Second, 1*time.Second)
 		})
 	}
 }

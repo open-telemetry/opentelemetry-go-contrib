@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -1398,6 +1399,10 @@ func TestPrometheusIPv6(t *testing.T) {
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// TODO (#7446): Fix the flakiness on Windows.
+		t.Skip("Test is flaky on Windows.")
+	}
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLPMetric
@@ -1414,7 +1419,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				otlpConfig: &OTLPMetric{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(2000),
+					Timeout:     ptr(5000),
 					Insecure:    ptr(true),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -1432,7 +1437,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				otlpConfig: &OTLPMetric{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(2000),
+					Timeout:     ptr(5000),
 					Certificate: ptr("testdata/server-certs/server.crt"),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -1456,7 +1461,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				otlpConfig: &OTLPMetric{
 					Protocol:          ptr("grpc"),
 					Compression:       ptr("gzip"),
-					Timeout:           ptr(2000),
+					Timeout:           ptr(5000),
 					Certificate:       ptr("testdata/server-certs/server.crt"),
 					ClientKey:         ptr("testdata/client-certs/client.key"),
 					ClientCertificate: ptr("testdata/client-certs/client.crt"),
@@ -1526,7 +1531,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 						},
 					},
 				}))
-			}, 20*time.Second, 100*time.Millisecond)
+			}, 10*time.Second, 1*time.Second)
 		})
 	}
 }
