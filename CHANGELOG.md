@@ -77,6 +77,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix data race when writing log entries with `context.Context` fields in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7368)
 - Fix nil pointer dereference when `ClientTracer` did not have a span in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#7464)
 - Record all non-failure metrics on transport round trip errors in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#7146)
+- Skip the exporter tests on Windows due to flaky test runs in `go.opentelemetry.io/contrib/otelconf` (#7446)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
