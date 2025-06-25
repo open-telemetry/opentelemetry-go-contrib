@@ -8,13 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.37.0/0.62.0/0.31.0/0.17.0/0.12.0/0.10.0/0.9.0] - 2025-06-25
+
 ### Added
 
 - Add the `WithPublicEndpoint` and `WithPublicEndpointFn` options to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7407)
-
-### Removed
-
-- The deprecated `StreamServerInterceptor` function from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed. (#7362)
 
 ### Changed
 
@@ -78,8 +79,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix nil pointer dereference when `ClientTracer` did not have a span in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#7464)
 - Record all non-failure metrics on transport round trip errors in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#7146)
 
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
+### Removed
+
+- The deprecated `StreamServerInterceptor` function from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed. (#7362)
 
 ## [1.36.0/0.61.0/0.30.0/0.16.0/0.11.0/0.9.0/0.8.0] - 2025-05-21
 
@@ -1456,7 +1458,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.36.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.37.0...HEAD
+[1.37.0/0.62.0/0.31.0/0.17.0/0.12.0/0.10.0/0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.37.0
 [1.36.0/0.61.0/0.30.0/0.16.0/0.11.0/0.9.0/0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.36.0
 [1.35.0/0.60.0/0.29.0/0.15.0/0.10.0/0.8.0/0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.35.0
 [1.34.0/0.59.0/0.28.0/0.14.0/0.9.0/0.7.0/0.6.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.34.0
