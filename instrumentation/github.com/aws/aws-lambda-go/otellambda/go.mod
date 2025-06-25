@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-lambda-go v1.49.0
 	github.com/stretchr/testify v1.10.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.61.0
-	go.opentelemetry.io/contrib/propagators/aws v1.36.0
+	go.opentelemetry.io/contrib/propagators/aws v1.37.0
 	go.opentelemetry.io/otel v1.37.0
 	go.opentelemetry.io/otel/sdk v1.37.0
 	go.opentelemetry.io/otel/trace v1.37.0
