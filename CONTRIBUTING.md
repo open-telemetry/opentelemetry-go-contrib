@@ -111,14 +111,7 @@ You can find out how to add component to the registry [here](https://github.com/
 
 ## Approvers and Maintainers
 
-Triagers:
-
-- [Alex Kats](https://github.com/akats7), Capital One
-- [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
-
-Approvers:
-
-Maintainers:
+### Maintainers
 
 - [Damien Mathieu](https://github.com/dmathieu), Elastic
 - [David Ashpole](https://github.com/dashpole), Google
@@ -126,7 +119,16 @@ Maintainers:
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
-Emeritus:
+For more information about the maintainer role, see the [community repository](https://github.com/open-telemetry/community/blob/main/community-membership.md#maintainer).
+
+### Triagers
+
+- [Alex Kats](https://github.com/akats7), Capital One
+- [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
+
+For more information about the triager role, see the [community repository](https://github.com/open-telemetry/community/blob/main/community-membership.md#triagers).
+
+### Emeritus
 
 - [Aaron Clawson](https://github.com/MadVikingGod)
 - [Anthony Mirabella](https://github.com/Aneurysm9)
@@ -134,6 +136,8 @@ Emeritus:
 - [Evan Torrie](https://github.com/evantorrie)
 - [Gustavo Silva Paiva](https://github.com/paivagustavo)
 - [Josh MacDonald](https://github.com/jmacd)
+
+For more information about the emeritus role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#emeritus-maintainerapprovertriager).
 
 ### Become an Approver or a Maintainer
 
