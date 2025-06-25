@@ -47,3 +47,5 @@ require (
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
