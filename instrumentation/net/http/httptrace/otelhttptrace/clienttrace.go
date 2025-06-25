@@ -189,6 +189,9 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 }
 
 func (ct *clientTracer) start(hook, spanName string, attrs ...attribute.KeyValue) {
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+
 	if !ct.useSpans {
 		if ct.root == nil {
 			ct.root = trace.SpanFromContext(ct.Context)
@@ -196,9 +199,6 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...attribute.KeyValue
 		ct.root.AddEvent(hook+".start", trace.WithAttributes(attrs...))
 		return
 	}
-
-	ct.mtx.Lock()
-	defer ct.mtx.Unlock()
 
 	if hookCtx, found := ct.activeHooks[hook]; !found {
 		var sp trace.Span
@@ -217,6 +217,13 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...attribute.KeyValue
 }
 
 func (ct *clientTracer) end(hook string, err error, attrs ...attribute.KeyValue) {
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+
+	if ct.root == nil {
+		return
+	}
+
 	if !ct.useSpans {
 		// sometimes end may be called without previous start
 		if ct.root == nil {
@@ -229,8 +236,6 @@ func (ct *clientTracer) end(hook string, err error, attrs ...attribute.KeyValue)
 		return
 	}
 
-	ct.mtx.Lock()
-	defer ct.mtx.Unlock()
 	if ctx, ok := ct.activeHooks[hook]; ok {
 		span := trace.SpanFromContext(ctx)
 		if err != nil {
@@ -328,6 +333,9 @@ func (ct *clientTracer) tlsHandshakeDone(_ tls.ConnectionState, err error) {
 }
 
 func (ct *clientTracer) wroteHeaderField(k string, v []string) {
+	if ct.root == nil {
+		return
+	}
 	if ct.useSpans && ct.span("http.headers") == nil {
 		ct.start("http.headers", "http.headers")
 	}
