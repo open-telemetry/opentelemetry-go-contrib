@@ -5,13 +5,13 @@ go 1.23.0
 require (
 	github.com/gin-gonic/gin v1.10.1
 	github.com/stretchr/testify v1.10.0
-	go.opentelemetry.io/contrib/propagators/b3 v1.36.0
-	go.opentelemetry.io/otel v1.36.1-0.20250618142619-0150494ef969
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.36.1-0.20250618142619-0150494ef969
-	go.opentelemetry.io/otel/metric v1.36.1-0.20250618142619-0150494ef969
-	go.opentelemetry.io/otel/sdk v1.36.1-0.20250618142619-0150494ef969
-	go.opentelemetry.io/otel/sdk/metric v1.36.1-0.20250618142619-0150494ef969
-	go.opentelemetry.io/otel/trace v1.36.1-0.20250618142619-0150494ef969
+	go.opentelemetry.io/contrib/propagators/b3 v1.37.0
+	go.opentelemetry.io/otel v1.37.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.37.0
+	go.opentelemetry.io/otel/metric v1.37.0
+	go.opentelemetry.io/otel/sdk v1.37.0
+	go.opentelemetry.io/otel/sdk/metric v1.37.0
+	go.opentelemetry.io/otel/trace v1.37.0
 )
 
 require (
@@ -47,3 +47,5 @@ require (
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
