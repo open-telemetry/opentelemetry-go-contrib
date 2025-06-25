@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -854,6 +855,10 @@ func TestSampler(t *testing.T) {
 }
 
 func Test_otlpGRPCTraceExporter(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// TODO (#7446): Fix the flakiness on Windows.
+		t.Skip("Test is flaky on Windows.")
+	}
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLP
@@ -989,10 +994,15 @@ func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions 
 	c := &grpcTraceCollector{}
 
 	v1.RegisterTraceServiceServer(srv, c)
-	go func() { _ = srv.Serve(listener) }()
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.Stop()
+		srv.GracefulStop()
+		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			assert.NoError(t, err)
+		}
 	})
 }
 

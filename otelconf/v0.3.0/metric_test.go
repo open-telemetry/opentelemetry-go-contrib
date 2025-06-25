@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -1398,6 +1399,10 @@ func TestPrometheusIPv6(t *testing.T) {
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// TODO (#7446): Fix the flakiness on Windows.
+		t.Skip("Test is flaky on Windows.")
+	}
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLPMetric
@@ -1548,10 +1553,15 @@ func startGRPCMetricCollector(t *testing.T, listener net.Listener, serverOptions
 	c := &grpcMetricCollector{}
 
 	v1.RegisterMetricsServiceServer(srv, c)
-	go func() { _ = srv.Serve(listener) }()
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.Stop()
+		srv.GracefulStop()
+		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			assert.NoError(t, err)
+		}
 	})
 }
 
