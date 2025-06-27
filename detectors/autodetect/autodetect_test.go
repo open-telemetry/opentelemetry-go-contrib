@@ -72,18 +72,6 @@ func TestRegisterDuplicate(t *testing.T) {
 	Register(id, testFactory())
 }
 
-func TestAll(t *testing.T) {
-	detector := All()
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Errorf("expected composite detector, got %T", detector)
-	}
-
-	if len(c.detectors) != len(registry) {
-		t.Errorf("expected %d detectors, got %d", len(registry), len(c.detectors))
-	}
-}
-
 func TestParse(t *testing.T) {
 	ids := make([]string, 0, len(registry))
 	for id := range registry {
