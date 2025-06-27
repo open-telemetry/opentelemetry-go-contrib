@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"sort"
 	"sync"
 
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -180,6 +181,21 @@ func Register(id ID, fn func() resource.Detector) {
 	registry[id] = fn
 }
 
+// Registered returns a sorted slice of all registered resource detector IDs.t st
+func Registered() []ID {
+	registryMu.Lock()
+	defer registryMu.Unlock()
+	out := make([]ID, 0, len(registry))
+	for id := range registry {
+		out = append(out, id)
+	}
+
+	sort.SliceStable(out, func(i, j int) bool {
+		return out[i].String() < out[j].String()
+	})
+	return out
+}
+
 // optDetector is a resource.Detector that uses a resource.Option to
 // create a resource.Resource. This is useful for detectors that
 // do not require any additional logic beyond creating a resource
@@ -315,17 +331,6 @@ func Detector(ids ...ID) (resource.Detector, error) {
 		detectors = append(detectors, fn())
 	}
 	return newComposite(detectors), err
-}
-
-// All returns a [resource.Detector] composed of all the registered detectors.
-func All() resource.Detector {
-	registryMu.Lock()
-	defer registryMu.Unlock()
-	detectors := make([]resource.Detector, 0, len(registry))
-	for _, fn := range registry {
-		detectors = append(detectors, fn())
-	}
-	return newComposite(detectors)
 }
 
 // Parse returns a [resource.Detector] composed of the detectors identified by
