@@ -179,7 +179,7 @@ func (r *runtime) registerMemStats() error {
 	// observation interval is too slow.
 	if pauseTotalNs, err = r.meter.Int64ObservableCounter(
 		"process.runtime.go.gc.pause_total_ns",
-		// TODO: nanoseconds units
+		metric.WithUnit("ns"),
 		metric.WithDescription("Cumulative nanoseconds in GC stop-the-world pauses since the program started"),
 	); err != nil {
 		return err
@@ -187,7 +187,7 @@ func (r *runtime) registerMemStats() error {
 
 	if gcPauseNs, err = r.meter.Int64Histogram(
 		"process.runtime.go.gc.pause_ns",
-		// TODO: nanoseconds units
+		metric.WithUnit("ns"),
 		metric.WithDescription("Amount of nanoseconds in GC stop-the-world pauses"),
 	); err != nil {
 		return err
