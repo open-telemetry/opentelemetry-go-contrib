@@ -317,30 +317,6 @@ func Detector(ids ...ID) (resource.Detector, error) {
 		if !exists {
 			e := fmt.Errorf("%w: %s", ErrUnknownDetector, id)
 			err = errors.Join(err, e)
-		}
-		detectors = append(detectors, fn())
-	}
-	return newComposite(detectors), err
-}
-
-// Parse returns a [resource.Detector] composed of the detectors identified by
-// the provided ID strings. If an ID string is not recognized,
-// [ErrUnknownDetector] for that identifier. All recognized IDs are used to
-// create the returned detector, even in the case of an error.
-func Parse(ids ...string) (resource.Detector, error) {
-	registryMu.Lock()
-	defer registryMu.Unlock()
-
-	var (
-		detectors []resource.Detector
-		err       error
-	)
-	for _, id := range ids {
-		detectorID := ID(id)
-		fn, exists := registry[detectorID]
-		if !exists {
-			e := fmt.Errorf("%w: %s", ErrUnknownDetector, detectorID)
-			err = errors.Join(err, e)
 			continue
 		}
 		detectors = append(detectors, fn())
