@@ -15,7 +15,7 @@ import (
 
 // This environment variable is expected to be a comma-separated list of
 // detectors the user wants for the purpose of the example. It can take any
-// form a user want to parse
+// form a user want to parse.
 const envVar = "RESOURCE_DETECTORS"
 
 func init() {
@@ -24,7 +24,7 @@ func init() {
 		return MyDetector{}
 	})
 
-	os.Setenv(envVar, "host,telemetry.sdk,my.env.var.detector")
+	_ = os.Setenv(envVar, "host,telemetry.sdk,my.env.var.detector")
 }
 
 func ExampleDetector_envVar() {

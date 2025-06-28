@@ -27,11 +27,11 @@ func (keyEncoder) Encode(iterator attribute.Iterator) string {
 	var b strings.Builder
 
 	iterator.Next()
-	b.WriteString(string(iterator.Attribute().Key))
+	_, _ = b.WriteString(string(iterator.Attribute().Key))
 
 	for iterator.Next() {
-		b.WriteRune(' ')
-		b.WriteString(string(iterator.Attribute().Key))
+		_, _ = b.WriteRune(' ')
+		_, _ = b.WriteString(string(iterator.Attribute().Key))
 	}
 	return b.String()
 }
