@@ -66,12 +66,12 @@ func TestRegisterDuplicate(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	ids := make([]string, 0, len(registry))
+	ids := make([]ID, 0, len(registry))
 	for id := range registry {
-		ids = append(ids, string(id))
+		ids = append(ids, id)
 	}
 
-	detector, err := Parse(ids...)
+	detector, err := Detector(ids...)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -87,7 +87,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestParseUnknown(t *testing.T) {
-	_, err := Parse("unknown")
+	_, err := Detector(ID("unknown"))
 	if !errors.Is(err, ErrUnknownDetector) {
 		t.Errorf("expected ErrUnknownDetector, got %v", err)
 	}
