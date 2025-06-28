@@ -171,6 +171,12 @@ func NewID(val string) ID { return ID{val: val} }
 // String returns the string representation of the ID.
 func (id ID) String() string { return id.val }
 
+// UnmarshalText unmarshals data into the ID.
+func (id *ID) UnmarshalText(text []byte) error {
+	id.val = string(text)
+	return nil
+}
+
 // Register registers a new resource detector function with the given ID.
 func Register(id ID, fn func() resource.Detector) {
 	registryMu.Lock()
@@ -181,7 +187,7 @@ func Register(id ID, fn func() resource.Detector) {
 	registry[id] = fn
 }
 
-// Registered returns a sorted slice of all registered resource detector IDs.t st
+// Registered returns a sorted slice of all registered resource detector IDs.
 func Registered() []ID {
 	registryMu.Lock()
 	defer registryMu.Unlock()
