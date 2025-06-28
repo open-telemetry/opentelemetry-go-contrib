@@ -28,15 +28,8 @@ func (d *testDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	return resource.NewWithAttributes(d.schemaURL, d.attr...), d.err
 }
 
-func TestNewID(t *testing.T) {
-	id := NewID("test")
-	if id.String() != "test" {
-		t.Errorf("expected 'test', got '%s'", id.String())
-	}
-}
-
 func TestRegisterAndDetector(t *testing.T) {
-	id := NewID("custom")
+	id := ID("custom")
 	Register(id, testFactory())
 
 	detector, err := Detector(id)
@@ -61,7 +54,7 @@ func TestRegisterAndDetector(t *testing.T) {
 }
 
 func TestRegisterDuplicate(t *testing.T) {
-	id := NewID("duplicate")
+	id := ID("duplicate")
 	Register(id, testFactory())
 
 	defer func() {
@@ -75,7 +68,7 @@ func TestRegisterDuplicate(t *testing.T) {
 func TestParse(t *testing.T) {
 	ids := make([]string, 0, len(registry))
 	for id := range registry {
-		ids = append(ids, id.String())
+		ids = append(ids, string(id))
 	}
 
 	detector, err := Parse(ids...)

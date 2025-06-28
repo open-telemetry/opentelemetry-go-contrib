@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	id := autodetect.NewID("my.cfg.detector")
+	id := autodetect.ID("my.cfg.detector")
 	autodetect.Register(id, func() resource.Detector {
 		return MyDetector{}
 	})

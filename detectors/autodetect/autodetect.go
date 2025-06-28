@@ -26,59 +26,59 @@ var (
 	// IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
 	// attributes on Amazon Web Services (AWS) EC2 instances (see
 	// ec2.NewResourceDetector for details).
-	IDAWSEC2 = ID{"aws.ec2"}
+	IDAWSEC2 = ID("aws.ec2")
 	// IDAWSECS is the ID for the AWS ECS detector that detects resource
 	// attributes on Amazon Web Services (AWS) ECS clusters (see
 	// ecs.NewResourceDetector for details).
-	IDAWSECS = ID{"aws.ecs"}
+	IDAWSECS = ID("aws.ecs")
 	// IDAWSEKS is the ID for the AWS EKS detector that detects resource
 	// attributes on Amazon Web Services (AWS) EKS clusters (see
 	// eks.NewResourceDetector for details).
-	IDAWSEKS = ID{"aws.eks"}
+	IDAWSEKS = ID("aws.eks")
 	// IDAWSLambda is the ID for the AWS Lambda detector that detects resource
 	// attributes on Amazon Web Services (AWS) Lambda functions (see
 	// lambda.NewResourceDetector for details).
-	IDAWSLambda = ID{"aws.lambda"}
+	IDAWSLambda = ID("aws.lambda")
 	// IDAzureVM is the ID for the Azure VM detector that detects resource
 	// attributes on Microsoft Azure virtual machines (see azurevm.New for
 	// details).
-	IDAzureVM = ID{"azure.vm"}
+	IDAzureVM = ID("azure.vm")
 	// IDGCP is the ID for the GCP detector that detects resource attributes on
 	// Google Cloud Platform (GCP) environments (see gcp.NewDetector for
 	// details).
-	IDGCP = ID{"gcp"}
+	IDGCP = ID("gcp")
 	// IDHost is the ID for the host detector. This detector detects the
 	// "host.name" attribute from the os.Hostname function.
-	IDHost = ID{"host"}
+	IDHost = ID("host")
 	// IDHostID is the ID for the host ID detector. This detector detects the
 	// "host.id" attribute, which is a unique identifier for the host (e.g.,
 	// machine-id, UUID).
-	IDHostID = ID{"host.id"}
+	IDHostID = ID("host.id")
 	// IDTelemetrySDK is the ID for the telemetry SDK detector. This detector
 	// detects the "telemetry.sdk.name", "telemetry.sdk.language", and
 	// "telemetry.sdk.version" attributes, which provide information about the
 	// SDK being used.
-	IDTelemetrySDK = ID{"telemetry.sdk"}
+	IDTelemetrySDK = ID("telemetry.sdk")
 	// IDOSType is the ID for the OS type detector. This detector detects the
 	// "os.type" attribute, which indicates the type of operating system (e.g.,
 	// "linux", "windows", "darwin").
-	IDOSType = ID{"os.type"}
+	IDOSType = ID("os.type")
 	// IDOSDescription is the ID for the OS description detector. This detector
 	// detects the "os.description" attribute, which provides a human-readable
 	// description of the operating system.
-	IDOSDescription = ID{"os.description"}
+	IDOSDescription = ID("os.description")
 	// IDProcessPID is the ID for the process PID detector. This detector
 	// detects the "process.pid" attribute, which is the process ID of the
 	// current process.
-	IDProcessPID = ID{"process.pid"}
+	IDProcessPID = ID("process.pid")
 	// IDProcessExecutableName is the ID for the process executable name
 	// detector. This detector detects the "process.executable.name" attribute,
 	// which is the name of the executable file for the current process.
-	IDProcessExecutableName = ID{"process.executable.name"}
+	IDProcessExecutableName = ID("process.executable.name")
 	// IDProcessExecutablePath is the ID for the process executable path
 	// detector. This detector detects the "process.executable.path" attribute,
 	// which is the full path to the executable file for the current process.
-	IDProcessExecutablePath = ID{"process.executable.path"}
+	IDProcessExecutablePath = ID("process.executable.path")
 	// IDProcessCommandArgs is the ID for the process command arguments
 	// detector. This detector detects the "process.command.args" attribute,
 	// which is the command line arguments used to start the current process.
@@ -86,33 +86,33 @@ var (
 	// Warning! This detector will include process command line arguments. If
 	// these contain sensitive information it will be included in the exported
 	// resource.
-	IDProcessCommandArgs = ID{"process.command.args"}
+	IDProcessCommandArgs = ID("process.command.args")
 	// IDProcessOwner is the ID for the process owner detector. This detector
 	// detects the "process.owner" attribute, which is the user who owns the
 	// current process.
-	IDProcessOwner = ID{"process.owner"}
+	IDProcessOwner = ID("process.owner")
 	// IDProcessRuntimeName is the ID for the process runtime name detector.
 	// This detector detects the "process.runtime.name" attribute, which is the
 	// name of the runtime environment for the current process (e.g., "go",
 	// "python", "java").
-	IDProcessRuntimeName = ID{"process.runtime.name"}
+	IDProcessRuntimeName = ID("process.runtime.name")
 	// IDProcessRuntimeVersion is the ID for the process runtime version
 	// detector. This detector detects the "process.runtime.version" attribute,
 	// which is the version of the runtime environment for the current process
 	// (e.g., "1.16.3", "3.8.5").
-	IDProcessRuntimeVersion = ID{"process.runtime.version"}
+	IDProcessRuntimeVersion = ID("process.runtime.version")
 	// IDProcessRuntimeDescription is the ID for the process runtime
 	// description detector. This detector detects the
 	// "process.runtime.description" attribute, which provides an additional
 	// description of the runtime environment for the current process (e.g.,
 	// "Go runtime version 1.16.3", "Python 3.8.5").
-	IDProcessRuntimeDescription = ID{"process.runtime.description"}
+	IDProcessRuntimeDescription = ID("process.runtime.description")
 	// IDContainer is the ID for the container detector. This detector detects
 	// the "container.id" attribute, which is a unique identifier for the
 	// container in which the process is running. This is useful for
 	// identifying the container in which the process is running, especially in
 	// containerized environments like Kubernetes or Docker.
-	IDContainer = ID{"container"}
+	IDContainer = ID("container")
 )
 
 var (
@@ -159,30 +159,14 @@ var (
 )
 
 // ID represents the unique identifier of a resource detector.
-type ID struct {
-	// Do not define ID as a string alias. We do not want malicious code to
-	// be able to change the value of an ID var to something else.
-	val string
-}
-
-// NewID creates a new ID with the given value.
-func NewID(val string) ID { return ID{val: val} }
-
-// String returns the string representation of the ID.
-func (id ID) String() string { return id.val }
-
-// UnmarshalText unmarshals data into the ID.
-func (id *ID) UnmarshalText(text []byte) error {
-	id.val = string(text)
-	return nil
-}
+type ID string
 
 // Register registers a new resource detector function with the given ID.
 func Register(id ID, fn func() resource.Detector) {
 	registryMu.Lock()
 	defer registryMu.Unlock()
 	if _, exists := registry[id]; exists {
-		panic("detector already registered: " + id.String())
+		panic("detector already registered: " + id)
 	}
 	registry[id] = fn
 }
@@ -197,7 +181,7 @@ func Registered() []ID {
 	}
 
 	sort.SliceStable(out, func(i, j int) bool {
-		return out[i].String() < out[j].String()
+		return out[i] < out[j]
 	})
 	return out
 }
@@ -352,7 +336,7 @@ func Parse(ids ...string) (resource.Detector, error) {
 		err       error
 	)
 	for _, id := range ids {
-		detectorID := NewID(id)
+		detectorID := ID(id)
 		fn, exists := registry[detectorID]
 		if !exists {
 			e := fmt.Errorf("%w: %s", ErrUnknownDetector, detectorID)
