@@ -1,0 +1,51 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package autodetect_test
+
+import (
+	"context"
+	"fmt"
+	"os"
+	"strings"
+
+	"go.opentelemetry.io/contrib/detectors/autodetect"
+	"go.opentelemetry.io/otel/sdk/resource"
+)
+
+// This environment variable is expected to be a comma-separated list of
+// detectors the user wants for the purpose of the example. It can take any
+// form a user want to parse
+const envVar = "RESOURCE_DETECTORS"
+
+func init() {
+	id := autodetect.NewID("my.env.var.detector")
+	autodetect.Register(id, func() resource.Detector {
+		return MyDetector{}
+	})
+
+	os.Setenv(envVar, "host,telemetry.sdk,my.env.var.detector")
+}
+
+func ExampleParse() {
+	// This example shows how to parse resource.Detectors from an environment
+	// variable.
+
+	detectors := strings.Split(os.Getenv(envVar), ",")
+
+	detector, err := autodetect.Parse(detectors...)
+	if err != nil {
+		// Handle the error if parsing fails.
+		panic(err)
+	}
+
+	// Use the detector as needed.
+
+	res, err := detector.Detect(context.Background())
+	if err != nil {
+		panic(err)
+	}
+	fmt.Print(enc.Encode(res.Iter()))
+	// Output:
+	//   host.name my.key telemetry.sdk.language telemetry.sdk.name telemetry.sdk.version
+}
