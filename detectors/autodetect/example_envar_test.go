@@ -19,7 +19,7 @@ import (
 const envVar = "RESOURCE_DETECTORS"
 
 func init() {
-	id := autodetect.NewID("my.env.var.detector")
+	id := autodetect.ID("my.env.var.detector")
 	autodetect.Register(id, func() resource.Detector {
 		return MyDetector{}
 	})
