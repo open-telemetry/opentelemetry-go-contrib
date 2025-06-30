@@ -119,14 +119,14 @@ You can find out how to add component to the registry [here](https://github.com/
 - [Sam Xie](https://github.com/XSAM), Cisco/AppDynamics
 - [Tyler Yahn](https://github.com/MrAlias), Splunk
 
-For more information about the maintainer role, see the [community repository](https://github.com/open-telemetry/community/blob/main/community-membership.md#maintainer).
+For more information about the maintainer role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#maintainer).
 
 ### Triagers
 
 - [Alex Kats](https://github.com/akats7), Capital One
 - [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
 
-For more information about the triager role, see the [community repository](https://github.com/open-telemetry/community/blob/main/community-membership.md#triagers).
+For more information about the triager role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#triager).
 
 ### Emeritus
 

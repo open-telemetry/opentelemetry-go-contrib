@@ -8,14 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.37.0/0.62.0/0.31.0/0.17.0/0.12.0/0.10.0/0.9.0] - 2025-06-25
+
 ### Added
 
 - Add the `WithPublicEndpoint` and `WithPublicEndpointFn` options to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7407)
 - Add the unit `ns` to deprecated runtime metrics `process.runtime.go.gc.pause_total_ns` and `process.runtime.go.gc.pause_ns` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#7490)
-
-### Removed
-
-- The deprecated `StreamServerInterceptor` function from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed. (#7362)
 
 ### Changed
 
@@ -74,13 +75,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix EKS detector erroring outside of Kubernetes. (#7483)
+- Fix EKS detector erroring outside of Kubernetes in `go.opentelemetry.io/contrib/detectors/aws/eks`. (#7483)
 - Fix data race when writing log entries with `context.Context` fields in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7368)
 - Fix nil pointer dereference when `ClientTracer` did not have a span in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#7464)
 - Record all non-failure metrics on transport round trip errors in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#7146)
 
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
+### Removed
+
+- The deprecated `StreamServerInterceptor` function from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed. (#7362)
 
 ## [1.36.0/0.61.0/0.30.0/0.16.0/0.11.0/0.9.0/0.8.0] - 2025-05-21
 
@@ -145,9 +147,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
-- Cleaned up indentations under `Unreleased/Fixed` of `./CHANGELOG.md`. (#7163)
-- Removed a duplicate instance of the `Changed` subheader under `1.18.0/0.43.0/0.12.0` in `./CHANGELOG.md`. (#7163)
-- Check for TLS related options to be set before creating TLS config `go.opentelemetry.io/contrib/otelconf`. (#6984)
+- Check for TLS related options to be set before creating TLS config in `go.opentelemetry.io/contrib/otelconf`. (#6984)
 - Fixed handling of the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7215)
 - Support mixed categories for `OTEL_SEMCONV_STABILITY_OPT_IN` opt-in in the following packages. (#7246)
   - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`.
@@ -1457,7 +1457,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.36.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.37.0...HEAD
+[1.37.0/0.62.0/0.31.0/0.17.0/0.12.0/0.10.0/0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.37.0
 [1.36.0/0.61.0/0.30.0/0.16.0/0.11.0/0.9.0/0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.36.0
 [1.35.0/0.60.0/0.29.0/0.15.0/0.10.0/0.8.0/0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.35.0
 [1.34.0/0.59.0/0.28.0/0.14.0/0.9.0/0.7.0/0.6.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.34.0
