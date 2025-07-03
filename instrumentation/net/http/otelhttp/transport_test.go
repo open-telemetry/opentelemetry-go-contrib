@@ -260,7 +260,7 @@ func TestWrappedBodyRead(t *testing.T) {
 	s := new(span)
 	called := false
 	record := func(numBytes int64) { called = true }
-	wb := newWrappedBody(s, record, readCloser{})
+	wb := newWrappedBody(s, record, readCloser{}, false)
 	n, err := wb.Read([]byte{})
 	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
 	assert.NoError(t, err)
@@ -276,7 +276,7 @@ func TestWrappedBodyReadEOFError(t *testing.T) {
 		called = true
 		numRecorded = numBytes
 	}
-	wb := newWrappedBody(s, record, readCloser{readErr: io.EOF})
+	wb := newWrappedBody(s, record, readCloser{readErr: io.EOF}, false)
 	n, err := wb.Read([]byte{})
 	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
 	assert.Equal(t, io.EOF, err)
@@ -290,7 +290,7 @@ func TestWrappedBodyReadError(t *testing.T) {
 	called := false
 	record := func(int64) { called = true }
 	expectedErr := errors.New("test")
-	wb := newWrappedBody(s, record, readCloser{readErr: expectedErr})
+	wb := newWrappedBody(s, record, readCloser{readErr: expectedErr}, false)
 	n, err := wb.Read([]byte{})
 	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
 	assert.Equal(t, expectedErr, err)
@@ -302,7 +302,7 @@ func TestWrappedBodyClose(t *testing.T) {
 	s := new(span)
 	called := false
 	record := func(int64) { called = true }
-	wb := newWrappedBody(s, record, readCloser{})
+	wb := newWrappedBody(s, record, readCloser{}, false)
 	assert.NoError(t, wb.Close())
 	s.assert(t, true, nil, codes.Unset, "")
 	assert.True(t, called, "record should have been called")
@@ -311,7 +311,7 @@ func TestWrappedBodyClose(t *testing.T) {
 func TestWrappedBodyClosePanic(t *testing.T) {
 	s := new(span)
 	var body io.ReadCloser
-	wb := newWrappedBody(s, func(n int64) {}, body)
+	wb := newWrappedBody(s, func(n int64) {}, body, false)
 	assert.NotPanics(t, func() { wb.Close() }, "nil body should not panic on close")
 }
 
@@ -320,7 +320,7 @@ func TestWrappedBodyCloseError(t *testing.T) {
 	called := false
 	record := func(int64) { called = true }
 	expectedErr := errors.New("test")
-	wb := newWrappedBody(s, record, readCloser{closeErr: expectedErr})
+	wb := newWrappedBody(s, record, readCloser{closeErr: expectedErr}, false)
 	assert.Equal(t, expectedErr, wb.Close())
 	s.assert(t, true, nil, codes.Unset, "")
 	assert.True(t, called, "record should have been called")
@@ -339,12 +339,12 @@ func (rwc readWriteCloser) Write([]byte) (int, error) {
 }
 
 func TestNewWrappedBodyReadWriteCloserImplementation(t *testing.T) {
-	wb := newWrappedBody(nil, func(n int64) {}, readWriteCloser{})
+	wb := newWrappedBody(nil, func(n int64) {}, readWriteCloser{}, false)
 	assert.Implements(t, (*io.ReadWriteCloser)(nil), wb)
 }
 
 func TestNewWrappedBodyReadCloserImplementation(t *testing.T) {
-	wb := newWrappedBody(nil, func(n int64) {}, readCloser{})
+	wb := newWrappedBody(nil, func(n int64) {}, readCloser{}, false)
 	assert.Implements(t, (*io.ReadCloser)(nil), wb)
 
 	_, ok := wb.(io.ReadWriteCloser)
@@ -355,7 +355,7 @@ func TestWrappedBodyWrite(t *testing.T) {
 	s := new(span)
 	var rwc io.ReadWriteCloser
 	assert.NotPanics(t, func() {
-		rwc = newWrappedBody(s, func(n int64) {}, readWriteCloser{}).(io.ReadWriteCloser)
+		rwc = newWrappedBody(s, func(n int64) {}, readWriteCloser{}, false).(io.ReadWriteCloser)
 	})
 
 	n, err := rwc.Write([]byte{})
@@ -373,7 +373,7 @@ func TestWrappedBodyWriteError(t *testing.T) {
 			func(n int64) {},
 			readWriteCloser{
 				writeErr: expectedErr,
-			}).(io.ReadWriteCloser)
+			}, false).(io.ReadWriteCloser)
 	})
 	n, err := rwc.Write([]byte{})
 	assert.Equal(t, writeSize, n, "wrappedBody returned wrong bytes")

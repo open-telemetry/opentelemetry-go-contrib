@@ -152,15 +152,16 @@ const (
 	WriteEvents
 )
 
-// WithMessageEvents configures the Handler to record the specified events
+// WithMessageEvents configures the Handler or Transport to record the specified events
 // (span.AddEvent) on spans. By default only summary attributes are added at the
 // end of the request.
 //
 // Valid events are:
 //   - ReadEvents: Record the number of bytes read after every http.Request.Body.Read
-//     using the ReadBytesKey
-//   - WriteEvents: Record the number of bytes written after every http.ResponeWriter.Write
-//     using the WriteBytesKey
+//     using the ReadBytesKey for Handler. For Transport, it will record the number of
+//     bytes read after every http.Response.Body.Read.
+//   - WriteEvents: Record the number of bytes written after every http.ResponseWriter.Write
+//     using the WriteBytesKey for Handler. Ignored for Transport.
 func WithMessageEvents(events ...event) Option {
 	return optionFunc(func(c *config) {
 		for _, e := range events {
