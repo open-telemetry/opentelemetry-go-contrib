@@ -1398,6 +1398,109 @@ func TestPrometheusIPv6(t *testing.T) {
 	}
 }
 
+func TestPrometheusReaderErrorCases(t *testing.T) {
+	t.Run("missing host", func(t *testing.T) {
+		port := 8080
+		cfg := Prometheus{Port: &port}
+		reader, err := prometheusReader(context.Background(), &cfg)
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "host must be specified")
+		assert.Nil(t, reader)
+	})
+
+	t.Run("missing port", func(t *testing.T) {
+		host := "localhost"
+		cfg := Prometheus{Host: &host}
+		reader, err := prometheusReader(context.Background(), &cfg)
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "port must be specified")
+		assert.Nil(t, reader)
+	})
+
+	t.Run("invalid port", func(t *testing.T) {
+		host := "localhost"
+		port := 99999 // invalid port
+		cfg := Prometheus{
+			Host:                       &host,
+			Port:                       &port,
+			WithoutScopeInfo:           ptr(true),
+			WithoutTypeSuffix:          ptr(true),
+			WithoutUnits:               ptr(true),
+			WithResourceConstantLabels: &IncludeExclude{},
+		}
+		reader, err := prometheusReader(context.Background(), &cfg)
+		assert.Error(t, err)
+		assert.ErrorContains(t, err, "binding address")
+		assert.Nil(t, reader)
+	})
+}
+
+func TestPrometheusReaderHostParsing(t *testing.T) {
+	tests := []struct {
+		name string
+		host string
+	}{
+		{
+			name: "regular host",
+			host: "localhost",
+		},
+		{
+			name: "IPv4",
+			host: "127.0.0.1",
+		},
+		{
+			name: "single char",
+			host: "a",
+		},
+		{
+			name: "IPv6 with brackets",
+			host: "[::1]",
+		},
+		{
+			name: "IPv6 without brackets",
+			host: "::1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			port := 0
+			cfg := Prometheus{
+				Host:                       &tt.host,
+				Port:                       &port,
+				WithoutScopeInfo:           ptr(true),
+				WithoutTypeSuffix:          ptr(true),
+				WithoutUnits:               ptr(true),
+				WithResourceConstantLabels: &IncludeExclude{},
+			}
+
+			reader, err := prometheusReader(context.Background(), &cfg)
+			if err != nil {
+				return
+			}
+
+			t.Cleanup(func() {
+				require.NoError(t, reader.Shutdown(context.Background()))
+			})
+
+			server := reader.(readerWithServer).server
+			assert.NotEmpty(t, server.Addr)
+
+			expectedHost := tt.host
+			if len(tt.host) > 2 && tt.host[0] == '[' && tt.host[len(tt.host)-1] == ']' {
+				expectedHost = tt.host[1 : len(tt.host)-1]
+			}
+
+			if expectedHost == "localhost" {
+				assert.True(t, strings.Contains(server.Addr, "localhost") || strings.Contains(server.Addr, "127.0.0.1"),
+					"server address %s should contain localhost or 127.0.0.1", server.Addr)
+			} else {
+				assert.Contains(t, server.Addr, expectedHost)
+			}
+		})
+	}
+}
+
 func Test_otlpGRPCMetricExporter(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		// TODO (#7446): Fix the flakiness on Windows.
