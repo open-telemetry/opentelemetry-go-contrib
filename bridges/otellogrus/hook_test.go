@@ -167,7 +167,11 @@ func TestHookFire(t *testing.T) {
 
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityFatal4, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityFatal4,
+						SeverityText: "panic",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -178,7 +182,12 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityFatal4, Body: log.StringValue(""), Timestamp: now},
+					{
+						Severity:     log.SeverityFatal4,
+						SeverityText: "panic",
+						Body:         log.StringValue(""),
+						Timestamp:    now,
+					},
 				},
 			},
 		},
@@ -189,7 +198,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityFatal4, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityFatal4,
+						SeverityText: "panic",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -200,7 +213,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityFatal, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityFatal,
+						SeverityText: "fatal",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -211,7 +228,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityError, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityError,
+						SeverityText: "error",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -222,7 +243,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityWarn, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityWarn,
+						SeverityText: "warning",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -233,7 +258,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityInfo, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityInfo,
+						SeverityText: "info",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -244,7 +273,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityDebug, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityDebug,
+						SeverityText: "debug",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -255,7 +288,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityTrace, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityTrace,
+						SeverityText: "trace",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -269,7 +306,8 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
-						Severity: log.SeverityFatal4,
+						Severity:     log.SeverityFatal4,
+						SeverityText: "panic",
 						Attributes: []log.KeyValue{
 							log.String("hello", "world"),
 						},
@@ -288,7 +326,8 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
-						Severity: log.SeverityFatal4,
+						Severity:     log.SeverityFatal4,
+						SeverityText: "panic",
 						Attributes: []log.KeyValue{
 							log.Empty("nil_pointer"),
 						},
