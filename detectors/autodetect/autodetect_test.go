@@ -46,9 +46,7 @@ func TestRegisterAndDetector(t *testing.T) {
 		t.Fatalf("expected 1 detector, got %d", len(c.detectors))
 	}
 
-	switch c.detectors[0].(type) {
-	case *testDetector:
-	default:
+	if _, ok := c.detectors[0].(*testDetector); !ok {
 		t.Errorf("expected testDetector, got %T", c.detectors[0])
 	}
 }
