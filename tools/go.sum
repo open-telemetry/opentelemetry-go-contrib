@@ -10,8 +10,8 @@ github.com/4meepo/tagalign v1.4.2 h1:0hcLHPGMjDyM1gHG58cS73aQF8J4TdVR96TZViorO9E
 github.com/4meepo/tagalign v1.4.2/go.mod h1:+p4aMyFM+ra7nb41CnFG6aSDXqRxU/w1VQqScKqDARI=
 github.com/Abirdcfly/dupword v0.1.6 h1:qeL6u0442RPRe3mcaLcbaCi2/Y/hOcdtw6DE9odjz9c=
 github.com/Abirdcfly/dupword v0.1.6/go.mod h1:s+BFMuL/I4YSiFv29snqyjwzDp4b65W2Kvy+PKzZ6cw=
-github.com/AlwxSin/noinlineerr v1.0.3 h1:9b5edChzzwX30BuBci13LHVZHF5q7hW9qtrs+wJdDog=
-github.com/AlwxSin/noinlineerr v1.0.3/go.mod h1:+QgkkoYrMH7RHvcdxdlI7vYYEdgeoFOVjU9sUhw/rQc=
+github.com/AlwxSin/noinlineerr v1.0.4 h1:+WeO27L9bora38Quw+we2Tt0tr/UKJLP5bOMxwEeO5Y=
+github.com/AlwxSin/noinlineerr v1.0.4/go.mod h1:+QgkkoYrMH7RHvcdxdlI7vYYEdgeoFOVjU9sUhw/rQc=
 github.com/Antonboom/errname v1.1.0 h1:A+ucvdpMwlo/myWrkHEUEBWc/xuXdud23S8tmTb/oAE=
 github.com/Antonboom/errname v1.1.0/go.mod h1:O1NMrzgUcVBGIfi3xlVuvX8Q/VP/73sseCaAppfjqZw=
 github.com/Antonboom/nilnil v1.1.0 h1:jGxJxjgYS3VUUtOTNk8Z1icwT5ESpLH/426fjmQG+ng=
@@ -514,8 +514,8 @@ go.augendre.info/arangolint v0.2.0 h1:2NP/XudpPmfBhQKX4rMk+zDYIj//qbt4hfZmSSTcpj
 go.augendre.info/arangolint v0.2.0/go.mod h1:Vx4KSJwu48tkE+8uxuf0cbBnAPgnt8O1KWiT7bljq7w=
 go.augendre.info/fatcontext v0.8.0 h1:2dfk6CQbDGeu1YocF59Za5Pia7ULeAM6friJ3LP7lmk=
 go.augendre.info/fatcontext v0.8.0/go.mod h1:oVJfMgwngMsHO+KB2MdgzcO+RvtNdiCEOlWvSFtax/s=
-go.opentelemetry.io/build-tools v0.23.1 h1:Md0aRvwGrRaIbW3baxFj7oipSY2HfrY0SiT/Iq1gzLI=
-go.opentelemetry.io/build-tools v0.23.1/go.mod h1:ORnHNf2mImNjM63JUoVZ5YJhs+HAvQ6aAtE++KQF9Kc=
+go.opentelemetry.io/build-tools v0.24.0 h1:QSJT16EVjg76YaYKCqNXZq3cenfGpbX5w1BY13M1D6Q=
+go.opentelemetry.io/build-tools v0.24.0/go.mod h1:F07+v9sUChamQK4BY+lTZqDna3YoFy2hcYRnAygO7rY=
 go.opentelemetry.io/build-tools/crosslink v0.23.1 h1:cNdO85DlDcHETEVmoN4A0hE5X89rvkxMejakvlbu+eU=
 go.opentelemetry.io/build-tools/crosslink v0.23.1/go.mod h1:yC5WlPnCa44cTM5e0PtRGpcbgU9lPNgJ6msyTE+dt+0=
 go.opentelemetry.io/build-tools/gotmpl v0.23.1 h1:iA+oEJVhig4jBfrAYT9AuSxpbx4lYxwHPaQzSS3/txY=
