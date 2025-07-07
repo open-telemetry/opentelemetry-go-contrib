@@ -128,32 +128,49 @@ func TestSDKIntegration(t *testing.T) {
 	router.HandleFunc("/book/{title}", ok)
 
 	tests := []struct {
-		name       string
-		path       string
-		reqFunc    func(r *http.Request)
-		wantMethod string
-		wantRoute  string
+		name         string
+		method       string
+		path         string
+		reqFunc      func(r *http.Request)
+		wantSpanName string
+		wantMethod   string
+		wantRoute    string
 	}{
 		{
-			name:       "user route",
-			path:       "/user/123",
-			reqFunc:    nil,
-			wantMethod: http.MethodGet,
-			wantRoute:  "/user/{id:[0-9]+}",
+			name:         "user route",
+			method:       http.MethodGet,
+			path:         "/user/123",
+			reqFunc:      nil,
+			wantSpanName: "GET /user/{id:[0-9]+}",
+			wantMethod:   http.MethodGet,
+			wantRoute:    "/user/{id:[0-9]+}",
 		},
 		{
-			name:       "book route",
-			path:       "/book/foo",
-			reqFunc:    nil,
-			wantMethod: http.MethodGet,
-			wantRoute:  "/book/{title}",
+			name:         "POST book route",
+			method:       http.MethodPost,
+			path:         "/book/foo",
+			reqFunc:      nil,
+			wantSpanName: "POST /book/{title}",
+			wantMethod:   http.MethodPost,
+			wantRoute:    "/book/{title}",
 		},
 		{
-			name:       "book route with custom pattern",
-			path:       "/book/bar",
-			reqFunc:    func(r *http.Request) { r.Pattern = "/book/{custom}" },
-			wantMethod: http.MethodGet,
-			wantRoute:  "/book/{custom}",
+			name:         "book route with custom pattern",
+			method:       http.MethodGet,
+			path:         "/book/bar",
+			reqFunc:      func(r *http.Request) { r.Pattern = "/book/{custom}" },
+			wantSpanName: "GET /book/{custom}",
+			wantMethod:   http.MethodGet,
+			wantRoute:    "/book/{custom}",
+		},
+		{
+			name:         "Invalid HTTP Method",
+			method:       "INVALID",
+			path:         "/book/bar",
+			reqFunc:      func(r *http.Request) { r.Pattern = "/book/{custom}" },
+			wantSpanName: "HTTP /book/{custom}",
+			wantMethod:   http.MethodGet,
+			wantRoute:    "/book/{custom}",
 		},
 	}
 
@@ -161,7 +178,7 @@ func TestSDKIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer sr.Reset()
 
-			r := httptest.NewRequest("GET", tt.path, nil)
+			r := httptest.NewRequest(tt.method, tt.path, nil)
 			if tt.reqFunc != nil {
 				tt.reqFunc(r)
 			}
@@ -171,13 +188,12 @@ func TestSDKIntegration(t *testing.T) {
 			spans := sr.Ended()
 
 			require.Len(t, spans, 1)
-			assert.True(t, ensurePrefix(tt.wantMethod, spans[0].Name()))
 			assertSpan(t, sr.Ended()[0],
-				setDefaultName(tt.wantMethod, tt.wantRoute),
+				tt.wantSpanName,
 				trace.SpanKindServer,
 				attribute.String("server.address", "foobar"),
 				attribute.Int("http.response.status_code", http.StatusOK),
-				attribute.String("http.request.method", "GET"),
+				attribute.String("http.request.method", tt.wantMethod),
 				attribute.String("http.route", tt.wantRoute),
 			)
 		})
@@ -429,8 +445,8 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 	}
 }
 
-func containsAttributes(t *testing.T, attrSet attribute.Set, want []attribute.KeyValue) {
-	for _, att := range want {
+func containsAttributes(t *testing.T, attrSet attribute.Set, expected []attribute.KeyValue) {
+	for _, att := range expected {
 		actualValue, ok := attrSet.Value(att.Key)
 		assert.True(t, ok)
 		assert.Equal(t, att.Value.AsString(), actualValue.AsString())

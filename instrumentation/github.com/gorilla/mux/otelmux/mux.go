@@ -6,6 +6,7 @@ package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/felixge/httpsnoop"
@@ -88,7 +89,13 @@ type traceware struct {
 // defaultSpanNameFunc just reuses the route name as the span name.
 func defaultSpanNameFunc(routeName string, r *http.Request) string {
 	method := r.Method
-	if method == "" {
+	if !slices.Contains([]string{
+		http.MethodGet, http.MethodHead,
+		http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete,
+		http.MethodConnect, http.MethodOptions,
+		http.MethodTrace,
+	}, method) {
 		method = "HTTP"
 	}
 	return method + " " + routeName

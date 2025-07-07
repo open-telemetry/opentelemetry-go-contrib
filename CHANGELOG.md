@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add the unit `ns` to deprecated runtime metrics `process.runtime.go.gc.pause_total_ns` and `process.runtime.go.gc.pause_ns` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#7490)
-- HTTP method prefix added to span name for mux instrumentation. (#7551)
+- Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`(#7551)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
