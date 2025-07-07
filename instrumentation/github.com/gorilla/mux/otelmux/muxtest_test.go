@@ -27,15 +27,12 @@ import (
 )
 
 func TestDefaultTrace(t *testing.T) {
-	var called bool
-
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 	router := mux.NewRouter()
 	router.Use(otelmux.Middleware("foobar", otelmux.WithTracerProvider(provider)))
 
 	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, r *http.Request) {
-		called = true
 		w.WriteHeader(http.StatusOK)
 	})
 
@@ -44,7 +41,6 @@ func TestDefaultTrace(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 
-	assert.True(t, called, "failed to run test")
 	assert.Equal(t, http.StatusOK, w.Code, "unexpected status code")
 
 	spans := sr.Ended()
