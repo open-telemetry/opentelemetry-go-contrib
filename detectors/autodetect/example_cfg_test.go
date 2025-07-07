@@ -32,7 +32,7 @@ type Config struct {
 }
 
 func ExampleDetector() {
-	// This example shows how to parse resource.Detectors from a user define
+	// This example shows how to parse resource.Detectors from a user defined
 	// configuration file.
 
 	cfg := Config{}
