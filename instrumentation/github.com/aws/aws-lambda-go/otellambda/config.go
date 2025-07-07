@@ -6,6 +6,7 @@ package otellambda // import "go.opentelemetry.io/contrib/instrumentation/github
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -35,8 +36,16 @@ var _ Flusher = &noopFlusher{}
 // trace information is instead stored in the Lambda environment.
 type EventToCarrier func(eventJSON []byte) propagation.TextMapCarrier
 
+// EventAttributesExtractor defines a function that extracts attributes
+// from the event JSON to be added to the span created by the instrumentation.
+type EventAttrExtractor func(eventJSON []byte) []attribute.KeyValue
+
 func emptyEventToCarrier([]byte) propagation.TextMapCarrier {
 	return propagation.HeaderCarrier{}
+}
+
+func emptyEventAttrExtractor([]byte) []attribute.KeyValue {
+	return []attribute.KeyValue{}
 }
 
 // Compile time check our emptyEventToCarrier implements EventToCarrier.
@@ -80,6 +89,12 @@ type config struct {
 	// The default value of Propagator the global otel Propagator
 	// returned by otel.GetTextMapPropagator()
 	Propagator propagation.TextMapPropagator
+
+	// CustomAttributes is a function that returns custom attributes
+	// to be added to the span created by the instrumentation.
+	// The default value of CustomAttributes is nil, which means no custom attributes
+	// will be added to the span.
+	CustomAttributes EventAttrExtractor
 }
 
 // WithTracerProvider configures the TracerProvider used by the
@@ -112,5 +127,12 @@ func WithEventToCarrier(eventToCarrier EventToCarrier) Option {
 func WithPropagator(propagator propagation.TextMapPropagator) Option {
 	return optionFunc(func(c *config) {
 		c.Propagator = propagator
+	})
+}
+
+// WithCustomAttributes configures a function that returns custom attributes
+func WithCustomAttributes(eventAttrExtractor EventAttrExtractor) Option {
+	return optionFunc(func(c *config) {
+		c.CustomAttributes = eventAttrExtractor
 	})
 }
