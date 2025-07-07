@@ -21,6 +21,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the `WithPublicEndpoint` and `WithPublicEndpointFn` options to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7407)
 
+- Add the `WithCustomAttributes` option to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7556)
+
 ### Changed
 
 - `go.opentelemetry.io/contrib/instrumentation/runtime` now produces the new metrics by default. Set `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=true` environment variable to additionally produce the deprecated metrics. (#7418)
