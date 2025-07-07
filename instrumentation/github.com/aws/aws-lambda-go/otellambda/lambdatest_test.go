@@ -410,21 +410,21 @@ func TestWrapHandlerTracingWithMockPropagator(t *testing.T) {
 }
 
 func TestWrapHandlerTracingWithCustomAttributes(t *testing.T) {
-    setEnvVars(t)
-    tp, memExporter := initMockTracerProvider()
+	setEnvVars(t)
+	tp, memExporter := initMockTracerProvider()
 
-    // No flusher needed as SimpleSpanProcessor is synchronous
-    wrapped := otellambda.WrapHandler(emptyHandler{},
-        otellambda.WithTracerProvider(tp),
-        otellambda.WithCustomAttributes(mockEventAttrExtractor),
-    )
+	// No flusher needed as SimpleSpanProcessor is synchronous
+	wrapped := otellambda.WrapHandler(emptyHandler{},
+		otellambda.WithTracerProvider(tp),
+		otellambda.WithCustomAttributes(mockEventAttrExtractor),
+	)
 
-    payload, _ := json.Marshal(mockPropagatorTestsEvent)
-    _, err := wrapped.Invoke(mockPropagatorTestsContext, payload)
-    assert.NoError(t, err)
+	payload, _ := json.Marshal(mockPropagatorTestsEvent)
+	_, err := wrapped.Invoke(mockPropagatorTestsContext, payload)
+	assert.NoError(t, err)
 
-    assert.Len(t, memExporter.GetSpans(), 1)
-    stub := memExporter.GetSpans()[0]
+	assert.Len(t, memExporter.GetSpans(), 1)
+	stub := memExporter.GetSpans()[0]
 	expectedAttr := attribute.KeyValue{Key: "mock.request.type", Value: attribute.StringValue(reflect.TypeOf(mockPropagatorTestsEvent).String())}
-    assert.Contains(t, stub.Attributes, expectedAttr, "custom attribute 'mock.request.type' with value 'otellambda_test.mockRequest' not found")
+	assert.Contains(t, stub.Attributes, expectedAttr, "custom attribute 'mock.request.type' with value 'otellambda_test.mockRequest' not found")
 }

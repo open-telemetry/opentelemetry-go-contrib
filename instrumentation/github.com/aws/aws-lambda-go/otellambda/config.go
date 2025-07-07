@@ -36,7 +36,7 @@ var _ Flusher = &noopFlusher{}
 // trace information is instead stored in the Lambda environment.
 type EventToCarrier func(eventJSON []byte) propagation.TextMapCarrier
 
-// EventAttributesExtractor defines a function that extracts attributes
+// EventAttrExtractor defines a function that extracts attributes
 // from the event JSON to be added to the span created by the instrumentation.
 type EventAttrExtractor func(eventJSON []byte) []attribute.KeyValue
 
@@ -130,7 +130,7 @@ func WithPropagator(propagator propagation.TextMapPropagator) Option {
 	})
 }
 
-// WithCustomAttributes configures a function that returns custom attributes
+// WithCustomAttributes configures a function that returns custom attributes.
 func WithCustomAttributes(eventAttrExtractor EventAttrExtractor) Option {
 	return optionFunc(func(c *config) {
 		c.CustomAttributes = eventAttrExtractor

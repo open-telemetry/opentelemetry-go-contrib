@@ -32,10 +32,10 @@ type instrumentor struct {
 
 func newInstrumentor(opts ...Option) instrumentor {
 	cfg := config{
-		TracerProvider: otel.GetTracerProvider(),
-		Flusher:        &noopFlusher{},
-		EventToCarrier: emptyEventToCarrier,
-		Propagator:     otel.GetTextMapPropagator(),
+		TracerProvider:   otel.GetTracerProvider(),
+		Flusher:          &noopFlusher{},
+		EventToCarrier:   emptyEventToCarrier,
+		Propagator:       otel.GetTextMapPropagator(),
 		CustomAttributes: emptyEventAttrExtractor,
 	}
 	for _, opt := range opts {
