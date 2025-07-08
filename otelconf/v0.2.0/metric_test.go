@@ -1156,3 +1156,145 @@ func TestPrometheusIPv6(t *testing.T) {
 		})
 	}
 }
+
+func TestPrometheusReaderErrorCases(t *testing.T) {
+	tests := []struct {
+		name   string
+		config *Prometheus
+		errMsg string
+	}{
+		{
+			name:   "missing host",
+			config: &Prometheus{Port: ptr(8080)},
+			errMsg: "host must be specified",
+		},
+		{
+			name:   "missing port",
+			config: &Prometheus{Host: ptr("localhost")},
+			errMsg: "port must be specified",
+		},
+		{
+			name: "invalid port",
+			config: &Prometheus{
+				Host:                       ptr("localhost"),
+				Port:                       ptr(99999), // invalid port
+				WithoutScopeInfo:           ptr(true),
+				WithoutTypeSuffix:          ptr(true),
+				WithoutUnits:               ptr(true),
+				WithResourceConstantLabels: &IncludeExclude{},
+			},
+			errMsg: "binding address",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader, err := prometheusReader(context.Background(), tt.config)
+			assert.Error(t, err)
+			assert.ErrorContains(t, err, tt.errMsg)
+			assert.Nil(t, reader)
+		})
+	}
+}
+
+func TestPrometheusReaderConfigurationOptions(t *testing.T) {
+	host := "localhost"
+	port := 0
+	cfg := &Prometheus{
+		Host:              &host,
+		Port:              &port,
+		WithoutScopeInfo:  ptr(true),
+		WithoutTypeSuffix: ptr(true),
+		WithoutUnits:      ptr(true),
+		WithResourceConstantLabels: &IncludeExclude{
+			Included: []string{"service.name"},
+			Excluded: []string{"host.name"},
+		},
+	}
+
+	reader, err := prometheusReader(context.Background(), cfg)
+	require.NoError(t, err)
+	require.NotNil(t, reader)
+
+	t.Cleanup(func() {
+		require.NoError(t, reader.Shutdown(context.Background()))
+	})
+
+	server := reader.(readerWithServer).server
+
+	addr := server.Addr
+	assert.True(t, strings.Contains(addr, "localhost") || strings.Contains(addr, "127.0.0.1"),
+		"server address %s should contain localhost or 127.0.0.1", addr)
+
+	resp, err := http.DefaultClient.Get("http://" + server.Addr + "/metrics")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestPrometheusReaderHostParsing(t *testing.T) {
+	tests := []struct {
+		name string
+		host string
+	}{
+		{
+			name: "regular host",
+			host: "localhost",
+		},
+		{
+			name: "IPv4",
+			host: "127.0.0.1",
+		},
+		{
+			name: "single char",
+			host: "a",
+		},
+		{
+			name: "IPv6 with brackets",
+			host: "[::1]",
+		},
+		{
+			name: "IPv6 without brackets",
+			host: "::1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			port := 0
+			cfg := Prometheus{
+				Host:                       &tt.host,
+				Port:                       &port,
+				WithoutScopeInfo:           ptr(true),
+				WithoutTypeSuffix:          ptr(true),
+				WithoutUnits:               ptr(true),
+				WithResourceConstantLabels: &IncludeExclude{},
+			}
+
+			reader, err := prometheusReader(context.Background(), &cfg)
+			if err != nil {
+				return
+			}
+
+			t.Cleanup(func() {
+				require.NoError(t, reader.Shutdown(context.Background()))
+			})
+
+			server := reader.(readerWithServer).server
+			assert.NotEmpty(t, server.Addr)
+
+			expectedHost := tt.host
+			if len(tt.host) > 2 && tt.host[0] == '[' && tt.host[len(tt.host)-1] == ']' {
+				expectedHost = tt.host[1 : len(tt.host)-1]
+			}
+
+			if expectedHost == "localhost" {
+				assert.True(t, strings.Contains(server.Addr, "localhost") || strings.Contains(server.Addr, "127.0.0.1"),
+					"server address %s should contain localhost or 127.0.0.1", server.Addr)
+			} else {
+				assert.Contains(t, server.Addr, expectedHost)
+			}
+		})
+	}
+}
