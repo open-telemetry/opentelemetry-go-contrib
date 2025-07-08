@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Set `SeverityText` field to logrus hook in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#7553)
 - Add the unit `ns` to deprecated runtime metrics `process.runtime.go.gc.pause_total_ns` and `process.runtime.go.gc.pause_ns` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#7490)
+- Add the `WithLoggerProviderOptions`, `WithMeterProviderOptions` and `WithTracerProviderOptions` options to `NewSDK` to allow passing custom options to providers in `go.opentelemetry.io/contrib/otelconf`. (#7552)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
