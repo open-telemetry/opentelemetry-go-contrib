@@ -25,9 +25,8 @@ func loggerProvider(cfg configOptions, res *resource.Resource) (log.LoggerProvid
 	if cfg.opentelemetryConfig.LoggerProvider == nil {
 		return noop.NewLoggerProvider(), noopShutdown, nil
 	}
-	opts := []sdklog.LoggerProviderOption{
-		sdklog.WithResource(res),
-	}
+	opts := append(cfg.loggerProviderOptions, sdklog.WithResource(res))
+
 	var errs []error
 	for _, processor := range cfg.opentelemetryConfig.LoggerProvider.Processors {
 		sp, err := logProcessor(cfg.ctx, processor)
