@@ -15,8 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
-	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -911,10 +910,6 @@ func TestSampler(t *testing.T) {
 }
 
 func Test_otlpGRPCTraceExporter(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// TODO (#7446): Fix the flakiness on Windows.
-		t.Skip("Test is flaky on Windows.")
-	}
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLP
@@ -1010,12 +1005,29 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			require.NoError(t, err)
 
 			// this is a workaround, as providing 127.0.0.1 resulted in an "invalid URI for request" error
-			tt.args.otlpConfig.Endpoint = ptr(strings.ReplaceAll(n.Addr().String(), "127.0.0.1", "localhost"))
+			//
+			// Always use "localhost:PORT" for the OTLP endpoint, regardless of what n.Addr().String() returns.
+			// This avoids issues with IPv6 addresses (e.g., "[::1]:PORT")
+			_, port, err := net.SplitHostPort(n.Addr().String())
+			require.NoError(t, err)
+			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
 
-			startGRPCTraceCollector(t, n, serverOpts)
+			ready := make(chan struct{})
+			wrappedListener := &notifyListener{
+				Listener: n,
+				ready:    ready,
+			}
+			startGRPCTraceCollector(t, wrappedListener, serverOpts)
+			// wait for server to be ready before client connects
+			select {
+			case <-wrappedListener.ready:
+				// continue
+			case <-time.After(3 * time.Second):
+				t.Fatal("server did not become ready in time")
+			}
 
 			exporter, err := otlpGRPCSpanExporter(tt.args.ctx, tt.args.otlpConfig)
 			require.NoError(t, err)
@@ -1039,6 +1051,22 @@ type grpcTraceCollector struct {
 }
 
 var _ v1.TraceServiceServer = (*grpcTraceCollector)(nil)
+
+// notifyListener wraps net.Listener to signal when the server is ready.
+type notifyListener struct {
+	net.Listener
+	once  sync.Once
+	ready chan struct{}
+}
+
+// implements the net.Listener.Accept method.
+func (l *notifyListener) Accept() (net.Conn, error) {
+	l.once.Do(func() {
+		// signal server is ready
+		close(l.ready)
+	})
+	return l.Listener.Accept()
+}
 
 // startGRPCTraceCollector returns a *grpcTraceCollector that is listening at the provided
 // endpoint.
