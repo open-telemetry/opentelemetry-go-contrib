@@ -4,6 +4,7 @@
 package otelconf
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -11,6 +12,7 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -98,6 +100,58 @@ func TestMeterProvider(t *testing.T) {
 		assert.Equal(t, tt.wantErr, err)
 		require.NoError(t, shutdown(context.Background()))
 	}
+}
+
+func TestMeterProviderOptions(t *testing.T) {
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		calls++
+	}))
+	defer srv.Close()
+
+	cfg := OpenTelemetryConfiguration{
+		MeterProvider: &MeterProvider{
+			Readers: []MetricReader{{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol: ptr("http/protobuf"),
+							Endpoint: ptr(srv.URL),
+							Insecure: ptr(true),
+						},
+					},
+				},
+			}},
+		},
+	}
+
+	var buf bytes.Buffer
+	stdoutmetricExporter, err := stdoutmetric.New(stdoutmetric.WithWriter(&buf))
+	require.NoError(t, err)
+
+	res := resource.NewSchemaless(attribute.String("foo", "bar"))
+	sdk, err := NewSDK(
+		WithOpenTelemetryConfiguration(cfg),
+		WithMeterProviderOptions(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutmetricExporter))),
+		WithMeterProviderOptions(sdkmetric.WithResource(res)),
+	)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, sdk.Shutdown(context.Background()))
+		// The exporter, which we passed in as an extra option to NewSDK,
+		// should be wired up to the provider in addition to the
+		// configuration-based OTLP exporter.
+		assert.NotZero(t, buf)
+		assert.Equal(t, 1, calls) // flushed on shutdown
+
+		// Options provided by WithMeterProviderOptions may be overridden
+		// by configuration, e.g. the resource is always defined via
+		// configuration.
+		assert.NotContains(t, buf.String(), "foo")
+	}()
+
+	counter, _ := sdk.MeterProvider().Meter("test").Int64Counter("counter")
+	counter.Add(context.Background(), 1)
 }
 
 func TestReader(t *testing.T) {

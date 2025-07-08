@@ -42,9 +42,7 @@ func meterProvider(cfg configOptions, res *resource.Resource) (metric.MeterProvi
 	if cfg.opentelemetryConfig.MeterProvider == nil {
 		return noop.NewMeterProvider(), noopShutdown, nil
 	}
-	opts := []sdkmetric.Option{
-		sdkmetric.WithResource(res),
-	}
+	opts := append(cfg.meterProviderOptions, sdkmetric.WithResource(res))
 
 	var errs []error
 	for _, reader := range cfg.opentelemetryConfig.MeterProvider.Readers {
