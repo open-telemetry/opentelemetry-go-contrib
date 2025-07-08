@@ -34,20 +34,20 @@ func TestRegisterAndDetector(t *testing.T) {
 
 	detector, err := Detector(id)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("got error: %v, expected no error", err)
 	}
 
 	c, ok := detector.(*composite)
 	if !ok {
-		t.Errorf("expected composite detector, got %T", detector)
+		t.Errorf("got %T, expected composite detector", detector)
 	}
 
 	if len(c.detectors) != 1 {
-		t.Fatalf("expected 1 detector, got %d", len(c.detectors))
+		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
 	}
 
 	if _, ok := c.detectors[0].(*testDetector); !ok {
-		t.Errorf("expected testDetector, got %T", c.detectors[0])
+		t.Errorf("got %T, expected testDetector", c.detectors[0])
 	}
 }
 
@@ -57,7 +57,7 @@ func TestRegisterDuplicate(t *testing.T) {
 
 	defer func() {
 		if r := recover(); r == nil {
-			t.Errorf("expected panic for duplicate registration")
+			t.Errorf("got no panic, expected panic for duplicate registration")
 		}
 	}()
 	Register(id, testFactory())
@@ -71,23 +71,23 @@ func TestParse(t *testing.T) {
 
 	detector, err := Detector(ids...)
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("got error: %v, expected no error", err)
 	}
 
 	c, ok := detector.(*composite)
 	if !ok {
-		t.Errorf("expected composite detector, got %T", detector)
+		t.Errorf("got %T, expected composite detector", detector)
 	}
 
 	if len(c.detectors) != len(registry) {
-		t.Errorf("expected %d detectors, got %d", len(registry), len(c.detectors))
+		t.Errorf("got %d detectors, expected %d detectors", len(c.detectors), len(registry))
 	}
 }
 
 func TestParseUnknown(t *testing.T) {
 	_, err := Detector(ID("unknown"))
 	if !errors.Is(err, ErrUnknownDetector) {
-		t.Errorf("expected ErrUnknownDetector, got %v", err)
+		t.Errorf("got %v, expected ErrUnknownDetector", err)
 	}
 }
 
@@ -98,16 +98,16 @@ func TestOptDetectorDetect(t *testing.T) {
 
 	res, err := detector.Detect(context.Background())
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("got error: %v, expected no error", err)
 	}
 
 	if res == nil {
-		t.Errorf("expected non-nil resource")
+		t.Errorf("got nil resource, expected non-nil resource")
 	}
 
 	got := res.Attributes()
 	if len(got) != 1 || got[0] != want {
-		t.Errorf("expected %v, got %v", []attribute.KeyValue{want}, got)
+		t.Errorf("got %v, expected %v", got, []attribute.KeyValue{want})
 	}
 }
 
@@ -125,23 +125,23 @@ func TestCompositeDetect(t *testing.T) {
 
 	res, err := comp.Detect(context.Background())
 	if !errors.Is(err, knownErr) {
-		t.Errorf("expected error %v, got %v", knownErr, err)
+		t.Errorf("got error %v, expected %v", err, knownErr)
 	}
 
 	if res == nil {
-		t.Errorf("expected non-nil resource")
+		t.Errorf("got nil resource, expected non-nil resource")
 	}
 
 	got := res.Attributes()
 	if len(got) != 2 {
-		t.Fatalf("expected 2 attributes, got %d", len(got))
+		t.Fatalf("got %d attributes, expected 2 attributes", len(got))
 	}
 
 	if got[0].Key != a.Key && got[1].Key != a.Key {
-		t.Errorf("expected attribute %s, got %v", a.Key, got)
+		t.Errorf("got %v, expected attribute %s", got, a.Key)
 	}
 	if got[0].Key != b.Key && got[1].Key != b.Key {
-		t.Errorf("expected attribute %s, got %v", b.Key, got)
+		t.Errorf("got %v, expected attribute %s", got, b.Key)
 	}
 }
 
@@ -161,10 +161,10 @@ func TestCompositeDetectMergeError(t *testing.T) {
 
 	res, err := comp.Detect(context.Background())
 	if !errors.Is(err, resource.ErrSchemaURLConflict) {
-		t.Errorf("expected error %v, got %v", resource.ErrSchemaURLConflict, err)
+		t.Errorf("got error %v, expected %v", err, resource.ErrSchemaURLConflict)
 	}
 
 	if res != nil {
-		t.Error("expected nil resource")
+		t.Error("got non-nil resource, expected nil resource")
 	}
 }
