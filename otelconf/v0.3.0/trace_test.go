@@ -1001,33 +1001,21 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := net.Listen("tcp", "localhost:0")
+			n, err := net.Listen("tcp4", "localhost:0")
 			require.NoError(t, err)
 
-			// this is a workaround, as providing 127.0.0.1 resulted in an "invalid URI for request" error
+			// We need to manually construct the endpoint using the port on which the server is listening.
 			//
-			// Always use "localhost:PORT" for the OTLP endpoint, regardless of what n.Addr().String() returns.
-			// This avoids issues with IPv6 addresses (e.g., "[::1]:PORT")
+			// n.Addr() always returns 127.0.0.1 instead of localhost.
+			// But our certificate is created with CN as 'localhost', not '127.0.0.1'.
+			// So we have to manually form the endpoint as "localhost:<port>".
 			_, port, err := net.SplitHostPort(n.Addr().String())
 			require.NoError(t, err)
 			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
-
-			ready := make(chan struct{})
-			wrappedListener := &notifyListener{
-				Listener: n,
-				ready:    ready,
-			}
-			startGRPCTraceCollector(t, wrappedListener, serverOpts)
-			// wait for server to be ready before client connects
-			select {
-			case <-wrappedListener.ready:
-				// continue
-			case <-time.After(3 * time.Second):
-				t.Fatal("server did not become ready in time")
-			}
+			startGRPCTraceCollector(t, n, serverOpts)
 
 			exporter, err := otlpGRPCSpanExporter(tt.args.ctx, tt.args.otlpConfig)
 			require.NoError(t, err)
@@ -1080,7 +1068,12 @@ func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions 
 	v1.RegisterTraceServiceServer(srv, c)
 
 	errCh := make(chan error, 1)
-	go func() { errCh <- srv.Serve(listener) }()
+	ready := make(chan struct{})
+	wrappedListener := &notifyListener{
+		Listener: listener,
+		ready:    ready,
+	}
+	go func() { errCh <- srv.Serve(wrappedListener) }()
 
 	t.Cleanup(func() {
 		srv.GracefulStop()
@@ -1088,6 +1081,14 @@ func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions 
 			assert.NoError(t, err)
 		}
 	})
+
+	// wait for server to be ready before client connects
+	select {
+	case <-wrappedListener.ready:
+		// continue
+	case <-time.After(3 * time.Second):
+		t.Fatal("server did not become ready in time")
+	}
 }
 
 // Export handles the export req.
