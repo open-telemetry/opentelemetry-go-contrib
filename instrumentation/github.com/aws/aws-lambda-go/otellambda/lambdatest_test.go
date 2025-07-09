@@ -409,14 +409,14 @@ func TestWrapHandlerTracingWithMockPropagator(t *testing.T) {
 	assertStubEqualsIgnoreTime(t, mockPropagatorTestsExpectedSpanStub, stub)
 }
 
-func TestWrapHandlerTracingWithCustomAttributes(t *testing.T) {
+func TestWrapHandlerTracingWithTraceAttributesFn(t *testing.T) {
 	setEnvVars(t)
 	tp, memExporter := initMockTracerProvider()
 
 	// No flusher needed as SimpleSpanProcessor is synchronous
 	wrapped := otellambda.WrapHandler(emptyHandler{},
 		otellambda.WithTracerProvider(tp),
-		otellambda.WithCustomAttributes(mockEventAttrExtractor),
+		otellambda.WithTraceAttributesFn(mockEventAttrExtractor),
 	)
 
 	payload, _ := json.Marshal(mockPropagatorTestsEvent)

@@ -130,8 +130,8 @@ func WithPropagator(propagator propagation.TextMapPropagator) Option {
 	})
 }
 
-// WithCustomAttributes configures a function that returns custom attributes.
-func WithCustomAttributes(eventAttrExtractor EventAttrExtractor) Option {
+// WithTraceAttributesFn configures a function that returns custom attributes.
+func WithTraceAttributesFn(eventAttrExtractor EventAttrExtractor) Option {
 	return optionFunc(func(c *config) {
 		c.CustomAttributes = eventAttrExtractor
 	})
