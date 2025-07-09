@@ -15,7 +15,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"sync"
 	"testing"
 	"time"
 
@@ -1040,22 +1039,6 @@ type grpcTraceCollector struct {
 
 var _ v1.TraceServiceServer = (*grpcTraceCollector)(nil)
 
-// notifyListener wraps net.Listener to signal when the server is ready.
-type notifyListener struct {
-	net.Listener
-	once  sync.Once
-	ready chan struct{}
-}
-
-// implements the net.Listener.Accept method.
-func (l *notifyListener) Accept() (net.Conn, error) {
-	l.once.Do(func() {
-		// signal server is ready
-		close(l.ready)
-	})
-	return l.Listener.Accept()
-}
-
 // startGRPCTraceCollector returns a *grpcTraceCollector that is listening at the provided
 // endpoint.
 //
@@ -1068,12 +1051,7 @@ func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions 
 	v1.RegisterTraceServiceServer(srv, c)
 
 	errCh := make(chan error, 1)
-	ready := make(chan struct{})
-	wrappedListener := &notifyListener{
-		Listener: listener,
-		ready:    ready,
-	}
-	go func() { errCh <- srv.Serve(wrappedListener) }()
+	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
 		srv.GracefulStop()
@@ -1081,14 +1059,6 @@ func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions 
 			assert.NoError(t, err)
 		}
 	})
-
-	// wait for server to be ready before client connects
-	select {
-	case <-wrappedListener.ready:
-		// continue
-	case <-time.After(3 * time.Second):
-		t.Fatal("server did not become ready in time")
-	}
 }
 
 // Export handles the export req.
