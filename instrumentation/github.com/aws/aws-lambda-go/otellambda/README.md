@@ -80,7 +80,7 @@ func mockEventToCarrier(eventJSON []byte) propagation.TextMapCarrier{
 }
 
 func mockEventAttrExtractor(eventJSON []byte) []attribute.KeyValue {
-	var request mockRequest
+	var request mockHTTPRequest
 	_ = json.unmarshal(eventJSON, &request)
 	return []attribute.KeyValue{attribute.String("mock.request.type", reflect.TypeOf(request).String())}
 }
