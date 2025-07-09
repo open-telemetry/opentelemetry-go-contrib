@@ -1014,6 +1014,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
+
 			startGRPCTraceCollector(t, n, serverOpts)
 
 			exporter, err := otlpGRPCSpanExporter(tt.args.ctx, tt.args.otlpConfig)
