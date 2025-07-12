@@ -12,8 +12,7 @@
 //
 //   - Time is set as the Timestamp.
 //   - Message is set as the Body using a [log.StringValue].
-//   - Level is transformed and set as the Severity. The SeverityText is not
-//     set.
+//   - Level is transformed and set as the Severity. The SeverityText is also set.
 //   - Fields are transformed and set as the attributes.
 //
 // The Level is transformed to the OpenTelemetry
@@ -178,6 +177,7 @@ func (h *Hook) convertEntry(e *logrus.Entry) log.Record {
 	record.SetTimestamp(e.Time)
 	record.SetBody(log.StringValue(e.Message))
 	record.SetSeverity(convertSeverity(e.Level))
+	record.SetSeverityText(e.Level.String())
 	record.AddAttributes(convertFields(e.Data)...)
 
 	return record
