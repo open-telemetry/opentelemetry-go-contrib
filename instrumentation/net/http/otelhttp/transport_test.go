@@ -617,6 +617,66 @@ func TestTransportErrorStatus(t *testing.T) {
 	}
 }
 
+func TestTransportWithMessageEventsReadEvents(t *testing.T) {
+	// Prepare tracing stuff.
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	content := []byte("Hello, world!")
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write(content)
+		assert.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	// Create our Transport and make request.
+	tr := NewTransport(
+		http.DefaultTransport,
+		WithTracerProvider(provider),
+		WithMessageEvents(ReadEvents),
+	)
+	c := http.Client{Transport: tr}
+	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := c.Do(r) // nolint:bodyclose  // False-positive.
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, res.Body.Close()) }()
+
+	_, err = io.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	// Check span.
+	spans := spanRecorder.Ended()
+	if len(spans) != 1 {
+		t.Fatalf("expected 1 span; got: %d", len(spans))
+	}
+	span := spans[0]
+
+	events := span.Events()
+	require.NotEmpty(t, events, "expected span to have events")
+
+	var readEvent sdktrace.Event
+	for _, ev := range events {
+		if ev.Name == "read" {
+			readEvent = ev
+			break
+		}
+	}
+	require.NotEmpty(t, readEvent, "expected span to have a 'read' event")
+
+	var readBytesAttr attribute.KeyValue
+	for _, attr := range readEvent.Attributes {
+		if attr.Key == ReadBytesKey {
+			readBytesAttr = attr
+			break
+		}
+	}
+	require.NotEmpty(t, readBytesAttr, "expected span to have a read bytes attribute")
+	require.Greater(t, readBytesAttr.Value.AsInt64(), int64(0), "expected read bytes attribute to have a non-zero int64 value")
+}
+
 func TestTransportRequestWithTraceContext(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(
