@@ -60,6 +60,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `system.memory.usage` now uses the `state` attribute instead of `system.memory.state`.
   - `system.memory.utilization` now uses the `state` attribute instead of `system.memory.state`.
   - The `system.memory.state` attribute (now `state`) value of `available` is now `free` instead.
+- `NewTransport()` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` will now accept `WithMessageEvents(ReadEvents)` to enable span events to be emitted for each read of a HTTP response body.
 
 ### Deprecated
 
