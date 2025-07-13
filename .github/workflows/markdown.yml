@@ -14,7 +14,6 @@ jobs:
   lint-markdown:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
       issues: write # required for creating issues from markdown lint results
     steps:
     - name: Checkout Repo
