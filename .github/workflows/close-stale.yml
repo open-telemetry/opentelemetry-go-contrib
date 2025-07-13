@@ -9,8 +9,8 @@ permissions:
 jobs:
   stale:
     permissions:
-      issues: write # required for closing stale issues
-      pull-requests: write # required for closing stale pull requests
+      issues: write
+      pull-requests: write
     runs-on: ubuntu-latest
     steps:
       - uses: actions/stale@v9
