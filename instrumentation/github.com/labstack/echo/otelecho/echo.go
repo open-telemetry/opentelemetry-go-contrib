@@ -64,7 +64,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
 			opts := []oteltrace.SpanStartOption{
 				oteltrace.WithAttributes(
-					semconvSrv.RequestTraceAttrs(service, request, semconv.RequestTraceAttrsOpts{}...),
+					semconvSrv.RequestTraceAttrs(service, request, semconv.RequestTraceAttrsOpts{})...,
 				),
 				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 			}
@@ -89,10 +89,10 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			}
 
 			status := c.Response().Status
-			span.SetStatus(semconvutil.HTTPServerStatus(status))
-			if status > 0 {
-				span.SetAttributes(semconvSrv.StatusCode(status))
-			}
+			span.SetStatus(semconvSrv.Status(status))
+			span.SetAttributes(semconvSrv.ResponseTraceAttrs(semconv.ResponseTelemetry{
+				StatusCode: status,
+			})...)
 
 			return err
 		}
