@@ -147,6 +147,11 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 			RequestSize: bw.BytesRead(),
 		}
 
+		if err == nil {
+			readRecordFunc := func(n int64) {}
+			res.Body = newWrappedBody(span, readRecordFunc, res.Body)
+		}
+
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
 
