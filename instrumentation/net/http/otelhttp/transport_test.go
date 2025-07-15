@@ -674,7 +674,7 @@ func TestTransportWithMessageEventsReadEvents(t *testing.T) {
 		}
 	}
 	require.NotEmpty(t, readBytesAttr, "expected span to have a read bytes attribute")
-	require.Greater(t, readBytesAttr.Value.AsInt64(), int64(0), "expected read bytes attribute to have a non-zero int64 value")
+	require.Positive(t, readBytesAttr.Value.AsInt64(), "expected read bytes attribute to have a non-zero int64 value")
 }
 
 func TestTransportRequestWithTraceContext(t *testing.T) {
