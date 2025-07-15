@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -116,6 +117,13 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			StatusCode: status,
 			WriteBytes: int64(c.Writer.Size()),
 		})...)
+
+		if len(c.Errors) > 0 {
+			span.SetStatus(codes.Error, c.Errors.String())
+			for _, err := range c.Errors {
+				span.RecordError(err.Err)
+			}
+		}
 
 		// Record the server-side attributes.
 		var additionalAttributes []attribute.KeyValue
