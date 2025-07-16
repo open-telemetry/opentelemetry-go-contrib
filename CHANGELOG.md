@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Support for the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable, and support for semantic conventions v1.20.0 in the modules below. (#7584)
+- Remove support for the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable as well as support for semantic conventions v1.20.0 in the modules below. (#7584)
   - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
   - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
   - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
