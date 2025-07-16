@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- `NewTransport()` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` will now accept `WithMessageEvents(ReadEvents)` to enable span events to be emitted for each read of a HTTP response body.
+- Handle the `WithMessageEvents` option for `Transport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#7513)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
