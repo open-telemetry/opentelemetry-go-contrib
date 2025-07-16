@@ -33,6 +33,7 @@ type Transport struct {
 	spanNameFormatter  func(string, *http.Request) string
 	clientTrace        func(context.Context) *httptrace.ClientTrace
 	metricAttributesFn func(*http.Request) []attribute.KeyValue
+	readEvent          bool
 
 	semconv semconv.HTTPClient
 }
@@ -74,6 +75,7 @@ func (t *Transport) applyConfig(c *config) {
 	t.clientTrace = c.ClientTrace
 	t.semconv = semconv.NewHTTPClient(c.Meter)
 	t.metricAttributesFn = c.MetricAttributesFn
+	t.readEvent = c.ReadEvent
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {
@@ -153,7 +155,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 				t.semconv.RecordResponseSize(ctx, n, metricOpts)
 			}
 
-			res.Body = newWrappedBody(span, readRecordFunc, res.Body)
+			res.Body = newWrappedBody(span, readRecordFunc, res.Body, t.readEvent)
 		}
 
 		// Use floating point division here for higher precision (instead of Millisecond method).
@@ -198,17 +200,17 @@ func (t *Transport) metricAttributesFromRequest(r *http.Request) []attribute.Key
 // newWrappedBody returns a new and appropriately scoped *wrappedBody as an
 // io.ReadCloser. If the passed body implements io.Writer, the returned value
 // will implement io.ReadWriteCloser.
-func newWrappedBody(span trace.Span, record func(n int64), body io.ReadCloser) io.ReadCloser {
+func newWrappedBody(span trace.Span, record func(n int64), body io.ReadCloser, readEvent bool) io.ReadCloser {
 	// The successful protocol switch responses will have a body that
 	// implement an io.ReadWriteCloser. Ensure this interface type continues
 	// to be satisfied if that is the case.
 	if _, ok := body.(io.ReadWriteCloser); ok {
-		return &wrappedBody{span: span, record: record, body: body}
+		return &wrappedBody{span: span, record: record, body: body, readEvent: readEvent}
 	}
 
 	// Remove the implementation of the io.ReadWriteCloser and only implement
 	// the io.ReadCloser.
-	return struct{ io.ReadCloser }{&wrappedBody{span: span, record: record, body: body}}
+	return struct{ io.ReadCloser }{&wrappedBody{span: span, record: record, body: body, readEvent: readEvent}}
 }
 
 // wrappedBody is the response body type returned by the transport
@@ -225,6 +227,8 @@ type wrappedBody struct {
 	record   func(n int64)
 	body     io.ReadCloser
 	read     atomic.Int64
+
+	readEvent bool
 }
 
 var _ io.ReadWriteCloser = &wrappedBody{}
@@ -243,6 +247,10 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 	n, err := wb.body.Read(b)
 	// Record the number of bytes read
 	wb.read.Add(int64(n))
+
+	if wb.readEvent {
+		wb.span.AddEvent("read", trace.WithAttributes(ReadBytesKey.Int64(int64(n))))
+	}
 
 	switch err {
 	case nil:

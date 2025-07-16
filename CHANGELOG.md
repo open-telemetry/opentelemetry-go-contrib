@@ -16,6 +16,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `WithLoggerProviderOptions`, `WithMeterProviderOptions` and `WithTracerProviderOptions` options to `NewSDK` to allow passing custom options to providers in `go.opentelemetry.io/contrib/otelconf`. (#7552)
 - Added V2 version of AWS EC2 detector `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` due to deprecation of `github.com/aws/aws-sdk-go`. (#6961)
 
+### Changed
+
+- `NewTransport()` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` will now accept `WithMessageEvents(ReadEvents)` to enable span events to be emitted for each read of a HTTP response body.
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

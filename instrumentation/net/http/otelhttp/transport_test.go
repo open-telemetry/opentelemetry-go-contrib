@@ -260,7 +260,7 @@ func TestWrappedBodyRead(t *testing.T) {
 	s := new(span)
 	called := false
 	record := func(numBytes int64) { called = true }
-	wb := newWrappedBody(s, record, readCloser{})
+	wb := newWrappedBody(s, record, readCloser{}, false)
 	n, err := wb.Read([]byte{})
 	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
 	assert.NoError(t, err)
@@ -276,7 +276,7 @@ func TestWrappedBodyReadEOFError(t *testing.T) {
 		called = true
 		numRecorded = numBytes
 	}
-	wb := newWrappedBody(s, record, readCloser{readErr: io.EOF})
+	wb := newWrappedBody(s, record, readCloser{readErr: io.EOF}, false)
 	n, err := wb.Read([]byte{})
 	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
 	assert.Equal(t, io.EOF, err)
@@ -290,7 +290,7 @@ func TestWrappedBodyReadError(t *testing.T) {
 	called := false
 	record := func(int64) { called = true }
 	expectedErr := errors.New("test")
-	wb := newWrappedBody(s, record, readCloser{readErr: expectedErr})
+	wb := newWrappedBody(s, record, readCloser{readErr: expectedErr}, false)
 	n, err := wb.Read([]byte{})
 	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
 	assert.Equal(t, expectedErr, err)
@@ -302,7 +302,7 @@ func TestWrappedBodyClose(t *testing.T) {
 	s := new(span)
 	called := false
 	record := func(int64) { called = true }
-	wb := newWrappedBody(s, record, readCloser{})
+	wb := newWrappedBody(s, record, readCloser{}, false)
 	assert.NoError(t, wb.Close())
 	s.assert(t, true, nil, codes.Unset, "")
 	assert.True(t, called, "record should have been called")
@@ -311,7 +311,7 @@ func TestWrappedBodyClose(t *testing.T) {
 func TestWrappedBodyClosePanic(t *testing.T) {
 	s := new(span)
 	var body io.ReadCloser
-	wb := newWrappedBody(s, func(n int64) {}, body)
+	wb := newWrappedBody(s, func(n int64) {}, body, false)
 	assert.NotPanics(t, func() { wb.Close() }, "nil body should not panic on close")
 }
 
@@ -320,7 +320,7 @@ func TestWrappedBodyCloseError(t *testing.T) {
 	called := false
 	record := func(int64) { called = true }
 	expectedErr := errors.New("test")
-	wb := newWrappedBody(s, record, readCloser{closeErr: expectedErr})
+	wb := newWrappedBody(s, record, readCloser{closeErr: expectedErr}, false)
 	assert.Equal(t, expectedErr, wb.Close())
 	s.assert(t, true, nil, codes.Unset, "")
 	assert.True(t, called, "record should have been called")
@@ -339,12 +339,12 @@ func (rwc readWriteCloser) Write([]byte) (int, error) {
 }
 
 func TestNewWrappedBodyReadWriteCloserImplementation(t *testing.T) {
-	wb := newWrappedBody(nil, func(n int64) {}, readWriteCloser{})
+	wb := newWrappedBody(nil, func(n int64) {}, readWriteCloser{}, false)
 	assert.Implements(t, (*io.ReadWriteCloser)(nil), wb)
 }
 
 func TestNewWrappedBodyReadCloserImplementation(t *testing.T) {
-	wb := newWrappedBody(nil, func(n int64) {}, readCloser{})
+	wb := newWrappedBody(nil, func(n int64) {}, readCloser{}, false)
 	assert.Implements(t, (*io.ReadCloser)(nil), wb)
 
 	_, ok := wb.(io.ReadWriteCloser)
@@ -355,7 +355,7 @@ func TestWrappedBodyWrite(t *testing.T) {
 	s := new(span)
 	var rwc io.ReadWriteCloser
 	assert.NotPanics(t, func() {
-		rwc = newWrappedBody(s, func(n int64) {}, readWriteCloser{}).(io.ReadWriteCloser)
+		rwc = newWrappedBody(s, func(n int64) {}, readWriteCloser{}, false).(io.ReadWriteCloser)
 	})
 
 	n, err := rwc.Write([]byte{})
@@ -373,7 +373,7 @@ func TestWrappedBodyWriteError(t *testing.T) {
 			func(n int64) {},
 			readWriteCloser{
 				writeErr: expectedErr,
-			}).(io.ReadWriteCloser)
+			}, false).(io.ReadWriteCloser)
 	})
 	n, err := rwc.Write([]byte{})
 	assert.Equal(t, writeSize, n, "wrappedBody returned wrong bytes")
@@ -615,6 +615,66 @@ func TestTransportErrorStatus(t *testing.T) {
 	if got := span.Status().Description; !strings.Contains(got, errSubstr) {
 		t.Errorf("expected error status message on span; got: %q", got)
 	}
+}
+
+func TestTransportWithMessageEventsReadEvents(t *testing.T) {
+	// Prepare tracing stuff.
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	content := []byte("Hello, world!")
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, err := w.Write(content)
+		assert.NoError(t, err)
+	}))
+	defer ts.Close()
+
+	// Create our Transport and make request.
+	tr := NewTransport(
+		http.DefaultTransport,
+		WithTracerProvider(provider),
+		WithMessageEvents(ReadEvents),
+	)
+	c := http.Client{Transport: tr}
+	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := c.Do(r) // nolint:bodyclose  // False-positive.
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, res.Body.Close()) }()
+
+	_, err = io.ReadAll(res.Body)
+	require.NoError(t, err)
+
+	// Check span.
+	spans := spanRecorder.Ended()
+	if len(spans) != 1 {
+		t.Fatalf("expected 1 span; got: %d", len(spans))
+	}
+	span := spans[0]
+
+	events := span.Events()
+	require.NotEmpty(t, events, "expected span to have events")
+
+	var readEvent sdktrace.Event
+	for _, ev := range events {
+		if ev.Name == "read" {
+			readEvent = ev
+			break
+		}
+	}
+	require.NotEmpty(t, readEvent, "expected span to have a 'read' event")
+
+	var readBytesAttr attribute.KeyValue
+	for _, attr := range readEvent.Attributes {
+		if attr.Key == ReadBytesKey {
+			readBytesAttr = attr
+			break
+		}
+	}
+	require.NotEmpty(t, readBytesAttr, "expected span to have a read bytes attribute")
+	require.Positive(t, readBytesAttr.Value.AsInt64(), "expected read bytes attribute to have a non-zero int64 value")
 }
 
 func TestTransportRequestWithTraceContext(t *testing.T) {
