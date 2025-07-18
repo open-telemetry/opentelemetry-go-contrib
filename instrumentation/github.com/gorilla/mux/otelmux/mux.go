@@ -214,9 +214,6 @@ func extractRoute(r *http.Request) string {
 		route := mux.CurrentRoute(r)
 		if route != nil {
 			routeStr, _ = route.GetPathTemplate()
-			if routeStr == "" {
-				routeStr, _ = route.GetPathRegexp()
-			}
 		}
 	}
 	return routeStr
