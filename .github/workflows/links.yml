@@ -7,11 +7,15 @@ on:
   # Everyday at 9:00 AM.
   - cron: "0 9 * * *"
 
+permissions:
+  contents: read
+
 jobs:
   check-links:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      issues: write # required for creating issues from link checker results
     steps:
     - name: Checkout Repo
       uses: actions/checkout@v4

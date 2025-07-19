@@ -4,6 +4,8 @@ on:
     branches:
       - main
   pull_request:
+permissions:
+  contents: read
 env:
   # path to where test results will be saved
   TEST_RESULTS: /tmp/test-results
