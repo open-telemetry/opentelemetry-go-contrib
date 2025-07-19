@@ -87,9 +87,9 @@ func TestTrace200(t *testing.T) {
 	assert.Equal(t, "GET /user/:id", span.Name())
 	assert.Equal(t, oteltrace.SpanKindServer, span.SpanKind())
 	attrs := span.Attributes()
-	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
-	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusOK))
-	assert.Contains(t, attrs, attribute.String("http.method", "GET"))
+	assert.Contains(t, attrs, attribute.String("server.address", "foobar"))
+	assert.Contains(t, attrs, attribute.Int("http.response.status_code", http.StatusOK))
+	assert.Contains(t, attrs, attribute.String("http.request.method", "GET"))
 	assert.Contains(t, attrs, attribute.String("http.route", "/user/:id"))
 }
 
@@ -118,8 +118,8 @@ func TestError(t *testing.T) {
 	span := spans[0]
 	assert.Equal(t, "GET /server_err", span.Name())
 	attrs := span.Attributes()
-	assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
-	assert.Contains(t, attrs, attribute.Int("http.status_code", http.StatusInternalServerError))
+	assert.Contains(t, attrs, attribute.String("server.address", "foobar"))
+	assert.Contains(t, attrs, attribute.Int("http.response.status_code", http.StatusInternalServerError))
 	assert.Contains(t, attrs, attribute.String("echo.error", "oh no"))
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
@@ -179,10 +179,10 @@ func TestStatusError(t *testing.T) {
 			assert.Equal(t, tc.spanCode, span.Status().Code)
 
 			attrs := span.Attributes()
-			assert.Contains(t, attrs, attribute.String("net.host.name", "foobar"))
+			assert.Contains(t, attrs, attribute.String("server.address", "foobar"))
 			assert.Contains(t, attrs, attribute.String("http.route", "/err"))
-			assert.Contains(t, attrs, attribute.String("http.method", "GET"))
-			assert.Contains(t, attrs, attribute.Int("http.status_code", tc.statusCode))
+			assert.Contains(t, attrs, attribute.String("http.request.method", "GET"))
+			assert.Contains(t, attrs, attribute.Int("http.response.status_code", tc.statusCode))
 			assert.Contains(t, attrs, attribute.String("echo.error", tc.echoError))
 		})
 	}

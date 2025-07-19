@@ -31,7 +31,9 @@ bridges/prometheus/                                                     @open-te
 bridges/otelzap/                                                        @open-telemetry/go-approvers @pellared @khushijain21
 bridges/otellogr/                                                       @open-telemetry/go-approvers @scorpionknifes @pellared
 
+detectors/autodetect                                                    @open-telemetry/go-approvers @MrAlias
 detectors/aws/ec2                                                       @open-telemetry/go-approvers @pyohannes @akats7
+detectors/aws/ec2/v2                                                    @open-telemetry/go-approvers @akats7
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes @akats7
 detectors/aws/eks                                                       @open-telemetry/go-approvers @pyohannes
 detectors/aws/lambda                                                    @open-telemetry/go-approvers @akats7
