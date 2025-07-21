@@ -6,6 +6,9 @@ on:
       - synchronize
       - ready_for_review
 
+permissions:
+  contents: read
+
 jobs:
   request_codeowners_review:
     runs-on: ubuntu-latest
