@@ -7,7 +7,7 @@ exclude github.com/blizzy78/varnamelen v0.6.1
 require (
 	github.com/atombender/go-jsonschema v0.18.0
 	github.com/client9/misspell v0.3.4
-	github.com/golangci/golangci-lint/v2 v2.2.2
+	github.com/golangci/golangci-lint/v2 v2.3.0
 	github.com/itchyny/gojq v0.12.17
 	github.com/jcchavezs/porto v0.7.0
 	github.com/stretchr/testify v1.10.0
@@ -159,7 +159,7 @@ require (
 	github.com/nakabonne/nestif v0.3.1 // indirect
 	github.com/nishanths/exhaustive v0.12.0 // indirect
 	github.com/nishanths/predeclared v0.2.2 // indirect
-	github.com/nunnatsa/ginkgolinter v0.19.1 // indirect
+	github.com/nunnatsa/ginkgolinter v0.20.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/pjbgf/sha1cd v0.4.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
