@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- `WithSpanStartOptions` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated.
+- `WithSpanOptions` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated.
   It is only used by the deprecated interceptor, and is unused in the new [NewClientHandler] implementation for StatsHandlers. (#7601)
 
 ### Removed
