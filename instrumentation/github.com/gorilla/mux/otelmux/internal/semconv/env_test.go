@@ -54,7 +54,6 @@ func TestHTTPServerDoesNotPanic(t *testing.T) {
 func TestServerNetworkTransportAttr(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
-		optinVal string
 		network  string
 
 		wantAttributes []attribute.KeyValue
@@ -67,29 +66,8 @@ func TestServerNetworkTransportAttr(t *testing.T) {
 				attribute.String("network.transport", "tcp"),
 			},
 		},
-		{
-			name:     "without a dup optin",
-			optinVal: "http/dup",
-			network:  "tcp",
-
-			wantAttributes: []attribute.KeyValue{
-				attribute.String("net.transport", "ip_tcp"),
-				attribute.String("network.transport", "tcp"),
-			},
-		},
-		{
-			name:     "with mixed categories",
-			optinVal: "http/dup,database",
-			network:  "tcp",
-
-			wantAttributes: []attribute.KeyValue{
-				attribute.String("net.transport", "ip_tcp"),
-				attribute.String("network.transport", "tcp"),
-			},
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(OTelSemConvStabilityOptIn, tt.optinVal)
 			s := NewHTTPServer(nil)
 
 			assert.Equal(t, tt.wantAttributes, s.NetworkTransportAttr(tt.network))
@@ -124,7 +102,6 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 					Req:        req,
 					StatusCode: 200,
 				})
-				tt.client.RecordResponseSize(context.Background(), 40, opts)
 				tt.client.RecordMetrics(context.Background(), MetricData{
 					RequestSize: 20,
 					ElapsedTime: 1,
@@ -137,7 +114,6 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 func TestHTTPClientTraceAttributes(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
-		optinVal string
 
 		wantAttributes []attribute.KeyValue
 	}{
@@ -148,28 +124,8 @@ func TestHTTPClientTraceAttributes(t *testing.T) {
 				attribute.String("server.address", "example.com"),
 			},
 		},
-		{
-			name:     "with optin set to duplicate",
-			optinVal: "http/dup",
-
-			wantAttributes: []attribute.KeyValue{
-				attribute.String("server.address", "example.com"),
-				attribute.String("net.host.name", "example.com"),
-			},
-		},
-		{
-			name:     "with mixed categories",
-			optinVal: "http/dup,database",
-
-			wantAttributes: []attribute.KeyValue{
-				attribute.String("server.address", "example.com"),
-				attribute.String("net.host.name", "example.com"),
-			},
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(OTelSemConvStabilityOptIn, tt.optinVal)
-
 			c := NewHTTPClient(nil)
 			a := c.TraceAttributes("example.com")
 			assert.Equal(t, tt.wantAttributes, a)
@@ -180,7 +136,6 @@ func TestHTTPClientTraceAttributes(t *testing.T) {
 func TestClientTraceAttributes(t *testing.T) {
 	for _, tt := range []struct {
 		name     string
-		optinVal string
 		host     string
 
 		wantAttributes []attribute.KeyValue
@@ -193,29 +148,8 @@ func TestClientTraceAttributes(t *testing.T) {
 				attribute.String("server.address", "example.com"),
 			},
 		},
-		{
-			name:     "without a dup optin",
-			optinVal: "http/dup",
-			host:     "example.com",
-
-			wantAttributes: []attribute.KeyValue{
-				attribute.String("server.address", "example.com"),
-				attribute.String("net.host.name", "example.com"),
-			},
-		},
-		{
-			name:     "with mixed categories",
-			optinVal: "http/dup",
-			host:     "example.com",
-
-			wantAttributes: []attribute.KeyValue{
-				attribute.String("server.address", "example.com"),
-				attribute.String("net.host.name", "example.com"),
-			},
-		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(OTelSemConvStabilityOptIn, tt.optinVal)
 			s := NewHTTPClient(nil)
 
 			assert.Equal(t, tt.wantAttributes, s.TraceAttributes(tt.host))

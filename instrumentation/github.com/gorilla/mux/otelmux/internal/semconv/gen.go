@@ -13,4 +13,3 @@ package semconv // import "go.opentelemetry.io/contrib/instrumentation/github.co
 //go:generate gotmpl --body=../../../../../../../internal/shared/semconv/httpconvtest_test.go.tmpl "--data={ \"pkg\": \"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux\" }" --out=httpconvtest_test.go
 //go:generate gotmpl --body=../../../../../../../internal/shared/semconv/util.go.tmpl "--data={ \"pkg\": \"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux\" }" --out=util.go
 //go:generate gotmpl --body=../../../../../../../internal/shared/semconv/util_test.go.tmpl "--data={}" --out=util_test.go
-//go:generate gotmpl --body=../../../../../../../internal/shared/semconv/v1.20.0.go.tmpl "--data={ \"pkg\": \"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux\" }" --out=v1.20.0.go
