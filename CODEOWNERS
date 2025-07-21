@@ -23,7 +23,7 @@
 
 * @open-telemetry/go-approvers
 
-CODEOWNERS @MrAlias @pellared @dashpole @XSAM @dmathieu @flc1125
+CODEOWNERS @MrAlias @pellared @dashpole @XSAM @dmathieu
 
 bridges/otelslog                                                        @open-telemetry/go-approvers @MrAlias @pellared
 bridges/otellogrus/                                                     @open-telemetry/go-approvers @dmathieu @pellared
