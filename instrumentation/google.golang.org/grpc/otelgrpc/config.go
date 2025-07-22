@@ -216,7 +216,7 @@ func (o spanStartOption) apply(c *config) {
 // WithSpanOptions configures an additional set of
 // trace.SpanOptions, which are applied to each new span.
 //
-// Deprecated: It is only used by the deprecated interceptor, and is unused in the new [NewClientHandler] implementation for StatsHandlers.
+// Deprecated: It is only used by the deprecated interceptor, and is unused by [NewClientHandler] and [NewServerHandler].
 func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 	return spanStartOption{opts}
 }
