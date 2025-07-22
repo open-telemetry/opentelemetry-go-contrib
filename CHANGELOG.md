@@ -26,6 +26,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 
+### Fixed
+
+- Fixed ECS detector failing tests on Ubuntu by updating `getContainerID` method. (#7500)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
