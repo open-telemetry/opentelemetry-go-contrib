@@ -17,6 +17,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `WithLoggerProviderOptions`, `WithMeterProviderOptions` and `WithTracerProviderOptions` options to `NewSDK` to allow passing custom options to providers in `go.opentelemetry.io/contrib/otelconf`. (#7552)
 - Added V2 version of AWS EC2 detector `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` due to deprecation of `github.com/aws/aws-sdk-go`. (#6961)
 
+### Deprecated
+
+- `WithSpanOptions` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated.
+  It is only used by the deprecated interceptor, and is unused by `NewClientHandler` and `NewServerHandler`. (#7601)
+
 ### Removed
 
 - Remove support for the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable as well as support for semantic conventions v1.20.0 in the modules below. (#7584)
