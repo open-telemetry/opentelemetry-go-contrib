@@ -355,7 +355,7 @@ func mockRequestCarrier(eventJSON []byte) propagation.TextMapCarrier {
 	return propagation.HeaderCarrier{mockPropagatorKey: []string{event.Headers[mockPropagatorKey]}}
 }
 
-func mockEventAttrExtractor(eventJSON []byte) []attribute.KeyValue {
+func mockTraceAttributeFn(eventJSON []byte) []attribute.KeyValue {
 	var event mockRequest
 	err := json.Unmarshal(eventJSON, &event)
 	if err != nil {
@@ -409,14 +409,14 @@ func TestWrapHandlerTracingWithMockPropagator(t *testing.T) {
 	assertStubEqualsIgnoreTime(t, mockPropagatorTestsExpectedSpanStub, stub)
 }
 
-func TestWrapHandlerTracingWithTraceAttributesFn(t *testing.T) {
+func TestWrapHandlerTracingWithTraceAttributeFn(t *testing.T) {
 	setEnvVars(t)
 	tp, memExporter := initMockTracerProvider()
 
 	// No flusher needed as SimpleSpanProcessor is synchronous
 	wrapped := otellambda.WrapHandler(emptyHandler{},
 		otellambda.WithTracerProvider(tp),
-		otellambda.WithTraceAttributesFn(mockEventAttrExtractor),
+		otellambda.WithTraceAttributeFn(mockTraceAttributeFn),
 	)
 
 	payload, _ := json.Marshal(mockPropagatorTestsEvent)

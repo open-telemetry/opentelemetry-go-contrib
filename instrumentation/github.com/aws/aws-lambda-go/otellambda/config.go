@@ -36,15 +36,15 @@ var _ Flusher = &noopFlusher{}
 // trace information is instead stored in the Lambda environment.
 type EventToCarrier func(eventJSON []byte) propagation.TextMapCarrier
 
-// EventAttrExtractor defines a function that extracts attributes
+// TraceAttributeFn defines a function that extracts attributes
 // from the event JSON to be added to the span created by the instrumentation.
-type EventAttrExtractor func(eventJSON []byte) []attribute.KeyValue
+type TraceAttributeFn func(eventJSON []byte) []attribute.KeyValue
 
 func emptyEventToCarrier([]byte) propagation.TextMapCarrier {
 	return propagation.HeaderCarrier{}
 }
 
-func emptyEventAttrExtractor([]byte) []attribute.KeyValue {
+func emptyTraceAttributeFn([]byte) []attribute.KeyValue {
 	return []attribute.KeyValue{}
 }
 
@@ -90,11 +90,11 @@ type config struct {
 	// returned by otel.GetTextMapPropagator()
 	Propagator propagation.TextMapPropagator
 
-	// CustomAttributes is a function that returns custom attributes
+	// TraceAttributeFn is a function that returns custom attributes
 	// to be added to the span created by the instrumentation.
-	// The default value of CustomAttributes is nil, which means no custom attributes
+	// The default value of TraceAttributeFn is nil, which means no attributes
 	// will be added to the span.
-	CustomAttributes EventAttrExtractor
+	TraceAttributeFn TraceAttributeFn
 }
 
 // WithTracerProvider configures the TracerProvider used by the
@@ -130,9 +130,9 @@ func WithPropagator(propagator propagation.TextMapPropagator) Option {
 	})
 }
 
-// WithTraceAttributesFn configures a function that returns custom attributes.
-func WithTraceAttributesFn(eventAttrExtractor EventAttrExtractor) Option {
+// WithTraceAttributeFn configures a function that returns custom attributes.
+func WithTraceAttributeFn(fn TraceAttributeFn) Option {
 	return optionFunc(func(c *config) {
-		c.CustomAttributes = eventAttrExtractor
+		c.TraceAttributeFn = fn
 	})
 }

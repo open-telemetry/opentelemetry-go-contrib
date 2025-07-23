@@ -36,7 +36,7 @@ func newInstrumentor(opts ...Option) instrumentor {
 		Flusher:          &noopFlusher{},
 		EventToCarrier:   emptyEventToCarrier,
 		Propagator:       otel.GetTextMapPropagator(),
-		CustomAttributes: emptyEventAttrExtractor,
+		TraceAttributeFn: emptyTraceAttributeFn,
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -59,7 +59,7 @@ func (i *instrumentor) tracingBegin(ctx context.Context, eventJSON []byte) (cont
 	spanName := os.Getenv("AWS_LAMBDA_FUNCTION_NAME")
 
 	var attributes []attribute.KeyValue
-	customAttrs := i.configuration.CustomAttributes(eventJSON)
+	customAttrs := i.configuration.TraceAttributeFn(eventJSON)
 	attributes = append(attributes, customAttrs...)
 	lc, ok := lambdacontext.FromContext(ctx)
 	if !ok {
