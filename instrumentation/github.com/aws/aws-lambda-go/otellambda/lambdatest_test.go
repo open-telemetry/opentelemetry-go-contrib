@@ -355,6 +355,16 @@ func mockRequestCarrier(eventJSON []byte) propagation.TextMapCarrier {
 	return propagation.HeaderCarrier{mockPropagatorKey: []string{event.Headers[mockPropagatorKey]}}
 }
 
+func mockTraceAttributeFn(eventJSON []byte) []attribute.KeyValue {
+	var event mockRequest
+	err := json.Unmarshal(eventJSON, &event)
+	if err != nil {
+		fmt.Println("event type: ", reflect.TypeOf(event))
+		panic("mockRequestCarrier only supports events of type mockRequest")
+	}
+	return []attribute.KeyValue{attribute.String("mock.request.type", reflect.TypeOf(event).String())}
+}
+
 func TestInstrumentHandlerTracingWithMockPropagator(t *testing.T) {
 	setEnvVars(t)
 	tp, memExporter := initMockTracerProvider()
@@ -397,4 +407,24 @@ func TestWrapHandlerTracingWithMockPropagator(t *testing.T) {
 	assert.Len(t, memExporter.GetSpans(), 1)
 	stub := memExporter.GetSpans()[0]
 	assertStubEqualsIgnoreTime(t, mockPropagatorTestsExpectedSpanStub, stub)
+}
+
+func TestWrapHandlerTracingWithTraceAttributeFn(t *testing.T) {
+	setEnvVars(t)
+	tp, memExporter := initMockTracerProvider()
+
+	// No flusher needed as SimpleSpanProcessor is synchronous
+	wrapped := otellambda.WrapHandler(emptyHandler{},
+		otellambda.WithTracerProvider(tp),
+		otellambda.WithTraceAttributeFn(mockTraceAttributeFn),
+	)
+
+	payload, _ := json.Marshal(mockPropagatorTestsEvent)
+	_, err := wrapped.Invoke(mockPropagatorTestsContext, payload)
+	assert.NoError(t, err)
+
+	assert.Len(t, memExporter.GetSpans(), 1)
+	stub := memExporter.GetSpans()[0]
+	expectedAttr := attribute.KeyValue{Key: "mock.request.type", Value: attribute.StringValue(reflect.TypeOf(mockPropagatorTestsEvent).String())}
+	assert.Contains(t, stub.Attributes, expectedAttr, "custom attribute 'mock.request.type' with value 'otellambda_test.mockRequest' not found")
 }
