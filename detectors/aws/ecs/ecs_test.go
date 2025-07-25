@@ -256,7 +256,7 @@ func TestCgroupContainerID(t *testing.T) {
 
 	for _, c := range cgroups {
 		t.Run(c.cgroupPath, func(t *testing.T) {
-			containerID, _ := getCgroupContainerID([]byte(c.cgroupPath))
+			containerID := getCgroupContainerID([]byte(c.cgroupPath))
 			assert.Equal(t, c.wantContainerID, containerID)
 		})
 	}

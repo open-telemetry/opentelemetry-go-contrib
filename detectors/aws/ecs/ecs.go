@@ -248,7 +248,7 @@ func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
 		// For example, windows; or when running integration tests outside of a container.
 		return "", nil
 	}
-	return getCgroupContainerID(fileData)
+	return getCgroupContainerID(fileData), nil
 }
 
 // returns host name reported by the kernel.
@@ -260,12 +260,12 @@ func (ecsUtils ecsDetectorUtils) getContainerName() (string, error) {
 	return hostName, nil
 }
 
-func getCgroupContainerID(fileData []byte) (string, error) {
+func getCgroupContainerID(fileData []byte) string {
 	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
 	for _, str := range splitData {
 		if ecsCgroupPathPattern.MatchString(str) {
-			return str[len(str)-containerIDLength:], nil
+			return str[len(str)-containerIDLength:]
 		}
 	}
-	return "", nil
+	return ""
 }
