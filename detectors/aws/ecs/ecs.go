@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"regexp"
 	"runtime"
 	"strings"
 
@@ -35,6 +36,7 @@ var (
 	errCannotParseTaskArn                 = errors.New("cannot parse region and account ID from the Task's ARN: the ARN does not contain at least 6 segments separated by the ':' character")
 	errCannotRetrieveLogsGroupMetadataV4  = errors.New("the ECS Metadata v4 did not return a AwsLogGroup name")
 	errCannotRetrieveLogsStreamMetadataV4 = errors.New("the ECS Metadata v4 did not return a AwsLogStream name")
+	ecsCgroupPathPattern                  = regexp.MustCompile(`/ecs/[^/]+/[a-f0-9]{64}$`)
 )
 
 // Create interface for methods needing to be mocked.
@@ -246,13 +248,7 @@ func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
 		// For example, windows; or when running integration tests outside of a container.
 		return "", nil
 	}
-	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
-	for _, str := range splitData {
-		if len(str) > containerIDLength {
-			return str[len(str)-containerIDLength:], nil
-		}
-	}
-	return "", nil
+	return getCgroupContainerID(fileData), nil
 }
 
 // returns host name reported by the kernel.
@@ -262,4 +258,14 @@ func (ecsUtils ecsDetectorUtils) getContainerName() (string, error) {
 		return "", errCannotReadContainerName
 	}
 	return hostName, nil
+}
+
+func getCgroupContainerID(fileData []byte) string {
+	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
+	for _, str := range splitData {
+		if ecsCgroupPathPattern.MatchString(str) {
+			return str[len(str)-containerIDLength:]
+		}
+	}
+	return ""
 }
