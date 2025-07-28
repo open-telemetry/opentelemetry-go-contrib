@@ -32,6 +32,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 
+### Fixed
+
+- Improve the ECS detector correctness in `go.opentelemetry.io/contrib/detectors/aws/ecs`. (#7607)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
