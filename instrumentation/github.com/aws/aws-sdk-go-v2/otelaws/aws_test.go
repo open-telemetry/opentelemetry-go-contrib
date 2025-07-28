@@ -60,7 +60,7 @@ func Test_otelMiddlewares_finalizeMiddlewareAfter(t *testing.T) {
 		},
 	}
 
-	next := middleware.HandlerFunc(func(ctx context.Context, input interface{}) (output interface{}, metadata middleware.Metadata, err error) {
+	next := middleware.HandlerFunc(func(ctx context.Context, input any) (output any, metadata middleware.Metadata, err error) {
 		return nil, middleware.Metadata{}, nil
 	})
 
@@ -95,7 +95,7 @@ func Test_otelMiddlewares_finalizeMiddlewareAfter_Noop(t *testing.T) {
 	// Non request input should trigger noop
 	input := &struct{}{}
 
-	next := middleware.HandlerFunc(func(ctx context.Context, input interface{}) (output interface{}, metadata middleware.Metadata, err error) {
+	next := middleware.HandlerFunc(func(ctx context.Context, input any) (output any, metadata middleware.Metadata, err error) {
 		return nil, middleware.Metadata{}, nil
 	})
 
@@ -153,7 +153,7 @@ func Test_otelMiddlewares_presignedRequests(t *testing.T) {
 		},
 	}
 
-	next := middleware.HandlerFunc(func(ctx context.Context, input interface{}) (output interface{}, metadata middleware.Metadata, err error) {
+	next := middleware.HandlerFunc(func(ctx context.Context, input any) (output any, metadata middleware.Metadata, err error) {
 		return nil, middleware.Metadata{}, nil
 	})
 

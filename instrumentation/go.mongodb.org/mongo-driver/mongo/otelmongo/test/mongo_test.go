@@ -42,14 +42,14 @@ func TestDBCrudOperation(t *testing.T) {
 
 	tt := []struct {
 		title          string
-		operation      func(context.Context, *mongo.Database) (interface{}, error)
+		operation      func(context.Context, *mongo.Database) (any, error)
 		mockResponses  []bson.D
 		excludeCommand bool
 		validators     []validator
 	}{
 		{
 			title: "insert",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
 			mockResponses:  []bson.D{{{Key: "ok", Value: 1}}},
@@ -65,7 +65,7 @@ func TestDBCrudOperation(t *testing.T) {
 		},
 		{
 			title: "insert",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
 			mockResponses:  []bson.D{{{Key: "ok", Value: 1}}},
@@ -145,13 +145,13 @@ func TestDBCrudOperation(t *testing.T) {
 func TestDBCollectionAttribute(t *testing.T) {
 	tt := []struct {
 		title         string
-		operation     func(context.Context, *mongo.Database) (interface{}, error)
+		operation     func(context.Context, *mongo.Database) (any, error)
 		mockResponses []bson.D
 		validators    []validator
 	}{
 		{
 			title: "delete",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item"}})
 			},
 			mockResponses: []bson.D{{{Key: "ok", Value: 1}}},
@@ -172,7 +172,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 		},
 		{
 			title: "listCollectionNames",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.ListCollectionNames(ctx, bson.D{})
 			},
 			mockResponses: []bson.D{

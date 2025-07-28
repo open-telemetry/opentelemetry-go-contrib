@@ -213,6 +213,7 @@ linters:
         # https://github.com/mgechev/revive/blob/master/RULES_DESCRIPTIONS.md#waitgroup-by-value
         - name: waitgroup-by-value
           disabled: false
+        - name: use-any
     testifylint:
       enable-all: true
       disable:

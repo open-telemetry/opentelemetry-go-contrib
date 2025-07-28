@@ -115,7 +115,7 @@ func (m *objectEncoder) AddUint64(k string, v uint64) {
 		})
 }
 
-func (m *objectEncoder) AddReflected(k string, v interface{}) error {
+func (m *objectEncoder) AddReflected(k string, v any) error {
 	m.cur.attrs = append(m.cur.attrs,
 		log.KeyValue{
 			Key:   k,
@@ -218,7 +218,7 @@ func (a *arrayEncoder) AppendObject(v zapcore.ObjectMarshaler) error {
 	return err
 }
 
-func (a *arrayEncoder) AppendReflected(v interface{}) error {
+func (a *arrayEncoder) AppendReflected(v any) error {
 	a.elems = append(a.elems, convertValue(v))
 	return nil
 }
