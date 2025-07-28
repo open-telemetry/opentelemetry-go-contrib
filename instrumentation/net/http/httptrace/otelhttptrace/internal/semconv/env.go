@@ -111,13 +111,13 @@ type MetricData struct {
 
 var (
 	metricAddOptionPool = &sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return &[]metric.AddOption{}
 		},
 	}
 
 	metricRecordOptionPool = &sync.Pool{
-		New: func() interface{} {
+		New: func() any {
 			return &[]metric.RecordOption{}
 		},
 	}
