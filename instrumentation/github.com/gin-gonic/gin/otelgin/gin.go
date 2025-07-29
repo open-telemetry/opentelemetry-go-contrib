@@ -157,7 +157,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 // span in the given context. This is a replacement for
 // gin.Context.HTML function - it invokes the original function after
 // setting up the span.
-func HTML(c *gin.Context, code int, name string, obj interface{}) {
+func HTML(c *gin.Context, code int, name string, obj any) {
 	var tracer oteltrace.Tracer
 	tracerInterface, ok := c.Get(tracerKey)
 	if ok {

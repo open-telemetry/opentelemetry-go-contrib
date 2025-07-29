@@ -292,7 +292,7 @@ func TestParseYAML(t *testing.T) {
 		name     string
 		input    string
 		wantErr  error
-		wantType interface{}
+		wantType any
 	}{
 		{
 			name:    "valid YAML config",
@@ -337,7 +337,7 @@ func TestSerializeJSON(t *testing.T) {
 		name     string
 		input    string
 		wantErr  error
-		wantType interface{}
+		wantType any
 	}{
 		{
 			name:    "valid JSON config",

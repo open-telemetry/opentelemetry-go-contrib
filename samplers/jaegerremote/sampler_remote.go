@@ -49,7 +49,7 @@ type SamplingStrategyFetcher interface {
 // samplingStrategyParser is used to parse sampling strategy updates. The output object
 // should be of the type that is recognized by the SamplerUpdaters.
 type samplingStrategyParser interface {
-	Parse(response []byte) (interface{}, error)
+	Parse(response []byte) (any, error)
 }
 
 // samplerUpdater is used by Sampler to apply sampling strategies,
@@ -62,7 +62,7 @@ type samplingStrategyParser interface {
 //
 // Sampler invokes the updaters while holding a lock on the main sampler.
 type samplerUpdater interface {
-	Update(sampler trace.Sampler, strategy interface{}) (modified trace.Sampler, err error)
+	Update(sampler trace.Sampler, strategy any) (modified trace.Sampler, err error)
 }
 
 // Sampler is a delegating sampler that polls a remote server
@@ -173,7 +173,7 @@ func (s *Sampler) UpdateSampler() {
 }
 
 // NB: this function should only be called while holding a Write lock.
-func (s *Sampler) updateSamplerViaUpdaters(strategy interface{}) error {
+func (s *Sampler) updateSamplerViaUpdaters(strategy any) error {
 	for _, updater := range s.updaters {
 		sampler, err := updater.Update(s.sampler, strategy)
 		if err != nil {
@@ -193,7 +193,7 @@ func (s *Sampler) updateSamplerViaUpdaters(strategy interface{}) error {
 type probabilisticSamplerUpdater struct{}
 
 // Update implements Update of samplerUpdater.
-func (u *probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy interface{}) (trace.Sampler, error) {
+func (u *probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy any) (trace.Sampler, error) {
 	type response interface {
 		GetProbabilisticSampling() *jaeger_api_v2.ProbabilisticSamplingStrategy
 	}
@@ -218,7 +218,7 @@ func (u *probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy int
 type rateLimitingSamplerUpdater struct{}
 
 // Update implements Update of samplerUpdater.
-func (u *rateLimitingSamplerUpdater) Update(sampler trace.Sampler, strategy interface{}) (trace.Sampler, error) {
+func (u *rateLimitingSamplerUpdater) Update(sampler trace.Sampler, strategy any) (trace.Sampler, error) {
 	type response interface {
 		GetRateLimitingSampling() *jaeger_api_v2.RateLimitingSamplingStrategy
 	}
@@ -246,7 +246,7 @@ type perOperationSamplerUpdater struct {
 }
 
 // Update implements Update of samplerUpdater.
-func (u *perOperationSamplerUpdater) Update(sampler trace.Sampler, strategy interface{}) (trace.Sampler, error) {
+func (u *perOperationSamplerUpdater) Update(sampler trace.Sampler, strategy any) (trace.Sampler, error) {
 	type response interface {
 		GetOperationSampling() *jaeger_api_v2.PerOperationSamplingStrategies
 	}
@@ -310,7 +310,7 @@ func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 
 type samplingStrategyParserImpl struct{}
 
-func (p *samplingStrategyParserImpl) Parse(response []byte) (interface{}, error) {
+func (p *samplingStrategyParserImpl) Parse(response []byte) (any, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
 	// Official Jaeger Remote Sampling protocol contains enums encoded as strings.
 	// Legacy protocol contains enums as numbers.
