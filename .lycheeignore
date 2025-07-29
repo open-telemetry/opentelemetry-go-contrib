@@ -2,3 +2,4 @@ http://localhost
 http://169.254.169.254/metadata/instance/compute
 https://10.0.0.0
 https://localhost:4317
+localhost:14250
