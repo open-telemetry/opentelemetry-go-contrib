@@ -70,7 +70,7 @@ type samplerUpdater interface {
 // delegates to it for sampling decisions.
 type Sampler struct {
 	// These fields must be first in the struct because `sync/atomic` expects 64-bit alignment.
-	// Cf. https://github.com/jaegertracing/jaeger-client-go/issues/155, https://goo.gl/zW7dgq
+	// Cf. https://github.com/jaegertracing/jaeger-client-go/issues/155, https://pkg.go.dev/sync/atomic#pkg-note-BUG
 	closed int64 // 0 - not closed, 1 - closed
 
 	sync.RWMutex // used to serialize access to samplerConfig.sampler
