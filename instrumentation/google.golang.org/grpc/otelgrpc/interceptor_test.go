@@ -64,8 +64,8 @@ type mockClientStream struct {
 	msgs []grpc_testing.SimpleResponse
 }
 
-func (mockClientStream) SendMsg(m interface{}) error { return nil }
-func (c *mockClientStream) RecvMsg(m interface{}) error {
+func (mockClientStream) SendMsg(m any) error { return nil }
+func (c *mockClientStream) RecvMsg(m any) error {
 	if len(c.msgs) == 0 {
 		return io.EOF
 	}

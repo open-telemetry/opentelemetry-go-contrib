@@ -60,7 +60,7 @@ func (s *MockAgent) SamplingServerAddr() string {
 }
 
 // AddSamplingStrategy registers a sampling strategy for a service.
-func (s *MockAgent) AddSamplingStrategy(service string, strategy interface{}) {
+func (s *MockAgent) AddSamplingStrategy(service string, strategy any) {
 	s.samplingMgr.AddSamplingStrategy(service, strategy)
 }
 

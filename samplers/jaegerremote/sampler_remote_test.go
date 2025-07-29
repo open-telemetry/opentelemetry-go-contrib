@@ -86,7 +86,7 @@ func (c *testSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 
 type testSamplingStrategyParser struct{}
 
-func (p *testSamplingStrategyParser) Parse(response []byte) (interface{}, error) {
+func (p *testSamplingStrategyParser) Parse(response []byte) (any, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
 
 	switch string(response) {

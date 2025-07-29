@@ -29,7 +29,7 @@ type messageType attribute.KeyValue
 
 // Event adds an event of the messageType to the span associated with the
 // passed context with a message id.
-func (m messageType) Event(ctx context.Context, id int, _ interface{}) {
+func (m messageType) Event(ctx context.Context, id int, _ any) {
 	span := trace.SpanFromContext(ctx)
 	if !span.IsRecording() {
 		return
@@ -62,7 +62,7 @@ type clientStream struct {
 
 var _ = proto.Marshal
 
-func (w *clientStream) RecvMsg(m interface{}) error {
+func (w *clientStream) RecvMsg(m any) error {
 	err := w.ClientStream.RecvMsg(m)
 
 	if err == nil && !w.desc.ServerStreams {
@@ -82,7 +82,7 @@ func (w *clientStream) RecvMsg(m interface{}) error {
 	return err
 }
 
-func (w *clientStream) SendMsg(m interface{}) error {
+func (w *clientStream) SendMsg(m any) error {
 	err := w.ClientStream.SendMsg(m)
 
 	w.sentMessageID++
