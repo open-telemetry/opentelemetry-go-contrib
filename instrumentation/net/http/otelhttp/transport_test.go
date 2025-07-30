@@ -88,7 +88,7 @@ func TestTransportFormatter(t *testing.T) {
 
 	for _, tc := range httpMethods {
 		t.Run(tc.name, func(t *testing.T) {
-			r, err := http.NewRequest(tc.method, "http://localhost/", nil)
+			r, err := http.NewRequest(tc.method, "http://localhost/", http.NoBody)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -124,7 +124,7 @@ func TestTransportBasics(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +175,7 @@ func TestNilTransport(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -462,7 +462,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -502,7 +502,7 @@ func TestTransportErrorStatus(t *testing.T) {
 		WithTracerProvider(provider),
 	)
 	c := http.Client{Transport: tr}
-	r, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, server.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -558,7 +558,7 @@ func TestTransportRequestWithTraceContext(t *testing.T) {
 	tracer := provider.Tracer("")
 	ctx, span := tracer.Start(context.Background(), "test_span")
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	r = r.WithContext(ctx)
@@ -604,7 +604,7 @@ func TestWithHTTPTrace(t *testing.T) {
 	tracer := provider.Tracer("")
 	ctx, span := tracer.Start(context.Background(), "test_span")
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	r = r.WithContext(ctx)
@@ -932,7 +932,7 @@ func TestCustomAttributesHandling(t *testing.T) {
 		attribute.String("bar", "barValue"),
 	}
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 	labeler := &Labeler{}
 	labeler.Add(expectedAttributes...)
@@ -987,7 +987,7 @@ func TestMetricsExistenceOnRequestError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
 	ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := client.Do(r)
@@ -1038,7 +1038,7 @@ func TestDefaultAttributesHandling(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := client.Do(r)
@@ -1083,7 +1083,7 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(b, err)
 
 	for _, bb := range []struct {
