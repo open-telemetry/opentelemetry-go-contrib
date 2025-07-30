@@ -10,6 +10,7 @@ linters:
     - depguard
     - errcheck
     - errorlint
+    - gocritic
     - godot
     - gosec
     - govet
@@ -50,6 +51,30 @@ linters:
             - pkg: crypto/md5
             - pkg: crypto/sha1
             - pkg: crypto/**/pkix
+    gocritic:
+      disabled-checks:
+        - appendAssign
+        - appendCombine
+        - assignOp
+        - elseif
+        - emptyStringTest
+        - exitAfterDefer
+        - exposedSyncMutex
+        - httpNoBody
+        - hugeParam
+        - ifElseChain
+        - nilValReturn
+        - paramTypeCombine
+        - preferStringWriter
+        - rangeValCopy
+        - regexpMust
+        - typeDefFirst
+        - typeUnparen
+        - unlambda
+        - unnamedResult
+        - unslice
+        - whyNoLint
+      enable-all: true
     godot:
       exclude:
         # Exclude sentence fragments for lists.
