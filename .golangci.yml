@@ -62,7 +62,6 @@ linters:
         - hugeParam
         - paramTypeCombine
         - rangeValCopy
-        - typeDefFirst
         - typeUnparen
         - unnamedResult
         - unslice
