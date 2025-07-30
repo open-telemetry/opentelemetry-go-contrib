@@ -64,7 +64,6 @@ linters:
         - paramTypeCombine
         - preferStringWriter
         - rangeValCopy
-        - regexpMust
         - typeDefFirst
         - typeUnparen
         - unnamedResult
