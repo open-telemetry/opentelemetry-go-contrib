@@ -150,7 +150,7 @@ var (
 	}
 )
 
-func assertStubEqualsIgnoreTime(t *testing.T, expected tracetest.SpanStub, actual tracetest.SpanStub) {
+func assertStubEqualsIgnoreTime(t *testing.T, expected, actual tracetest.SpanStub) {
 	assert.Equal(t, expected.Name, actual.Name)
 	assert.Equal(t, expected.SpanContext, actual.SpanContext)
 	assert.Equal(t, expected.Parent, actual.Parent)

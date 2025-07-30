@@ -185,6 +185,8 @@ formatters:
     - gofumpt
     - goimports
   settings:
+    gofumpt:
+      extra-rules: true
     goimports:
       local-prefixes:
         - go.opentelemetry.io

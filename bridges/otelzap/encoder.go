@@ -103,7 +103,7 @@ func (m *objectEncoder) AddInt(k string, v int) {
 	m.cur.attrs = append(m.cur.attrs, log.Int(k, v))
 }
 
-func (m *objectEncoder) AddString(k string, v string) {
+func (m *objectEncoder) AddString(k, v string) {
 	m.cur.attrs = append(m.cur.attrs, log.String(k, v))
 }
 

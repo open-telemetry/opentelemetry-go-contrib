@@ -121,7 +121,7 @@ var (
 	}
 )
 
-func assertResourceEquals(t *testing.T, expected *v1resource.Resource, actual *v1resource.Resource) {
+func assertResourceEquals(t *testing.T, expected, actual *v1resource.Resource) {
 	assert.Len(t, actual.Attributes, 6)
 	assert.Equal(t, expected.Attributes[0].String(), actual.Attributes[0].String())
 	assert.Equal(t, expected.Attributes[1].String(), actual.Attributes[1].String())
@@ -134,7 +134,7 @@ func assertResourceEquals(t *testing.T, expected *v1resource.Resource, actual *v
 
 // ignore timestamps and SpanID since time is obviously variable,
 // and SpanID is randomized when using xray IDGenerator.
-func assertSpanEqualsIgnoreTimeAndSpanID(t *testing.T, expected *v1trace.ResourceSpans, actual *v1trace.ResourceSpans) {
+func assertSpanEqualsIgnoreTimeAndSpanID(t *testing.T, expected, actual *v1trace.ResourceSpans) {
 	assert.Equal(t, expected.ScopeSpans[0].Scope, actual.ScopeSpans[0].Scope)
 
 	actualSpan := actual.ScopeSpans[0].Spans[0]

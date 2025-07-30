@@ -113,7 +113,7 @@ type mockHTTPPresigner struct{}
 
 func (f mockHTTPPresigner) PresignHTTP(
 	ctx context.Context, credentials aws.Credentials, r *http.Request,
-	payloadHash string, service string, region string, signingTime time.Time,
+	payloadHash, service, region string, signingTime time.Time,
 	optFns ...func(*awsSignerV4.SignerOptions),
 ) (
 	url string, signedHeader http.Header, err error,

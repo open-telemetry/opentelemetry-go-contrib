@@ -160,7 +160,7 @@ type sampleStore struct {
 }
 
 // newSampleStore creates a sampleStore.
-func newSampleStore(latencyBucketSize uint, errorBucketSize uint) *sampleStore {
+func newSampleStore(latencyBucketSize, errorBucketSize uint) *sampleStore {
 	s := &sampleStore{
 		latency: make([]*bucket, defaultBoundaries.numBuckets()),
 		errors:  newBucket(errorBucketSize),

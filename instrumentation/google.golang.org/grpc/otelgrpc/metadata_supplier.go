@@ -28,7 +28,7 @@ func (s *metadataSupplier) Get(key string) string {
 	return values[0]
 }
 
-func (s *metadataSupplier) Set(key string, value string) {
+func (s *metadataSupplier) Set(key, value string) {
 	s.metadata.Set(key, value)
 }
 

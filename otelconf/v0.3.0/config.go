@@ -190,7 +190,7 @@ func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
 }
 
 // createTLSConfig creates a tls.Config from certificate files.
-func createTLSConfig(caCertFile *string, clientCertFile *string, clientKeyFile *string) (*tls.Config, error) {
+func createTLSConfig(caCertFile, clientCertFile, clientKeyFile *string) (*tls.Config, error) {
 	tlsConfig := &tls.Config{}
 	if caCertFile != nil {
 		caText, err := os.ReadFile(*caCertFile)
