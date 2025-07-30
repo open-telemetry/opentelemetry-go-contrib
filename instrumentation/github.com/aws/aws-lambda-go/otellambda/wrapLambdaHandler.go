@@ -17,8 +17,8 @@ type wrappedHandlerFunction struct {
 	instrumentor instrumentor
 }
 
-func errorHandler(e error) func(context.Context, interface{}) (interface{}, error) {
-	return func(context.Context, interface{}) (interface{}, error) {
+func errorHandler(e error) func(context.Context, any) (any, error) {
+	return func(context.Context, any) (any, error) {
 		return nil, e
 	}
 }
@@ -63,20 +63,20 @@ func validateReturns(handler reflect.Type) error {
 }
 
 // Wraps and calls customer lambda handler then unpacks response as necessary.
-func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handlerFunc interface{}, eventJSON []byte, event reflect.Value, takesContext bool) (interface{}, error) { // nolint:revive // this control flag is required
+func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handlerFunc any, eventJSON []byte, event reflect.Value, takesContext bool) (any, error) { // nolint:revive // this control flag is required
 	wrappedLambdaHandler := reflect.ValueOf(whf.wrapper(handlerFunc))
 
 	argsWrapped := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(eventJSON), event, reflect.ValueOf(takesContext)}
 	response := wrappedLambdaHandler.Call(argsWrapped)[0].Interface().([]reflect.Value)
 
-	// convert return values into (interface{}, error)
+	// convert return values into (any, error)
 	var err error
 	if len(response) > 0 {
 		if errVal, ok := response[len(response)-1].Interface().(error); ok {
 			err = errVal
 		}
 	}
-	var val interface{}
+	var val any
 	if len(response) > 1 {
 		val = response[0].Interface()
 	}
@@ -85,7 +85,7 @@ func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handler
 }
 
 // InstrumentHandler Provides a lambda handler which wraps customer lambda handler with OTel Tracing.
-func InstrumentHandler(handlerFunc interface{}, options ...Option) interface{} {
+func InstrumentHandler(handlerFunc any, options ...Option) any {
 	whf := wrappedHandlerFunction{instrumentor: newInstrumentor(options...)}
 
 	if handlerFunc == nil {
@@ -108,19 +108,19 @@ func InstrumentHandler(handlerFunc interface{}, options ...Option) interface{} {
 	// note we will always take context to capture lambda context,
 	// regardless of whether customer takes context
 	if handlerType.NumIn() == 0 || handlerType.NumIn() == 1 && takesContext {
-		return func(ctx context.Context) (interface{}, error) {
-			var temp *interface{}
+		return func(ctx context.Context) (any, error) {
+			var temp *any
 			event := reflect.ValueOf(temp)
 			return whf.wrapperInternals(ctx, handlerFunc, []byte{}, event, takesContext)
 		}
 	}
 
 	// customer either takes both context and payload or just payload
-	return func(ctx context.Context, payload interface{}) (interface{}, error) {
+	return func(ctx context.Context, payload any) (any, error) {
 		event := reflect.New(handlerType.In(handlerType.NumIn() - 1))
 
 		// lambda SDK normally unmarshalls to customer event type, however
-		// with the wrapper the SDK unmarshalls to map[string]interface{}
+		// with the wrapper the SDK unmarshalls to map[string]any
 		// due to our use of reflection. Therefore we must convert this map
 		// to customer's desired event, we do so by simply re-marshaling then
 		// unmarshalling to the desired event type. The remarshalledPayload
@@ -139,8 +139,8 @@ func InstrumentHandler(handlerFunc interface{}, options ...Option) interface{} {
 }
 
 // Adds OTel span surrounding customer handler call.
-func (whf *wrappedHandlerFunction) wrapper(handlerFunc interface{}) func(ctx context.Context, eventJSON []byte, event interface{}, takesContext bool) []reflect.Value {
-	return func(ctx context.Context, eventJSON []byte, event interface{}, takesContext bool) []reflect.Value {
+func (whf *wrappedHandlerFunction) wrapper(handlerFunc any) func(ctx context.Context, eventJSON []byte, event any, takesContext bool) []reflect.Value {
+	return func(ctx context.Context, eventJSON []byte, event any, takesContext bool) []reflect.Value {
 		ctx, span := whf.instrumentor.tracingBegin(ctx, eventJSON)
 		defer whf.instrumentor.tracingEnd(ctx, span)
 
@@ -159,9 +159,9 @@ func (whf *wrappedHandlerFunction) wrapper(handlerFunc interface{}) func(ctx con
 	}
 }
 
-// Determine if an interface{} is nil or the
+// Determine if an any is nil or the
 // if the reflect.Value of the event is nil.
-func eventExists(event interface{}) bool {
+func eventExists(event any) bool {
 	if event == nil {
 		return false
 	}

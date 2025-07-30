@@ -14,10 +14,9 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconvutil"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconv"
 )
 
 const (
@@ -47,6 +46,8 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 		cfg.Skipper = middleware.DefaultSkipper
 	}
 
+	semconvSrv := semconv.NewHTTPServer(nil)
+
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			if cfg.Skipper(c) {
@@ -62,11 +63,13 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			}()
 			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
 			opts := []oteltrace.SpanStartOption{
-				oteltrace.WithAttributes(semconvutil.HTTPServerRequest(service, request, semconvutil.HTTPServerRequestOptions{}, nil)...),
+				oteltrace.WithAttributes(
+					semconvSrv.RequestTraceAttrs(service, request, semconv.RequestTraceAttrsOpts{})...,
+				),
 				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 			}
 			if path := c.Path(); path != "" {
-				rAttr := semconv.HTTPRoute(path)
+				rAttr := semconvSrv.Route(path)
 				opts = append(opts, oteltrace.WithAttributes(rAttr))
 			}
 			spanName := spanNameFormatter(c)
@@ -86,10 +89,10 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			}
 
 			status := c.Response().Status
-			span.SetStatus(semconvutil.HTTPServerStatus(status))
-			if status > 0 {
-				span.SetAttributes(semconv.HTTPStatusCode(status))
-			}
+			span.SetStatus(semconvSrv.Status(status))
+			span.SetAttributes(semconvSrv.ResponseTraceAttrs(semconv.ResponseTelemetry{
+				StatusCode: status,
+			})...)
 
 			return err
 		}

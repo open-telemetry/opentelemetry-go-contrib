@@ -12,7 +12,7 @@ import (
 
 func BenchmarkHook(b *testing.B) {
 	record := &logrus.Entry{
-		Data: map[string]interface{}{
+		Data: map[string]any{
 			"string": "hello",
 			"int":    42,
 			"float":  1.5,

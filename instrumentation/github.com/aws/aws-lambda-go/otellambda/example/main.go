@@ -72,7 +72,7 @@ func lambdaHandler(ctx context.Context) error {
 		}
 	}()
 
-	var data map[string]interface{}
+	var data map[string]any
 	err = json.NewDecoder(res.Body).Decode(&data)
 	if err != nil {
 		log.Printf("failed to read http response body, %v\n", err)
