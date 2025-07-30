@@ -70,7 +70,6 @@ linters:
         - regexpMust
         - typeDefFirst
         - typeUnparen
-        - unlambda
         - unnamedResult
         - unslice
         - whyNoLint
