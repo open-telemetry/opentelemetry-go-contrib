@@ -238,7 +238,7 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		if u.Scheme == "http" {
 			opts = append(opts, otlptracehttp.WithInsecure())
 		}
-		if len(u.Path) > 0 {
+		if u.Path != "" {
 			opts = append(opts, otlptracehttp.WithURLPath(u.Path))
 		}
 	}
