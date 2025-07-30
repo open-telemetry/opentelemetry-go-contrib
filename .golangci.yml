@@ -61,7 +61,6 @@ linters:
         - exposedSyncMutex
         - hugeParam
         - paramTypeCombine
-        - preferStringWriter
         - rangeValCopy
         - typeDefFirst
         - typeUnparen

@@ -46,7 +46,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 		span := trace.SpanFromContext(c.Request.Context())
 		ok := !span.SpanContext().IsValid()
 		assert.True(t, ok)
-		_, _ = c.Writer.Write([]byte("ok"))
+		_, _ = c.Writer.WriteString("ok")
 	})
 	r := httptest.NewRequest(http.MethodGet, "/ping", http.NoBody)
 	w := httptest.NewRecorder()
@@ -147,7 +147,7 @@ func TestTrace200(t *testing.T) {
 	router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		_, _ = c.Writer.Write([]byte(id))
+		_, _ = c.Writer.WriteString(id)
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
@@ -351,7 +351,7 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	)
 	router.GET("/user/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		_, _ = c.Writer.Write([]byte(id))
+		_, _ = c.Writer.WriteString(id)
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
@@ -538,7 +538,7 @@ func TestMetrics(t *testing.T) {
 			router.GET("/user/:id", func(c *gin.Context) {
 				id := c.Param("id")
 				assert.Equal(t, "123", id)
-				_, _ = c.Writer.Write([]byte(id))
+				_, _ = c.Writer.WriteString(id)
 			})
 
 			r := httptest.NewRequest(http.MethodGet, tt.requestTarget, http.NoBody)
