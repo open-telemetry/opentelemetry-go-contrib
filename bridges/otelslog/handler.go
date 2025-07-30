@@ -361,7 +361,7 @@ func (g *group) KeyValue(kvs ...log.KeyValue) log.KeyValue {
 // Clone returns a copy of g.
 func (g *group) Clone() *group {
 	if g == nil {
-		return g
+		return nil
 	}
 	g2 := *g
 	g2.attrs = g2.attrs.Clone()
