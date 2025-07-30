@@ -62,7 +62,6 @@ linters:
         - exposedSyncMutex
         - httpNoBody
         - hugeParam
-        - ifElseChain
         - nilValReturn
         - paramTypeCombine
         - preferStringWriter
