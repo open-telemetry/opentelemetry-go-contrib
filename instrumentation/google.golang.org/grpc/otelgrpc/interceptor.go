@@ -64,14 +64,14 @@ var _ = proto.Marshal
 
 func (w *clientStream) RecvMsg(m any) error {
 	err := w.ClientStream.RecvMsg(m)
-
-	if err == nil && !w.desc.ServerStreams {
+	switch {
+	case err == nil && !w.desc.ServerStreams:
 		w.endSpan(nil)
-	} else if errors.Is(err, io.EOF) {
+	case errors.Is(err, io.EOF):
 		w.endSpan(nil)
-	} else if err != nil {
+	case err != nil:
 		w.endSpan(err)
-	} else {
+	default:
 		w.receivedMessageID++
 
 		if w.receivedEvent {

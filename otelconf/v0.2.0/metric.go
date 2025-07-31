@@ -138,7 +138,7 @@ func periodicExporter(ctx context.Context, exporter MetricExporter, opts ...sdkm
 func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmetric.Exporter, error) {
 	opts := []otlpmetrichttp.Option{}
 
-	if len(otlpConfig.Endpoint) > 0 {
+	if otlpConfig.Endpoint != "" {
 		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err
@@ -148,7 +148,7 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		if u.Scheme == "http" {
 			opts = append(opts, otlpmetrichttp.WithInsecure())
 		}
-		if len(u.Path) > 0 {
+		if u.Path != "" {
 			opts = append(opts, otlpmetrichttp.WithURLPath(u.Path))
 		}
 	}
@@ -187,7 +187,7 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmetric.Exporter, error) {
 	var opts []otlpmetricgrpc.Option
 
-	if len(otlpConfig.Endpoint) > 0 {
+	if otlpConfig.Endpoint != "" {
 		u, err := url.ParseRequestURI(otlpConfig.Endpoint)
 		if err != nil {
 			return nil, err

@@ -53,7 +53,7 @@ func lambdaHandler(ctx context.Context) error {
 			otelhttp.WithTracerProvider(otel.GetTracerProvider()),
 		),
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/repos/open-telemetry/opentelemetry-go/releases/latest", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/repos/open-telemetry/opentelemetry-go/releases/latest", http.NoBody)
 	if err != nil {
 		log.Printf("failed to create http request, %v\n", err)
 		return err

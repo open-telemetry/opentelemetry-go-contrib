@@ -133,7 +133,7 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		if u.Scheme == "http" {
 			opts = append(opts, otlploghttp.WithInsecure())
 		}
-		if len(u.Path) > 0 {
+		if u.Path != "" {
 			opts = append(opts, otlploghttp.WithURLPath(u.Path))
 		}
 	}

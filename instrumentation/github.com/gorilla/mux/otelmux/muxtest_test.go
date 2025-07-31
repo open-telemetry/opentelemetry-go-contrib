@@ -59,7 +59,7 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 			))
 			router.HandleFunc(routeTpl, func(w http.ResponseWriter, r *http.Request) {})
 
-			r := httptest.NewRequest("GET", "/user/123", nil)
+			r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, r)
@@ -124,7 +124,7 @@ func TestSDKIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer sr.Reset()
 
-			r := httptest.NewRequest("GET", tt.path, nil)
+			r := httptest.NewRequest(http.MethodGet, tt.path, http.NoBody)
 			if tt.reqFunc != nil {
 				tt.reqFunc(r)
 			}
@@ -154,7 +154,7 @@ func TestNotFoundIsNotError(t *testing.T) {
 	router.Use(otelmux.Middleware("foobar", otelmux.WithTracerProvider(provider)))
 	router.HandleFunc("/does/not/exist", notfound)
 
-	r0 := httptest.NewRequest("GET", "/does/not/exist", nil)
+	r0 := httptest.NewRequest(http.MethodGet, "/does/not/exist", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r0)
 
@@ -216,7 +216,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 		assert.NotEqual(t, remoteSpan.TraceID, sc.TraceID())
 	})
 
-	r0 := httptest.NewRequest("GET", "/with/public/endpoint", nil)
+	r0 := httptest.NewRequest(http.MethodGet, "/with/public/endpoint", http.NoBody)
 	w := httptest.NewRecorder()
 
 	sc := trace.NewSpanContext(remoteSpan)
@@ -301,7 +301,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 				tt.handlerAssert(t, s.SpanContext())
 			})
 
-			r0 := httptest.NewRequest("GET", "/with/public/endpointfn", nil)
+			r0 := httptest.NewRequest(http.MethodGet, "/with/public/endpointfn", http.NoBody)
 			w := httptest.NewRecorder()
 
 			sc := trace.NewSpanContext(remoteSpan)
@@ -361,7 +361,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		))
 
 		router.HandleFunc("/user/{id:[0-9]+}", ok)
-		r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", nil)
+		r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", http.NoBody)
 		require.NoError(t, err)
 		rr := httptest.NewRecorder()
 		router.ServeHTTP(rr, r)

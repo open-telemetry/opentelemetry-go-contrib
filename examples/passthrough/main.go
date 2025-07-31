@@ -33,7 +33,7 @@ func main() {
 	defer func() { _ = tp.Shutdown(ctx) }()
 
 	// make an initial http request
-	r, err := http.NewRequest("", "", nil)
+	r, err := http.NewRequest("", "", http.NoBody)
 	if err != nil {
 		panic(err)
 	}

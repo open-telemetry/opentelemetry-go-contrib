@@ -149,7 +149,7 @@ func TestSpecifyPropagators(t *testing.T) {
 		defer span.End()
 		bag, _ := baggage.Parse("foo=bar")
 		ctx = baggage.ContextWithBaggage(ctx, bag)
-		req, _ := http.NewRequest("GET", ts.URL, nil)
+		req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
 		otelhttptrace.Inject(ctx, req, otelhttptrace.WithPropagators(propagation.Baggage{}))
 
 		res, err := client.Do(req)

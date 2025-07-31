@@ -55,6 +55,9 @@ var _ resource.Detector = (*resourceDetector)(nil)
 // Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
 var _ detectorUtils = (*eksDetectorUtils)(nil)
 
+// is this going to stop working with 1.20 when Docker is deprecated?
+var containerIDRegex = regexp.MustCompile(`^.*/docker/(.+)$`)
+
 // NewResourceDetector returns a resource detector that will detect AWS EKS resources.
 func NewResourceDetector() resource.Detector {
 	utils, err := newK8sDetectorUtils()
@@ -179,16 +182,10 @@ func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
 		return "", fmt.Errorf("getContainerID() error: cannot read file with path %s: %w", defaultCgroupPath, err)
 	}
 
-	// is this going to stop working with 1.20 when Docker is deprecated?
-	r, err := regexp.Compile(`^.*/docker/(.+)$`)
-	if err != nil {
-		return "", err
-	}
-
 	// Retrieve containerID from file
 	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
 	for _, str := range splitData {
-		if r.MatchString(str) {
+		if containerIDRegex.MatchString(str) {
 			return str[len(str)-containerIDLength:], nil
 		}
 	}

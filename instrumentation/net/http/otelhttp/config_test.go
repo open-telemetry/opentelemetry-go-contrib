@@ -34,7 +34,7 @@ func TestBasicFilter(t *testing.T) {
 		}),
 	)
 
-	r, err := http.NewRequest(http.MethodGet, "http://localhost/", nil)
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/", http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,7 +106,7 @@ func TestSpanNameFormatter(t *testing.T) {
 				otelhttp.WithTracerProvider(provider),
 				otelhttp.WithSpanNameFormatter(tc.formatter),
 			)
-			r, err := http.NewRequest(http.MethodGet, "http://localhost/hello", nil)
+			r, err := http.NewRequest(http.MethodGet, "http://localhost/hello", http.NoBody)
 			if err != nil {
 				t.Fatal(err)
 			}

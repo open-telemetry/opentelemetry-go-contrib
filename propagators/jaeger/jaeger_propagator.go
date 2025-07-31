@@ -58,11 +58,12 @@ func (jaeger Jaeger) Inject(ctx context.Context, carrier propagation.TextMapCarr
 		return
 	}
 	headers = append(headers, sc.TraceID().String(), sc.SpanID().String(), deprecatedParentSpanID)
-	if debugFromContext(ctx) {
+	switch {
+	case debugFromContext(ctx):
 		headers = append(headers, fmt.Sprintf("%x", flagsDebug|flagsSampled))
-	} else if sc.IsSampled() {
+	case sc.IsSampled():
 		headers = append(headers, fmt.Sprintf("%x", flagsSampled))
-	} else {
+	default:
 		headers = append(headers, fmt.Sprintf("%x", flagsNotSampled))
 	}
 
