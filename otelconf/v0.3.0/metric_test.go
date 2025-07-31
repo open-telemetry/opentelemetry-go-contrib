@@ -1428,7 +1428,6 @@ func TestPrometheusReaderErrorCases(t *testing.T) {
 			WithResourceConstantLabels: &IncludeExclude{},
 		}
 		reader, err := prometheusReader(context.Background(), &cfg)
-		assert.Error(t, err)
 		assert.ErrorContains(t, err, "binding address")
 		assert.Nil(t, reader)
 	})
@@ -1498,6 +1497,42 @@ func TestPrometheusReaderHostParsing(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPrometheusReaderConfigurationOptions(t *testing.T) {
+	host := "localhost"
+	port := 0
+	cfg := &Prometheus{
+		Host:              &host,
+		Port:              &port,
+		WithoutScopeInfo:  ptr(true),
+		WithoutTypeSuffix: ptr(true),
+		WithoutUnits:      ptr(true),
+		WithResourceConstantLabels: &IncludeExclude{
+			Included: []string{"service.name"},
+			Excluded: []string{"host.name"},
+		},
+	}
+
+	reader, err := prometheusReader(context.Background(), cfg)
+	require.NoError(t, err)
+	require.NotNil(t, reader)
+
+	t.Cleanup(func() {
+		require.NoError(t, reader.Shutdown(context.Background()))
+	})
+
+	server := reader.(readerWithServer).server
+
+	addr := server.Addr
+	assert.True(t, strings.Contains(addr, "localhost") || strings.Contains(addr, "127.0.0.1"),
+		"server address %s should contain localhost or 127.0.0.1", addr)
+
+	resp, err := http.DefaultClient.Get("http://" + addr + "/metrics")
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {

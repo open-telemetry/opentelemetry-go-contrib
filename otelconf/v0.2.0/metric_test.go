@@ -1190,7 +1190,6 @@ func TestPrometheusReaderErrorCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reader, err := prometheusReader(context.Background(), tt.config)
-			assert.Error(t, err)
 			assert.ErrorContains(t, err, tt.errMsg)
 			assert.Nil(t, reader)
 		})
@@ -1226,7 +1225,7 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 	assert.True(t, strings.Contains(addr, "localhost") || strings.Contains(addr, "127.0.0.1"),
 		"server address %s should contain localhost or 127.0.0.1", addr)
 
-	resp, err := http.DefaultClient.Get("http://" + server.Addr + "/metrics")
+	resp, err := http.DefaultClient.Get("http://" + addr + "/metrics")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
