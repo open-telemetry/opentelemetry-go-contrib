@@ -60,7 +60,6 @@ linters:
         - exitAfterDefer
         - exposedSyncMutex
         - hugeParam
-        - paramTypeCombine
         - rangeValCopy
         - typeUnparen
         - unnamedResult
