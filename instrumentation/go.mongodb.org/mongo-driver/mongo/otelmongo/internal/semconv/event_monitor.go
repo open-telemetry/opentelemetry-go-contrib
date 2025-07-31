@@ -135,14 +135,16 @@ func commandStartedTraceAttrs(evt *event.CommandStartedEvent, setters ...Attribu
 
 	attrs := []attribute.KeyValue{semconv.DBSystemNameMongoDB}
 
-	attrs = append(attrs,
+	attrs = append(
+		attrs,
 		semconv.DBOperationName(evt.CommandName),
 		semconv.DBNamespace(evt.DatabaseName),
 		semconv.NetworkTransportTCP,
 	)
 
 	hostname, port := peerInfo(evt)
-	attrs = append(attrs,
+	attrs = append(
+		attrs,
 		semconv.NetworkPeerPort(port),
 		semconv.NetworkPeerAddress(net.JoinHostPort(hostname, strconv.Itoa(port))),
 	)
@@ -168,14 +170,16 @@ func commandStartedTraceAttrsV1210(evt *event.CommandStartedEvent, setters ...At
 
 	attrs := []attribute.KeyValue{semconv1210.DBSystemMongoDB}
 
-	attrs = append(attrs,
+	attrs = append(
+		attrs,
 		semconv1210.DBOperation(evt.CommandName),
 		semconv1210.DBName(evt.DatabaseName),
 		semconv1210.NetTransportTCP,
 	)
 
 	hostname, port := peerInfo(evt)
-	attrs = append(attrs,
+	attrs = append(
+		attrs,
 		semconv1210.NetPeerPort(port),
 		semconv1210.NetPeerName(hostname),
 	)

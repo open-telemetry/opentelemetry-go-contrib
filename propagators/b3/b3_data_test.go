@@ -1024,7 +1024,8 @@ func init() {
 	}
 	// Nothing should be set for any header regardless of encoding.
 	for _, t := range injectInvalidHeaderGenerator {
-		injectInvalidHeader = append(injectInvalidHeader,
+		injectInvalidHeader = append(
+			injectInvalidHeader,
 			injectTest{
 				name:             "none: " + t.name,
 				scc:              t.scc,
