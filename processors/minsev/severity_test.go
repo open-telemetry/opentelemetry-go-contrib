@@ -10,7 +10,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 )
 
-func TestSeverityVarConcurrentSafe(t *testing.T) {
+func TestSeverityVarConcurrentSafe(*testing.T) {
 	var (
 		sev SeverityVar
 		wg  sync.WaitGroup

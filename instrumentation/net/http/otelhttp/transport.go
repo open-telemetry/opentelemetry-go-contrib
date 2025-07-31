@@ -148,7 +148,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 
 		if err == nil {
-			readRecordFunc := func(n int64) {}
+			readRecordFunc := func(int64) {}
 			res.Body = newWrappedBody(span, readRecordFunc, res.Body)
 		}
 

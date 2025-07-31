@@ -135,6 +135,7 @@ linters:
         - name: time-equal
         - name: unconditional-recursion
         - name: unexported-return
+        - name: unused-parameter
         - name: unhandled-error
           arguments:
             - "fmt.Fprint"

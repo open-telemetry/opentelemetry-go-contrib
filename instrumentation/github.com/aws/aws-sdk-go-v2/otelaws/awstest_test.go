@@ -91,7 +91,7 @@ func TestAppendMiddlewares(t *testing.T) {
 
 	for name, c := range cases {
 		srv := httptest.NewServer(http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
+			func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(c.responseStatus)
 				_, err := w.Write(c.responseBody)
 				if err != nil {

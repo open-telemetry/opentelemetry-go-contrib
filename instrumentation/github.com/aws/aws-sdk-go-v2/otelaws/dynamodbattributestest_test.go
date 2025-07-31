@@ -47,7 +47,7 @@ func TestDynamodbTags(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
+		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(cases.responseStatus)
 		}))
 	defer server.Close()
@@ -117,7 +117,7 @@ func TestDynamodbTagsCustomBuilder(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
+		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(cases.responseStatus)
 		}))
 	defer server.Close()

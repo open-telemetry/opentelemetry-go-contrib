@@ -121,7 +121,7 @@ func (rw *testResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 }
 
 // implement Pusher.
-func (rw *testResponseWriter) Push(target string, opts *http.PushOptions) error {
+func (rw *testResponseWriter) Push(string, *http.PushOptions) error {
 	return nil
 }
 
@@ -130,7 +130,7 @@ func (rw *testResponseWriter) Flush() {
 }
 
 // implement io.ReaderFrom.
-func (rw *testResponseWriter) ReadFrom(r io.Reader) (n int64, err error) {
+func (rw *testResponseWriter) ReadFrom(io.Reader) (int64, error) {
 	return 0, nil
 }
 
@@ -138,7 +138,7 @@ func TestResponseWriterInterfaces(t *testing.T) {
 	// make sure the recordingResponseWriter preserves interfaces implemented by the wrapped writer
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar"))
-	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		assert.Implements(t, (*http.Hijacker)(nil), w)
 		assert.Implements(t, (*http.Pusher)(nil), w)
 		assert.Implements(t, (*http.Flusher)(nil), w)
@@ -233,7 +233,7 @@ func TestHeaderAlreadyWrittenWhenFlushing(t *testing.T) {
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar"))
 
-	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 
 		w.WriteHeader(http.StatusBadRequest)

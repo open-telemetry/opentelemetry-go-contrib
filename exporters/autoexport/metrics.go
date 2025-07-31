@@ -154,7 +154,7 @@ func init() {
 		}
 		return metric.NewPeriodicReader(r, readerOpts...), nil
 	})
-	RegisterMetricReader("none", func(ctx context.Context) (metric.Reader, error) {
+	RegisterMetricReader("none", func(context.Context) (metric.Reader, error) {
 		return newNoopMetricReader(), nil
 	})
 	RegisterMetricReader("prometheus", func(ctx context.Context) (metric.Reader, error) {
@@ -211,10 +211,10 @@ func init() {
 		return readerWithServer{lis.Addr(), reader, &server}, nil
 	})
 
-	RegisterMetricProducer("prometheus", func(ctx context.Context) (metric.Producer, error) {
+	RegisterMetricProducer("prometheus", func(context.Context) (metric.Producer, error) {
 		return prometheusbridge.NewMetricProducer(), nil
 	})
-	RegisterMetricProducer("none", func(ctx context.Context) (metric.Producer, error) {
+	RegisterMetricProducer("none", func(context.Context) (metric.Producer, error) {
 		return newNoopMetricProducer(), nil
 	})
 }

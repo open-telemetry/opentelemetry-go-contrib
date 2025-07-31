@@ -21,7 +21,7 @@ type mockLoggerProvider struct {
 	embedded.LoggerProvider
 }
 
-func (mockLoggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
+func (mockLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
 	return nil
 }
 

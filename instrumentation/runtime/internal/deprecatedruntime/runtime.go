@@ -56,7 +56,7 @@ func (r *runtime) register() error {
 	}
 
 	_, err = r.meter.RegisterCallback(
-		func(ctx context.Context, o metric.Observer) error {
+		func(_ context.Context, o metric.Observer) error {
 			o.ObserveInt64(uptime, time.Since(startTime).Milliseconds())
 			o.ObserveInt64(goroutines, int64(goruntime.NumGoroutine()))
 			o.ObserveInt64(cgoCalls, goruntime.NumCgoCall())

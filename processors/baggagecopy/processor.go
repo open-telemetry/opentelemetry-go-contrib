@@ -53,7 +53,7 @@ func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWrite
 }
 
 // OnEnd is called when span is finished and is a no-op for this processor.
-func (processor SpanProcessor) OnEnd(s trace.ReadOnlySpan) {}
+func (processor SpanProcessor) OnEnd(trace.ReadOnlySpan) {}
 
 // Shutdown is called when the SDK shuts down and is a no-op for this processor.
 func (processor SpanProcessor) Shutdown(context.Context) error { return nil }

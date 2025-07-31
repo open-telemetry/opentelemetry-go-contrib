@@ -103,7 +103,7 @@ func TestError(t *testing.T) {
 	wantErr := errors.New("oh no")
 	// configure a handler that returns an error and 5xx status
 	// code
-	router.GET("/server_err", func(c echo.Context) error {
+	router.GET("/server_err", func(echo.Context) error {
 		return wantErr
 	})
 	r := httptest.NewRequest(http.MethodGet, "/server_err", http.NoBody)
@@ -138,7 +138,7 @@ func TestStatusError(t *testing.T) {
 			echoError:  "oh no",
 			statusCode: http.StatusInternalServerError,
 			spanCode:   codes.Error,
-			handler: func(c echo.Context) error {
+			handler: func(echo.Context) error {
 				return errors.New("oh no")
 			},
 		},
@@ -147,7 +147,7 @@ func TestStatusError(t *testing.T) {
 			echoError:  "code=500, message=my error message",
 			statusCode: http.StatusInternalServerError,
 			spanCode:   codes.Error,
-			handler: func(c echo.Context) error {
+			handler: func(echo.Context) error {
 				return echo.NewHTTPError(http.StatusInternalServerError, "my error message")
 			},
 		},
@@ -156,7 +156,7 @@ func TestStatusError(t *testing.T) {
 			echoError:  "code=400, message=my error message",
 			statusCode: http.StatusBadRequest,
 			spanCode:   codes.Unset,
-			handler: func(c echo.Context) error {
+			handler: func(echo.Context) error {
 				return echo.NewHTTPError(http.StatusBadRequest, "my error message")
 			},
 		},
@@ -193,7 +193,7 @@ func TestErrorNotSwallowedByMiddleware(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/err", http.NoBody)
 	w := httptest.NewRecorder()
 	c := e.NewContext(r, w)
-	h := otelecho.Middleware("foobar")(echo.HandlerFunc(func(c echo.Context) error {
+	h := otelecho.Middleware("foobar")(echo.HandlerFunc(func(echo.Context) error {
 		return assert.AnError
 	}))
 
