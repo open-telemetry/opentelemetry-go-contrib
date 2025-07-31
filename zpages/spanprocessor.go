@@ -154,9 +154,9 @@ func (ssm *SpanProcessor) spansByLatency(name string, latencyBucketIndex int) []
 // It contains sample of spans for error requests (status code is codes.Error);
 // and a sample of spans for successful requests, bucketed by latency.
 type sampleStore struct {
-	sync.Mutex // protects everything below.
-	latency    []*bucket
-	errors     *bucket
+	mu      sync.Mutex // protects everything below.
+	latency []*bucket
+	errors  *bucket
 }
 
 // newSampleStore creates a sampleStore.
@@ -172,8 +172,8 @@ func newSampleStore(latencyBucketSize, errorBucketSize uint) *sampleStore {
 }
 
 func (ss *sampleStore) perMethodSummary() *perMethodSummary {
-	ss.Lock()
-	defer ss.Unlock()
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
 	p := &perMethodSummary{}
 	p.errorSpans = ss.errors.len()
 	for _, b := range ss.latency {
@@ -183,8 +183,8 @@ func (ss *sampleStore) perMethodSummary() *perMethodSummary {
 }
 
 func (ss *sampleStore) spansByLatency(latencyBucketIndex int) []sdktrace.ReadOnlySpan {
-	ss.Lock()
-	defer ss.Unlock()
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
 	if latencyBucketIndex < 0 || latencyBucketIndex >= len(ss.latency) {
 		return nil
 	}
@@ -192,8 +192,8 @@ func (ss *sampleStore) spansByLatency(latencyBucketIndex int) []sdktrace.ReadOnl
 }
 
 func (ss *sampleStore) errorSpans() []sdktrace.ReadOnlySpan {
-	ss.Lock()
-	defer ss.Unlock()
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
 	return ss.errors.spans()
 }
 
@@ -201,8 +201,8 @@ func (ss *sampleStore) errorSpans() []sdktrace.ReadOnlySpan {
 func (ss *sampleStore) sampleSpan(span sdktrace.ReadOnlySpan) {
 	code := span.Status().Code
 
-	ss.Lock()
-	defer ss.Unlock()
+	ss.mu.Lock()
+	defer ss.mu.Unlock()
 	if code == codes.Error {
 		ss.errors.add(span)
 		return
