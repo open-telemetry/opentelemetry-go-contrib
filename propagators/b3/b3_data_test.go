@@ -1024,28 +1024,30 @@ func init() {
 	}
 	// Nothing should be set for any header regardless of encoding.
 	for _, t := range injectInvalidHeaderGenerator {
-		injectInvalidHeader = append(injectInvalidHeader, injectTest{
-			name:             "none: " + t.name,
-			scc:              t.scc,
-			doNotWantHeaders: allHeaders,
-		})
-		injectInvalidHeader = append(injectInvalidHeader, injectTest{
-			name:             "multiple: " + t.name,
-			encoding:         b3.B3MultipleHeader,
-			scc:              t.scc,
-			doNotWantHeaders: allHeaders,
-		})
-		injectInvalidHeader = append(injectInvalidHeader, injectTest{
-			name:             "single: " + t.name,
-			encoding:         b3.B3SingleHeader,
-			scc:              t.scc,
-			doNotWantHeaders: allHeaders,
-		})
-		injectInvalidHeader = append(injectInvalidHeader, injectTest{
-			name:             "single+multiple: " + t.name,
-			encoding:         b3.B3SingleHeader | b3.B3MultipleHeader,
-			scc:              t.scc,
-			doNotWantHeaders: allHeaders,
-		})
+		injectInvalidHeader = append(injectInvalidHeader,
+			injectTest{
+				name:             "none: " + t.name,
+				scc:              t.scc,
+				doNotWantHeaders: allHeaders,
+			},
+			injectTest{
+				name:             "multiple: " + t.name,
+				encoding:         b3.B3MultipleHeader,
+				scc:              t.scc,
+				doNotWantHeaders: allHeaders,
+			},
+			injectTest{
+				name:             "single: " + t.name,
+				encoding:         b3.B3SingleHeader,
+				scc:              t.scc,
+				doNotWantHeaders: allHeaders,
+			},
+			injectTest{
+				name:             "single+multiple: " + t.name,
+				encoding:         b3.B3SingleHeader | b3.B3MultipleHeader,
+				scc:              t.scc,
+				doNotWantHeaders: allHeaders,
+			},
+		)
 	}
 }

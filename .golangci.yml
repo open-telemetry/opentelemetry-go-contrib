@@ -54,7 +54,6 @@ linters:
     gocritic:
       disabled-checks:
         - appendAssign
-        - appendCombine
         - assignOp
         - elseif
         - exitAfterDefer
