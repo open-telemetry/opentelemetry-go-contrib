@@ -76,7 +76,7 @@ func resourceString(res *resourcepb.Resource) string {
 	sAttrs := sortedAttributes(res.GetAttributes())
 	rstr := ""
 	for _, attr := range sAttrs {
-		rstr = rstr + attr.String()
+		rstr += attr.String()
 	}
 	return rstr
 }
