@@ -14,7 +14,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/trace"
-	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -71,33 +70,6 @@ func doCalls(ctx context.Context, client pb.TestServiceClient) {
 	test.DoClientStreaming(ctx, client)
 	test.DoServerStreaming(ctx, client)
 	test.DoPingPong(ctx, client)
-}
-
-func TestInterceptors(t *testing.T) {
-	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
-
-	clientStreamSR := tracetest.NewSpanRecorder()
-	clientStreamTP := trace.NewTracerProvider(trace.WithSpanProcessor(clientStreamSR))
-
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
-	require.NoError(t, err, "failed to open port")
-	client := newGrpcTest(t, listener,
-		[]grpc.DialOption{
-			//nolint:staticcheck // Interceptors are deprecated and will be removed in the next release.
-			grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
-				otelgrpc.WithTracerProvider(clientStreamTP),
-				otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-			)),
-		},
-		[]grpc.ServerOption{},
-	)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-	doCalls(ctx, client)
-
-	t.Run("StreamClientSpans", func(t *testing.T) {
-		checkStreamClientSpans(t, clientStreamSR.Ended(), listener.Addr().String())
-	})
 }
 
 func checkStreamClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {

@@ -14,7 +14,6 @@ import (
 	pb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/test/bufconn"
 
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
 )
 
@@ -67,12 +66,4 @@ func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 
 func BenchmarkNoInstrumentation(b *testing.B) {
 	benchmark(b, nil, nil)
-}
-
-func BenchmarkStreamClientInterceptor(b *testing.B) {
-	benchmark(b, []grpc.DialOption{
-		grpc.WithStreamInterceptor(otelgrpc.StreamClientInterceptor(
-			otelgrpc.WithTracerProvider(tracerProvider),
-		)),
-	}, nil)
 }
