@@ -82,7 +82,7 @@ func TestChildSpanNames(t *testing.T) {
 	container.Add(ws)
 
 	ws.Route(ws.GET("/book/{title}").To(func(req *restful.Request, resp *restful.Response) {
-		_, _ = resp.Write(([]byte)("ok"))
+		_, _ = resp.Write([]byte("ok"))
 	}))
 
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)

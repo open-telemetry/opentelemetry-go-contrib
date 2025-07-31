@@ -58,7 +58,6 @@ linters:
         - exposedSyncMutex
         - hugeParam
         - rangeValCopy
-        - typeUnparen
         - unnamedResult
         - unslice
         - whyNoLint

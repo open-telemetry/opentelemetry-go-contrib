@@ -136,7 +136,7 @@ func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockColle
 	collectortracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
 	mc.ln = newListener(ln)
 	go func() {
-		_ = srv.Serve((net.Listener)(mc.ln))
+		_ = srv.Serve(net.Listener(mc.ln))
 	}()
 
 	mc.endpoint = ln.Addr().String()
