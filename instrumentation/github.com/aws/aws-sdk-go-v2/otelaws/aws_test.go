@@ -9,14 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsSignerV4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	awsSignerV4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
-
 	"go.opentelemetry.io/otel/propagation"
 )
 

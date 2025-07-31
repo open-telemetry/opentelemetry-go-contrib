@@ -6,9 +6,8 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 import (
 	"time"
 
-	"go.uber.org/zap/zapcore"
-
 	"go.opentelemetry.io/otel/log"
+	"go.uber.org/zap/zapcore"
 )
 
 var (

@@ -9,8 +9,9 @@ import (
 	"os"
 	"strings"
 
-	"go.opentelemetry.io/contrib/detectors/autodetect"
 	"go.opentelemetry.io/otel/sdk/resource"
+
+	"go.opentelemetry.io/contrib/detectors/autodetect"
 )
 
 // This environment variable is expected to be a comma-separated list of

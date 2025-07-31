@@ -8,15 +8,14 @@ import (
 	"net"
 	"testing"
 
+	"go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	pb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/test/bufconn"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
-	"go.opentelemetry.io/otel/trace/noop"
-
-	pb "google.golang.org/grpc/interop/grpc_testing"
 )
 
 const bufSize = 2048

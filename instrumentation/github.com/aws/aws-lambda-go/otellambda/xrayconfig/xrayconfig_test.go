@@ -13,14 +13,14 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
-	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	v1common "go.opentelemetry.io/proto/otlp/common/v1"
 	v1resource "go.opentelemetry.io/proto/otlp/resource/v1"
 	v1trace "go.opentelemetry.io/proto/otlp/trace/v1"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+	"go.opentelemetry.io/contrib/propagators/aws/xray"
 )
 
 func TestEventToCarrier(t *testing.T) {

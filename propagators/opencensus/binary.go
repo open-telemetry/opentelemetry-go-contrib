@@ -8,7 +8,6 @@ import (
 	"context"
 
 	ocpropagation "go.opencensus.io/trace/propagation"
-
 	"go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"

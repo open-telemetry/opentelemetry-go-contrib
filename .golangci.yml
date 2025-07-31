@@ -189,6 +189,6 @@ formatters:
       extra-rules: true
     goimports:
       local-prefixes:
-        - go.opentelemetry.io
+        - go.opentelemetry.io/contrib
   exclusions:
     generated: lax

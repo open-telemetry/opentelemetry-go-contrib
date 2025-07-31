@@ -9,10 +9,11 @@ import (
 	"net/http"
 	"strconv"
 
-	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 )
 
 const name = "go.opentelemetry.io/contrib/examples/dice"

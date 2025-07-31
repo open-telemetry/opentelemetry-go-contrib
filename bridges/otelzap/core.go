@@ -37,12 +37,11 @@ import (
 	"context"
 	"slices"
 
-	"go.uber.org/zap/zapcore"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	"go.uber.org/zap/zapcore"
 )
 
 type config struct {

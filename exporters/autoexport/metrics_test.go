@@ -17,13 +17,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	otlpmetrics "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"go.uber.org/goleak"
 	"google.golang.org/protobuf/proto"
 
 	prometheusbridge "go.opentelemetry.io/contrib/bridges/prometheus"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/metric"
-	otlpmetrics "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 )
 
 func TestMetricExporterNone(t *testing.T) {

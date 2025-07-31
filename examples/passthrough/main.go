@@ -11,12 +11,13 @@ import (
 	"net/http"
 	"time"
 
-	"go.opentelemetry.io/contrib/examples/passthrough/handler"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/examples/passthrough/handler"
 )
 
 const name = "go.opentelemetry.io/contrib/examples/passthrough"

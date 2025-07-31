@@ -9,7 +9,6 @@ import (
 	"os"
 
 	"cloud.google.com/go/compute/metadata"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
