@@ -1466,7 +1466,6 @@ func TestPrometheusReaderErrorCases(t *testing.T) {
 		host := "localhost"
 		cfg := Prometheus{Host: &host}
 		reader, err := prometheusReader(context.Background(), &cfg)
-		assert.Error(t, err)
 		assert.ErrorContains(t, err, "port must be specified")
 		assert.Nil(t, reader)
 	})

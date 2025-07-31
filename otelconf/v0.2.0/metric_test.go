@@ -1190,7 +1190,6 @@ func TestPrometheusReaderErrorCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			reader, err := prometheusReader(context.Background(), tt.config)
-			assert.Error(t, err)
 			assert.ErrorContains(t, err, tt.errMsg)
 			assert.Nil(t, reader)
 		})
