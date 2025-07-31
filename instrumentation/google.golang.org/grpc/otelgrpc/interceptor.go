@@ -14,22 +14,7 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 )
-
-// telemetryAttributes returns a span name and span and metric attributes from
-// the gRPC method and peer address.
-func telemetryAttributes(fullMethod, serverAddr string) (string, []attribute.KeyValue) {
-	name, methodAttrs := internal.ParseFullMethod(fullMethod)
-	srvAttrs := serverAddrAttrs(serverAddr)
-
-	attrs := make([]attribute.KeyValue, 0, 1+len(methodAttrs)+len(srvAttrs))
-	attrs = append(attrs, semconv.RPCSystemGRPC)
-	attrs = append(attrs, methodAttrs...)
-	attrs = append(attrs, srvAttrs...)
-	return name, attrs
-}
 
 // serverAddrAttrs returns the server address attributes for the hostport.
 func serverAddrAttrs(hostport string) []attribute.KeyValue {
