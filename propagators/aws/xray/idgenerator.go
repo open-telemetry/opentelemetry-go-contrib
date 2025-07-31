@@ -19,7 +19,7 @@ import (
 
 // IDGenerator is used for generating a new traceID and spanID.
 type IDGenerator struct {
-	sync.Mutex
+	mu         sync.Mutex
 	randSource *rand.Rand
 }
 
@@ -27,8 +27,8 @@ var _ sdktrace.IDGenerator = &IDGenerator{}
 
 // NewSpanID returns a non-zero span ID from a randomly-chosen sequence.
 func (gen *IDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
-	gen.Lock()
-	defer gen.Unlock()
+	gen.mu.Lock()
+	defer gen.mu.Unlock()
 	sid := trace.SpanID{}
 	_, _ = gen.randSource.Read(sid[:])
 	return sid
@@ -40,8 +40,8 @@ func (gen *IDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
 //
 // span ID is from a randomly-chosen sequence.
 func (gen *IDGenerator) NewIDs(context.Context) (trace.TraceID, trace.SpanID) {
-	gen.Lock()
-	defer gen.Unlock()
+	gen.mu.Lock()
+	defer gen.mu.Unlock()
 
 	tid := trace.TraceID{}
 	currentTime := getCurrentTimeHex()

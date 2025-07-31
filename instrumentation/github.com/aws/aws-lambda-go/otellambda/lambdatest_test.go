@@ -35,22 +35,22 @@ import (
 var errorLogger = log.New(log.Writer(), "OTel Lambda Test Error: ", 0)
 
 type mockIDGenerator struct {
-	sync.Mutex
+	mu         sync.Mutex
 	traceCount int
 	spanCount  int
 }
 
 func (m *mockIDGenerator) NewIDs(context.Context) (trace.TraceID, trace.SpanID) {
-	m.Lock()
-	defer m.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.traceCount++
 	m.spanCount++
 	return [16]byte{byte(m.traceCount)}, [8]byte{byte(m.spanCount)}
 }
 
 func (m *mockIDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
-	m.Lock()
-	defer m.Unlock()
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	m.spanCount++
 	return [8]byte{byte(m.spanCount)}
 }
