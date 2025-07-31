@@ -6,137 +6,17 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 // gRPC tracing middleware
 // https://opentelemetry.io/docs/specs/semconv/rpc/
 import (
-	"context"
-	"errors"
-	"io"
 	"net"
 	"strconv"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
-	"go.opentelemetry.io/otel/trace"
-	"google.golang.org/grpc"
 	grpc_codes "google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/proto"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 )
-
-type messageType attribute.KeyValue
-
-// Event adds an event of the messageType to the span associated with the
-// passed context with a message id.
-func (m messageType) Event(ctx context.Context, id int, _ any) {
-	span := trace.SpanFromContext(ctx)
-	if !span.IsRecording() {
-		return
-	}
-	span.AddEvent("message", trace.WithAttributes(
-		attribute.KeyValue(m),
-		semconv.RPCMessageIDKey.Int(id),
-	))
-}
-
-var (
-	messageSent     = messageType(semconv.RPCMessageTypeSent)
-	messageReceived = messageType(semconv.RPCMessageTypeReceived)
-)
-
-// clientStream  wraps around the embedded grpc.ClientStream, and intercepts the RecvMsg and
-// SendMsg method call.
-type clientStream struct {
-	grpc.ClientStream
-	desc *grpc.StreamDesc
-
-	span trace.Span
-
-	receivedEvent bool
-	sentEvent     bool
-
-	receivedMessageID int
-	sentMessageID     int
-}
-
-var _ = proto.Marshal
-
-func (w *clientStream) RecvMsg(m any) error {
-	err := w.ClientStream.RecvMsg(m)
-	switch {
-	case err == nil && !w.desc.ServerStreams:
-		w.endSpan(nil)
-	case errors.Is(err, io.EOF):
-		w.endSpan(nil)
-	case err != nil:
-		w.endSpan(err)
-	default:
-		w.receivedMessageID++
-
-		if w.receivedEvent {
-			messageReceived.Event(w.Context(), w.receivedMessageID, m)
-		}
-	}
-
-	return err
-}
-
-func (w *clientStream) SendMsg(m any) error {
-	err := w.ClientStream.SendMsg(m)
-
-	w.sentMessageID++
-
-	if w.sentEvent {
-		messageSent.Event(w.Context(), w.sentMessageID, m)
-	}
-
-	if err != nil {
-		w.endSpan(err)
-	}
-
-	return err
-}
-
-func (w *clientStream) Header() (metadata.MD, error) {
-	md, err := w.ClientStream.Header()
-	if err != nil {
-		w.endSpan(err)
-	}
-
-	return md, err
-}
-
-func (w *clientStream) CloseSend() error {
-	err := w.ClientStream.CloseSend()
-	if err != nil {
-		w.endSpan(err)
-	}
-
-	return err
-}
-
-func wrapClientStream(s grpc.ClientStream, desc *grpc.StreamDesc, span trace.Span, cfg *config) *clientStream {
-	return &clientStream{
-		ClientStream:  s,
-		span:          span,
-		desc:          desc,
-		receivedEvent: cfg.ReceivedEvent,
-		sentEvent:     cfg.SentEvent,
-	}
-}
-
-func (w *clientStream) endSpan(err error) {
-	if err != nil {
-		s, _ := status.FromError(err)
-		w.span.SetStatus(codes.Error, s.Message())
-		w.span.SetAttributes(statusCodeAttr(s.Code()))
-	} else {
-		w.span.SetAttributes(statusCodeAttr(grpc_codes.OK))
-	}
-
-	w.span.End()
-}
 
 // telemetryAttributes returns a span name and span and metric attributes from
 // the gRPC method and peer address.
