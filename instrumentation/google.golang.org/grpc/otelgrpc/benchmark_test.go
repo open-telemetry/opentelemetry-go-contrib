@@ -8,7 +8,6 @@ import (
 	"net"
 	"testing"
 
-	"go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	pb "google.golang.org/grpc/interop/grpc_testing"
@@ -18,8 +17,6 @@ import (
 )
 
 const bufSize = 2048
-
-var tracerProvider = noop.NewTracerProvider()
 
 func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	l := bufconn.Listen(bufSize)
