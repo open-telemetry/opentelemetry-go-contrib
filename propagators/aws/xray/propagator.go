@@ -133,7 +133,7 @@ func extract(headerVal string) (trace.SpanContext, error) {
 }
 
 // indexOf returns position of the first occurrence of a substr in str starting at pos index.
-func indexOf(str string, substr string, pos int) int {
+func indexOf(str, substr string, pos int) int {
 	index := strings.Index(str[pos:], substr)
 	if index > -1 {
 		index += pos

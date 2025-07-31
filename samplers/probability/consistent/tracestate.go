@@ -189,7 +189,7 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //
 	return otts, nil
 }
 
-func parseNumber(key string, input string, maximum uint8) (uint8, error) {
+func parseNumber(key, input string, maximum uint8) (uint8, error) {
 	if input == "" {
 		return maximum + 1, nil
 	}

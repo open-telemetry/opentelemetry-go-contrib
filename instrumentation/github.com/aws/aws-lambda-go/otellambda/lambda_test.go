@@ -73,7 +73,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 		{
 			name:     "handler declares too many arguments",
 			expected: errors.New("handlers may not take more than two arguments, but handler takes 3"),
-			handler: func(n context.Context, x string, y string) error {
+			handler: func(n context.Context, x, y string) error {
 				return nil
 			},
 			args: []reflect.Value{reflect.ValueOf(mockContext), reflect.ValueOf(emptyPayload)},

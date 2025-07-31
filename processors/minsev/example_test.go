@@ -10,9 +10,10 @@ import (
 	"strings"
 	"sync"
 
-	"go.opentelemetry.io/contrib/processors/minsev"
 	"go.opentelemetry.io/otel/log"
 	logsdk "go.opentelemetry.io/otel/sdk/log"
+
+	"go.opentelemetry.io/contrib/processors/minsev"
 )
 
 const key = "OTEL_LOG_LEVEL"

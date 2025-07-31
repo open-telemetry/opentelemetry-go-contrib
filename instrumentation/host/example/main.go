@@ -13,11 +13,12 @@ import (
 	"os/signal"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/host"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+
+	"go.opentelemetry.io/contrib/instrumentation/host"
 )
 
 var res = resource.NewWithAttributes(

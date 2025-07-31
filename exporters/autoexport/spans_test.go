@@ -9,10 +9,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestSpanExporterNone(t *testing.T) {

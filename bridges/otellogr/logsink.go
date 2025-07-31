@@ -58,7 +58,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"

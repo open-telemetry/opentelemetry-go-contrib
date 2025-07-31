@@ -60,7 +60,6 @@ linters:
         - exitAfterDefer
         - exposedSyncMutex
         - hugeParam
-        - paramTypeCombine
         - rangeValCopy
         - typeUnparen
         - unnamedResult
@@ -202,8 +201,10 @@ formatters:
     - gofumpt
     - goimports
   settings:
+    gofumpt:
+      extra-rules: true
     goimports:
       local-prefixes:
-        - go.opentelemetry.io
+        - go.opentelemetry.io/contrib
   exclusions:
     generated: lax
