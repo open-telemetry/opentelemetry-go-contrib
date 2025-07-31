@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )
 
 var now = time.Now()
@@ -42,7 +42,7 @@ type scope struct {
 	Attributes               attribute.Set
 }
 
-// recorder records all [log.Record]s it is ased to emit.
+// recorder records all [log.Record]s it is asked to emit.
 type recorder struct {
 	embedded.LoggerProvider
 	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.

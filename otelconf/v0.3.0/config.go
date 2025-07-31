@@ -12,13 +12,16 @@ import (
 	"fmt"
 	"os"
 
-	yaml "sigs.k8s.io/yaml/goyaml.v3"
+	yaml "go.yaml.in/yaml/v3"
 
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 )
@@ -32,8 +35,11 @@ const (
 )
 
 type configOptions struct {
-	ctx                 context.Context
-	opentelemetryConfig OpenTelemetryConfiguration
+	ctx                   context.Context
+	opentelemetryConfig   OpenTelemetryConfiguration
+	loggerProviderOptions []sdklog.LoggerProviderOption
+	meterProviderOptions  []sdkmetric.Option
+	tracerProviderOptions []sdktrace.TracerProviderOption
 }
 
 type shutdownFunc func(context.Context) error
@@ -80,7 +86,9 @@ var noopSDK = SDK{
 
 // NewSDK creates SDK providers based on the configuration model.
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
-	o := configOptions{}
+	o := configOptions{
+		ctx: context.Background(),
+	}
 	for _, opt := range opts {
 		o = opt.apply(o)
 	}
@@ -139,6 +147,33 @@ func WithContext(ctx context.Context) ConfigurationOption {
 func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) ConfigurationOption {
 	return configurationOptionFunc(func(c configOptions) configOptions {
 		c.opentelemetryConfig = cfg
+		return c
+	})
+}
+
+// WithLoggerProviderOptions appends LoggerProviderOptions used for constructing
+// the LoggerProvider. OpenTelemetryConfiguration takes precedence over these options.
+func WithLoggerProviderOptions(opts ...sdklog.LoggerProviderOption) ConfigurationOption {
+	return configurationOptionFunc(func(c configOptions) configOptions {
+		c.loggerProviderOptions = append(c.loggerProviderOptions, opts...)
+		return c
+	})
+}
+
+// WithMeterProviderOptions appends metric.Options used for constructing the
+// MeterProvider. OpenTelemetryConfiguration takes precedence over these options.
+func WithMeterProviderOptions(opts ...sdkmetric.Option) ConfigurationOption {
+	return configurationOptionFunc(func(c configOptions) configOptions {
+		c.meterProviderOptions = append(c.meterProviderOptions, opts...)
+		return c
+	})
+}
+
+// WithTracerProviderOptions appends TracerProviderOptions used for constructing
+// the TracerProvider. OpenTelemetryConfiguration takes precedence over these options.
+func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) ConfigurationOption {
+	return configurationOptionFunc(func(c configOptions) configOptions {
+		c.tracerProviderOptions = append(c.tracerProviderOptions, opts...)
 		return c
 	})
 }

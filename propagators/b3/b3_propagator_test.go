@@ -184,7 +184,7 @@ func TestExtractMultiple(t *testing.T) {
 			test.sampled,
 			test.flags,
 		)
-		info := []interface{}{
+		info := []any{
 			"trace ID: %q, span ID: %q, parent span ID: %q, sampled: %q, flags: %q",
 			test.traceID,
 			test.spanID,

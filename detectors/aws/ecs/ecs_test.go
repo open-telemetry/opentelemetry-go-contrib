@@ -10,7 +10,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.32.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 
 	metadata "github.com/brunoscheufler/aws-ecs-metadata-go"
 	"github.com/stretchr/testify/assert"
@@ -229,4 +229,35 @@ func TestLogsAttributesAlternatePartition(t *testing.T) {
 		semconv.AWSLogStreamARNs("arn:arn-partition:logs:arn-region:arn-account:log-group:fake-group:log-stream:fake-stream"),
 	}
 	assert.Equal(t, expectedAttributes, actualAttributes, "logs attributes are incorrect")
+}
+
+func TestCgroupContainerID(t *testing.T) {
+	cgroups := []struct {
+		cgroupPath      string
+		wantContainerID string
+	}{
+		{
+			"10:memory:/ecs/my-task-name/1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+			"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+		},
+		{
+			"10:memory:/ecs/api_service_1/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		},
+		{
+			"10:memory:/ecs/my-task-name/12345abc",
+			"",
+		},
+		{
+			"10:memory:/docker/my-task-name/1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+			"",
+		},
+	}
+
+	for _, c := range cgroups {
+		t.Run(c.cgroupPath, func(t *testing.T) {
+			containerID := getCgroupContainerID([]byte(c.cgroupPath))
+			assert.Equal(t, c.wantContainerID, containerID)
+		})
+	}
 }

@@ -4,6 +4,7 @@
 package otelconf
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
@@ -11,9 +12,11 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -97,6 +100,58 @@ func TestMeterProvider(t *testing.T) {
 		assert.Equal(t, tt.wantErr, err)
 		require.NoError(t, shutdown(context.Background()))
 	}
+}
+
+func TestMeterProviderOptions(t *testing.T) {
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		calls++
+	}))
+	defer srv.Close()
+
+	cfg := OpenTelemetryConfiguration{
+		MeterProvider: &MeterProvider{
+			Readers: []MetricReader{{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol: ptr("http/protobuf"),
+							Endpoint: ptr(srv.URL),
+							Insecure: ptr(true),
+						},
+					},
+				},
+			}},
+		},
+	}
+
+	var buf bytes.Buffer
+	stdoutmetricExporter, err := stdoutmetric.New(stdoutmetric.WithWriter(&buf))
+	require.NoError(t, err)
+
+	res := resource.NewSchemaless(attribute.String("foo", "bar"))
+	sdk, err := NewSDK(
+		WithOpenTelemetryConfiguration(cfg),
+		WithMeterProviderOptions(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutmetricExporter))),
+		WithMeterProviderOptions(sdkmetric.WithResource(res)),
+	)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, sdk.Shutdown(context.Background()))
+		// The exporter, which we passed in as an extra option to NewSDK,
+		// should be wired up to the provider in addition to the
+		// configuration-based OTLP exporter.
+		assert.NotZero(t, buf)
+		assert.Equal(t, 1, calls) // flushed on shutdown
+
+		// Options provided by WithMeterProviderOptions may be overridden
+		// by configuration, e.g. the resource is always defined via
+		// configuration.
+		assert.NotContains(t, buf.String(), "foo")
+	}()
+
+	counter, _ := sdk.MeterProvider().Meter("test").Int64Counter("counter")
+	counter.Add(context.Background(), 1)
 }
 
 func TestReader(t *testing.T) {
@@ -1536,6 +1591,10 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// TODO (#7446): Fix the flakiness on Windows.
+		t.Skip("Test is flaky on Windows.")
+	}
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLPMetric
@@ -1627,11 +1686,17 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := net.Listen("tcp", "localhost:0")
+			n, err := net.Listen("tcp4", "localhost:0")
 			require.NoError(t, err)
 
-			// this is a workaround, as providing 127.0.0.1 resulted in an "invalid URI for request" error
-			tt.args.otlpConfig.Endpoint = ptr(strings.ReplaceAll(n.Addr().String(), "127.0.0.1", "localhost"))
+			// We need to manually construct the endpoint using the port on which the server is listening.
+			//
+			// n.Addr() always returns 127.0.0.1 instead of localhost.
+			// But our certificate is created with CN as 'localhost', not '127.0.0.1'.
+			// So we have to manually form the endpoint as "localhost:<port>".
+			_, port, err := net.SplitHostPort(n.Addr().String())
+			require.NoError(t, err)
+			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
@@ -1686,10 +1751,15 @@ func startGRPCMetricCollector(t *testing.T, listener net.Listener, serverOptions
 	c := &grpcMetricCollector{}
 
 	v1.RegisterMetricsServiceServer(srv, c)
-	go func() { _ = srv.Serve(listener) }()
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.Stop()
+		srv.GracefulStop()
+		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			assert.NoError(t, err)
+		}
 	})
 }
 

@@ -113,9 +113,11 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 		status := c.Writer.Status()
 		span.SetStatus(sc.Status(status))
-		if status > 0 {
-			span.SetAttributes(semconv.HTTPStatusCode(status))
-		}
+		span.SetAttributes(sc.ResponseTraceAttrs(semconv.ResponseTelemetry{
+			StatusCode: status,
+			WriteBytes: int64(c.Writer.Size()),
+		})...)
+
 		if len(c.Errors) > 0 {
 			span.SetStatus(codes.Error, c.Errors.String())
 			for _, err := range c.Errors {
@@ -155,7 +157,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 // span in the given context. This is a replacement for
 // gin.Context.HTML function - it invokes the original function after
 // setting up the span.
-func HTML(c *gin.Context, code int, name string, obj interface{}) {
+func HTML(c *gin.Context, code int, name string, obj any) {
 	var tracer oteltrace.Tracer
 	tracerInterface, ok := c.Get(tracerKey)
 	if ok {

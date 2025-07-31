@@ -54,7 +54,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 	emptyPayload := ""
 	testCases := []struct {
 		name     string
-		handler  interface{}
+		handler  any
 		expected error
 		args     []reflect.Value
 	}{
@@ -131,7 +131,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 }
 
 type expected struct {
-	val interface{}
+	val any
 	err error
 }
 
@@ -144,9 +144,9 @@ func TestHandlerInvokes(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected expected
-		handler  interface{}
+		handler  any
 	}{
 		{
 			name:     "string input and return without context",
@@ -168,7 +168,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "no input with response event and simple error",
 			input:    nil,
 			expected: expected{"", errors.New("bad stuff")},
-			handler: func() (interface{}, error) {
+			handler: func() (any, error) {
 				return nil, errors.New("bad stuff")
 			},
 		},
@@ -176,7 +176,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "input with response event and simple error",
 			input:    "Lambda",
 			expected: expected{"", errors.New("bad stuff")},
-			handler: func(e interface{}) (interface{}, error) {
+			handler: func(e any) (any, error) {
 				return nil, errors.New("bad stuff")
 			},
 		},
@@ -184,7 +184,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "input and context with response event and simple error",
 			input:    "Lambda",
 			expected: expected{"", errors.New("bad stuff")},
-			handler: func(ctx context.Context, e interface{}) (interface{}, error) {
+			handler: func(ctx context.Context, e any) (any, error) {
 				return nil, errors.New("bad stuff")
 			},
 		},
@@ -192,7 +192,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "input with response event and complex error",
 			input:    "Lambda",
 			expected: expected{"", messages.InvokeResponse_Error{Message: "message", Type: "type"}},
-			handler: func(e interface{}) (interface{}, error) {
+			handler: func(e any) (any, error) {
 				return nil, messages.InvokeResponse_Error{Message: "message", Type: "type"}
 			},
 		},
