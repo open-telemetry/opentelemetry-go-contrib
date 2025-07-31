@@ -1246,11 +1246,6 @@ func TestPrometheusReaderHostParsing(t *testing.T) {
 			name: "IPv4",
 			host: "127.0.0.1",
 		},
-		// TODO: Investigate and fix support for single character hostnames in test environments. See https://github.com/open-telemetry/opentelemetry-go-contrib/issues/7641
-		// {
-		// 	name: "single char",
-		// 	host: "a",
-		// },
 		{
 			name: "IPv6 with brackets",
 			host: "[::1]",
