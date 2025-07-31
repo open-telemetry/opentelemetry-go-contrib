@@ -23,8 +23,8 @@ type testExporter struct {
 	spans []trace.ReadOnlySpan
 }
 
-func (e *testExporter) Start(context.Context) error    { return nil }
-func (e *testExporter) Shutdown(context.Context) error { return nil }
+func (*testExporter) Start(context.Context) error    { return nil }
+func (*testExporter) Shutdown(context.Context) error { return nil }
 
 func (e *testExporter) ExportSpans(_ context.Context, ss []trace.ReadOnlySpan) error {
 	e.spans = append(e.spans, ss...)
@@ -176,4 +176,4 @@ type rwSpan struct {
 	trace.ReadWriteSpan
 }
 
-func (s rwSpan) SetAttributes(...attribute.KeyValue) {}
+func (rwSpan) SetAttributes(...attribute.KeyValue) {}

@@ -27,11 +27,11 @@ func (p mockPropagator) Inject(_ context.Context, carrier propagation.TextMapCar
 	carrier.Set(p.injectKey, p.injectValue)
 }
 
-func (p mockPropagator) Extract(context.Context, propagation.TextMapCarrier) context.Context {
+func (mockPropagator) Extract(context.Context, propagation.TextMapCarrier) context.Context {
 	return context.TODO()
 }
 
-func (p mockPropagator) Fields() []string {
+func (mockPropagator) Fields() []string {
 	return []string{}
 }
 
@@ -109,7 +109,7 @@ func (mockCredentialsProvider) Retrieve(context.Context) (aws.Credentials, error
 
 type mockHTTPPresigner struct{}
 
-func (f mockHTTPPresigner) PresignHTTP(
+func (mockHTTPPresigner) PresignHTTP(
 	context.Context, aws.Credentials, *http.Request,
 	string, string, string, time.Time,
 	...func(*awsSignerV4.SignerOptions),

@@ -59,7 +59,7 @@ var _ sdktrace.IDGenerator = &mockIDGenerator{}
 
 type emptyHandler struct{}
 
-func (h emptyHandler) Invoke(context.Context, []byte) ([]byte, error) {
+func (emptyHandler) Invoke(context.Context, []byte) ([]byte, error) {
 	return nil, nil
 }
 
@@ -256,7 +256,7 @@ const mockPropagatorKey = "Mockkey"
 
 type mockPropagator struct{}
 
-func (prop mockPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (mockPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	// extract tracing information
 	if header := carrier.Get(mockPropagatorKey); header != "" {
 		scc := trace.SpanContextConfig{}
@@ -281,11 +281,11 @@ func (prop mockPropagator) Extract(ctx context.Context, carrier propagation.Text
 	return ctx
 }
 
-func (prop mockPropagator) Inject(context.Context, propagation.TextMapCarrier) {
+func (mockPropagator) Inject(context.Context, propagation.TextMapCarrier) {
 	// not needed other than to satisfy interface
 }
 
-func (prop mockPropagator) Fields() []string {
+func (mockPropagator) Fields() []string {
 	// not needed other than to satisfy interface
 	return []string{}
 }

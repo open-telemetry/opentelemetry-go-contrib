@@ -33,7 +33,7 @@ var (
 
 type emptyHandler struct{}
 
-func (h emptyHandler) Invoke(context.Context, []byte) ([]byte, error) {
+func (emptyHandler) Invoke(context.Context, []byte) ([]byte, error) {
 	return nil, nil
 }
 

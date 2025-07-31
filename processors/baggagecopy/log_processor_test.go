@@ -27,9 +27,9 @@ func (p *processor) OnEmit(_ context.Context, r *log.Record) error {
 	return nil
 }
 
-func (p *processor) Shutdown(context.Context) error { return nil }
+func (*processor) Shutdown(context.Context) error { return nil }
 
-func (p *processor) ForceFlush(context.Context) error { return nil }
+func (*processor) ForceFlush(context.Context) error { return nil }
 
 func NewTestProcessor() *processor {
 	return &processor{}

@@ -163,7 +163,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
-func (detector *resourceDetector) getBaseArn(arns ...string) string {
+func (*resourceDetector) getBaseArn(arns ...string) string {
 	for _, arn := range arns {
 		if i := strings.LastIndex(arn, ":"); i >= 0 {
 			return arn[:i]
@@ -172,7 +172,7 @@ func (detector *resourceDetector) getBaseArn(arns ...string) string {
 	return ""
 }
 
-func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.ContainerMetadataV4) ([]attribute.KeyValue, error) {
+func (*resourceDetector) getLogsAttributes(metadata *ecsmetadata.ContainerMetadataV4) ([]attribute.KeyValue, error) {
 	if metadata.LogDriver != "awslogs" {
 		return []attribute.KeyValue{}, nil
 	}
@@ -225,17 +225,17 @@ func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.Contai
 }
 
 // returns metadata v4 for the container.
-func (ecsUtils ecsDetectorUtils) getContainerMetadataV4(ctx context.Context) (*ecsmetadata.ContainerMetadataV4, error) {
+func (ecsDetectorUtils) getContainerMetadataV4(ctx context.Context) (*ecsmetadata.ContainerMetadataV4, error) {
 	return ecsmetadata.GetContainerV4(ctx, &http.Client{})
 }
 
 // returns metadata v4 for the task.
-func (ecsUtils ecsDetectorUtils) getTaskMetadataV4(ctx context.Context) (*ecsmetadata.TaskMetadataV4, error) {
+func (ecsDetectorUtils) getTaskMetadataV4(ctx context.Context) (*ecsmetadata.TaskMetadataV4, error) {
 	return ecsmetadata.GetTaskV4(ctx, &http.Client{})
 }
 
 // returns docker container ID from default c group path.
-func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
+func (ecsDetectorUtils) getContainerID() (string, error) {
 	if runtime.GOOS != "linux" {
 		// Cgroups are used only under Linux.
 		return "", nil
@@ -251,7 +251,7 @@ func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
 }
 
 // returns host name reported by the kernel.
-func (ecsUtils ecsDetectorUtils) getContainerName() (string, error) {
+func (ecsDetectorUtils) getContainerName() (string, error) {
 	hostName, err := os.Hostname()
 	if err != nil {
 		return "", errCannotReadContainerName

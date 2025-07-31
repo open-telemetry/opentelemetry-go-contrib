@@ -183,7 +183,7 @@ func (o *Core) clone() *Core {
 }
 
 // Sync flushes buffered logs (if any).
-func (o *Core) Sync() error {
+func (*Core) Sync() error {
 	return nil
 }
 

@@ -57,6 +57,6 @@ func (f *cloudFunction) Detect(context.Context) (*resource.Resource, error) {
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
-func (f *cloudFunction) googleCloudFunctionName() (string, bool) {
+func (*cloudFunction) googleCloudFunctionName() (string, bool) {
 	return os.LookupEnv(gcpFunctionNameKey)
 }

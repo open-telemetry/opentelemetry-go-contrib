@@ -28,7 +28,7 @@ import (
 
 type dynamoDBAuthResolver struct{}
 
-func (r *dynamoDBAuthResolver) ResolveAuthSchemes(context.Context, *dynamodb.AuthResolverParameters) ([]*smithyauth.Option, error) {
+func (*dynamoDBAuthResolver) ResolveAuthSchemes(context.Context, *dynamodb.AuthResolverParameters) ([]*smithyauth.Option, error) {
 	return []*smithyauth.Option{
 		{SchemeID: smithyauth.SchemeIDAnonymous},
 	}, nil

@@ -85,7 +85,7 @@ func (c *testSamplingStrategyFetcher) Fetch(string) ([]byte, error) {
 
 type testSamplingStrategyParser struct{}
 
-func (p *testSamplingStrategyParser) Parse(response []byte) (any, error) {
+func (*testSamplingStrategyParser) Parse(response []byte) (any, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
 
 	switch string(response) {
@@ -374,7 +374,7 @@ func TestSamplerQueryError(t *testing.T) {
 
 type fakeSamplingFetcher struct{}
 
-func (c *fakeSamplingFetcher) Fetch(string) ([]byte, error) {
+func (*fakeSamplingFetcher) Fetch(string) ([]byte, error) {
 	return nil, errors.New("query error")
 }
 

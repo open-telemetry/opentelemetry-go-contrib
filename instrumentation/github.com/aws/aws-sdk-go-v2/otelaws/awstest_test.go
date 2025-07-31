@@ -27,7 +27,7 @@ import (
 
 type route53AuthResolver struct{}
 
-func (r *route53AuthResolver) ResolveAuthSchemes(context.Context, *route53.AuthResolverParameters) ([]*smithyauth.Option, error) {
+func (*route53AuthResolver) ResolveAuthSchemes(context.Context, *route53.AuthResolverParameters) ([]*smithyauth.Option, error) {
 	return []*smithyauth.Option{
 		{SchemeID: smithyauth.SchemeIDAnonymous},
 	}, nil

@@ -136,6 +136,7 @@ linters:
         - name: unconditional-recursion
         - name: unexported-return
         - name: unused-parameter
+        - name: unused-receiver
         - name: unhandled-error
           arguments:
             - "fmt.Fprint"
