@@ -112,18 +112,19 @@ func extract(headerVal string) (trace.SpanContext, error) {
 			return empty, errInvalidTraceHeader
 		}
 		value := part[equalsIndex+1:]
-		if strings.HasPrefix(part, traceIDKey) {
+		switch {
+		case strings.HasPrefix(part, traceIDKey):
 			scc.TraceID, err = parseTraceID(value)
 			if err != nil {
 				return empty, err
 			}
-		} else if strings.HasPrefix(part, parentIDKey) {
+		case strings.HasPrefix(part, parentIDKey):
 			// extract parentId
 			scc.SpanID, err = trace.SpanIDFromHex(value)
 			if err != nil {
 				return empty, errInvalidSpanIDLength
 			}
-		} else if strings.HasPrefix(part, sampleFlagKey) {
+		case strings.HasPrefix(part, sampleFlagKey):
 			// extract traceflag
 			scc.TraceFlags = parseTraceFlag(value)
 		}

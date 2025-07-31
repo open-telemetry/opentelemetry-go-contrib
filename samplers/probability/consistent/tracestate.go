@@ -96,7 +96,7 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //
 	var pval, rval string
 	var unknown []string
 
-	if len(ts) == 0 {
+	if ts == "" {
 		return newTraceState(), nil
 	}
 
@@ -104,7 +104,7 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //
 		return newTraceState(), errTraceStateSyntax
 	}
 
-	for len(ts) > 0 {
+	for ts != "" {
 		eqPos := 0
 		for ; eqPos < len(ts); eqPos++ {
 			if eqPos == 0 {

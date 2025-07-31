@@ -73,7 +73,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	metadataURIV3 := os.Getenv(metadataV3EnvVar)
 	metadataURIV4 := os.Getenv(metadataV4EnvVar)
 
-	if len(metadataURIV3) == 0 && len(metadataURIV4) == 0 {
+	if metadataURIV3 == "" && metadataURIV4 == "" {
 		return nil, nil
 	}
 	hostName, err := detector.utils.getContainerName()
@@ -91,7 +91,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		semconv.ContainerID(containerID),
 	}
 
-	if len(metadataURIV4) > 0 {
+	if metadataURIV4 != "" {
 		containerMetadata, err := detector.utils.getContainerMetadataV4(ctx)
 		if err != nil {
 			return empty, err
@@ -133,7 +133,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		)
 
 		availabilityZone := taskMetadata.AvailabilityZone
-		if len(availabilityZone) > 0 {
+		if availabilityZone != "" {
 			attributes = append(
 				attributes,
 				semconv.CloudAvailabilityZone(availabilityZone),

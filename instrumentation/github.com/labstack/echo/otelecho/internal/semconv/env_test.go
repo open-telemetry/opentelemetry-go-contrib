@@ -35,7 +35,7 @@ func TestHTTPServerDoesNotPanic(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			require.NotPanics(t, func() {
-				req, err := http.NewRequest("GET", "http://example.com", nil)
+				req, err := http.NewRequest("GET", "http://example.com", http.NoBody)
 				require.NoError(t, err)
 
 				_ = tt.server.RequestTraceAttrs("stuff", req, RequestTraceAttrsOpts{})
@@ -92,7 +92,7 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			require.NotPanics(t, func() {
-				req, err := http.NewRequest("GET", "http://example.com", nil)
+				req, err := http.NewRequest("GET", "http://example.com", http.NoBody)
 				require.NoError(t, err)
 
 				_ = tt.client.RequestTraceAttrs(req)
@@ -178,7 +178,7 @@ func BenchmarkRecordMetrics(b *testing.B) {
 
 	for _, bm := range benchmarks {
 		b.Run(bm.name, func(b *testing.B) {
-			req, _ := http.NewRequest("GET", "http://example.com", nil)
+			req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
 			_ = bm.server.RequestTraceAttrs("stuff", req, RequestTraceAttrsOpts{})
 			_ = bm.server.ResponseTraceAttrs(ResponseTelemetry{StatusCode: 200})
 			ctx := context.Background()

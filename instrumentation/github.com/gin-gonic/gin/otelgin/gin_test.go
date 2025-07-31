@@ -46,9 +46,9 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 		span := trace.SpanFromContext(c.Request.Context())
 		ok := !span.SpanContext().IsValid()
 		assert.True(t, ok)
-		_, _ = c.Writer.Write([]byte("ok"))
+		_, _ = c.Writer.WriteString("ok")
 	})
-	r := httptest.NewRequest("GET", "/ping", nil)
+	r := httptest.NewRequest(http.MethodGet, "/ping", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
@@ -59,7 +59,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	provider := noop.NewTracerProvider()
 	otel.SetTextMapPropagator(b3prop.New())
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	ctx := context.Background()
@@ -86,7 +86,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	provider := noop.NewTracerProvider()
 	b3 := b3prop.New()
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	ctx := context.Background()
@@ -117,7 +117,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 	router.Use(otelgin.Middleware("foobar"))
 	router.GET("/user/:id", func(c *gin.Context) {})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -132,7 +132,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c *gin.Context) {})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -147,10 +147,10 @@ func TestTrace200(t *testing.T) {
 	router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
 	router.GET("/user/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		_, _ = c.Writer.Write([]byte(id))
+		_, _ = c.Writer.WriteString(id)
 	})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	// do and verify the request
@@ -188,7 +188,7 @@ func TestError(t *testing.T) {
 		_ = c.Error(errors.New("oh no one"))
 		_ = c.AbortWithError(http.StatusInternalServerError, errors.New("oh no two"))
 	})
-	r := httptest.NewRequest("GET", "/server_err", nil)
+	r := httptest.NewRequest(http.MethodGet, "/server_err", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
@@ -238,7 +238,7 @@ func TestSpanStatus(t *testing.T) {
 				c.Status(tc.httpStatusCode)
 			})
 
-			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", http.NoBody))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
 			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
@@ -258,7 +258,7 @@ func TestSpanStatus(t *testing.T) {
 			c.JSON(http.StatusOK, nil)
 		})
 
-		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+		router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", http.NoBody))
 
 		require.Len(t, sr.Ended(), 1)
 		assert.Equal(t, codes.Error, sr.Ended()[0].Status().Code)
@@ -280,7 +280,7 @@ func TestWithSpanOptions_CustomAttributesAndSpanKind(t *testing.T) {
 	))
 	router.GET("/test", func(c *gin.Context) {})
 
-	r := httptest.NewRequest("GET", "/test", nil)
+	r := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 
@@ -329,7 +329,7 @@ func TestSpanName(t *testing.T) {
 			router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider), otelgin.WithSpanNameFormatter(tc.spanNameFormatter)))
 			router.Handle(tc.method, tc.route, func(c *gin.Context) {})
 
-			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(tc.method, tc.requestPath, nil))
+			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(tc.method, tc.requestPath, http.NoBody))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
 			assert.Equal(t, tc.wantSpanName, sr.Ended()[0].Name(), "span name not correct")
@@ -351,10 +351,10 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	)
 	router.GET("/user/:id", func(c *gin.Context) {
 		id := c.Param("id")
-		_, _ = c.Writer.Write([]byte(id))
+		_, _ = c.Writer.WriteString(id)
 	})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	// do and verify the request
@@ -389,7 +389,7 @@ func TestHTML(t *testing.T) {
 	router.GET("/hello", func(c *gin.Context) {
 		otelgin.HTML(c, http.StatusOK, "hello", "world")
 	})
-	r := httptest.NewRequest("GET", "/hello", nil)
+	r := httptest.NewRequest(http.MethodGet, "/hello", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
@@ -422,7 +422,7 @@ func TestWithFilter(t *testing.T) {
 		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
 		router.GET("/healthcheck", func(c *gin.Context) {})
 
-		r := httptest.NewRequest("GET", "/healthcheck", nil)
+		r := httptest.NewRequest(http.MethodGet, "/healthcheck", http.NoBody)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, r)
@@ -438,7 +438,7 @@ func TestWithFilter(t *testing.T) {
 		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
 		router.GET("/user/:id", func(c *gin.Context) {})
 
-		r := httptest.NewRequest("GET", "/user/123", nil)
+		r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, r)
@@ -456,7 +456,7 @@ func TestWithGinFilter(t *testing.T) {
 		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
 		router.GET("/healthcheck", func(c *gin.Context) {})
 
-		r := httptest.NewRequest("GET", "/healthcheck", nil)
+		r := httptest.NewRequest(http.MethodGet, "/healthcheck", http.NoBody)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, r)
@@ -472,7 +472,7 @@ func TestWithGinFilter(t *testing.T) {
 		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
 		router.GET("/user/:id", func(c *gin.Context) {})
 
-		r := httptest.NewRequest("GET", "/user/123", nil)
+		r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 		w := httptest.NewRecorder()
 
 		router.ServeHTTP(w, r)
@@ -538,10 +538,10 @@ func TestMetrics(t *testing.T) {
 			router.GET("/user/:id", func(c *gin.Context) {
 				id := c.Param("id")
 				assert.Equal(t, "123", id)
-				_, _ = c.Writer.Write([]byte(id))
+				_, _ = c.Writer.WriteString(id)
 			})
 
-			r := httptest.NewRequest("GET", tt.requestTarget, nil)
+			r := httptest.NewRequest(http.MethodGet, tt.requestTarget, http.NoBody)
 			w := httptest.NewRecorder()
 			c, _ := gin.CreateTestContext(w)
 			c.Request = r

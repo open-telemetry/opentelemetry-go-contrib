@@ -34,7 +34,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 	container := restful.NewContainer()
 	container.Add(ws)
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	container.ServeHTTP(w, r)
@@ -47,7 +47,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	provider := noop.NewTracerProvider()
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	ctx := context.Background()
@@ -79,7 +79,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	provider := noop.NewTracerProvider()
 	b3 := b3prop.New()
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	ctx := context.Background()

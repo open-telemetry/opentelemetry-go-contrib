@@ -35,7 +35,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 		return c.NoContent(http.StatusOK)
 	})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -53,7 +53,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 		return c.NoContent(http.StatusOK)
 	})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -72,7 +72,7 @@ func TestTrace200(t *testing.T) {
 		return c.String(http.StatusOK, id)
 	})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	// do and verify the request
@@ -106,7 +106,7 @@ func TestError(t *testing.T) {
 	router.GET("/server_err", func(c echo.Context) error {
 		return wantErr
 	})
-	r := httptest.NewRequest("GET", "/server_err", nil)
+	r := httptest.NewRequest(http.MethodGet, "/server_err", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
@@ -168,7 +168,7 @@ func TestStatusError(t *testing.T) {
 			router := echo.New()
 			router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
 			router.GET("/err", tc.handler)
-			r := httptest.NewRequest("GET", "/err", nil)
+			r := httptest.NewRequest(http.MethodGet, "/err", http.NoBody)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, r)
 
@@ -190,7 +190,7 @@ func TestStatusError(t *testing.T) {
 
 func TestErrorNotSwallowedByMiddleware(t *testing.T) {
 	e := echo.New()
-	r := httptest.NewRequest(http.MethodGet, "/err", nil)
+	r := httptest.NewRequest(http.MethodGet, "/err", http.NoBody)
 	w := httptest.NewRecorder()
 	c := e.NewContext(r, w)
 	h := otelecho.Middleware("foobar")(echo.HandlerFunc(func(c echo.Context) error {
@@ -246,7 +246,7 @@ func TestSpanNameFormatter(t *testing.T) {
 				return c.NoContent(http.StatusOK)
 			})
 
-			r := httptest.NewRequest(test.method, test.url, nil)
+			r := httptest.NewRequest(test.method, test.url, http.NoBody)
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, r)
 

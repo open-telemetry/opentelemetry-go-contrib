@@ -148,7 +148,7 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		if u.Scheme == "http" {
 			opts = append(opts, otlpmetrichttp.WithInsecure())
 		}
-		if len(u.Path) > 0 {
+		if u.Path != "" {
 			opts = append(opts, otlpmetrichttp.WithURLPath(u.Path))
 		}
 	}
