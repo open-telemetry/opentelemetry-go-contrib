@@ -44,12 +44,10 @@ func (s *SpansStorage) AddSpans(request *collectortracepb.ExportTraceServiceRequ
 				}
 			}
 			s.spanCount += len(rs.ScopeSpans[0].Spans)
-		} else {
-			if len(rs.ScopeSpans) > 0 {
-				newSpans := rs.ScopeSpans[0].GetSpans()
-				existingRs.ScopeSpans[0].Spans = append(existingRs.ScopeSpans[0].Spans, newSpans...)
-				s.spanCount += len(newSpans)
-			}
+		} else if len(rs.ScopeSpans) > 0 {
+			newSpans := rs.ScopeSpans[0].GetSpans()
+			existingRs.ScopeSpans[0].Spans = append(existingRs.ScopeSpans[0].Spans, newSpans...)
+			s.spanCount += len(newSpans)
 		}
 	}
 }

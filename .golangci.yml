@@ -54,7 +54,6 @@ linters:
     gocritic:
       disabled-checks:
         - appendAssign
-        - elseif
         - exitAfterDefer
         - exposedSyncMutex
         - hugeParam
