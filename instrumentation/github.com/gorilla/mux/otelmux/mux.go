@@ -6,6 +6,7 @@ package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"fmt"
 	"net/http"
+	"slices"
 	"time"
 
 	"github.com/felixge/httpsnoop"
@@ -86,7 +87,19 @@ type traceware struct {
 }
 
 // defaultSpanNameFunc just reuses the route name as the span name.
-func defaultSpanNameFunc(routeName string, _ *http.Request) string { return routeName }
+func defaultSpanNameFunc(routeName string, r *http.Request) string {
+	method := r.Method
+	if !slices.Contains([]string{
+		http.MethodGet, http.MethodHead,
+		http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete,
+		http.MethodConnect, http.MethodOptions,
+		http.MethodTrace,
+	}, method) {
+		method = "HTTP"
+	}
+	return method + " " + routeName
+}
 
 // ServeHTTP implements the http.Handler interface. It does the actual
 // tracing of the request.
@@ -114,17 +127,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	routeStr := r.Pattern
-
-	if routeStr == "" {
-		route := mux.CurrentRoute(r)
-		if route != nil {
-			routeStr, _ = route.GetPathTemplate()
-			if routeStr == "" {
-				routeStr, _ = route.GetPathRegexp()
-			}
-		}
-	}
+	routeStr := extractRoute(r)
 
 	if routeStr == "" {
 		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
@@ -202,4 +205,16 @@ func (tw traceware) metricAttributesFromRequest(r *http.Request) []attribute.Key
 		attributeForRequest = tw.metricAttributesFn(r)
 	}
 	return attributeForRequest
+}
+
+func extractRoute(r *http.Request) string {
+	routeStr := r.Pattern
+
+	if routeStr == "" {
+		route := mux.CurrentRoute(r)
+		if route != nil {
+			routeStr, _ = route.GetPathTemplate()
+		}
+	}
+	return routeStr
 }
