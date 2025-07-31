@@ -33,11 +33,6 @@ func serverAddrAttrs(hostport string) []attribute.KeyValue {
 	}
 }
 
-// statusCodeAttr returns status code attribute based on given gRPC code.
-func statusCodeAttr(c grpc_codes.Code) attribute.KeyValue {
-	return semconv.RPCGRPCStatusCodeKey.Int64(int64(c))
-}
-
 // serverStatus returns a span status code and message for a given gRPC
 // status code. It maps specific gRPC status codes to a corresponding span
 // status code and message. This function is intended for use on the server
