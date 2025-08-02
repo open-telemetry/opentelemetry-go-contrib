@@ -4,7 +4,11 @@
 package minsev // import "go.opentelemetry.io/contrib/processors/minsev"
 
 import (
+	"encoding"
+	"errors"
 	"fmt"
+	"strconv"
+	"strings"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/log"
@@ -16,8 +20,14 @@ import (
 // as errors and critical events).
 type Severity int
 
-// Ensure Severity implements fmt.Stringer.
-var _ fmt.Stringer = Severity(0)
+var (
+	// Ensure Severity implements fmt.Stringer.
+	_ fmt.Stringer = Severity(0)
+	// Ensure Severity implements encoding.TextMarshaler.
+	_ encoding.TextMarshaler = Severity(0)
+	// Ensure Severity implements encoding.TextUnmarshaler.
+	_ encoding.TextUnmarshaler = (*Severity)(nil)
+)
 
 // Severity values defined by OpenTelemetry.
 const (
@@ -73,6 +83,10 @@ const (
 // It implements [Severitier].
 func (s Severity) Severity() log.Severity {
 	// Unknown defaults to log.SeverityUndefined.
+	//
+	// TODO: return a clamped log.Severity. If s is less than
+	// SeverityTrace1, return log.SeverityTrace1, if s is greater than
+	// SeverityFatal4, return log.SeverityFatal4.
 	return translations[s]
 }
 
@@ -145,6 +159,105 @@ func (s Severity) String() string {
 	default:
 		return str("FATAL", s-SeverityFatal1)
 	}
+}
+
+// AppendText implements [encoding.TextAppender] by calling [Severity.String].
+func (s Severity) AppendText(b []byte) ([]byte, error) {
+	return append(b, s.String()...), nil
+}
+
+// MarshalText implements [encoding.TextMarshaler] by calling
+// [Severity.AppendText].
+func (s Severity) MarshalText() ([]byte, error) {
+	return s.AppendText(nil)
+}
+
+// UnmarshalText implements [encoding.TextUnmarshaler]. It accepts any string
+// produced by [Severity.MarshalText], ignoring case. It also accepts numeric
+// offsets that would result in a different string on output. For example,
+// "ERROR-8" will marshal as SeverityInfo.
+func (s *Severity) UnmarshalText(data []byte) error {
+	return s.parse(string(data))
+}
+
+// parse parses str into s.
+//
+// It will return an error if str is not a valid severity string.
+//
+// The string is expected to be in the format of "NAME[N][+/-OFFSET]", where
+// NAME is one of the severity names ("TRACE", "DEBUG", "INFO", "WARN",
+// "ERROR", "FATAL"), OFFSET is an optional signed integer offset, and N is an
+// optional fine-grained severity level that modifies the base severity name.
+//
+// Name is parsed in a case-insensitive way. Meaning, "info", "Info",
+// "iNfO", etc. are all equivalent to "INFO".
+//
+// Fine-grained severity levels are expected to be in the range of 1 to 4,
+// where 1 is the base severity level, and 2, 3, and 4 are more fine-grained
+// levels. However, fine-grained levels greater than 4 are also accepted, and
+// they will be treated as an 1-based offset from the base severity level.
+//
+// For example, "ERROR3" will be parsed as "ERROR" with a fine-grained level of
+// 3, which corresponds to `SeverityError3`, "FATAL+2" will be parsed as
+// "FATAL" with an offset of +2, which corresponds to `SeverityFatal2`, and
+// "INFO2+1" is parsed as INFO with a fine-grained level of 2 and an offset of
+// +1, which corresponds to `SeverityInfo3`.
+//
+// Fine-grained severity levels are based on counting numbers excluding zero.
+// If a fine-grained level of 0 is provided it is treaded as equivalent to the
+// base severity level.  For example, "INFO0" is equivalent to `SeverityInfo1`.
+func (s *Severity) parse(str string) (err error) {
+	defer func() {
+		if err != nil {
+			err = fmt.Errorf("minsev: severity string %q: %w", str, err)
+		}
+	}()
+
+	name := str
+	offset := 0
+
+	// Parse +/- offset suffix, if present.
+	if i := strings.IndexAny(str, "+-"); i >= 0 {
+		name = str[:i]
+		offset, err = strconv.Atoi(str[i:])
+		if err != nil {
+			return err
+		}
+	}
+
+	// Parse fine-grained severity level suffix, if present.
+	// This supports formats like "ERROR3", "FATAL4", etc.
+	i := len(name)
+	n, multi := 0, 1
+	for ; i > 0 && str[i-1] >= '0' && str[i-1] <= '9'; i-- {
+		n += int(str[i-1]-'0') * multi
+		multi *= 10
+	}
+	if i < len(name) {
+		name = name[:i]
+		if n != 0 {
+			offset += n - 1 // Convert 1-based to 0-based.
+		}
+	}
+
+	switch strings.ToUpper(name) {
+	case "TRACE":
+		*s = SeverityTrace1
+	case "DEBUG":
+		*s = SeverityDebug1
+	case "INFO":
+		*s = SeverityInfo1
+	case "WARN":
+		*s = SeverityWarn1
+	case "ERROR":
+		*s = SeverityError1
+	case "FATAL":
+		*s = SeverityFatal1
+	default:
+		return errors.New("unknown name")
+	}
+	*s += Severity(offset)
+	return nil
 }
 
 // A SeverityVar is a [Severity] variable, to allow a [LogProcessor] severity
