@@ -294,8 +294,14 @@ type SeverityVar struct {
 	val atomic.Int64
 }
 
-// Ensure Severity implements fmt.Stringer.
-var _ fmt.Stringer = (*SeverityVar)(nil)
+var (
+	// Ensure Severity implements fmt.Stringer.
+	_ fmt.Stringer = (*SeverityVar)(nil)
+	// Ensure Severity implements encoding.TextMarshaler.
+	_ encoding.TextMarshaler = (*SeverityVar)(nil)
+	// Ensure Severity implements encoding.TextUnmarshaler.
+	_ encoding.TextUnmarshaler = (*SeverityVar)(nil)
+)
 
 // Severity returns v's severity.
 func (v *SeverityVar) Severity() log.Severity {
@@ -310,6 +316,29 @@ func (v *SeverityVar) Set(l Severity) {
 // String returns a string representation of the SeverityVar.
 func (v *SeverityVar) String() string {
 	return fmt.Sprintf("SeverityVar(%s)", Severity(int(v.val.Load())).String())
+}
+
+// AppendText implements [encoding.TextAppender]
+// by calling [Severity.AppendText].
+func (v *SeverityVar) AppendText(b []byte) ([]byte, error) {
+	return Severity(int(v.val.Load())).AppendText(b)
+}
+
+// MarshalText implements [encoding.TextMarshaler]
+// by calling [SeverityVar.AppendText].
+func (v *SeverityVar) MarshalText() ([]byte, error) {
+	return v.AppendText(nil)
+}
+
+// UnmarshalText implements [encoding.TextUnmarshaler]
+// by calling [Severity.UnmarshalText].
+func (v *SeverityVar) UnmarshalText(data []byte) error {
+	var s Severity
+	if err := s.UnmarshalText(data); err != nil {
+		return err
+	}
+	v.Set(s)
+	return nil
 }
 
 // A Severitier provides a [log.Severity] value.

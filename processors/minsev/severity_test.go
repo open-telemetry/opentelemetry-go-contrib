@@ -262,3 +262,104 @@ func TestSeverityVarString(t *testing.T) {
 		})
 	}
 }
+
+func TestSeverityVarMarshalText(t *testing.T) {
+	for _, test := range validEncodingTests {
+		t.Run(test.Name, func(t *testing.T) {
+			var sev SeverityVar
+			sev.Set(test.Severity)
+			got, err := sev.MarshalText()
+			require.NoError(t, err)
+			assert.Equal(t, test.Text, string(got))
+		})
+	}
+}
+
+func TestSeverityVarUnmarshalText(t *testing.T) {
+	for _, test := range validDecodingTests {
+		t.Run(test.Name, func(t *testing.T) {
+			var sev SeverityVar
+			require.NoError(t, sev.UnmarshalText([]byte(test.Text)))
+
+			got := Severity(int(sev.val.Load()))
+			const msg = "UnmarshalText(%q) != %d (%[2]s)"
+			assert.Equalf(t, test.Severity, got, msg, test.Text, test.Severity)
+		})
+	}
+}
+
+func TestSeverityVarUnmarshalTextError(t *testing.T) {
+	for _, test := range invalidText {
+		t.Run(test, func(t *testing.T) {
+			var sev SeverityVar
+			err := sev.UnmarshalText([]byte(test))
+			assert.Error(t, err)
+		})
+	}
+}
+
+func TestSeverityVarAppendText(t *testing.T) {
+	tests := []struct {
+		sev      Severity
+		prefix   string
+		expected string
+	}{
+		{SeverityInfo1, "", "INFO"},
+		{SeverityError1, "level=", "level=ERROR"},
+		{SeverityWarn2, "severity:", "severity:WARN2"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.expected, func(t *testing.T) {
+			var sev SeverityVar
+			sev.Set(test.sev)
+			result, err := sev.AppendText([]byte(test.prefix))
+			require.NoError(t, err)
+			assert.Equal(t, test.expected, string(result))
+		})
+	}
+}
+
+// Test JSON roundtrip for structures containing Severity.
+func TestSeverityJSONRoundtrip(t *testing.T) {
+	type Config struct {
+		Level Severity `json:"level"`
+		Name  string   `json:"name"`
+	}
+
+	original := Config{
+		Level: SeverityError1,
+		Name:  "test-config",
+	}
+
+	// Marshal to JSON
+	data, err := json.Marshal(original)
+	require.NoError(t, err)
+
+	expectedJSON := `{"level":"ERROR","name":"test-config"}`
+	assert.JSONEq(t, expectedJSON, string(data))
+
+	// Unmarshal from JSON
+	var decoded Config
+	err = json.Unmarshal(data, &decoded)
+	require.NoError(t, err)
+	assert.Equal(t, original, decoded)
+}
+
+// Test text marshaling roundtrip for SeverityVar.
+func TestSeverityVarTextRoundtrip(t *testing.T) {
+	original := SeverityWarn3
+
+	var sev SeverityVar
+	sev.Set(original)
+
+	// Marshal to text.
+	data, err := sev.MarshalText()
+	require.NoError(t, err)
+	assert.Equal(t, "WARN3", string(data))
+
+	// Unmarshal from text
+	var decoded SeverityVar
+	require.NoError(t, decoded.UnmarshalText(data))
+	assert.Equal(t, original, Severity(int(decoded.val.Load())))
+}
