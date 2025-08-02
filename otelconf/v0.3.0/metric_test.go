@@ -1489,24 +1489,29 @@ func TestPrometheusReaderErrorCases(t *testing.T) {
 
 func TestPrometheusReaderHostParsing(t *testing.T) {
 	tests := []struct {
-		name string
-		host string
+		name     string
+		host     string
+		wantAddr string
 	}{
 		{
-			name: "regular host",
-			host: "localhost",
+			name:     "regular host",
+			host:     "localhost",
+			wantAddr: "127.0.0.1", // expected resolved address
 		},
 		{
-			name: "IPv4",
-			host: "127.0.0.1",
+			name:     "IPv4",
+			host:     "127.0.0.1",
+			wantAddr: "127.0.0.1",
 		},
 		{
-			name: "IPv6 with brackets",
-			host: "[::1]",
+			name:     "IPv6 with brackets",
+			host:     "[::1]",
+			wantAddr: "::1",
 		},
 		{
-			name: "IPv6 without brackets",
-			host: "::1",
+			name:     "IPv6 without brackets",
+			host:     "::1",
+			wantAddr: "::1",
 		},
 	}
 
@@ -1530,20 +1535,12 @@ func TestPrometheusReaderHostParsing(t *testing.T) {
 				require.NoError(t, reader.Shutdown(context.Background()))
 			})
 
-			server := reader.(readerWithServer).server
+			rws, ok := reader.(readerWithServer)
+			require.True(t, ok, "reader is not a readerWithServer")
+			server := rws.server
+
 			assert.NotEmpty(t, server.Addr)
-
-			expectedHost := tt.host
-			if len(tt.host) > 2 && tt.host[0] == '[' && tt.host[len(tt.host)-1] == ']' {
-				expectedHost = tt.host[1 : len(tt.host)-1]
-			}
-
-			if expectedHost == "localhost" {
-				assert.True(t, strings.Contains(server.Addr, "localhost") || strings.Contains(server.Addr, "127.0.0.1"),
-					"server address %s should contain localhost or 127.0.0.1", server.Addr)
-			} else {
-				assert.Contains(t, server.Addr, expectedHost)
-			}
+			assert.Contains(t, server.Addr, tt.wantAddr)
 		})
 	}
 }

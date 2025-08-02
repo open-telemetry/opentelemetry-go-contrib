@@ -1219,13 +1219,15 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 		require.NoError(t, reader.Shutdown(context.Background()))
 	})
 
-	server := reader.(readerWithServer).server
+	rws, ok := reader.(readerWithServer)
+	require.True(t, ok, "reader is not a readerWithServer")
+	server := rws.server
 
 	addr := server.Addr
-	assert.True(t, strings.Contains(addr, "localhost") || strings.Contains(addr, "127.0.0.1"),
-		"server address %s should contain localhost or 127.0.0.1", addr)
+	// localhost resolves to 127.0.0.1, so we expect the resolved IP
+	assert.Contains(t, addr, "127.0.0.1")
 
-	resp, err := http.DefaultClient.Get("http://" + addr + "/metrics")
+	resp, err := http.Get("http://" + addr + "/metrics")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
@@ -1234,24 +1236,29 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 
 func TestPrometheusReaderHostParsing(t *testing.T) {
 	tests := []struct {
-		name string
-		host string
+		name     string
+		host     string
+		wantAddr string
 	}{
 		{
-			name: "regular host",
-			host: "localhost",
+			name:     "regular host",
+			host:     "localhost",
+			wantAddr: "127.0.0.1", // localhost resolves to this IP
 		},
 		{
-			name: "IPv4",
-			host: "127.0.0.1",
+			name:     "IPv4",
+			host:     "127.0.0.1",
+			wantAddr: "127.0.0.1",
 		},
 		{
-			name: "IPv6 with brackets",
-			host: "[::1]",
+			name:     "IPv6 with brackets",
+			host:     "[::1]",
+			wantAddr: "::1",
 		},
 		{
-			name: "IPv6 without brackets",
-			host: "::1",
+			name:     "IPv6 without brackets",
+			host:     "::1",
+			wantAddr: "::1",
 		},
 	}
 
@@ -1275,20 +1282,12 @@ func TestPrometheusReaderHostParsing(t *testing.T) {
 				require.NoError(t, reader.Shutdown(context.Background()))
 			})
 
-			server := reader.(readerWithServer).server
+			rws, ok := reader.(readerWithServer)
+			require.True(t, ok, "reader is not a readerWithServer")
+			server := rws.server
+
 			assert.NotEmpty(t, server.Addr)
-
-			expectedHost := tt.host
-			if len(tt.host) > 2 && tt.host[0] == '[' && tt.host[len(tt.host)-1] == ']' {
-				expectedHost = tt.host[1 : len(tt.host)-1]
-			}
-
-			if expectedHost == "localhost" {
-				assert.True(t, strings.Contains(server.Addr, "localhost") || strings.Contains(server.Addr, "127.0.0.1"),
-					"server address %s should contain localhost or 127.0.0.1", server.Addr)
-			} else {
-				assert.Contains(t, server.Addr, expectedHost)
-			}
+			assert.Contains(t, server.Addr, tt.wantAddr)
 		})
 	}
 }
