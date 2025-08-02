@@ -16,18 +16,18 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 )
 
 type route53AuthResolver struct{}
 
-func (r *route53AuthResolver) ResolveAuthSchemes(context.Context, *route53.AuthResolverParameters) ([]*smithyauth.Option, error) {
+func (*route53AuthResolver) ResolveAuthSchemes(context.Context, *route53.AuthResolverParameters) ([]*smithyauth.Option, error) {
 	return []*smithyauth.Option{
 		{SchemeID: smithyauth.SchemeIDAnonymous},
 	}, nil
@@ -91,7 +91,7 @@ func TestAppendMiddlewares(t *testing.T) {
 
 	for name, c := range cases {
 		srv := httptest.NewServer(http.HandlerFunc(
-			func(w http.ResponseWriter, r *http.Request) {
+			func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(c.responseStatus)
 				_, err := w.Write(c.responseBody)
 				if err != nil {

@@ -10,7 +10,6 @@ import (
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
@@ -32,7 +31,7 @@ type detector struct {
 
 // Detect detects associated resources when running on GCE, GKE, GAE,
 // Cloud Run, and Cloud functions.
-func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (d *detector) Detect(context.Context) (*resource.Resource, error) {
 	if !metadata.OnGCE() {
 		return nil, nil
 	}

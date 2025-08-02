@@ -10,7 +10,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -22,7 +21,7 @@ type mockLoggerProvider struct {
 	embedded.LoggerProvider
 }
 
-func (mockLoggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
+func (mockLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
 	return nil
 }
 

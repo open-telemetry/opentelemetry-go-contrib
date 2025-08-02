@@ -10,14 +10,14 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 )
 
 var tracer = otel.Tracer("mux-server")

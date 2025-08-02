@@ -10,6 +10,7 @@ linters:
     - depguard
     - errcheck
     - errorlint
+    - gocritic
     - godot
     - gosec
     - govet
@@ -50,6 +51,21 @@ linters:
             - pkg: crypto/md5
             - pkg: crypto/sha1
             - pkg: crypto/**/pkix
+    gocritic:
+      disabled-checks:
+        - appendAssign
+        - appendCombine
+        - assignOp
+        - elseif
+        - exitAfterDefer
+        - exposedSyncMutex
+        - hugeParam
+        - rangeValCopy
+        - typeUnparen
+        - unnamedResult
+        - unslice
+        - whyNoLint
+      enable-all: true
     godot:
       exclude:
         # Exclude sentence fragments for lists.
@@ -119,6 +135,8 @@ linters:
         - name: time-equal
         - name: unconditional-recursion
         - name: unexported-return
+        - name: unused-parameter
+        - name: unused-receiver
         - name: unhandled-error
           arguments:
             - "fmt.Fprint"
@@ -185,8 +203,10 @@ formatters:
     - gofumpt
     - goimports
   settings:
+    gofumpt:
+      extra-rules: true
     goimports:
       local-prefixes:
-        - go.opentelemetry.io
+        - go.opentelemetry.io/contrib
   exclusions:
     generated: lax

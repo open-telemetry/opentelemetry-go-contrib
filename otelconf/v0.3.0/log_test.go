@@ -21,9 +21,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
@@ -34,6 +31,8 @@ import (
 	sdklogtest "go.opentelemetry.io/otel/sdk/log/logtest"
 	"go.opentelemetry.io/otel/sdk/resource"
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 func TestLoggerProvider(t *testing.T) {
@@ -919,7 +918,7 @@ func startGRPCLogsCollector(t *testing.T, listener net.Listener, serverOptions [
 }
 
 // Export handles the export req.
-func (c *grpcLogsCollector) Export(
+func (*grpcLogsCollector) Export(
 	_ context.Context,
 	_ *collogpb.ExportLogsServiceRequest,
 ) (*collogpb.ExportLogsServiceResponse, error) {

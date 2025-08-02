@@ -14,12 +14,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	testpb "google.golang.org/grpc/interop/grpc_testing"
-	"google.golang.org/grpc/stats"
-	"google.golang.org/grpc/status"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
@@ -30,6 +24,11 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/semconv/v1.34.0/rpcconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	testpb "google.golang.org/grpc/interop/grpc_testing"
+	"google.golang.org/grpc/stats"
+	"google.golang.org/grpc/status"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"

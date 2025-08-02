@@ -4,8 +4,9 @@
 package prometheus_test
 
 import (
-	"go.opentelemetry.io/contrib/bridges/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
+
+	"go.opentelemetry.io/contrib/bridges/prometheus"
 )
 
 func ExampleNewMetricProducer() {

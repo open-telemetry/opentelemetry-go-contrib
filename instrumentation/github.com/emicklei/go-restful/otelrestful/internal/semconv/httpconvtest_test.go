@@ -167,7 +167,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 		wantFunc   func(t *testing.T, rm metricdata.ResourceMetrics)
 	}{
 		{
-			name:   "No Meter",
+			name: "No Meter",
 			serverFunc: func(metric.MeterProvider) semconv.HTTPServer {
 				return semconv.NewHTTPServer(nil)
 			},
@@ -176,7 +176,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 			},
 		},
 		{
-			name:   "With Meter",
+			name: "With Meter",
 			serverFunc: func(mp metric.MeterProvider) semconv.HTTPServer {
 				return semconv.NewHTTPServer(mp.Meter("test"))
 			},
@@ -196,7 +196,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 			server := tt.serverFunc(mp)
-			req, err := http.NewRequest("POST", "http://example.com", nil)
+			req, err := http.NewRequest("POST", "http://example.com", http.NoBody)
 			assert.NoError(t, err)
 
 			server.RecordMetrics(context.Background(), semconv.ServerMetricData{
@@ -403,7 +403,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 		wantFunc   func(t *testing.T, rm metricdata.ResourceMetrics)
 	}{
 		{
-			name:   "No environment variable set, and no Meter",
+			name: "No environment variable set, and no Meter",
 			clientFunc: func(metric.MeterProvider) semconv.HTTPClient {
 				return semconv.NewHTTPClient(nil)
 			},
@@ -412,7 +412,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 			},
 		},
 		{
-			name:   "With Meter",
+			name: "With Meter",
 			clientFunc: func(mp metric.MeterProvider) semconv.HTTPClient {
 				return semconv.NewHTTPClient(mp.Meter("test"))
 			},
@@ -431,7 +431,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 			client := tt.clientFunc(mp)
-			req, err := http.NewRequest("POST", "http://example.com", nil)
+			req, err := http.NewRequest("POST", "http://example.com", http.NoBody)
 			assert.NoError(t, err)
 
 			client.RecordMetrics(context.Background(), semconv.MetricData{

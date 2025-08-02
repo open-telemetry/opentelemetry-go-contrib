@@ -121,15 +121,9 @@ var (
 		IDAWSEC2: func() resource.Detector {
 			return ec2.NewResourceDetector()
 		},
-		IDAWSECS: func() resource.Detector {
-			return ecs.NewResourceDetector()
-		},
-		IDAWSEKS: func() resource.Detector {
-			return eks.NewResourceDetector()
-		},
-		IDAWSLambda: func() resource.Detector {
-			return lambda.NewResourceDetector()
-		},
+		IDAWSECS:    ecs.NewResourceDetector,
+		IDAWSEKS:    eks.NewResourceDetector,
+		IDAWSLambda: lambda.NewResourceDetector,
 
 		IDAzureVM: func() resource.Detector {
 			return azurevm.New()

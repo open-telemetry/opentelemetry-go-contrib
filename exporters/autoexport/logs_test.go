@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/sdk/log"
 )
@@ -99,7 +98,7 @@ func TestLogExporterOTLPOverInvalidProtocol(t *testing.T) {
 func TestLogExporterFallbackWithConsoleExporter(t *testing.T) {
 	ctx := context.Background()
 
-	fallbackExporterFactory := func(ctx context.Context) (log.Exporter, error) {
+	fallbackExporterFactory := func(context.Context) (log.Exporter, error) {
 		return stdoutlog.New()
 	}
 

@@ -12,9 +12,7 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/event"
-
 	"go.opentelemetry.io/otel/attribute"
-
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )

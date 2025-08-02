@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )

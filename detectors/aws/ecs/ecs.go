@@ -15,7 +15,6 @@ import (
 	"strings"
 
 	ecsmetadata "github.com/brunoscheufler/aws-ecs-metadata-go"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
@@ -73,7 +72,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	metadataURIV3 := os.Getenv(metadataV3EnvVar)
 	metadataURIV4 := os.Getenv(metadataV4EnvVar)
 
-	if len(metadataURIV3) == 0 && len(metadataURIV4) == 0 {
+	if metadataURIV3 == "" && metadataURIV4 == "" {
 		return nil, nil
 	}
 	hostName, err := detector.utils.getContainerName()
@@ -91,7 +90,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		semconv.ContainerID(containerID),
 	}
 
-	if len(metadataURIV4) > 0 {
+	if metadataURIV4 != "" {
 		containerMetadata, err := detector.utils.getContainerMetadataV4(ctx)
 		if err != nil {
 			return empty, err
@@ -133,7 +132,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		)
 
 		availabilityZone := taskMetadata.AvailabilityZone
-		if len(availabilityZone) > 0 {
+		if availabilityZone != "" {
 			attributes = append(
 				attributes,
 				semconv.CloudAvailabilityZone(availabilityZone),
@@ -164,7 +163,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
-func (detector *resourceDetector) getBaseArn(arns ...string) string {
+func (*resourceDetector) getBaseArn(arns ...string) string {
 	for _, arn := range arns {
 		if i := strings.LastIndex(arn, ":"); i >= 0 {
 			return arn[:i]
@@ -173,7 +172,7 @@ func (detector *resourceDetector) getBaseArn(arns ...string) string {
 	return ""
 }
 
-func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.ContainerMetadataV4) ([]attribute.KeyValue, error) {
+func (*resourceDetector) getLogsAttributes(metadata *ecsmetadata.ContainerMetadataV4) ([]attribute.KeyValue, error) {
 	if metadata.LogDriver != "awslogs" {
 		return []attribute.KeyValue{}, nil
 	}
@@ -226,17 +225,17 @@ func (detector *resourceDetector) getLogsAttributes(metadata *ecsmetadata.Contai
 }
 
 // returns metadata v4 for the container.
-func (ecsUtils ecsDetectorUtils) getContainerMetadataV4(ctx context.Context) (*ecsmetadata.ContainerMetadataV4, error) {
+func (ecsDetectorUtils) getContainerMetadataV4(ctx context.Context) (*ecsmetadata.ContainerMetadataV4, error) {
 	return ecsmetadata.GetContainerV4(ctx, &http.Client{})
 }
 
 // returns metadata v4 for the task.
-func (ecsUtils ecsDetectorUtils) getTaskMetadataV4(ctx context.Context) (*ecsmetadata.TaskMetadataV4, error) {
+func (ecsDetectorUtils) getTaskMetadataV4(ctx context.Context) (*ecsmetadata.TaskMetadataV4, error) {
 	return ecsmetadata.GetTaskV4(ctx, &http.Client{})
 }
 
 // returns docker container ID from default c group path.
-func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
+func (ecsDetectorUtils) getContainerID() (string, error) {
 	if runtime.GOOS != "linux" {
 		// Cgroups are used only under Linux.
 		return "", nil
@@ -252,7 +251,7 @@ func (ecsUtils ecsDetectorUtils) getContainerID() (string, error) {
 }
 
 // returns host name reported by the kernel.
-func (ecsUtils ecsDetectorUtils) getContainerName() (string, error) {
+func (ecsDetectorUtils) getContainerName() (string, error) {
 	hostName, err := os.Hostname()
 	if err != nil {
 		return "", errCannotReadContainerName

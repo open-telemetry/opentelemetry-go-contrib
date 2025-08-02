@@ -42,10 +42,10 @@ func NewResourceDetector() resource.Detector {
 }
 
 // Detect collects resource attributes available when running on lambda.
-func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, error) {
+func (*resourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	// Lambda resources come from ENV
 	lambdaName := os.Getenv(lambdaFunctionNameEnvVar)
-	if len(lambdaName) == 0 {
+	if lambdaName == "" {
 		return empty, errNotOnLambda
 	}
 	awsRegion := os.Getenv(awsRegionEnvVar)

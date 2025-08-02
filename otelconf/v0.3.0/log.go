@@ -10,8 +10,6 @@ import (
 	"net/url"
 	"time"
 
-	"google.golang.org/grpc/credentials"
-
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
@@ -19,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/log/noop"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"google.golang.org/grpc/credentials"
 )
 
 func loggerProvider(cfg configOptions, res *resource.Resource) (log.LoggerProvider, shutdownFunc, error) {
@@ -134,7 +133,7 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		if u.Scheme == "http" {
 			opts = append(opts, otlploghttp.WithInsecure())
 		}
-		if len(u.Path) > 0 {
+		if u.Path != "" {
 			opts = append(opts, otlploghttp.WithURLPath(u.Path))
 		}
 	}

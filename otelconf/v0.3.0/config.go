@@ -12,8 +12,6 @@ import (
 	"fmt"
 	"os"
 
-	yaml "go.yaml.in/yaml/v3"
-
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
@@ -24,6 +22,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
+	yaml "go.yaml.in/yaml/v3"
 )
 
 const (
@@ -81,7 +80,7 @@ var noopSDK = SDK{
 	loggerProvider: nooplog.LoggerProvider{},
 	meterProvider:  noopmetric.MeterProvider{},
 	tracerProvider: nooptrace.TracerProvider{},
-	shutdown:       func(ctx context.Context) error { return nil },
+	shutdown:       func(context.Context) error { return nil },
 }
 
 // NewSDK creates SDK providers based on the configuration model.
@@ -190,7 +189,7 @@ func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
 }
 
 // createTLSConfig creates a tls.Config from certificate files.
-func createTLSConfig(caCertFile *string, clientCertFile *string, clientKeyFile *string) (*tls.Config, error) {
+func createTLSConfig(caCertFile, clientCertFile, clientKeyFile *string) (*tls.Config, error) {
 	tlsConfig := &tls.Config{}
 	if caCertFile != nil {
 		caText, err := os.ReadFile(*caCertFile)

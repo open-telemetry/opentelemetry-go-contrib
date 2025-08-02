@@ -10,15 +10,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/stats"
-
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/stats"
 )
 
 func TestWithPublicEndpoint(t *testing.T) {

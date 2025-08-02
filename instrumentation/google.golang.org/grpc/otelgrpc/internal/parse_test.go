@@ -6,10 +6,9 @@ package internal // import "go.opentelemetry.io/contrib/instrumentation/google.g
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func TestParseFullMethod(t *testing.T) {

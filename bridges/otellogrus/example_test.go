@@ -5,9 +5,9 @@ package otellogrus_test
 
 import (
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel/log/noop"
 
 	"go.opentelemetry.io/contrib/bridges/otellogrus"
-	"go.opentelemetry.io/otel/log/noop"
 )
 
 func Example() {

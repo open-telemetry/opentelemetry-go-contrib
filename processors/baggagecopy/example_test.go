@@ -7,10 +7,11 @@ import (
 	"regexp"
 	"strings"
 
-	"go.opentelemetry.io/contrib/processors/baggagecopy"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/trace"
+
+	"go.opentelemetry.io/contrib/processors/baggagecopy"
 )
 
 func ExampleNewSpanProcessor_allKeys() {
