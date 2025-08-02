@@ -87,15 +87,22 @@ type traceware struct {
 }
 
 // defaultSpanNameFunc just reuses the route name as the span name.
+var validMethods = map[string]struct{}{
+	http.MethodGet: {},
+	http.MethodHead: {},
+	http.MethodPost: {},
+	http.MethodPut: {},
+	http.MethodPatch: {},
+	http.MethodDelete: {},
+	http.MethodConnect: {},
+	http.MethodOptions: {},
+	http.MethodTrace: {},
+}
+
+// defaultSpanNameFunc just reuses the route name as the span name.
 func defaultSpanNameFunc(routeName string, r *http.Request) string {
 	method := r.Method
-	if !slices.Contains([]string{
-		http.MethodGet, http.MethodHead,
-		http.MethodPost, http.MethodPut,
-		http.MethodPatch, http.MethodDelete,
-		http.MethodConnect, http.MethodOptions,
-		http.MethodTrace,
-	}, method) {
+	if _, ok := validMethods[method]; !ok {
 		method = "HTTP"
 	}
 	return method + " " + routeName
