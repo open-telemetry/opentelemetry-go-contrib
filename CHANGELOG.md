@@ -17,6 +17,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `WithLoggerProviderOptions`, `WithMeterProviderOptions` and `WithTracerProviderOptions` options to `NewSDK` to allow passing custom options to providers in `go.opentelemetry.io/contrib/otelconf`. (#7552)
 - Added V2 version of AWS EC2 detector `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` due to deprecation of `github.com/aws/aws-sdk-go`. (#6961)
 
+### Changed
+
+- The `Severity` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, `encoding.TextAppender`, `json.Marshaler`, and `json.Unmarshaler` interfaces. (#7652)
+- The `SeverityVar` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, and `encoding.TextAppender` interfaces. (#7652)
+
 ### Deprecated
 
 - `WithSpanOptions` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated.
