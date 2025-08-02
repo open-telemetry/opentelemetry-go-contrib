@@ -294,6 +294,9 @@ type SeverityVar struct {
 	val atomic.Int64
 }
 
+// Ensure Severity implements fmt.Stringer.
+var _ fmt.Stringer = (*SeverityVar)(nil)
+
 // Severity returns v's severity.
 func (v *SeverityVar) Severity() log.Severity {
 	return Severity(int(v.val.Load())).Severity()
@@ -302,6 +305,11 @@ func (v *SeverityVar) Severity() log.Severity {
 // Set sets v's Severity to l.
 func (v *SeverityVar) Set(l Severity) {
 	v.val.Store(int64(l))
+}
+
+// String returns a string representation of the SeverityVar.
+func (v *SeverityVar) String() string {
+	return fmt.Sprintf("SeverityVar(%s)", Severity(int(v.val.Load())).String())
 }
 
 // A Severitier provides a [log.Severity] value.
