@@ -5,6 +5,7 @@ package minsev // import "go.opentelemetry.io/contrib/processors/minsev"
 
 import (
 	"encoding"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -23,6 +24,10 @@ type Severity int
 var (
 	// Ensure Severity implements fmt.Stringer.
 	_ fmt.Stringer = Severity(0)
+	// Ensure Severity implements json.Marshaler.
+	_ json.Marshaler = Severity(0)
+	// Ensure Severity implements json.Unmarshaler.
+	_ json.Unmarshaler = (*Severity)(nil)
 	// Ensure Severity implements encoding.TextMarshaler.
 	_ encoding.TextMarshaler = Severity(0)
 	// Ensure Severity implements encoding.TextUnmarshaler.
@@ -159,6 +164,26 @@ func (s Severity) String() string {
 	default:
 		return str("FATAL", s-SeverityFatal1)
 	}
+}
+
+// MarshalJSON implements [encoding/json.Marshaler] by quoting the output of
+// [Severity.String].
+func (s Severity) MarshalJSON() ([]byte, error) {
+	// AppendQuote is sufficient for JSON-encoding all Severity strings. They
+	// don't contain any runes that would produce invalid JSON when escaped.
+	return strconv.AppendQuote(nil, s.String()), nil
+}
+
+// UnmarshalJSON implements [encoding/json.Unmarshaler] It accepts any string
+// produced by [Severity.MarshalJSON], ignoring case. It also accepts numeric
+// offsets that would result in a different string on output. For example,
+// "ERROR-8" will unmarshal as SeverityInfo.
+func (s *Severity) UnmarshalJSON(data []byte) error {
+	str, err := strconv.Unquote(string(data))
+	if err != nil {
+		return err
+	}
+	return s.parse(str)
 }
 
 // AppendText implements [encoding.TextAppender] by calling [Severity.String].
