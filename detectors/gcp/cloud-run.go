@@ -63,7 +63,7 @@ func (c *CloudRun) cloudRegion() (string, error) {
 // NOTE: the service.namespace attribute is currently hardcoded to be
 // "cloud-run-managed". This may change in the future, please do not rely on
 // this behavior yet.
-func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
+func (c *CloudRun) Detect(context.Context) (*resource.Resource, error) {
 	// .OnGCE is actually testing whether the metadata server is available.
 	// Metadata server is supported on Cloud Run.
 	if !c.onGCE() {

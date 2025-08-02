@@ -57,7 +57,7 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 				otelmux.WithTracerProvider(tp),
 				otelmux.WithSpanNameFormatter(d.spanNameFormatter),
 			))
-			router.HandleFunc(routeTpl, func(w http.ResponseWriter, r *http.Request) {})
+			router.HandleFunc(routeTpl, func(http.ResponseWriter, *http.Request) {})
 
 			r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 			w := httptest.NewRecorder()
@@ -73,7 +73,7 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 	}
 }
 
-func ok(w http.ResponseWriter, _ *http.Request) {}
+func ok(http.ResponseWriter, *http.Request) {}
 func notfound(w http.ResponseWriter, _ *http.Request) {
 	http.Error(w, "not found", http.StatusNotFound)
 }
@@ -206,7 +206,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 		otelmux.WithPropagators(prop),
 		otelmux.WithTracerProvider(provider),
 	))
-	router.HandleFunc("/with/public/endpoint", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/with/public/endpoint", func(_ http.ResponseWriter, r *http.Request) {
 		s := trace.SpanFromContext(r.Context())
 		sc := s.SpanContext()
 
@@ -251,7 +251,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 	}{
 		{
 			name: "with the method returning true",
-			fn: func(r *http.Request) bool {
+			fn: func(*http.Request) bool {
 				return true
 			},
 			handlerAssert: func(t *testing.T, sc trace.SpanContext) {
@@ -268,7 +268,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 		},
 		{
 			name: "with the method returning false",
-			fn: func(r *http.Request) bool {
+			fn: func(*http.Request) bool {
 				return false
 			},
 			handlerAssert: func(t *testing.T, sc trace.SpanContext) {
@@ -296,7 +296,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 				otelmux.WithPropagators(prop),
 				otelmux.WithTracerProvider(provider),
 			))
-			router.HandleFunc("/with/public/endpointfn", func(w http.ResponseWriter, r *http.Request) {
+			router.HandleFunc("/with/public/endpointfn", func(_ http.ResponseWriter, r *http.Request) {
 				s := trace.SpanFromContext(r.Context())
 				tt.handlerAssert(t, s.SpanContext())
 			})
@@ -337,7 +337,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		},
 		{
 			name: "With a function that returns an additional attribute",
-			fn: func(r *http.Request) []attribute.KeyValue {
+			fn: func(*http.Request) []attribute.KeyValue {
 				return []attribute.KeyValue{
 					attribute.String("fooKey", "fooValue"),
 					attribute.String("barKey", "barValue"),

@@ -24,7 +24,7 @@ func testFactory() func() resource.Detector {
 	return func() resource.Detector { return &testDetector{} }
 }
 
-func (d *testDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (d *testDetector) Detect(context.Context) (*resource.Resource, error) {
 	return resource.NewWithAttributes(d.schemaURL, d.attr...), d.err
 }
 

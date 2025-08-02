@@ -51,7 +51,7 @@ var _ propagation.TextMapPropagator = &Jaeger{}
 
 // Inject injects a context to the carrier following jaeger format.
 // The parent span ID is set to an dummy parent span id as the most implementations do.
-func (jaeger Jaeger) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
+func (Jaeger) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 	headers := []string{}
 	if !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
@@ -71,7 +71,7 @@ func (jaeger Jaeger) Inject(ctx context.Context, carrier propagation.TextMapCarr
 }
 
 // Extract extracts a context from the carrier if it contains Jaeger headers.
-func (jaeger Jaeger) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (Jaeger) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	// extract tracing information
 	if h := carrier.Get(jaegerHeader); h != "" {
 		ctx, sc, err := extract(ctx, h)
@@ -152,6 +152,6 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 }
 
 // Fields returns the Jaeger header key whose value is set with Inject.
-func (jaeger Jaeger) Fields() []string {
+func (Jaeger) Fields() []string {
 	return []string{jaegerHeader}
 }

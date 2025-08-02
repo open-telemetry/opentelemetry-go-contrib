@@ -22,14 +22,14 @@ type processor struct {
 	records []*log.Record
 }
 
-func (p *processor) OnEmit(ctx context.Context, r *log.Record) error {
+func (p *processor) OnEmit(_ context.Context, r *log.Record) error {
 	p.records = append(p.records, r)
 	return nil
 }
 
-func (p *processor) Shutdown(ctx context.Context) error { return nil }
+func (*processor) Shutdown(context.Context) error { return nil }
 
-func (p *processor) ForceFlush(ctx context.Context) error { return nil }
+func (*processor) ForceFlush(context.Context) error { return nil }
 
 func NewTestProcessor() *processor {
 	return &processor{}

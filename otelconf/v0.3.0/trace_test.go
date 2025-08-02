@@ -1062,7 +1062,7 @@ func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions 
 }
 
 // Export handles the export req.
-func (c *grpcTraceCollector) Export(
+func (*grpcTraceCollector) Export(
 	_ context.Context,
 	_ *v1.ExportTraceServiceRequest,
 ) (*v1.ExportTraceServiceResponse, error) {

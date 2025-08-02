@@ -150,7 +150,7 @@ func isK8s(utils detectorUtils) bool {
 }
 
 // fileExists checks if a file with a given filename exists.
-func (eksUtils eksDetectorUtils) fileExists(filename string) bool {
+func (eksDetectorUtils) fileExists(filename string) bool {
 	info, err := os.Stat(filename)
 	return err == nil && !info.IsDir()
 }
@@ -176,7 +176,7 @@ func getClusterName(ctx context.Context, utils detectorUtils) (string, error) {
 }
 
 // getContainerID returns the containerID if currently running within a container.
-func (eksUtils eksDetectorUtils) getContainerID() (string, error) {
+func (eksDetectorUtils) getContainerID() (string, error) {
 	fileData, err := os.ReadFile(defaultCgroupPath)
 	if err != nil {
 		return "", fmt.Errorf("getContainerID() error: cannot read file with path %s: %w", defaultCgroupPath, err)

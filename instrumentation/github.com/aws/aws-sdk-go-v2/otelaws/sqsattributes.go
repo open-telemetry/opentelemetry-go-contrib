@@ -13,7 +13,7 @@ import (
 )
 
 // SQSAttributeBuilder sets SQS specific attributes depending on the SQS operation being performed.
-func SQSAttributeBuilder(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue {
+func SQSAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ middleware.InitializeOutput) []attribute.KeyValue {
 	sqsAttributes := []attribute.KeyValue{semconv.MessagingSystemAWSSQS}
 
 	switch v := in.Parameters.(type) {
