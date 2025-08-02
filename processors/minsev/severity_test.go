@@ -249,3 +249,15 @@ func TestSeverityAppendText(t *testing.T) {
 		})
 	}
 }
+
+func TestSeverityVarString(t *testing.T) {
+	for _, test := range validEncodingTests {
+		t.Run(test.Name, func(t *testing.T) {
+			var sev SeverityVar
+			sev.Set(test.Severity)
+
+			want := "SeverityVar(" + test.Text + ")"
+			assert.Equal(t, want, sev.String())
+		})
+	}
+}
