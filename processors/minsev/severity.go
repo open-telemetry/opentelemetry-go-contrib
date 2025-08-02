@@ -4,6 +4,7 @@
 package minsev // import "go.opentelemetry.io/contrib/processors/minsev"
 
 import (
+	"fmt"
 	"sync/atomic"
 
 	"go.opentelemetry.io/otel/log"
@@ -14,6 +15,9 @@ import (
 // events), larger numerical values correspond to more severe log records (such
 // as errors and critical events).
 type Severity int
+
+// Ensure Severity implements fmt.Stringer.
+var _ fmt.Stringer = Severity(0)
 
 // Severity values defined by OpenTelemetry.
 const (
@@ -97,6 +101,50 @@ var translations = map[Severity]log.Severity{
 	SeverityFatal2: log.SeverityFatal2,
 	SeverityFatal3: log.SeverityFatal3,
 	SeverityFatal4: log.SeverityFatal4,
+}
+
+// String returns a name for the severity level. If the severity level has a
+// name, then that name in uppercase is returned. If the severity level is
+// outside named values, then an signed integer is appended to the uppercased
+// name.
+//
+// Examples:
+//
+//	SeverityWarn1.String() => "WARN"
+//	(SeverityInfo1+2).String() => "INFO2"
+//	(SeverityFatal4+2).String() => "FATAL+6"
+//	(SeverityTrace1-3).String() => "TRACE-3"
+func (s Severity) String() string {
+	str := func(base string, val Severity) string {
+		switch val {
+		case 0:
+			return base
+		case 1, 2, 3:
+			// No sign for known fine-grained severity values.
+			return fmt.Sprintf("%s%d", base, val+1)
+		}
+
+		if val > 0 {
+			// Exclude zero from positive scale count.
+			val++
+		}
+		return fmt.Sprintf("%s%+d", base, val)
+	}
+
+	switch {
+	case s < SeverityDebug1:
+		return str("TRACE", s-SeverityTrace1)
+	case s < SeverityInfo1:
+		return str("DEBUG", s-SeverityDebug1)
+	case s < SeverityWarn1:
+		return str("INFO", s-SeverityInfo1)
+	case s < SeverityError1:
+		return str("WARN", s-SeverityWarn1)
+	case s < SeverityFatal1:
+		return str("ERROR", s-SeverityError1)
+	default:
+		return str("FATAL", s-SeverityFatal1)
+	}
 }
 
 // A SeverityVar is a [Severity] variable, to allow a [LogProcessor] severity
