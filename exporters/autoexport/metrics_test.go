@@ -159,7 +159,7 @@ func TestMetricProducerPrometheusWithOTLPExporter(t *testing.T) {
 	assertNoOtelHandleErrors(t)
 
 	requestWaitChan := make(chan struct{})
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
 		assert.NoError(t, r.Body.Close())
@@ -291,7 +291,7 @@ func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
 		return prometheusbridge.NewMetricProducer(prometheusbridge.WithGatherer(reg2)), nil
 	})
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
 		assert.NoError(t, r.Body.Close())

@@ -24,7 +24,7 @@ type GKE struct{}
 var _ resource.Detector = (*GKE)(nil)
 
 // Detect detects associated resources when running in GKE environment.
-func (gke *GKE) Detect(ctx context.Context) (*resource.Resource, error) {
+func (*GKE) Detect(ctx context.Context) (*resource.Resource, error) {
 	gcpDetecor := GCE{}
 	gceLablRes, err := gcpDetecor.Detect(ctx)
 

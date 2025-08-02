@@ -39,7 +39,7 @@ func (s *server) SayHello(ctx context.Context, in *api.HelloRequest) (*api.Hello
 	return &api.HelloResponse{Reply: "Hello " + in.Greeting}, nil
 }
 
-func (s *server) workHard(ctx context.Context) {
+func (*server) workHard(ctx context.Context) {
 	_, span := tracer.Start(ctx, "workHard",
 		trace.WithAttributes(attribute.String("extra.key", "extra.value")))
 	defer span.End()
@@ -47,7 +47,7 @@ func (s *server) workHard(ctx context.Context) {
 	time.Sleep(50 * time.Millisecond)
 }
 
-func (s *server) SayHelloServerStream(in *api.HelloRequest, out api.HelloService_SayHelloServerStreamServer) error {
+func (*server) SayHelloServerStream(in *api.HelloRequest, out api.HelloService_SayHelloServerStreamServer) error {
 	log.Printf("Received: %v\n", in.GetGreeting())
 
 	for i := 0; i < 5; i++ {
@@ -62,7 +62,7 @@ func (s *server) SayHelloServerStream(in *api.HelloRequest, out api.HelloService
 	return nil
 }
 
-func (s *server) SayHelloClientStream(stream api.HelloService_SayHelloClientStreamServer) error {
+func (*server) SayHelloClientStream(stream api.HelloService_SayHelloClientStreamServer) error {
 	i := 0
 
 	for {
@@ -84,7 +84,7 @@ func (s *server) SayHelloClientStream(stream api.HelloService_SayHelloClientStre
 	return stream.SendAndClose(&api.HelloResponse{Reply: fmt.Sprintf("Hello (%v times)", i)})
 }
 
-func (s *server) SayHelloBidiStream(stream api.HelloService_SayHelloBidiStreamServer) error {
+func (*server) SayHelloBidiStream(stream api.HelloService_SayHelloBidiStreamServer) error {
 	for {
 		in, err := stream.Recv()
 

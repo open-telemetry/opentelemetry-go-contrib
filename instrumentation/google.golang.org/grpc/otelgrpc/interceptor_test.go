@@ -63,8 +63,8 @@ type mockClientStream struct {
 	msgs []grpc_testing.SimpleResponse
 }
 
-func (mockClientStream) SendMsg(m any) error { return nil }
-func (c *mockClientStream) RecvMsg(m any) error {
+func (mockClientStream) SendMsg(any) error { return nil }
+func (c *mockClientStream) RecvMsg(any) error {
 	if len(c.msgs) == 0 {
 		return io.EOF
 	}
@@ -121,9 +121,9 @@ func createInterceptedStreamClient(t *testing.T, method string, opts clientStrea
 		method,
 		func(ctx context.Context,
 			desc *grpc.StreamDesc,
-			cc *grpc.ClientConn,
-			method string,
-			opts ...grpc.CallOption,
+			_ *grpc.ClientConn,
+			_ string,
+			_ ...grpc.CallOption,
 		) (grpc.ClientStream, error) {
 			mockStream.Desc = desc
 			mockStream.Ctx = ctx
@@ -375,9 +375,9 @@ func TestStreamClientInterceptorCancelContext(t *testing.T) {
 		method,
 		func(ctx context.Context,
 			desc *grpc.StreamDesc,
-			cc *grpc.ClientConn,
-			method string,
-			opts ...grpc.CallOption,
+			_ *grpc.ClientConn,
+			_ string,
+			_ ...grpc.CallOption,
 		) (grpc.ClientStream, error) {
 			mockClStr = &mockClientStream{Desc: desc, Ctx: ctx}
 			return mockClStr, nil
@@ -433,9 +433,9 @@ func TestStreamClientInterceptorWithError(t *testing.T) {
 		method,
 		func(ctx context.Context,
 			desc *grpc.StreamDesc,
-			cc *grpc.ClientConn,
-			method string,
-			opts ...grpc.CallOption,
+			_ *grpc.ClientConn,
+			_ string,
+			_ ...grpc.CallOption,
 		) (grpc.ClientStream, error) {
 			mockClStr = &mockClientStream{Desc: desc, Ctx: ctx}
 			return mockClStr, errors.New("test")

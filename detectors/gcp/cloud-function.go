@@ -32,7 +32,7 @@ type cloudFunction struct {
 }
 
 // Detect detects associated resources when running in GCP Cloud Function.
-func (f *cloudFunction) Detect(ctx context.Context) (*resource.Resource, error) {
+func (f *cloudFunction) Detect(context.Context) (*resource.Resource, error) {
 	functionName, ok := f.googleCloudFunctionName()
 	if !ok {
 		return nil, nil
@@ -57,6 +57,6 @@ func (f *cloudFunction) Detect(ctx context.Context) (*resource.Resource, error) 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
 }
 
-func (f *cloudFunction) googleCloudFunctionName() (string, bool) {
+func (*cloudFunction) googleCloudFunctionName() (string, bool) {
 	return os.LookupEnv(gcpFunctionNameKey)
 }

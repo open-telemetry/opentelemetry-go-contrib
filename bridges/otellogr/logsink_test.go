@@ -22,7 +22,7 @@ type mockLoggerProvider struct {
 	embedded.LoggerProvider
 }
 
-func (mockLoggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
+func (mockLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
 	return nil
 }
 
@@ -127,7 +127,7 @@ func TestLogSink(t *testing.T) {
 	}{
 		{
 			name: "no_log",
-			f:    func(l *logr.Logger) {},
+			f:    func(*logr.Logger) {},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: nil,
 			},
@@ -421,7 +421,7 @@ func TestLogSinkContext(t *testing.T) {
 }
 
 func TestLogSinkEnabled(t *testing.T) {
-	enabledFunc := func(ctx context.Context, param log.EnabledParameters) bool {
+	enabledFunc := func(_ context.Context, param log.EnabledParameters) bool {
 		return param.Severity == log.SeverityInfo
 	}
 

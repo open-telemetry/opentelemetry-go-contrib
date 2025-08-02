@@ -76,7 +76,7 @@ func NewResourceDetector(opts ...Option) resource.Detector {
 }
 
 // Detect detects associated resources when running in AWS environment.
-func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	client, err := detector.client()
 	if err != nil {
 		return nil, err

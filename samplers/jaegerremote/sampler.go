@@ -143,7 +143,7 @@ func (s *rateLimitingSampler) Equal(other trace.Sampler) bool {
 	return false
 }
 
-func (s *rateLimitingSampler) Description() string {
+func (*rateLimitingSampler) Description() string {
 	return "rateLimitingSampler{}"
 }
 
@@ -200,7 +200,7 @@ func (s *guaranteedThroughputProbabilisticSampler) update(lowerBound, samplingRa
 	}
 }
 
-func (s *guaranteedThroughputProbabilisticSampler) Description() string {
+func (*guaranteedThroughputProbabilisticSampler) Description() string {
 	return "guaranteedThroughputProbabilisticSampler{}"
 }
 
@@ -289,7 +289,7 @@ func (s *perOperationSampler) getSamplerForOperation(operation string) trace.Sam
 	return newSampler
 }
 
-func (s *perOperationSampler) Description() string {
+func (*perOperationSampler) Description() string {
 	return "perOperationSampler{}"
 }
 

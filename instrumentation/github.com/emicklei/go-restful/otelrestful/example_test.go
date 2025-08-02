@@ -73,7 +73,7 @@ func initTracer() (*sdktrace.TracerProvider, error) {
 	return tp, nil
 }
 
-func (u userResource) getUser(req *restful.Request, resp *restful.Response) {
+func (userResource) getUser(req *restful.Request, resp *restful.Response) {
 	uid := req.PathParameter("user-id")
 	_, span := tracer.Start(req.Request.Context(), "getUser", oteltrace.WithAttributes(attribute.String("id", uid)))
 	defer span.End()

@@ -98,7 +98,7 @@ func TestLogExporterOTLPOverInvalidProtocol(t *testing.T) {
 func TestLogExporterFallbackWithConsoleExporter(t *testing.T) {
 	ctx := context.Background()
 
-	fallbackExporterFactory := func(ctx context.Context) (log.Exporter, error) {
+	fallbackExporterFactory := func(context.Context) (log.Exporter, error) {
 		return stdoutlog.New()
 	}
 
