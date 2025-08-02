@@ -4,6 +4,7 @@
 package minsev
 
 import (
+	"encoding/json"
 	"sync"
 	"testing"
 
@@ -153,6 +154,48 @@ func TestSeverityString(t *testing.T) {
 	for _, test := range validEncodingTests {
 		t.Run(test.Name, func(t *testing.T) {
 			assert.Equal(t, test.Text, test.Severity.String())
+		})
+	}
+}
+
+func TestSeverityMarshalJSON(t *testing.T) {
+	for _, test := range validEncodingTests {
+		t.Run(test.Name, func(t *testing.T) {
+			got, err := json.Marshal(test.Severity)
+			require.NoError(t, err)
+			assert.Equal(t, `"`+test.Text+`"`, string(got))
+		})
+	}
+}
+
+func TestSeverityUnmarshalJSON(t *testing.T) {
+	for _, test := range validDecodingTests {
+		t.Run(test.Name, func(t *testing.T) {
+			var sev Severity
+			data := []byte(`"` + test.Text + `"`)
+			require.NoError(t, sev.UnmarshalJSON(data))
+			const msg = "UnmarshalJSON(%q) != %d (%[2]s)"
+			assert.Equalf(t, test.Severity, sev, msg, data, test.Severity)
+		})
+	}
+}
+
+func TestSeverityUnmarshalJSONError(t *testing.T) {
+	invalidJSON := []string{
+		`"UNKNOWN"`,
+		`"DEBUG3+abc"`,
+		`"INFO+abc"`,
+		`"ERROR-xyz"`,
+		`"not-a-level"`,
+		`invalid-json`,
+		`42`, // number instead of string
+	}
+
+	for _, test := range invalidJSON {
+		t.Run(test, func(t *testing.T) {
+			var sev Severity
+			err := sev.UnmarshalJSON([]byte(test))
+			assert.Error(t, err)
 		})
 	}
 }
