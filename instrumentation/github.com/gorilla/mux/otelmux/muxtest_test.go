@@ -178,7 +178,7 @@ func TestSDKIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer sr.Reset()
 
-			r := httptest.NewRequest(tt.method, tt.path, nil)
+			r := httptest.NewRequest(http.MethodGet, tt.path, http.NoBody)
 			if tt.reqFunc != nil {
 				tt.reqFunc(r)
 			}
