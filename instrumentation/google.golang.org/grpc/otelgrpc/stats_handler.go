@@ -90,12 +90,12 @@ func NewServerHandler(opts ...Option) stats.Handler {
 }
 
 // TagConn can attach some information to the given context.
-func (h *serverHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
+func (*serverHandler) TagConn(ctx context.Context, _ *stats.ConnTagInfo) context.Context {
 	return ctx
 }
 
 // HandleConn processes the Conn stats.
-func (h *serverHandler) HandleConn(ctx context.Context, info stats.ConnStats) {
+func (*serverHandler) HandleConn(context.Context, stats.ConnStats) {
 }
 
 // TagRPC can attach some information to the given context.
@@ -252,12 +252,12 @@ func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 }
 
 // TagConn can attach some information to the given context.
-func (h *clientHandler) TagConn(ctx context.Context, info *stats.ConnTagInfo) context.Context {
+func (*clientHandler) TagConn(ctx context.Context, _ *stats.ConnTagInfo) context.Context {
 	return ctx
 }
 
 // HandleConn processes the Conn stats.
-func (h *clientHandler) HandleConn(context.Context, stats.ConnStats) {
+func (*clientHandler) HandleConn(context.Context, stats.ConnStats) {
 	// no-op
 }
 

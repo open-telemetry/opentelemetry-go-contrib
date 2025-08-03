@@ -49,7 +49,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 
 	// Mock http server
 	ts := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		}),
 	)
 	defer ts.Close()
@@ -304,7 +304,7 @@ func prepareClientTraceTest(t *testing.T) clientTraceTestFixture {
 	)
 
 	ts := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		}),
 	)
 	t.Cleanup(ts.Close)
@@ -508,7 +508,7 @@ func TestHTTPRequestWithTraceContext(t *testing.T) {
 
 	// Mock http server
 	ts := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		}),
 	)
 	defer ts.Close()

@@ -118,7 +118,7 @@ func (s *Sampler) Close() {
 }
 
 // Description returns a human-readable name for the Sampler.
-func (s *Sampler) Description() string {
+func (*Sampler) Description() string {
 	return "JaegerRemoteSampler{}"
 }
 
@@ -192,7 +192,7 @@ func (s *Sampler) updateSamplerViaUpdaters(strategy any) error {
 type probabilisticSamplerUpdater struct{}
 
 // Update implements Update of samplerUpdater.
-func (u *probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy any) (trace.Sampler, error) {
+func (*probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy any) (trace.Sampler, error) {
 	type response interface {
 		GetProbabilisticSampling() *jaeger_api_v2.ProbabilisticSamplingStrategy
 	}
@@ -217,7 +217,7 @@ func (u *probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy any
 type rateLimitingSamplerUpdater struct{}
 
 // Update implements Update of samplerUpdater.
-func (u *rateLimitingSamplerUpdater) Update(sampler trace.Sampler, strategy any) (trace.Sampler, error) {
+func (*rateLimitingSamplerUpdater) Update(sampler trace.Sampler, strategy any) (trace.Sampler, error) {
 	type response interface {
 		GetRateLimitingSampling() *jaeger_api_v2.RateLimitingSamplingStrategy
 	}
@@ -309,7 +309,7 @@ func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 
 type samplingStrategyParserImpl struct{}
 
-func (p *samplingStrategyParserImpl) Parse(response []byte) (any, error) {
+func (*samplingStrategyParserImpl) Parse(response []byte) (any, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
 	// Official Jaeger Remote Sampling protocol contains enums encoded as strings.
 	// Legacy protocol contains enums as numbers.

@@ -271,10 +271,8 @@ func TestInject(t *testing.T) {
 				if headerVal != tc.wantHeaderVal {
 					t.Errorf("expected header value %q, got %q", tc.wantHeaderVal, headerVal)
 				}
-			} else {
-				if headerVal != "" {
-					t.Errorf("expected no header to be set, but got %q", headerVal)
-				}
+			} else if headerVal != "" {
+				t.Errorf("expected no header to be set, but got %q", headerVal)
 			}
 		})
 	}

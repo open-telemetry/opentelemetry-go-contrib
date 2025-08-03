@@ -43,7 +43,7 @@ var _ propagation.TextMapPropagator = OT{}
 
 // Inject injects a context into the carrier as OT headers.
 // NOTE: In order to interop with systems that use the OT header format, trace ids MUST be 64-bits.
-func (o OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
+func (OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
 	if !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
@@ -66,7 +66,7 @@ func (o OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 }
 
 // Extract extracts a context from the carrier if it contains OT headers.
-func (o OT) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (OT) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	var (
 		sc  trace.SpanContext
 		err error
@@ -91,7 +91,7 @@ func (o OT) Extract(ctx context.Context, carrier propagation.TextMapCarrier) con
 }
 
 // Fields returns the OT header keys whose values are set with Inject.
-func (o OT) Fields() []string {
+func (OT) Fields() []string {
 	return []string{traceIDHeader, spanIDHeader, sampledHeader}
 }
 

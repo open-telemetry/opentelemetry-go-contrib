@@ -23,15 +23,15 @@ type mockPropagator struct {
 	injectValue string
 }
 
-func (p mockPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
+func (p mockPropagator) Inject(_ context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(p.injectKey, p.injectValue)
 }
 
-func (p mockPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (mockPropagator) Extract(context.Context, propagation.TextMapCarrier) context.Context {
 	return context.TODO()
 }
 
-func (p mockPropagator) Fields() []string {
+func (mockPropagator) Fields() []string {
 	return []string{}
 }
 
@@ -58,7 +58,7 @@ func Test_otelMiddlewares_finalizeMiddlewareAfter(t *testing.T) {
 		},
 	}
 
-	next := middleware.HandlerFunc(func(ctx context.Context, input any) (output any, metadata middleware.Metadata, err error) {
+	next := middleware.HandlerFunc(func(context.Context, any) (output any, metadata middleware.Metadata, err error) {
 		return nil, middleware.Metadata{}, nil
 	})
 
@@ -93,7 +93,7 @@ func Test_otelMiddlewares_finalizeMiddlewareAfter_Noop(t *testing.T) {
 	// Non request input should trigger noop
 	input := &struct{}{}
 
-	next := middleware.HandlerFunc(func(ctx context.Context, input any) (output any, metadata middleware.Metadata, err error) {
+	next := middleware.HandlerFunc(func(context.Context, any) (output any, metadata middleware.Metadata, err error) {
 		return nil, middleware.Metadata{}, nil
 	})
 
@@ -109,10 +109,10 @@ func (mockCredentialsProvider) Retrieve(context.Context) (aws.Credentials, error
 
 type mockHTTPPresigner struct{}
 
-func (f mockHTTPPresigner) PresignHTTP(
-	ctx context.Context, credentials aws.Credentials, r *http.Request,
-	payloadHash, service, region string, signingTime time.Time,
-	optFns ...func(*awsSignerV4.SignerOptions),
+func (mockHTTPPresigner) PresignHTTP(
+	context.Context, aws.Credentials, *http.Request,
+	string, string, string, time.Time,
+	...func(*awsSignerV4.SignerOptions),
 ) (
 	url string, signedHeader http.Header, err error,
 ) {
@@ -151,7 +151,7 @@ func Test_otelMiddlewares_presignedRequests(t *testing.T) {
 		},
 	}
 
-	next := middleware.HandlerFunc(func(ctx context.Context, input any) (output any, metadata middleware.Metadata, err error) {
+	next := middleware.HandlerFunc(func(context.Context, any) (output any, metadata middleware.Metadata, err error) {
 		return nil, middleware.Metadata{}, nil
 	})
 

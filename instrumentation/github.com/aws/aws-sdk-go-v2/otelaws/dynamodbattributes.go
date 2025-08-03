@@ -14,7 +14,7 @@ import (
 )
 
 // DynamoDBAttributeBuilder sets DynamoDB specific attributes depending on the DynamoDB operation being performed.
-func DynamoDBAttributeBuilder(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue {
+func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ middleware.InitializeOutput) []attribute.KeyValue {
 	dynamodbAttributes := []attribute.KeyValue{semconv.DBSystemNameAWSDynamoDB}
 
 	switch v := in.Parameters.(type) {

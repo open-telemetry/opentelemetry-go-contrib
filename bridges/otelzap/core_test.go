@@ -225,7 +225,7 @@ func TestCoreWriteContextConcurrentSafe(t *testing.T) {
 }
 
 func TestCoreEnabled(t *testing.T) {
-	enabledFunc := func(c context.Context, param log.EnabledParameters) bool {
+	enabledFunc := func(_ context.Context, param log.EnabledParameters) bool {
 		return param.Severity >= log.SeverityInfo
 	}
 

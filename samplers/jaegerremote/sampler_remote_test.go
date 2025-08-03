@@ -37,7 +37,7 @@ import (
 	"go.opentelemetry.io/contrib/samplers/jaegerremote/internal/testutils"
 )
 
-func TestRemotelyControlledSampler_updateConcurrentSafe(t *testing.T) {
+func TestRemotelyControlledSampler_updateConcurrentSafe(*testing.T) {
 	initSampler := newProbabilisticSampler(0.123)
 	fetcher := &testSamplingStrategyFetcher{response: []byte("probabilistic")}
 	parser := new(testSamplingStrategyParser)
@@ -79,13 +79,13 @@ type testSamplingStrategyFetcher struct {
 	response []byte
 }
 
-func (c *testSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) {
+func (c *testSamplingStrategyFetcher) Fetch(string) ([]byte, error) {
 	return c.response, nil
 }
 
 type testSamplingStrategyParser struct{}
 
-func (p *testSamplingStrategyParser) Parse(response []byte) (any, error) {
+func (*testSamplingStrategyParser) Parse(response []byte) (any, error) {
 	strategy := new(jaeger_api_v2.SamplingStrategyResponse)
 
 	switch string(response) {
@@ -374,7 +374,7 @@ func TestSamplerQueryError(t *testing.T) {
 
 type fakeSamplingFetcher struct{}
 
-func (c *fakeSamplingFetcher) Fetch(serviceName string) ([]byte, error) {
+func (*fakeSamplingFetcher) Fetch(string) ([]byte, error) {
 	return nil, errors.New("query error")
 }
 

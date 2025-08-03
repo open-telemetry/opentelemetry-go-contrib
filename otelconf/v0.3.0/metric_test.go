@@ -1625,7 +1625,7 @@ func startGRPCMetricCollector(t *testing.T, listener net.Listener, serverOptions
 }
 
 // Export handles the export req.
-func (c *grpcMetricCollector) Export(
+func (*grpcMetricCollector) Export(
 	_ context.Context,
 	_ *v1.ExportMetricsServiceRequest,
 ) (*v1.ExportMetricsServiceResponse, error) {

@@ -54,16 +54,11 @@ linters:
     gocritic:
       disabled-checks:
         - appendAssign
-        - appendCombine
-        - assignOp
-        - elseif
         - exitAfterDefer
         - exposedSyncMutex
         - hugeParam
         - rangeValCopy
-        - typeUnparen
         - unnamedResult
-        - unslice
         - whyNoLint
       enable-all: true
     godot:
@@ -135,6 +130,8 @@ linters:
         - name: time-equal
         - name: unconditional-recursion
         - name: unexported-return
+        - name: unused-parameter
+        - name: unused-receiver
         - name: unhandled-error
           arguments:
             - "fmt.Fprint"

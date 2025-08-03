@@ -31,7 +31,7 @@ type detector struct {
 
 // Detect detects associated resources when running on GCE, GKE, GAE,
 // Cloud Run, and Cloud functions.
-func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (d *detector) Detect(context.Context) (*resource.Resource, error) {
 	if !metadata.OnGCE() {
 		return nil, nil
 	}
@@ -121,8 +121,11 @@ func (r *resourceBuilder) addInt(key attribute.Key, detect func() (string, error
 // zoneAndRegion functions are expected to return zone, region, err.
 func (r *resourceBuilder) addZoneAndRegion(detect func() (string, string, error)) {
 	if zone, region, err := detect(); err == nil {
-		r.attrs = append(r.attrs, semconv.CloudAvailabilityZone(zone))
-		r.attrs = append(r.attrs, semconv.CloudRegion(region))
+		r.attrs = append(
+			r.attrs,
+			semconv.CloudAvailabilityZone(zone),
+			semconv.CloudRegion(region),
+		)
 	} else {
 		r.errs = append(r.errs, err)
 	}

@@ -171,7 +171,7 @@ func (h *Hook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
-func (h *Hook) convertEntry(e *logrus.Entry) log.Record {
+func (*Hook) convertEntry(e *logrus.Entry) log.Record {
 	var record log.Record
 	record.SetTimestamp(e.Time)
 	record.SetBody(log.StringValue(e.Message))

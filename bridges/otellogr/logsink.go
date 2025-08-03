@@ -254,7 +254,7 @@ func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
 
 // Init receives optional information about the logr library this
 // implementation does not use it.
-func (l *LogSink) Init(logr.RuntimeInfo) {
+func (*LogSink) Init(logr.RuntimeInfo) {
 	// We don't need to do anything here.
 	// CallDepth is used to calculate the caller's PC.
 	// PC is dropped as part of the conversion to the OpenTelemetry log.Record.

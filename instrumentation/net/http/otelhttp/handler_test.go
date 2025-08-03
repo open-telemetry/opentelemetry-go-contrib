@@ -40,7 +40,7 @@ func TestHandler(t *testing.T) {
 			name: "implements flusher",
 			handler: func(t *testing.T) http.Handler {
 				return NewHandler(
-					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 						assert.Implements(t, (*http.Flusher)(nil), w)
 
 						w.(http.Flusher).Flush()
@@ -54,7 +54,7 @@ func TestHandler(t *testing.T) {
 			name: "succeeds",
 			handler: func(t *testing.T) http.Handler {
 				return NewHandler(
-					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 						assert.NotNil(t, r.Body)
 
 						b, err := io.ReadAll(r.Body)
@@ -70,7 +70,7 @@ func TestHandler(t *testing.T) {
 			name: "succeeds with a nil body",
 			handler: func(t *testing.T) http.Handler {
 				return NewHandler(
-					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 						assert.Nil(t, r.Body)
 					}), "test_handler",
 				)
@@ -81,7 +81,7 @@ func TestHandler(t *testing.T) {
 			name: "succeeds with an http.NoBody",
 			handler: func(t *testing.T) http.Handler {
 				return NewHandler(
-					http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 						assert.Equal(t, http.NoBody, r.Body)
 					}), "test_handler",
 				)
@@ -241,7 +241,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 	}{
 		{
 			name: "With a success handler",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
 			attributes: []attribute.KeyValue{
@@ -250,7 +250,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 		},
 		{
 			name: "With a failing handler",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 			},
 			attributes: []attribute.KeyValue{
@@ -259,7 +259,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 		},
 		{
 			name: "With an empty handler",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(http.ResponseWriter, *http.Request) {
 			},
 			attributes: []attribute.KeyValue{
 				attribute.Int("http.response.status_code", http.StatusOK),
@@ -267,7 +267,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 		},
 		{
 			name: "With persisting initial failing status in handler with multiple WriteHeader calls",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 				w.WriteHeader(http.StatusOK)
 			},
@@ -323,28 +323,28 @@ func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 	}{
 		{
 			name: "With a success handler",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			},
 			expectHeadersWritten: []int{http.StatusOK},
 		},
 		{
 			name: "With a failing handler",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 			},
 			expectHeadersWritten: []int{http.StatusBadRequest},
 		},
 		{
 			name: "With an empty handler",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(http.ResponseWriter, *http.Request) {
 			},
 
 			expectHeadersWritten: nil,
 		},
 		{
 			name: "With calling WriteHeader twice",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusInternalServerError)
 				w.WriteHeader(http.StatusOK)
 			},
@@ -352,14 +352,14 @@ func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 		},
 		{
 			name: "When writing the header indirectly through body write",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(w http.ResponseWriter, _ *http.Request) {
 				_, _ = w.Write([]byte("hello"))
 			},
 			expectHeadersWritten: []int{http.StatusOK},
 		},
 		{
 			name: "With a header already written when writing the body",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				_, _ = w.Write([]byte("hello"))
 			},
@@ -367,7 +367,7 @@ func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 		},
 		{
 			name: "When writing the header indirectly through flush",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(w http.ResponseWriter, _ *http.Request) {
 				f := w.(http.Flusher)
 				f.Flush()
 			},
@@ -375,7 +375,7 @@ func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 		},
 		{
 			name: "With a header already written when flushing",
-			handler: func(w http.ResponseWriter, r *http.Request) {
+			handler: func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusBadRequest)
 				f := w.(http.Flusher)
 				f.Flush()
@@ -406,7 +406,7 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	rr := httptest.NewRecorder()
 
 	h := NewHandler(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, err := w.Write([]byte("hello world"))
 			assert.NoError(t, err)
 		}), "test_handler")
@@ -449,14 +449,14 @@ func TestWithSpanNameFormatter(t *testing.T) {
 		},
 		{
 			name: "with a custom span name formatter",
-			formatter: func(op string, r *http.Request) string {
+			formatter: func(_ string, r *http.Request) string {
 				return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
 			},
 			wantSpanName: "GET /foo/123",
 		},
 		{
 			name: "with a custom span name formatter using the pattern",
-			formatter: func(op string, r *http.Request) string {
+			formatter: func(_ string, r *http.Request) string {
 				return fmt.Sprintf("%s %s", r.Method, r.Pattern)
 			},
 			wantSpanName: "GET /foo/{id}",
@@ -476,7 +476,7 @@ func TestWithSpanNameFormatter(t *testing.T) {
 			}
 
 			mux := http.NewServeMux()
-			mux.Handle("/foo/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			mux.Handle("/foo/{id}", http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 				// Nothing to do here
 			}))
 			h := NewHandler(mux, "test_handler", opts...)
@@ -508,7 +508,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	}
 	prop := propagation.TraceContext{}
 	h := NewHandler(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 			s := trace.SpanFromContext(r.Context())
 			sc := s.SpanContext()
 
@@ -558,7 +558,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 	}{
 		{
 			name: "with the method returning true",
-			fn: func(r *http.Request) bool {
+			fn: func(*http.Request) bool {
 				return true
 			},
 			handlerAssert: func(t *testing.T, sc trace.SpanContext) {
@@ -575,7 +575,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 		},
 		{
 			name: "with the method returning false",
-			fn: func(r *http.Request) bool {
+			fn: func(*http.Request) bool {
 				return false
 			},
 			handlerAssert: func(t *testing.T, sc trace.SpanContext) {
@@ -597,7 +597,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			)
 
 			h := NewHandler(
-				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 					s := trace.SpanFromContext(r.Context())
 					tt.handlerAssert(t, s.SpanContext())
 				}), "test_handler",
@@ -640,7 +640,7 @@ func TestSpanStatus(t *testing.T) {
 			provider := sdktrace.NewTracerProvider()
 			provider.RegisterSpanProcessor(sr)
 			h := NewHandler(
-				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 					w.WriteHeader(tc.httpStatusCode)
 				}), "test_handler",
 				WithTracerProvider(provider),
@@ -668,7 +668,7 @@ func TestWithRouteTag(t *testing.T) {
 	h := NewHandler(
 		WithRouteTag(
 			route,
-			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusTeapot)
 			}),
 		),
@@ -740,7 +740,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		},
 		{
 			name: "With a function that returns an additional attribute",
-			fn: func(r *http.Request) []attribute.KeyValue {
+			fn: func(*http.Request) []attribute.KeyValue {
 				return []attribute.KeyValue{
 					attribute.String("fooKey", "fooValue"),
 					attribute.String("barKey", "barValue"),
@@ -758,7 +758,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 		h := NewHandler(
-			http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
 			}), "test_handler",
 			WithMeterProvider(meterProvider),
@@ -807,14 +807,14 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 	}{
 		{
 			name: "without the otelhttp handler",
-			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				fmt.Fprint(w, "Hello World")
 			}),
 		},
 		{
 			name: "with the otelhttp handler",
 			handler: NewHandler(
-				http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 					fmt.Fprint(w, "Hello World")
 				}),
 				"test_handler",

@@ -85,9 +85,9 @@ func TestDBCrudOperation(t *testing.T) {
 
 		title := tc.title
 		if tc.excludeCommand {
-			title = title + "/excludeCommand"
+			title += "/excludeCommand"
 		} else {
-			title = title + "/includeCommand"
+			title += "/includeCommand"
 		}
 
 		mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))

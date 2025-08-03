@@ -90,7 +90,7 @@ func Start(opts ...Option) error {
 	collector := newCollector(c.MinimumReadMemStatsInterval, runtimeMetrics)
 	var lock sync.Mutex
 	_, err = meter.RegisterCallback(
-		func(ctx context.Context, o metric.Observer) error {
+		func(_ context.Context, o metric.Observer) error {
 			lock.Lock()
 			defer lock.Unlock()
 			collector.refresh()

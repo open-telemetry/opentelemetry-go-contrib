@@ -29,7 +29,7 @@ const address = "localhost:50051"
 type server struct{}
 
 // SayHello implements helloworld.GreeterServer.
-func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
+func (*server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
 	_, span := trace.StartSpan(ctx, "sleep")
 	time.Sleep(time.Duration(rand.Float64() * float64(time.Second))) //nolint:gosec // Ignoring G404: Use of weak random number generator (math/rand instead of crypto/rand)
 	span.End()
