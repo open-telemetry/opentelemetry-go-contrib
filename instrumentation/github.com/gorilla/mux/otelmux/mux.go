@@ -86,7 +86,7 @@ type traceware struct {
 	metricAttributesFn func(*http.Request) []attribute.KeyValue
 }
 
-// defaultSpanNameFunc just reuses the route name as the span name.
+// validMethods are all the OTel recognized HTTP methods.
 var validMethods = map[string]struct{}{
 	http.MethodGet: {},
 	http.MethodHead: {},
