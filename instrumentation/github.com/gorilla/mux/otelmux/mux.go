@@ -99,7 +99,7 @@ var validMethods = map[string]struct{}{
 	http.MethodTrace: {},
 }
 
-// defaultSpanNameFunc just reuses the route name as the span name.
+// defaultSpanNameFunc returns the semconv based default span name.
 func defaultSpanNameFunc(routeName string, r *http.Request) string {
 	method := r.Method
 	if _, ok := validMethods[method]; !ok {
