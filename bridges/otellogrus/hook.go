@@ -33,7 +33,6 @@ package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
 
 import (
 	"github.com/sirupsen/logrus"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
@@ -172,7 +171,7 @@ func (h *Hook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
-func (h *Hook) convertEntry(e *logrus.Entry) log.Record {
+func (*Hook) convertEntry(e *logrus.Entry) log.Record {
 	var record log.Record
 	record.SetTimestamp(e.Time)
 	record.SetBody(log.StringValue(e.Message))

@@ -9,11 +9,11 @@ import (
 	"time"
 
 	"github.com/davecgh/go-spew/spew"
-
-	"go.opentelemetry.io/contrib/samplers/jaegerremote"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/trace"
+
+	"go.opentelemetry.io/contrib/samplers/jaegerremote"
 )
 
 func main() {

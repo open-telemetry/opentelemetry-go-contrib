@@ -6,9 +6,8 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 import (
 	"time"
 
-	"go.uber.org/zap/zapcore"
-
 	"go.opentelemetry.io/otel/log"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -103,7 +102,7 @@ func (m *objectEncoder) AddInt(k string, v int) {
 	m.cur.attrs = append(m.cur.attrs, log.Int(k, v))
 }
 
-func (m *objectEncoder) AddString(k string, v string) {
+func (m *objectEncoder) AddString(k, v string) {
 	m.cur.attrs = append(m.cur.attrs, log.String(k, v))
 }
 

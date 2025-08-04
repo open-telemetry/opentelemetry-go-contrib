@@ -14,14 +14,11 @@ import (
 	"time"
 
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
-	smithyhttp "github.com/aws/smithy-go/transport/http"
-
-	"github.com/aws/smithy-go/middleware"
-
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/smithy-go/middleware"
+	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"

@@ -75,13 +75,13 @@ func (ssm *SpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
 }
 
 // Shutdown does nothing.
-func (ssm *SpanProcessor) Shutdown(context.Context) error {
+func (*SpanProcessor) Shutdown(context.Context) error {
 	// Do nothing
 	return nil
 }
 
 // ForceFlush does nothing.
-func (ssm *SpanProcessor) ForceFlush(context.Context) error {
+func (*SpanProcessor) ForceFlush(context.Context) error {
 	// Do nothing
 	return nil
 }
@@ -160,7 +160,7 @@ type sampleStore struct {
 }
 
 // newSampleStore creates a sampleStore.
-func newSampleStore(latencyBucketSize uint, errorBucketSize uint) *sampleStore {
+func newSampleStore(latencyBucketSize, errorBucketSize uint) *sampleStore {
 	s := &sampleStore{
 		latency: make([]*bucket, defaultBoundaries.numBuckets()),
 		errors:  newBucket(errorBucketSize),

@@ -9,11 +9,11 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
-	"go.opentelemetry.io/contrib/propagators/ot"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/propagators/ot"
 )
 
 func TestExtractOT(t *testing.T) {

@@ -38,7 +38,7 @@ func (p *parentProbabilitySampler) ShouldSample(params sdktrace.SamplingParamete
 	if err != nil {
 		otel.Handle(err)
 		value := otts.serialize()
-		if len(value) > 0 {
+		if value != "" {
 			// Note: see the note in
 			// "go.opentelemetry.io/otel/trace".TraceState.Insert(). The
 			// error below is not a condition we're supposed to handle.

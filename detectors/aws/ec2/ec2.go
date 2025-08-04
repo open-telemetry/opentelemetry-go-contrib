@@ -13,7 +13,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/aws/aws-sdk-go/aws/session"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
@@ -77,7 +76,7 @@ func NewResourceDetector(opts ...Option) resource.Detector {
 }
 
 // Detect detects associated resources when running in AWS environment.
-func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	client, err := detector.client()
 	if err != nil {
 		return nil, err

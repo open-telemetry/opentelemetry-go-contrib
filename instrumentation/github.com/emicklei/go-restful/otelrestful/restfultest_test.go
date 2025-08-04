@@ -13,8 +13,6 @@ import (
 	"github.com/emicklei/go-restful/v3"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -22,13 +20,15 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
 )
 
 func TestChildSpanFromGlobalTracer(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	otel.SetTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr)))
 
-	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+	handlerFunc := func(_ *restful.Request, resp *restful.Response) {
 		resp.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
@@ -39,7 +39,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 	container.Filter(otelrestful.OTelFilter("my-service"))
 	container.Add(ws)
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	container.ServeHTTP(w, r)
@@ -50,7 +50,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+	handlerFunc := func(_ *restful.Request, resp *restful.Response) {
 		resp.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
@@ -60,7 +60,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 	container.Filter(otelrestful.OTelFilter("my-service", otelrestful.WithTracerProvider(provider)))
 	container.Add(ws)
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	container.ServeHTTP(w, r)
@@ -71,7 +71,7 @@ func TestChildSpanNames(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+	handlerFunc := func(_ *restful.Request, resp *restful.Response) {
 		resp.WriteHeader(http.StatusOK)
 	}
 	ws := &restful.WebService{}
@@ -81,11 +81,11 @@ func TestChildSpanNames(t *testing.T) {
 	container.Filter(otelrestful.OTelFilter("foobar", otelrestful.WithTracerProvider(provider)))
 	container.Add(ws)
 
-	ws.Route(ws.GET("/book/{title}").To(func(req *restful.Request, resp *restful.Response) {
-		_, _ = resp.Write(([]byte)("ok"))
+	ws.Route(ws.GET("/book/{title}").To(func(_ *restful.Request, resp *restful.Response) {
+		_, _ = resp.Write([]byte("ok"))
 	}))
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	container.ServeHTTP(w, r)
@@ -101,7 +101,7 @@ func TestChildSpanNames(t *testing.T) {
 		attribute.String("http.route", "/user/{id:[0-9]+}"),
 	)
 
-	r = httptest.NewRequest("GET", "/book/foo", nil)
+	r = httptest.NewRequest(http.MethodGet, "/book/foo", http.NoBody)
 	w = httptest.NewRecorder()
 	container.ServeHTTP(w, r)
 	spans = sr.Ended()
@@ -121,7 +121,7 @@ func TestMultiFilters(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-	retOK := func(req *restful.Request, resp *restful.Response) { resp.WriteHeader(http.StatusOK) }
+	retOK := func(_ *restful.Request, resp *restful.Response) { resp.WriteHeader(http.StatusOK) }
 	ws1 := &restful.WebService{}
 	ws1.Path("/user")
 	ws1.Route(ws1.GET("/{id}").
@@ -140,21 +140,21 @@ func TestMultiFilters(t *testing.T) {
 	container.Add(ws1)
 	container.Add(ws2)
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 	container.ServeHTTP(w, r)
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
 	assertSpan(t, spans[0], "/user/{id}")
 
-	r = httptest.NewRequest("GET", "/user/123/books", nil)
+	r = httptest.NewRequest(http.MethodGet, "/user/123/books", http.NoBody)
 	w = httptest.NewRecorder()
 	container.ServeHTTP(w, r)
 	spans = sr.Ended()
 	require.Len(t, spans, 2)
 	assertSpan(t, spans[1], "/user/{id}/books")
 
-	r = httptest.NewRequest("GET", "/library/metropolitan", nil)
+	r = httptest.NewRequest(http.MethodGet, "/library/metropolitan", http.NoBody)
 	w = httptest.NewRecorder()
 	container.ServeHTTP(w, r)
 	spans = sr.Ended()
@@ -176,7 +176,7 @@ func TestSpanStatus(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider()
 			provider.RegisterSpanProcessor(sr)
-			handlerFunc := func(req *restful.Request, resp *restful.Response) {
+			handlerFunc := func(_ *restful.Request, resp *restful.Response) {
 				resp.WriteHeader(tc.httpStatusCode)
 			}
 			ws := &restful.WebService{}
@@ -185,7 +185,7 @@ func TestSpanStatus(t *testing.T) {
 			container.Filter(otelrestful.OTelFilter("my-service", otelrestful.WithTracerProvider(provider)))
 			container.Add(ws)
 
-			container.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest("GET", "/", nil))
+			container.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", http.NoBody))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
 			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
@@ -205,7 +205,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	}
 	prop := propagation.TraceContext{}
 
-	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+	handlerFunc := func(req *restful.Request, _ *restful.Response) {
 		s := oteltrace.SpanFromContext(req.Request.Context())
 		sc := s.SpanContext()
 
@@ -226,7 +226,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	)
 	container.Add(ws)
 
-	r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", nil)
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", http.NoBody)
 	require.NoError(t, err)
 
 	sc := oteltrace.NewSpanContext(remoteSpan)
@@ -262,7 +262,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 	}{
 		{
 			name: "with the method returning true",
-			fn: func(r *http.Request) bool {
+			fn: func(*http.Request) bool {
 				return true
 			},
 			handlerAssert: func(t *testing.T, sc oteltrace.SpanContext) {
@@ -279,7 +279,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 		},
 		{
 			name: "with the method returning false",
-			fn: func(r *http.Request) bool {
+			fn: func(*http.Request) bool {
 				return false
 			},
 			handlerAssert: func(t *testing.T, sc oteltrace.SpanContext) {
@@ -300,7 +300,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 				sdktrace.WithSpanProcessor(spanRecorder),
 			)
 
-			handlerFunc := func(req *restful.Request, resp *restful.Response) {
+			handlerFunc := func(req *restful.Request, _ *restful.Response) {
 				s := oteltrace.SpanFromContext(req.Request.Context())
 				tt.handlerAssert(t, s.SpanContext())
 			}
@@ -316,7 +316,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			)
 			container.Add(ws)
 
-			r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", nil)
+			r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", http.NoBody)
 			require.NoError(t, err)
 
 			sc := oteltrace.NewSpanContext(remoteSpan)

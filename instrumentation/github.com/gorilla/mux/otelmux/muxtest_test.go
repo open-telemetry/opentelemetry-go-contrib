@@ -14,8 +14,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
@@ -24,6 +22,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 )
 
 func TestDefaultTrace(t *testing.T) {
@@ -90,9 +90,9 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 				otelmux.WithTracerProvider(tp),
 				otelmux.WithSpanNameFormatter(d.spanNameFormatter),
 			))
-			router.HandleFunc(routeTpl, func(w http.ResponseWriter, r *http.Request) {})
+			router.HandleFunc(routeTpl, func(http.ResponseWriter, *http.Request) {})
 
-			r := httptest.NewRequest("GET", "/user/123", nil)
+			r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, r)
@@ -106,7 +106,7 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 	}
 }
 
-func ok(w http.ResponseWriter, _ *http.Request) {}
+func ok(http.ResponseWriter, *http.Request) {}
 func notfound(w http.ResponseWriter, _ *http.Request) {
 	http.Error(w, "not found", http.StatusNotFound)
 }
@@ -209,7 +209,7 @@ func TestNotFoundIsNotError(t *testing.T) {
 	router.Use(otelmux.Middleware("foobar", otelmux.WithTracerProvider(provider)))
 	router.HandleFunc("/does/not/exist", notfound)
 
-	r0 := httptest.NewRequest("GET", "/does/not/exist", nil)
+	r0 := httptest.NewRequest(http.MethodGet, "/does/not/exist", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r0)
 
@@ -261,7 +261,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 		otelmux.WithPropagators(prop),
 		otelmux.WithTracerProvider(provider),
 	))
-	router.HandleFunc("/with/public/endpoint", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/with/public/endpoint", func(_ http.ResponseWriter, r *http.Request) {
 		s := trace.SpanFromContext(r.Context())
 		sc := s.SpanContext()
 
@@ -271,7 +271,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 		assert.NotEqual(t, remoteSpan.TraceID, sc.TraceID())
 	})
 
-	r0 := httptest.NewRequest("GET", "/with/public/endpoint", nil)
+	r0 := httptest.NewRequest(http.MethodGet, "/with/public/endpoint", http.NoBody)
 	w := httptest.NewRecorder()
 
 	sc := trace.NewSpanContext(remoteSpan)
@@ -306,7 +306,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 	}{
 		{
 			name: "with the method returning true",
-			fn: func(r *http.Request) bool {
+			fn: func(*http.Request) bool {
 				return true
 			},
 			handlerAssert: func(t *testing.T, sc trace.SpanContext) {
@@ -323,7 +323,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 		},
 		{
 			name: "with the method returning false",
-			fn: func(r *http.Request) bool {
+			fn: func(*http.Request) bool {
 				return false
 			},
 			handlerAssert: func(t *testing.T, sc trace.SpanContext) {
@@ -351,12 +351,12 @@ func TestWithPublicEndpointFn(t *testing.T) {
 				otelmux.WithPropagators(prop),
 				otelmux.WithTracerProvider(provider),
 			))
-			router.HandleFunc("/with/public/endpointfn", func(w http.ResponseWriter, r *http.Request) {
+			router.HandleFunc("/with/public/endpointfn", func(_ http.ResponseWriter, r *http.Request) {
 				s := trace.SpanFromContext(r.Context())
 				tt.handlerAssert(t, s.SpanContext())
 			})
 
-			r0 := httptest.NewRequest("GET", "/with/public/endpointfn", nil)
+			r0 := httptest.NewRequest(http.MethodGet, "/with/public/endpointfn", http.NoBody)
 			w := httptest.NewRecorder()
 
 			sc := trace.NewSpanContext(remoteSpan)
@@ -392,7 +392,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		},
 		{
 			name: "With a function that returns an additional attribute",
-			fn: func(r *http.Request) []attribute.KeyValue {
+			fn: func(*http.Request) []attribute.KeyValue {
 				return []attribute.KeyValue{
 					attribute.String("fooKey", "fooValue"),
 					attribute.String("barKey", "barValue"),
@@ -416,7 +416,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		))
 
 		router.HandleFunc("/user/{id:[0-9]+}", ok)
-		r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", nil)
+		r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", http.NoBody)
 		require.NoError(t, err)
 		rr := httptest.NewRecorder()
 		router.ServeHTTP(rr, r)

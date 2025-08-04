@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
@@ -81,7 +80,7 @@ func TestCloudFunctionDetect(t *testing.T) {
 			name: "error in reading region",
 			cr: &CloudRun{
 				mc: &metaDataClientImpl{
-					get: func(key string) (string, error) {
+					get: func(string) (string, error) {
 						return "", errTest
 					},
 				},
@@ -98,7 +97,7 @@ func TestCloudFunctionDetect(t *testing.T) {
 					projectID: func() (string, error) {
 						return projectIDValue, nil
 					},
-					get: func(key string) (string, error) {
+					get: func(string) (string, error) {
 						return regionValue, nil
 					},
 				},

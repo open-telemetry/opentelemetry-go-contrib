@@ -27,6 +27,13 @@ import (
 	"net/http/httptest"
 )
 
+// MockAgent is a mock representation of Jaeger Agent.
+// It has an HTTP endpoint for sampling strategies.
+type MockAgent struct {
+	samplingMgr *samplingManager
+	samplingSrv *httptest.Server
+}
+
 // StartMockAgent runs a mock representation of jaeger-agent.
 // This function returns a started server.
 func StartMockAgent() (*MockAgent, error) {
@@ -45,13 +52,6 @@ func StartMockAgent() (*MockAgent, error) {
 // Close stops the serving of traffic.
 func (s *MockAgent) Close() {
 	s.samplingSrv.Close()
-}
-
-// MockAgent is a mock representation of Jaeger Agent.
-// It has an HTTP endpoint for sampling strategies.
-type MockAgent struct {
-	samplingMgr *samplingManager
-	samplingSrv *httptest.Server
 }
 
 // SamplingServerAddr returns the host:port of HTTP server exposing sampling strategy endpoint.

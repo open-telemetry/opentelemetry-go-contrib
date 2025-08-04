@@ -27,7 +27,6 @@ import (
 
 	jaeger_api_v2 "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2"
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )

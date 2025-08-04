@@ -20,7 +20,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
@@ -88,7 +87,7 @@ func TestTransportFormatter(t *testing.T) {
 
 	for _, tc := range httpMethods {
 		t.Run(tc.name, func(t *testing.T) {
-			r, err := http.NewRequest(tc.method, "http://localhost/", nil)
+			r, err := http.NewRequest(tc.method, "http://localhost/", http.NoBody)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -124,7 +123,7 @@ func TestTransportBasics(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -175,7 +174,7 @@ func TestNilTransport(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +208,7 @@ type readCloser struct {
 	readErr, closeErr error
 }
 
-func (rc readCloser) Read(p []byte) (n int, err error) {
+func (rc readCloser) Read([]byte) (n int, err error) {
 	return readSize, rc.readErr
 }
 
@@ -259,7 +258,7 @@ func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d strin
 func TestWrappedBodyRead(t *testing.T) {
 	s := new(span)
 	called := false
-	record := func(numBytes int64) { called = true }
+	record := func(int64) { called = true }
 	wb := newWrappedBody(s, record, readCloser{})
 	n, err := wb.Read([]byte{})
 	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
@@ -311,7 +310,7 @@ func TestWrappedBodyClose(t *testing.T) {
 func TestWrappedBodyClosePanic(t *testing.T) {
 	s := new(span)
 	var body io.ReadCloser
-	wb := newWrappedBody(s, func(n int64) {}, body)
+	wb := newWrappedBody(s, func(int64) {}, body)
 	assert.NotPanics(t, func() { wb.Close() }, "nil body should not panic on close")
 }
 
@@ -339,12 +338,12 @@ func (rwc readWriteCloser) Write([]byte) (int, error) {
 }
 
 func TestNewWrappedBodyReadWriteCloserImplementation(t *testing.T) {
-	wb := newWrappedBody(nil, func(n int64) {}, readWriteCloser{})
+	wb := newWrappedBody(nil, func(int64) {}, readWriteCloser{})
 	assert.Implements(t, (*io.ReadWriteCloser)(nil), wb)
 }
 
 func TestNewWrappedBodyReadCloserImplementation(t *testing.T) {
-	wb := newWrappedBody(nil, func(n int64) {}, readCloser{})
+	wb := newWrappedBody(nil, func(int64) {}, readCloser{})
 	assert.Implements(t, (*io.ReadCloser)(nil), wb)
 
 	_, ok := wb.(io.ReadWriteCloser)
@@ -355,7 +354,7 @@ func TestWrappedBodyWrite(t *testing.T) {
 	s := new(span)
 	var rwc io.ReadWriteCloser
 	assert.NotPanics(t, func() {
-		rwc = newWrappedBody(s, func(n int64) {}, readWriteCloser{}).(io.ReadWriteCloser)
+		rwc = newWrappedBody(s, func(int64) {}, readWriteCloser{}).(io.ReadWriteCloser)
 	})
 
 	n, err := rwc.Write([]byte{})
@@ -370,7 +369,7 @@ func TestWrappedBodyWriteError(t *testing.T) {
 	var rwc io.ReadWriteCloser
 	assert.NotPanics(t, func() {
 		rwc = newWrappedBody(s,
-			func(n int64) {},
+			func(int64) {},
 			readWriteCloser{
 				writeErr: expectedErr,
 			}).(io.ReadWriteCloser)
@@ -462,7 +461,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -493,7 +492,7 @@ func TestTransportErrorStatus(t *testing.T) {
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
 
 	// Run a server and stop to make sure nothing is listening and force the error.
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	server.Close()
 
 	// Create our Transport and make request.
@@ -502,7 +501,7 @@ func TestTransportErrorStatus(t *testing.T) {
 		WithTracerProvider(provider),
 	)
 	c := http.Client{Transport: tr}
-	r, err := http.NewRequest(http.MethodGet, server.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, server.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -549,7 +548,7 @@ func TestTransportRequestWithTraceContext(t *testing.T) {
 	)
 	content := []byte("Hello, world!")
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write(content)
 		assert.NoError(t, err)
 	}))
@@ -558,7 +557,7 @@ func TestTransportRequestWithTraceContext(t *testing.T) {
 	tracer := provider.Tracer("")
 	ctx, span := tracer.Start(context.Background(), "test_span")
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	r = r.WithContext(ctx)
@@ -595,7 +594,7 @@ func TestWithHTTPTrace(t *testing.T) {
 	)
 	content := []byte("Hello, world!")
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, err := w.Write(content)
 		assert.NoError(t, err)
 	}))
@@ -604,7 +603,7 @@ func TestWithHTTPTrace(t *testing.T) {
 	tracer := provider.Tracer("")
 	ctx, span := tracer.Start(context.Background(), "test_span")
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	r = r.WithContext(ctx)
@@ -612,10 +611,10 @@ func TestWithHTTPTrace(t *testing.T) {
 	clientTracer := func(ctx context.Context) *httptrace.ClientTrace {
 		var span trace.Span
 		return &httptrace.ClientTrace{
-			GetConn: func(_ string) {
+			GetConn: func(string) {
 				_, span = trace.SpanFromContext(ctx).TracerProvider().Tracer("").Start(ctx, "httptrace.GetConn")
 			},
-			GotConn: func(_ httptrace.GotConnInfo) {
+			GotConn: func(httptrace.GotConnInfo) {
 				if span != nil {
 					span.End()
 				}
@@ -660,7 +659,7 @@ func TestTransportMetrics(t *testing.T) {
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			if _, err := w.Write(responseBody); err != nil {
 				t.Fatal(err)
@@ -722,7 +721,7 @@ func TestTransportMetrics(t *testing.T) {
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			if _, err := w.Write(responseBody); err != nil {
 				t.Fatal(err)
@@ -794,7 +793,7 @@ func TestTransportMetrics(t *testing.T) {
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
-		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusOK)
 			if _, err := w.Write(responseBody); err != nil {
 				t.Fatal(err)
@@ -932,7 +931,7 @@ func TestCustomAttributesHandling(t *testing.T) {
 		attribute.String("bar", "barValue"),
 	}
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 	labeler := &Labeler{}
 	labeler.Add(expectedAttributes...)
@@ -984,10 +983,10 @@ func TestMetricsExistenceOnRequestError(t *testing.T) {
 
 	// simulate an error by closing the server
 	// before the request is made
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	ts := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := client.Do(r)
@@ -1038,7 +1037,7 @@ func TestDefaultAttributesHandling(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := client.Do(r)
@@ -1075,7 +1074,7 @@ func containsAttributes(t *testing.T, attrSet attribute.Set, expected []attribut
 }
 
 func BenchmarkTransportRoundTrip(b *testing.B) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, "Hello World")
 	}))
 	defer ts.Close()
@@ -1083,7 +1082,7 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
+	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(b, err)
 
 	for _, bb := range []struct {

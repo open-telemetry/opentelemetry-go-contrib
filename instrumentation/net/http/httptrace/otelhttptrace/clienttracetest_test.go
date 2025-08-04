@@ -14,7 +14,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -50,7 +49,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 
 	// Mock http server
 	ts := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		}),
 	)
 	defer ts.Close()
@@ -60,7 +59,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	err := func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "test")
 		defer span.End()
-		req, _ := http.NewRequest("GET", ts.URL, nil)
+		req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
 		_, req = otelhttptrace.W3C(ctx, req)
 
 		res, err := client.Do(req)
@@ -305,7 +304,7 @@ func prepareClientTraceTest(t *testing.T) clientTraceTestFixture {
 	)
 
 	ts := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		}),
 	)
 	t.Cleanup(ts.Close)
@@ -324,7 +323,7 @@ func TestWithoutSubSpans(t *testing.T) {
 			otelhttptrace.WithoutSubSpans(),
 		),
 	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, http.NoBody)
 	require.NoError(t, err)
 	resp, err := fixture.Client.Do(req)
 	require.NoError(t, err)
@@ -340,7 +339,7 @@ func TestWithoutSubSpans(t *testing.T) {
 			otelhttptrace.WithoutSubSpans(),
 		),
 	)
-	req, err = http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, nil)
+	req, err = http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, http.NoBody)
 	req.Header.Set("User-Agent", "oteltest/1.1")
 	req.Header.Set("Authorization", "Bearer token123")
 	require.NoError(t, err)
@@ -427,7 +426,7 @@ func TestWithRedactedHeaders(t *testing.T) {
 			otelhttptrace.WithRedactedHeaders("user-agent"),
 		),
 	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, http.NoBody)
 	require.NoError(t, err)
 	resp, err := fixture.Client.Do(req)
 	require.NoError(t, err)
@@ -457,7 +456,7 @@ func TestWithoutHeaders(t *testing.T) {
 			otelhttptrace.WithoutHeaders(),
 		),
 	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, http.NoBody)
 	require.NoError(t, err)
 	resp, err := fixture.Client.Do(req)
 	require.NoError(t, err)
@@ -480,7 +479,7 @@ func TestWithInsecureHeaders(t *testing.T) {
 			otelhttptrace.WithInsecureHeaders(),
 		),
 	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, http.NoBody)
 	req.Header.Set("User-Agent", "oteltest/1.1")
 	req.Header.Set("Authorization", "Bearer token123")
 	require.NoError(t, err)
@@ -509,14 +508,14 @@ func TestHTTPRequestWithTraceContext(t *testing.T) {
 
 	// Mock http server
 	ts := httptest.NewServer(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
 		}),
 	)
 	defer ts.Close()
 
 	ctx, span := tp.Tracer("").Start(context.Background(), "parent_span")
 
-	req, _ := http.NewRequest("GET", ts.URL, nil)
+	req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), otelhttptrace.NewClientTrace(ctx)))
 
 	client := ts.Client()

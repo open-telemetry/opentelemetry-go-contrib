@@ -33,7 +33,7 @@ var (
 
 type emptyHandler struct{}
 
-func (h emptyHandler) Invoke(_ context.Context, _ []byte) ([]byte, error) {
+func (emptyHandler) Invoke(context.Context, []byte) ([]byte, error) {
 	return nil, nil
 }
 
@@ -73,7 +73,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 		{
 			name:     "handler declares too many arguments",
 			expected: errors.New("handlers may not take more than two arguments, but handler takes 3"),
-			handler: func(n context.Context, x string, y string) error {
+			handler: func(context.Context, string, string) error {
 				return nil
 			},
 			args: []reflect.Value{reflect.ValueOf(mockContext), reflect.ValueOf(emptyPayload)},
@@ -81,7 +81,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 		{
 			name:     "two argument handler does not have context as first argument",
 			expected: errors.New("handler takes two arguments, but the first is not Context. got string"),
-			handler: func(a string, x context.Context) error {
+			handler: func(string, context.Context) error {
 				return nil
 			},
 			args: []reflect.Value{reflect.ValueOf(mockContext), reflect.ValueOf(emptyPayload)},
@@ -160,7 +160,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "string input and return with context",
 			input:    "Lambda",
 			expected: expected{`"Hello Lambda!"`, nil},
-			handler: func(ctx context.Context, name string) (string, error) {
+			handler: func(_ context.Context, name string) (string, error) {
 				return hello(name), nil
 			},
 		},
@@ -176,7 +176,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "input with response event and simple error",
 			input:    "Lambda",
 			expected: expected{"", errors.New("bad stuff")},
-			handler: func(e any) (any, error) {
+			handler: func(any) (any, error) {
 				return nil, errors.New("bad stuff")
 			},
 		},
@@ -184,7 +184,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "input and context with response event and simple error",
 			input:    "Lambda",
 			expected: expected{"", errors.New("bad stuff")},
-			handler: func(ctx context.Context, e any) (any, error) {
+			handler: func(context.Context, any) (any, error) {
 				return nil, errors.New("bad stuff")
 			},
 		},
@@ -192,7 +192,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "input with response event and complex error",
 			input:    "Lambda",
 			expected: expected{"", messages.InvokeResponse_Error{Message: "message", Type: "type"}},
-			handler: func(e any) (any, error) {
+			handler: func(any) (any, error) {
 				return nil, messages.InvokeResponse_Error{Message: "message", Type: "type"}
 			},
 		},
@@ -259,7 +259,7 @@ func TestHandlerInvokes(t *testing.T) {
 func BenchmarkInstrumentHandler(b *testing.B) {
 	setEnvVars()
 
-	customerHandler := func(ctx context.Context, payload int) error {
+	customerHandler := func(context.Context, int) error {
 		return nil
 	}
 	wrapped := InstrumentHandler(customerHandler)

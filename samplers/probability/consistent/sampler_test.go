@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"

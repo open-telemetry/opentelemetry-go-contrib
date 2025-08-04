@@ -11,7 +11,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )

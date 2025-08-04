@@ -83,7 +83,7 @@ var defaultProcessor = noopProcessor{}
 
 type noopProcessor struct{}
 
-func (p noopProcessor) OnEmit(context.Context, *log.Record) error           { return nil }
-func (p noopProcessor) Enabled(context.Context, log.EnabledParameters) bool { return false }
-func (p noopProcessor) Shutdown(context.Context) error                      { return nil }
-func (p noopProcessor) ForceFlush(context.Context) error                    { return nil }
+func (noopProcessor) OnEmit(context.Context, *log.Record) error           { return nil }
+func (noopProcessor) Enabled(context.Context, log.EnabledParameters) bool { return false }
+func (noopProcessor) Shutdown(context.Context) error                      { return nil }
+func (noopProcessor) ForceFlush(context.Context) error                    { return nil }

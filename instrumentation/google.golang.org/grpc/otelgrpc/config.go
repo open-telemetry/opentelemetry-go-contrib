@@ -6,13 +6,12 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 import (
 	"context"
 
-	"google.golang.org/grpc/stats"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc/stats"
 )
 
 // ScopeName is the instrumentation scope name.

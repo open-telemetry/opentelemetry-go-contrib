@@ -36,11 +36,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/grpclog"
+	testpb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
-
-	testpb "google.golang.org/grpc/interop/grpc_testing"
 )
 
 var (
@@ -240,7 +239,7 @@ func NewTestServer() testpb.TestServiceServer {
 	return &testServer{}
 }
 
-func (s *testServer) EmptyCall(ctx context.Context, in *testpb.Empty) (*testpb.Empty, error) {
+func (*testServer) EmptyCall(context.Context, *testpb.Empty) (*testpb.Empty, error) {
 	return new(testpb.Empty), nil
 }
 
@@ -260,7 +259,7 @@ func serverNewPayload(t testpb.PayloadType, size int32) (*testpb.Payload, error)
 	}, nil
 }
 
-func (s *testServer) UnaryCall(ctx context.Context, in *testpb.SimpleRequest) (*testpb.SimpleResponse, error) {
+func (*testServer) UnaryCall(ctx context.Context, in *testpb.SimpleRequest) (*testpb.SimpleResponse, error) {
 	st := in.GetResponseStatus()
 	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if initialMetadata, ok := md[initialMetadataKey]; ok {
@@ -284,7 +283,7 @@ func (s *testServer) UnaryCall(ctx context.Context, in *testpb.SimpleRequest) (*
 	}, nil
 }
 
-func (s *testServer) StreamingOutputCall(args *testpb.StreamingOutputCallRequest, stream testpb.TestService_StreamingOutputCallServer) error {
+func (*testServer) StreamingOutputCall(args *testpb.StreamingOutputCallRequest, stream testpb.TestService_StreamingOutputCallServer) error {
 	cs := args.GetResponseParameters()
 	for _, c := range cs {
 		if us := c.GetIntervalUs(); us > 0 {
@@ -303,7 +302,7 @@ func (s *testServer) StreamingOutputCall(args *testpb.StreamingOutputCallRequest
 	return nil
 }
 
-func (s *testServer) StreamingInputCall(stream testpb.TestService_StreamingInputCallServer) error {
+func (*testServer) StreamingInputCall(stream testpb.TestService_StreamingInputCallServer) error {
 	var sum int32
 	for {
 		in, err := stream.Recv()
@@ -322,7 +321,7 @@ func (s *testServer) StreamingInputCall(stream testpb.TestService_StreamingInput
 	}
 }
 
-func (s *testServer) FullDuplexCall(stream testpb.TestService_FullDuplexCallServer) error {
+func (*testServer) FullDuplexCall(stream testpb.TestService_FullDuplexCallServer) error {
 	if md, ok := metadata.FromIncomingContext(stream.Context()); ok {
 		if initialMetadata, ok := md[initialMetadataKey]; ok {
 			header := metadata.Pairs(initialMetadataKey, initialMetadata[0])
@@ -365,7 +364,7 @@ func (s *testServer) FullDuplexCall(stream testpb.TestService_FullDuplexCallServ
 	}
 }
 
-func (s *testServer) HalfDuplexCall(stream testpb.TestService_HalfDuplexCallServer) error {
+func (*testServer) HalfDuplexCall(stream testpb.TestService_HalfDuplexCallServer) error {
 	var msgBuf []*testpb.StreamingOutputCallRequest
 	for {
 		in, err := stream.Recv()

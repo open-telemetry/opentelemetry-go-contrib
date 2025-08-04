@@ -7,11 +7,11 @@ import (
 	"context"
 	"os"
 
-	"go.opentelemetry.io/contrib/bridges/otelzap"
 	"go.opentelemetry.io/otel/log/noop"
-
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"go.opentelemetry.io/contrib/bridges/otelzap"
 )
 
 func Example() {

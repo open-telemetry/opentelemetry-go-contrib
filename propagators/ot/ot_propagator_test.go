@@ -8,10 +8,8 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/propagation"
-
 	"github.com/stretchr/testify/assert"
-
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 

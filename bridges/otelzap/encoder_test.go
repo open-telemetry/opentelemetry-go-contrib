@@ -12,9 +12,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zapcore"
-
 	"go.opentelemetry.io/otel/log"
+	"go.uber.org/zap/zapcore"
 )
 
 // Copied from https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/memory_encoder_test.go.
@@ -343,7 +342,7 @@ func TestArrayEncoder(t *testing.T) {
 
 type turducken struct{}
 
-func (t turducken) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+func (turducken) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	return enc.AddArray("ducks", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
 		for i := 0; i < 2; i++ {
 			err := arr.AppendObject(zapcore.ObjectMarshalerFunc(func(inner zapcore.ObjectEncoder) error {

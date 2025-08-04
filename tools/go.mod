@@ -7,7 +7,7 @@ exclude github.com/blizzy78/varnamelen v0.6.1
 require (
 	github.com/atombender/go-jsonschema v0.18.0
 	github.com/client9/misspell v0.3.4
-	github.com/golangci/golangci-lint/v2 v2.3.0
+	github.com/golangci/golangci-lint/v2 v2.3.1
 	github.com/itchyny/gojq v0.12.17
 	github.com/jcchavezs/porto v0.7.0
 	github.com/stretchr/testify v1.10.0
@@ -38,7 +38,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.1 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
-	github.com/alecthomas/chroma/v2 v2.19.0 // indirect
+	github.com/alecthomas/chroma/v2 v2.20.0 // indirect
 	github.com/alecthomas/go-check-sumtype v0.3.1 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.6 // indirect
 	github.com/alexkohler/prealloc v1.0.0 // indirect
@@ -166,7 +166,7 @@ require (
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/polyfloyd/go-errorlint v1.8.0 // indirect
-	github.com/prometheus/client_golang v1.22.0 // indirect
+	github.com/prometheus/client_golang v1.23.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.65.0 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect

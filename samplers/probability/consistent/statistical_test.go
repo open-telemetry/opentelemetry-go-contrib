@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
@@ -150,16 +149,12 @@ func TestSamplerStatistics(t *testing.T) {
 
 				failed := countFailures(rand.NewSource(seed))
 
-				if failed != 1 && test.seedIndex < 0 {
-					t.Logf("%d probabilistic failures, trying a new seed for %g was 0x%x", failed, test.prob, seed)
-					continue
-				} else if failed != 1 {
-					t.Errorf("wrong number of probabilistic failures for %g, should be 1 was %d for seed 0x%x", test.prob, failed, seed)
-				} else if test.seedIndex < 0 {
-					t.Logf("update the test for %g to use seed index %d", test.prob, seedIndex)
-					t.Fail()
-					return
-				} else {
+				if failed == 1 {
+					if test.seedIndex < 0 {
+						t.Logf("update the test for %g to use seed index %d", test.prob, seedIndex)
+						t.Fail()
+						return
+					}
 					// Note: this can be uncommented to verify that the preceding seed failed the test,
 					// however this just doubles runtime and adds little evidence.  For example:
 					// if seedIndex != 0 && countFailures(rand.NewSource(seedBank[seedIndex-1])) == 1 {
@@ -168,6 +163,11 @@ func TestSamplerStatistics(t *testing.T) {
 					// }
 					break
 				}
+				if test.seedIndex < 0 {
+					t.Logf("%d probabilistic failures, trying a new seed for %g was 0x%x", failed, test.prob, seed)
+					continue
+				}
+				t.Errorf("wrong number of probabilistic failures for %g, should be 1 was %d for seed 0x%x", test.prob, failed, seed)
 			}
 			testSummary = append(testSummary, testResult{
 				test:     test,

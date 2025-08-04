@@ -15,7 +15,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/drivertest"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -86,9 +85,9 @@ func TestDBCrudOperation(t *testing.T) {
 
 		title := tc.title
 		if tc.excludeCommand {
-			title = title + "/excludeCommand"
+			title += "/excludeCommand"
 		} else {
-			title = title + "/includeCommand"
+			title += "/includeCommand"
 		}
 
 		t.Run(title, func(t *testing.T) {
