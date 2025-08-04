@@ -130,7 +130,7 @@ var translations = map[Severity]log.Severity{
 // Examples:
 //
 //	SeverityWarn1.String() => "WARN"
-//	(SeverityInfo1+2).String() => "INFO2"
+//	(SeverityInfo1+2).String() => "INFO3"
 //	(SeverityFatal4+2).String() => "FATAL+6"
 //	(SeverityTrace1-3).String() => "TRACE-3"
 func (s Severity) String() string {
@@ -177,7 +177,7 @@ func (s Severity) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON implements [encoding/json.Unmarshaler] It accepts any string
 // produced by [Severity.MarshalJSON], ignoring case. It also accepts numeric
 // offsets that would result in a different string on output. For example,
-// "ERROR-8" will unmarshal as SeverityInfo.
+// "ERROR-8" will unmarshal as [SeverityInfo].
 func (s *Severity) UnmarshalJSON(data []byte) error {
 	str, err := strconv.Unquote(string(data))
 	if err != nil {
@@ -200,7 +200,7 @@ func (s Severity) MarshalText() ([]byte, error) {
 // UnmarshalText implements [encoding.TextUnmarshaler]. It accepts any string
 // produced by [Severity.MarshalText], ignoring case. It also accepts numeric
 // offsets that would result in a different string on output. For example,
-// "ERROR-8" will marshal as SeverityInfo.
+// "ERROR-8" will marshal as [SeverityInfo].
 func (s *Severity) UnmarshalText(data []byte) error {
 	return s.parse(string(data))
 }
@@ -223,14 +223,14 @@ func (s *Severity) UnmarshalText(data []byte) error {
 // they will be treated as an 1-based offset from the base severity level.
 //
 // For example, "ERROR3" will be parsed as "ERROR" with a fine-grained level of
-// 3, which corresponds to `SeverityError3`, "FATAL+2" will be parsed as
-// "FATAL" with an offset of +2, which corresponds to `SeverityFatal2`, and
+// 3, which corresponds to [SeverityError3], "FATAL+2" will be parsed as
+// "FATAL" with an offset of +2, which corresponds to [SeverityFatal2], and
 // "INFO2+1" is parsed as INFO with a fine-grained level of 2 and an offset of
-// +1, which corresponds to `SeverityInfo3`.
+// +1, which corresponds to [SeverityInfo3].
 //
 // Fine-grained severity levels are based on counting numbers excluding zero.
 // If a fine-grained level of 0 is provided it is treaded as equivalent to the
-// base severity level.  For example, "INFO0" is equivalent to `SeverityInfo1`.
+// base severity level.  For example, "INFO0" is equivalent to [SeverityInfo1].
 func (s *Severity) parse(str string) (err error) {
 	defer func() {
 		if err != nil {

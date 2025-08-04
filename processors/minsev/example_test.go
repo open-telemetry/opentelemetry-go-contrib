@@ -55,10 +55,9 @@ func ExampleSeveritier_environment() {
 	// true
 }
 
+// ExampleSeveritier_json demonstrates how to use a Severitier that reads from a JSON
+// configuration.
 func ExampleSeveritier_json() {
-	// Demonstrates how to use a Severitier that reads from a JSON
-	// configuration.
-
 	// Example JSON configuration that specifies the minimum severity level.
 	// This would be provided by the application user.
 	const jsonConfig = `{"log_level":"error"}`
