@@ -1538,7 +1538,6 @@ func TestPrometheusReaderHostParsing(t *testing.T) {
 			require.True(t, ok, "reader is not a readerWithServer")
 			server := rws.server
 
-			assert.NotEmpty(t, server.Addr)
 			assert.Contains(t, server.Addr, tt.wantAddr)
 		})
 	}
