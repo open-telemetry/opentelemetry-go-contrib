@@ -32,7 +32,7 @@ func TestDefaultTrace(t *testing.T) {
 	router := mux.NewRouter()
 	router.Use(otelmux.Middleware("foobar", otelmux.WithTracerProvider(provider)))
 
-	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	})
 
