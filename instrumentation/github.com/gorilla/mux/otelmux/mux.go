@@ -6,7 +6,6 @@ package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"fmt"
 	"net/http"
-	"slices"
 	"time"
 
 	"github.com/felixge/httpsnoop"
@@ -88,15 +87,15 @@ type traceware struct {
 
 // validMethods are all the OTel recognized HTTP methods.
 var validMethods = map[string]struct{}{
-	http.MethodGet: {},
-	http.MethodHead: {},
-	http.MethodPost: {},
-	http.MethodPut: {},
-	http.MethodPatch: {},
-	http.MethodDelete: {},
+	http.MethodGet:     {},
+	http.MethodHead:    {},
+	http.MethodPost:    {},
+	http.MethodPut:     {},
+	http.MethodPatch:   {},
+	http.MethodDelete:  {},
 	http.MethodConnect: {},
 	http.MethodOptions: {},
-	http.MethodTrace: {},
+	http.MethodTrace:   {},
 }
 
 // defaultSpanNameFunc returns the semconv based default span name.
