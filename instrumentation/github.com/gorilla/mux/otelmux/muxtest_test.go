@@ -36,7 +36,7 @@ func TestDefaultTrace(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest("GET", "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
