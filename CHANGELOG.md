@@ -19,7 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`(#7551)
+- Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7551)
 
 ### Deprecated
 
