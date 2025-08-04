@@ -23,13 +23,13 @@ func TestBasicFilter(t *testing.T) {
 	provider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
 
 	h := otelhttp.NewHandler(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
 			}
 		}), "test_handler",
 		otelhttp.WithTracerProvider(provider),
-		otelhttp.WithFilter(func(r *http.Request) bool {
+		otelhttp.WithFilter(func(*http.Request) bool {
 			return false
 		}),
 	)
@@ -81,7 +81,7 @@ func TestSpanNameFormatter(t *testing.T) {
 		},
 		{
 			name: "custom formatter",
-			formatter: func(s string, r *http.Request) string {
+			formatter: func(_ string, r *http.Request) string {
 				return r.URL.Path
 			},
 			operation: "",
@@ -95,7 +95,7 @@ func TestSpanNameFormatter(t *testing.T) {
 
 			spanRecorder := tracetest.NewSpanRecorder()
 			provider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
-			handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				if _, err := io.WriteString(w, "hello world"); err != nil {
 					t.Fatal(err)
 				}

@@ -64,11 +64,11 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	m.Unlock()
 }
 
-func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEvent) {
+func (m *monitor) Succeeded(_ context.Context, evt *event.CommandSucceededEvent) {
 	m.Finished(&evt.CommandFinishedEvent, nil)
 }
 
-func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
+func (m *monitor) Failed(_ context.Context, evt *event.CommandFailedEvent) {
 	m.Finished(&evt.CommandFinishedEvent, evt.Failure)
 }
 

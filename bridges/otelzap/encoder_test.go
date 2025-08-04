@@ -342,7 +342,7 @@ func TestArrayEncoder(t *testing.T) {
 
 type turducken struct{}
 
-func (t turducken) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+func (turducken) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	return enc.AddArray("ducks", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
 		for i := 0; i < 2; i++ {
 			err := arr.AppendObject(zapcore.ObjectMarshalerFunc(func(inner zapcore.ObjectEncoder) error {

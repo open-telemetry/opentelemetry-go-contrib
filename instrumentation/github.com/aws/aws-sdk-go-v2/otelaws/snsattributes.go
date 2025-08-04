@@ -14,7 +14,7 @@ import (
 )
 
 // SNSAttributeBuilder sets SNS specific attributes depending on the SNS operation is being performed.
-func SNSAttributeBuilder(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue {
+func SNSAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ middleware.InitializeOutput) []attribute.KeyValue {
 	snsAttributes := []attribute.KeyValue{semconv.MessagingSystemKey.String("aws_sns")}
 
 	switch v := in.Parameters.(type) {

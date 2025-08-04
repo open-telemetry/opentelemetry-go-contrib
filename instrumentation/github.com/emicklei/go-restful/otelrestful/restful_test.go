@@ -59,7 +59,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	ctx, _ = provider.Tracer(tracerName).Start(ctx, "test")
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
-	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+	handlerFunc := func(req *restful.Request, _ *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
 		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())
@@ -91,7 +91,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	ctx, _ = provider.Tracer(tracerName).Start(ctx, "test")
 	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
-	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+	handlerFunc := func(req *restful.Request, _ *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
 		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())

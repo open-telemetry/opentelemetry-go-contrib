@@ -115,7 +115,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 
 	router := gin.New()
 	router.Use(otelgin.Middleware("foobar"))
-	router.GET("/user/:id", func(c *gin.Context) {})
+	router.GET("/user/:id", func(*gin.Context) {})
 
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
@@ -130,7 +130,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 
 	router := gin.New()
 	router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
-	router.GET("/user/:id", func(c *gin.Context) {})
+	router.GET("/user/:id", func(*gin.Context) {})
 
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
@@ -278,7 +278,7 @@ func TestWithSpanOptions_CustomAttributesAndSpanKind(t *testing.T) {
 		otelgin.WithTracerProvider(provider),
 		otelgin.WithSpanStartOptions(trace.WithAttributes(customAttr)),
 	))
-	router.GET("/test", func(c *gin.Context) {})
+	router.GET("/test", func(*gin.Context) {})
 
 	r := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	w := httptest.NewRecorder()
@@ -327,7 +327,7 @@ func TestSpanName(t *testing.T) {
 
 			router := gin.New()
 			router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider), otelgin.WithSpanNameFormatter(tc.spanNameFormatter)))
-			router.Handle(tc.method, tc.route, func(c *gin.Context) {})
+			router.Handle(tc.method, tc.route, func(*gin.Context) {})
 
 			router.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(tc.method, tc.requestPath, http.NoBody))
 
@@ -420,7 +420,7 @@ func TestWithFilter(t *testing.T) {
 		router := gin.New()
 		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
 		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
-		router.GET("/healthcheck", func(c *gin.Context) {})
+		router.GET("/healthcheck", func(*gin.Context) {})
 
 		r := httptest.NewRequest(http.MethodGet, "/healthcheck", http.NoBody)
 		w := httptest.NewRecorder()
@@ -436,7 +436,7 @@ func TestWithFilter(t *testing.T) {
 		router := gin.New()
 		f := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
 		router.Use(otelgin.Middleware("foobar", otelgin.WithFilter(f)))
-		router.GET("/user/:id", func(c *gin.Context) {})
+		router.GET("/user/:id", func(*gin.Context) {})
 
 		r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 		w := httptest.NewRecorder()
@@ -454,7 +454,7 @@ func TestWithGinFilter(t *testing.T) {
 		router := gin.New()
 		f := func(c *gin.Context) bool { return c.Request.URL.Path != "/healthcheck" }
 		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
-		router.GET("/healthcheck", func(c *gin.Context) {})
+		router.GET("/healthcheck", func(*gin.Context) {})
 
 		r := httptest.NewRequest(http.MethodGet, "/healthcheck", http.NoBody)
 		w := httptest.NewRecorder()
@@ -470,7 +470,7 @@ func TestWithGinFilter(t *testing.T) {
 		router := gin.New()
 		f := func(c *gin.Context) bool { return c.Request.URL.Path != "/user/:id" }
 		router.Use(otelgin.Middleware("foobar", otelgin.WithGinFilter(f)))
-		router.GET("/user/:id", func(c *gin.Context) {})
+		router.GET("/user/:id", func(*gin.Context) {})
 
 		r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 		w := httptest.NewRecorder()
@@ -513,7 +513,7 @@ func TestMetrics(t *testing.T) {
 					attribute.String("method", strings.ToUpper(r.Method)),
 				}
 			},
-			ginMetricAttributeExtractor: func(c *gin.Context) []attribute.KeyValue {
+			ginMetricAttributeExtractor: func(*gin.Context) []attribute.KeyValue {
 				return []attribute.KeyValue{
 					attribute.String("key3", "value3"),
 				}

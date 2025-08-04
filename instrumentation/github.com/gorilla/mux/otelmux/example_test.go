@@ -39,7 +39,7 @@ func Example() {
 		id := vars["id"]
 		name := getUser(r.Context(), id)
 		reply := fmt.Sprintf("user %s (id %s)\n", name, id)
-		_, _ = w.Write(([]byte)(reply))
+		_, _ = w.Write([]byte(reply))
 	}))
 	http.Handle("/", r)
 	_ = http.ListenAndServe(":8080", nil) //nolint:gosec // Ignoring G114: Use of net/http serve function that has no support for setting timeouts.

@@ -17,7 +17,7 @@ import (
 type testType struct{ string }
 
 func factory(val string) func(ctx context.Context) (*testType, error) {
-	return func(ctx context.Context) (*testType, error) { return &testType{val}, nil }
+	return func(context.Context) (*testType, error) { return &testType{val}, nil }
 }
 
 func newTestRegistry() registry[*testType] {
