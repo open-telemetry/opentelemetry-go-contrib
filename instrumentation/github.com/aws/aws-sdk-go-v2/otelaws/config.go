@@ -54,3 +54,8 @@ func WithAttributeBuilder(attributeBuilders ...AttributeBuilder) Option {
 		cfg.AttributeBuilders = append(cfg.AttributeBuilders, attributeBuilders...)
 	})
 }
+
+// WithSQSMessageAttributesTracePropagation adds a TextMapPropagator that propagates trace context using SQS message attributes.
+func WithSQSMessageAttributesTracePropagation() Option {
+	return WithTextMapPropagator(NewSQSMessageAttributePropagator())
+}
