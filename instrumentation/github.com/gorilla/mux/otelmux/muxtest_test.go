@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
@@ -25,6 +26,38 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 )
 
+func TestDefaultTrace(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware("foobar", otelmux.WithTracerProvider(provider)))
+
+	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code, "unexpected status code")
+
+	spans := sr.Ended()
+
+	require.Len(t, sr.Ended(), 1)
+	span := spans[0]
+	attr := span.Attributes()
+	assert.True(t, ensurePrefix(http.MethodGet, spans[0].Name()))
+	assert.Equal(t, "GET /user/{id}", span.Name())
+	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
+	assert.Contains(t, attr, attribute.Int("http.response.status_code", http.StatusOK))
+	assert.Contains(t, attr, attribute.String("http.request.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.route", "/user/{id}"))
+	assert.Equal(t, codes.Unset, span.Status().Code)
+	assert.Empty(t, span.Status().Description)
+}
+
 func TestCustomSpanNameFormatter(t *testing.T) {
 	exporter := tracetest.NewInMemoryExporter()
 
@@ -34,9 +67,9 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 
 	testdata := []struct {
 		spanNameFormatter func(string, *http.Request) string
-		expected          string
+		want              string
 	}{
-		{nil, routeTpl},
+		{nil, setDefaultName(http.MethodGet, routeTpl)},
 		{
 			func(string, *http.Request) string { return "custom" },
 			"custom",
@@ -50,7 +83,7 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 	}
 
 	for i, d := range testdata {
-		t.Run(fmt.Sprintf("%d_%s", i, d.expected), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%d_%s", i, d.want), func(t *testing.T) {
 			router := mux.NewRouter()
 			router.Use(otelmux.Middleware(
 				"foobar",
@@ -66,7 +99,7 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 
 			spans := exporter.GetSpans()
 			require.Len(t, spans, 1)
-			assert.Equal(t, d.expected, spans[0].Name)
+			assert.Equal(t, d.want, spans[0].Name)
 
 			exporter.Reset()
 		})
@@ -95,28 +128,49 @@ func TestSDKIntegration(t *testing.T) {
 	router.HandleFunc("/book/{title}", ok)
 
 	tests := []struct {
-		name     string
-		path     string
-		reqFunc  func(r *http.Request)
-		expected string
+		name         string
+		method       string
+		path         string
+		reqFunc      func(r *http.Request)
+		wantSpanName string
+		wantMethod   string
+		wantRoute    string
 	}{
 		{
-			name:     "user route",
-			path:     "/user/123",
-			reqFunc:  nil,
-			expected: "/user/{id:[0-9]+}",
+			name:         "user route",
+			method:       http.MethodGet,
+			path:         "/user/123",
+			reqFunc:      nil,
+			wantSpanName: "GET /user/{id:[0-9]+}",
+			wantMethod:   http.MethodGet,
+			wantRoute:    "/user/{id:[0-9]+}",
 		},
 		{
-			name:     "book route",
-			path:     "/book/foo",
-			reqFunc:  nil,
-			expected: "/book/{title}",
+			name:         "POST book route",
+			method:       http.MethodPost,
+			path:         "/book/foo",
+			reqFunc:      nil,
+			wantSpanName: "POST /book/{title}",
+			wantMethod:   http.MethodPost,
+			wantRoute:    "/book/{title}",
 		},
 		{
-			name:     "book route with custom pattern",
-			path:     "/book/bar",
-			reqFunc:  func(r *http.Request) { r.Pattern = "/book/{custom}" },
-			expected: "/book/{custom}",
+			name:         "book route with custom pattern",
+			method:       http.MethodGet,
+			path:         "/book/bar",
+			reqFunc:      func(r *http.Request) { r.Pattern = "/book/{custom}" },
+			wantSpanName: "GET /book/{custom}",
+			wantMethod:   http.MethodGet,
+			wantRoute:    "/book/{custom}",
+		},
+		{
+			name:         "Invalid HTTP Method",
+			method:       "INVALID",
+			path:         "/book/bar",
+			reqFunc:      func(r *http.Request) { r.Pattern = "/book/{custom}" },
+			wantSpanName: "HTTP /book/{custom}",
+			wantMethod:   http.MethodGet,
+			wantRoute:    "/book/{custom}",
 		},
 	}
 
@@ -124,22 +178,23 @@ func TestSDKIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer sr.Reset()
 
-			r := httptest.NewRequest(http.MethodGet, tt.path, http.NoBody)
+			r := httptest.NewRequest(tt.method, tt.path, http.NoBody)
 			if tt.reqFunc != nil {
 				tt.reqFunc(r)
 			}
 
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, r)
+			spans := sr.Ended()
 
-			require.Len(t, sr.Ended(), 1)
+			require.Len(t, spans, 1)
 			assertSpan(t, sr.Ended()[0],
-				tt.expected,
+				tt.wantSpanName,
 				trace.SpanKindServer,
 				attribute.String("server.address", "foobar"),
 				attribute.Int("http.response.status_code", http.StatusOK),
-				attribute.String("http.request.method", "GET"),
-				attribute.String("http.route", tt.expected),
+				attribute.String("http.request.method", tt.wantMethod),
+				attribute.String("http.route", tt.wantRoute),
 			)
 		})
 	}
@@ -160,7 +215,7 @@ func TestNotFoundIsNotError(t *testing.T) {
 
 	require.Len(t, sr.Ended(), 1)
 	assertSpan(t, sr.Ended()[0],
-		"/does/not/exist",
+		"GET /does/not/exist",
 		trace.SpanKindServer,
 		attribute.String("server.address", "foobar"),
 		attribute.Int("http.response.status_code", http.StatusNotFound),
@@ -326,14 +381,14 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		serverDuration     = "http.server.duration"
 	)
 	testCases := []struct {
-		name                        string
-		fn                          func(r *http.Request) []attribute.KeyValue
-		expectedAdditionalAttribute []attribute.KeyValue
+		name                    string
+		fn                      func(r *http.Request) []attribute.KeyValue
+		wantAdditionalAttribute []attribute.KeyValue
 	}{
 		{
-			name:                        "With a nil function",
-			fn:                          nil,
-			expectedAdditionalAttribute: []attribute.KeyValue{},
+			name:                    "With a nil function",
+			fn:                      nil,
+			wantAdditionalAttribute: []attribute.KeyValue{},
 		},
 		{
 			name: "With a function that returns an additional attribute",
@@ -343,7 +398,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 					attribute.String("barKey", "barValue"),
 				}
 			},
-			expectedAdditionalAttribute: []attribute.KeyValue{
+			wantAdditionalAttribute: []attribute.KeyValue{
 				attribute.String("fooKey", "fooValue"),
 				attribute.String("barKey", "barValue"),
 			},
@@ -379,12 +434,12 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 				d, ok := m.Data.(metricdata.Sum[int64])
 				assert.True(t, ok)
 				assert.Len(t, d.DataPoints, 1)
-				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
+				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].wantAdditionalAttribute)
 			case serverDuration:
 				d, ok := m.Data.(metricdata.Histogram[float64])
 				assert.True(t, ok)
 				assert.Len(t, d.DataPoints, 1)
-				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
+				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].wantAdditionalAttribute)
 			}
 		}
 	}
@@ -396,4 +451,12 @@ func containsAttributes(t *testing.T, attrSet attribute.Set, expected []attribut
 		assert.True(t, ok)
 		assert.Equal(t, att.Value.AsString(), actualValue.AsString())
 	}
+}
+
+func setDefaultName(method, path string) string {
+	return method + " " + path
+}
+
+func ensurePrefix(prefix, s string) bool {
+	return strings.HasPrefix(s, prefix)
 }
