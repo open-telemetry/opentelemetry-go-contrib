@@ -25,6 +25,8 @@ func (s EnvSeverity) Severity() log.Severity {
 	return sev.Severity() // Default to SeverityInfo if not set or error.
 }
 
+// This example demonstrates how to use a Severitier that reads from
+// an environment variable.
 func ExampleSeveritier_environment() {
 	const key = "LOG_LEVEL"
 	// Mock an environmental variable setup that would be done externally.
@@ -55,7 +57,7 @@ func ExampleSeveritier_environment() {
 	// true
 }
 
-// ExampleSeveritier_json demonstrates how to use a Severitier that reads from a JSON
+// This example demonstrates how to use a Severitier that reads from a JSON
 // configuration.
 func ExampleSeveritier_json() {
 	// Example JSON configuration that specifies the minimum severity level.
