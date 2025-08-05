@@ -185,3 +185,13 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 	}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddlewareAfter, m.deserializeMiddleware)
 }
+
+// ExtractSQSTraceContext extracts trace context from SQS message attributes
+// and returns a new context with the extracted trace information.
+func ExtractSQSTraceContext(ctx context.Context, messageAttributes map[string]types.MessageAttributeValue) context.Context {
+	propagator := otel.GetTextMapPropagator()
+	carrier := &SQSMessageAttributeCarrier{
+		Attributes: messageAttributes,
+	}
+	return propagator.Extract(ctx, carrier)
+}
