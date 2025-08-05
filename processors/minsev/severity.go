@@ -232,6 +232,22 @@ func (s *Severity) UnmarshalText(data []byte) error {
 // If a fine-grained level of 0 is provided it is treaded as equivalent to the
 // base severity level.  For example, "INFO0" is equivalent to [SeverityInfo1].
 func (s *Severity) parse(str string) (err error) {
+	if str == "" {
+		// Handle empty str as a special case and parse it as the default
+		// SeverityInfo1.
+		//
+		// Do not parse this below in the switch statement of the name. That
+		// will allow strings like "2", "-1", "2+1", "+3", etc. to be accepted
+		// and that adds ambiguity. For example, a user may expect that "2" is
+		// parsed as SeverityInfo2 based on an implied "SeverityInfo1" prifix,
+		// but they may also expect it be parsed as SeverityInfo3 which has a
+		// numeric value of 2. Avoide this ambiguity by treating those inputs
+		// as invalid, and only accept the empty string as a special case.
+
+		*s = SeverityInfo1 // Default severity.
+		return nil
+	}
+
 	defer func() {
 		if err != nil {
 			err = fmt.Errorf("minsev: severity string %q: %w", str, err)

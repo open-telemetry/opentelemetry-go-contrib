@@ -119,6 +119,9 @@ var validDecodingTests = []struct {
 	{"SeverityFatal3", SeverityFatal3, "FATAL3"},
 	{"SeverityFatal4", SeverityFatal4, "FATAL4"},
 
+	// Use the default SeverityInfo for an empty name.
+	{"Default", SeverityInfo, ""},
+
 	// Test case insensitivity.
 	{"SeverityTraceLower", SeverityTrace1, "trace"},
 	{"SeverityDebugMixed", SeverityDebug1, "Debug"},
@@ -148,6 +151,10 @@ var invalidText = []string{
 	"INFO+abc",
 	"ERROR-xyz",
 	"not-a-level",
+	"+1",
+	"2",
+	"2+1",
+	"-1",
 }
 
 func TestSeverityString(t *testing.T) {
