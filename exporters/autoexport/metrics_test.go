@@ -303,9 +303,9 @@ func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
 		metricNames := []string{}
 		sm := req.ResourceMetrics[0].ScopeMetrics
 
-		for i := 0; i < len(sm); i++ {
+		for i := range sm {
 			m := sm[i].Metrics
-			for i := 0; i < len(m); i++ {
+			for i := range m {
 				metricNames = append(metricNames, m[i].Name)
 			}
 		}
