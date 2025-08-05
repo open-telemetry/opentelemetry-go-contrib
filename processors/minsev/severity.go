@@ -241,7 +241,7 @@ func (s *Severity) parse(str string) (err error) {
 		// and that adds ambiguity. For example, a user may expect that "2" is
 		// parsed as SeverityInfo2 based on an implied "SeverityInfo1" prifix,
 		// but they may also expect it be parsed as SeverityInfo3 which has a
-		// numeric value of 2. Avoide this ambiguity by treating those inputs
+		// numeric value of 2. Avoid this ambiguity by treating those inputs
 		// as invalid, and only accept the empty string as a special case.
 
 		*s = SeverityInfo1 // Default severity.
