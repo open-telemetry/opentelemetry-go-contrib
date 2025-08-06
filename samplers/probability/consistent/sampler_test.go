@@ -178,7 +178,7 @@ func TestSamplerBehavior(t *testing.T) {
 					hasRValue := testState.hasRValue()
 
 					const repeats = 10
-					for i := 0; i < repeats; i++ {
+					for range repeats {
 						result := sampler.ShouldSample(
 							sdktrace.SamplingParameters{
 								ParentContext: parentCtx,

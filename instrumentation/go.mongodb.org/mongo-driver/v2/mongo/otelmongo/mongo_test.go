@@ -81,8 +81,6 @@ func TestDBCrudOperation(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		title := tc.title
 		if tc.excludeCommand {
 			title += "/excludeCommand"
@@ -199,8 +197,6 @@ func TestDBCollectionAttribute(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		t.Run(tc.title, func(t *testing.T) {
 			md := drivertest.NewMockDeployment()
 

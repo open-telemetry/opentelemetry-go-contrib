@@ -136,7 +136,7 @@ func TestSamplerStatistics(t *testing.T) {
 				countFailures := func(src rand.Source) int {
 					failed := 0
 
-					for j := 0; j < trials; j++ {
+					for range trials {
 						var x float64
 						x, expected = sampleTrials(t, test.prob, test.degrees, test.upperP, src)
 

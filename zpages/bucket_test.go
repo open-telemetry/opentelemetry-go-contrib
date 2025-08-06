@@ -74,7 +74,7 @@ func TestBucketAddSample(t *testing.T) {
 	bkt := newBucket(defaultBucketCapacity)
 	assert.Equal(t, 0, bkt.len())
 
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		bkt.add(&testSpan{endTime: time.Unix(1, int64(i*1000))})
 		assert.Equal(t, 1, bkt.len())
 		spans := bkt.spans()
