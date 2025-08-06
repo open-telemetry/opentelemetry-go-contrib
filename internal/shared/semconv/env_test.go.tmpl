@@ -113,8 +113,7 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 
 func TestHTTPClientTraceAttributes(t *testing.T) {
 	for _, tt := range []struct {
-		name     string
-
+		name           string
 		wantAttributes []attribute.KeyValue
 	}{
 		{
