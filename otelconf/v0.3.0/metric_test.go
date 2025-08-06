@@ -1566,11 +1566,13 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 		require.NoError(t, reader.Shutdown(context.Background()))
 	})
 
-	server := reader.(readerWithServer).server
+	rws, ok := reader.(readerWithServer)
+	require.True(t, ok, "reader is not a readerWithServer")
+	server := rws.server
 
 	addr := server.Addr
-	assert.True(t, strings.Contains(addr, "localhost") || strings.Contains(addr, "127.0.0.1"),
-		"server address %s should contain localhost or 127.0.0.1", addr)
+	// localhost resolves to 127.0.0.1, so we expect the resolved IP
+	assert.Contains(t, addr, "127.0.0.1")
 
 	resp, err := http.DefaultClient.Get("http://" + addr + "/metrics")
 	require.NoError(t, err)
