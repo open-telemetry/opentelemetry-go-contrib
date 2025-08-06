@@ -239,7 +239,7 @@ func (s *Severity) parse(str string) (err error) {
 		// Do not parse this below in the switch statement of the name. That
 		// will allow strings like "2", "-1", "2+1", "+3", etc. to be accepted
 		// and that adds ambiguity. For example, a user may expect that "2" is
-		// parsed as SeverityInfo2 based on an implied "SeverityInfo1" prifix,
+		// parsed as SeverityInfo2 based on an implied "SeverityInfo1" prefix,
 		// but they may also expect it be parsed as SeverityInfo3 which has a
 		// numeric value of 2. Avoid this ambiguity by treating those inputs
 		// as invalid, and only accept the empty string as a special case.
