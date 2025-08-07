@@ -8,13 +8,12 @@ import (
 	"fmt"
 	"testing"
 
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
-
 	metadata "github.com/brunoscheufler/aws-ecs-metadata-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )
 
 // Create interface for functions that need to be mocked.
@@ -32,12 +31,12 @@ func (detectorUtils *MockDetectorUtils) getContainerName() (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-func (detectorUtils *MockDetectorUtils) getContainerMetadataV4(_ context.Context) (*metadata.ContainerMetadataV4, error) {
+func (detectorUtils *MockDetectorUtils) getContainerMetadataV4(context.Context) (*metadata.ContainerMetadataV4, error) {
 	args := detectorUtils.Called()
 	return args.Get(0).(*metadata.ContainerMetadataV4), args.Error(1)
 }
 
-func (detectorUtils *MockDetectorUtils) getTaskMetadataV4(_ context.Context) (*metadata.TaskMetadataV4, error) {
+func (detectorUtils *MockDetectorUtils) getTaskMetadataV4(context.Context) (*metadata.TaskMetadataV4, error) {
 	args := detectorUtils.Called()
 	return args.Get(0).(*metadata.TaskMetadataV4), args.Error(1)
 }
@@ -229,4 +228,35 @@ func TestLogsAttributesAlternatePartition(t *testing.T) {
 		semconv.AWSLogStreamARNs("arn:arn-partition:logs:arn-region:arn-account:log-group:fake-group:log-stream:fake-stream"),
 	}
 	assert.Equal(t, expectedAttributes, actualAttributes, "logs attributes are incorrect")
+}
+
+func TestCgroupContainerID(t *testing.T) {
+	cgroups := []struct {
+		cgroupPath      string
+		wantContainerID string
+	}{
+		{
+			"10:memory:/ecs/my-task-name/1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+			"1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+		},
+		{
+			"10:memory:/ecs/api_service_1/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+		},
+		{
+			"10:memory:/ecs/my-task-name/12345abc",
+			"",
+		},
+		{
+			"10:memory:/docker/my-task-name/1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+			"",
+		},
+	}
+
+	for _, c := range cgroups {
+		t.Run(c.cgroupPath, func(t *testing.T) {
+			containerID := getCgroupContainerID([]byte(c.cgroupPath))
+			assert.Equal(t, c.wantContainerID, containerID)
+		})
+	}
 }

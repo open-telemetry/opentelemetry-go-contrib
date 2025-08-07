@@ -14,7 +14,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/ec2metadata"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
@@ -140,8 +139,6 @@ func TestAWS_Detect(t *testing.T) {
 	}
 
 	for name, tt := range testTable {
-		tt := tt
-
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
 

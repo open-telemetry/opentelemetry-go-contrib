@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	lognoop "go.opentelemetry.io/otel/log/noop"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
@@ -292,7 +291,7 @@ func TestParseYAML(t *testing.T) {
 		name     string
 		input    string
 		wantErr  error
-		wantType interface{}
+		wantType any
 	}{
 		{
 			name:    "valid YAML config",
@@ -337,7 +336,7 @@ func TestSerializeJSON(t *testing.T) {
 		name     string
 		input    string
 		wantErr  error
-		wantType interface{}
+		wantType any
 	}{
 		{
 			name:    "valid JSON config",

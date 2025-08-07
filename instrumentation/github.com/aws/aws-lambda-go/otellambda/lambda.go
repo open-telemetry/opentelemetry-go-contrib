@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/aws/aws-lambda-go/lambdacontext"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
@@ -32,10 +31,11 @@ type instrumentor struct {
 
 func newInstrumentor(opts ...Option) instrumentor {
 	cfg := config{
-		TracerProvider: otel.GetTracerProvider(),
-		Flusher:        &noopFlusher{},
-		EventToCarrier: emptyEventToCarrier,
-		Propagator:     otel.GetTextMapPropagator(),
+		TracerProvider:   otel.GetTracerProvider(),
+		Flusher:          &noopFlusher{},
+		EventToCarrier:   emptyEventToCarrier,
+		Propagator:       otel.GetTextMapPropagator(),
+		TraceAttributeFn: emptyTraceAttributeFn,
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -58,6 +58,8 @@ func (i *instrumentor) tracingBegin(ctx context.Context, eventJSON []byte) (cont
 	spanName := os.Getenv("AWS_LAMBDA_FUNCTION_NAME")
 
 	var attributes []attribute.KeyValue
+	customAttrs := i.configuration.TraceAttributeFn(eventJSON)
+	attributes = append(attributes, customAttrs...)
 	lc, ok := lambdacontext.FromContext(ctx)
 	if !ok {
 		errorLogger.Println("failed to load lambda context from context, ensure tracing enabled in Lambda")

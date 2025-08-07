@@ -10,14 +10,14 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
 )
 
 const (
@@ -113,9 +113,11 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 		status := c.Writer.Status()
 		span.SetStatus(sc.Status(status))
-		if status > 0 {
-			span.SetAttributes(semconv.HTTPStatusCode(status))
-		}
+		span.SetAttributes(sc.ResponseTraceAttrs(semconv.ResponseTelemetry{
+			StatusCode: status,
+			WriteBytes: int64(c.Writer.Size()),
+		})...)
+
 		if len(c.Errors) > 0 {
 			span.SetStatus(codes.Error, c.Errors.String())
 			for _, err := range c.Errors {
@@ -155,7 +157,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 // span in the given context. This is a replacement for
 // gin.Context.HTML function - it invokes the original function after
 // setting up the span.
-func HTML(c *gin.Context, code int, name string, obj interface{}) {
+func HTML(c *gin.Context, code int, name string, obj any) {
 	var tracer oteltrace.Tracer
 	tracerInterface, ok := c.Get(tracerKey)
 	if ok {

@@ -9,12 +9,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/stats"
-	"google.golang.org/grpc/status"
-
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/attribute"
+	otelcode "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
@@ -22,7 +18,113 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/semconv/v1.34.0/rpcconv"
+	grpc_codes "google.golang.org/grpc/codes"
+	"google.golang.org/grpc/stats"
+	"google.golang.org/grpc/status"
+
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
+
+func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
+	for _, s := range sr.Ended() {
+		if s.Name() == name {
+			return s, true
+		}
+	}
+	return nil, false
+}
+
+var serverChecks = []struct {
+	grpcCode                  grpc_codes.Code
+	wantSpanCode              otelcode.Code
+	wantSpanStatusDescription string
+}{
+	{
+		grpcCode:                  grpc_codes.OK,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.Canceled,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.Unknown,
+		wantSpanCode:              otelcode.Error,
+		wantSpanStatusDescription: grpc_codes.Unknown.String(),
+	},
+	{
+		grpcCode:                  grpc_codes.InvalidArgument,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.DeadlineExceeded,
+		wantSpanCode:              otelcode.Error,
+		wantSpanStatusDescription: grpc_codes.DeadlineExceeded.String(),
+	},
+	{
+		grpcCode:                  grpc_codes.NotFound,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.AlreadyExists,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.PermissionDenied,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.ResourceExhausted,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.FailedPrecondition,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.Aborted,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.OutOfRange,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.Unimplemented,
+		wantSpanCode:              otelcode.Error,
+		wantSpanStatusDescription: grpc_codes.Unimplemented.String(),
+	},
+	{
+		grpcCode:                  grpc_codes.Internal,
+		wantSpanCode:              otelcode.Error,
+		wantSpanStatusDescription: grpc_codes.Internal.String(),
+	},
+	{
+		grpcCode:                  grpc_codes.Unavailable,
+		wantSpanCode:              otelcode.Error,
+		wantSpanStatusDescription: grpc_codes.Unavailable.String(),
+	},
+	{
+		grpcCode:                  grpc_codes.DataLoss,
+		wantSpanCode:              otelcode.Error,
+		wantSpanStatusDescription: grpc_codes.DataLoss.String(),
+	},
+	{
+		grpcCode:                  grpc_codes.Unauthenticated,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+}
 
 func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 	for _, check := range serverChecks {
@@ -65,7 +167,25 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 	}
 }
 
-func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code codes.Code) {
+func assertServerSpan(t *testing.T, wantSpanCode otelcode.Code, wantSpanStatusDescription string, wantGrpcCode grpc_codes.Code, span trace.ReadOnlySpan) {
+	// validate span status
+	assert.Equal(t, wantSpanCode, span.Status().Code)
+	assert.Equal(t, wantSpanStatusDescription, span.Status().Description)
+
+	// validate grpc code span attribute
+	var codeAttr attribute.KeyValue
+	for _, a := range span.Attributes() {
+		if a.Key == semconv.RPCGRPCStatusCodeKey {
+			codeAttr = a
+			break
+		}
+	}
+
+	require.True(t, codeAttr.Valid(), "attributes contain gRPC status code")
+	assert.Equal(t, attribute.Int64Value(int64(wantGrpcCode)), codeAttr.Value)
+}
+
+func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code grpc_codes.Code) {
 	want := metricdata.ScopeMetrics{
 		Scope: wantInstrumentationScope,
 		Metrics: []metricdata.Metrics{

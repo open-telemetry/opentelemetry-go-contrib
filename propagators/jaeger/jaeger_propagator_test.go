@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -162,7 +161,7 @@ func TestJaeger_Extract(t *testing.T) {
 		headerVal := strings.Join([]string{test.traceID, test.spanID, test.parentSpanID, test.flags}, separator)
 		ctx, sc, err := extract(context.Background(), headerVal)
 
-		info := []interface{}{
+		info := []any{
 			"trace ID: %q, span ID: %q, parent span ID: %q, sampled: %q, flags: %q",
 			test.traceID,
 			test.spanID,

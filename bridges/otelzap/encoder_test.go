@@ -12,32 +12,31 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap/zapcore"
-
 	"go.opentelemetry.io/otel/log"
+	"go.uber.org/zap/zapcore"
 )
 
 // Copied from https://github.com/uber-go/zap/blob/b39f8b6b6a44d8371a87610be50cce58eeeaabcb/zapcore/memory_encoder_test.go.
 func TestObjectEncoder(t *testing.T) {
 	// Expected output of a turducken.
-	wantTurducken := map[string]interface{}{
-		"ducks": []interface{}{
-			map[string]interface{}{"in": "chicken"},
-			map[string]interface{}{"in": "chicken"},
+	wantTurducken := map[string]any{
+		"ducks": []any{
+			map[string]any{"in": "chicken"},
+			map[string]any{"in": "chicken"},
 		},
 	}
 
 	tests := []struct {
 		desc     string
 		f        func(zapcore.ObjectEncoder)
-		expected interface{}
+		expected any
 	}{
 		{
 			desc: "AddObject",
 			f: func(e zapcore.ObjectEncoder) {
 				assert.NoError(t, e.AddObject("k", loggable{true}), "Expected AddObject to succeed.")
 			},
-			expected: map[string]interface{}{"loggable": "yes"},
+			expected: map[string]any{"loggable": "yes"},
 		},
 		{
 			desc: "AddObject (nested)",
@@ -56,21 +55,21 @@ func TestObjectEncoder(t *testing.T) {
 					return nil
 				})), "Expected AddArray to succeed.")
 			},
-			expected: []interface{}{true, false, true},
+			expected: []any{true, false, true},
 		},
 		{
 			desc: "AddArray (nested)",
 			f: func(e zapcore.ObjectEncoder) {
 				assert.NoError(t, e.AddArray("k", turduckens(2)), "Expected AddArray to succeed.")
 			},
-			expected: []interface{}{wantTurducken, wantTurducken},
+			expected: []any{wantTurducken, wantTurducken},
 		},
 		{
 			desc: "AddReflected",
 			f: func(e zapcore.ObjectEncoder) {
-				assert.NoError(t, e.AddReflected("k", map[string]interface{}{"foo": 5}), "Expected AddReflected to succeed.")
+				assert.NoError(t, e.AddReflected("k", map[string]any{"foo": 5}), "Expected AddReflected to succeed.")
 			},
-			expected: map[string]interface{}{"foo": int64(5)},
+			expected: map[string]any{"foo": int64(5)},
 		},
 		{
 			desc: "AddReflected (nil pointer)",
@@ -183,12 +182,12 @@ func TestObjectEncoder(t *testing.T) {
 		{
 			desc:     "AddComplex128",
 			f:        func(e zapcore.ObjectEncoder) { e.AddComplex128("k", 1+2i) },
-			expected: map[string]interface{}{"i": float64(2), "r": float64(1)},
+			expected: map[string]any{"i": float64(2), "r": float64(1)},
 		},
 		{
 			desc:     "AddComplex64",
 			f:        func(e zapcore.ObjectEncoder) { e.AddComplex64("k", 1+2i) },
-			expected: map[string]interface{}{"i": float64(2), "r": float64(1)},
+			expected: map[string]any{"i": float64(2), "r": float64(1)},
 		},
 		{
 			desc: "OpenNamespace",
@@ -200,11 +199,11 @@ func TestObjectEncoder(t *testing.T) {
 				e.OpenNamespace("inner")
 				e.AddInt("foo", 3)
 			},
-			expected: map[string]interface{}{
+			expected: map[string]any{
 				"foo": int64(1),
-				"middle": map[string]interface{}{
+				"middle": map[string]any{
 					"foo": int64(2),
-					"inner": map[string]interface{}{
+					"inner": map[string]any{
 						"foo": int64(3),
 					},
 				},
@@ -217,10 +216,10 @@ func TestObjectEncoder(t *testing.T) {
 				assert.NoError(t, e.AddObject("obj", maybeNamespace{true}))
 				e.AddString("not-obj", "should-be-outside-obj")
 			},
-			expected: map[string]interface{}{
-				"obj": map[string]interface{}{
+			expected: map[string]any{
+				"obj": map[string]any{
 					"obj-out": "obj-outside-namespace",
-					"obj-namespace": map[string]interface{}{
+					"obj-namespace": map[string]any{
 						"obj-in": "obj-inside-namespace",
 					},
 				},
@@ -245,7 +244,7 @@ func TestArrayEncoder(t *testing.T) {
 	tests := []struct {
 		desc     string
 		f        func(zapcore.ArrayEncoder)
-		expected interface{}
+		expected any
 	}{
 		// AppendObject is covered by AddObject (nested) case above.
 		{
@@ -258,14 +257,14 @@ func TestArrayEncoder(t *testing.T) {
 				}))
 				assert.NoError(t, err)
 			},
-			expected: []interface{}{true, false},
+			expected: []any{true, false},
 		},
 		{
 			desc: "AppendReflected",
 			f: func(e zapcore.ArrayEncoder) {
-				assert.NoError(t, e.AppendReflected(map[string]interface{}{"foo": 5}))
+				assert.NoError(t, e.AppendReflected(map[string]any{"foo": 5}))
 			},
-			expected: map[string]interface{}{"foo": int64(5)},
+			expected: map[string]any{"foo": int64(5)},
 		},
 		{
 			desc: "object (no nested namespace) then string",
@@ -277,8 +276,8 @@ func TestArrayEncoder(t *testing.T) {
 				}))
 				assert.NoError(t, err)
 			},
-			expected: []interface{}{
-				map[string]interface{}{
+			expected: []any{
+				map[string]any{
 					"obj-out": "obj-outside-namespace",
 				},
 				"should-be-outside-obj",
@@ -294,10 +293,10 @@ func TestArrayEncoder(t *testing.T) {
 				}))
 				assert.NoError(t, err)
 			},
-			expected: []interface{}{
-				map[string]interface{}{
+			expected: []any{
+				map[string]any{
 					"obj-out": "obj-outside-namespace",
-					"obj-namespace": map[string]interface{}{
+					"obj-namespace": map[string]any{
 						"obj-in": "obj-inside-namespace",
 					},
 				},
@@ -314,8 +313,8 @@ func TestArrayEncoder(t *testing.T) {
 		{"AppendInt8", func(e zapcore.ArrayEncoder) { e.AppendInt8(42) }, int64(42)},
 		{"AppendInt", func(e zapcore.ArrayEncoder) { e.AppendInt(42) }, int64(42)},
 		{"AppendString", func(e zapcore.ArrayEncoder) { e.AppendString("foo") }, "foo"},
-		{"AppendComplex128", func(e zapcore.ArrayEncoder) { e.AppendComplex128(1 + 2i) }, map[string]interface{}{"i": float64(2), "r": float64(1)}},
-		{"AppendComplex64", func(e zapcore.ArrayEncoder) { e.AppendComplex64(1 + 2i) }, map[string]interface{}{"i": float64(2), "r": float64(1)}},
+		{"AppendComplex128", func(e zapcore.ArrayEncoder) { e.AppendComplex128(1 + 2i) }, map[string]any{"i": float64(2), "r": float64(1)}},
+		{"AppendComplex64", func(e zapcore.ArrayEncoder) { e.AppendComplex64(1 + 2i) }, map[string]any{"i": float64(2), "r": float64(1)}},
 		{"AppendDuration", func(e zapcore.ArrayEncoder) { e.AppendDuration(time.Second) }, int64(1000000000)},
 		{"AppendTime", func(e zapcore.ArrayEncoder) { e.AppendTime(time.Unix(0, 100)) }, time.Unix(0, 100).UnixNano()},
 		{"AppendUint", func(e zapcore.ArrayEncoder) { e.AppendUint(42) }, int64(42)},
@@ -336,16 +335,16 @@ func TestArrayEncoder(t *testing.T) {
 				return nil
 			})), "Expected AddArray to succeed.")
 			enc.calculate(enc.root)
-			assert.Equal(t, []interface{}{tt.expected, tt.expected}, value2Result(enc.root.attrs[0].Value), "Unexpected encoder output.")
+			assert.Equal(t, []any{tt.expected, tt.expected}, value2Result(enc.root.attrs[0].Value), "Unexpected encoder output.")
 		})
 	}
 }
 
 type turducken struct{}
 
-func (t turducken) MarshalLogObject(enc zapcore.ObjectEncoder) error {
+func (turducken) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	return enc.AddArray("ducks", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			err := arr.AppendObject(zapcore.ObjectMarshalerFunc(func(inner zapcore.ObjectEncoder) error {
 				inner.AddString("in", "chicken")
 				return nil

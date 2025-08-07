@@ -9,11 +9,10 @@ import (
 	"fmt"
 	"sync"
 
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/trace"
-
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/event"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/internal/semconv"
 )
@@ -57,11 +56,11 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	m.Unlock()
 }
 
-func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEvent) {
+func (m *monitor) Succeeded(_ context.Context, evt *event.CommandSucceededEvent) {
 	m.Finished(&evt.CommandFinishedEvent, nil)
 }
 
-func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
+func (m *monitor) Failed(_ context.Context, evt *event.CommandFailedEvent) {
 	m.Finished(&evt.CommandFinishedEvent, fmt.Errorf("%s", evt.Failure))
 }
 

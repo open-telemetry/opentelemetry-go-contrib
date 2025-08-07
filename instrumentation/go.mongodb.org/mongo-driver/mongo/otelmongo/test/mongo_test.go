@@ -13,13 +13,13 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/integration/mtest"
 	"go.mongodb.org/mongo-driver/mongo/options"
-
-	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
 )
 
 type validator func(sdktrace.ReadOnlySpan) bool
@@ -42,14 +42,14 @@ func TestDBCrudOperation(t *testing.T) {
 
 	tt := []struct {
 		title          string
-		operation      func(context.Context, *mongo.Database) (interface{}, error)
+		operation      func(context.Context, *mongo.Database) (any, error)
 		mockResponses  []bson.D
 		excludeCommand bool
 		validators     []validator
 	}{
 		{
 			title: "insert",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
 			mockResponses:  []bson.D{{{Key: "ok", Value: 1}}},
@@ -65,7 +65,7 @@ func TestDBCrudOperation(t *testing.T) {
 		},
 		{
 			title: "insert",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
 			mockResponses:  []bson.D{{{Key: "ok", Value: 1}}},
@@ -81,13 +81,11 @@ func TestDBCrudOperation(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		title := tc.title
 		if tc.excludeCommand {
-			title = title + "/excludeCommand"
+			title += "/excludeCommand"
 		} else {
-			title = title + "/includeCommand"
+			title += "/includeCommand"
 		}
 
 		mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
@@ -145,13 +143,13 @@ func TestDBCrudOperation(t *testing.T) {
 func TestDBCollectionAttribute(t *testing.T) {
 	tt := []struct {
 		title         string
-		operation     func(context.Context, *mongo.Database) (interface{}, error)
+		operation     func(context.Context, *mongo.Database) (any, error)
 		mockResponses []bson.D
 		validators    []validator
 	}{
 		{
 			title: "delete",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item"}})
 			},
 			mockResponses: []bson.D{{{Key: "ok", Value: 1}}},
@@ -172,7 +170,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 		},
 		{
 			title: "listCollectionNames",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.ListCollectionNames(ctx, bson.D{})
 			},
 			mockResponses: []bson.D{
@@ -195,8 +193,6 @@ func TestDBCollectionAttribute(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 		mt.Run(tc.title, func(mt *mtest.T) {
 			sr := tracetest.NewSpanRecorder()
@@ -287,8 +283,6 @@ func TestSemanticConventionOptIn(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 
 		mt.Run(tc.name, func(mt *mtest.T) {

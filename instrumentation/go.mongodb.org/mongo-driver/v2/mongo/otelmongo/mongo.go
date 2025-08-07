@@ -10,13 +10,12 @@ import (
 	"strconv"
 	"sync"
 
+	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/event"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 	"go.opentelemetry.io/otel/trace"
-
-	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/event"
 )
 
 type spanKey struct {
@@ -65,11 +64,11 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	m.Unlock()
 }
 
-func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEvent) {
+func (m *monitor) Succeeded(_ context.Context, evt *event.CommandSucceededEvent) {
 	m.Finished(&evt.CommandFinishedEvent, nil)
 }
 
-func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
+func (m *monitor) Failed(_ context.Context, evt *event.CommandFailedEvent) {
 	m.Finished(&evt.CommandFinishedEvent, evt.Failure)
 }
 

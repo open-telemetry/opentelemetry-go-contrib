@@ -12,8 +12,7 @@
 //
 //   - Time is set as the Timestamp.
 //   - Message is set as the Body using a [log.StringValue].
-//   - Level is transformed and set as the Severity. The SeverityText is not
-//     set.
+//   - Level is transformed and set as the Severity. The SeverityText is also set.
 //   - Fields are transformed and set as the attributes.
 //
 // The Level is transformed to the OpenTelemetry
@@ -34,7 +33,6 @@ package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
 
 import (
 	"github.com/sirupsen/logrus"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
@@ -173,11 +171,12 @@ func (h *Hook) Fire(entry *logrus.Entry) error {
 	return nil
 }
 
-func (h *Hook) convertEntry(e *logrus.Entry) log.Record {
+func (*Hook) convertEntry(e *logrus.Entry) log.Record {
 	var record log.Record
 	record.SetTimestamp(e.Time)
 	record.SetBody(log.StringValue(e.Message))
 	record.SetSeverity(convertSeverity(e.Level))
+	record.SetSeverityText(e.Level.String())
 	record.AddAttributes(convertFields(e.Data)...)
 
 	return record

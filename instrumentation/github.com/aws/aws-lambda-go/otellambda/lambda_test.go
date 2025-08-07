@@ -33,7 +33,7 @@ var (
 
 type emptyHandler struct{}
 
-func (h emptyHandler) Invoke(_ context.Context, _ []byte) ([]byte, error) {
+func (emptyHandler) Invoke(context.Context, []byte) ([]byte, error) {
 	return nil, nil
 }
 
@@ -54,7 +54,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 	emptyPayload := ""
 	testCases := []struct {
 		name     string
-		handler  interface{}
+		handler  any
 		expected error
 		args     []reflect.Value
 	}{
@@ -73,7 +73,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 		{
 			name:     "handler declares too many arguments",
 			expected: errors.New("handlers may not take more than two arguments, but handler takes 3"),
-			handler: func(n context.Context, x string, y string) error {
+			handler: func(context.Context, string, string) error {
 				return nil
 			},
 			args: []reflect.Value{reflect.ValueOf(mockContext), reflect.ValueOf(emptyPayload)},
@@ -81,7 +81,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 		{
 			name:     "two argument handler does not have context as first argument",
 			expected: errors.New("handler takes two arguments, but the first is not Context. got string"),
-			handler: func(a string, x context.Context) error {
+			handler: func(string, context.Context) error {
 				return nil
 			},
 			args: []reflect.Value{reflect.ValueOf(mockContext), reflect.ValueOf(emptyPayload)},
@@ -119,7 +119,6 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 		},
 	}
 	for i, testCase := range testCases {
-		testCase := testCase
 		t.Run(fmt.Sprintf("testCase[%d] %s", i, testCase.name), func(t *testing.T) {
 			lambdaHandler := InstrumentHandler(testCase.handler)
 			handler := reflect.ValueOf(lambdaHandler)
@@ -131,7 +130,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 }
 
 type expected struct {
-	val interface{}
+	val any
 	err error
 }
 
@@ -144,9 +143,9 @@ func TestHandlerInvokes(t *testing.T) {
 
 	testCases := []struct {
 		name     string
-		input    interface{}
+		input    any
 		expected expected
-		handler  interface{}
+		handler  any
 	}{
 		{
 			name:     "string input and return without context",
@@ -160,7 +159,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "string input and return with context",
 			input:    "Lambda",
 			expected: expected{`"Hello Lambda!"`, nil},
-			handler: func(ctx context.Context, name string) (string, error) {
+			handler: func(_ context.Context, name string) (string, error) {
 				return hello(name), nil
 			},
 		},
@@ -168,7 +167,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "no input with response event and simple error",
 			input:    nil,
 			expected: expected{"", errors.New("bad stuff")},
-			handler: func() (interface{}, error) {
+			handler: func() (any, error) {
 				return nil, errors.New("bad stuff")
 			},
 		},
@@ -176,7 +175,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "input with response event and simple error",
 			input:    "Lambda",
 			expected: expected{"", errors.New("bad stuff")},
-			handler: func(e interface{}) (interface{}, error) {
+			handler: func(any) (any, error) {
 				return nil, errors.New("bad stuff")
 			},
 		},
@@ -184,7 +183,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "input and context with response event and simple error",
 			input:    "Lambda",
 			expected: expected{"", errors.New("bad stuff")},
-			handler: func(ctx context.Context, e interface{}) (interface{}, error) {
+			handler: func(context.Context, any) (any, error) {
 				return nil, errors.New("bad stuff")
 			},
 		},
@@ -192,7 +191,7 @@ func TestHandlerInvokes(t *testing.T) {
 			name:     "input with response event and complex error",
 			input:    "Lambda",
 			expected: expected{"", messages.InvokeResponse_Error{Message: "message", Type: "type"}},
-			handler: func(e interface{}) (interface{}, error) {
+			handler: func(any) (any, error) {
 				return nil, messages.InvokeResponse_Error{Message: "message", Type: "type"}
 			},
 		},
@@ -216,7 +215,6 @@ func TestHandlerInvokes(t *testing.T) {
 
 	// test invocation via a lambda handler
 	for i, testCase := range testCases {
-		testCase := testCase
 		t.Run(fmt.Sprintf("lambdaHandlerTestCase[%d] %s", i, testCase.name), func(t *testing.T) {
 			lambdaHandler := InstrumentHandler(testCase.handler)
 			handler := reflect.ValueOf(lambdaHandler)
@@ -241,7 +239,6 @@ func TestHandlerInvokes(t *testing.T) {
 
 	// test invocation via a Handler
 	for i, testCase := range testCases {
-		testCase := testCase
 		t.Run(fmt.Sprintf("handlerTestCase[%d] %s", i, testCase.name), func(t *testing.T) {
 			handler := WrapHandler(lambda.NewHandler(testCase.handler))
 			inputPayload, _ := json.Marshal(testCase.input)
@@ -259,7 +256,7 @@ func TestHandlerInvokes(t *testing.T) {
 func BenchmarkInstrumentHandler(b *testing.B) {
 	setEnvVars()
 
-	customerHandler := func(ctx context.Context, payload int) error {
+	customerHandler := func(context.Context, int) error {
 		return nil
 	}
 	wrapped := InstrumentHandler(customerHandler)

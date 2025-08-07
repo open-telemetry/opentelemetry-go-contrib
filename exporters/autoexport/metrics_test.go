@@ -17,13 +17,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/sdk/metric"
+	otlpmetrics "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"go.uber.org/goleak"
 	"google.golang.org/protobuf/proto"
 
 	prometheusbridge "go.opentelemetry.io/contrib/bridges/prometheus"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/sdk/metric"
-	otlpmetrics "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 )
 
 func TestMetricExporterNone(t *testing.T) {
@@ -159,7 +159,7 @@ func TestMetricProducerPrometheusWithOTLPExporter(t *testing.T) {
 	assertNoOtelHandleErrors(t)
 
 	requestWaitChan := make(chan struct{})
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
 		assert.NoError(t, r.Body.Close())
@@ -291,7 +291,7 @@ func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
 		return prometheusbridge.NewMetricProducer(prometheusbridge.WithGatherer(reg2)), nil
 	})
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		body, err := io.ReadAll(r.Body)
 		assert.NoError(t, err)
 		assert.NoError(t, r.Body.Close())
@@ -303,9 +303,9 @@ func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
 		metricNames := []string{}
 		sm := req.ResourceMetrics[0].ScopeMetrics
 
-		for i := 0; i < len(sm); i++ {
+		for i := range sm {
 			m := sm[i].Metrics
-			for i := 0; i < len(m); i++ {
+			for i := range m {
 				metricNames = append(metricNames, m[i].Name)
 			}
 		}

@@ -8,9 +8,10 @@ import (
 	"net/http"
 	"testing"
 
-	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/propagators/b3"
 )
 
 func BenchmarkExtractB3(b *testing.B) {
@@ -33,7 +34,7 @@ func BenchmarkExtractB3(b *testing.B) {
 		for _, tt := range tg.tests {
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				ctx := context.Background()
-				req, _ := http.NewRequest("GET", "http://example.com", nil)
+				req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
 				for h, v := range tt.headers {
 					req.Header.Set(h, v)
 				}
@@ -66,7 +67,7 @@ func BenchmarkInjectB3(b *testing.B) {
 		for _, tt := range tg.tests {
 			propagator := b3.New(b3.WithInjectEncoding(tt.encoding))
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
-				req, _ := http.NewRequest("GET", "http://example.com", nil)
+				req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
 				ctx := trace.ContextWithSpan(
 					context.Background(),
 					testSpan{sc: trace.NewSpanContext(tt.scc)},

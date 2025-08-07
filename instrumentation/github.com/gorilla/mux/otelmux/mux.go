@@ -10,15 +10,14 @@ import (
 
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconv"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconv"
 )
 
 const (
@@ -85,8 +84,27 @@ type traceware struct {
 	metricAttributesFn func(*http.Request) []attribute.KeyValue
 }
 
-// defaultSpanNameFunc just reuses the route name as the span name.
-func defaultSpanNameFunc(routeName string, _ *http.Request) string { return routeName }
+// validMethods are all the OTel recognized HTTP methods.
+var validMethods = map[string]struct{}{
+	http.MethodGet:     {},
+	http.MethodHead:    {},
+	http.MethodPost:    {},
+	http.MethodPut:     {},
+	http.MethodPatch:   {},
+	http.MethodDelete:  {},
+	http.MethodConnect: {},
+	http.MethodOptions: {},
+	http.MethodTrace:   {},
+}
+
+// defaultSpanNameFunc returns the semconv based default span name.
+func defaultSpanNameFunc(routeName string, r *http.Request) string {
+	method := r.Method
+	if _, ok := validMethods[method]; !ok {
+		method = "HTTP"
+	}
+	return method + " " + routeName
+}
 
 // ServeHTTP implements the http.Handler interface. It does the actual
 // tracing of the request.
@@ -114,17 +132,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	routeStr := r.Pattern
-
-	if routeStr == "" {
-		route := mux.CurrentRoute(r)
-		if route != nil {
-			routeStr, _ = route.GetPathTemplate()
-			if routeStr == "" {
-				routeStr, _ = route.GetPathRegexp()
-			}
-		}
-	}
+	routeStr := extractRoute(r)
 
 	if routeStr == "" {
 		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
@@ -202,4 +210,16 @@ func (tw traceware) metricAttributesFromRequest(r *http.Request) []attribute.Key
 		attributeForRequest = tw.metricAttributesFn(r)
 	}
 	return attributeForRequest
+}
+
+func extractRoute(r *http.Request) string {
+	routeStr := r.Pattern
+
+	if routeStr == "" {
+		route := mux.CurrentRoute(r)
+		if route != nil {
+			routeStr, _ = route.GetPathTemplate()
+		}
+	}
+	return routeStr
 }

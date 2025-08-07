@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -24,10 +23,10 @@ type testExporter struct {
 	spans []trace.ReadOnlySpan
 }
 
-func (e *testExporter) Start(ctx context.Context) error    { return nil }
-func (e *testExporter) Shutdown(ctx context.Context) error { return nil }
+func (*testExporter) Start(context.Context) error    { return nil }
+func (*testExporter) Shutdown(context.Context) error { return nil }
 
-func (e *testExporter) ExportSpans(ctx context.Context, ss []trace.ReadOnlySpan) error {
+func (e *testExporter) ExportSpans(_ context.Context, ss []trace.ReadOnlySpan) error {
 	e.spans = append(e.spans, ss...)
 	return nil
 }
@@ -177,4 +176,4 @@ type rwSpan struct {
 	trace.ReadWriteSpan
 }
 
-func (s rwSpan) SetAttributes(kv ...attribute.KeyValue) {}
+func (rwSpan) SetAttributes(...attribute.KeyValue) {}

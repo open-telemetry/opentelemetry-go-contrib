@@ -13,12 +13,12 @@ import (
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
-
-	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
+
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 )
 
 func TestGetSpanNotInstrumented(t *testing.T) {
@@ -30,7 +30,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 		assert.True(t, ok)
 		return c.String(http.StatusOK, "ok")
 	})
-	r := httptest.NewRequest("GET", "/ping", nil)
+	r := httptest.NewRequest(http.MethodGet, "/ping", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
@@ -41,7 +41,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	provider := noop.NewTracerProvider()
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	ctx := context.Background()
@@ -72,7 +72,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 
 	b3 := b3prop.New()
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	ctx := context.Background()
@@ -98,7 +98,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 }
 
 func TestSkipper(t *testing.T) {
-	r := httptest.NewRequest("GET", "/ping", nil)
+	r := httptest.NewRequest(http.MethodGet, "/ping", http.NoBody)
 	w := httptest.NewRecorder()
 
 	skipper := func(c echo.Context) bool {

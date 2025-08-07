@@ -19,7 +19,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -454,10 +453,10 @@ func TestSLogHandler(t *testing.T) {
 
 func TestSlogtest(t *testing.T) {
 	r := new(recorder)
-	slogtest.Run(t, func(t *testing.T) slog.Handler {
+	slogtest.Run(t, func(*testing.T) slog.Handler {
 		r = new(recorder)
 		return NewHandler("", WithLoggerProvider(r))
-	}, func(t *testing.T) map[string]any {
+	}, func(*testing.T) map[string]any {
 		return r.Results()[0]
 	})
 }

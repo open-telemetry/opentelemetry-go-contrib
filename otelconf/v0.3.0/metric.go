@@ -18,8 +18,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"google.golang.org/grpc/credentials"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -32,6 +30,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"google.golang.org/grpc/credentials"
 )
 
 var zeroScope instrumentation.Scope
@@ -42,9 +41,7 @@ func meterProvider(cfg configOptions, res *resource.Resource) (metric.MeterProvi
 	if cfg.opentelemetryConfig.MeterProvider == nil {
 		return noop.NewMeterProvider(), noopShutdown, nil
 	}
-	opts := []sdkmetric.Option{
-		sdkmetric.WithResource(res),
-	}
+	opts := append(cfg.meterProviderOptions, sdkmetric.WithResource(res))
 
 	var errs []error
 	for _, reader := range cfg.opentelemetryConfig.MeterProvider.Readers {
@@ -150,7 +147,7 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		if u.Scheme == "http" {
 			opts = append(opts, otlpmetrichttp.WithInsecure())
 		}
-		if len(u.Path) > 0 {
+		if u.Path != "" {
 			opts = append(opts, otlpmetrichttp.WithURLPath(u.Path))
 		}
 	}
@@ -292,7 +289,7 @@ func lowMemory(ik sdkmetric.InstrumentKind) metricdata.Temporality {
 // If IncludeExclude is empty a include-all filter is returned.
 func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
 	if lists == nil {
-		return func(kv attribute.KeyValue) bool { return true }, nil
+		return func(attribute.KeyValue) bool { return true }, nil
 	}
 
 	included := make(map[attribute.Key]struct{})

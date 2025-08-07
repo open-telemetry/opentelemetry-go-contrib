@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -272,10 +271,8 @@ func TestInject(t *testing.T) {
 				if headerVal != tc.wantHeaderVal {
 					t.Errorf("expected header value %q, got %q", tc.wantHeaderVal, headerVal)
 				}
-			} else {
-				if headerVal != "" {
-					t.Errorf("expected no header to be set, but got %q", headerVal)
-				}
+			} else if headerVal != "" {
+				t.Errorf("expected no header to be set, but got %q", headerVal)
 			}
 		})
 	}
@@ -318,7 +315,7 @@ func BenchmarkPropagatorExtract(b *testing.B) {
 	propagator := Propagator{}
 
 	ctx := context.Background()
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
 
 	req.Header.Set("Root", "1-8a3c60f7-d188f8fa79d48a391a778fa6")
 	req.Header.Set("Parent", "53995c3f42cd8ad8")
@@ -334,7 +331,7 @@ func BenchmarkPropagatorInject(b *testing.B) {
 	propagator := Propagator{}
 	tracer := otel.Tracer("test")
 
-	req, _ := http.NewRequest("GET", "http://example.com", nil)
+	req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
 	ctx, _ := tracer.Start(context.Background(), "Parent operation...")
 
 	b.ResetTimer()

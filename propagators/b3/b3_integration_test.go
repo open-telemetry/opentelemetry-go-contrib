@@ -8,13 +8,12 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/google/go-cmp/cmp"
-
-	"go.opentelemetry.io/contrib/propagators/b3"
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/propagators/b3"
 )
 
 func TestExtractB3(t *testing.T) {

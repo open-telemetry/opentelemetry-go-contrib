@@ -12,14 +12,13 @@ import (
 	"log"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example/api"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example/config"
-
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
+
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example/api"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example/config"
 )
 
 func main() {
@@ -89,7 +88,7 @@ func callSayHelloClientStream(c api.HelloServiceClient) error {
 		return fmt.Errorf("opening SayHelloClientStream: %w", err)
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		err := stream.Send(&api.HelloRequest{Greeting: "World"})
 
 		time.Sleep(time.Duration(i*50) * time.Millisecond)
@@ -152,7 +151,7 @@ func callSayHelloBidiStream(c api.HelloServiceClient) error {
 	clientClosed := make(chan struct{})
 
 	go func() {
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			err := stream.Send(&api.HelloRequest{Greeting: "World"})
 			if err != nil {
 				// nolint: revive  // This acts as its own main func.

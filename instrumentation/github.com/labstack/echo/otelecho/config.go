@@ -5,7 +5,6 @@ package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.c
 
 import (
 	"github.com/labstack/echo/v4/middleware"
-
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )

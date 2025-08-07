@@ -4,24 +4,23 @@
 package otelconf
 
 import (
+	"bytes"
 	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
 	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
-	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -31,9 +30,11 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
-func TestTracerPovider(t *testing.T) {
+func TestTracerProvider(t *testing.T) {
 	tests := []struct {
 		name         string
 		cfg          configOptions
@@ -114,6 +115,58 @@ func TestTracerPovider(t *testing.T) {
 		assert.Equal(t, tt.wantErr, err)
 		require.NoError(t, shutdown(context.Background()))
 	}
+}
+
+func TestTracerProviderOptions(t *testing.T) {
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		calls++
+	}))
+	defer srv.Close()
+
+	cfg := OpenTelemetryConfiguration{
+		TracerProvider: &TracerProvider{
+			Processors: []SpanProcessor{{
+				Simple: &SimpleSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol: ptr("http/protobuf"),
+							Endpoint: ptr(srv.URL),
+							Insecure: ptr(true),
+						},
+					},
+				},
+			}},
+		},
+	}
+
+	var buf bytes.Buffer
+	stdouttraceExporter, err := stdouttrace.New(stdouttrace.WithWriter(&buf))
+	require.NoError(t, err)
+
+	res := resource.NewSchemaless(attribute.String("foo", "bar"))
+	sdk, err := NewSDK(
+		WithOpenTelemetryConfiguration(cfg),
+		WithTracerProviderOptions(sdktrace.WithSyncer(stdouttraceExporter)),
+		WithTracerProviderOptions(sdktrace.WithResource(res)),
+	)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, sdk.Shutdown(context.Background()))
+	}()
+
+	// The exporter, which we passed in as an extra option to NewSDK,
+	// should be wired up to the provider in addition to the
+	// configuration-based OTLP exporter.
+	tracer := sdk.TracerProvider().Tracer("test")
+	_, span := tracer.Start(context.Background(), "span")
+	span.End()
+	assert.NotZero(t, buf)
+	assert.Equal(t, 1, calls)
+	// Options provided by WithMeterProviderOptions may be overridden
+	// by configuration, e.g. the resource is always defined via
+	// configuration.
+	assert.NotContains(t, buf.String(), "foo")
 }
 
 func TestSpanProcessor(t *testing.T) {
@@ -855,10 +908,6 @@ func TestSampler(t *testing.T) {
 }
 
 func Test_otlpGRPCTraceExporter(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// TODO (#7446): Fix the flakiness on Windows.
-		t.Skip("Test is flaky on Windows.")
-	}
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLP
@@ -950,11 +999,17 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := net.Listen("tcp", "localhost:0")
+			n, err := net.Listen("tcp4", "localhost:0")
 			require.NoError(t, err)
 
-			// this is a workaround, as providing 127.0.0.1 resulted in an "invalid URI for request" error
-			tt.args.otlpConfig.Endpoint = ptr(strings.ReplaceAll(n.Addr().String(), "127.0.0.1", "localhost"))
+			// We need to manually construct the endpoint using the port on which the server is listening.
+			//
+			// n.Addr() always returns 127.0.0.1 instead of localhost.
+			// But our certificate is created with CN as 'localhost', not '127.0.0.1'.
+			// So we have to manually form the endpoint as "localhost:<port>".
+			_, port, err := net.SplitHostPort(n.Addr().String())
+			require.NoError(t, err)
+			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
@@ -1007,7 +1062,7 @@ func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions 
 }
 
 // Export handles the export req.
-func (c *grpcTraceCollector) Export(
+func (*grpcTraceCollector) Export(
 	_ context.Context,
 	_ *v1.ExportTraceServiceRequest,
 ) (*v1.ExportTraceServiceResponse, error) {

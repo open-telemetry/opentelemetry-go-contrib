@@ -11,7 +11,6 @@ import (
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -36,7 +35,7 @@ type otelMiddlewares struct {
 	attributeBuilders []AttributeBuilder
 }
 
-func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
+func (otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
 	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OTelInitializeMiddlewareBefore", func(
 		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error,
@@ -99,7 +98,7 @@ func (m otelMiddlewares) finalizeMiddlewareAfter(stack *middleware.Stack) error 
 		middleware.After)
 }
 
-func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
+func (otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 	return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OTelDeserializeMiddleware", func(
 		ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
 		out middleware.DeserializeOutput, metadata middleware.Metadata, err error,

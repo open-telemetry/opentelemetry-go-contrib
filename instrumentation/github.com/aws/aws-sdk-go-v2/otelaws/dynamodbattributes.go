@@ -9,13 +9,12 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/smithy-go/middleware"
-
 	"go.opentelemetry.io/otel/attribute"
 	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
 )
 
 // DynamoDBAttributeBuilder sets DynamoDB specific attributes depending on the DynamoDB operation being performed.
-func DynamoDBAttributeBuilder(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue {
+func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ middleware.InitializeOutput) []attribute.KeyValue {
 	dynamodbAttributes := []attribute.KeyValue{semconv.DBSystemNameAWSDynamoDB}
 
 	switch v := in.Parameters.(type) {

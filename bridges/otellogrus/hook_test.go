@@ -10,7 +10,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
@@ -22,7 +21,7 @@ type mockLoggerProvider struct {
 	embedded.LoggerProvider
 }
 
-func (mockLoggerProvider) Logger(name string, options ...log.LoggerOption) log.Logger {
+func (mockLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
 	return nil
 }
 
@@ -167,7 +166,11 @@ func TestHookFire(t *testing.T) {
 
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityFatal4, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityFatal4,
+						SeverityText: "panic",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -178,7 +181,12 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityFatal4, Body: log.StringValue(""), Timestamp: now},
+					{
+						Severity:     log.SeverityFatal4,
+						SeverityText: "panic",
+						Body:         log.StringValue(""),
+						Timestamp:    now,
+					},
 				},
 			},
 		},
@@ -189,7 +197,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityFatal4, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityFatal4,
+						SeverityText: "panic",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -200,7 +212,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityFatal, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityFatal,
+						SeverityText: "fatal",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -211,7 +227,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityError, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityError,
+						SeverityText: "error",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -222,7 +242,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityWarn, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityWarn,
+						SeverityText: "warning",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -233,7 +257,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityInfo, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityInfo,
+						SeverityText: "info",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -244,7 +272,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityDebug, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityDebug,
+						SeverityText: "debug",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -255,7 +287,11 @@ func TestHookFire(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Severity: log.SeverityTrace, Body: log.StringValue("")},
+					{
+						Severity:     log.SeverityTrace,
+						SeverityText: "trace",
+						Body:         log.StringValue(""),
+					},
 				},
 			},
 		},
@@ -269,7 +305,8 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
-						Severity: log.SeverityFatal4,
+						Severity:     log.SeverityFatal4,
+						SeverityText: "panic",
 						Attributes: []log.KeyValue{
 							log.String("hello", "world"),
 						},
@@ -288,7 +325,8 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
-						Severity: log.SeverityFatal4,
+						Severity:     log.SeverityFatal4,
+						SeverityText: "panic",
 						Attributes: []log.KeyValue{
 							log.Empty("nil_pointer"),
 						},
@@ -384,7 +422,7 @@ func TestConvertFields(t *testing.T) {
 		},
 		{
 			name:   "with an interface slice",
-			fields: logrus.Fields{"hello": []interface{}{"foo", 42}},
+			fields: logrus.Fields{"hello": []any{"foo", 42}},
 			want: []log.KeyValue{
 				log.Slice("hello",
 					log.StringValue("foo"),
@@ -401,7 +439,7 @@ func TestConvertFields(t *testing.T) {
 		},
 		{
 			name:   "with an interface map",
-			fields: logrus.Fields{"hello": map[interface{}]interface{}{1: "question", "answer": 42}},
+			fields: logrus.Fields{"hello": map[any]any{1: "question", "answer": 42}},
 			want: []log.KeyValue{
 				log.Map("hello", log.Int("answer", 42), log.String("1", "question")),
 			},

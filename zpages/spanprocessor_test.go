@@ -14,7 +14,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -155,7 +154,7 @@ func TestSpanProcessorSpansByLatencyWrongIndex(t *testing.T) {
 }
 
 func createEndedSpans(tracer trace.Tracer, spanName string, numSpans int) {
-	for i := 0; i < numSpans; i++ {
+	for i := range numSpans {
 		_, span := tracer.Start(context.Background(), spanName)
 		span.SetStatus(codes.Code(i%3), "")
 		span.End()
@@ -164,7 +163,7 @@ func createEndedSpans(tracer trace.Tracer, spanName string, numSpans int) {
 
 func createActiveSpans(tracer trace.Tracer, spanName string, numSpans int) []trace.Span {
 	var spans []trace.Span
-	for i := 0; i < numSpans; i++ {
+	for i := range numSpans {
 		_, span := tracer.Start(context.Background(), spanName)
 		span.SetStatus(codes.Code(i%3), "")
 		spans = append(spans, span)
