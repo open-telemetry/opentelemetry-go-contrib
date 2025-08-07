@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/detectors/autodetect
 go 1.23.8
 
 require (
-	go.opentelemetry.io/contrib/detectors/aws/ec2 v1.37.0
+	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0-20250807162148-4933b0a71839
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.37.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.37.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.62.0
@@ -16,7 +16,19 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.8.0 // indirect
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.29.0 // indirect
-	github.com/aws/aws-sdk-go v1.55.7 // indirect
+	github.com/aws/aws-sdk-go-v2 v1.37.2 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.30.3 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.18.3 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.2 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.2 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.2 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.27.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.32.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.36.0 // indirect
+	github.com/aws/smithy-go v1.22.5 // indirect
 	github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20221221133751-67e37ae746cd // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/emicklei/go-restful/v3 v3.12.2 // indirect
@@ -32,7 +44,6 @@ require (
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.9.0 // indirect
@@ -76,6 +87,6 @@ replace go.opentelemetry.io/contrib/detectors/aws/eks => ../aws/eks
 
 replace go.opentelemetry.io/contrib/detectors/aws/ecs => ../aws/ecs
 
-replace go.opentelemetry.io/contrib/detectors/aws/ec2 => ../aws/ec2
-
 replace go.opentelemetry.io/contrib/detectors/gcp => ../gcp
+
+replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
