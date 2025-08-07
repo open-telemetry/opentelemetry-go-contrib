@@ -208,11 +208,8 @@ func (ss *sampleStore) sampleSpan(span sdktrace.ReadOnlySpan) {
 		return
 	}
 
-	latency := span.EndTime().Sub(span.StartTime())
 	// In case of time skew or wrong time, sample as 0 latency.
-	if latency < 0 {
-		latency = 0
-	}
+	latency := max(span.EndTime().Sub(span.StartTime()), 0)
 	ss.latency[defaultBoundaries.getBucketIndex(latency)].add(span)
 }
 

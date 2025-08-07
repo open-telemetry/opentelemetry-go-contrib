@@ -88,7 +88,7 @@ func callSayHelloClientStream(c api.HelloServiceClient) error {
 		return fmt.Errorf("opening SayHelloClientStream: %w", err)
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		err := stream.Send(&api.HelloRequest{Greeting: "World"})
 
 		time.Sleep(time.Duration(i*50) * time.Millisecond)
@@ -151,7 +151,7 @@ func callSayHelloBidiStream(c api.HelloServiceClient) error {
 	clientClosed := make(chan struct{})
 
 	go func() {
-		for i := 0; i < 5; i++ {
+		for range 5 {
 			err := stream.Send(&api.HelloRequest{Greeting: "World"})
 			if err != nil {
 				// nolint: revive  // This acts as its own main func.

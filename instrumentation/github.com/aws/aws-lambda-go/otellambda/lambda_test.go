@@ -119,7 +119,6 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 		},
 	}
 	for i, testCase := range testCases {
-		testCase := testCase
 		t.Run(fmt.Sprintf("testCase[%d] %s", i, testCase.name), func(t *testing.T) {
 			lambdaHandler := InstrumentHandler(testCase.handler)
 			handler := reflect.ValueOf(lambdaHandler)
@@ -216,7 +215,6 @@ func TestHandlerInvokes(t *testing.T) {
 
 	// test invocation via a lambda handler
 	for i, testCase := range testCases {
-		testCase := testCase
 		t.Run(fmt.Sprintf("lambdaHandlerTestCase[%d] %s", i, testCase.name), func(t *testing.T) {
 			lambdaHandler := InstrumentHandler(testCase.handler)
 			handler := reflect.ValueOf(lambdaHandler)
@@ -241,7 +239,6 @@ func TestHandlerInvokes(t *testing.T) {
 
 	// test invocation via a Handler
 	for i, testCase := range testCases {
-		testCase := testCase
 		t.Run(fmt.Sprintf("handlerTestCase[%d] %s", i, testCase.name), func(t *testing.T) {
 			handler := WrapHandler(lambda.NewHandler(testCase.handler))
 			inputPayload, _ := json.Marshal(testCase.input)
