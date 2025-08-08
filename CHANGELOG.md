@@ -25,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/bridges/otellogrus`
   - `go.opentelemetry.io/contrib/bridges/otelslog`
   - `go.opentelemetry.io/contrib/bridges/otelzap`
+- Chang the default By-unit explicit histogram bucket bounds to [0, 50MB) for `google.golang.org/grpc` and `net/http` instrumentation packages. (#7696)
 
 ### Deprecated
 
