@@ -121,6 +121,9 @@ var (
 			return &[]metric.RecordOption{}
 		},
 	}
+
+	// defaultByteHistogramBounds defines the default By unit explicit bucket bounds: [0, 50MB].
+	defaultByteHistogramBounds = []float64{100_000, 500_000, 1000_000, 1500_000, 2000_000, 2500_000, 3000_000, 3500_000, 4000_000, 8000_000, 10000_000, 2000_0000, 30000_000, 40000_000, 50000_000}
 )
 
 func (s HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
@@ -150,10 +153,12 @@ func NewHTTPServer(meter metric.Meter) HTTPServer {
 	server := HTTPServer{}
 
 	var err error
-	server.requestBodySizeHistogram, err = httpconv.NewServerRequestBodySize(meter)
+	server.requestBodySizeHistogram, err = httpconv.NewServerRequestBodySize(meter,
+		metric.WithExplicitBucketBoundaries(defaultByteHistogramBounds...))
 	handleErr(err)
 
-	server.responseBodySizeHistogram, err = httpconv.NewServerResponseBodySize(meter)
+	server.responseBodySizeHistogram, err = httpconv.NewServerResponseBodySize(meter,
+		metric.WithExplicitBucketBoundaries(defaultByteHistogramBounds...))
 	handleErr(err)
 
 	server.requestDurationHistogram, err = httpconv.NewServerRequestDuration(
@@ -176,7 +181,8 @@ func NewHTTPClient(meter metric.Meter) HTTPClient {
 	client := HTTPClient{}
 
 	var err error
-	client.requestBodySize, err = httpconv.NewClientRequestBodySize(meter)
+	client.requestBodySize, err = httpconv.NewClientRequestBodySize(meter,
+		metric.WithExplicitBucketBoundaries(defaultByteHistogramBounds...))
 	handleErr(err)
 
 	client.requestDuration, err = httpconv.NewClientRequestDuration(
