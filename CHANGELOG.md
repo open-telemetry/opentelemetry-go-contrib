@@ -20,6 +20,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7551)
+- Transform attribute values of `go.opentelemetry.io/otel/attribute.Value` and `go.opentelemetry.io/otel/log.Value` types to appropriate `go.opentelemetry.io/otel/log.Value` type instead of `log.StringValue` in the modules below. (#7660)
+  - `go.opentelemetry.io/contrib/bridges/otellogr`
+  - `go.opentelemetry.io/contrib/bridges/otellogrus`
+  - `go.opentelemetry.io/contrib/bridges/otelslog`
+  - `go.opentelemetry.io/contrib/bridges/otelzap`
 
 ### Deprecated
 
