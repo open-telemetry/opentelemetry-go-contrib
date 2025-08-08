@@ -15,6 +15,10 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/aws/ec2
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
+  stable-v2:
+    version: v2.0.0
+    modules:
+      - go.opentelemetry.io/contrib/detectors/aws/ec2/v2
   experimental-instrumentation:
     version: v0.62.0
     modules:
