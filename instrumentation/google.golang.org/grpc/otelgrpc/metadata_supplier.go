@@ -42,6 +42,7 @@ func (s *metadataSupplier) Keys() []string {
 // Inject injects correlation context and span context into the gRPC
 // metadata object. This function is meant to be used on outgoing
 // requests.
+//
 // Deprecated: Unnecessary public func.
 func Inject(ctx context.Context, md *metadata.MD, opts ...Option) {
 	c := newConfig(opts)
@@ -64,6 +65,7 @@ func inject(ctx context.Context, propagators propagation.TextMapPropagator) cont
 // Extract returns the correlation context and span context that
 // another service encoded in the gRPC metadata object with Inject.
 // This function is meant to be used on incoming requests.
+//
 // Deprecated: Unnecessary public func.
 func Extract(ctx context.Context, md *metadata.MD, opts ...Option) (baggage.Baggage, trace.SpanContext) {
 	c := newConfig(opts)

@@ -30,6 +30,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `WithSpanOptions` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated.
   It is only used by the deprecated interceptor, and is unused by `NewClientHandler` and `NewServerHandler`. (#7601)
+- `Extract` and `Inject` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` are deprecated.
+  These functions were initially exposed in the public API, but are now considered unnecessary. (#7689)
 
 ### Removed
 
