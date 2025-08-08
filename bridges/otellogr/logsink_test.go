@@ -197,6 +197,8 @@ func TestLogSink(t *testing.T) {
 					"string", "str",
 					"time", time.Unix(1000, 1000),
 					"uint64", uint64(3),
+					"log-attribute", log.MapValue(log.String("foo", "bar")),
+					"standard-attribute", attribute.StringSliceValue([]string{"one", "two"}),
 				)
 			},
 			want: logtest.Recording{
@@ -213,6 +215,8 @@ func TestLogSink(t *testing.T) {
 							log.String("string", "str"),
 							log.Int64("time", time.Unix(1000, 1000).UnixNano()),
 							log.Int64("uint64", 3),
+							log.Map("log-attribute", log.String("foo", "bar")),
+							log.Slice("standard-attribute", log.StringValue("one"), log.StringValue("two")),
 						},
 					},
 				},
