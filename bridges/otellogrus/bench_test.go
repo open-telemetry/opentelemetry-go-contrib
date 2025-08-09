@@ -31,7 +31,7 @@ func BenchmarkHook(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			_ = hooks[n].Fire(record)
 		}
 	})

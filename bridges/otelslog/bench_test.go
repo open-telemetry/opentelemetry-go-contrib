@@ -40,7 +40,7 @@ func BenchmarkHandler(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			err = handlers[n].Handle(ctx, record)
 		}
 	})
@@ -54,7 +54,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				h = handlers[n].WithAttrs(attrs5)
 			}
 		})
@@ -66,7 +66,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				h = handlers[n].WithAttrs(attrs10)
 			}
 		})
@@ -80,7 +80,7 @@ func BenchmarkHandler(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			h = handlers[n].WithGroup("group")
 		}
 	})
@@ -94,7 +94,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				h = handlers[n].WithGroup("group").WithAttrs(attrs5)
 			}
 		})
@@ -106,7 +106,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				h = handlers[n].WithGroup("group").WithAttrs(attrs10)
 			}
 		})
@@ -121,7 +121,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				err = handlers[n].Handle(ctx, record)
 			}
 		})
@@ -133,7 +133,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				err = handlers[n].Handle(ctx, record)
 			}
 		})
@@ -147,7 +147,7 @@ func BenchmarkHandler(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			err = handlers[n].Handle(ctx, record)
 		}
 	})

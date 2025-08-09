@@ -53,7 +53,7 @@ func TestSpanProcessor(t *testing.T) {
 	}
 	// No ended spans so there will be no error, no latency samples.
 	assert.Empty(t, zsp.errorSpans(spanName))
-	for i := 0; i < defaultBoundaries.numBuckets(); i++ {
+	for i := range defaultBoundaries.numBuckets() {
 		assert.Empty(t, zsp.spansByLatency(spanName, i))
 	}
 	spansPM := zsp.spansPerMethod()
@@ -69,7 +69,7 @@ func TestSpanProcessor(t *testing.T) {
 	assert.Empty(t, zsp.activeSpans(spanName))
 	assert.Len(t, zsp.errorSpans(spanName), 1)
 	numLatencySamples := 0
-	for i := 0; i < defaultBoundaries.numBuckets(); i++ {
+	for i := range defaultBoundaries.numBuckets() {
 		numLatencySamples += len(zsp.spansByLatency(spanName, i))
 	}
 	assert.GreaterOrEqual(t, numLatencySamples, 1)

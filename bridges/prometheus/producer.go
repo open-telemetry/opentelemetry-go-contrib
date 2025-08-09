@@ -230,7 +230,7 @@ func convertExponentialBuckets(bucketSpans []*dto.BucketSpan, deltas []int64) me
 			// Increase the count index by the Offset to insert Offset zeroes
 			countIndex += bs.GetOffset()
 		}
-		for j := uint32(0); j < bs.GetLength(); j++ {
+		for range bs.GetLength() {
 			// Convert deltas to the cumulative number of observations
 			count += deltas[deltaIndex]
 			deltaIndex++

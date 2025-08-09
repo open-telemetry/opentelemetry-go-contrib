@@ -19,7 +19,7 @@ import (
 func benchmarkStatsHandlerHandleRPC(b *testing.B, ctx context.Context, handler stats.Handler, stat stats.RPCStats) {
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		handler.HandleRPC(ctx, stat)
 	}
 }

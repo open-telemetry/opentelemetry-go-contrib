@@ -322,7 +322,7 @@ func BenchmarkPropagatorExtract(b *testing.B) {
 	req.Header.Set("Sampled", "1")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
 	}
 }
@@ -335,7 +335,7 @@ func BenchmarkPropagatorInject(b *testing.B) {
 	ctx, _ := tracer.Start(context.Background(), "Parent operation...")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 	}
 }

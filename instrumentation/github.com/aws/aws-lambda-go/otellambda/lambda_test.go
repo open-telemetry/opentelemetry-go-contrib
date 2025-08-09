@@ -266,7 +266,7 @@ func BenchmarkInstrumentHandler(b *testing.B) {
 	args := []reflect.Value{ctx, payload}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		wrappedCallable.Call(args)
 	}
 }
@@ -277,7 +277,7 @@ func BenchmarkWrapHandler(b *testing.B) {
 	wrapped := WrapHandler(emptyHandler{})
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = wrapped.Invoke(mockContext, []byte{0})
 	}
 }

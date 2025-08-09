@@ -243,7 +243,7 @@ func BenchmarkLogProcessor(b *testing.B) {
 			var err error
 			var enabled bool
 			b.ReportAllocs()
-			for n := 0; n < b.N; n++ {
+			for range b.N {
 				enabled = p.Enabled(ctx, param)
 				err = p.OnEmit(ctx, r)
 			}

@@ -643,7 +643,7 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 			_, errs := getEnvOptions()
 			require.Len(t, errs, len(test.expErrs))
 
-			for i := range len(errs) {
+			for i := range errs {
 				require.ErrorContains(t, errs[i], test.expErrs[i])
 			}
 

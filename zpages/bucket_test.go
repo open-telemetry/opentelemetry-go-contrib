@@ -50,7 +50,7 @@ func TestBucket(t *testing.T) {
 		assert.Equal(t, i, bkt.len())
 		spans := bkt.spans()
 		assert.Len(t, spans, i)
-		for j := 0; j < i; j++ {
+		for j := range i {
 			assert.Equal(t, time.Unix(int64(j+1), 0), spans[j].EndTime())
 		}
 	}
@@ -61,7 +61,7 @@ func TestBucket(t *testing.T) {
 		spans := bkt.spans()
 		assert.Len(t, spans, defaultBucketCapacity)
 		// First spans will have newer times, and will replace older timestamps.
-		for j := 0; j < i-defaultBucketCapacity; j++ {
+		for j := range i - defaultBucketCapacity {
 			assert.Equal(t, time.Unix(int64(j+defaultBucketCapacity+1), 0), spans[j].EndTime())
 		}
 		for j := i - defaultBucketCapacity; j < defaultBucketCapacity; j++ {
