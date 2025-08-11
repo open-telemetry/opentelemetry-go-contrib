@@ -465,6 +465,20 @@ func TestConvertFields(t *testing.T) {
 				log.String("hello", "{Name:foobar}"),
 			},
 		},
+		{
+			name:   "with log attribute",
+			fields: logrus.Fields{"hello": log.MapValue(log.String("foo", "bar"))},
+			want: []log.KeyValue{
+				log.Map("hello", log.String("foo", "bar")),
+			},
+		},
+		{
+			name:   "with standard attribute",
+			fields: logrus.Fields{"hello": attribute.StringSliceValue([]string{"one", "two"})},
+			want: []log.KeyValue{
+				log.Slice("hello", log.StringValue("one"), log.StringValue("two")),
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got := convertFields(tt.fields)
