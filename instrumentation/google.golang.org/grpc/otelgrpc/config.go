@@ -52,6 +52,12 @@ type Option interface {
 	apply(*config)
 }
 
+// EmptyOption does not alter the server configuration. It can be embedded
+// in another structure to build custom server options.
+type EmptyOption struct{}
+
+func (EmptyOption) apply(*config) {}
+
 // newConfig returns a config configured with all the passed Options.
 func newConfig(opts []Option) *config {
 	c := &config{
