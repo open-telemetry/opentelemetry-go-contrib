@@ -18,7 +18,7 @@ jobs:
       issues: write # required for creating issues from link checker results
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@v4
+      uses: actions/checkout@v5
 
 
     - name: Restore lychee cache
