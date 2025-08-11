@@ -13,7 +13,7 @@ import (
 )
 
 type metadataSupplier struct {
-	metadata *metadata.MD
+	metadata metadata.MD
 }
 
 // assert that metadataSupplier implements the TextMapCarrier interface.
@@ -32,8 +32,8 @@ func (s *metadataSupplier) Set(key, value string) {
 }
 
 func (s *metadataSupplier) Keys() []string {
-	out := make([]string, 0, len(*s.metadata))
-	for key := range *s.metadata {
+	out := make([]string, 0, len(s.metadata))
+	for key := range s.metadata {
 		out = append(out, key)
 	}
 	return out
@@ -47,7 +47,7 @@ func (s *metadataSupplier) Keys() []string {
 func Inject(ctx context.Context, md *metadata.MD, opts ...Option) {
 	c := newConfig(opts)
 	c.Propagators.Inject(ctx, &metadataSupplier{
-		metadata: md,
+		metadata: *md,
 	})
 }
 
@@ -57,7 +57,7 @@ func inject(ctx context.Context, propagators propagation.TextMapPropagator) cont
 		md = metadata.MD{}
 	}
 	propagators.Inject(ctx, &metadataSupplier{
-		metadata: &md,
+		metadata: md,
 	})
 	return metadata.NewOutgoingContext(ctx, md)
 }
@@ -70,7 +70,7 @@ func inject(ctx context.Context, propagators propagation.TextMapPropagator) cont
 func Extract(ctx context.Context, md *metadata.MD, opts ...Option) (baggage.Baggage, trace.SpanContext) {
 	c := newConfig(opts)
 	ctx = c.Propagators.Extract(ctx, &metadataSupplier{
-		metadata: md,
+		metadata: *md,
 	})
 
 	return baggage.FromContext(ctx), trace.SpanContextFromContext(ctx)
@@ -83,6 +83,6 @@ func extract(ctx context.Context, propagators propagation.TextMapPropagator) con
 	}
 
 	return propagators.Extract(ctx, &metadataSupplier{
-		metadata: &md,
+		metadata: md,
 	})
 }
