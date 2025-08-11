@@ -362,7 +362,7 @@ type turduckens int
 func (t turduckens) MarshalLogArray(enc zapcore.ArrayEncoder) error {
 	var err error
 	tur := turducken{}
-	for i := 0; i < int(t); i++ {
+	for range t {
 		err = errors.Join(err, enc.AppendObject(tur))
 	}
 	return err

@@ -20,6 +20,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7551)
+- Transform attribute values of `go.opentelemetry.io/otel/attribute.Value` and `go.opentelemetry.io/otel/log.Value` types to appropriate `go.opentelemetry.io/otel/log.Value` type instead of `log.StringValue` in the modules below. (#7660)
+  - `go.opentelemetry.io/contrib/bridges/otellogr`
+  - `go.opentelemetry.io/contrib/bridges/otellogrus`
+  - `go.opentelemetry.io/contrib/bridges/otelslog`
+  - `go.opentelemetry.io/contrib/bridges/otelzap`
 - The `Severity` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, `encoding.TextAppender`, `json.Marshaler`, and `json.Unmarshaler` interfaces. (#7652)
 - The `SeverityVar` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, and `encoding.TextAppender` interfaces. (#7652)
 
@@ -27,6 +32,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - `WithSpanOptions` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated.
   It is only used by the deprecated interceptor, and is unused by `NewClientHandler` and `NewServerHandler`. (#7601)
+- `Extract` and `Inject` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` are deprecated.
+  These functions were initially exposed in the public API, but are now considered unnecessary. (#7689)
 
 ### Removed
 
