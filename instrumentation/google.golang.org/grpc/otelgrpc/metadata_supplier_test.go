@@ -14,7 +14,7 @@ func TestMetadataSupplier(t *testing.T) {
 	md := metadata.New(map[string]string{
 		"k1": "v1",
 	})
-	ms := &metadataSupplier{&md}
+	ms := &metadataSupplier{md}
 
 	v1 := ms.Get("k1")
 	assert.Equal(t, "v1", v1)
