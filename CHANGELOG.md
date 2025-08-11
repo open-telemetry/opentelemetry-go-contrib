@@ -25,6 +25,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/bridges/otellogrus`
   - `go.opentelemetry.io/contrib/bridges/otelslog`
   - `go.opentelemetry.io/contrib/bridges/otelzap`
+- The `Severity` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, `encoding.TextAppender`, `json.Marshaler`, and `json.Unmarshaler` interfaces. (#7652)
+- The `SeverityVar` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, and `encoding.TextAppender` interfaces. (#7652)
 
 ### Deprecated
 
