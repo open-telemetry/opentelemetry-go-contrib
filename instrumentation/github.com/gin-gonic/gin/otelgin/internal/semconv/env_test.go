@@ -53,8 +53,8 @@ func TestHTTPServerDoesNotPanic(t *testing.T) {
 
 func TestServerNetworkTransportAttr(t *testing.T) {
 	for _, tt := range []struct {
-		name     string
-		network  string
+		name    string
+		network string
 
 		wantAttributes []attribute.KeyValue
 	}{
@@ -113,7 +113,7 @@ func TestHTTPClientDoesNotPanic(t *testing.T) {
 
 func TestHTTPClientTraceAttributes(t *testing.T) {
 	for _, tt := range []struct {
-		name     string
+		name string
 
 		wantAttributes []attribute.KeyValue
 	}{
@@ -135,8 +135,8 @@ func TestHTTPClientTraceAttributes(t *testing.T) {
 
 func TestClientTraceAttributes(t *testing.T) {
 	for _, tt := range []struct {
-		name     string
-		host     string
+		name string
+		host string
 
 		wantAttributes []attribute.KeyValue
 	}{
@@ -184,7 +184,7 @@ func BenchmarkRecordMetrics(b *testing.B) {
 			ctx := context.Background()
 			b.ReportAllocs()
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				bm.server.RecordMetrics(ctx, ServerMetricData{
 					ServerName: bm.name,
 					MetricAttributes: MetricAttributes{

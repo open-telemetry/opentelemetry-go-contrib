@@ -49,7 +49,7 @@ func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	b.ReportAllocs()
 	b.ResetTimer()
 
-	for n := 0; n < b.N; n++ {
+	for range b.N {
 		test.DoEmptyUnaryCall(ctx, client)
 		test.DoLargeUnaryCall(ctx, client)
 		test.DoClientStreaming(ctx, client)

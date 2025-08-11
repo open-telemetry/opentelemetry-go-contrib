@@ -23,11 +23,9 @@ import (
 const (
 	oneDegree  testDegrees = 1
 	twoDegrees testDegrees = 2
-)
 
-var (
-	trials         = 20
-	populationSize = 1e5
+	trials               = 20
+	populationSize int64 = 1e5
 
 	// These may be computed using Gonum, e.g.,
 	// import "gonum.org/v1/gonum/stat/distuv"
@@ -38,13 +36,13 @@ var (
 	// These have been specified using significance = 0.05:
 	chiSquaredDF1 = 0.003932140000019522
 	chiSquaredDF2 = 0.1025865887751011
-
-	chiSquaredByDF = [3]float64{
-		0,
-		chiSquaredDF1,
-		chiSquaredDF2,
-	}
 )
+
+var chiSquaredByDF = [3]float64{
+	0,
+	chiSquaredDF1,
+	chiSquaredDF2,
+}
 
 func TestSamplerStatistics(t *testing.T) {
 	seedBankRng := rand.New(rand.NewSource(77777677777))
@@ -213,7 +211,7 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 
 	tracer := provider.Tracer("test")
 
-	for i := 0; i < int(populationSize); i++ {
+	for range populationSize {
 		_, span := tracer.Start(ctx, "span")
 		span.End()
 	}
@@ -279,16 +277,16 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 		floorChoice = 1
 	}
 
-	expectLowerCount := floorChoice * floorProb * populationSize
-	expectUpperCount := (1 - floorChoice) * ceilingProb * populationSize
-	expectUnsampled := (1 - prob) * populationSize
+	expectLowerCount := floorChoice * floorProb * float64(populationSize)
+	expectUpperCount := (1 - floorChoice) * ceilingProb * float64(populationSize)
+	expectUnsampled := (1 - prob) * float64(populationSize)
 
 	upperCount := int64(0)
 	lowerCount := counts[maxP]
 	if degrees == 2 {
 		upperCount = counts[minP]
 	}
-	unsampled := int64(populationSize) - upperCount - lowerCount
+	unsampled := populationSize - upperCount - lowerCount
 
 	expected := []float64{
 		expectUnsampled,
