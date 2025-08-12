@@ -244,7 +244,7 @@ func clampUint64(v uint64) int64 {
 	if v > math.MaxInt64 {
 		return math.MaxInt64
 	}
-	return int64(v) // nolint: gosec  // Overflow checked above.
+	return int64(v) //nolint:gosec  // Overflow checked above.
 }
 
 func computeGCPauses(
@@ -271,7 +271,7 @@ func computeGCPauses(
 		return
 	}
 
-	length := uint64(n) // nolint: gosec  // n >= 0
+	length := uint64(n) //nolint:gosec  // n >= 0
 
 	i := uint64(lastNumGC) % length
 	j := uint64(currentNumGC) % length

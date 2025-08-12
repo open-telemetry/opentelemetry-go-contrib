@@ -61,7 +61,6 @@ linters:
         - hugeParam
         - rangeValCopy
         - unnamedResult
-        - whyNoLint
       enable-all: true
     godot:
       exclude:

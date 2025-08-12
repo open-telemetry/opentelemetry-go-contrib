@@ -194,7 +194,7 @@ func (n CurrentHTTPServer) method(method string) (attribute.KeyValue, attribute.
 	return semconvNew.HTTPRequestMethodGet, orig
 }
 
-func (n CurrentHTTPServer) scheme(https bool) attribute.KeyValue { // nolint:revive
+func (n CurrentHTTPServer) scheme(https bool) attribute.KeyValue { //nolint:revive // ignore linter
 	if https {
 		return semconvNew.URLScheme("https")
 	}
