@@ -219,8 +219,10 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 	var minP, maxP pValue
 
 	counts := map[pValue]int64{}
+	spans := recorder.GetSpans()
 
-	for idx, r := range recorder.GetSpans() {
+	for idx := range spans {
+		r := &spans[idx]
 		ts := r.SpanContext.TraceState()
 		p, _ := parsePR(ts.Get("ot"))
 
