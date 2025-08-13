@@ -1,3 +1,4 @@
+// Deprecated: use go.opentelemetry.io/contrib/detectors/aws/ec2/v2 instead.
 module go.opentelemetry.io/contrib/detectors/aws/ec2
 
 go 1.23.0
