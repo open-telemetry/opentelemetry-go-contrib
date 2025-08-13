@@ -96,18 +96,21 @@ func New(
 }
 
 // Lock is used to lock the Sampler for concurrent use.
+//
 // Deprecated: mutex is internal and shall not be used.
 func (s *Sampler) Lock() {
 	s.mu.Lock()
 }
 
 // TryLock attempts to lock the Sampler for concurrent use.
+//
 // Deprecated: mutex is internal and shall not be used.
 func (s *Sampler) TryLock() bool {
 	return s.mu.TryLock()
 }
 
 // Unlock is used to unlock the Sampler for concurrent use.
+//
 // Deprecated: mutex is internal and shall not be used.
 func (s *Sampler) Unlock() {
 	s.mu.Unlock()
