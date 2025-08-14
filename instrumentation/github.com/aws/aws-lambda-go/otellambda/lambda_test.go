@@ -18,6 +18,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+const MiB = 1 << 20
+
 var (
 	mockLambdaContext = lambdacontext.LambdaContext{
 		AwsRequestID:       "123",
