@@ -41,6 +41,7 @@ The next release will require at least [Go 1.24].
 - `Extract` and `Inject` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` are deprecated.
   These functions were initially exposed in the public API, but are now considered unnecessary. (#7689)
 - The `go.opentelemetry.io/contrib/detectors/aws/ec2` package is deprecated, use `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` instead. (#7725)
+- Deprecate direct exposure and usage of mutex objects via structs: introduce equivalent methods for locking/unlocking, and mark mutex fields as deprecated, specially for `go.opentelemetry.io/contrib/samplers/jaegerremote.Sampler` and `go.opentelemetry.io/contrib/propagators/aws/xray.IDGenerator`. (#7726)
 
 ### Removed
 
