@@ -28,7 +28,7 @@ func TestDetectSuccess(t *testing.T) {
 		semconv.FaaSName("testFunction"),
 		semconv.FaaSVersion("$LATEST"),
 		semconv.FaaSInstance("2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
-		semconv.FaaSMaxMemory(128 * bytesInMegabyte),
+		semconv.FaaSMaxMemory(128 * MiB),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := resourceDetector{}
