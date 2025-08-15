@@ -72,7 +72,7 @@ type Sampler struct {
 	// Cf. https://github.com/jaegertracing/jaeger-client-go/issues/155, https://pkg.go.dev/sync/atomic#pkg-note-BUG
 	closed int64 // 0 - not closed, 1 - closed
 
-	sync.RWMutex // used to serialize access to samplerConfig.sampler
+	mu sync.RWMutex // used to serialize access to samplerConfig.sampler
 	config
 
 	serviceName string
@@ -95,11 +95,32 @@ func New(
 	return sampler
 }
 
+// Lock is used to lock the Sampler for concurrent use.
+//
+// Deprecated: mutex is internal and shall not be used.
+func (s *Sampler) Lock() {
+	s.mu.Lock()
+}
+
+// TryLock attempts to lock the Sampler for concurrent use.
+//
+// Deprecated: mutex is internal and shall not be used.
+func (s *Sampler) TryLock() bool {
+	return s.mu.TryLock()
+}
+
+// Unlock is used to unlock the Sampler for concurrent use.
+//
+// Deprecated: mutex is internal and shall not be used.
+func (s *Sampler) Unlock() {
+	s.mu.Unlock()
+}
+
 // ShouldSample returns a sampling choice based on the passed sampling
 // parameters.
 func (s *Sampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult {
-	s.RLock()
-	defer s.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.sampler.ShouldSample(p)
 }
 
@@ -143,8 +164,8 @@ func (s *Sampler) pollControllerWithTicker(ticker *time.Ticker) {
 }
 
 func (s *Sampler) setSampler(sampler trace.Sampler) {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.sampler = sampler
 }
 
@@ -162,8 +183,8 @@ func (s *Sampler) UpdateSampler() {
 		return
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if err := s.updateSamplerViaUpdaters(strategy); err != nil {
 		s.logger.Error(err, "failed to handle sampling strategy response", "response", res)

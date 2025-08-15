@@ -23,7 +23,7 @@ type spanKey struct {
 }
 
 type monitor struct {
-	sync.Mutex
+	mu      sync.Mutex
 	spans   map[spanKey]trace.Span
 	cfg     config
 	semconv semconv.EventMonitor
@@ -51,9 +51,9 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		ConnectionID: evt.ConnectionID,
 		RequestID:    evt.RequestID,
 	}
-	m.Lock()
+	m.mu.Lock()
 	m.spans[key] = span
-	m.Unlock()
+	m.mu.Unlock()
 }
 
 func (m *monitor) Succeeded(_ context.Context, evt *event.CommandSucceededEvent) {
@@ -69,12 +69,12 @@ func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
 		ConnectionID: evt.ConnectionID,
 		RequestID:    evt.RequestID,
 	}
-	m.Lock()
+	m.mu.Lock()
 	span, ok := m.spans[key]
 	if ok {
 		delete(m.spans, key)
 	}
-	m.Unlock()
+	m.mu.Unlock()
 	if !ok {
 		return
 	}

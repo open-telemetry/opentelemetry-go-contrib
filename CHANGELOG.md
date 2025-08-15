@@ -31,6 +31,7 @@ The next release will require at least [Go 1.24].
   - `go.opentelemetry.io/contrib/bridges/otelzap`
 - The `Severity` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, `encoding.TextAppender`, `json.Marshaler`, and `json.Unmarshaler` interfaces. (#7652)
 - The `SeverityVar` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, and `encoding.TextAppender` interfaces. (#7652)
+-- Deprecate direct exposure and usage of mutex objects via structs: introduce equivalent methods for locking/unlocking, and mark mutex fields as deprecated, specially for `go.opentelemetry.io/contrib/samplers/jaegerremote.Sampler` and `go.opentelemetry.io/contrib/propagators/aws/xray.IDGenerator`. (#7726)
 
 ### Deprecated
 
