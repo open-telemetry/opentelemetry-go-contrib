@@ -87,39 +87,21 @@ const (
 //
 // It implements [Severitier].
 func (s Severity) Severity() log.Severity {
-	// Unknown defaults to log.SeverityUndefined.
-	//
-	// TODO: return a clamped log.Severity. If s is less than
-	// SeverityTrace1, return log.SeverityTrace1, if s is greater than
-	// SeverityFatal4, return log.SeverityFatal4.
-	return translations[s]
-}
+	// Clamp to the defined range of log.Severity values. This provides a
+	// closer approximation for out-of-range values instead of returning
+	// log.SeverityUndefined.
+	switch {
+	case s < SeverityTrace1:
+		return log.SeverityTrace1
+	case s > SeverityFatal4:
+		return log.SeverityFatal4
+	}
 
-var translations = map[Severity]log.Severity{
-	SeverityTrace1: log.SeverityTrace1,
-	SeverityTrace2: log.SeverityTrace2,
-	SeverityTrace3: log.SeverityTrace3,
-	SeverityTrace4: log.SeverityTrace4,
-	SeverityDebug1: log.SeverityDebug1,
-	SeverityDebug2: log.SeverityDebug2,
-	SeverityDebug3: log.SeverityDebug3,
-	SeverityDebug4: log.SeverityDebug4,
-	SeverityInfo1:  log.SeverityInfo1,
-	SeverityInfo2:  log.SeverityInfo2,
-	SeverityInfo3:  log.SeverityInfo3,
-	SeverityInfo4:  log.SeverityInfo4,
-	SeverityWarn1:  log.SeverityWarn1,
-	SeverityWarn2:  log.SeverityWarn2,
-	SeverityWarn3:  log.SeverityWarn3,
-	SeverityWarn4:  log.SeverityWarn4,
-	SeverityError1: log.SeverityError1,
-	SeverityError2: log.SeverityError2,
-	SeverityError3: log.SeverityError3,
-	SeverityError4: log.SeverityError4,
-	SeverityFatal1: log.SeverityFatal1,
-	SeverityFatal2: log.SeverityFatal2,
-	SeverityFatal3: log.SeverityFatal3,
-	SeverityFatal4: log.SeverityFatal4,
+	// The relative ordering and contiguous definition of both sets of
+	// severities allows a constant offset translation instead of a lookup
+	// table. Keep this in sync if either definition changes.
+	const offset = int(log.SeverityTrace1) - int(SeverityTrace1)
+	return log.Severity(int(s) + offset)
 }
 
 // String returns a name for the severity level. If the severity level has a
