@@ -63,7 +63,7 @@ func validateReturns(handler reflect.Type) error {
 }
 
 // Wraps and calls customer lambda handler then unpacks response as necessary.
-func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handlerFunc any, eventJSON []byte, event reflect.Value, takesContext bool) (any, error) { // nolint:revive // this control flag is required
+func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handlerFunc any, eventJSON []byte, event reflect.Value, takesContext bool) (any, error) { //nolint:revive // this control flag is required
 	wrappedLambdaHandler := reflect.ValueOf(whf.wrapper(handlerFunc))
 
 	argsWrapped := []reflect.Value{reflect.ValueOf(ctx), reflect.ValueOf(eventJSON), event, reflect.ValueOf(takesContext)}

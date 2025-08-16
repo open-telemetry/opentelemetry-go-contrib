@@ -197,7 +197,7 @@ func NewLogSink(name string, options ...Option) *LogSink {
 // OpenTelemetry. See package documentation for how conversions are made.
 type LogSink struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
-	noCmp [0]func() //nolint: unused  // This is indeed used.
+	noCmp [0]func() //nolint:unused  // This is indeed used.
 
 	name          string
 	provider      log.LoggerProvider

@@ -60,7 +60,6 @@ linters:
         - exposedSyncMutex
         - hugeParam
         - unnamedResult
-        - whyNoLint
       enable-all: true
     godot:
       exclude:

@@ -238,7 +238,7 @@ func (s *span) SetStatus(c codes.Code, d string) {
 	s.statusCode, s.statusDesc = c, d
 }
 
-func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d string) { // nolint: revive  // ended is not a control flag.
+func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d string) { //nolint:revive  // ended is not a control flag.
 	if ended {
 		assert.True(t, s.ended, "not ended")
 	} else {
@@ -473,7 +473,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 	)
 
 	c := http.Client{Transport: tr}
-	res, err := c.Do(r) // nolint:bodyclose  // False-positive.
+	res, err := c.Do(r) //nolint:bodyclose  // False-positive.
 	require.NoError(t, err)
 	require.NoError(t, res.Body.Close())
 
@@ -505,7 +505,7 @@ func TestTransportErrorStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := c.Do(r) // nolint:bodyclose  // False-positive.
+	resp, err := c.Do(r) //nolint:bodyclose  // False-positive.
 	if err == nil {
 		if e := resp.Body.Close(); e != nil {
 			t.Errorf("close response body: %v", e)
