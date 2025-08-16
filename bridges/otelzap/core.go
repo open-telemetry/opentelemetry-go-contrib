@@ -49,6 +49,7 @@ type config struct {
 	version    string
 	schemaURL  string
 	attributes []attribute.KeyValue
+	level      zapcore.Level
 }
 
 func newConfig(options []Option) config {
@@ -60,6 +61,7 @@ func newConfig(options []Option) config {
 	if c.provider == nil {
 		c.provider = global.GetLoggerProvider()
 	}
+	c.level = zapcore.InvalidLevel
 
 	return c
 }
@@ -114,6 +116,17 @@ func WithLoggerProvider(provider log.LoggerProvider) Option {
 	})
 }
 
+// WithLevel returns an [Option] that configures the min level of logs to be
+// accepted by a [Core].
+//
+// By default, if this Option is not provided, the Core will accept all levels.
+func WithLevel(level zapcore.Level) Option {
+	return optFunc(func(c config) config {
+		c.level = level
+		return c
+	})
+}
+
 // Core is a [zapcore.Core] that sends logging records to OpenTelemetry.
 type Core struct {
 	provider log.LoggerProvider
@@ -121,6 +134,7 @@ type Core struct {
 	opts     []log.LoggerOption
 	attr     []log.KeyValue
 	ctx      context.Context
+	level    zapcore.Level
 }
 
 // Compile-time check *Core implements zapcore.Core.
@@ -150,13 +164,17 @@ func NewCore(name string, opts ...Option) *Core {
 		logger:   logger,
 		opts:     loggerOpts,
 		ctx:      context.Background(),
+		level:    cfg.level,
 	}
 }
 
 // Enabled decides whether a given logging level is enabled when logging a message.
 func (o *Core) Enabled(level zapcore.Level) bool {
 	param := log.EnabledParameters{Severity: convertLevel(level)}
-	return o.logger.Enabled(context.Background(), param)
+
+	// if logger level is set, then check if this level is enabled
+	levelCondition := o.level == zapcore.InvalidLevel || o.level.Enabled(level)
+	return levelCondition && o.logger.Enabled(context.Background(), param)
 }
 
 // With adds structured context to the Core.
@@ -179,6 +197,7 @@ func (o *Core) clone() *Core {
 		logger:   o.logger,
 		attr:     slices.Clone(o.attr),
 		ctx:      o.ctx,
+		level:    o.level,
 	}
 }
 
@@ -197,7 +216,8 @@ func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.Check
 		logger = o.provider.Logger(ent.LoggerName, o.opts...)
 	}
 
-	if logger.Enabled(context.Background(), param) {
+	levelCondition := o.level == zapcore.InvalidLevel || o.level.Enabled(ent.Level)
+	if levelCondition && logger.Enabled(context.Background(), param) {
 		return ce.AddCore(ent, o)
 	}
 	return ce
