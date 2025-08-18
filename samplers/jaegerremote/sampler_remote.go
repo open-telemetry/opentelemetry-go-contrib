@@ -96,25 +96,24 @@ func New(
 }
 
 // Lock is used to lock the Sampler for concurrent use.
+// noop method to satisfy the sync.RWMutex interface.
 //
 // Deprecated: mutex is internal and shall not be used.
-func (s *Sampler) Lock() {
-	s.mu.Lock()
-}
+func (*Sampler) Lock() {}
 
 // TryLock attempts to lock the Sampler for concurrent use.
+// noop method to satisfy the sync.RWMutex interface.
 //
 // Deprecated: mutex is internal and shall not be used.
-func (s *Sampler) TryLock() bool {
-	return s.mu.TryLock()
+func (*Sampler) TryLock() bool {
+	return false
 }
 
 // Unlock is used to unlock the Sampler for concurrent use.
+// noop method to satisfy the sync.RWMutex interface.
 //
 // Deprecated: mutex is internal and shall not be used.
-func (s *Sampler) Unlock() {
-	s.mu.Unlock()
-}
+func (*Sampler) Unlock() {}
 
 // ShouldSample returns a sampling choice based on the passed sampling
 // parameters.

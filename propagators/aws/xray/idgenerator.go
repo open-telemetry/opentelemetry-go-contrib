@@ -26,25 +26,24 @@ type IDGenerator struct {
 var _ sdktrace.IDGenerator = &IDGenerator{}
 
 // Lock is used to lock the IDGenerator for concurrent use.
+// noop method to satisfy the sync.Mutex interface.
 //
 // Deprecated: mutex is internal and shall not be used.
-func (gen *IDGenerator) Lock() {
-	gen.mu.Lock()
-}
+func (*IDGenerator) Lock() {}
 
 // TryLock attempts to lock the IDGenerator for concurrent use.
+// noop method to satisfy the sync.Mutex interface.
 //
 // Deprecated: mutex is internal and shall not be used.
-func (gen *IDGenerator) TryLock() bool {
-	return gen.mu.TryLock()
+func (*IDGenerator) TryLock() bool {
+	return false
 }
 
 // Unlock is used to unlock the IDGenerator for concurrent use.
+// noop method to satisfy the sync.Mutex interface.
 //
 // Deprecated: mutex is internal and shall not be used.
-func (gen *IDGenerator) Unlock() {
-	gen.mu.Unlock()
-}
+func (*IDGenerator) Unlock() {}
 
 // NewSpanID returns a non-zero span ID from a randomly-chosen sequence.
 func (gen *IDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
