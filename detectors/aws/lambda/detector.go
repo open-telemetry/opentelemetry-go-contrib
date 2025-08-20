@@ -22,8 +22,8 @@ const (
 	awsRegionEnvVar             = "AWS_REGION"
 	lambdaFunctionVersionEnvVar = "AWS_LAMBDA_FUNCTION_VERSION"
 	lambdaLogStreamNameEnvVar   = "AWS_LAMBDA_LOG_STREAM_NAME"
-	lambdaMemoryLimitEnvVar     = "AWS_LAMBDA_FUNCTION_MEMORY_SIZE"
-	MiB                         = 1 << 20
+	lambdaMemoryLimitEnvVar = "AWS_LAMBDA_FUNCTION_MEMORY_SIZE"
+	miB                     = 1 << 20
 )
 
 var (
@@ -66,7 +66,7 @@ func (*resourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	maxMemoryStr := os.Getenv(lambdaMemoryLimitEnvVar)
 	maxMemory, err := strconv.Atoi(maxMemoryStr)
 	if err == nil {
-		attrs = append(attrs, semconv.FaaSMaxMemory(maxMemory*MiB))
+		attrs = append(attrs, semconv.FaaSMaxMemory(maxMemory*miB))
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), nil
