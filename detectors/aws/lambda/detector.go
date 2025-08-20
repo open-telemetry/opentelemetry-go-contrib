@@ -22,8 +22,8 @@ const (
 	awsRegionEnvVar             = "AWS_REGION"
 	lambdaFunctionVersionEnvVar = "AWS_LAMBDA_FUNCTION_VERSION"
 	lambdaLogStreamNameEnvVar   = "AWS_LAMBDA_LOG_STREAM_NAME"
-	lambdaMemoryLimitEnvVar = "AWS_LAMBDA_FUNCTION_MEMORY_SIZE"
-	miB                     = 1 << 20
+	lambdaMemoryLimitEnvVar     = "AWS_LAMBDA_FUNCTION_MEMORY_SIZE"
+	miB                         = 1 << 20
 )
 
 var (
