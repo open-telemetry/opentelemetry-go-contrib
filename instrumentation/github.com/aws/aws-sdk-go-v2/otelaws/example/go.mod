@@ -6,9 +6,9 @@ replace go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.38.1
-	github.com/aws/aws-sdk-go-v2/config v1.31.1
+	github.com/aws/aws-sdk-go-v2/config v1.31.2
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.49.1
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.87.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.87.1
 	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.62.0
 	go.opentelemetry.io/otel v1.37.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.37.0
@@ -28,7 +28,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.8.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.11.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.3 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/s3shared v1.19.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sns v1.37.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.41.2 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.28.2 // indirect
