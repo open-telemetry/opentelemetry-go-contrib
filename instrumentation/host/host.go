@@ -18,9 +18,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/cpuconv"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/processconv"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/systemconv"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/processconv"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/systemconv"
 )
 
 // ScopeName is the instrumentation scope name.
@@ -126,18 +125,18 @@ func (h *host) register() error {
 			procCPUTime.AttrCPUMode(processconv.CPUModeSystem),
 		)
 
-		cpuTime         cpuconv.Time
+		cpuTime         systemconv.CPUTime
 		cpuTimeModeUser = metric.WithAttributes(
-			cpuTime.AttrMode(cpuconv.ModeUser),
+			cpuTime.AttrCPUMode(systemconv.CPUModeUser),
 		)
 		cpuTimeModeSystem = metric.WithAttributes(
-			cpuTime.AttrMode(cpuconv.ModeSystem),
+			cpuTime.AttrCPUMode(systemconv.CPUModeSystem),
 		)
 		cpuTimeModeIdle = metric.WithAttributes(
-			cpuTime.AttrMode(cpuconv.ModeIdle),
+			cpuTime.AttrCPUMode(systemconv.CPUModeIdle),
 		)
 		cpuTimeModeOther = metric.WithAttributes(
-			cpuTime.AttrMode(cpuconv.ModeAttr("other")),
+			cpuTime.AttrCPUMode(systemconv.CPUModeAttr("other")),
 		)
 
 		memUse          systemconv.MemoryUsage
@@ -183,7 +182,7 @@ func (h *host) register() error {
 	if procCPUTime, err = processconv.NewCPUTime(h.meter); err != nil {
 		return err
 	}
-	if cpuTime, err = cpuconv.NewTime(h.meter); err != nil {
+	if cpuTime, err = systemconv.NewCPUTime(h.meter); err != nil {
 		return err
 	}
 	if memUse, err = systemconv.NewMemoryUsage(h.meter); err != nil {
