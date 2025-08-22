@@ -7,6 +7,7 @@ linters:
   enable:
     - asasalint
     - bodyclose
+    - copyloopvar
     - depguard
     - errcheck
     - errorlint
@@ -15,6 +16,7 @@ linters:
     - gosec
     - govet
     - ineffassign
+    - intrange
     - misspell
     - perfsprint
     - revive
@@ -57,7 +59,6 @@ linters:
         - exitAfterDefer
         - exposedSyncMutex
         - hugeParam
-        - rangeValCopy
         - unnamedResult
         - whyNoLint
       enable-all: true

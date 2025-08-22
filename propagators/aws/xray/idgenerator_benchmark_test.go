@@ -23,7 +23,7 @@ func init() {
 }
 
 func BenchmarkStartAndEndSampledSpan(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, span := tracer.Start(context.Background(), "Example Trace")
 		span.End()
 	}
@@ -34,7 +34,7 @@ func BenchmarkStartAndEndNestedSampledSpan(b *testing.B) {
 	defer parent.End()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, span := tracer.Start(ctx, "Sub operation...")
 		span.End()
 	}
