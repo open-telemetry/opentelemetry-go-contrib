@@ -55,8 +55,8 @@ var _ resource.Detector = (*resourceDetector)(nil)
 // Compile time assertion that eksDetectorUtils implements the detectorUtils interface.
 var _ detectorUtils = (*eksDetectorUtils)(nil)
 
-// is this going to stop working with 1.20 when Docker is deprecated?
-var containerIDRegex = regexp.MustCompile(`^.*/docker/(.+)$`)
+// Updated regex to support both Docker and Kubernetes/containerd cgroup formats
+var containerIDRegex = regexp.MustCompile(`^.*/(docker/|kubepods/.*/pod[a-f0-9-]+/)([a-f0-9]{12,})$`)
 
 // NewResourceDetector returns a resource detector that will detect AWS EKS resources.
 func NewResourceDetector() resource.Detector {
@@ -185,8 +185,14 @@ func (eksDetectorUtils) getContainerID() (string, error) {
 	// Retrieve containerID from file
 	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
 	for _, str := range splitData {
-		if containerIDRegex.MatchString(str) {
-			return str[len(str)-containerIDLength:], nil
+		matches := containerIDRegex.FindStringSubmatch(str)
+		if len(matches) > 2 {
+			// Extract container ID from the third capture group (index 2)
+			containerID := matches[2]
+			// Ensure it's at least 12 characters (minimum container ID length)
+			if len(containerID) >= 12 {
+				return containerID, nil
+			}
 		}
 	}
 	return "", fmt.Errorf("getContainerID() error: cannot read containerID from file %s", defaultCgroupPath)
