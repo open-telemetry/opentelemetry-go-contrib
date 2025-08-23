@@ -3,6 +3,7 @@ description: >-
   Please create a report of any instances of invalid behavior to assist us in
   improving our processes.
 title: '[Bug]: A clear and concise description of what the bug is'
+labels: ['bug']
 body:
   - type: markdown
     attributes:

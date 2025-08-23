@@ -1,6 +1,7 @@
 name: 'Feature request'
 description: Suggest an idea to include in this project
 title: '[Feature]:'
+labels: ['enhancement']
 body:
   - type: dropdown
     id: otel_component

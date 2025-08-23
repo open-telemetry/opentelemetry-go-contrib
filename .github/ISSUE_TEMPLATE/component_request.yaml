@@ -1,7 +1,7 @@
 name: Component Request
 description: Suggest a component to include in this project
 title: "New Component: <component-name>"
-labels: ["enhancement"]
+labels: ['enhancement']
 assignees: []
 body:
   - type: textarea
