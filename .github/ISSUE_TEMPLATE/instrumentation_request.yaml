@@ -100,16 +100,14 @@ body:
       label: Tasks — Documented
       description: >
         Checklist for completion before merging the new instrumentation.
-
-        [OpenTelemetry Registry](https://opentelemetry.io/registry/) | [Instrumentation documentation](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/instrumentation/README.md#instrumentation-packages)
       options:
-        - label: Added to the OpenTelemetry Registry.
+        - label: Added to the [OpenTelemetry Registry](https://opentelemetry.io/registry/)
           required: true
         - label: README included for the module describing high-level purpose.
           required: true
         - label: Complete documentation of all public API including package documentation
           required: true
-        - label: Instrumentation documentation updated.
+        - label: Instrumentation [documentation](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/instrumentation/README.md#instrumentation-packages) updated.
           required: true
 
   - type: checkboxes
