@@ -1,5 +1,5 @@
 name: 'Feature request'
-description: Suggest an idea
+description: Suggest an idea to include in this project
 title: '[Feature]:'
 body:
   - type: dropdown
