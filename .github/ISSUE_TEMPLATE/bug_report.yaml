@@ -129,6 +129,8 @@ body:
       label: Component Version
       description: Which component version were you using when the problem occurred?
       placeholder: autoexporter v0.14.0, 3c7face
+    validations:
+      required: true
   - type: markdown
     attributes:
       value: >-
