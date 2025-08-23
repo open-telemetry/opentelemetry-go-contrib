@@ -4,97 +4,140 @@ on:
   issues:
     types: [opened, edited]
 
+permissions:
+  issues: write
+
 jobs:
   label-issue:
     runs-on: ubuntu-latest
     concurrency:
       group: issue-${{ github.event.issue.number }}
       cancel-in-progress: false
-    
+
     steps:
-      - name: Setup GitHub CLI
-        uses: cli/setup-gh@v2
-        with:
-          version: latest
-          
-      - name: Authenticate GitHub CLI
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
-          
       - name: Apply Area and Namespace Labels
-        id: apply-labels
-        run: |
-          # Get current issue labels
-          ISSUE_NUMBER="${{ github.event.issue.number }}"
-          CURRENT_LABELS=$(gh issue view "$ISSUE_NUMBER" --json labels --jq '.labels[].name' | tr '\n' ' ')
-          
-          echo "Current labels: $CURRENT_LABELS"
-          
-          # Determine which area label to apply based on existing labels
-          if [[ "$CURRENT_LABELS" == *"bug"* ]] || [[ "$CURRENT_LABELS" == *"enhancement"* ]]; then
-            echo "Processing issue with bug or enhancement label..."
-            
-            # Extract component from form data in issue body
-            ISSUE_BODY="${{ github.event.issue.body }}"
-            FORM_DATA=$(echo "$ISSUE_BODY" | sed -n '/<!--/,/-->/p' | grep -v '<!--' | grep -v '-->')
-            COMPONENT=$(echo "$FORM_DATA" | grep -o 'otel_component:.*' | cut -d':' -f2 | xargs)
-            
-            echo "Component: $COMPONENT"
-            
-            # Map component to area label and namespace label
-            AREA_LABEL=""
-            NAMESPACE_LABEL=""
-            
-            if [[ "$COMPONENT" == *"Detector:"* ]]; then
-              AREA_LABEL="area: detector"
-              # Extract the detector type and convert to namespace format
-              DETECTOR_TYPE=$(echo "$COMPONENT" | sed 's/Detector: //' | tr '[:upper:]' '[:lower:]' | sed 's/ /:/g')
-              NAMESPACE_LABEL="detector: $DETECTOR_TYPE"
-            elif [[ "$COMPONENT" == *"Instrumentation:"* ]]; then
-              AREA_LABEL="area: instrumentation"
-              # Extract the instrumentation type and convert to namespace format
-              INSTR_TYPE=$(echo "$COMPONENT" | sed 's/Instrumentation: //' | tr '[:upper:]' '[:lower:]')
-              NAMESPACE_LABEL="instrumentation: $INSTR_TYPE"
-            elif [[ "$COMPONENT" == *"Propagator:"* ]]; then
-              AREA_LABEL="area: propagators"
-              # Extract the propagator type and convert to namespace format
-              PROP_TYPE=$(echo "$COMPONENT" | sed 's/Propagator: //' | tr '[:upper:]' '[:lower:]' | sed 's/ /:/g')
-              NAMESPACE_LABEL="propagator: $PROP_TYPE"
-            elif [[ "$COMPONENT" == *"Sampler:"* ]]; then
-              AREA_LABEL="area: sampler"
-              # Extract the sampler type and convert to namespace format
-              SAMPLE_TYPE=$(echo "$COMPONENT" | sed 's/Sampler: //' | tr '[:upper:]' '[:lower:]' | sed 's/ /:/g')
-              NAMESPACE_LABEL="sampler: $SAMPLE_TYPE"
-            elif [[ "$COMPONENT" == "AutoExporter" ]]; then
-              AREA_LABEL="area: exporter"
-              NAMESPACE_LABEL="exporter: autoexport"
-            elif [[ "$COMPONENT" == "zPages" ]]; then
-              AREA_LABEL="area: zpages"
-              NAMESPACE_LABEL="zpages"
-            fi
-            
-            # Apply area label if not already present
-            if [[ -n "$AREA_LABEL" ]] && [[ "$CURRENT_LABELS" != *"$AREA_LABEL"* ]]; then
-              echo "Adding area label: $AREA_LABEL"
-              gh issue edit "$ISSUE_NUMBER" --add-label "$AREA_LABEL"
-            fi
-            
-            # Apply namespace label if not already present
-            if [[ -n "$NAMESPACE_LABEL" ]] && [[ "$CURRENT_LABELS" != *"$NAMESPACE_LABEL"* ]]; then
-              echo "Adding namespace label: $NAMESPACE_LABEL"
-              gh issue edit "$ISSUE_NUMBER" --add-label "$NAMESPACE_LABEL"
-            fi
-            
-          else
-            echo "No bug or enhancement label found, skipping label application"
-          fi
-          
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          
-      - name: Handle Errors Gracefully
-        if: failure()
-        run: |
-          echo "Issue processing failed, but workflow completed cleanly"
-          echo "This may be due to malformed issue body or missing form data"
-          exit 0
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { owner, repo } = context.repo;
+            const issueNumber = context.payload.issue?.number;
+            if (!issueNumber) return core.setFailed('No issue number in payload');
+
+            // Fetch fresh issue to avoid stale payloads
+            const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number: issueNumber });
+            const currentLabels = (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);
+            const currentLower = currentLabels.map(s => s.toLowerCase());
+
+            core.startGroup('Diagnostics');
+            core.info(`Issue #${issue.number}`);
+            core.info(`Current labels: ${currentLabels.join(', ') || '(none)'}`);
+            core.endGroup();
+
+            // Gate: only proceed if bug/enhancement label is present
+            if (!currentLower.includes('bug') && !currentLower.includes('enhancement')) {
+              core.info('Gate not met (requires "bug" or "enhancement"); skipping.');
+              return;
+            }
+
+            const body = issue.body || '';
+            core.startGroup('Body preview');
+            core.info(`Length: ${body.length}`);
+            core.info(`First 400 chars: ${body.slice(0, 400).replace(/\r?\n/g, '\\n')}`);
+            core.endGroup();
+
+            // Extract the Component value from Issue Forms ("### Component" section)
+            function getByHeading(text, title) {
+              // Escape regex meta characters in the title string
+              const esc = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+              const re = new RegExp(
+                `(?:^|\\r?\\n)#{2,}\\s*${esc}\\s*\\r?\\n+([\\s\\S]*?)(?=\\r?\\n#{2,}\\s|\\r?\\n<!--|$)`,
+                'i'
+              );
+
+              const m = text.match(re);
+              if (!m) return '';
+              const lines = m[1].split(/\r?\n/).map(s => s.trim());
+
+              for (const ln of lines) {
+                if (!ln) continue;
+                const cleaned = ln.replace(/^>+\s*/, '').replace(/^[-*]\s*/, '');
+                if (/^no response$/i.test(cleaned)) continue;
+                if (/^```/.test(cleaned)) continue; // skip code fences
+                return cleaned;
+              }
+              return '';
+            }
+
+            // Try "### Component" first; fall back to inline "Component: X" or "otel_component: X"
+            let component = getByHeading(body, 'Component');
+            if (!component) {
+              let m = body.match(/(?:^|\\r?\\n)\\s*(?:component|otel[_\\s-]*component)\\s*[:\\-–]\\s*(.+)/i);
+              if (m) component = m[1].trim();
+            }
+
+            core.info(`Extracted component: "${component || '(empty)'}"`);
+            if (!component) {
+              return core.setFailed('Gate met, but component not found. Ensure the form has a "Component" field with a value.');
+            }
+
+            const sanitize = s => s.toLowerCase().replace(/\\s+/g, ':').replace(/:+$/,'').trim();
+
+            let area = '';
+            let ns = '';
+            let m;
+
+            if ((m = component.match(/^detector\\s*[:\\-–]\\s*(.+)$/i))) {
+              area = 'area: detector';
+              ns = `detector: ${sanitize(m[1])}`;
+            } else if ((m = component.match(/^instrumentation\\s*[:\\-–]\\s*(.+)$/i))) {
+              area = 'area: instrumentation';
+              ns = `instrumentation: ${sanitize(m[1])}`;
+            } else if ((m = component.match(/^propagator\\s*[:\\-–]\\s*(.+)$/i))) {
+              area = 'area: propagators';
+              ns = `propagator: ${sanitize(m[1])}`;
+            } else if ((m = component.match(/^sampler\\s*[:\\-–]\\s*(.+)$/i))) {
+              area = 'area: sampler';
+              ns = `sampler: ${sanitize(m[1])}`;
+            } else if (/^autoexporter$/i.test(component.trim())) {
+              area = 'area: exporter';
+              ns = 'exporter: autoexport';
+            } else if (/^zpages$/i.test(component.trim())) {
+              area = 'area: zpages';
+              ns = 'zpages';
+            } else if (/^config$/i.test(component.trim())) {
+              area = 'area: file-config';
+              ns = '';
+            }
+
+            core.info(`Computed area: "${area || '(none)'}", namespace: "${ns || '(none)'}"`);
+
+            const toAdd = [area, ns].filter(Boolean).filter(l => !currentLower.includes(l.toLowerCase()));
+            core.info(`Labels to add: ${toAdd.join(', ') || '(none)'}`);
+
+            if (!toAdd.length) {
+              return core.setFailed('Gate met but no labels computed (unrecognized component) or labels already present.');
+            }
+
+            // Ensure labels exist; fail if missing (so you get an explicit error)
+            const existing = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
+            const existingSet = new Set(existing.map(l => l.name.toLowerCase()));
+            const missing = toAdd.filter(l => !existingSet.has(l.toLowerCase()));
+            if (missing.length) {
+              return core.setFailed(`Required labels do not exist in the repository: ${missing.join(', ')}. Create them and re-run.`);
+            }
+
+            // Add labels
+            await github.rest.issues.addLabels({ owner, repo, issue_number: issue.number, labels: toAdd });
+
+            // Verify
+            const updated = await github.rest.issues.get({ owner, repo, issue_number: issue.number });
+            const updatedSet = new Set(updated.data.labels.map(l => l.name.toLowerCase()));
+            const stillMissing = toAdd.filter(l => !updatedSet.has(l.toLowerCase()));
+            if (stillMissing.length) {
+              core.setFailed(`Attempted to add labels but they are missing after update: ${stillMissing.join(', ')}`);
+            } else {
+              core.info(`Labels added successfully: ${toAdd.join(', ')}`);
+            }
+
