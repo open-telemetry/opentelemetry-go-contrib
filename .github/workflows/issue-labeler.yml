@@ -1,0 +1,100 @@
+name: Issue Labeler
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  label-issue:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: issue-${{ github.event.issue.number }}
+      cancel-in-progress: false
+    
+    steps:
+      - name: Setup GitHub CLI
+        uses: cli/setup-gh@v2
+        with:
+          version: latest
+          
+      - name: Authenticate GitHub CLI
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          
+      - name: Apply Area and Namespace Labels
+        id: apply-labels
+        run: |
+          # Get current issue labels
+          ISSUE_NUMBER="${{ github.event.issue.number }}"
+          CURRENT_LABELS=$(gh issue view "$ISSUE_NUMBER" --json labels --jq '.labels[].name' | tr '\n' ' ')
+          
+          echo "Current labels: $CURRENT_LABELS"
+          
+          # Determine which area label to apply based on existing labels
+          if [[ "$CURRENT_LABELS" == *"bug"* ]] || [[ "$CURRENT_LABELS" == *"enhancement"* ]]; then
+            echo "Processing issue with bug or enhancement label..."
+            
+            # Extract component from form data in issue body
+            ISSUE_BODY="${{ github.event.issue.body }}"
+            FORM_DATA=$(echo "$ISSUE_BODY" | sed -n '/<!--/,/-->/p' | grep -v '<!--' | grep -v '-->')
+            COMPONENT=$(echo "$FORM_DATA" | grep -o 'otel_component:.*' | cut -d':' -f2 | xargs)
+            
+            echo "Component: $COMPONENT"
+            
+            # Map component to area label and namespace label
+            AREA_LABEL=""
+            NAMESPACE_LABEL=""
+            
+            if [[ "$COMPONENT" == *"Detector:"* ]]; then
+              AREA_LABEL="area: detector"
+              # Extract the detector type and convert to namespace format
+              DETECTOR_TYPE=$(echo "$COMPONENT" | sed 's/Detector: //' | tr '[:upper:]' '[:lower:]' | sed 's/ /:/g')
+              NAMESPACE_LABEL="detector: $DETECTOR_TYPE"
+            elif [[ "$COMPONENT" == *"Instrumentation:"* ]]; then
+              AREA_LABEL="area: instrumentation"
+              # Extract the instrumentation type and convert to namespace format
+              INSTR_TYPE=$(echo "$COMPONENT" | sed 's/Instrumentation: //' | tr '[:upper:]' '[:lower:]')
+              NAMESPACE_LABEL="instrumentation: $INSTR_TYPE"
+            elif [[ "$COMPONENT" == *"Propagator:"* ]]; then
+              AREA_LABEL="area: propagators"
+              # Extract the propagator type and convert to namespace format
+              PROP_TYPE=$(echo "$COMPONENT" | sed 's/Propagator: //' | tr '[:upper:]' '[:lower:]' | sed 's/ /:/g')
+              NAMESPACE_LABEL="propagator: $PROP_TYPE"
+            elif [[ "$COMPONENT" == *"Sampler:"* ]]; then
+              AREA_LABEL="area: sampler"
+              # Extract the sampler type and convert to namespace format
+              SAMPLE_TYPE=$(echo "$COMPONENT" | sed 's/Sampler: //' | tr '[:upper:]' '[:lower:]' | sed 's/ /:/g')
+              NAMESPACE_LABEL="sampler: $SAMPLE_TYPE"
+            elif [[ "$COMPONENT" == "AutoExporter" ]]; then
+              AREA_LABEL="area: exporter"
+              NAMESPACE_LABEL="exporter: autoexport"
+            elif [[ "$COMPONENT" == "zPages" ]]; then
+              AREA_LABEL="area: zpages"
+              NAMESPACE_LABEL="zpages"
+            fi
+            
+            # Apply area label if not already present
+            if [[ -n "$AREA_LABEL" ]] && [[ "$CURRENT_LABELS" != *"$AREA_LABEL"* ]]; then
+              echo "Adding area label: $AREA_LABEL"
+              gh issue edit "$ISSUE_NUMBER" --add-label "$AREA_LABEL"
+            fi
+            
+            # Apply namespace label if not already present
+            if [[ -n "$NAMESPACE_LABEL" ]] && [[ "$CURRENT_LABELS" != *"$NAMESPACE_LABEL"* ]]; then
+              echo "Adding namespace label: $NAMESPACE_LABEL"
+              gh issue edit "$ISSUE_NUMBER" --add-label "$NAMESPACE_LABEL"
+            fi
+            
+          else
+            echo "No bug or enhancement label found, skipping label application"
+          fi
+          
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          
+      - name: Handle Errors Gracefully
+        if: failure()
+        run: |
+          echo "Issue processing failed, but workflow completed cleanly"
+          echo "This may be due to malformed issue body or missing form data"
+          exit 0
