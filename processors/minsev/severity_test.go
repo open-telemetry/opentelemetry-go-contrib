@@ -327,6 +327,63 @@ func TestSeverityVarAppendText(t *testing.T) {
 	}
 }
 
+func TestSeveritySeverityClamps(t *testing.T) {
+	t.Run("BelowRange", func(t *testing.T) {
+		got := (SeverityTrace1 - 10).Severity()
+		assert.Equal(t, log.SeverityTrace1, got)
+	})
+	t.Run("AboveRange", func(t *testing.T) {
+		got := (SeverityFatal4 + 10).Severity()
+		assert.Equal(t, log.SeverityFatal4, got)
+	})
+	t.Run("WithinRange", func(t *testing.T) {
+		// Explicit table to verify each defined severity (including aliases) maps
+		// to the expected log.Severity. This guards against accidental reorder or
+		// gaps because expectations are enumerated instead of derived.
+		tests := []struct {
+			name string
+			sev  Severity
+			want log.Severity
+		}{
+			// Aliases (base names) first.
+			{"Alias/SeverityTrace", SeverityTrace, log.SeverityTrace1},
+			{"Alias/SeverityDebug", SeverityDebug, log.SeverityDebug1},
+			{"Alias/SeverityInfo", SeverityInfo, log.SeverityInfo1},
+			{"Alias/SeverityWarn", SeverityWarn, log.SeverityWarn1},
+			{"Alias/SeverityError", SeverityError, log.SeverityError1},
+			{"Alias/SeverityFatal", SeverityFatal, log.SeverityFatal1},
+			// Full set of defined granular severities.
+			{"SeverityTrace1", SeverityTrace1, log.SeverityTrace1},
+			{"SeverityTrace2", SeverityTrace2, log.SeverityTrace2},
+			{"SeverityTrace3", SeverityTrace3, log.SeverityTrace3},
+			{"SeverityTrace4", SeverityTrace4, log.SeverityTrace4},
+			{"SeverityDebug1", SeverityDebug1, log.SeverityDebug1},
+			{"SeverityDebug2", SeverityDebug2, log.SeverityDebug2},
+			{"SeverityDebug3", SeverityDebug3, log.SeverityDebug3},
+			{"SeverityDebug4", SeverityDebug4, log.SeverityDebug4},
+			{"SeverityInfo1", SeverityInfo1, log.SeverityInfo1},
+			{"SeverityInfo2", SeverityInfo2, log.SeverityInfo2},
+			{"SeverityInfo3", SeverityInfo3, log.SeverityInfo3},
+			{"SeverityInfo4", SeverityInfo4, log.SeverityInfo4},
+			{"SeverityWarn1", SeverityWarn1, log.SeverityWarn1},
+			{"SeverityWarn2", SeverityWarn2, log.SeverityWarn2},
+			{"SeverityWarn3", SeverityWarn3, log.SeverityWarn3},
+			{"SeverityWarn4", SeverityWarn4, log.SeverityWarn4},
+			{"SeverityError1", SeverityError1, log.SeverityError1},
+			{"SeverityError2", SeverityError2, log.SeverityError2},
+			{"SeverityError3", SeverityError3, log.SeverityError3},
+			{"SeverityError4", SeverityError4, log.SeverityError4},
+			{"SeverityFatal1", SeverityFatal1, log.SeverityFatal1},
+			{"SeverityFatal2", SeverityFatal2, log.SeverityFatal2},
+			{"SeverityFatal3", SeverityFatal3, log.SeverityFatal3},
+			{"SeverityFatal4", SeverityFatal4, log.SeverityFatal4},
+		}
+		for _, tc := range tests {
+			assert.Equalf(t, tc.want, tc.sev.Severity(), tc.name)
+		}
+	})
+}
+
 // Test JSON roundtrip for structures containing Severity.
 func TestSeverityJSONRoundtrip(t *testing.T) {
 	type Config struct {
