@@ -14,8 +14,8 @@ github.com/aws/aws-sdk-go-v2/service/route53 v1.56.2 h1:6QKyfbweIsjt1kvE8rw+LeDx
 github.com/aws/aws-sdk-go-v2/service/route53 v1.56.2/go.mod h1:Ro0zSeA7hRAhX04QgnUAc8MvvQO74wg/S15wzA/mxgo=
 github.com/aws/aws-sdk-go-v2/service/sns v1.37.2 h1:dXu0MVrJRbidEuUPb7tY3IT896K//tF2RHZmARts9QY=
 github.com/aws/aws-sdk-go-v2/service/sns v1.37.2/go.mod h1:LI2j0ARb4J453bpa8PTEYUmMjbUp7RwPzP30KoeIIA8=
-github.com/aws/aws-sdk-go-v2/service/sqs v1.41.2 h1:yBi89yZecBo3z/lKtOYwveOyGYBCqusZb6GbircmPXU=
-github.com/aws/aws-sdk-go-v2/service/sqs v1.41.2/go.mod h1:0k5UwPsBKX/vDEEP8T5YDW/cBjiOw6BwRsRtA3BMNoM=
+github.com/aws/aws-sdk-go-v2/service/sqs v1.42.0 h1:dbxXhQu0wVhmGY8qnSXUEFZ4ZfQFTjBDEadxsmgtdS8=
+github.com/aws/aws-sdk-go-v2/service/sqs v1.42.0/go.mod h1:0k5UwPsBKX/vDEEP8T5YDW/cBjiOw6BwRsRtA3BMNoM=
 github.com/aws/smithy-go v1.22.5 h1:P9ATCXPMb2mPjYBgueqJNCA5S9UfktsW0tTxi+a7eqw=
 github.com/aws/smithy-go v1.22.5/go.mod h1:t1ufH5HMublsJYulve2RKmHDC15xu1f26kHCp/HgceI=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
