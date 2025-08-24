@@ -24,7 +24,6 @@ jobs:
             const issueNumber = context.payload.issue?.number;
             if (!issueNumber) return core.setFailed('No issue number in payload');
 
-            // Fetch fresh issue to avoid stale payloads
             const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number: issueNumber });
             const currentLabels = (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);
             const currentLower = currentLabels.map(s => s.toLowerCase());
@@ -69,7 +68,7 @@ jobs:
             // Try "### Component" first; fall back to inline "Component: X" or "otel_component: X"
             let component = getByHeading(body, 'Component');
             if (!component) {
-              let m = body.match(/(?:^|\r?\n)\s*(?:component|otel[_\s-]*component)\s*[:\--]\s*(.+)/i);
+              let m = body.match(/(?:^|\r?\n)\s*(?:component|otel[_\s-]*component)\s*[:\-–]\s*(.+)/i);
               if (m) component = m[1].trim();
             }
 
@@ -84,16 +83,16 @@ jobs:
             let ns = '';
             let m;
 
-            if ((m = component.match(/^detector\s*[:\--]\s*(.+)$/i))) {
+            if ((m = component.match(/^detector\s*[:\-–]\s*(.+)$/i))) {
               area = 'area: detector';
               ns = `detector: ${sanitize(m[1])}`;
-            } else if ((m = component.match(/^instrumentation\s*[:\--]\s*(.+)$/i))) {
+            } else if ((m = component.match(/^instrumentation\s*[:\-–]\s*(.+)$/i))) {
               area = 'area: instrumentation';
               ns = `instrumentation: ${sanitize(m[1])}`;
-            } else if ((m = component.match(/^propagator\s*[:\--]\s*(.+)$/i))) {
+            } else if ((m = component.match(/^propagator\s*[:\-–]\s*(.+)$/i))) {
               area = 'area: propagators';
               ns = `propagator: ${sanitize(m[1])}`;
-            } else if ((m = component.match(/^sampler\s*[:\--]\s*(.+)$/i))) {
+            } else if ((m = component.match(/^sampler\s*[:\-–]\s*(.+)$/i))) {
               area = 'area: sampler';
               ns = `sampler: ${sanitize(m[1])}`;
             } else if (/^autoexporter$/i.test(component.trim())) {
