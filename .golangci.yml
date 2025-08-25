@@ -18,6 +18,7 @@ linters:
     - ineffassign
     - intrange
     - misspell
+    - nolintlint
     - perfsprint
     - revive
     - staticcheck
@@ -72,6 +73,9 @@ linters:
       locale: US
       ignore-rules:
         - cancelled
+    nolintlint:
+      require-explanation: true
+      require-specific: true
     perfsprint:
       int-conversion: true
       err-error: true
