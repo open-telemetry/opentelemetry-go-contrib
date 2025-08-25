@@ -20,6 +20,7 @@ The next release will require at least [Go 1.24].
 - Add the `WithLoggerProviderOptions`, `WithMeterProviderOptions` and `WithTracerProviderOptions` options to `NewSDK` to allow passing custom options to providers in `go.opentelemetry.io/contrib/otelconf`. (#7552)
 - Added V2 version of AWS EC2 detector `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` due to deprecation of `github.com/aws/aws-sdk-go`. (#6961)
 - Support testing of [Go 1.25]. (#7732)
+- Add support for HTTP server metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. (#7668)
 
 ### Changed
 
