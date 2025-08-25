@@ -32,6 +32,8 @@ The next release will require at least [Go 1.24].
   - `go.opentelemetry.io/contrib/bridges/otelzap`
 - The `Severity` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, `encoding.TextAppender`, `json.Marshaler`, and `json.Unmarshaler` interfaces. (#7652)
 - The `SeverityVar` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, and `encoding.TextAppender` interfaces. (#7652)
+- `Severity.Severity()` in `go.opentelemetry.io/contrib/processors/minsev` now returns `log.SeverityTrace1` for severities less than `minsev.SeverityTrace1` and `log.SeverityFatal4` for severities greater than `minsev.SeverityFatal4` instead of `log.SeverityUndefined`.
+  All other conversions are the same. (#7748)
 
 ### Deprecated
 
