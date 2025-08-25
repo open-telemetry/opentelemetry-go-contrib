@@ -64,7 +64,8 @@ func BenchmarkInjectB3(b *testing.B) {
 	}
 
 	for _, tg := range testGroup {
-		for _, tt := range tg.tests {
+		for i := range tg.tests {
+			tt := &tg.tests[i]
 			propagator := b3.New(b3.WithInjectEncoding(tt.encoding))
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)

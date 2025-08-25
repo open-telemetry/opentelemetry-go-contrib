@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release is the last to support [Go 1.23].
+The next release will require at least [Go 1.24].
+
 ### Added
 
 - Add the `WithTraceAttributeFn` option to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7556)
@@ -16,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/detectors/autodetect` package is added to automatically compose user defined `resource.Detector`s at runtime. (#7522)
 - Add the `WithLoggerProviderOptions`, `WithMeterProviderOptions` and `WithTracerProviderOptions` options to `NewSDK` to allow passing custom options to providers in `go.opentelemetry.io/contrib/otelconf`. (#7552)
 - Added V2 version of AWS EC2 detector `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` due to deprecation of `github.com/aws/aws-sdk-go`. (#6961)
+- Support testing of [Go 1.25]. (#7732)
 
 ### Changed
 
@@ -27,6 +31,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - `go.opentelemetry.io/contrib/bridges/otelzap`
 - The `Severity` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, `encoding.TextAppender`, `json.Marshaler`, and `json.Unmarshaler` interfaces. (#7652)
 - The `SeverityVar` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, and `encoding.TextAppender` interfaces. (#7652)
+- `Severity.Severity()` in `go.opentelemetry.io/contrib/processors/minsev` now returns `log.SeverityTrace1` for severities less than `minsev.SeverityTrace1` and `log.SeverityFatal4` for severities greater than `minsev.SeverityFatal4` instead of `log.SeverityUndefined`.
+  All other conversions are the same. (#7748)
 
 ### Deprecated
 
@@ -34,6 +40,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   It is only used by the deprecated interceptor, and is unused by `NewClientHandler` and `NewServerHandler`. (#7601)
 - `Extract` and `Inject` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` are deprecated.
   These functions were initially exposed in the public API, but are now considered unnecessary. (#7689)
+- The `go.opentelemetry.io/contrib/detectors/aws/ec2` package is deprecated, use `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` instead. (#7725)
 
 ### Removed
 
@@ -1571,6 +1578,7 @@ First official tagged release of `contrib` repository.
 
 <!-- Released section ended -->
 
+[Go 1.25]: https://go.dev/doc/go1.25
 [Go 1.24]: https://go.dev/doc/go1.24
 [Go 1.23]: https://go.dev/doc/go1.23
 [Go 1.22]: https://go.dev/doc/go1.22

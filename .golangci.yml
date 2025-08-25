@@ -60,7 +60,6 @@ linters:
         - exitAfterDefer
         - exposedSyncMutex
         - hugeParam
-        - rangeValCopy
         - unnamedResult
       enable-all: true
     godot:
