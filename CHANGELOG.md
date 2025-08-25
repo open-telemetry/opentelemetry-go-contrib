@@ -661,6 +661,9 @@ The next release will require at least [Go 1.21].
 
 - Upgrade dependencies of OpenTelemetry Go to use the new [`v1.21.0`/`v0.44.0` release](https://github.com/open-telemetry/opentelemetry-go/releases/tag/v1.21.0). (#4582)
 
+### Changed
+- Remove call to global error handler in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` (#4420)
+
 ### Fixed
 
 - Fix `StreamClientInterceptor` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to end the spans synchronously. (#4537)
