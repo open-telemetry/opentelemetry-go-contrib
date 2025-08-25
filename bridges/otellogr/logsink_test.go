@@ -374,7 +374,7 @@ func TestLogSink(t *testing.T) {
 
 func TestLogSinkContext(t *testing.T) {
 	name := "name"
-	ctx := context.WithValue(context.Background(), "key", "value") // nolint:revive,staticcheck // test context
+	ctx := context.WithValue(context.Background(), "key", "value") //nolint:revive,staticcheck // test context
 
 	tests := []struct {
 		name string
@@ -448,7 +448,7 @@ func TestLogSinkEnabled(t *testing.T) {
 }
 
 func TestConvertKVs(t *testing.T) {
-	ctx := context.WithValue(context.Background(), "key", "value") // nolint: revive,staticcheck // test context
+	ctx := context.WithValue(context.Background(), "key", "value") //nolint:revive,staticcheck // test context
 
 	for _, tt := range []struct {
 		name    string
@@ -504,7 +504,7 @@ func TestConvertKVs(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, kvs := convertKVs(nil, tt.kvs...) // nolint: staticcheck // pass nil context
+			ctx, kvs := convertKVs(nil, tt.kvs...) //nolint:staticcheck // pass nil context
 			assert.Equal(t, tt.wantKVs, kvs)
 			assert.Equal(t, tt.wantCtx, ctx)
 		})

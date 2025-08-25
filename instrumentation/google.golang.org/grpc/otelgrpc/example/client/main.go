@@ -154,7 +154,7 @@ func callSayHelloBidiStream(c api.HelloServiceClient) error {
 		for range 5 {
 			err := stream.Send(&api.HelloRequest{Greeting: "World"})
 			if err != nil {
-				// nolint: revive  // This acts as its own main func.
+				//nolint:revive  // This acts as its own main func.
 				log.Fatalf("Error when sending to SayHelloBidiStream: %s", err)
 			}
 
@@ -163,7 +163,7 @@ func callSayHelloBidiStream(c api.HelloServiceClient) error {
 
 		err := stream.CloseSend()
 		if err != nil {
-			// nolint: revive  // This acts as its own main func.
+			//nolint:revive  // This acts as its own main func.
 			log.Fatalf("Error when closing SayHelloBidiStream: %s", err)
 		}
 
@@ -176,7 +176,7 @@ func callSayHelloBidiStream(c api.HelloServiceClient) error {
 			if errors.Is(err, io.EOF) {
 				break
 			} else if err != nil {
-				// nolint: revive  // This acts as its own main func.
+				//nolint:revive  // This acts as its own main func.
 				log.Fatalf("Error when receiving from SayHelloBidiStream: %s", err)
 			}
 
