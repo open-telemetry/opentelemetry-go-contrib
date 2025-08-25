@@ -473,7 +473,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 	)
 
 	c := http.Client{Transport: tr}
-	res, err := c.Do(r) //nolint:bodyclose  // False-positive.
+	res, err := c.Do(r)
 	require.NoError(t, err)
 	require.NoError(t, res.Body.Close())
 
@@ -505,7 +505,7 @@ func TestTransportErrorStatus(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	resp, err := c.Do(r) //nolint:bodyclose  // False-positive.
+	resp, err := c.Do(r)
 	if err == nil {
 		if e := resp.Body.Close(); e != nil {
 			t.Errorf("close response body: %v", e)

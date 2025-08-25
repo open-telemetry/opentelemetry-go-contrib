@@ -96,7 +96,7 @@ func (detector *ResourceDetector) getJSONMetadata(ctx context.Context) ([]byte, 
 
 	req.Header.Add("Metadata", "True")
 
-	resp, err := client.Do(req) //nolint:bodyclose  // False-positive.
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, false, err
 	}

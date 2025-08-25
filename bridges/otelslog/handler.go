@@ -471,7 +471,7 @@ func convert(v slog.Value) log.Value {
 		if u > maxInt64 {
 			return log.Float64Value(float64(u))
 		}
-		return log.Int64Value(int64(u)) //nolint:gosec  // Overflow checked above.
+		return log.Int64Value(int64(u))
 	case slog.KindGroup:
 		g := v.Group()
 		buf := newKVBuffer(len(g))

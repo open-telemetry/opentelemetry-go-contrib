@@ -184,7 +184,7 @@ func assignUintValue(v uint64) log.Value {
 	if v > maxInt64 {
 		return log.Float64Value(float64(v))
 	}
-	return log.Int64Value(int64(v)) //nolint:gosec  // Overflow checked above.
+	return log.Int64Value(int64(v))
 }
 
 // arrayEncoder implements [zapcore.ArrayEncoder].
