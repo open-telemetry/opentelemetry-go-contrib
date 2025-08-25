@@ -13,9 +13,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/cpuconv"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/processconv"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/systemconv"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/processconv"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/systemconv"
 
 	"go.opentelemetry.io/contrib/instrumentation/host"
 )
@@ -54,22 +53,22 @@ func TestHostMetrics(t *testing.T) {
 				},
 			},
 			{
-				Name:        cpuconv.Time{}.Name(),
-				Description: cpuconv.Time{}.Description(),
-				Unit:        cpuconv.Time{}.Unit(),
+				Name:        systemconv.CPUTime{}.Name(),
+				Description: systemconv.CPUTime{}.Description(),
+				Unit:        systemconv.CPUTime{}.Unit(),
 				Data: metricdata.Sum[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
 						{Attributes: attribute.NewSet(
-							cpuconv.Time{}.AttrMode(cpuconv.ModeUser),
+							systemconv.CPUTime{}.AttrCPUMode(systemconv.CPUModeUser),
 						)},
 						{Attributes: attribute.NewSet(
-							cpuconv.Time{}.AttrMode(cpuconv.ModeSystem),
+							systemconv.CPUTime{}.AttrCPUMode(systemconv.CPUModeSystem),
 						)},
 						{Attributes: attribute.NewSet(
-							cpuconv.Time{}.AttrMode(cpuconv.ModeAttr("other")),
+							systemconv.CPUTime{}.AttrCPUMode(systemconv.CPUModeAttr("other")),
 						)},
 						{Attributes: attribute.NewSet(
-							cpuconv.Time{}.AttrMode(cpuconv.ModeIdle),
+							systemconv.CPUTime{}.AttrCPUMode(systemconv.CPUModeIdle),
 						)},
 					},
 					Temporality: metricdata.CumulativeTemporality,
