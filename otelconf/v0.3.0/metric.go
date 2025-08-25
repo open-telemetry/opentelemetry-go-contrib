@@ -553,7 +553,7 @@ func int32OrZero(pInt *int) int32 {
 	if i < math.MinInt32 {
 		return math.MinInt32
 	}
-	return int32(i) //nolint:gosec  // Overflow and underflow checked above.
+	return int32(i)
 }
 
 func strOrEmpty(pStr *string) string {
