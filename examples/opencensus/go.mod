@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	go.opencensus.io v0.24.0
-	go.opentelemetry.io/otel v1.37.1-0.20250825143334-4b2bef6dd972
+	go.opentelemetry.io/otel v1.37.1-0.20250826062056-45bb4ba7203a
 	go.opentelemetry.io/otel/bridge/opencensus v1.37.1-0.20250825143334-4b2bef6dd972
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.37.1-0.20250825143334-4b2bef6dd972
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.37.1-0.20250825143334-4b2bef6dd972
