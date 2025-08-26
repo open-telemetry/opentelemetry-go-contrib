@@ -171,7 +171,7 @@ func (h *host) register() error {
 	if pid > math.MaxInt32 || pid < math.MinInt32 {
 		return fmt.Errorf("invalid process ID: %d", pid)
 	}
-	proc, err := process.NewProcess(int32(pid)) // nolint: gosec  // Overflow checked above.
+	proc, err := process.NewProcess(int32(pid))
 	if err != nil {
 		return fmt.Errorf("could not find this process: %w", err)
 	}
@@ -306,5 +306,5 @@ func clampInt64(v uint64) int64 {
 	if v > math.MaxInt64 {
 		return math.MaxInt64
 	}
-	return int64(v) // nolint: gosec  // Overflow checked.
+	return int64(v)
 }

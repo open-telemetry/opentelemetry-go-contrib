@@ -42,7 +42,7 @@ func Example() {
 		_, _ = w.Write([]byte(reply))
 	}))
 	http.Handle("/", r)
-	_ = http.ListenAndServe(":8080", nil) //nolint:gosec // Ignoring G114: Use of net/http serve function that has no support for setting timeouts.
+	_ = http.ListenAndServe(":8080", nil)
 }
 
 func initTracer() (*sdktrace.TracerProvider, error) {

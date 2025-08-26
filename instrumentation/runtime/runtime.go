@@ -187,7 +187,7 @@ func (g *goCollector) getInt(name string) int64 {
 		if v > math.MaxInt64 {
 			return math.MaxInt64
 		}
-		return int64(v) // nolint: gosec  // Overflow checked above.
+		return int64(v)
 	}
 	return 0
 }

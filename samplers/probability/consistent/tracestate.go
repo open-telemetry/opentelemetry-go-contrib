@@ -92,7 +92,7 @@ func isUCAlpha(r byte) bool {
 	return r >= 'A' && r <= 'Z'
 }
 
-func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { // nolint: revive
+func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //nolint:revive // ignore linter
 	var pval, rval string
 	var unknown []string
 
@@ -201,7 +201,7 @@ func parseNumber(key, input string, maximum uint8) (uint8, error) {
 		return maximum + 1, parseError(key, strconv.ErrRange)
 	}
 	// `value` is strictly less then the uint8 maximum. This cast is safe.
-	return uint8(value), nil // nolint: gosec
+	return uint8(value), nil //nolint:gosec // ignore linter
 }
 
 func parseError(key string, err error) error {
