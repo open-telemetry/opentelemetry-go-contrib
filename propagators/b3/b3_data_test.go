@@ -1023,7 +1023,8 @@ func init() {
 		b3Context,
 	}
 	// Nothing should be set for any header regardless of encoding.
-	for _, t := range injectInvalidHeaderGenerator {
+	for i := range injectInvalidHeaderGenerator {
+		t := &injectInvalidHeaderGenerator[i]
 		injectInvalidHeader = append(
 			injectInvalidHeader,
 			injectTest{

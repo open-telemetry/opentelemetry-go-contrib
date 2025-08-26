@@ -9,7 +9,7 @@ replace (
 
 require (
 	github.com/aws/aws-lambda-go v1.49.0
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.62.0
 	go.opentelemetry.io/contrib/propagators/aws v1.37.0
 	go.opentelemetry.io/otel v1.37.0
@@ -25,6 +25,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
 	go.opentelemetry.io/otel/metric v1.37.0 // indirect
-	golang.org/x/sys v0.34.0 // indirect
+	golang.org/x/sys v0.35.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

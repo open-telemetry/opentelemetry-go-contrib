@@ -344,7 +344,7 @@ type turducken struct{}
 
 func (turducken) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	return enc.AddArray("ducks", zapcore.ArrayMarshalerFunc(func(arr zapcore.ArrayEncoder) error {
-		for i := 0; i < 2; i++ {
+		for range 2 {
 			err := arr.AppendObject(zapcore.ObjectMarshalerFunc(func(inner zapcore.ObjectEncoder) error {
 				inner.AddString("in", "chicken")
 				return nil
@@ -362,7 +362,7 @@ type turduckens int
 func (t turduckens) MarshalLogArray(enc zapcore.ArrayEncoder) error {
 	var err error
 	tur := turducken{}
-	for i := 0; i < int(t); i++ {
+	for range t {
 		err = errors.Join(err, enc.AppendObject(tur))
 	}
 	return err

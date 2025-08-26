@@ -1485,7 +1485,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 	)
 
 	const n = 10
-	for i := 0; i < n; i++ {
+	for range n {
 		ctx, cancel := context.WithCancel(context.Background())
 		stream, err := client.FullDuplexCall(ctx)
 		require.NoError(t, err)
@@ -1496,7 +1496,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for i := 0; i < messageCount; i++ {
+			for range messageCount {
 				const reqSize = 1
 				pl := test.ClientNewPayload(testpb.PayloadType_COMPRESSABLE, reqSize)
 				respParam := []*testpb.ResponseParameters{
@@ -1522,7 +1522,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for i := 0; i < messageCount; i++ {
+			for i := range messageCount {
 				_, err := stream.Recv()
 				if i > messageCount/2 {
 					cancel()
