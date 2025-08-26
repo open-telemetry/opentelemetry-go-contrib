@@ -18,7 +18,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel v1.37.1-0.20250821162332-8b17b897d2b9 // indirect
+	go.opentelemetry.io/otel v1.37.1-0.20250826062056-45bb4ba7203a // indirect
 	go.opentelemetry.io/otel/metric v1.37.1-0.20250821162332-8b17b897d2b9 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
