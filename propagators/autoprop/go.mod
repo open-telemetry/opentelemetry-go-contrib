@@ -8,7 +8,7 @@ require (
 	go.opentelemetry.io/contrib/propagators/b3 v1.37.0
 	go.opentelemetry.io/contrib/propagators/jaeger v1.37.0
 	go.opentelemetry.io/contrib/propagators/ot v1.37.0
-	go.opentelemetry.io/otel v1.37.1-0.20250826062056-45bb4ba7203a
+	go.opentelemetry.io/otel v1.37.1-0.20250826125411-49be00144e58
 )
 
 require (
