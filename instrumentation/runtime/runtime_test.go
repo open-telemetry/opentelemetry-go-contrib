@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/goconv"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/goconv"
 )
 
 func TestRefreshGoCollector(t *testing.T) {
