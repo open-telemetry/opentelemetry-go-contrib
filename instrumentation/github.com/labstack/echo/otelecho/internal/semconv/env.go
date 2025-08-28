@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/httpconv"
+	"go.opentelemetry.io/otel/semconv/v1.36.0/httpconv"
 )
 
 // OTelSemConvStabilityOptIn is an environment variable.

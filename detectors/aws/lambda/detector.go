@@ -12,13 +12,13 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
 )
 
 // For a complete list of reserved environment variables in Lambda, see:
 // https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
 const (
-	lambdaFunctionNameEnvVar    = "AWS_LAMBDA_FUNCTION_NAME" //nolint:gosec // False positive G101: Potential hardcoded credentials. The function name is added as attribute per semantic conventions.
+	lambdaFunctionNameEnvVar    = "AWS_LAMBDA_FUNCTION_NAME"
 	awsRegionEnvVar             = "AWS_REGION"
 	lambdaFunctionVersionEnvVar = "AWS_LAMBDA_FUNCTION_VERSION"
 	lambdaLogStreamNameEnvVar   = "AWS_LAMBDA_LOG_STREAM_NAME"
