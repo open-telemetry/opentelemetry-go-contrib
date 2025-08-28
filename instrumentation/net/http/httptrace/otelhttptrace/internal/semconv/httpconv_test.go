@@ -19,7 +19,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 )
 
-func TestCurrentHttpServer_MetricAttributes(t *testing.T) {
+func TestHTTPServer_MetricAttributes(t *testing.T) {
 	defaultRequest, err := http.NewRequest("GET", "http://example.com/path?query=test", http.NoBody)
 	require.NoError(t, err)
 
@@ -73,7 +73,7 @@ func TestCurrentHttpServer_MetricAttributes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CurrentHTTPServer{}.MetricAttributes(tt.server, tt.req, tt.statusCode, tt.additionalAttributes)
+			got := HTTPServer{}.MetricAttributes(tt.server, tt.req, tt.statusCode, tt.additionalAttributes)
 			tt.wantFunc(t, got)
 		})
 	}
@@ -107,7 +107,7 @@ func TestNewMethod(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.method, func(t *testing.T) {
-			got, gotOrig := CurrentHTTPServer{}.method(tt.method)
+			got, gotOrig := HTTPServer{}.method(tt.method)
 			assert.Equal(t, tt.want, got)
 			assert.Equal(t, tt.wantOrig, gotOrig)
 		})
@@ -201,7 +201,7 @@ func TestHTTPClientStatus(t *testing.T) {
 	}
 }
 
-func TestCurrentHttpClient_MetricAttributes(t *testing.T) {
+func TestHTTPClient_MetricAttributes(t *testing.T) {
 	defaultRequest, err := http.NewRequest("GET", "http://example.com/path?query=test", http.NoBody)
 	require.NoError(t, err)
 	httpsRequest, err := http.NewRequest("GET", "https://example.com/path?query=test", http.NoBody)
@@ -271,7 +271,7 @@ func TestCurrentHttpClient_MetricAttributes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := CurrentHTTPClient{}.MetricAttributes(tt.req, tt.statusCode, tt.additionalAttributes)
+			got := HTTPClient{}.MetricAttributes(tt.req, tt.statusCode, tt.additionalAttributes)
 			tt.wantFunc(t, got)
 		})
 	}
@@ -305,7 +305,7 @@ func TestRequestTraceAttrs_HTTPRoute(t *testing.T) {
 			req := httptest.NewRequest(http.MethodGet, "/path/abc123", http.NoBody)
 			req.Pattern = tt.pattern
 
-			attrs := (CurrentHTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
+			attrs := (HTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
 
 			var gotRoute string
 			for _, attr := range attrs {
@@ -358,7 +358,7 @@ func TestRequestTraceAttrs_ClientIP(t *testing.T) {
 			}
 
 			var found bool
-			for _, attr := range (CurrentHTTPServer{}).RequestTraceAttrs("", req, tt.requestTraceOpts) {
+			for _, attr := range (HTTPServer{}).RequestTraceAttrs("", req, tt.requestTraceOpts) {
 				if attr.Key != "client.address" {
 					continue
 				}
