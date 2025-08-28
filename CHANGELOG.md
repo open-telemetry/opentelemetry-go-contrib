@@ -24,7 +24,7 @@ The next release will require at least [Go 1.24].
 ### Changed
 
 - Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7551)
-- Change the faas.max_memory unit to be bytes instead of MB to comply with the semantic conventions in `"go.opentelemetry.io/contrib/detectors/aws/lambda`. (#7745)
+- Change the faas.max_memory unit to be bytes instead of MB to comply with the semantic conventions in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#7745)
 - Transform attribute values of `go.opentelemetry.io/otel/attribute.Value` and `go.opentelemetry.io/otel/log.Value` types to appropriate `go.opentelemetry.io/otel/log.Value` type instead of `log.StringValue` in the modules below. (#7660)
   - `go.opentelemetry.io/contrib/bridges/otellogr`
   - `go.opentelemetry.io/contrib/bridges/otellogrus`
