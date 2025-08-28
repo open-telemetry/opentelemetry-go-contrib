@@ -6,9 +6,9 @@ require (
 	github.com/go-logr/logr v1.4.3
 	github.com/gogo/protobuf v1.3.2
 	github.com/jaegertracing/jaeger-idl v0.5.0
-	github.com/stretchr/testify v1.11.0
-	go.opentelemetry.io/otel/sdk v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/trace v1.37.1-0.20250827112407-3342341f1508
+	github.com/stretchr/testify v1.11.1
+	go.opentelemetry.io/otel/sdk v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/trace v1.37.1-0.20250828092952-5358fd737d0c
 )
 
 require (
@@ -18,8 +18,8 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel v1.37.1-0.20250827112407-3342341f1508 // indirect
-	go.opentelemetry.io/otel/metric v1.37.1-0.20250827112407-3342341f1508 // indirect
+	go.opentelemetry.io/otel v1.37.1-0.20250828092952-5358fd737d0c // indirect
+	go.opentelemetry.io/otel/metric v1.37.1-0.20250828092952-5358fd737d0c // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect

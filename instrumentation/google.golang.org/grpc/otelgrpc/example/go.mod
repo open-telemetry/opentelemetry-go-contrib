@@ -7,10 +7,10 @@ replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelg
 require (
 	github.com/golang/protobuf v1.5.4
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.62.0
-	go.opentelemetry.io/otel v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/sdk v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/trace v1.37.1-0.20250827112407-3342341f1508
+	go.opentelemetry.io/otel v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/sdk v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/trace v1.37.1-0.20250828092952-5358fd737d0c
 	golang.org/x/net v0.43.0
 	google.golang.org/grpc v1.75.0
 )
@@ -20,7 +20,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel/metric v1.37.1-0.20250827112407-3342341f1508 // indirect
+	go.opentelemetry.io/otel/metric v1.37.1-0.20250828092952-5358fd737d0c // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250825161204-c5933d9347a5 // indirect

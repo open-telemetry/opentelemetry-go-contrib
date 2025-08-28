@@ -4,25 +4,25 @@ go 1.23.0
 
 require (
 	github.com/prometheus/client_golang v1.23.0
-	github.com/stretchr/testify v1.11.0
-	go.opentelemetry.io/otel v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.13.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.13.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/exporters/prometheus v0.59.2-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.13.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/log v0.13.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/metric v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/sdk v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/sdk/log v0.13.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/sdk/log/logtest v0.13.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/sdk/metric v1.37.1-0.20250827112407-3342341f1508
-	go.opentelemetry.io/otel/trace v1.37.1-0.20250827112407-3342341f1508
+	github.com/stretchr/testify v1.11.1
+	go.opentelemetry.io/otel v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.13.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.13.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/exporters/prometheus v0.59.2-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.13.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/log v0.13.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/metric v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/sdk v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/sdk/log v0.13.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/sdk/log/logtest v0.13.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/sdk/metric v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel/trace v1.37.1-0.20250828092952-5358fd737d0c
 	go.opentelemetry.io/proto/otlp v1.7.1
 	go.yaml.in/yaml/v3 v3.0.4
 	google.golang.org/grpc v1.75.0
@@ -42,10 +42,10 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.65.0 // indirect
-	github.com/prometheus/otlptranslator v0.0.1 // indirect
+	github.com/prometheus/otlptranslator v0.0.2 // indirect
 	github.com/prometheus/procfs v0.17.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.37.1-0.20250827112407-3342341f1508 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.37.1-0.20250828092952-5358fd737d0c // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
