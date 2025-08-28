@@ -4,9 +4,9 @@ go 1.23.0
 
 require (
 	github.com/prometheus/client_golang v1.23.0
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/bridges/prometheus v0.62.0
-	go.opentelemetry.io/otel v1.37.1-0.20250826062056-45bb4ba7203a
+	go.opentelemetry.io/otel v1.37.1-0.20250828092952-5358fd737d0c
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.13.1-0.20250825143334-4b2bef6dd972
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.13.1-0.20250825143334-4b2bef6dd972
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.37.1-0.20250825143334-4b2bef6dd972

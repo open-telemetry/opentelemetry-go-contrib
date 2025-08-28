@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/processors/minsev
 go 1.23.0
 
 require (
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel/log v0.13.1-0.20250821162332-8b17b897d2b9
 	go.opentelemetry.io/otel/sdk/log v0.13.1-0.20250821162332-8b17b897d2b9
 )
@@ -15,7 +15,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel v1.37.1-0.20250826062056-45bb4ba7203a // indirect
+	go.opentelemetry.io/otel v1.37.1-0.20250828092952-5358fd737d0c // indirect
 	go.opentelemetry.io/otel/metric v1.37.1-0.20250821162332-8b17b897d2b9 // indirect
 	go.opentelemetry.io/otel/sdk v1.37.1-0.20250821162332-8b17b897d2b9 // indirect
 	go.opentelemetry.io/otel/trace v1.37.1-0.20250821162332-8b17b897d2b9 // indirect
