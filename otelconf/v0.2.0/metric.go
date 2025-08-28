@@ -273,7 +273,7 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 		opts = append(opts, otelprom.WithoutScopeInfo())
 	}
 	if prometheusConfig.WithoutTypeSuffix != nil && *prometheusConfig.WithoutTypeSuffix {
-		opts = append(opts, otelprom.WithoutCounterSuffixes()) //nolint:staticcheck // WithouTypeSuffix is deprecated, but we still need it for backwards compatibility.
+		opts = append(opts, otelprom.WithoutCounterSuffixes()) //nolint:staticcheck // WithoutCounterSuffixes is deprecated, but we still need it for backwards compatibility.
 	}
 	if prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
 		opts = append(opts, otelprom.WithoutUnits()) //nolint:staticcheck // WithouTypeSuffix is deprecated, but we still need it for backwards compatibility.
