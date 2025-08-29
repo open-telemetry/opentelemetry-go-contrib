@@ -101,7 +101,6 @@ body:
       placeholder: iOS 26
     validations:
       required: true
-      pattern: '^[A-Za-z]+(?:[\\sA-Za-z]+)?\\s+\\d+(?:\\.\\d+){0,2}$'
   - type: dropdown
     id: device_arch
     attributes:
@@ -123,7 +122,6 @@ body:
       placeholder: '1.25'
     validations:
       required: true
-      pattern: '^\\d+(\\.\\d+){1,2}$'
   - type: input
     id: component_version
     attributes:
