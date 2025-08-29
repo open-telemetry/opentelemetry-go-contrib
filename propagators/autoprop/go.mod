@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/propagators/autoprop
 go 1.23.0
 
 require (
-	github.com/stretchr/testify v1.11.0
+	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/propagators/aws v1.37.0
 	go.opentelemetry.io/contrib/propagators/b3 v1.37.0
 	go.opentelemetry.io/contrib/propagators/jaeger v1.37.0
