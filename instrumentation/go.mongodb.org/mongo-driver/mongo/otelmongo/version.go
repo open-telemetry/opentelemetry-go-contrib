@@ -5,6 +5,6 @@ package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mong
 
 // Version is the current release version of the mongo-driver instrumentation.
 func Version() string {
-	return "0.62.0"
+	return "0.63.0"
 	// This string is updated by the pre_release.sh script during release
 }
