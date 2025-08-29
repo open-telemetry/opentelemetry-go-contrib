@@ -18,7 +18,7 @@ The next release will require at least [Go 1.24].
 
 ### Added
 
-- Added V2 version of AWS EC2 detector `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` due to deprecation of `github.com/aws/aws-sdk-go`. (#6961)
+- Add v2 version of AWS EC2 detector `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` due to deprecation of `github.com/aws/aws-sdk-go`. (#6961)
 - Add the unit `ns` to deprecated runtime metrics `process.runtime.go.gc.pause_total_ns` and `process.runtime.go.gc.pause_ns` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#7490)
 - The `go.opentelemetry.io/contrib/detectors/autodetect` package is added to automatically compose user defined `resource.Detector`s at runtime. (#7522)
 - Add the `WithLoggerProviderOptions`, `WithMeterProviderOptions` and `WithTracerProviderOptions` options to `NewSDK` to allow passing custom options to providers in `go.opentelemetry.io/contrib/otelconf`. (#7552)
