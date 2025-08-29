@@ -4,7 +4,7 @@ go 1.23.0
 
 require (
 	github.com/go-logr/stdr v1.2.2
-	go.opentelemetry.io/otel v1.37.1-0.20250826062056-45bb4ba7203a
+	go.opentelemetry.io/otel v1.37.1-0.20250828230916-d99c68cb21b2
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.37.1-0.20250825143334-4b2bef6dd972
 	go.opentelemetry.io/otel/sdk v1.37.1-0.20250825143334-4b2bef6dd972
 	go.opentelemetry.io/otel/trace v1.37.1-0.20250825143334-4b2bef6dd972
