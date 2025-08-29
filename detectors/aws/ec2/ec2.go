@@ -17,7 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 type config struct {

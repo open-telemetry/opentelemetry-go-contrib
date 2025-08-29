@@ -5,8 +5,8 @@ go 1.23.0
 require (
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/otel v1.37.1-0.20250826062056-45bb4ba7203a
-	go.opentelemetry.io/otel/trace v1.37.1-0.20250821162332-8b17b897d2b9
+	go.opentelemetry.io/otel v1.37.1-0.20250828230916-d99c68cb21b2
+	go.opentelemetry.io/otel/trace v1.37.1-0.20250828230916-d99c68cb21b2
 	go.uber.org/multierr v1.11.0
 )
 
@@ -16,6 +16,6 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel/metric v1.37.1-0.20250821162332-8b17b897d2b9 // indirect
+	go.opentelemetry.io/otel/metric v1.37.1-0.20250828230916-d99c68cb21b2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

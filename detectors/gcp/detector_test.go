@@ -11,7 +11,7 @@ import (
 	"github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 func TestDetect(t *testing.T) {
