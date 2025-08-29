@@ -3,13 +3,13 @@ module go.opentelemetry.io/contrib/examples/otel-collector
 go 1.23.0
 
 require (
-	go.opentelemetry.io/otel v1.37.1-0.20250828092952-5358fd737d0c
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.37.1-0.20250828092952-5358fd737d0c
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.37.1-0.20250828092952-5358fd737d0c
-	go.opentelemetry.io/otel/metric v1.37.1-0.20250828092952-5358fd737d0c
-	go.opentelemetry.io/otel/sdk v1.37.1-0.20250828092952-5358fd737d0c
-	go.opentelemetry.io/otel/sdk/metric v1.37.1-0.20250828092952-5358fd737d0c
-	go.opentelemetry.io/otel/trace v1.37.1-0.20250828092952-5358fd737d0c
+	go.opentelemetry.io/otel v1.37.1-0.20250828230916-d99c68cb21b2
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.37.1-0.20250828230916-d99c68cb21b2
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.37.1-0.20250828230916-d99c68cb21b2
+	go.opentelemetry.io/otel/metric v1.37.1-0.20250828230916-d99c68cb21b2
+	go.opentelemetry.io/otel/sdk v1.37.1-0.20250828230916-d99c68cb21b2
+	go.opentelemetry.io/otel/sdk/metric v1.37.1-0.20250828230916-d99c68cb21b2
+	go.opentelemetry.io/otel/trace v1.37.1-0.20250828230916-d99c68cb21b2
 	google.golang.org/grpc v1.75.0
 )
 
@@ -20,7 +20,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.27.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.1.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.37.1-0.20250828092952-5358fd737d0c // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.37.1-0.20250828230916-d99c68cb21b2 // indirect
 	go.opentelemetry.io/proto/otlp v1.7.1 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
