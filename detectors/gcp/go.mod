@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/detectors/gcp
 
-go 1.24.8
+go 1.24.0
 
 require (
 	cloud.google.com/go/compute/metadata v0.8.0
