@@ -1,7 +1,7 @@
 // Deprecated: use go.opentelemetry.io/contrib/detectors/aws/ec2/v2 instead.
 module go.opentelemetry.io/contrib/detectors/aws/ec2
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/aws/aws-sdk-go v1.55.7

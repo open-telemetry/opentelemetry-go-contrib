@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/xrayconfig
 
-go 1.23.0
+go 1.24.0
 
 replace (
 	go.opentelemetry.io/contrib/detectors/aws/lambda => ../../../../../../detectors/aws/lambda

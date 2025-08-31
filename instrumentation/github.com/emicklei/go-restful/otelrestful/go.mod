@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful
 
-go 1.23.0
+go 1.24.0
 
 replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
 

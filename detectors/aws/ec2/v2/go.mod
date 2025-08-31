@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/detectors/aws/ec2/v2
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.38.3

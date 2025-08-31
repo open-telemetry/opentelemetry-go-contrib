@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.38.3
