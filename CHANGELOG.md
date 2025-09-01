@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Drop support for [Go 1.23]. (#7831)
-- Remove the deprecated module `go.opentelemetry.io/contrib/detectors/aws/ec2`, please use `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` instead. (#xxx)
+- Remove the deprecated module `go.opentelemetry.io/contrib/detectors/aws/ec2`, please use `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` instead. (#7841)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
