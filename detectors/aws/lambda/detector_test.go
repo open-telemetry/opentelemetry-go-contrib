@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 // successfully return resource when process is running on Amazon Lambda environment.

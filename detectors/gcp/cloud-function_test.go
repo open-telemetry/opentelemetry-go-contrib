@@ -11,7 +11,7 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.36.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 var errTest = errors.New("testError")

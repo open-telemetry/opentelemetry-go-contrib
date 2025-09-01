@@ -1,17 +1,17 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/felixge/httpsnoop v1.0.4
 	github.com/gorilla/mux v1.8.1
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/otel v1.37.1-0.20250826062056-45bb4ba7203a
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.37.1-0.20250825143334-4b2bef6dd972
-	go.opentelemetry.io/otel/metric v1.37.1-0.20250825143334-4b2bef6dd972
-	go.opentelemetry.io/otel/sdk v1.37.1-0.20250825143334-4b2bef6dd972
-	go.opentelemetry.io/otel/sdk/metric v1.37.1-0.20250825143334-4b2bef6dd972
-	go.opentelemetry.io/otel/trace v1.37.1-0.20250825143334-4b2bef6dd972
+	go.opentelemetry.io/otel v1.38.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.38.0
+	go.opentelemetry.io/otel/metric v1.38.0
+	go.opentelemetry.io/otel/sdk v1.38.0
+	go.opentelemetry.io/otel/sdk/metric v1.38.0
+	go.opentelemetry.io/otel/trace v1.38.0
 )
 
 require (
