@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/detectors/autodetect
 
-go 1.23.8
+go 1.24.0
 
 require (
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.0.0

@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/examples/prometheus
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/prometheus/client_golang v1.23.0
