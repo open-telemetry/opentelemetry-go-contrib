@@ -47,7 +47,7 @@ jobs:
 
             // Extract the Component value from Issue Forms ("### Component" section)
             function getByHeading(text, title) {
-              const esc = title.replace(/[.*+?^${}()|[```\```/g, '\\$&');
+              const esc = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
               const re = new RegExp(
                 `(?:^|\\r?\\n)#{2,}\\s*${esc}\\s*\\r?\\n+([\\s\\S]*?)(?=\\r?\\n#{2,}\\s|\\r?\\n<!--|$)`,
                 'i'
