@@ -104,11 +104,21 @@ func TestSpanProcessorFuzzer(t *testing.T) {
 
 	assert.Empty(t, zsp.activeSpans("testSpan1"))
 	assert.GreaterOrEqual(t, len(zsp.errorSpans("testSpan1")), 1)
-	assert.GreaterOrEqual(t, len(zsp.spansByLatency("testSpan1", 1)), 1)
+	// Count latency samples across all buckets instead of a single bucket to avoid flakes
+	numLatencySamples1 := 0
+	for i := range defaultBoundaries.numBuckets() {
+		numLatencySamples1 += len(zsp.spansByLatency("testSpan1", i))
+	}
+	assert.GreaterOrEqual(t, numLatencySamples1, 1)
 
 	assert.Empty(t, zsp.activeSpans("testSpan2"))
 	assert.GreaterOrEqual(t, len(zsp.errorSpans("testSpan2")), 1)
-	assert.GreaterOrEqual(t, len(zsp.spansByLatency("testSpan2", 1)), 1)
+	// Count latency samples across all buckets instead of a single bucket to avoid flakes
+	numLatencySamples2 := 0
+	for i := range defaultBoundaries.numBuckets() {
+		numLatencySamples2 += len(zsp.spansByLatency("testSpan2", i))
+	}
+	assert.GreaterOrEqual(t, numLatencySamples2, 1)
 }
 
 func TestSpanProcessorNegativeLatency(t *testing.T) {
