@@ -38,7 +38,7 @@ func parsePR(s string) (p, r string) {
 			r = kv[1]
 		}
 	}
-	return
+	return p, r
 }
 
 func (eh *testErrorHandler) Handle(err error) {
