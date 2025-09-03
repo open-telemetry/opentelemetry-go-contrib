@@ -13,9 +13,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/cpuconv"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/processconv"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/systemconv"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/processconv"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/systemconv"
 
 	"go.opentelemetry.io/contrib/instrumentation/host"
 )
@@ -54,22 +53,22 @@ func TestHostMetrics(t *testing.T) {
 				},
 			},
 			{
-				Name:        cpuconv.Time{}.Name(),
-				Description: cpuconv.Time{}.Description(),
-				Unit:        cpuconv.Time{}.Unit(),
+				Name:        systemconv.CPUTime{}.Name(),
+				Description: systemconv.CPUTime{}.Description(),
+				Unit:        systemconv.CPUTime{}.Unit(),
 				Data: metricdata.Sum[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
 						{Attributes: attribute.NewSet(
-							cpuconv.Time{}.AttrMode(cpuconv.ModeUser),
+							systemconv.CPUTime{}.AttrCPUMode(systemconv.CPUModeUser),
 						)},
 						{Attributes: attribute.NewSet(
-							cpuconv.Time{}.AttrMode(cpuconv.ModeSystem),
+							systemconv.CPUTime{}.AttrCPUMode(systemconv.CPUModeSystem),
 						)},
 						{Attributes: attribute.NewSet(
-							cpuconv.Time{}.AttrMode(cpuconv.ModeAttr("other")),
+							systemconv.CPUTime{}.AttrCPUMode(systemconv.CPUModeAttr("other")),
 						)},
 						{Attributes: attribute.NewSet(
-							cpuconv.Time{}.AttrMode(cpuconv.ModeIdle),
+							systemconv.CPUTime{}.AttrCPUMode(systemconv.CPUModeIdle),
 						)},
 					},
 					Temporality: metricdata.CumulativeTemporality,
@@ -94,9 +93,9 @@ func TestHostMetrics(t *testing.T) {
 				},
 			},
 			{
-				Name: systemconv.MemoryUtilization{}.Name(),
-				// No description given in semantic conventions.
-				Unit: systemconv.MemoryUtilization{}.Unit(),
+				Name:        systemconv.MemoryUtilization{}.Name(),
+				Description: systemconv.MemoryUtilization{}.Description(),
+				Unit:        systemconv.MemoryUtilization{}.Unit(),
 				Data: metricdata.Gauge[float64]{
 					DataPoints: []metricdata.DataPoint[float64]{
 						{Attributes: attribute.NewSet(
@@ -109,9 +108,9 @@ func TestHostMetrics(t *testing.T) {
 				},
 			},
 			{
-				Name: systemconv.NetworkIO{}.Name(),
-				// No description given in semantic conventions.
-				Unit: systemconv.NetworkIO{}.Unit(),
+				Name:        systemconv.NetworkIO{}.Name(),
+				Description: systemconv.NetworkIO{}.Description(),
+				Unit:        systemconv.NetworkIO{}.Unit(),
 				Data: metricdata.Sum[int64]{
 					DataPoints: []metricdata.DataPoint[int64]{
 						{Attributes: attribute.NewSet(
