@@ -1,0 +1,142 @@
+name: Bug report
+description: >-
+  Please create a report of any instances of invalid behavior to assist us in
+  improving our processes.
+title: '[Bug]: A clear and concise description of what the bug is'
+labels: ['bug']
+body:
+  - type: markdown
+    attributes:
+      value: >
+        Thank you for taking the time to fill out this bug report!
+
+        Please provide the following information to help us investigate the
+        issue.
+  - type: dropdown
+    id: otel_component
+    attributes:
+      label: Component
+      description: Which OpenTelemetry component are you encountering this issue with?
+      options:
+        - AutoExporter
+        - Config
+        - 'Detector: AWS EC2'
+        - 'Detector: AWS ECS'
+        - 'Detector: AWS EKS'
+        - 'Detector: AWS Lambda'
+        - 'Detector: GCP'
+        - 'Instrumentation: host'
+        - 'Instrumentation: otelaws'
+        - 'Instrumentation: otelecho'
+        - 'Instrumentation: otelgin'
+        - 'Instrumentation: otelgrpc'
+        - 'Instrumentation: otelhttp'
+        - 'Instrumentation: otelhttptrace'
+        - 'Instrumentation: otellambda'
+        - 'Instrumentation: otelmacaron'
+        - 'Instrumentation: otelmongo'
+        - 'Instrumentation: otelmux'
+        - 'Instrumentation: otelrestful'
+        - 'Instrumentation: runtime'
+        - 'Propagator: Autoprop'
+        - 'Propagator: AWS'
+        - 'Propagator: AWS X-Ray'
+        - 'Propagator: B3'
+        - 'Propagator: Jaeger'
+        - 'Propagator: OpenCensus'
+        - 'Propagator: OT'
+        - 'Sampler: AWS X-Ray'
+        - 'Sampler: JaegerRemote'
+        - 'Sampler: probability:consistent'
+        - zPages
+    validations:
+      required: true
+  
+  - type: textarea
+    id: bug_description
+    attributes:
+      label: Describe the issue you're facing
+      description: Provide a clear and concise description of the bug
+      placeholder: >-
+        For example: AutoExporter started, but no telemetry data was sent to the
+        configured backend during the export interval.
+    validations:
+      required: true
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+      description: Describe what should happen if the component was working correctly
+      placeholder: >-
+        E.g. AutoExporter should send all configured signals (traces, metrics,
+        logs) to the target backend according to the export interval defined in
+        configuration, with no dropped data and no unexpected warnings.
+    validations:
+      required: true
+  - type: textarea
+    id: repro_steps
+    attributes:
+      label: Steps to Reproduce
+      description: >-
+        Provide the exact sequence of actions so we can reproduce the issue.
+        Markdown supported.
+      placeholder: >
+        1. Start the service with OpenTelemetry AutoExporter enabled in
+        `config.yaml`:
+          ```yaml
+          exporters:
+            otlp:
+              endpoint: http://localhost:4317
+          ```
+        2. Generate telemetry data by performing actions that trigger the instrumented code.
+
+        3. Observe that telemetry data is not visible in the configured backend.
+    validations:
+      required: true
+  - type: input
+    id: environment_os
+    attributes:
+      label: Operating System
+      description: On which operating system and version was this issue observed?
+      placeholder: iOS 26
+    validations:
+      required: true
+  - type: dropdown
+    id: device_arch
+    attributes:
+      label: Device Architecture
+      description: Which CPU architecture does your system use?
+      options:
+        - ARM32
+        - ARM64
+        - i386
+        - MIPS
+        - x86_64
+    validations:
+      required: true
+  - type: input
+    id: go_version
+    attributes:
+      label: Go Version
+      description: What Golang version were you running?
+      placeholder: '1.25'
+    validations:
+      required: true
+  - type: input
+    id: component_version
+    attributes:
+      label: Component Version
+      description: Which component version were you using when the problem occurred?
+      placeholder: autoexporter v0.14.0, 3c7face
+    validations:
+      required: true
+  - type: markdown
+    attributes:
+      value: >-
+        <sub>**Tip**:
+        [React](https://github.blog/news-insights/product-news/add-reactions-to-pull-requests-issues-and-comments/)
+        with 👍 to help prioritize this issue. Please use comments to provide
+        useful context, avoiding comments like `+1` or `me too`, to help us
+        triage it. Learn more
+        [here](https://opentelemetry.io/community/end-user/issue-participation/).</sub>
+
