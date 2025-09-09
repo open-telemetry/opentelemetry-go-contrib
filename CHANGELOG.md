@@ -8,17 +8,28 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Drop support for [Go 1.23]. (#7831)
+- Remove deprecated `go.opentelemetry.io/contrib/detectors/aws/ec2` module, please use `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` instead. (#7841)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.38.0/2.0.0/0.63.0/0.32.0/0.18.0/0.13.0/0.11.0/0.10.0] - 2025-08-29
+
 This release is the last to support [Go 1.23].
 The next release will require at least [Go 1.24].
 
 ### Added
 
-- Add the `WithTraceAttributeFn` option to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7556)
-- Set `SeverityText` field to logrus hook in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#7553)
+- Add v2 version of AWS EC2 detector `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` due to deprecation of `github.com/aws/aws-sdk-go`. (#6961)
 - Add the unit `ns` to deprecated runtime metrics `process.runtime.go.gc.pause_total_ns` and `process.runtime.go.gc.pause_ns` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#7490)
 - The `go.opentelemetry.io/contrib/detectors/autodetect` package is added to automatically compose user defined `resource.Detector`s at runtime. (#7522)
 - Add the `WithLoggerProviderOptions`, `WithMeterProviderOptions` and `WithTracerProviderOptions` options to `NewSDK` to allow passing custom options to providers in `go.opentelemetry.io/contrib/otelconf`. (#7552)
-- Added V2 version of AWS EC2 detector `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` due to deprecation of `github.com/aws/aws-sdk-go`. (#6961)
+- Set `SeverityText` field to logrus hook in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#7553)
+- Add the `WithTraceAttributeFn` option to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7556)
+- Add support for HTTP server metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. (#7668)
 - Support testing of [Go 1.25]. (#7732)
 
 ### Changed
@@ -31,8 +42,13 @@ The next release will require at least [Go 1.24].
   - `go.opentelemetry.io/contrib/bridges/otelzap`
 - The `Severity` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, `encoding.TextAppender`, `json.Marshaler`, and `json.Unmarshaler` interfaces. (#7652)
 - The `SeverityVar` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, and `encoding.TextAppender` interfaces. (#7652)
+- Change the faas.max_memory unit to be bytes instead of MB to comply with the semantic conventions in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#7745)
 - `Severity.Severity()` in `go.opentelemetry.io/contrib/processors/minsev` now returns `log.SeverityTrace1` for severities less than `minsev.SeverityTrace1` and `log.SeverityFatal4` for severities greater than `minsev.SeverityFatal4` instead of `log.SeverityUndefined`.
   All other conversions are the same. (#7748)
+
+### Fixed
+
+- Improve the ECS detector correctness in `go.opentelemetry.io/contrib/detectors/aws/ecs`. (#7607)
 
 ### Deprecated
 
@@ -53,13 +69,6 @@ The next release will require at least [Go 1.24].
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 - The deprecated `StreamClientInterceptor` function from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed. (#7646)
-
-### Fixed
-
-- Improve the ECS detector correctness in `go.opentelemetry.io/contrib/detectors/aws/ecs`. (#7607)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.37.0/0.62.0/0.31.0/0.17.0/0.12.0/0.10.0/0.9.0] - 2025-06-25
 
@@ -1506,7 +1515,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.37.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.38.0...HEAD
+[1.38.0/2.0.0/0.63.0/0.32.0/0.18.0/0.13.0/0.11.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.38.0
 [1.37.0/0.62.0/0.31.0/0.17.0/0.12.0/0.10.0/0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.37.0
 [1.36.0/0.61.0/0.30.0/0.16.0/0.11.0/0.9.0/0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.36.0
 [1.35.0/0.60.0/0.29.0/0.15.0/0.10.0/0.8.0/0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.35.0

@@ -23,6 +23,8 @@ import (
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 )
 
+const miB = 1 << 20
+
 func TestEventToCarrier(t *testing.T) {
 	t.Setenv("_X_AMZN_TRACE_ID", "traceID")
 	carrier := xrayEventToCarrier([]byte{})
@@ -107,7 +109,7 @@ var (
 			{Key: "cloud.provider", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "aws"}}},
 			{Key: "cloud.region", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "us-texas-1"}}},
 			{Key: "faas.instance", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"}}},
-			{Key: "faas.max_memory", Value: &v1common.AnyValue{Value: &v1common.AnyValue_IntValue{IntValue: 128}}},
+			{Key: "faas.max_memory", Value: &v1common.AnyValue{Value: &v1common.AnyValue_IntValue{IntValue: 128 * miB}}},
 			{Key: "faas.name", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "testFunction"}}},
 			{Key: "faas.version", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "$LATEST"}}},
 		},

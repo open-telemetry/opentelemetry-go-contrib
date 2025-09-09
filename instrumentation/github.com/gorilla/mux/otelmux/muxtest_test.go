@@ -279,7 +279,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	prop.Inject(ctx, propagation.HeaderCarrier(r0.Header))
 
 	router.ServeHTTP(w, r0)
-	assert.Equal(t, http.StatusOK, w.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 
 	// Recorded span should be linked with an incoming span context.
 	assert.NoError(t, sr.ForceFlush(ctx))
@@ -364,7 +364,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			prop.Inject(ctx, propagation.HeaderCarrier(r0.Header))
 
 			router.ServeHTTP(w, r0)
-			assert.Equal(t, http.StatusOK, w.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+			assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 
 			// Recorded span should be linked with an incoming span context.
 			assert.NoError(t, sr.ForceFlush(ctx))

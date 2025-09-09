@@ -383,10 +383,10 @@ func prometheusReaderOpts(prometheusConfig *Prometheus) ([]otelprom.Option, erro
 		opts = append(opts, otelprom.WithoutScopeInfo())
 	}
 	if prometheusConfig.WithoutTypeSuffix != nil && *prometheusConfig.WithoutTypeSuffix {
-		opts = append(opts, otelprom.WithoutCounterSuffixes())
+		opts = append(opts, otelprom.WithoutCounterSuffixes()) //nolint:staticcheck // WithouTypeSuffix is deprecated, but we still need it for backwards compatibility.
 	}
 	if prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
-		opts = append(opts, otelprom.WithoutUnits())
+		opts = append(opts, otelprom.WithoutUnits()) //nolint:staticcheck // WithouTypeSuffix is deprecated, but we still need it for backwards compatibility.
 	}
 	if prometheusConfig.WithResourceConstantLabels != nil {
 		f, err := newIncludeExcludeFilter(prometheusConfig.WithResourceConstantLabels)
@@ -553,7 +553,7 @@ func int32OrZero(pInt *int) int32 {
 	if i < math.MinInt32 {
 		return math.MinInt32
 	}
-	return int32(i) // nolint: gosec  // Overflow and underflow checked above.
+	return int32(i)
 }
 
 func strOrEmpty(pStr *string) string {

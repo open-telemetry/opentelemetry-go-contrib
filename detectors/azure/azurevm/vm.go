@@ -12,7 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 const defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
@@ -96,7 +96,7 @@ func (detector *ResourceDetector) getJSONMetadata(ctx context.Context) ([]byte, 
 
 	req.Header.Add("Metadata", "True")
 
-	resp, err := client.Do(req) // nolint:bodyclose  // False-positive.
+	resp, err := client.Do(req)
 	if err != nil {
 		return nil, false, err
 	}

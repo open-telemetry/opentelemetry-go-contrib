@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 // successfully return resource when process is running on Amazon Lambda environment.
@@ -28,7 +28,7 @@ func TestDetectSuccess(t *testing.T) {
 		semconv.FaaSName("testFunction"),
 		semconv.FaaSVersion("$LATEST"),
 		semconv.FaaSInstance("2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
-		semconv.FaaSMaxMemory(128),
+		semconv.FaaSMaxMemory(128 * miB),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := resourceDetector{}
