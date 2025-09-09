@@ -209,6 +209,7 @@ func (*guaranteedThroughputProbabilisticSampler) Description() string {
 // perOperationSampler is a delegating sampler that applies guaranteedThroughputProbabilisticSampler
 // on a per-operation basis.
 type perOperationSampler struct {
+	sync.RWMutex // Deprecated: mutex is internal and shall not be used.
 	mu             sync.RWMutex
 	samplers       map[string]*guaranteedThroughputProbabilisticSampler
 	defaultSampler *probabilisticSampler
