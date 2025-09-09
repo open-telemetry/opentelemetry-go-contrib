@@ -12,7 +12,6 @@ module-sets:
       - go.opentelemetry.io/contrib/propagators/jaeger
       - go.opentelemetry.io/contrib/propagators/b3
       - go.opentelemetry.io/contrib/detectors/gcp
-      - go.opentelemetry.io/contrib/detectors/aws/ec2
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
   stable-v2:
