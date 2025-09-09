@@ -19,6 +19,7 @@ import (
 
 // IDGenerator is used for generating a new traceID and spanID.
 type IDGenerator struct {
+	sync.Mutex // Deprecated: mutex is internal and shall not be used.
 	mu         sync.Mutex
 	randSource *rand.Rand
 }
