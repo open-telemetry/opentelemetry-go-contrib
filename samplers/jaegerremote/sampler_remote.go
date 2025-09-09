@@ -71,7 +71,8 @@ type Sampler struct {
 	// These fields must be first in the struct because `sync/atomic` expects 64-bit alignment.
 	// Cf. https://github.com/jaegertracing/jaeger-client-go/issues/155, https://pkg.go.dev/sync/atomic#pkg-note-BUG
 	closed int64 // 0 - not closed, 1 - closed
-
+	//nolint:gocritic // ongoing deletion
+	sync.RWMutex // Deprecated: mutex is internal and shall not be used.
 	mu sync.RWMutex // used to serialize access to samplerConfig.sampler
 	config
 
