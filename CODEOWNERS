@@ -67,6 +67,7 @@ propagators/b3/                                                         @open-te
 propagators/jaeger/                                                     @open-telemetry/go-approvers @yurishkuro
 propagators/opencensus/                                                 @open-telemetry/go-approvers @dashpole
 propagators/ot/                                                         @open-telemetry/go-approvers @pellared
+propagators/skywalking/                                                 @open-telemetry/go-approvers
 
 samplers/jaegerremote/                                                  @open-telemetry/go-approvers @yurishkuro
 samplers/probability/consistent/                                        @open-telemetry/go-approvers

@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/contrib/propagators/ot"
+	"go.opentelemetry.io/contrib/propagators/skywalking"
 )
 
 // none is the special "propagator" name that means no propagator shall be
@@ -39,6 +40,8 @@ var propagators = &registry{
 		"xray": xray.Propagator{},
 		// OpenTracing Trace.
 		"ottrace": ot.OT{},
+		// SkyWalking.
+		"skywalking": skywalking.Skywalking{},
 
 		// No-op TextMapPropagator.
 		none: propagation.NewCompositeTextMapPropagator(),

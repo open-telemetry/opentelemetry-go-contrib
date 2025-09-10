@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Implement SkyWalking propagator. (#7893)
+
 ### Removed
 
 - Drop support for [Go 1.23]. (#7831)

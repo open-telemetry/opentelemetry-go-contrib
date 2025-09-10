@@ -8,6 +8,7 @@ require (
 	go.opentelemetry.io/contrib/propagators/b3 v1.38.0
 	go.opentelemetry.io/contrib/propagators/jaeger v1.38.0
 	go.opentelemetry.io/contrib/propagators/ot v1.38.0
+	go.opentelemetry.io/contrib/propagators/skywalking v1.38.0
 	go.opentelemetry.io/otel v1.38.0
 )
 
@@ -33,3 +34,5 @@ replace go.opentelemetry.io/contrib/propagators/b3 => ../b3
 replace go.opentelemetry.io/contrib/propagators/aws => ../aws
 
 replace go.opentelemetry.io/contrib/propagators/ot => ../ot
+
+replace go.opentelemetry.io/contrib/propagators/skywalking => ../skywalking
