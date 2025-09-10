@@ -142,7 +142,7 @@ func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
 		// If parsing fails, assume default MongoDB port and return the entire ConnectionID as hostname
 		hostname = evt.ConnectionID
 		port = defaultMongoPort
-		return
+		return hostname, port
 	}
 
 	port, err = strconv.Atoi(portStr)
