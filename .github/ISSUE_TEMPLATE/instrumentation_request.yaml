@@ -9,7 +9,7 @@ body:
     attributes:
       label: Package Link
       description: Add link to the package here
-      placeholder: "https://pkg.go.dev/go.opentelemetry.io/otel"
+      placeholder: "https://pkg.go.dev/go.opentelemetry.io/contrib"
     validations:
       required: true
 
