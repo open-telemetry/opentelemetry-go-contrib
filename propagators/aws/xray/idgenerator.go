@@ -19,16 +19,37 @@ import (
 
 // IDGenerator is used for generating a new traceID and spanID.
 type IDGenerator struct {
-	sync.Mutex
+	sync.Mutex // Deprecated: mutex is internal and shall not be used.
+	mu         sync.Mutex
 	randSource *rand.Rand
 }
 
 var _ sdktrace.IDGenerator = &IDGenerator{}
 
+// Lock is used to lock the IDGenerator for concurrent use.
+// noop method to satisfy the sync.Mutex interface.
+//
+// Deprecated: mutex is internal and shall not be used.
+func (*IDGenerator) Lock() {}
+
+// TryLock attempts to lock the IDGenerator for concurrent use.
+// noop method to satisfy the sync.Mutex interface.
+//
+// Deprecated: mutex is internal and shall not be used.
+func (*IDGenerator) TryLock() bool {
+	return false
+}
+
+// Unlock is used to unlock the IDGenerator for concurrent use.
+// noop method to satisfy the sync.Mutex interface.
+//
+// Deprecated: mutex is internal and shall not be used.
+func (*IDGenerator) Unlock() {}
+
 // NewSpanID returns a non-zero span ID from a randomly-chosen sequence.
 func (gen *IDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
-	gen.Lock()
-	defer gen.Unlock()
+	gen.mu.Lock()
+	defer gen.mu.Unlock()
 	sid := trace.SpanID{}
 	_, _ = gen.randSource.Read(sid[:])
 	return sid
@@ -40,8 +61,8 @@ func (gen *IDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
 //
 // span ID is from a randomly-chosen sequence.
 func (gen *IDGenerator) NewIDs(context.Context) (trace.TraceID, trace.SpanID) {
-	gen.Lock()
-	defer gen.Unlock()
+	gen.mu.Lock()
+	defer gen.mu.Unlock()
 
 	tid := trace.TraceID{}
 	currentTime := getCurrentTimeHex()

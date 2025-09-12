@@ -71,8 +71,9 @@ type Sampler struct {
 	// These fields must be first in the struct because `sync/atomic` expects 64-bit alignment.
 	// Cf. https://github.com/jaegertracing/jaeger-client-go/issues/155, https://pkg.go.dev/sync/atomic#pkg-note-BUG
 	closed int64 // 0 - not closed, 1 - closed
-
-	sync.RWMutex // used to serialize access to samplerConfig.sampler
+	//nolint:gocritic // ongoing deletion
+	sync.RWMutex // Deprecated: mutex is internal and shall not be used.
+	mu sync.RWMutex // used to serialize access to samplerConfig.sampler
 	config
 
 	serviceName string
@@ -95,11 +96,31 @@ func New(
 	return sampler
 }
 
+// Lock is used to lock the Sampler for concurrent use.
+// noop method to satisfy the sync.RWMutex interface.
+//
+// Deprecated: mutex is internal and shall not be used.
+func (*Sampler) Lock() {}
+
+// TryLock attempts to lock the Sampler for concurrent use.
+// noop method to satisfy the sync.RWMutex interface.
+//
+// Deprecated: mutex is internal and shall not be used.
+func (*Sampler) TryLock() bool {
+	return false
+}
+
+// Unlock is used to unlock the Sampler for concurrent use.
+// noop method to satisfy the sync.RWMutex interface.
+//
+// Deprecated: mutex is internal and shall not be used.
+func (*Sampler) Unlock() {}
+
 // ShouldSample returns a sampling choice based on the passed sampling
 // parameters.
 func (s *Sampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult {
-	s.RLock()
-	defer s.RUnlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 	return s.sampler.ShouldSample(p)
 }
 
@@ -143,8 +164,8 @@ func (s *Sampler) pollControllerWithTicker(ticker *time.Ticker) {
 }
 
 func (s *Sampler) setSampler(sampler trace.Sampler) {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	s.sampler = sampler
 }
 
@@ -162,8 +183,8 @@ func (s *Sampler) UpdateSampler() {
 		return
 	}
 
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	if err := s.updateSamplerViaUpdaters(strategy); err != nil {
 		s.logger.Error(err, "failed to handle sampling strategy response", "response", res)
