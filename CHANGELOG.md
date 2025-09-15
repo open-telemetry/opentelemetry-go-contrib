@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Deprecated
+
+- Deprecate direct exposure and usage of mutex objects via structs: introduce equivalent methods for locking/unlocking, and mark mutex fields as deprecated, specially for `go.opentelemetry.io/contrib/samplers/jaegerremote.Sampler` and `go.opentelemetry.io/contrib/propagators/aws/xray.IDGenerator`. (#7726)
+
 ### Removed
 
 - Drop support for [Go 1.23]. (#7831)
