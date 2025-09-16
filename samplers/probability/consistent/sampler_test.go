@@ -4,7 +4,6 @@
 package consistent
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -169,7 +168,7 @@ func TestSamplerBehavior(t *testing.T) {
 					}
 
 					parentCtx := trace.ContextWithSpanContext(
-						context.Background(),
+						t.Context(),
 						trace.NewSpanContext(sccfg),
 					)
 

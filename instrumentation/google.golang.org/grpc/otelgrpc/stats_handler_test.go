@@ -38,7 +38,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	)
 
 	sc := trace.NewSpanContext(remoteSpan)
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
 
 	ctx = h.TagRPC(ctx, &stats.RPCTagInfo{
 		FullMethodName: "some.package/Method",
@@ -132,7 +132,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			)
 
 			sc := trace.NewSpanContext(remoteSpan)
-			ctx := trace.ContextWithSpanContext(context.Background(), sc)
+			ctx := trace.ContextWithSpanContext(t.Context(), sc)
 
 			ctx = h.TagRPC(ctx, &stats.RPCTagInfo{
 				FullMethodName: "some.package/Method",
@@ -168,7 +168,7 @@ func TestNilInstruments(t *testing.T) {
 	mp := meterProvider{}
 	opts := []Option{WithMeterProvider(mp)}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("ServerHandler", func(t *testing.T) {
 		hIface := NewServerHandler(opts...)

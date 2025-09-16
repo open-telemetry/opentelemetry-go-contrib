@@ -4,7 +4,6 @@
 package otelrestful_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -50,7 +49,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
 		TraceID: oteltrace.TraceID{0x01},
 		SpanID:  oteltrace.SpanID{0x01},
@@ -82,7 +81,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
 		TraceID: oteltrace.TraceID{0x01},
 		SpanID:  oteltrace.SpanID{0x01},

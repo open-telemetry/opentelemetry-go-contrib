@@ -512,7 +512,7 @@ func TestHandlerEnabled(t *testing.T) {
 
 	h := NewHandler("name", WithLoggerProvider(r))
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.False(t, h.Enabled(ctx, slog.LevelDebug), "level conversion: permissive")
 	assert.True(t, h.Enabled(ctx, slog.LevelInfo), "level conversion: restrictive")
 

@@ -4,7 +4,6 @@
 package azurevm
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -103,7 +102,7 @@ func TestDetect(t *testing.T) {
 		detector := New()
 		detector.endpoint = svr.URL
 
-		azureResource, err := detector.Detect(context.Background())
+		azureResource, err := detector.Detect(t.Context())
 
 		svr.Close()
 

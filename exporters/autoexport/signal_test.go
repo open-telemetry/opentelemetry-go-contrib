@@ -14,14 +14,14 @@ import (
 func TestOTLPExporterReturnedWhenNoEnvOrFallbackExporterConfigured(t *testing.T) {
 	ts := newSignal[*testType]("TEST_TYPE_KEY")
 	assert.NoError(t, ts.registry.store("otlp", factory("test-otlp-exporter")))
-	exp, err := ts.create(context.Background())
+	exp, err := ts.create(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, exp.string, "test-otlp-exporter")
 }
 
 func TestFallbackExporterReturnedWhenNoEnvExporterConfigured(t *testing.T) {
 	ts := newSignal[*testType]("TEST_TYPE_KEY")
-	exp, err := ts.create(context.Background(), withFallbackFactory(factory("test-fallback-exporter")))
+	exp, err := ts.create(t.Context(), withFallbackFactory(factory("test-fallback-exporter")))
 	assert.NoError(t, err)
 	assert.Equal(t, exp.string, "test-fallback-exporter")
 }
@@ -33,7 +33,7 @@ func TestFallbackExporterFactoryErrorReturnedWhenNoEnvExporterConfiguredAndFallb
 	errFactory := func(context.Context) (*testType, error) {
 		return nil, expectedErr
 	}
-	exp, err := ts.create(context.Background(), withFallbackFactory(errFactory))
+	exp, err := ts.create(t.Context(), withFallbackFactory(errFactory))
 	assert.ErrorIs(t, err, expectedErr)
 	assert.Nil(t, exp)
 }
@@ -46,7 +46,7 @@ func TestEnvExporterIsPreferredOverFallbackExporter(t *testing.T) {
 	t.Setenv(envVariable, expName)
 	assert.NoError(t, ts.registry.store(expName, factory("test-env-exporter")))
 
-	exp, err := ts.create(context.Background(), withFallbackFactory(factory("test-fallback-exporter")))
+	exp, err := ts.create(t.Context(), withFallbackFactory(factory("test-fallback-exporter")))
 	assert.NoError(t, err)
 	assert.Equal(t, exp.string, "test-env-exporter")
 }

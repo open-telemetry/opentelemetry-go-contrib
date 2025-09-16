@@ -4,7 +4,6 @@
 package otelaws
 
 import (
-	"context"
 	"testing"
 
 	awsMiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
@@ -45,14 +44,14 @@ func TestSystemAttribute(t *testing.T) {
 }
 
 func TestDefaultAttributeBuilderNotSupportedService(t *testing.T) {
-	testCtx := awsMiddleware.SetServiceID(context.TODO(), "not-implemented-service")
+	testCtx := awsMiddleware.SetServiceID(t.Context(), "not-implemented-service")
 
 	attr := DefaultAttributeBuilder(testCtx, middleware.InitializeInput{}, middleware.InitializeOutput{})
 	assert.Empty(t, attr)
 }
 
 func TestDefaultAttributeBuilderOnSupportedService(t *testing.T) {
-	testCtx := awsMiddleware.SetServiceID(context.TODO(), sqs.ServiceID)
+	testCtx := awsMiddleware.SetServiceID(t.Context(), sqs.ServiceID)
 	testQueueURL := "test-queue-url"
 
 	attr := DefaultAttributeBuilder(testCtx, middleware.InitializeInput{

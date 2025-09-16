@@ -4,7 +4,6 @@
 package host_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -25,7 +24,7 @@ func TestHostMetrics(t *testing.T) {
 	err := host.Start(host.WithMeterProvider(mp))
 	require.NoError(t, err)
 	rm := metricdata.ResourceMetrics{}
-	err = reader.Collect(context.Background(), &rm)
+	err = reader.Collect(t.Context(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 

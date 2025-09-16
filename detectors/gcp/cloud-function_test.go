@@ -4,7 +4,6 @@
 package gcp
 
 import (
-	"context"
 	"errors"
 	"testing"
 
@@ -119,7 +118,7 @@ func TestCloudFunctionDetect(t *testing.T) {
 		detector := cloudFunction{
 			cloudRun: test.cr,
 		}
-		res, err := detector.Detect(context.Background())
+		res, err := detector.Detect(t.Context())
 		if !errors.Is(err, test.expected.err) {
 			t.Fatalf("got unexpected failure: %v", err)
 		} else if diff := cmp.Diff(test.expected.res, res); diff != "" {
@@ -130,7 +129,7 @@ func TestCloudFunctionDetect(t *testing.T) {
 
 func TestNotOnCloudFunction(t *testing.T) {
 	detector := NewCloudFunction()
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 	if err != nil {
 		t.Errorf("expected cloud function detector to return error as nil, but returned %v", err)
 	} else if res != nil {

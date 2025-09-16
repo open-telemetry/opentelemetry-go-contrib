@@ -6,7 +6,6 @@
 package otelecho
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -52,7 +51,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x01},
 		SpanID:  trace.SpanID{0x01},
@@ -83,7 +82,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x01},
 		SpanID:  trace.SpanID{0x01},
@@ -193,7 +192,7 @@ func TestMetrics(t *testing.T) {
 
 			// verify metrics
 			rm := metricdata.ResourceMetrics{}
-			require.NoError(t, reader.Collect(context.Background(), &rm))
+			require.NoError(t, reader.Collect(t.Context(), &rm))
 
 			require.Len(t, rm.ScopeMetrics, 1)
 			sm := rm.ScopeMetrics[0]
@@ -296,7 +295,7 @@ func TestWithMetricAttributeFn(t *testing.T) {
 
 	// verify metrics
 	rm := metricdata.ResourceMetrics{}
-	require.NoError(t, reader.Collect(context.Background(), &rm))
+	require.NoError(t, reader.Collect(t.Context(), &rm))
 	require.Len(t, rm.ScopeMetrics, 1)
 	sm := rm.ScopeMetrics[0]
 	require.Len(t, sm.Metrics, 3)
@@ -346,7 +345,7 @@ func TestWithEchoMetricAttributeFn(t *testing.T) {
 
 	// verify metrics
 	rm := metricdata.ResourceMetrics{}
-	require.NoError(t, reader.Collect(context.Background(), &rm))
+	require.NoError(t, reader.Collect(t.Context(), &rm))
 	require.Len(t, rm.ScopeMetrics, 1)
 	sm := rm.ScopeMetrics[0]
 	require.Len(t, sm.Metrics, 3)

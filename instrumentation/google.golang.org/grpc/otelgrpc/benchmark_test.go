@@ -31,7 +31,7 @@ func benchmark(b *testing.B, cOpt []grpc.DialOption, sOpt []grpc.ServerOption) {
 	}()
 	defer s.Stop()
 
-	ctx := context.Background()
+	ctx := b.Context()
 	dial := func(context.Context, string) (net.Conn, error) { return l.Dial() }
 	conn, err := grpc.NewClient(
 		"passthrough:bufnet",

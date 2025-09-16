@@ -4,7 +4,6 @@
 package ot_test
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
@@ -41,7 +40,7 @@ func TestExtractOT(t *testing.T) {
 					h.Set(k, v)
 				}
 
-				ctx := context.Background()
+				ctx := t.Context()
 				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(h))
 				resSc := trace.SpanContextFromContext(ctx)
 
@@ -100,7 +99,7 @@ func TestInjectOT(t *testing.T) {
 				if err != nil {
 					t.Errorf("%s: %s, unexpected error creating baggage: %s", tg.name, tc.name, err.Error())
 				}
-				ctx := baggage.ContextWithBaggage(context.Background(), bag)
+				ctx := baggage.ContextWithBaggage(t.Context(), bag)
 				ctx = trace.ContextWithSpanContext(ctx, trace.NewSpanContext(tc.sc))
 				header := http.Header{}
 				propagator.Inject(ctx, propagation.HeaderCarrier(header))

@@ -113,7 +113,7 @@ func TestAppendMiddlewares(t *testing.T) {
 				Retryer: aws.NopRetryer{},
 			})
 
-			_, err := svc.ChangeResourceRecordSets(context.Background(), &route53.ChangeResourceRecordSetsInput{
+			_, err := svc.ChangeResourceRecordSets(t.Context(), &route53.ChangeResourceRecordSetsInput{
 				ChangeBatch: &types.ChangeBatch{
 					Changes: []types.Change{},
 					Comment: aws.String("mock"),

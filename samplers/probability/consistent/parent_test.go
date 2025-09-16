@@ -4,7 +4,6 @@
 package consistent
 
 import (
-	"context"
 	"strings"
 	"testing"
 
@@ -73,7 +72,7 @@ func TestParentSamplerValidContext(t *testing.T) {
 			}
 
 			parentCtx := trace.ContextWithSpanContext(
-				context.Background(),
+				t.Context(),
 				trace.NewSpanContext(sccfg),
 			)
 
@@ -139,7 +138,7 @@ func TestParentSamplerInvalidContext(t *testing.T) {
 			}
 
 			parentCtx := trace.ContextWithSpanContext(
-				context.Background(),
+				t.Context(),
 				trace.NewSpanContext(sccfg),
 			)
 

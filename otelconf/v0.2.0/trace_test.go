@@ -4,7 +4,6 @@
 package otelconf
 
 import (
-	"context"
 	"errors"
 	"net/url"
 	"reflect"
@@ -79,7 +78,7 @@ func TestTracerPovider(t *testing.T) {
 		tp, shutdown, err := tracerProvider(tt.cfg, resource.Default())
 		require.Equal(t, tt.wantProvider, tp)
 		assert.Equal(t, tt.wantErr, err)
-		require.NoError(t, shutdown(context.Background()))
+		require.NoError(t, shutdown(t.Context()))
 	}
 }
 
@@ -88,7 +87,7 @@ func TestSpanProcessor(t *testing.T) {
 		stdouttrace.WithPrettyPrint(),
 	)
 	require.NoError(t, err)
-	ctx := context.Background()
+	ctx := t.Context()
 	otlpGRPCExporter, err := otlptracegrpc.New(ctx)
 	require.NoError(t, err)
 	otlpHTTPExporter, err := otlptracehttp.New(ctx)
@@ -512,7 +511,7 @@ func TestSpanProcessor(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := spanProcessor(context.Background(), tt.processor)
+			got, err := spanProcessor(t.Context(), tt.processor)
 			require.Equal(t, tt.wantErr, err)
 			if tt.wantProcessor == nil {
 				require.Nil(t, got)

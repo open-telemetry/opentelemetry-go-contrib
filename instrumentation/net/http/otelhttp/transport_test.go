@@ -104,7 +104,7 @@ func TestTransportBasics(t *testing.T) {
 	prop := propagation.TraceContext{}
 	content := []byte("Hello, world!")
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x01},
 		SpanID:  trace.SpanID{0x01},
@@ -155,7 +155,7 @@ func TestNilTransport(t *testing.T) {
 	prop := propagation.TraceContext{}
 	content := []byte("Hello, world!")
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x01},
 		SpanID:  trace.SpanID{0x01},
@@ -402,7 +402,7 @@ func TestTransportProtocolSwitch(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
@@ -417,7 +417,7 @@ func TestTransportProtocolSwitch(t *testing.T) {
 func TestTransportOriginRequestNotModify(t *testing.T) {
 	prop := propagation.TraceContext{}
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x01},
 		SpanID:  trace.SpanID{0x01},
@@ -555,7 +555,7 @@ func TestTransportRequestWithTraceContext(t *testing.T) {
 	defer ts.Close()
 
 	tracer := provider.Tracer("")
-	ctx, span := tracer.Start(context.Background(), "test_span")
+	ctx, span := tracer.Start(t.Context(), "test_span")
 
 	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
@@ -601,7 +601,7 @@ func TestWithHTTPTrace(t *testing.T) {
 	defer ts.Close()
 
 	tracer := provider.Tracer("")
-	ctx, span := tracer.Start(context.Background(), "test_span")
+	ctx, span := tracer.Start(t.Context(), "test_span")
 
 	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
@@ -702,7 +702,7 @@ func TestTransportMetrics(t *testing.T) {
 		}
 
 		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(context.Background(), &rm)
+		err = reader.Collect(t.Context(), &rm)
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
@@ -774,7 +774,7 @@ func TestTransportMetrics(t *testing.T) {
 		}
 
 		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(context.Background(), &rm)
+		err = reader.Collect(t.Context(), &rm)
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
@@ -841,7 +841,7 @@ func TestTransportMetrics(t *testing.T) {
 		}
 
 		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(context.Background(), &rm)
+		err = reader.Collect(t.Context(), &rm)
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
@@ -908,7 +908,7 @@ func TestCustomAttributesHandling(t *testing.T) {
 		clientRequestSize = "http.client.request.size"
 		clientDuration    = "http.client.duration"
 	)
-	ctx := context.TODO()
+	ctx := t.Context()
 	reader := sdkmetric.NewManualReader()
 	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	defer func() {
@@ -970,7 +970,7 @@ func TestCustomAttributesHandling(t *testing.T) {
 func TestMetricsExistenceOnRequestError(t *testing.T) {
 	var rm metricdata.ResourceMetrics
 
-	ctx := context.Background()
+	ctx := t.Context()
 	reader := sdkmetric.NewManualReader()
 	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	defer func() {
@@ -1010,7 +1010,7 @@ func TestDefaultAttributesHandling(t *testing.T) {
 		clientRequestSize = "http.client.request.size"
 		clientDuration    = "http.client.duration"
 	)
-	ctx := context.TODO()
+	ctx := t.Context()
 	reader := sdkmetric.NewManualReader()
 	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	defer func() {

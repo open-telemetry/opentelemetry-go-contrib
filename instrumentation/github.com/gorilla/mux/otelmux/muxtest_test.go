@@ -4,7 +4,6 @@
 package otelmux_test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -275,7 +274,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	sc := trace.NewSpanContext(remoteSpan)
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r0.Header))
 
 	router.ServeHTTP(w, r0)
@@ -360,7 +359,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			w := httptest.NewRecorder()
 
 			sc := trace.NewSpanContext(remoteSpan)
-			ctx := trace.ContextWithSpanContext(context.Background(), sc)
+			ctx := trace.ContextWithSpanContext(t.Context(), sc)
 			prop.Inject(ctx, propagation.HeaderCarrier(r0.Header))
 
 			router.ServeHTTP(w, r0)
@@ -422,7 +421,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		router.ServeHTTP(rr, r)
 
 		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(context.Background(), &rm)
+		err = reader.Collect(t.Context(), &rm)
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)

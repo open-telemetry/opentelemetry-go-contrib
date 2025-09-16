@@ -4,7 +4,6 @@
 package otelgrpc_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -147,7 +146,7 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 			methodName := serviceName + "/" + name
 			fullMethodName := "/" + methodName
 			// call the server handler
-			ctx := serverHandler.TagRPC(context.Background(), &stats.RPCTagInfo{
+			ctx := serverHandler.TagRPC(t.Context(), &stats.RPCTagInfo{
 				FullMethodName: fullMethodName,
 			})
 
@@ -249,7 +248,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 		},
 	}
 	rm := metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), &rm)
+	err := reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())

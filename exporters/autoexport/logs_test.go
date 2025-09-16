@@ -16,19 +16,19 @@ import (
 
 func TestLogExporterNone(t *testing.T) {
 	t.Setenv("OTEL_LOGS_EXPORTER", "none")
-	got, err := NewLogExporter(context.Background())
+	got, err := NewLogExporter(t.Context())
 	assert.NoError(t, err)
 	t.Cleanup(func() {
-		assert.NoError(t, got.ForceFlush(context.Background()))
-		assert.NoError(t, got.Shutdown(context.Background()))
+		assert.NoError(t, got.ForceFlush(t.Context()))
+		assert.NoError(t, got.Shutdown(t.Context()))
 	})
-	assert.NoError(t, got.Export(context.Background(), nil))
+	assert.NoError(t, got.Export(t.Context(), nil))
 	assert.True(t, IsNoneLogExporter(got))
 }
 
 func TestLogExporterConsole(t *testing.T) {
 	t.Setenv("OTEL_LOGS_EXPORTER", "console")
-	got, err := NewLogExporter(context.Background())
+	got, err := NewLogExporter(t.Context())
 	assert.NoError(t, err)
 	assert.IsType(t, &stdoutlog.Exporter{}, got)
 }
@@ -46,10 +46,10 @@ func TestLogExporterOTLP(t *testing.T) {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", tc.protocol)
 
-			got, err := NewLogExporter(context.Background())
+			got, err := NewLogExporter(t.Context())
 			assert.NoError(t, err)
 			t.Cleanup(func() {
-				assert.NoError(t, got.Shutdown(context.Background()))
+				assert.NoError(t, got.Shutdown(t.Context()))
 			})
 			assert.Implements(t, new(log.Exporter), got)
 
@@ -73,10 +73,10 @@ func TestLogExporterOTLPWithDedicatedProtocol(t *testing.T) {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_LOGS_PROTOCOL", tc.protocol)
 
-			got, err := NewLogExporter(context.Background())
+			got, err := NewLogExporter(t.Context())
 			assert.NoError(t, err)
 			t.Cleanup(func() {
-				assert.NoError(t, got.Shutdown(context.Background()))
+				assert.NoError(t, got.Shutdown(t.Context()))
 			})
 			assert.Implements(t, new(log.Exporter), got)
 
@@ -91,12 +91,12 @@ func TestLogExporterOTLPOverInvalidProtocol(t *testing.T) {
 	t.Setenv("OTEL_LOGS_EXPORTER", "otlp")
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid-protocol")
 
-	_, err := NewLogExporter(context.Background())
+	_, err := NewLogExporter(t.Context())
 	assert.Error(t, err)
 }
 
 func TestLogExporterFallbackWithConsoleExporter(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	fallbackExporterFactory := func(context.Context) (log.Exporter, error) {
 		return stdoutlog.New()

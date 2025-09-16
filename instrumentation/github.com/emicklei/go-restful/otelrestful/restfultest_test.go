@@ -4,7 +4,6 @@
 package otelrestful_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -230,7 +229,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	require.NoError(t, err)
 
 	sc := oteltrace.NewSpanContext(remoteSpan)
-	ctx := oteltrace.ContextWithSpanContext(context.Background(), sc)
+	ctx := oteltrace.ContextWithSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	rr := httptest.NewRecorder()
@@ -320,7 +319,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			require.NoError(t, err)
 
 			sc := oteltrace.NewSpanContext(remoteSpan)
-			ctx := oteltrace.ContextWithSpanContext(context.Background(), sc)
+			ctx := oteltrace.ContextWithSpanContext(t.Context(), sc)
 			prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 			rr := httptest.NewRecorder()

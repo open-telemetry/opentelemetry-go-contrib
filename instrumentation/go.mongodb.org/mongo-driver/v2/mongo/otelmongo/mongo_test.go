@@ -94,7 +94,7 @@ func TestDBCrudOperation(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
 			defer cancel()
 
 			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
@@ -111,7 +111,7 @@ func TestDBCrudOperation(t *testing.T) {
 			md.AddResponses(tc.mockResponses...)
 			client, err := mongo.Connect(opts)
 			defer func() {
-				err := client.Disconnect(context.Background())
+				err := client.Disconnect(t.Context())
 				require.NoError(t, err)
 			}()
 			require.NoError(t, err)
@@ -202,7 +202,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
 			defer cancel()
 
 			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
@@ -221,7 +221,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			require.NoError(t, err)
 
 			defer func() {
-				err := client.Disconnect(context.Background())
+				err := client.Disconnect(t.Context())
 				require.NoError(t, err)
 			}()
 

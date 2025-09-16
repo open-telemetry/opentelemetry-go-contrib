@@ -4,7 +4,6 @@
 package otelslog
 
 import (
-	"context"
 	"log/slog"
 	"testing"
 	"time"
@@ -30,7 +29,7 @@ func BenchmarkHandler(b *testing.B) {
 	}
 	attrs5 := attrs10[:5]
 	record := slog.NewRecord(time.Now(), slog.LevelInfo, "body", 0)
-	ctx := context.Background()
+	ctx := b.Context()
 
 	b.Run("Handle", func(b *testing.B) {
 		handlers := make([]*Handler, b.N)

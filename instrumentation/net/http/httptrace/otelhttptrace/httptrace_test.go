@@ -85,7 +85,7 @@ func TestRoundtrip(t *testing.T) {
 	}
 
 	client := ts.Client()
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x01},
 		SpanID:  trace.SpanID{0x01},
@@ -159,7 +159,7 @@ func TestSpecifyPropagators(t *testing.T) {
 		_ = res.Body.Close()
 
 		return nil
-	}(context.Background())
+	}(t.Context())
 	if err != nil {
 		panic("unexpected error in http request: " + err.Error())
 	}

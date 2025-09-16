@@ -92,7 +92,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := baggage.ContextWithBaggage(context.Background(), tt.baggage)
+			ctx := baggage.ContextWithBaggage(t.Context(), tt.baggage)
 
 			wrapped := &processor{}
 			lp := log.NewLoggerProvider(
@@ -124,7 +124,7 @@ func TestZeroLogProcessorNoPanic(t *testing.T) {
 	b, err := baggage.New(m)
 	require.NoError(t, err)
 
-	ctx := baggage.ContextWithBaggage(context.Background(), b)
+	ctx := baggage.ContextWithBaggage(t.Context(), b)
 	assert.NotPanics(t, func() {
 		_ = lp.OnEmit(ctx, &log.Record{})
 		_ = lp.Shutdown(ctx)

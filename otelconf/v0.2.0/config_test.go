@@ -4,7 +4,6 @@
 package otelconf
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"os"
@@ -40,7 +39,7 @@ func TestNewSDK(t *testing.T) {
 		{
 			name: "with-configuration",
 			cfg: []ConfigurationOption{
-				WithContext(context.Background()),
+				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
 					TracerProvider: &TracerProvider{},
 					MeterProvider:  &MeterProvider{},
@@ -54,7 +53,7 @@ func TestNewSDK(t *testing.T) {
 		{
 			name: "with-sdk-disabled",
 			cfg: []ConfigurationOption{
-				WithContext(context.Background()),
+				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
 					Disabled:       ptr(true),
 					TracerProvider: &TracerProvider{},
@@ -73,7 +72,7 @@ func TestNewSDK(t *testing.T) {
 		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
 		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
 		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
-		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
+		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
 	}
 }
 

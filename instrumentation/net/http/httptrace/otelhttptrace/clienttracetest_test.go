@@ -69,7 +69,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 		_ = res.Body.Close()
 
 		return nil
-	}(context.Background())
+	}(t.Context())
 	if err != nil {
 		panic("unexpected error in http request: " + err.Error())
 	}
@@ -223,7 +223,7 @@ func TestConcurrentConnectionStart(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 			otel.SetTracerProvider(tp)
-			tt.run(otelhttptrace.NewClientTrace(context.Background()))
+			tt.run(otelhttptrace.NewClientTrace(t.Context()))
 			spans := getSpansFromRecorder(sr, "http.connect")
 			require.Len(t, spans, 2)
 
@@ -241,7 +241,7 @@ func TestEndBeforeStartCreatesSpan(t *testing.T) {
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	otel.SetTracerProvider(tp)
 
-	ct := otelhttptrace.NewClientTrace(context.Background())
+	ct := otelhttptrace.NewClientTrace(t.Context())
 	ct.DNSDone(httptrace.DNSDoneInfo{})
 	ct.DNSStart(httptrace.DNSStartInfo{Host: "example.com"})
 
@@ -255,7 +255,7 @@ func TestEndBeforeStartWithoutSubSpansDoesNotPanic(t *testing.T) {
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 	otel.SetTracerProvider(tp)
 
-	ct := otelhttptrace.NewClientTrace(context.Background(), otelhttptrace.WithoutSubSpans())
+	ct := otelhttptrace.NewClientTrace(t.Context(), otelhttptrace.WithoutSubSpans())
 
 	require.NotPanics(t, func() {
 		ct.DNSDone(httptrace.DNSDoneInfo{})
@@ -272,18 +272,18 @@ func TestNoClientTraceCallGuarantee(t *testing.T) {
 		// Also as there is no guarantee provided in the ClientTrace docs that GotFirstResponseByte should be called before
 		// Got100Continue this edge case should be covered.
 		assert.NotPanics(t, func() {
-			clientTrace := otelhttptrace.NewClientTrace(context.Background())
+			clientTrace := otelhttptrace.NewClientTrace(t.Context())
 			clientTrace.Got100Continue()
 		})
 	})
 	t.Run("Got1xxResponse", func(t *testing.T) {
-		clientTrace := otelhttptrace.NewClientTrace(context.Background())
+		clientTrace := otelhttptrace.NewClientTrace(t.Context())
 		err := clientTrace.Got1xxResponse(http.StatusNoContent, nil)
 		assert.NoError(t, err)
 	})
 	t.Run("Wait100Continue", func(t *testing.T) {
 		assert.NotPanics(t, func() {
-			clientTrace := otelhttptrace.NewClientTrace(context.Background())
+			clientTrace := otelhttptrace.NewClientTrace(t.Context())
 			clientTrace.Wait100Continue()
 		})
 	})
@@ -317,7 +317,7 @@ func prepareClientTraceTest(t *testing.T) clientTraceTestFixture {
 func TestWithoutSubSpans(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = httptrace.WithClientTrace(ctx,
 		otelhttptrace.NewClientTrace(ctx,
 			otelhttptrace.WithoutSubSpans(),
@@ -333,7 +333,7 @@ func TestWithoutSubSpans(t *testing.T) {
 
 	// Start again with a "real" span in the context, now tracing should add
 	// events and annotations.
-	ctx, span := otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
 	ctx = httptrace.WithClientTrace(ctx,
 		otelhttptrace.NewClientTrace(ctx,
 			otelhttptrace.WithoutSubSpans(),
@@ -419,7 +419,7 @@ func TestWithoutSubSpans(t *testing.T) {
 func TestWithRedactedHeaders(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
 
-	ctx, span := otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
 	ctx = httptrace.WithClientTrace(ctx,
 		otelhttptrace.NewClientTrace(ctx,
 			otelhttptrace.WithoutSubSpans(),
@@ -449,7 +449,7 @@ func TestWithRedactedHeaders(t *testing.T) {
 func TestWithoutHeaders(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
 
-	ctx, span := otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
 	ctx = httptrace.WithClientTrace(ctx,
 		otelhttptrace.NewClientTrace(ctx,
 			otelhttptrace.WithoutSubSpans(),
@@ -472,7 +472,7 @@ func TestWithoutHeaders(t *testing.T) {
 func TestWithInsecureHeaders(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
 
-	ctx, span := otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
 	ctx = httptrace.WithClientTrace(ctx,
 		otelhttptrace.NewClientTrace(ctx,
 			otelhttptrace.WithoutSubSpans(),
@@ -513,7 +513,7 @@ func TestHTTPRequestWithTraceContext(t *testing.T) {
 	)
 	defer ts.Close()
 
-	ctx, span := tp.Tracer("").Start(context.Background(), "parent_span")
+	ctx, span := tp.Tracer("").Start(t.Context(), "parent_span")
 
 	req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), otelhttptrace.NewClientTrace(ctx)))
@@ -538,7 +538,7 @@ func TestHTTPRequestWithTraceContext(t *testing.T) {
 func TestHTTPRequestWithExpect100Continue(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
 
-	ctx, span := otel.Tracer("oteltest").Start(context.Background(), "root")
+	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
 	ctx = httptrace.WithClientTrace(ctx, otelhttptrace.NewClientTrace(ctx))
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, fixture.URL, bytes.NewReader([]byte("test")))
