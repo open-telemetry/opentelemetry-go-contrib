@@ -44,7 +44,7 @@ func run() (err error) {
 	select {
 	case err = <-srvErr:
 		// Error when starting HTTP server.
-		return
+		return err
 	case <-ctx.Done():
 		// Wait for first CTRL+C.
 		// Stop receiving signal notifications as soon as possible.
@@ -53,7 +53,7 @@ func run() (err error) {
 
 	// When Shutdown is called, ListenAndServe immediately returns ErrServerClosed.
 	err = srv.Shutdown(context.Background())
-	return
+	return err
 }
 
 func newHTTPHandler() http.Handler {

@@ -32,22 +32,20 @@ var (
 	traceID64bitPadded = mustTraceIDFromHex("0000000000000000a3ce929d0e0e4736")
 )
 
-func mustTraceIDFromHex(s string) (t trace.TraceID) {
-	var err error
-	t, err = trace.TraceIDFromHex(s)
+func mustTraceIDFromHex(s string) trace.TraceID {
+	t, err := trace.TraceIDFromHex(s)
 	if err != nil {
 		panic(err)
 	}
-	return
+	return t
 }
 
-func mustSpanIDFromHex(s string) (t trace.SpanID) {
-	var err error
-	t, err = trace.SpanIDFromHex(s)
+func mustSpanIDFromHex(s string) trace.SpanID {
+	t, err := trace.SpanIDFromHex(s)
 	if err != nil {
 		panic(err)
 	}
-	return
+	return t
 }
 
 type extractTest struct {

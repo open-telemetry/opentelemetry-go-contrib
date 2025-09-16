@@ -24,7 +24,7 @@ func main() {
 	}
 }
 
-func run() (err error) {
+func run() error {
 	// Handle SIGINT (CTRL+C) gracefully.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -32,7 +32,7 @@ func run() (err error) {
 	// Set up OpenTelemetry.
 	otelShutdown, err := setupOTelSDK(ctx)
 	if err != nil {
-		return
+		return err
 	}
 	// Handle shutdown properly so nothing leaks.
 	defer func() {
@@ -56,7 +56,7 @@ func run() (err error) {
 	select {
 	case err = <-srvErr:
 		// Error when starting HTTP server.
-		return
+		return err
 	case <-ctx.Done():
 		// Wait for first CTRL+C.
 		// Stop receiving signal notifications as soon as possible.
@@ -65,7 +65,7 @@ func run() (err error) {
 
 	// When Shutdown is called, ListenAndServe immediately returns ErrServerClosed.
 	err = srv.Shutdown(context.Background())
-	return
+	return err
 }
 
 func newHTTPHandler() http.Handler {
