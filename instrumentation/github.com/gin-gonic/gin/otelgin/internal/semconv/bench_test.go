@@ -10,11 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"testing"
-
-	"go.opentelemetry.io/otel/attribute"
 )
-
-var benchHTTPServerRequestResults []attribute.KeyValue
 
 // BenchmarkHTTPServerRequest allows comparison between different version of the HTTP server.
 // To use an alternative start this test with OTEL_SEMCONV_STABILITY_OPT_IN set to the
@@ -43,6 +39,6 @@ func BenchmarkHTTPServerRequest(b *testing.B) {
 	b.ReportAllocs()
 	b.ResetTimer()
 	for range b.N {
-		benchHTTPServerRequestResults = serv.RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
+		_ = serv.RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
 	}
 }
