@@ -388,7 +388,8 @@ func TestLogSinkContext(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Context: t.Context()},
+					//nolint:usetesting // This place was originally intended to test the default context.
+					{Context: context.Background()},
 				},
 			},
 		},

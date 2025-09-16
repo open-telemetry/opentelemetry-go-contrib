@@ -49,7 +49,8 @@ func TestLogExporterOTLP(t *testing.T) {
 			got, err := NewLogExporter(t.Context())
 			assert.NoError(t, err)
 			t.Cleanup(func() {
-				assert.NoError(t, got.Shutdown(t.Context()))
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(t, got.Shutdown(context.Background()))
 			})
 			assert.Implements(t, new(log.Exporter), got)
 
@@ -76,7 +77,8 @@ func TestLogExporterOTLPWithDedicatedProtocol(t *testing.T) {
 			got, err := NewLogExporter(t.Context())
 			assert.NoError(t, err)
 			t.Cleanup(func() {
-				assert.NoError(t, got.Shutdown(t.Context()))
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(t, got.Shutdown(context.Background()))
 			})
 			assert.Implements(t, new(log.Exporter), got)
 

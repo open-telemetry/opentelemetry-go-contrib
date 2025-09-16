@@ -64,7 +64,8 @@ func TestMetricExporterOTLP(t *testing.T) {
 			got, err := NewMetricReader(t.Context())
 			assert.NoError(t, err)
 			t.Cleanup(func() {
-				assert.NoError(t, got.Shutdown(t.Context()))
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(t, got.Shutdown(context.Background()))
 			})
 			assert.IsType(t, &metric.PeriodicReader{}, got)
 
@@ -91,7 +92,8 @@ func TestMetricExporterOTLPWithDedicatedProtocol(t *testing.T) {
 			got, err := NewMetricReader(t.Context())
 			assert.NoError(t, err)
 			t.Cleanup(func() {
-				assert.NoError(t, got.Shutdown(t.Context()))
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(t, got.Shutdown(context.Background()))
 			})
 			assert.IsType(t, &metric.PeriodicReader{}, got)
 
