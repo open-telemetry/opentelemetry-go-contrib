@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
+	"golang.org/x/net/context"
 )
 
 func TestMeterProvider(t *testing.T) {
@@ -1138,7 +1139,8 @@ func TestPrometheusIPv6(t *testing.T) {
 
 			rs, err := prometheusReader(t.Context(), &cfg)
 			t.Cleanup(func() {
-				require.NoError(t, rs.Shutdown(t.Context()))
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				require.NoError(t, rs.Shutdown(context.Background()))
 			})
 			require.NoError(t, err)
 
