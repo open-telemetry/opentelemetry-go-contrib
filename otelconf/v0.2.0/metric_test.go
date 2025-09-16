@@ -4,6 +4,7 @@
 package otelconf
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/url"
@@ -24,7 +25,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	"golang.org/x/net/context"
 )
 
 func TestMeterProvider(t *testing.T) {

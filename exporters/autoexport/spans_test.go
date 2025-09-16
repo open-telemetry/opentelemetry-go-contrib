@@ -4,6 +4,7 @@
 package autoexport // import "go.opentelemetry.io/contrib/exporters/autoexport"
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -11,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	"golang.org/x/net/context"
 )
 
 func TestSpanExporterNone(t *testing.T) {
