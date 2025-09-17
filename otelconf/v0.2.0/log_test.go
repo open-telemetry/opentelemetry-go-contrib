@@ -4,7 +4,6 @@
 package otelconf
 
 import (
-	"context"
 	"errors"
 	"net/url"
 	"reflect"
@@ -53,12 +52,12 @@ func TestLoggerProvider(t *testing.T) {
 		mp, shutdown, err := loggerProvider(tt.cfg, resource.Default())
 		require.Equal(t, tt.wantProvider, mp)
 		assert.Equal(t, tt.wantErr, err)
-		require.NoError(t, shutdown(context.Background()))
+		require.NoError(t, shutdown(t.Context()))
 	}
 }
 
 func TestLogProcessor(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	otlpHTTPExporter, err := otlploghttp.New(ctx)
 	require.NoError(t, err)
@@ -396,7 +395,7 @@ func TestLogProcessor(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := logProcessor(context.Background(), tt.processor)
+			got, err := logProcessor(t.Context(), tt.processor)
 			require.Equal(t, tt.wantErr, err)
 			if tt.wantProcessor == nil {
 				require.Nil(t, got)

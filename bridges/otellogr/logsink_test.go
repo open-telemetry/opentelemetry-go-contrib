@@ -374,7 +374,7 @@ func TestLogSink(t *testing.T) {
 
 func TestLogSinkContext(t *testing.T) {
 	name := "name"
-	ctx := context.WithValue(context.Background(), "key", "value") //nolint:revive,staticcheck // test context
+	ctx := context.WithValue(t.Context(), "key", "value") //nolint:revive,staticcheck // test context
 
 	tests := []struct {
 		name string
@@ -388,6 +388,7 @@ func TestLogSinkContext(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
+					//nolint:usetesting // This place was originally intended to test the default context.
 					{Context: context.Background()},
 				},
 			},
@@ -448,7 +449,7 @@ func TestLogSinkEnabled(t *testing.T) {
 }
 
 func TestConvertKVs(t *testing.T) {
-	ctx := context.WithValue(context.Background(), "key", "value") //nolint:revive,staticcheck // test context
+	ctx := context.WithValue(t.Context(), "key", "value") //nolint:revive,staticcheck // test context
 
 	for _, tt := range []struct {
 		name    string
@@ -498,7 +499,7 @@ func TestConvertKVs(t *testing.T) {
 		},
 		{
 			name:    "last_context",
-			kvs:     []any{"key", context.Background(), "ctx", ctx},
+			kvs:     []any{"key", t.Context(), "ctx", ctx},
 			wantKVs: []log.KeyValue{},
 			wantCtx: ctx,
 		},

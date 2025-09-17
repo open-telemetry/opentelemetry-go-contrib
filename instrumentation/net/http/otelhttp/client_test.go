@@ -4,7 +4,6 @@
 package otelhttp_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -40,7 +39,7 @@ func TestConvenienceWrappers(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	res, err := otelhttp.Get(ctx, ts.URL)
 	if err != nil {
 		t.Fatal(err)
@@ -80,7 +79,7 @@ func TestClientWithTraceContext(t *testing.T) {
 	provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 
 	tracer := provider.Tracer("")
-	ctx, span := tracer.Start(context.Background(), "http requests")
+	ctx, span := tracer.Start(t.Context(), "http requests")
 
 	content := []byte("Hello, world!")
 

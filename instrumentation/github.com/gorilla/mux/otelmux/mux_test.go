@@ -5,7 +5,6 @@ package otelmux
 
 import (
 	"bufio"
-	"context"
 	"io"
 	"net"
 	"net/http"
@@ -41,7 +40,7 @@ func TestPassthroughSpanFromGlobalTracer(t *testing.T) {
 	}))
 
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
-	r = r.WithContext(trace.ContextWithRemoteSpanContext(context.Background(), sc))
+	r = r.WithContext(trace.ContextWithRemoteSpanContext(t.Context(), sc))
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -59,7 +58,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc)
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	var called bool
@@ -82,7 +81,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	var called bool
@@ -176,13 +175,13 @@ func TestFilter(t *testing.T) {
 	}))
 
 	r := httptest.NewRequest(http.MethodGet, "/health", http.NoBody)
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 
 	r = httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
-	ctx = trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	ctx = trace.ContextWithRemoteSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, r)
@@ -216,7 +215,7 @@ func TestPassthroughSpanFromGlobalTracerWithBody(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodPost, "/user", strings.NewReader(`{"name":"John Doe","age":30}`))
 	r.Header.Set("Content-Type", "application/json")
-	r = r.WithContext(trace.ContextWithRemoteSpanContext(context.Background(), sc))
+	r = r.WithContext(trace.ContextWithRemoteSpanContext(t.Context(), sc))
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -242,7 +241,7 @@ func TestHeaderAlreadyWrittenWhenFlushing(t *testing.T) {
 	})
 
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
-	r = r.WithContext(trace.ContextWithRemoteSpanContext(context.Background(), sc))
+	r = r.WithContext(trace.ContextWithRemoteSpanContext(t.Context(), sc))
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)

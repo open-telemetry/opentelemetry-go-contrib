@@ -32,7 +32,7 @@ func benchmarkServerHandlerHandleRPC(b *testing.B, stat stats.RPCStats) {
 		WithMeterProvider(metricnoop.NewMeterProvider()),
 		WithMessageEvents(ReceivedEvents, SentEvents),
 	)
-	ctx := context.Background()
+	ctx := b.Context()
 	ctx = handler.TagRPC(ctx, &stats.RPCTagInfo{
 		FullMethodName: "/package.service/method",
 	})
@@ -89,7 +89,7 @@ func benchmarkServerHandlerHandleRPCNoOp(b *testing.B, stat stats.RPCStats) {
 		WithMeterProvider(metricnoop.NewMeterProvider()),
 		WithMessageEvents(ReceivedEvents, SentEvents),
 	)
-	ctx := context.Background()
+	ctx := b.Context()
 	ctx = handler.TagRPC(ctx, &stats.RPCTagInfo{
 		FullMethodName: "/package.service/method",
 	})

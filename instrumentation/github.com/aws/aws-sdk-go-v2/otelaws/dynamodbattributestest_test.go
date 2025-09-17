@@ -66,7 +66,7 @@ func TestDynamodbTags(t *testing.T) {
 			Retryer: aws.NopRetryer{},
 		})
 
-		_, err := svc.GetItem(context.Background(), &dynamodb.GetItemInput{
+		_, err := svc.GetItem(t.Context(), &dynamodb.GetItemInput{
 			TableName:            aws.String("table1"),
 			ConsistentRead:       aws.Bool(false),
 			ProjectionExpression: aws.String("test"),
@@ -148,7 +148,7 @@ func TestDynamodbTagsCustomBuilder(t *testing.T) {
 			return customAttributes
 		})
 
-		_, err := svc.GetItem(context.Background(), &dynamodb.GetItemInput{
+		_, err := svc.GetItem(t.Context(), &dynamodb.GetItemInput{
 			TableName:            aws.String("table1"),
 			ConsistentRead:       aws.Bool(false),
 			ProjectionExpression: aws.String("test"),

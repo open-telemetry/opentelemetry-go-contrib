@@ -5,7 +5,6 @@ package xray
 
 import (
 	"bytes"
-	"context"
 	"strconv"
 	"testing"
 	"time"
@@ -17,7 +16,7 @@ import (
 
 func TestTraceIDIsValidLength(t *testing.T) {
 	idg := NewIDGenerator()
-	traceID, _ := idg.NewIDs(context.Background())
+	traceID, _ := idg.NewIDs(t.Context())
 
 	expectedTraceIDLength := 32
 	assert.Len(t, traceID.String(), expectedTraceIDLength, "TraceID has incorrect length.")
@@ -25,8 +24,8 @@ func TestTraceIDIsValidLength(t *testing.T) {
 
 func TestTraceIDIsUnique(t *testing.T) {
 	idg := NewIDGenerator()
-	traceID1, _ := idg.NewIDs(context.Background())
-	traceID2, _ := idg.NewIDs(context.Background())
+	traceID1, _ := idg.NewIDs(t.Context())
+	traceID2, _ := idg.NewIDs(t.Context())
 
 	assert.NotEqual(t, traceID1.String(), traceID2.String(), "TraceID should be unique")
 }
@@ -36,7 +35,7 @@ func TestTraceIDTimestampInBounds(t *testing.T) {
 
 	previousTime := time.Now().Unix()
 
-	traceID, _ := idg.NewIDs(context.Background())
+	traceID, _ := idg.NewIDs(t.Context())
 
 	currentTime, err := strconv.ParseInt(traceID.String()[0:8], 16, 64)
 	require.NoError(t, err)
@@ -50,16 +49,16 @@ func TestTraceIDTimestampInBounds(t *testing.T) {
 func TestTraceIDIsNotNil(t *testing.T) {
 	var nilTraceID trace.TraceID
 	idg := NewIDGenerator()
-	traceID, _ := idg.NewIDs(context.Background())
+	traceID, _ := idg.NewIDs(t.Context())
 
 	assert.False(t, bytes.Equal(traceID[:], nilTraceID[:]), "TraceID cannot be empty.")
 }
 
 func TestSpanIDIsValidLength(t *testing.T) {
 	idg := NewIDGenerator()
-	ctx := context.Background()
+	ctx := t.Context()
 	traceID, spanID1 := idg.NewIDs(ctx)
-	spanID2 := idg.NewSpanID(context.Background(), traceID)
+	spanID2 := idg.NewSpanID(t.Context(), traceID)
 	expectedSpanIDLength := 16
 
 	assert.Len(t, spanID1.String(), expectedSpanIDLength, "SpanID has incorrect length")
@@ -68,7 +67,7 @@ func TestSpanIDIsValidLength(t *testing.T) {
 
 func TestSpanIDIsUnique(t *testing.T) {
 	idg := NewIDGenerator()
-	ctx := context.Background()
+	ctx := t.Context()
 	traceID, spanID1 := idg.NewIDs(ctx)
 	_, spanID2 := idg.NewIDs(ctx)
 
@@ -82,7 +81,7 @@ func TestSpanIDIsUnique(t *testing.T) {
 func TestSpanIDIsNotNil(t *testing.T) {
 	var nilSpanID trace.SpanID
 	idg := NewIDGenerator()
-	ctx := context.Background()
+	ctx := t.Context()
 	traceID, spanID1 := idg.NewIDs(ctx)
 	spanID2 := idg.NewSpanID(ctx, traceID)
 

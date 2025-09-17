@@ -38,7 +38,7 @@ func NewTestExporter() *testExporter {
 func TestSpanProcessorAppendsAllBaggageAttributes(t *testing.T) {
 	b, _ := baggage.New()
 	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
-	ctx := baggage.ContextWithBaggage(context.Background(), b)
+	ctx := baggage.ContextWithBaggage(t.Context(), b)
 
 	// create trace provider with baggage processor and test exporter
 	exporter := NewTestExporter()
@@ -62,7 +62,7 @@ func TestSpanProcessorAppendsAllBaggageAttributes(t *testing.T) {
 func TestSpanProcessorAppendsBaggageAttributesWithHaPrefixPredicate(t *testing.T) {
 	b, _ := baggage.New()
 	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
-	ctx := baggage.ContextWithBaggage(context.Background(), b)
+	ctx := baggage.ContextWithBaggage(t.Context(), b)
 
 	baggageKeyPredicate := func(m baggage.Member) bool {
 		return strings.HasPrefix(m.Key(), "baggage.")
@@ -90,7 +90,7 @@ func TestSpanProcessorAppendsBaggageAttributesWithHaPrefixPredicate(t *testing.T
 func TestSpanProcessorAppendsBaggageAttributesWithRegexPredicate(t *testing.T) {
 	b, _ := baggage.New()
 	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
-	ctx := baggage.ContextWithBaggage(context.Background(), b)
+	ctx := baggage.ContextWithBaggage(t.Context(), b)
 
 	expr := regexp.MustCompile(`^baggage\..*`)
 	baggageKeyPredicate := func(m baggage.Member) bool {
@@ -120,7 +120,7 @@ func TestOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
 	b, _ := baggage.New()
 	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
 	b = addEntryToBaggage(t, b, "foo", "bar")
-	ctx := baggage.ContextWithBaggage(context.Background(), b)
+	ctx := baggage.ContextWithBaggage(t.Context(), b)
 
 	baggageKeyPredicate := func(m baggage.Member) bool {
 		return m.Key() == "baggage.test"
@@ -161,7 +161,7 @@ func TestZeroSpanProcessorNoPanic(t *testing.T) {
 	b, err := baggage.New(m)
 	require.NoError(t, err)
 
-	ctx := baggage.ContextWithBaggage(context.Background(), b)
+	ctx := baggage.ContextWithBaggage(t.Context(), b)
 	roS := (tracetest.SpanStub{}).Snapshot()
 	rwS := rwSpan{}
 	assert.NotPanics(t, func() {

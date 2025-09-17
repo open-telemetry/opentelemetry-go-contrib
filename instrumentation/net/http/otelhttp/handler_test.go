@@ -4,7 +4,6 @@
 package otelhttp
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -136,7 +135,7 @@ func TestHandlerBasics(t *testing.T) {
 	h.ServeHTTP(rr, r)
 
 	rm := metricdata.ResourceMetrics{}
-	err = reader.Collect(context.Background(), &rm)
+	err = reader.Collect(t.Context(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	attrs := attribute.NewSet(
@@ -419,7 +418,7 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 		sdktrace.WithSpanProcessor(spanRecorder),
 	)
 	tracer := provider.Tracer("")
-	ctx, span := tracer.Start(context.Background(), "test_request")
+	ctx, span := tracer.Start(t.Context(), "test_request")
 	r = r.WithContext(ctx)
 
 	h.ServeHTTP(rr, r)
@@ -488,7 +487,7 @@ func TestWithSpanNameFormatter(t *testing.T) {
 			h.ServeHTTP(rr, r)
 			assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
-			assert.NoError(t, spanRecorder.ForceFlush(context.Background()))
+			assert.NoError(t, spanRecorder.ForceFlush(t.Context()))
 			spans := spanRecorder.Ended()
 			assert.Len(t, spans, 1)
 			assert.Equal(t, tt.wantSpanName, spans[0].Name())
@@ -526,7 +525,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	require.NoError(t, err)
 
 	sc := trace.NewSpanContext(remoteSpan)
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	rr := httptest.NewRecorder()
@@ -610,7 +609,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			require.NoError(t, err)
 
 			sc := trace.NewSpanContext(remoteSpan)
-			ctx := trace.ContextWithSpanContext(context.Background(), sc)
+			ctx := trace.ContextWithSpanContext(t.Context(), sc)
 			prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 			rr := httptest.NewRecorder()
@@ -685,7 +684,7 @@ func TestWithRouteTag(t *testing.T) {
 	require.Contains(t, gotSpan.Attributes(), want, "should add route to span attributes")
 
 	rm := metricdata.ResourceMetrics{}
-	err := metricReader.Collect(context.Background(), &rm)
+	err := metricReader.Collect(t.Context(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1, "should emit metrics for one scope")
 	gotMetrics := rm.ScopeMetrics[0].Metrics
@@ -771,7 +770,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		h.ServeHTTP(rr, r)
 
 		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(context.Background(), &rm)
+		err = reader.Collect(t.Context(), &rm)
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)

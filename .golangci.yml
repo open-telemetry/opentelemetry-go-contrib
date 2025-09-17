@@ -158,6 +158,9 @@ linters:
       disable:
         - float-compare
         - require-error
+    usetesting:
+      context-background: true
+      context-todo: true
   exclusions:
     generated: lax
     presets:

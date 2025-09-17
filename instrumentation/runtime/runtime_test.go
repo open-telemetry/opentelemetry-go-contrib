@@ -4,7 +4,6 @@
 package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
 
 import (
-	"context"
 	"math"
 	"runtime/debug"
 	"testing"
@@ -71,7 +70,7 @@ func TestRuntimeWithLimit(t *testing.T) {
 	err := Start(WithMeterProvider(mp))
 	assert.NoError(t, err)
 	rm := metricdata.ResourceMetrics{}
-	err = reader.Collect(context.Background(), &rm)
+	err = reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 8)

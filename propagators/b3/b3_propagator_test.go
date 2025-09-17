@@ -4,7 +4,6 @@
 package b3
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -176,7 +175,7 @@ func TestExtractMultiple(t *testing.T) {
 
 	for _, test := range tests {
 		ctx, actual, err := extractMultiple(
-			context.Background(),
+			t.Context(),
 			test.traceID,
 			test.spanID,
 			test.parentSpanID,
@@ -279,7 +278,7 @@ func TestExtractSingle(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		ctx, actual, err := extractSingle(context.Background(), test.header)
+		ctx, actual, err := extractSingle(t.Context(), test.header)
 		if !assert.Equal(t, test.err, err, "header: %s", test.header) {
 			continue
 		}

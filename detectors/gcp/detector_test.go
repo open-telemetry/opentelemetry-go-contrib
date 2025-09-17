@@ -4,7 +4,6 @@
 package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -237,7 +236,7 @@ func TestDetect(t *testing.T) {
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			res, err := tc.detector.Detect(context.TODO())
+			res, err := tc.detector.Detect(t.Context())
 			if tc.expectErr {
 				assert.Error(t, err)
 			} else {

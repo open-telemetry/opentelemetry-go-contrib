@@ -85,7 +85,7 @@ func TestMeterProvider(t *testing.T) {
 		mp, shutdown, err := meterProvider(tt.cfg, resource.Default())
 		require.Equal(t, tt.wantProvider, mp)
 		assert.Equal(t, tt.wantErr, err)
-		require.NoError(t, shutdown(context.Background()))
+		require.NoError(t, shutdown(t.Context()))
 	}
 }
 
@@ -94,7 +94,7 @@ func TestReader(t *testing.T) {
 		stdoutmetric.WithPrettyPrint(),
 	)
 	require.NoError(t, err)
-	ctx := context.Background()
+	ctx := t.Context()
 	otlpGRPCExporter, err := otlpmetricgrpc.New(ctx)
 	require.NoError(t, err)
 	otlpHTTPExporter, err := otlpmetrichttp.New(ctx)
@@ -641,7 +641,7 @@ func TestReader(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := metricReader(context.Background(), tt.reader)
+			got, err := metricReader(t.Context(), tt.reader)
 			require.Equal(t, tt.wantErr, err)
 			if tt.wantReader == nil {
 				require.Nil(t, got)
@@ -659,7 +659,7 @@ func TestReader(t *testing.T) {
 				wantExporterType := reflect.Indirect(reflect.ValueOf(tt.wantReader)).FieldByName(fieldName).Elem().Type()
 				gotExporterType := reflect.Indirect(reflect.ValueOf(got)).FieldByName(fieldName).Elem().Type()
 				require.Equal(t, wantExporterType.String(), gotExporterType.String())
-				require.NoError(t, got.Shutdown(context.Background()))
+				require.NoError(t, got.Shutdown(t.Context()))
 			}
 		})
 	}
@@ -1137,8 +1137,9 @@ func TestPrometheusIPv6(t *testing.T) {
 				WithResourceConstantLabels: &IncludeExclude{},
 			}
 
-			rs, err := prometheusReader(context.Background(), &cfg)
+			rs, err := prometheusReader(t.Context(), &cfg)
 			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 				require.NoError(t, rs.Shutdown(context.Background()))
 			})
 			require.NoError(t, err)

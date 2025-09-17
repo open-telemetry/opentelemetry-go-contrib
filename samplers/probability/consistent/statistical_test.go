@@ -7,7 +7,6 @@
 package consistent
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"math/rand"
@@ -196,7 +195,7 @@ func TestSamplerStatistics(t *testing.T) {
 }
 
 func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue, source rand.Source) (float64, []float64) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	sampler := ProbabilityBased(
 		prob,

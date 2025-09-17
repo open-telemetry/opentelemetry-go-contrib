@@ -21,8 +21,8 @@ import (
 
 func TestSpanProcessorDoNothing(t *testing.T) {
 	zsp := NewSpanProcessor()
-	assert.NoError(t, zsp.ForceFlush(context.Background()))
-	assert.NoError(t, zsp.Shutdown(context.Background()))
+	assert.NoError(t, zsp.ForceFlush(t.Context()))
+	assert.NoError(t, zsp.Shutdown(t.Context()))
 }
 
 func TestSpanProcessor(t *testing.T) {
@@ -138,7 +138,7 @@ func TestSpanProcessorNegativeLatency(t *testing.T) {
 			Description: "",
 		},
 	}
-	zsp.OnStart(context.Background(), ts)
+	zsp.OnStart(t.Context(), ts)
 
 	spansPM := zsp.spansPerMethod()
 	require.Len(t, spansPM, 1)

@@ -4,7 +4,6 @@
 package lambda
 
 import (
-	"context"
 	"os"
 	"testing"
 
@@ -32,7 +31,7 @@ func TestDetectSuccess(t *testing.T) {
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := resourceDetector{}
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 
 	assert.NoError(t, err, "Detector unexpectedly returned error")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
@@ -42,7 +41,7 @@ func TestDetectSuccess(t *testing.T) {
 func TestReturnsIfNoEnvVars(t *testing.T) {
 	os.Clearenv()
 	detector := resourceDetector{}
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 
 	assert.Equal(t, errNotOnLambda, err)
 	assert.Empty(t, res.Attributes())

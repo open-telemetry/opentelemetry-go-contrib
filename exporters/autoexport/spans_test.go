@@ -16,17 +16,17 @@ import (
 
 func TestSpanExporterNone(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "none")
-	got, err := NewSpanExporter(context.Background())
+	got, err := NewSpanExporter(t.Context())
 	assert.NoError(t, err)
 	t.Cleanup(func() {
-		assert.NoError(t, got.Shutdown(context.Background()))
+		assert.NoError(t, got.Shutdown(t.Context()))
 	})
 	assert.True(t, IsNoneSpanExporter(got))
 }
 
 func TestSpanExporterConsole(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "console")
-	got, err := NewSpanExporter(context.Background())
+	got, err := NewSpanExporter(t.Context())
 	assert.NoError(t, err)
 	assert.IsType(t, &stdouttrace.Exporter{}, got)
 }
@@ -44,9 +44,10 @@ func TestSpanExporterOTLP(t *testing.T) {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", tc.protocol)
 
-			got, err := NewSpanExporter(context.Background())
+			got, err := NewSpanExporter(t.Context())
 			assert.NoError(t, err)
 			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 				assert.NoError(t, got.Shutdown(context.Background()))
 			})
 			assert.IsType(t, &otlptrace.Exporter{}, got)
@@ -71,9 +72,10 @@ func TestSpanExporterOTLPWithDedicatedProtocol(t *testing.T) {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", tc.protocol)
 
-			got, err := NewSpanExporter(context.Background())
+			got, err := NewSpanExporter(t.Context())
 			assert.NoError(t, err)
 			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 				assert.NoError(t, got.Shutdown(context.Background()))
 			})
 			assert.IsType(t, &otlptrace.Exporter{}, got)
@@ -89,6 +91,6 @@ func TestSpanExporterOTLPOverInvalidProtocol(t *testing.T) {
 	t.Setenv("OTEL_TRACES_EXPORTER", "otlp")
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid-protocol")
 
-	_, err := NewSpanExporter(context.Background())
+	_, err := NewSpanExporter(t.Context())
 	assert.Error(t, err)
 }

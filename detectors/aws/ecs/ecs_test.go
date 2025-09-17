@@ -61,7 +61,7 @@ func TestDetectV3(t *testing.T) {
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}
-	res, _ := detector.Detect(context.Background())
+	res, _ := detector.Detect(t.Context())
 
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
@@ -111,7 +111,7 @@ func TestDetectV4(t *testing.T) {
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}
-	res, _ := detector.Detect(context.Background())
+	res, _ := detector.Detect(t.Context())
 
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
@@ -143,7 +143,7 @@ func TestDetectBadARNsv4(t *testing.T) {
 	}, nil)
 
 	detector := &resourceDetector{utils: detectorUtils}
-	_, err := detector.Detect(context.Background())
+	_, err := detector.Detect(t.Context())
 
 	assert.Equal(t, errCannotParseTaskArn, err)
 }
@@ -166,7 +166,7 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
@@ -183,7 +183,7 @@ func TestDetectCannotReadContainerName(t *testing.T) {
 	detectorUtils.On("getTaskMetadataV4").Return(nil, fmt.Errorf("not supported"))
 
 	detector := &resourceDetector{utils: detectorUtils}
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 
 	assert.Equal(t, errCannotReadContainerName, err)
 	assert.Empty(t, res.Attributes())
@@ -192,7 +192,7 @@ func TestDetectCannotReadContainerName(t *testing.T) {
 // returns empty resource when process is not running ECS.
 func TestReturnsIfNoEnvVars(t *testing.T) {
 	detector := &resourceDetector{utils: nil}
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 
 	// When not on ECS, the detector should return nil and not error.
 	assert.NoError(t, err, "failure to detect when not on platform must not be an error")

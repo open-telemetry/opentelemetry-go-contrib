@@ -7,7 +7,6 @@
 package semconv_test
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -199,7 +198,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 			req, err := http.NewRequest("POST", "http://example.com", http.NoBody)
 			assert.NoError(t, err)
 
-			server.RecordMetrics(context.Background(), semconv.ServerMetricData{
+			server.RecordMetrics(t.Context(), semconv.ServerMetricData{
 				ServerName:   "stuff",
 				ResponseSize: 200,
 				MetricAttributes: semconv.MetricAttributes{
@@ -216,7 +215,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 			})
 
 			rm := metricdata.ResourceMetrics{}
-			require.NoError(t, reader.Collect(context.Background(), &rm))
+			require.NoError(t, reader.Collect(t.Context(), &rm))
 			tt.wantFunc(t, rm)
 		})
 	}
@@ -434,7 +433,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 			req, err := http.NewRequest("POST", "http://example.com", http.NoBody)
 			assert.NoError(t, err)
 
-			client.RecordMetrics(context.Background(), semconv.MetricData{
+			client.RecordMetrics(t.Context(), semconv.MetricData{
 				RequestSize: 100,
 				ElapsedTime: 300,
 			}, client.MetricOptions(semconv.MetricAttributes{
@@ -443,7 +442,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 			}))
 
 			rm := metricdata.ResourceMetrics{}
-			require.NoError(t, reader.Collect(context.Background(), &rm))
+			require.NoError(t, reader.Collect(t.Context(), &rm))
 			tt.wantFunc(t, rm)
 		})
 	}

@@ -33,7 +33,7 @@ func FuzzJSON(f *testing.F) {
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+		ctx, cancel := context.WithTimeout(t.Context(), time.Millisecond)
 		defer cancel()
 		_ = sdk.Shutdown(ctx)
 	})
@@ -57,7 +57,7 @@ func FuzzYAML(f *testing.F) {
 			return
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond)
+		ctx, cancel := context.WithTimeout(t.Context(), time.Millisecond)
 		defer cancel()
 		_ = sdk.Shutdown(ctx)
 	})

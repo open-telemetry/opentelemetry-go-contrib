@@ -4,7 +4,6 @@
 package ot
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -151,7 +150,7 @@ func TestOT_Fields(t *testing.T) {
 	})
 
 	carrier := propagation.MapCarrier{}
-	propagator.Inject(trace.ContextWithSpanContext(context.Background(), ctx), carrier)
+	propagator.Inject(trace.ContextWithSpanContext(t.Context(), ctx), carrier)
 
 	for _, field := range got {
 		assert.Contains(t, carrier, field, "Each field returned by Fields() should be set by Inject()")
