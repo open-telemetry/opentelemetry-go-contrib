@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/detectors/gcp
 go 1.24.0
 
 require (
-	cloud.google.com/go/compute/metadata v0.8.3
+	cloud.google.com/go/compute/metadata v0.8.4
 	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.29.0
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.11.1
