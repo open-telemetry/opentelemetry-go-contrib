@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.50.3
 	github.com/aws/aws-sdk-go-v2/service/route53 v1.58.2
 	github.com/aws/aws-sdk-go-v2/service/sns v1.38.3
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.5
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.6
 	github.com/aws/smithy-go v1.23.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.38.0
