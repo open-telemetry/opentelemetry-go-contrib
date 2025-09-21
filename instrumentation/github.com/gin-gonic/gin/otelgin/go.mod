@@ -43,7 +43,7 @@ require (
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.uber.org/mock v0.5.0 // indirect
+	go.uber.org/mock v0.6.0 // indirect
 	golang.org/x/arch v0.21.0 // indirect
 	golang.org/x/crypto v0.42.0 // indirect
 	golang.org/x/mod v0.28.0 // indirect
