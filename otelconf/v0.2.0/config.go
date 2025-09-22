@@ -8,7 +8,7 @@ import (
 	"context"
 	"errors"
 
-	"gopkg.in/yaml.v3"
+	yaml "go.yaml.in/yaml/v3"
 
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 	"go.opentelemetry.io/otel/log"
@@ -17,7 +17,6 @@ import (
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
-	yaml "go.yaml.in/yaml/v3"
 )
 
 const (
