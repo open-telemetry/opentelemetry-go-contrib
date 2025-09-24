@@ -62,6 +62,7 @@ func replaceEnvVar(uri string) ([]byte, error) {
 }
 
 func parseEnvVarURI(uri string) (string, *string) {
+	uri = strings.TrimPrefix(uri, "env:")
 	const defaultSuffix = ":-"
 	if strings.Contains(uri, defaultSuffix) {
 		parts := strings.SplitN(uri, defaultSuffix, 2)
