@@ -41,6 +41,9 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 
 func replaceEnvVar(uri string) ([]byte, error) {
 	envVarName, defaultValuePtr := parseEnvVarURI(uri)
+	if strings.Contains(envVarName, ":") {
+		return nil, fmt.Errorf("invalid environment variable name: %s", envVarName)
+	}
 	if !validationRegexp.MatchString(envVarName) {
 		return nil, fmt.Errorf("invalid environment variable name: %s", envVarName)
 	}

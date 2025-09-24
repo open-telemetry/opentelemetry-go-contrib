@@ -130,6 +130,14 @@ func TestReplaceEnvVar(t *testing.T) {
 			wantValue:  []byte(nil),
 			wantErr:    errors.New("invalid value type: yaml: cannot decode !!str `NaN` as a !!int"),
 		},
+		{
+			name:       "handle invalid substitution syntax",
+			uri:        "something:?error",
+			envVarName: "something:?error",
+			val:        ``,
+			wantValue:  []byte(nil),
+			wantErr:    errors.New("invalid environment variable name: something:?error"),
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			if tt.envVarName != "" {
