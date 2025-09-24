@@ -132,7 +132,7 @@ func TestReplaceEnvVar(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			if len(tt.envVarName) > 0 {
+			if tt.envVarName != "" {
 				t.Setenv(tt.envVarName, tt.val)
 			}
 			got, err := replaceEnvVar(tt.uri)

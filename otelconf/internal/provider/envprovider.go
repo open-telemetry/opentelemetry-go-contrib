@@ -24,7 +24,7 @@ func EscapeDollarSigns(input []byte) []byte {
 }
 
 func ReplaceEnvVars(input []byte) ([]byte, error) {
-	re := regexp.MustCompile(`\$\{([a-zA-Z_][a-zA-Z0-9_]*[-]?.*)\}`)
+	re := regexp.MustCompile(`\$\{([a-zA-Z_][a-zA-Z0-9_]*-?.*)\}`)
 
 	replaceEnvVars := func(input []byte) ([]byte, error) {
 		var err error
@@ -49,7 +49,7 @@ func replaceEnvVar(uri string) ([]byte, error) {
 	if val == "" && defaultValuePtr != nil {
 		val = *defaultValuePtr
 	}
-	if len(val) == 0 {
+	if val == "" {
 		return nil, nil
 	}
 

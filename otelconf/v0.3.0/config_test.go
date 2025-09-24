@@ -396,10 +396,10 @@ var v03OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 			{Name: "bool_key", Type: &AttributeNameValueType{Value: "bool"}, Value: true},
 			{Name: "int_key", Type: &AttributeNameValueType{Value: "int"}, Value: 1},
 			{Name: "double_key", Type: &AttributeNameValueType{Value: "double"}, Value: 1.1},
-			{Name: "string_array_key", Type: &AttributeNameValueType{Value: "string_array"}, Value: []interface{}{"value1", "value2"}},
-			{Name: "bool_array_key", Type: &AttributeNameValueType{Value: "bool_array"}, Value: []interface{}{true, false}},
-			{Name: "int_array_key", Type: &AttributeNameValueType{Value: "int_array"}, Value: []interface{}{1, 2}},
-			{Name: "double_array_key", Type: &AttributeNameValueType{Value: "double_array"}, Value: []interface{}{1.1, 2.2}},
+			{Name: "string_array_key", Type: &AttributeNameValueType{Value: "string_array"}, Value: []any{"value1", "value2"}},
+			{Name: "bool_array_key", Type: &AttributeNameValueType{Value: "bool_array"}, Value: []any{true, false}},
+			{Name: "int_array_key", Type: &AttributeNameValueType{Value: "int_array"}, Value: []any{1, 2}},
+			{Name: "double_array_key", Type: &AttributeNameValueType{Value: "double_array"}, Value: []any{1.1, 2.2}},
 			{Name: "string_value", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
 			{Name: "bool_value", Type: &AttributeNameValueType{Value: "bool"}, Value: true},
 			{Name: "int_value", Type: &AttributeNameValueType{Value: "int"}, Value: 1},
@@ -511,7 +511,7 @@ func TestParseYAMLWithEnvironmentVariables(t *testing.T) {
 		name     string
 		input    string
 		wantErr  error
-		wantType interface{}
+		wantType any
 	}{
 		{
 			name:     "valid v0.3 config with env vars",
