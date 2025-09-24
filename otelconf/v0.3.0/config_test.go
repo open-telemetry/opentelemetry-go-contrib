@@ -418,7 +418,6 @@ var v03OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 			{Name: "env_var_in_key", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
 			{Name: "replace_me", Type: &AttributeNameValueType{Value: "string"}, Value: "${DO_NOT_REPLACE_ME}"},
 			{Name: "undefined_defaults_to_var", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE}"},
-			// key: ${STRING_VALUE:?error}
 			// {Name: "escaped_does_not_substitute", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE}"},
 			{Name: "escaped_and_substituted", Type: &AttributeNameValueType{Value: "string"}, Value: "$value"},
 			// key: $$$${STRING_VALUE}
