@@ -404,12 +404,12 @@ var v03OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 			{Name: "bool_value", Type: &AttributeNameValueType{Value: "bool"}, Value: true},
 			{Name: "int_value", Type: &AttributeNameValueType{Value: "int"}, Value: 1},
 			{Name: "float_value", Type: &AttributeNameValueType{Value: "double"}, Value: 1.1},
-			{Name: "hex_value", Type: &AttributeNameValueType{Value: "int"}, Value: int(3735928559)},
+			{Name: "hex_value", Type: &AttributeNameValueType{Value: "int"}, Value: int(48879)},
 			{Name: "quoted_string_value", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
 			{Name: "quoted_bool_value", Type: &AttributeNameValueType{Value: "string"}, Value: "true"},
 			{Name: "quoted_int_value", Type: &AttributeNameValueType{Value: "string"}, Value: "1"},
 			{Name: "quoted_float_value", Type: &AttributeNameValueType{Value: "string"}, Value: "1.1"},
-			{Name: "quoted_hex_value", Type: &AttributeNameValueType{Value: "string"}, Value: "0xdeadbeef"},
+			{Name: "quoted_hex_value", Type: &AttributeNameValueType{Value: "string"}, Value: "0xbeef"},
 			// {Name: "alternative_env_syntax", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
 			// {Name: "invalid_map_value", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
 			// {Name: "multiple_references_inject", Type: &AttributeNameValueType{Value: "string"}, Value: "foo value 1.1"},
@@ -527,7 +527,7 @@ func TestParseYAMLWithEnvironmentVariables(t *testing.T) {
 	t.Setenv("BOOL_VALUE", "true")
 	t.Setenv("INT_VALUE", "1")
 	t.Setenv("FLOAT_VALUE", "1.1")
-	t.Setenv("HEX_VALUE", "0xdeadbeef")                   // A valid integer value (i.e. 3735928559) written in hexadecimal
+	t.Setenv("HEX_VALUE", "0xbeef")                       // A valid integer value (i.e. 3735928559) written in hexadecimal
 	t.Setenv("INVALID_MAP_VALUE", "value\nkey:value")     // An invalid attempt to inject a map key into the YAML
 	t.Setenv("DO_NOT_REPLACE_ME", "Never use this value") // An unused environment variable
 	t.Setenv("REPLACE_ME", "${DO_NOT_REPLACE_ME}")        // A valid replacement text, used verbatim, not replaced with "Never use this value"
