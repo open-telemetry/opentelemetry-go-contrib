@@ -412,7 +412,7 @@ var v03OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 			{Name: "quoted_hex_value", Type: &AttributeNameValueType{Value: "string"}, Value: "0xbeef"},
 			// {Name: "alternative_env_syntax", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
 			// {Name: "invalid_map_value", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
-			// {Name: "multiple_references_inject", Type: &AttributeNameValueType{Value: "string"}, Value: "foo value 1.1"},
+			{Name: "multiple_references_inject", Type: &AttributeNameValueType{Value: "string"}, Value: "foo value 1.1"},
 			{Name: "undefined_key", Type: &AttributeNameValueType{Value: "string"}, Value: nil},
 			{Name: "undefined_key_fallback", Type: &AttributeNameValueType{Value: "string"}, Value: "fallback"},
 			// {Name: "env_var_in_key", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},

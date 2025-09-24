@@ -79,9 +79,9 @@ resource:
     - name: quoted_hex_value
       value: "${HEX_VALUE}"
       type: string
-    # - name: multiple_references_inject
-    #   value: foo ${STRING_VALUE} ${FLOAT_VALUE}
-    #   type: string
+    - name: multiple_references_inject
+      value: foo ${STRING_VALUE} ${FLOAT_VALUE}
+      type: string
     - name: undefined_key
       value: ${UNDEFINED_KEY}
       type: string
