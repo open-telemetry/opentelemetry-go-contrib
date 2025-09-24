@@ -12,8 +12,6 @@ import (
 	"fmt"
 	"os"
 
-	"gopkg.in/yaml.v3"
-
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log"
