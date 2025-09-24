@@ -82,6 +82,9 @@ resource:
     - name: alternative_env_syntax
       value: "${env:STRING_VALUE}"
       type: string
+    - name: invalid_map_value
+      value: "${INVALID_MAP_VALUE}"
+      type: string
     - name: multiple_references_inject
       value: foo ${STRING_VALUE} ${FLOAT_VALUE}
       type: string
