@@ -415,7 +415,7 @@ var v03OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 			{Name: "multiple_references_inject", Type: &AttributeNameValueType{Value: "string"}, Value: "foo value 1.1"},
 			{Name: "undefined_key", Type: &AttributeNameValueType{Value: "string"}, Value: nil},
 			{Name: "undefined_key_fallback", Type: &AttributeNameValueType{Value: "string"}, Value: "fallback"},
-			// {Name: "env_var_in_key", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
+			{Name: "env_var_in_key", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
 			{Name: "replace_me", Type: &AttributeNameValueType{Value: "string"}, Value: "${DO_NOT_REPLACE_ME}"},
 			{Name: "undefined_defaults_to_var", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE}"},
 			// key: ${STRING_VALUE:?error}
@@ -529,6 +529,7 @@ func TestParseYAMLWithEnvironmentVariables(t *testing.T) {
 	t.Setenv("FLOAT_VALUE", "1.1")
 	t.Setenv("HEX_VALUE", "0xbeef")                       // A valid integer value (i.e. 3735928559) written in hexadecimal
 	t.Setenv("INVALID_MAP_VALUE", "value\\nkey:value")    // An invalid attempt to inject a map key into the YAML
+	t.Setenv("ENV_VAR_IN_KEY", "env_var_in_key")          // An env var in key
 	t.Setenv("DO_NOT_REPLACE_ME", "Never use this value") // An unused environment variable
 	t.Setenv("REPLACE_ME", "${DO_NOT_REPLACE_ME}")        // A valid replacement text, used verbatim, not replaced with "Never use this value"
 	t.Setenv("VALUE_WITH_ESCAPE", "value$$")              // A valid replacement text, used verbatim, not replaced with "Never use this value"

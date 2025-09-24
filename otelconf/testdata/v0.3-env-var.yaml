@@ -94,6 +94,9 @@ resource:
     - name: undefined_key_fallback
       value: ${UNDEFINED_KEY:-fallback}
       type: string
+    - name: ${ENV_VAR_IN_KEY}
+      value: "value"
+      type: string
     - name: replace_me
       value: ${REPLACE_ME}
       type: string
