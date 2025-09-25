@@ -42,9 +42,9 @@ func TestNewSDK(t *testing.T) {
 			cfg: []ConfigurationOption{
 				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-					TracerProvider: &TracerProvider{},
-					MeterProvider:  &MeterProvider{},
-					LoggerProvider: &LoggerProvider{},
+					TracerProvider: &TracerProviderJson{},
+					MeterProvider:  &MeterProviderJson{},
+					LoggerProvider: &LoggerProviderJson{},
 				}),
 			},
 			wantTracerProvider: &sdktrace.TracerProvider{},
@@ -57,9 +57,9 @@ func TestNewSDK(t *testing.T) {
 				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
 					Disabled:       ptr(true),
-					TracerProvider: &TracerProvider{},
-					MeterProvider:  &MeterProvider{},
-					LoggerProvider: &LoggerProvider{},
+					TracerProvider: &TracerProviderJson{},
+					MeterProvider:  &MeterProviderJson{},
+					LoggerProvider: &LoggerProviderJson{},
 				}),
 			},
 			wantTracerProvider: tracenoop.NewTracerProvider(),
@@ -79,12 +79,12 @@ func TestNewSDK(t *testing.T) {
 
 var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 	Disabled:   ptr(false),
-	FileFormat: ptr("0.3"),
+	FileFormat: "0.3",
 	AttributeLimits: &AttributeLimits{
 		AttributeCountLimit:       ptr(128),
 		AttributeValueLengthLimit: ptr(4096),
 	},
-	Instrumentation: &Instrumentation{
+	InstrumentationDevelopment: &InstrumentationJson{
 		Cpp: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
@@ -100,19 +100,19 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 				"property": "value",
 			},
 		},
-		General: &GeneralInstrumentation{
-			Http: &GeneralInstrumentationHttp{
-				Client: &GeneralInstrumentationHttpClient{
+		General: &ExperimentalGeneralInstrumentation{
+			Http: &ExperimentalHttpInstrumentation{
+				Client: &ExperimentalHttpInstrumentationClient{
 					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
 					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
 				},
-				Server: &GeneralInstrumentationHttpServer{
+				Server: &ExperimentalHttpInstrumentationServer{
 					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
 					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
 				},
 			},
-			Peer: &GeneralInstrumentationPeer{
-				ServiceMapping: []GeneralInstrumentationPeerServiceMappingElem{
+			Peer: &ExperimentalPeerInstrumentation{
+				ServiceMapping: []ExperimentalPeerInstrumentationServiceMappingElem{
 					{Peer: "1.2.3.4", Service: "FooService"},
 					{Peer: "2.3.4.5", Service: "BarService"},
 				},
@@ -159,7 +159,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 		},
 	},
-	LoggerProvider: &LoggerProvider{
+	LoggerProvider: &LoggerProviderJson{
 		Limits: &LogRecordLimits{
 			AttributeCountLimit:       ptr(128),
 			AttributeValueLengthLimit: ptr(4096),
@@ -179,7 +179,6 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 								{Name: "api-key", Value: ptr("1234")},
 							},
 							HeadersList: ptr("api-key=1234"),
-							Insecure:    ptr(false),
 							Timeout:     ptr(10000),
 						},
 					},
@@ -197,12 +196,9 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 		},
 	},
-	MeterProvider: &MeterProvider{
+	MeterProvider: &MeterProviderJson{
 		Readers: []MetricReader{
 			{
-				Producers: []MetricProducer{
-					{Opencensus: MetricProducerOpencensus{}},
-				},
 				Pull: &PullMetricReader{
 					Exporter: PullMetricExporter{
 						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
@@ -220,9 +216,6 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 				},
 			},
 			{
-				Producers: []MetricProducer{
-					{},
-				},
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPHttp: &OTLPHttpMetricExporter{
@@ -230,14 +223,13 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 							ClientCertificateFile:       ptr("/app/cert.pem"),
 							ClientKeyFile:               ptr("/app/cert.pem"),
 							Compression:                 ptr("gzip"),
-							DefaultHistogramAggregation: ptr(OTLPMetricDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
 							Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
 							Headers: []NameStringValuePair{
 								{Name: "api-key", Value: ptr("1234")},
 							},
 							HeadersList:           ptr("api-key=1234"),
-							Insecure:              ptr(false),
-							TemporalityPreference: ptr("delta"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
 							Timeout:               ptr(10000),
 						},
 					},
@@ -257,15 +249,15 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 			{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("my-instrument"),
-					InstrumentType: ptr(ViewSelectorInstrumentTypeHistogram),
+					InstrumentType: ptr(InstrumentTypeHistogram),
 					MeterName:      ptr("my-meter"),
 					MeterSchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
 					MeterVersion:   ptr("1.0.0"),
 					Unit:           ptr("ms"),
 				},
 				Stream: &ViewStream{
-					Aggregation: &ViewStreamAggregation{
-						ExplicitBucketHistogram: &ViewStreamAggregationExplicitBucketHistogram{
+					Aggregation: &Aggregation{
+						ExplicitBucketHistogram: &ExplicitBucketHistogramAggregation{
 							Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
 							RecordMinMax: ptr(true),
 						},
@@ -280,10 +272,10 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 		},
 	},
-	Propagator: &Propagator{
-		Composite: []*string{ptr("tracecontext"), ptr("baggage"), ptr("b3"), ptr("b3multi"), ptr("jaeger"), ptr("xray"), ptr("ottrace")},
+	Propagator: &PropagatorJson{
+		// Composite: []TextMapPropagator{TraceContextPropagator, ptr("tracecontext"), ptr("baggage"), ptr("b3"), ptr("b3multi"), ptr("jaeger"), ptr("xray"), ptr("ottrace")},
 	},
-	Resource: &Resource{
+	Resource: &ResourceJson{
 		Attributes: []AttributeNameValue{
 			{Name: "service.name", Value: "unknown_service"},
 			{Name: "string_key", Type: &AttributeType{Value: "string"}, Value: "value"},
@@ -296,15 +288,15 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 			{Name: "double_array_key", Type: &AttributeType{Value: "double_array"}, Value: []any{1.1, 2.2}},
 		},
 		AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
-		Detectors: &Detectors{
-			Attributes: &DetectorsAttributes{
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Attributes: &IncludeExclude{
 				Excluded: []string{"process.command_args"},
 				Included: []string{"process.*"},
 			},
 		},
 		SchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
 	},
-	TracerProvider: &TracerProvider{
+	TracerProvider: &TracerProviderJson{
 		Limits: &SpanLimits{
 			AttributeCountLimit:       ptr(128),
 			AttributeValueLengthLimit: ptr(4096),
@@ -328,7 +320,6 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 								{Name: "api-key", Value: ptr("1234")},
 							},
 							HeadersList: ptr("api-key=1234"),
-							Insecure:    ptr(false),
 							Timeout:     ptr(10000),
 						},
 					},
@@ -356,21 +347,21 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 		},
 		Sampler: &Sampler{
-			ParentBased: &SamplerParentBased{
+			ParentBased: &ParentBasedSampler{
 				LocalParentNotSampled: &Sampler{
-					AlwaysOff: SamplerAlwaysOff{},
+					AlwaysOff: AlwaysOffSampler{},
 				},
 				LocalParentSampled: &Sampler{
-					AlwaysOn: SamplerAlwaysOn{},
+					AlwaysOn: AlwaysOnSampler{},
 				},
 				RemoteParentNotSampled: &Sampler{
-					AlwaysOff: SamplerAlwaysOff{},
+					AlwaysOff: AlwaysOffSampler{},
 				},
 				RemoteParentSampled: &Sampler{
-					AlwaysOn: SamplerAlwaysOn{},
+					AlwaysOn: AlwaysOnSampler{},
 				},
 				Root: &Sampler{
-					TraceIDRatioBased: &SamplerTraceIDRatioBased{
+					TraceIDRatioBased: &TraceIDRatioBasedSampler{
 						Ratio: ptr(0.0001),
 					},
 				},
@@ -392,7 +383,7 @@ func TestParseYAML(t *testing.T) {
 			wantErr: nil,
 			wantType: &OpenTelemetryConfiguration{
 				Disabled:   ptr(false),
-				FileFormat: ptr("0.1"),
+				FileFormat: "0.1",
 			},
 		},
 		{
@@ -458,7 +449,7 @@ func TestSerializeJSON(t *testing.T) {
 			wantErr: nil,
 			wantType: OpenTelemetryConfiguration{
 				Disabled:   ptr(false),
-				FileFormat: ptr("0.1"),
+				FileFormat: "0.1",
 			},
 		},
 		{

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf // import "go.opentelemetry.io/contrib/otelconf/v1.0.0-rc.1"
+package otelconf // import "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 
 import (
 	"encoding/json"
@@ -86,23 +86,23 @@ func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *GeneralInstrumentationPeerServiceMappingElem) UnmarshalJSON(b []byte) error {
+func (j *ExperimentalPeerInstrumentationServiceMappingElem) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
 	if _, ok := raw["peer"]; raw != nil && !ok {
-		return errors.New("field peer in GeneralInstrumentationPeerServiceMappingElem: required")
+		return errors.New("field peer in ExperimentalPeerInstrumentationServiceMappingElem: required")
 	}
 	if _, ok := raw["service"]; raw != nil && !ok {
-		return errors.New("field service in GeneralInstrumentationPeerServiceMappingElem: required")
+		return errors.New("field service in ExperimentalPeerInstrumentationServiceMappingElem: required")
 	}
-	type Plain GeneralInstrumentationPeerServiceMappingElem
+	type Plain ExperimentalPeerInstrumentationServiceMappingElem
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
-	*j = GeneralInstrumentationPeerServiceMappingElem(plain)
+	*j = ExperimentalPeerInstrumentationServiceMappingElem(plain)
 	return nil
 }
 
@@ -140,7 +140,7 @@ var enumValuesOTLPMetricDefaultHistogramAggregation = []any{
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLPMetricDefaultHistogramAggregation) UnmarshalJSON(b []byte) error {
+func (j *ExporterDefaultHistogramAggregation) UnmarshalJSON(b []byte) error {
 	var v string
 	if err := json.Unmarshal(b, &v); err != nil {
 		return err
@@ -155,12 +155,12 @@ func (j *OTLPMetricDefaultHistogramAggregation) UnmarshalJSON(b []byte) error {
 	if !ok {
 		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValuesOTLPMetricDefaultHistogramAggregation, v)
 	}
-	*j = OTLPMetricDefaultHistogramAggregation(v)
+	*j = ExporterDefaultHistogramAggregation(v)
 	return nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLPMetric) UnmarshalJSON(b []byte) error {
+func (j *OTLPHttpMetricExporter) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
@@ -168,20 +168,35 @@ func (j *OTLPMetric) UnmarshalJSON(b []byte) error {
 	if _, ok := raw["endpoint"]; raw != nil && !ok {
 		return errors.New("field endpoint in OTLPMetric: required")
 	}
-	if _, ok := raw["protocol"]; raw != nil && !ok {
-		return errors.New("field protocol in OTLPMetric: required")
-	}
-	type Plain OTLPMetric
+	type Plain OTLPHttpMetricExporter
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
-	*j = OTLPMetric(plain)
+	*j = OTLPHttpMetricExporter(plain)
 	return nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLP) UnmarshalJSON(b []byte) error {
+func (j *OTLPGrpcMetricExporter) UnmarshalJSON(b []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["endpoint"]; raw != nil && !ok {
+		return errors.New("field endpoint in OTLPMetric: required")
+	}
+	type Plain OTLPGrpcMetricExporter
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = OTLPGrpcMetricExporter(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *OTLPHttpExporter) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
@@ -189,15 +204,30 @@ func (j *OTLP) UnmarshalJSON(b []byte) error {
 	if _, ok := raw["endpoint"]; raw != nil && !ok {
 		return errors.New("field endpoint in OTLP: required")
 	}
-	if _, ok := raw["protocol"]; raw != nil && !ok {
-		return errors.New("field protocol in OTLP: required")
-	}
-	type Plain OTLP
+	type Plain OTLPHttpExporter
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
-	*j = OTLP(plain)
+	*j = OTLPHttpExporter(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *OTLPGrpcExporter) UnmarshalJSON(b []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	if _, ok := raw["endpoint"]; raw != nil && !ok {
+		return errors.New("field endpoint in OTLP: required")
+	}
+	type Plain OTLPGrpcExporter
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	*j = OTLPGrpcExporter(plain)
 	return nil
 }
 
@@ -301,7 +331,7 @@ var enumValuesViewSelectorInstrumentType = []any{
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *ViewSelectorInstrumentType) UnmarshalJSON(b []byte) error {
+func (j *InstrumentType) UnmarshalJSON(b []byte) error {
 	var v string
 	if err := json.Unmarshal(b, &v); err != nil {
 		return err
@@ -316,7 +346,7 @@ func (j *ViewSelectorInstrumentType) UnmarshalJSON(b []byte) error {
 	if !ok {
 		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValuesViewSelectorInstrumentType, v)
 	}
-	*j = ViewSelectorInstrumentType(v)
+	*j = InstrumentType(v)
 	return nil
 }
 
