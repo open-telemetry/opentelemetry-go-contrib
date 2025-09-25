@@ -188,7 +188,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Pull: &PullMetricReader{
 					Exporter: PullMetricExporter{
-						Prometheus: &Prometheus{},
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{},
 					},
 				},
 			},
@@ -199,7 +199,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Pull: &PullMetricReader{
 					Exporter: PullMetricExporter{
-						Prometheus: &Prometheus{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
 							Host: ptr("localhost"),
 						},
 					},
@@ -212,7 +212,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Pull: &PullMetricReader{
 					Exporter: PullMetricExporter{
-						Prometheus: &Prometheus{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
 							Host:              ptr("localhost"),
 							Port:              ptr(0),
 							WithoutScopeInfo:  ptr(true),
@@ -1368,17 +1368,17 @@ func TestNewIncludeExcludeFilterError(t *testing.T) {
 func TestPrometheusReaderOpts(t *testing.T) {
 	testCases := []struct {
 		name        string
-		cfg         Prometheus
+		cfg         ExperimentalPrometheusMetricExporter
 		wantOptions int
 	}{
 		{
 			name:        "no options",
-			cfg:         Prometheus{},
+			cfg:         ExperimentalPrometheusMetricExporter{},
 			wantOptions: 0,
 		},
 		{
 			name: "all set",
-			cfg: Prometheus{
+			cfg: ExperimentalPrometheusMetricExporter{
 				WithoutScopeInfo:           ptr(true),
 				WithoutTypeSuffix:          ptr(true),
 				WithoutUnits:               ptr(true),
@@ -1388,7 +1388,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 		},
 		{
 			name: "all set false",
-			cfg: Prometheus{
+			cfg: ExperimentalPrometheusMetricExporter{
 				WithoutScopeInfo:           ptr(false),
 				WithoutTypeSuffix:          ptr(false),
 				WithoutUnits:               ptr(false),
@@ -1423,7 +1423,7 @@ func TestPrometheusIPv6(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			port := 0
-			cfg := Prometheus{
+			cfg := ExperimentalPrometheusMetricExporter{
 				Host:                       &tt.host,
 				Port:                       &port,
 				WithoutScopeInfo:           ptr(true),

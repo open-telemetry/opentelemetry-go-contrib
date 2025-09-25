@@ -442,7 +442,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 				},
 				Pull: &PullMetricReader{
 					Exporter: PullMetricExporter{
-						Prometheus: &Prometheus{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
 							Host: ptr("localhost"),
 							Port: ptr(9464),
 							WithResourceConstantLabels: &IncludeExclude{
