@@ -231,7 +231,7 @@ func (j *SpanLimits) UnmarshalYAML(node *yaml.Node) error {
 	*j = SpanLimits(plain)
 	return nil
 }
-func (j *LanguageSpecificInstrumentation) UnmarshalYAML(unmarshal func(any) error) error {
+func (j *ExperimentalLanguageSpecificInstrumentation) UnmarshalYAML(unmarshal func(any) error) error {
 	var raw map[string]any
 	if err := unmarshal(&raw); err != nil {
 		return err
