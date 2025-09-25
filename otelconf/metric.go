@@ -93,8 +93,8 @@ func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error)
 }
 
 func pullReader(ctx context.Context, exporter PullMetricExporter) (sdkmetric.Reader, error) {
-	if exporter.Prometheus != nil {
-		return prometheusReader(ctx, exporter.Prometheus)
+	if exporter.PrometheusDevelopment != nil {
+		return prometheusReader(ctx, exporter.PrometheusDevelopment)
 	}
 	return nil, errors.New("no valid metric exporter")
 }
@@ -318,7 +318,7 @@ func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
 	}, nil
 }
 
-func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmetric.Reader, error) {
+func prometheusReader(ctx context.Context, prometheusConfig *ExperimentalPrometheusMetricExporter) (sdkmetric.Reader, error) {
 	if prometheusConfig.Host == nil {
 		return nil, errors.New("host must be specified")
 	}
@@ -377,7 +377,7 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	return readerWithServer{reader, &server}, nil
 }
 
-func prometheusReaderOpts(prometheusConfig *Prometheus) ([]otelprom.Option, error) {
+func prometheusReaderOpts(prometheusConfig *ExperimentalPrometheusMetricExporter) ([]otelprom.Option, error) {
 	var opts []otelprom.Option
 	if prometheusConfig.WithoutScopeInfo != nil && *prometheusConfig.WithoutScopeInfo {
 		opts = append(opts, otelprom.WithoutScopeInfo())
