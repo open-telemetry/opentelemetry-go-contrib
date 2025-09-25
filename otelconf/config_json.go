@@ -321,20 +321,20 @@ func (j *ViewSelectorInstrumentType) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *Zipkin) UnmarshalJSON(b []byte) error {
+func (j *ZipkinSpanExporter) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
 	if _, ok := raw["endpoint"]; raw != nil && !ok {
-		return errors.New("field endpoint in Zipkin: required")
+		return errors.New("field endpoint in ZipkinSpanExporter: required")
 	}
-	type Plain Zipkin
+	type Plain ZipkinSpanExporter
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
-	*j = Zipkin(plain)
+	*j = ZipkinSpanExporter(plain)
 	return nil
 }
 
