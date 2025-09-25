@@ -674,7 +674,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 			{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
-						Zipkin: &Zipkin{
+						Zipkin: &ZipkinSpanExporter{
 							Endpoint: ptr("http://localhost:9411/api/v2/spans"),
 							Timeout:  ptr(10000),
 						},
