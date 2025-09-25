@@ -500,18 +500,17 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Batch: &BatchLogRecordProcessor{
 					ExportTimeout: ptr(30000),
 					Exporter: LogRecordExporter{
-						OTLP: &OTLP{
-							Certificate:       ptr("/app/cert.pem"),
-							ClientCertificate: ptr("/app/cert.pem"),
-							ClientKey:         ptr("/app/cert.pem"),
-							Compression:       ptr("gzip"),
-							Endpoint:          ptr("http://localhost:4318/v1/logs"),
+						OTLPHttp: &OTLPHttpExporter{
+							CertificateFile:       ptr("/app/cert.pem"),
+							ClientCertificateFile: ptr("/app/cert.pem"),
+							ClientKeyFile:         ptr("/app/cert.pem"),
+							Compression:           ptr("gzip"),
+							Endpoint:              ptr("http://localhost:4318/v1/logs"),
 							Headers: []NameStringValuePair{
 								{Name: "api-key", Value: ptr("1234")},
 							},
 							HeadersList: ptr("api-key=1234"),
 							Insecure:    ptr(false),
-							Protocol:    ptr("http/protobuf"),
 							Timeout:     ptr(10000),
 						},
 					},
@@ -557,10 +556,10 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 				},
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Certificate:                 ptr("/app/cert.pem"),
-							ClientCertificate:           ptr("/app/cert.pem"),
-							ClientKey:                   ptr("/app/cert.pem"),
+						OTLPHttp: &OTLPHttpMetricExporter{
+							CertificateFile:             ptr("/app/cert.pem"),
+							ClientCertificateFile:       ptr("/app/cert.pem"),
+							ClientKeyFile:               ptr("/app/cert.pem"),
 							Compression:                 ptr("gzip"),
 							DefaultHistogramAggregation: ptr(OTLPMetricDefaultHistogramAggregationBase2ExponentialBucketHistogram),
 							Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
@@ -569,7 +568,6 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 							},
 							HeadersList:           ptr("api-key=1234"),
 							Insecure:              ptr(false),
-							Protocol:              ptr("http/protobuf"),
 							TemporalityPreference: ptr("delta"),
 							Timeout:               ptr(10000),
 						},
@@ -651,18 +649,17 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Batch: &BatchSpanProcessor{
 					ExportTimeout: ptr(30000),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Certificate:       ptr("/app/cert.pem"),
-							ClientCertificate: ptr("/app/cert.pem"),
-							ClientKey:         ptr("/app/cert.pem"),
-							Compression:       ptr("gzip"),
-							Endpoint:          ptr("http://localhost:4318/v1/traces"),
+						OTLPHttp: &OTLPHttpExporter{
+							CertificateFile:       ptr("/app/cert.pem"),
+							ClientCertificateFile: ptr("/app/cert.pem"),
+							ClientKeyFile:         ptr("/app/cert.pem"),
+							Compression:           ptr("gzip"),
+							Endpoint:              ptr("http://localhost:4318/v1/traces"),
 							Headers: []NameStringValuePair{
 								{Name: "api-key", Value: ptr("1234")},
 							},
 							HeadersList: ptr("api-key=1234"),
 							Insecure:    ptr(false),
-							Protocol:    ptr("http/protobuf"),
 							Timeout:     ptr(10000),
 						},
 					},
