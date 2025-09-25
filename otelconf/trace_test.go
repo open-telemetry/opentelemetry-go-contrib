@@ -75,7 +75,7 @@ func TestTracerProvider(t *testing.T) {
 							{
 								Simple: &SimpleSpanProcessor{
 									Exporter: SpanExporter{
-										Console: Console{},
+										Console: ConsoleExporter{},
 										OTLP:    &OTLP{},
 									},
 								},
@@ -96,7 +96,7 @@ func TestTracerProvider(t *testing.T) {
 							{
 								Simple: &SimpleSpanProcessor{
 									Exporter: SpanExporter{
-										Console: Console{},
+										Console: ConsoleExporter{},
 									},
 								},
 							},
@@ -215,7 +215,7 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					MaxExportBatchSize: ptr(-1),
 					Exporter: SpanExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
@@ -227,7 +227,7 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					ExportTimeout: ptr(-2),
 					Exporter: SpanExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
@@ -239,7 +239,7 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					MaxQueueSize: ptr(-3),
 					Exporter: SpanExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
@@ -251,7 +251,7 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					ScheduleDelay: ptr(-4),
 					Exporter: SpanExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
@@ -262,7 +262,7 @@ func TestSpanProcessor(t *testing.T) {
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 						OTLP:    &OTLP{},
 					},
 				},
@@ -278,7 +278,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
@@ -750,7 +750,7 @@ func TestSpanProcessor(t *testing.T) {
 			processor: SpanProcessor{
 				Simple: &SimpleSpanProcessor{
 					Exporter: SpanExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
