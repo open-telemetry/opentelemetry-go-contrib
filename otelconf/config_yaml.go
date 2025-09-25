@@ -42,7 +42,7 @@ func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
-func (j *AttributeNameValueType) UnmarshalYAML(unmarshal func(any) error) error {
+func (j *AttributeType) UnmarshalYAML(unmarshal func(any) error) error {
 	var v struct {
 		Value any
 	}
@@ -50,16 +50,16 @@ func (j *AttributeNameValueType) UnmarshalYAML(unmarshal func(any) error) error 
 		return err
 	}
 	var ok bool
-	for _, expected := range enumValuesAttributeNameValueType {
+	for _, expected := range enumValuesAttributeType {
 		if reflect.DeepEqual(v.Value, expected) {
 			ok = true
 			break
 		}
 	}
 	if !ok {
-		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValuesAttributeNameValueType, v.Value)
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValuesAttributeType, v.Value)
 	}
-	*j = AttributeNameValueType(v)
+	*j = AttributeType(v)
 	return nil
 }
 
