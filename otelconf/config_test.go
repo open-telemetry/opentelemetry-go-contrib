@@ -416,17 +416,17 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 		AttributeValueLengthLimit: ptr(4096),
 	},
 	Instrumentation: &Instrumentation{
-		Cpp: LanguageSpecificInstrumentation{
+		Cpp: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
 			},
 		},
-		Dotnet: LanguageSpecificInstrumentation{
+		Dotnet: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
 			},
 		},
-		Erlang: LanguageSpecificInstrumentation{
+		Erlang: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
 			},
@@ -449,42 +449,42 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 				},
 			},
 		},
-		Go: LanguageSpecificInstrumentation{
+		Go: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
 			},
 		},
-		Java: LanguageSpecificInstrumentation{
+		Java: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
 			},
 		},
-		Js: LanguageSpecificInstrumentation{
+		Js: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
 			},
 		},
-		Php: LanguageSpecificInstrumentation{
+		Php: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
 			},
 		},
-		Python: LanguageSpecificInstrumentation{
+		Python: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
 			},
 		},
-		Ruby: LanguageSpecificInstrumentation{
+		Ruby: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
 			},
 		},
-		Rust: LanguageSpecificInstrumentation{
+		Rust: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
 			},
 		},
-		Swift: LanguageSpecificInstrumentation{
+		Swift: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
 			},
