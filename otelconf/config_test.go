@@ -192,7 +192,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 			{
 				Simple: &SimpleLogRecordProcessor{
 					Exporter: LogRecordExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
@@ -250,7 +250,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 			{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
@@ -353,7 +353,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 			{
 				Simple: &SimpleSpanProcessor{
 					Exporter: SpanExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},

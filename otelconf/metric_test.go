@@ -80,7 +80,7 @@ func TestMeterProvider(t *testing.T) {
 							{
 								Periodic: &PeriodicMetricReader{
 									Exporter: PushMetricExporter{
-										Console: Console{},
+										Console: ConsoleExporter{},
 										OTLP:    &OTLPMetric{},
 									},
 								},
@@ -836,7 +836,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
@@ -849,7 +849,7 @@ func TestReader(t *testing.T) {
 					Interval: ptr(30_000),
 					Timeout:  ptr(5_000),
 					Exporter: PushMetricExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},

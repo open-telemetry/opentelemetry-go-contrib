@@ -183,7 +183,7 @@ func TestLogProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
-						Console: map[string]any{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
@@ -661,7 +661,7 @@ func TestLogProcessor(t *testing.T) {
 			processor: LogRecordProcessor{
 				Simple: &SimpleLogRecordProcessor{
 					Exporter: LogRecordExporter{
-						Console: map[string]any{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
