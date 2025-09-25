@@ -50,7 +50,7 @@ func TestLoggerProvider(t *testing.T) {
 			name: "error-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					LoggerProvider: &LoggerProvider{
+					LoggerProvider: &LoggerProviderJson{
 						Processors: []LogRecordProcessor{
 							{
 								Simple: &SimpleLogRecordProcessor{},
@@ -664,13 +664,12 @@ func TestLoggerProviderOptions(t *testing.T) {
 	defer srv.Close()
 
 	cfg := OpenTelemetryConfiguration{
-		LoggerProvider: &LoggerProvider{
+		LoggerProvider: &LoggerProviderJson{
 			Processors: []LogRecordProcessor{{
 				Simple: &SimpleLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPHttp: &OTLPHttpExporter{
 							Endpoint: ptr(srv.URL),
-							Insecure: ptr(true),
 						},
 					},
 				},

@@ -49,7 +49,7 @@ func TestTracerProvider(t *testing.T) {
 			name: "error-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					TracerProvider: &TracerProvider{
+					TracerProvider: &TracerProviderJson{
 						Processors: []SpanProcessor{
 							{
 								Batch:  &BatchSpanProcessor{},
@@ -66,7 +66,7 @@ func TestTracerProvider(t *testing.T) {
 			name: "multiple-errors-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					TracerProvider: &TracerProvider{
+					TracerProvider: &TracerProviderJson{
 						Processors: []SpanProcessor{
 							{
 								Batch:  &BatchSpanProcessor{},
@@ -75,8 +75,8 @@ func TestTracerProvider(t *testing.T) {
 							{
 								Simple: &SimpleSpanProcessor{
 									Exporter: SpanExporter{
-										Console: ConsoleExporter{},
-										OTLP:    &OTLP{},
+										Console:  ConsoleExporter{},
+										OTLPHttp: &OTLPHttpExporter{},
 									},
 								},
 							},
@@ -91,7 +91,7 @@ func TestTracerProvider(t *testing.T) {
 			name: "invalid-sampler-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					TracerProvider: &TracerProvider{
+					TracerProvider: &TracerProviderJson{
 						Processors: []SpanProcessor{
 							{
 								Simple: &SimpleSpanProcessor{
@@ -125,13 +125,12 @@ func TestTracerProviderOptions(t *testing.T) {
 	defer srv.Close()
 
 	cfg := OpenTelemetryConfiguration{
-		TracerProvider: &TracerProvider{
+		TracerProvider: &TracerProviderJson{
 			Processors: []SpanProcessor{{
 				Simple: &SimpleSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPHttp: &OTLPHttpExporter{
 							Endpoint: ptr(srv.URL),
-							Insecure: ptr(true),
 						},
 					},
 				},
@@ -261,8 +260,8 @@ func TestSpanProcessor(t *testing.T) {
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
-						Console: ConsoleExporter{},
-						OTLP:    &OTLP{},
+						Console:  ConsoleExporter{},
+						OTLPHttp: &OTLPHttpExporter{},
 					},
 				},
 			},
@@ -781,21 +780,21 @@ func TestSampler(t *testing.T) {
 		{
 			name: "sampler configuration always on",
 			sampler: &Sampler{
-				AlwaysOn: SamplerAlwaysOn{},
+				AlwaysOn: AlwaysOnSampler{},
 			},
 			wantSampler: sdktrace.AlwaysSample(),
 		},
 		{
 			name: "sampler configuration always off",
 			sampler: &Sampler{
-				AlwaysOff: SamplerAlwaysOff{},
+				AlwaysOff: AlwaysOffSampler{},
 			},
 			wantSampler: sdktrace.NeverSample(),
 		},
 		{
 			name: "sampler configuration trace ID ratio",
 			sampler: &Sampler{
-				TraceIDRatioBased: &SamplerTraceIDRatioBased{
+				TraceIDRatioBased: &TraceIDRatioBasedSampler{
 					Ratio: ptr(0.54),
 				},
 			},
@@ -804,37 +803,37 @@ func TestSampler(t *testing.T) {
 		{
 			name: "sampler configuration trace ID ratio no ratio",
 			sampler: &Sampler{
-				TraceIDRatioBased: &SamplerTraceIDRatioBased{},
+				TraceIDRatioBased: &TraceIDRatioBasedSampler{},
 			},
 			wantSampler: sdktrace.TraceIDRatioBased(1),
 		},
 		{
 			name: "sampler configuration parent based no options",
 			sampler: &Sampler{
-				ParentBased: &SamplerParentBased{},
+				ParentBased: &ParentBasedSampler{},
 			},
 			wantSampler: sdktrace.ParentBased(sdktrace.AlwaysSample()),
 		},
 		{
 			name: "sampler configuration parent based many options",
 			sampler: &Sampler{
-				ParentBased: &SamplerParentBased{
+				ParentBased: &ParentBasedSampler{
 					Root: &Sampler{
-						AlwaysOff: SamplerAlwaysOff{},
+						AlwaysOff: AlwaysOffSampler{},
 					},
 					RemoteParentNotSampled: &Sampler{
-						AlwaysOn: SamplerAlwaysOn{},
+						AlwaysOn: AlwaysOnSampler{},
 					},
 					RemoteParentSampled: &Sampler{
-						TraceIDRatioBased: &SamplerTraceIDRatioBased{
+						TraceIDRatioBased: &TraceIDRatioBasedSampler{
 							Ratio: ptr(0.009),
 						},
 					},
 					LocalParentNotSampled: &Sampler{
-						AlwaysOff: SamplerAlwaysOff{},
+						AlwaysOff: AlwaysOffSampler{},
 					},
 					LocalParentSampled: &Sampler{
-						TraceIDRatioBased: &SamplerTraceIDRatioBased{
+						TraceIDRatioBased: &TraceIDRatioBasedSampler{
 							Ratio: ptr(0.05),
 						},
 					},
@@ -851,7 +850,7 @@ func TestSampler(t *testing.T) {
 		{
 			name: "sampler configuration with many errors",
 			sampler: &Sampler{
-				ParentBased: &SamplerParentBased{
+				ParentBased: &ParentBasedSampler{
 					Root:                   &Sampler{},
 					RemoteParentNotSampled: &Sampler{},
 					RemoteParentSampled:    &Sampler{},
@@ -885,7 +884,7 @@ func TestSampler(t *testing.T) {
 func Test_otlpGRPCTraceExporter(t *testing.T) {
 	type args struct {
 		ctx        context.Context
-		otlpConfig *OTLP
+		otlpConfig *OTLPGrpcExporter
 	}
 	tests := []struct {
 		name           string
@@ -896,7 +895,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			name: "no TLS config",
 			args: args{
 				ctx: t.Context(),
-				OTLPGrpc: &OTLPGrpcExporter{
+				otlpConfig: &OTLPGrpcExporter{
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Insecure:    ptr(true),

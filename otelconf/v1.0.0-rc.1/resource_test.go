@@ -19,7 +19,7 @@ func TestNewResource(t *testing.T) {
 	other := mockType{}
 	tests := []struct {
 		name         string
-		config       *Resource
+		config       *ResourceJson
 		wantResource *resource.Resource
 	}{
 		{
@@ -28,19 +28,19 @@ func TestNewResource(t *testing.T) {
 		},
 		{
 			name:         "resource-no-attributes",
-			config:       &Resource{},
+			config:       &ResourceJson{},
 			wantResource: resource.NewSchemaless(),
 		},
 		{
 			name: "resource-with-schema",
-			config: &Resource{
+			config: &ResourceJson{
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
 			wantResource: resource.NewWithAttributes(semconv.SchemaURL),
 		},
 		{
 			name: "resource-with-attributes",
-			config: &Resource{
+			config: &ResourceJson{
 				Attributes: []AttributeNameValue{
 					{Name: "service.name", Value: "service-a"},
 				},
@@ -51,7 +51,7 @@ func TestNewResource(t *testing.T) {
 		},
 		{
 			name: "resource-with-attributes-and-schema",
-			config: &Resource{
+			config: &ResourceJson{
 				Attributes: []AttributeNameValue{
 					{Name: "service.name", Value: "service-a"},
 				},
@@ -63,7 +63,7 @@ func TestNewResource(t *testing.T) {
 		},
 		{
 			name: "resource-with-additional-attributes-and-schema",
-			config: &Resource{
+			config: &ResourceJson{
 				Attributes: []AttributeNameValue{
 					{Name: "service.name", Value: "service-a"},
 					{Name: "attr-bool", Value: true},
