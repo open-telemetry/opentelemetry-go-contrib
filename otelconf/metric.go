@@ -38,13 +38,17 @@ var zeroScope instrumentation.Scope
 const instrumentKindUndefined = sdkmetric.InstrumentKind(0)
 
 func meterProvider(cfg configOptions, res *resource.Resource) (metric.MeterProvider, shutdownFunc, error) {
-	if cfg.opentelemetryConfig.MeterProvider == nil {
+	provider, ok := cfg.opentelemetryConfig.MeterProvider.(*MeterProviderJson)
+	if provider == nil {
 		return noop.NewMeterProvider(), noopShutdown, nil
+	}
+	if !ok {
+		return noop.NewMeterProvider(), noopShutdown, errors.New("invalid meter provider")
 	}
 	opts := append(cfg.meterProviderOptions, sdkmetric.WithResource(res))
 
 	var errs []error
-	for _, reader := range cfg.opentelemetryConfig.MeterProvider.Readers {
+	for _, reader := range provider.Readers {
 		r, err := metricReader(cfg.ctx, reader)
 		if err == nil {
 			opts = append(opts, sdkmetric.WithReader(r))
@@ -52,7 +56,7 @@ func meterProvider(cfg configOptions, res *resource.Resource) (metric.MeterProvi
 			errs = append(errs, err)
 		}
 	}
-	for _, vw := range cfg.opentelemetryConfig.MeterProvider.Views {
+	for _, vw := range provider.Views {
 		v, err := view(vw)
 		if err == nil {
 			opts = append(opts, sdkmetric.WithView(v))
@@ -100,10 +104,11 @@ func pullReader(ctx context.Context, exporter PullMetricExporter) (sdkmetric.Rea
 }
 
 func periodicExporter(ctx context.Context, exporter PushMetricExporter, opts ...sdkmetric.PeriodicReaderOption) (sdkmetric.Reader, error) {
-	if exporter.Console != nil && exporter.OTLP != nil {
-		return nil, errors.New("must not specify multiple exporters")
-	}
+	exportersConfigured := 0
+	var exportFunc func() (sdkmetric.Reader, error)
+
 	if exporter.Console != nil {
+		exportersConfigured++
 		enc := json.NewEncoder(os.Stdout)
 		enc.SetIndent("", "  ")
 
@@ -113,28 +118,43 @@ func periodicExporter(ctx context.Context, exporter PushMetricExporter, opts ...
 		if err != nil {
 			return nil, err
 		}
-		return sdkmetric.NewPeriodicReader(exp, opts...), nil
-	}
-	if exporter.OTLP != nil && exporter.OTLP.Protocol != nil {
-		var err error
-		var exp sdkmetric.Exporter
-		switch *exporter.OTLP.Protocol {
-		case protocolProtobufHTTP:
-			exp, err = otlpHTTPMetricExporter(ctx, exporter.OTLP)
-		case protocolProtobufGRPC:
-			exp, err = otlpGRPCMetricExporter(ctx, exporter.OTLP)
-		default:
-			return nil, fmt.Errorf("unsupported protocol %q", *exporter.OTLP.Protocol)
+		exportFunc = func() (sdkmetric.Reader, error) {
+			return sdkmetric.NewPeriodicReader(exp, opts...), nil
 		}
+	}
+	if exporter.OTLPHttp != nil {
+		exportersConfigured++
+		exp, err := otlpHTTPMetricExporter(ctx, exporter.OTLPHttp)
 		if err != nil {
 			return nil, err
 		}
-		return sdkmetric.NewPeriodicReader(exp, opts...), nil
+		exportFunc = func() (sdkmetric.Reader, error) {
+			return sdkmetric.NewPeriodicReader(exp, opts...), nil
+		}
 	}
+	if exporter.OTLPGrpc != nil {
+		exportersConfigured++
+		exp, err := otlpGRPCMetricExporter(ctx, exporter.OTLPGrpc)
+		if err != nil {
+			return nil, err
+		}
+		exportFunc = func() (sdkmetric.Reader, error) {
+			return sdkmetric.NewPeriodicReader(exp, opts...), nil
+		}
+	}
+
+	if exportersConfigured > 1 {
+		return nil, errors.New("must not specify multiple exporters")
+	}
+
+	if exportFunc != nil {
+		return exportFunc()
+	}
+
 	return nil, errors.New("no valid metric exporter")
 }
 
-func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmetric.Exporter, error) {
+func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPHttpMetricExporter) (sdkmetric.Exporter, error) {
 	opts := []otlpmetrichttp.Option{}
 
 	if otlpConfig.Endpoint != nil {
@@ -147,7 +167,7 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 		if u.Scheme == "http" {
 			opts = append(opts, otlpmetrichttp.WithInsecure())
 		}
-		if u.Path != "" {
+		if len(u.Path) > 0 {
 			opts = append(opts, otlpmetrichttp.WithURLPath(u.Path))
 		}
 	}
@@ -177,14 +197,14 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(deltaTemporality))
 		case "cumulative":
 			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(cumulativeTemporality))
-		case "lowmemory":
+		case "low_memory":
 			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(lowMemory))
 		default:
 			return nil, fmt.Errorf("unsupported temporality preference %q", *otlpConfig.TemporalityPreference)
 		}
 	}
 
-	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +213,7 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 	return otlpmetrichttp.New(ctx, opts...)
 }
 
-func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmetric.Exporter, error) {
+func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPGrpcMetricExporter) (sdkmetric.Exporter, error) {
 	var opts []otlpmetricgrpc.Option
 
 	if otlpConfig.Endpoint != nil {
@@ -242,15 +262,15 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(deltaTemporality))
 		case "cumulative":
 			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(cumulativeTemporality))
-		case "lowmemory":
+		case "low_memory":
 			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(lowMemory))
 		default:
 			return nil, fmt.Errorf("unsupported temporality preference %q", *otlpConfig.TemporalityPreference)
 		}
 	}
 
-	if otlpConfig.Certificate != nil || otlpConfig.ClientCertificate != nil || otlpConfig.ClientKey != nil {
-		tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	if otlpConfig.CertificateFile != nil || otlpConfig.ClientCertificateFile != nil || otlpConfig.ClientKeyFile != nil {
+		tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 		if err != nil {
 			return nil, err
 		}
@@ -467,7 +487,7 @@ func stream(vs *ViewStream) (sdkmetric.Stream, error) {
 	}, nil
 }
 
-func aggregation(aggr *ViewStreamAggregation) sdkmetric.Aggregation {
+func aggregation(aggr *Aggregation) sdkmetric.Aggregation {
 	if aggr == nil {
 		return nil
 	}
@@ -503,24 +523,24 @@ func aggregation(aggr *ViewStreamAggregation) sdkmetric.Aggregation {
 	return nil
 }
 
-func instrumentKind(vsit *ViewSelectorInstrumentType) (sdkmetric.InstrumentKind, error) {
+func instrumentKind(vsit *InstrumentType) (sdkmetric.InstrumentKind, error) {
 	if vsit == nil {
 		// Equivalent to instrumentKindUndefined.
 		return instrumentKindUndefined, nil
 	}
 
 	switch *vsit {
-	case ViewSelectorInstrumentTypeCounter:
+	case InstrumentTypeCounter:
 		return sdkmetric.InstrumentKindCounter, nil
-	case ViewSelectorInstrumentTypeUpDownCounter:
+	case InstrumentTypeUpDownCounter:
 		return sdkmetric.InstrumentKindUpDownCounter, nil
-	case ViewSelectorInstrumentTypeHistogram:
+	case InstrumentTypeHistogram:
 		return sdkmetric.InstrumentKindHistogram, nil
-	case ViewSelectorInstrumentTypeObservableCounter:
+	case InstrumentTypeObservableCounter:
 		return sdkmetric.InstrumentKindObservableCounter, nil
-	case ViewSelectorInstrumentTypeObservableUpDownCounter:
+	case InstrumentTypeObservableUpDownCounter:
 		return sdkmetric.InstrumentKindObservableUpDownCounter, nil
-	case ViewSelectorInstrumentTypeObservableGauge:
+	case InstrumentTypeObservableGauge:
 		return sdkmetric.InstrumentKindObservableGauge, nil
 	}
 

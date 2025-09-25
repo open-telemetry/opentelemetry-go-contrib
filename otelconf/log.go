@@ -21,13 +21,17 @@ import (
 )
 
 func loggerProvider(cfg configOptions, res *resource.Resource) (log.LoggerProvider, shutdownFunc, error) {
-	if cfg.opentelemetryConfig.LoggerProvider == nil {
+	provider, ok := cfg.opentelemetryConfig.LoggerProvider.(*LoggerProviderJson)
+	if provider == nil {
 		return noop.NewLoggerProvider(), noopShutdown, nil
+	}
+	if !ok {
+		return noop.NewLoggerProvider(), noopShutdown, errors.New("invalid logger provider")
 	}
 	opts := append(cfg.loggerProviderOptions, sdklog.WithResource(res))
 
 	var errs []error
-	for _, processor := range cfg.opentelemetryConfig.LoggerProvider.Processors {
+	for _, processor := range provider.Processors {
 		sp, err := logProcessor(cfg.ctx, processor)
 		if err == nil {
 			opts = append(opts, sdklog.WithProcessor(sp))
@@ -66,26 +70,39 @@ func logProcessor(ctx context.Context, processor LogRecordProcessor) (sdklog.Pro
 }
 
 func logExporter(ctx context.Context, exporter LogRecordExporter) (sdklog.Exporter, error) {
-	if exporter.Console != nil && exporter.OTLP != nil {
+	exportersConfigured := 0
+	var exportFunc func() (sdklog.Exporter, error)
+
+	if exporter.Console != nil {
+		exportersConfigured++
+		exportFunc = func() (sdklog.Exporter, error) {
+			return stdoutlog.New(
+				stdoutlog.WithPrettyPrint(),
+			)
+		}
+	}
+
+	if exporter.OTLPHttp != nil {
+		exportersConfigured++
+		exportFunc = func() (sdklog.Exporter, error) {
+			return otlpHTTPLogExporter(ctx, exporter.OTLPHttp)
+		}
+	}
+	if exporter.OTLPGrpc != nil {
+		exportersConfigured++
+		exportFunc = func() (sdklog.Exporter, error) {
+			return otlpGRPCLogExporter(ctx, exporter.OTLPGrpc)
+		}
+	}
+
+	if exportersConfigured > 1 {
 		return nil, errors.New("must not specify multiple exporters")
 	}
 
-	if exporter.Console != nil {
-		return stdoutlog.New(
-			stdoutlog.WithPrettyPrint(),
-		)
+	if exportFunc != nil {
+		return exportFunc()
 	}
 
-	if exporter.OTLP != nil && exporter.OTLP.Protocol != nil {
-		switch *exporter.OTLP.Protocol {
-		case protocolProtobufHTTP:
-			return otlpHTTPLogExporter(ctx, exporter.OTLP)
-		case protocolProtobufGRPC:
-			return otlpGRPCLogExporter(ctx, exporter.OTLP)
-		default:
-			return nil, fmt.Errorf("unsupported protocol %q", *exporter.OTLP.Protocol)
-		}
-	}
 	return nil, errors.New("no valid log exporter")
 }
 
@@ -120,7 +137,7 @@ func batchLogProcessor(blp *BatchLogRecordProcessor, exp sdklog.Exporter) (*sdkl
 	return sdklog.NewBatchProcessor(exp, opts...), nil
 }
 
-func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter, error) {
+func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sdklog.Exporter, error) {
 	var opts []otlploghttp.Option
 
 	if otlpConfig.Endpoint != nil {
@@ -158,7 +175,7 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		opts = append(opts, otlploghttp.WithHeaders(headersConfig))
 	}
 
-	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -167,7 +184,7 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 	return otlploghttp.New(ctx, opts...)
 }
 
-func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter, error) {
+func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLPGrpcExporter) (sdklog.Exporter, error) {
 	var opts []otlploggrpc.Option
 
 	if otlpConfig.Endpoint != nil {
@@ -210,8 +227,8 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 		opts = append(opts, otlploggrpc.WithHeaders(headersConfig))
 	}
 
-	if otlpConfig.Certificate != nil || otlpConfig.ClientCertificate != nil || otlpConfig.ClientKey != nil {
-		tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	if otlpConfig.CertificateFile != nil || otlpConfig.ClientCertificateFile != nil || otlpConfig.ClientKeyFile != nil {
+		tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 		if err != nil {
 			return nil, err
 		}
