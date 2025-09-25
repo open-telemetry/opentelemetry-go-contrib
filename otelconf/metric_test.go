@@ -80,8 +80,8 @@ func TestMeterProvider(t *testing.T) {
 							{
 								Periodic: &PeriodicMetricReader{
 									Exporter: PushMetricExporter{
-										Console: ConsoleExporter{},
-										OTLP:    &OTLPMetric{},
+										Console:  ConsoleExporter{},
+										OTLPGrpc: &OTLPGrpcMetricExporter{},
 									},
 								},
 							},
@@ -113,8 +113,7 @@ func TestMeterProviderOptions(t *testing.T) {
 			Readers: []MetricReader{{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol: ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint: ptr(srv.URL),
 							Insecure: ptr(true),
 						},
@@ -232,11 +231,7 @@ func TestReader(t *testing.T) {
 			name: "periodic/otlp-exporter-invalid-protocol",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol: ptr("http/invalid"),
-						},
-					},
+					Exporter: PushMetricExporter{},
 				},
 			},
 			wantErr: "unsupported protocol \"http/invalid\"",
@@ -246,8 +241,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("http://localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -265,8 +259,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("http://localhost:4318/path/123"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -284,12 +277,11 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("https://localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
+							Endpoint:        ptr("https://localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
 						},
 					},
 				},
@@ -301,12 +293,11 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("https://localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
+							Endpoint:        ptr("https://localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 						},
 					},
 				},
@@ -318,13 +309,12 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:          ptr("grpc"),
-							Endpoint:          ptr("localhost:4317"),
-							Compression:       ptr("gzip"),
-							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
+							Endpoint:              ptr("localhost:4317"),
+							Compression:           ptr("gzip"),
+							Timeout:               ptr(1000),
+							ClientCertificateFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientKeyFile:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 						},
 					},
 				},
@@ -336,8 +326,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -353,8 +342,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
@@ -371,8 +359,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("unix:collector.sock"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -390,8 +377,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -409,8 +395,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr(" "),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -428,8 +413,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -447,8 +431,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -467,8 +450,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -487,8 +469,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -507,8 +488,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -527,8 +507,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),
@@ -546,8 +525,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("http://localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -565,12 +543,11 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("https://localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+						OTLPHttp: &OTLPHttpMetricExporter{
+							Endpoint:        ptr("https://localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
 						},
 					},
 				},
@@ -582,12 +559,11 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("https://localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPHttp: &OTLPHttpMetricExporter{
+							Endpoint:        ptr("https://localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 						},
 					},
 				},
@@ -599,13 +575,12 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:          ptr("http/protobuf"),
-							Endpoint:          ptr("localhost:4317"),
-							Compression:       ptr("gzip"),
-							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPHttp: &OTLPHttpMetricExporter{
+							Endpoint:              ptr("localhost:4317"),
+							Compression:           ptr("gzip"),
+							Timeout:               ptr(1000),
+							ClientCertificateFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientKeyFile:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 						},
 					},
 				},
@@ -617,8 +592,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -634,8 +608,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("http://localhost:4318/path/123"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -653,8 +626,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
@@ -671,8 +643,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -690,8 +661,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr(" "),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -709,8 +679,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -728,8 +697,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -748,8 +716,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -768,8 +735,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -788,8 +754,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -808,8 +773,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),
@@ -1459,7 +1423,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 	}
 	type args struct {
 		ctx        context.Context
-		otlpConfig *OTLPMetric
+		otlpConfig *OTLPGrpcMetricExporter
 	}
 	tests := []struct {
 		name           string
@@ -1470,8 +1434,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			name: "no TLS config",
 			args: args{
 				ctx: t.Context(),
-				otlpConfig: &OTLPMetric{
-					Protocol:    ptr("grpc"),
+				otlpConfig: &OTLPGrpcMetricExporter{
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Insecure:    ptr(true),
@@ -1488,11 +1451,10 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			name: "with TLS config",
 			args: args{
 				ctx: t.Context(),
-				otlpConfig: &OTLPMetric{
-					Protocol:    ptr("grpc"),
-					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
-					Certificate: ptr("testdata/server-certs/server.crt"),
+				otlpConfig: &OTLPGrpcMetricExporter{
+					Compression:     ptr("gzip"),
+					Timeout:         ptr(5000),
+					CertificateFile: ptr("testdata/server-certs/server.crt"),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -1512,13 +1474,12 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			name: "with TLS config and client key",
 			args: args{
 				ctx: t.Context(),
-				otlpConfig: &OTLPMetric{
-					Protocol:          ptr("grpc"),
-					Compression:       ptr("gzip"),
-					Timeout:           ptr(5000),
-					Certificate:       ptr("testdata/server-certs/server.crt"),
-					ClientKey:         ptr("testdata/client-certs/client.key"),
-					ClientCertificate: ptr("testdata/client-certs/client.crt"),
+				otlpConfig: &OTLPGrpcMetricExporter{
+					Compression:           ptr("gzip"),
+					Timeout:               ptr(5000),
+					CertificateFile:       ptr("testdata/server-certs/server.crt"),
+					ClientKeyFile:         ptr("testdata/client-certs/client.key"),
+					ClientCertificateFile: ptr("testdata/client-certs/client.crt"),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
