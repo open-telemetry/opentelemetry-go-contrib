@@ -54,7 +54,7 @@ func TestMeterProvider(t *testing.T) {
 			name: "error-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					MeterProvider: &MeterProvider{
+					MeterProvider: &MeterProviderJson{
 						Readers: []MetricReader{
 							{
 								Periodic: &PeriodicMetricReader{},
@@ -71,7 +71,7 @@ func TestMeterProvider(t *testing.T) {
 			name: "multiple-errors-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					MeterProvider: &MeterProvider{
+					MeterProvider: &MeterProviderJson{
 						Readers: []MetricReader{
 							{
 								Periodic: &PeriodicMetricReader{},
@@ -109,13 +109,12 @@ func TestMeterProviderOptions(t *testing.T) {
 	defer srv.Close()
 
 	cfg := OpenTelemetryConfiguration{
-		MeterProvider: &MeterProvider{
+		MeterProvider: &MeterProviderJson{
 			Readers: []MetricReader{{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint: ptr(srv.URL),
-							Insecure: ptr(true),
 						},
 					},
 				},
@@ -438,7 +437,7 @@ func TestReader(t *testing.T) {
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("delta"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
 						},
 					},
 				},
@@ -457,7 +456,7 @@ func TestReader(t *testing.T) {
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("cumulative"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceCumulative),
 						},
 					},
 				},
@@ -476,7 +475,7 @@ func TestReader(t *testing.T) {
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("lowmemory"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceLowMemory),
 						},
 					},
 				},
@@ -495,7 +494,7 @@ func TestReader(t *testing.T) {
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("invalid"),
+							TemporalityPreference: (*ExporterTemporalityPreference)(ptr("invalid")),
 						},
 					},
 				},
@@ -704,7 +703,7 @@ func TestReader(t *testing.T) {
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("cumulative"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceCumulative),
 						},
 					},
 				},
@@ -723,7 +722,7 @@ func TestReader(t *testing.T) {
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("lowmemory"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceLowMemory),
 						},
 					},
 				},
@@ -742,7 +741,7 @@ func TestReader(t *testing.T) {
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("delta"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
 						},
 					},
 				},
@@ -761,7 +760,7 @@ func TestReader(t *testing.T) {
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("invalid"),
+							TemporalityPreference: (*ExporterTemporalityPreference)(ptr("invalid")),
 						},
 					},
 				},
@@ -873,7 +872,7 @@ func TestView(t *testing.T) {
 			name: "selector/invalid_type",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("invalid_type")),
+					InstrumentType: (*InstrumentType)(ptr("invalid_type")),
 				},
 			},
 			wantErr: "view_selector: instrument_type: invalid value",
@@ -890,7 +889,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -915,7 +914,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -940,7 +939,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -965,7 +964,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("histogram")),
+					InstrumentType: (*InstrumentType)(ptr("histogram")),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -990,7 +989,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -1015,7 +1014,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -1040,7 +1039,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -1071,7 +1070,7 @@ func TestView(t *testing.T) {
 					Name:          ptr("new_name"),
 					Description:   ptr("new_description"),
 					AttributeKeys: ptr(IncludeExclude{Included: []string{"foo", "bar"}}),
-					Aggregation:   &ViewStreamAggregation{Sum: make(ViewStreamAggregationSum)},
+					Aggregation:   &Aggregation{Sum: make(SumAggregation)},
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -1109,7 +1108,7 @@ func TestView(t *testing.T) {
 func TestInstrumentType(t *testing.T) {
 	testCases := []struct {
 		name     string
-		instType *ViewSelectorInstrumentType
+		instType *InstrumentType
 		wantErr  error
 		wantKind sdkmetric.InstrumentKind
 	}{
@@ -1119,37 +1118,37 @@ func TestInstrumentType(t *testing.T) {
 		},
 		{
 			name:     "counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("counter")),
+			instType: ptr(InstrumentTypeCounter),
 			wantKind: sdkmetric.InstrumentKindCounter,
 		},
 		{
 			name:     "up_down_counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("up_down_counter")),
+			instType: ptr(InstrumentTypeUpDownCounter),
 			wantKind: sdkmetric.InstrumentKindUpDownCounter,
 		},
 		{
 			name:     "histogram",
-			instType: (*ViewSelectorInstrumentType)(ptr("histogram")),
+			instType: ptr(InstrumentTypeHistogram),
 			wantKind: sdkmetric.InstrumentKindHistogram,
 		},
 		{
 			name:     "observable_counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("observable_counter")),
+			instType: ptr(InstrumentTypeObservableCounter),
 			wantKind: sdkmetric.InstrumentKindObservableCounter,
 		},
 		{
 			name:     "observable_up_down_counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("observable_up_down_counter")),
+			instType: ptr(InstrumentTypeObservableUpDownCounter),
 			wantKind: sdkmetric.InstrumentKindObservableUpDownCounter,
 		},
 		{
 			name:     "observable_gauge",
-			instType: (*ViewSelectorInstrumentType)(ptr("observable_gauge")),
+			instType: ptr(InstrumentTypeObservableGauge),
 			wantKind: sdkmetric.InstrumentKindObservableGauge,
 		},
 		{
 			name:     "invalid",
-			instType: (*ViewSelectorInstrumentType)(ptr("invalid")),
+			instType: (*InstrumentType)(ptr("invalid")),
 			wantErr:  errors.New("instrument_type: invalid value"),
 		},
 	}
@@ -1170,7 +1169,7 @@ func TestInstrumentType(t *testing.T) {
 func TestAggregation(t *testing.T) {
 	testCases := []struct {
 		name            string
-		aggregation     *ViewStreamAggregation
+		aggregation     *Aggregation
 		wantAggregation sdkmetric.Aggregation
 	}{
 		{
@@ -1179,13 +1178,13 @@ func TestAggregation(t *testing.T) {
 		},
 		{
 			name:            "empty",
-			aggregation:     &ViewStreamAggregation{},
+			aggregation:     &Aggregation{},
 			wantAggregation: nil,
 		},
 		{
 			name: "Base2ExponentialBucketHistogram empty",
-			aggregation: &ViewStreamAggregation{
-				Base2ExponentialBucketHistogram: &ViewStreamAggregationBase2ExponentialBucketHistogram{},
+			aggregation: &Aggregation{
+				Base2ExponentialBucketHistogram: &Base2ExponentialBucketHistogramAggregation{},
 			},
 			wantAggregation: sdkmetric.AggregationBase2ExponentialHistogram{
 				MaxSize:  0,
@@ -1195,8 +1194,8 @@ func TestAggregation(t *testing.T) {
 		},
 		{
 			name: "Base2ExponentialBucketHistogram",
-			aggregation: &ViewStreamAggregation{
-				Base2ExponentialBucketHistogram: &ViewStreamAggregationBase2ExponentialBucketHistogram{
+			aggregation: &Aggregation{
+				Base2ExponentialBucketHistogram: &Base2ExponentialBucketHistogramAggregation{
 					MaxSize:      ptr(2),
 					MaxScale:     ptr(3),
 					RecordMinMax: ptr(true),
@@ -1210,22 +1209,22 @@ func TestAggregation(t *testing.T) {
 		},
 		{
 			name: "Default",
-			aggregation: &ViewStreamAggregation{
-				Default: make(ViewStreamAggregationDefault),
+			aggregation: &Aggregation{
+				Default: make(DefaultAggregation),
 			},
 			wantAggregation: nil,
 		},
 		{
 			name: "Drop",
-			aggregation: &ViewStreamAggregation{
-				Drop: make(ViewStreamAggregationDrop),
+			aggregation: &Aggregation{
+				Drop: make(DropAggregation),
 			},
 			wantAggregation: sdkmetric.AggregationDrop{},
 		},
 		{
 			name: "ExplicitBucketHistogram empty",
-			aggregation: &ViewStreamAggregation{
-				ExplicitBucketHistogram: &ViewStreamAggregationExplicitBucketHistogram{},
+			aggregation: &Aggregation{
+				ExplicitBucketHistogram: &ExplicitBucketHistogramAggregation{},
 			},
 			wantAggregation: sdkmetric.AggregationExplicitBucketHistogram{
 				Boundaries: nil,
@@ -1234,8 +1233,8 @@ func TestAggregation(t *testing.T) {
 		},
 		{
 			name: "ExplicitBucketHistogram",
-			aggregation: &ViewStreamAggregation{
-				ExplicitBucketHistogram: &ViewStreamAggregationExplicitBucketHistogram{
+			aggregation: &Aggregation{
+				ExplicitBucketHistogram: &ExplicitBucketHistogramAggregation{
 					Boundaries:   []float64{1, 2, 3},
 					RecordMinMax: ptr(true),
 				},
@@ -1247,15 +1246,15 @@ func TestAggregation(t *testing.T) {
 		},
 		{
 			name: "LastValue",
-			aggregation: &ViewStreamAggregation{
-				LastValue: make(ViewStreamAggregationLastValue),
+			aggregation: &Aggregation{
+				LastValue: make(LastValueAggregation),
 			},
 			wantAggregation: sdkmetric.AggregationLastValue{},
 		},
 		{
 			name: "Sum",
-			aggregation: &ViewStreamAggregation{
-				Sum: make(ViewStreamAggregationSum),
+			aggregation: &Aggregation{
+				Sum: make(SumAggregation),
 			},
 			wantAggregation: sdkmetric.AggregationSum{},
 		},

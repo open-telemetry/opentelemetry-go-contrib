@@ -23,13 +23,18 @@ import (
 var errInvalidSamplerConfiguration = errors.New("invalid sampler configuration")
 
 func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProvider, shutdownFunc, error) {
-	if cfg.opentelemetryConfig.TracerProvider == nil {
+	provider, ok := cfg.opentelemetryConfig.TracerProvider.(*TracerProviderJson)
+	if provider == nil {
 		return noop.NewTracerProvider(), noopShutdown, nil
 	}
+	if !ok {
+		return noop.NewTracerProvider(), noopShutdown, errors.New("invalid tracer provider")
+	}
+
 	opts := append(cfg.tracerProviderOptions, sdktrace.WithResource(res))
 
 	var errs []error
-	for _, processor := range cfg.opentelemetryConfig.TracerProvider.Processors {
+	for _, processor := range provider.Processors {
 		sp, err := spanProcessor(cfg.ctx, processor)
 		if err == nil {
 			opts = append(opts, sdktrace.WithSpanProcessor(sp))
@@ -37,7 +42,7 @@ func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProv
 			errs = append(errs, err)
 		}
 	}
-	if s, err := sampler(cfg.opentelemetryConfig.TracerProvider.Sampler); err == nil {
+	if s, err := sampler(provider.Sampler); err == nil {
 		opts = append(opts, sdktrace.WithSampler(s))
 	} else {
 		errs = append(errs, err)
@@ -49,7 +54,7 @@ func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProv
 	return tp, tp.Shutdown, nil
 }
 
-func parentBasedSampler(s *SamplerParentBased) (sdktrace.Sampler, error) {
+func parentBasedSampler(s *ParentBasedSampler) (sdktrace.Sampler, error) {
 	var rootSampler sdktrace.Sampler
 	var opts []sdktrace.ParentBasedSamplerOption
 	var errs []error
@@ -125,24 +130,44 @@ func sampler(s *Sampler) (sdktrace.Sampler, error) {
 }
 
 func spanExporter(ctx context.Context, exporter SpanExporter) (sdktrace.SpanExporter, error) {
-	if exporter.Console != nil && exporter.OTLP != nil {
+	exportersConfigured := 0
+	var exportFunc func() (sdktrace.SpanExporter, error)
+
+	if exporter.Console != nil {
+		exportersConfigured++
+		exportFunc = func() (sdktrace.SpanExporter, error) {
+			return stdouttrace.New(
+				stdouttrace.WithPrettyPrint(),
+			)
+		}
+	}
+	if exporter.OTLPHttp != nil {
+		exportersConfigured++
+		exportFunc = func() (sdktrace.SpanExporter, error) {
+			return otlpHTTPSpanExporter(ctx, exporter.OTLPHttp)
+		}
+	}
+	if exporter.OTLPGrpc != nil {
+		exportersConfigured++
+		exportFunc = func() (sdktrace.SpanExporter, error) {
+			return otlpGRPCSpanExporter(ctx, exporter.OTLPGrpc)
+		}
+	}
+	if exporter.OTLPFileDevelopment != nil {
+		exportersConfigured++
+		// TODO: implement file exporter
+	}
+	if exporter.Zipkin != nil {
+		exportersConfigured++
+		// TODO: implement zipkin exporter
+	}
+
+	if exportersConfigured > 1 {
 		return nil, errors.New("must not specify multiple exporters")
 	}
 
-	if exporter.Console != nil {
-		return stdouttrace.New(
-			stdouttrace.WithPrettyPrint(),
-		)
-	}
-	if exporter.OTLP != nil && exporter.OTLP.Protocol != nil {
-		switch *exporter.OTLP.Protocol {
-		case protocolProtobufHTTP:
-			return otlpHTTPSpanExporter(ctx, exporter.OTLP)
-		case protocolProtobufGRPC:
-			return otlpGRPCSpanExporter(ctx, exporter.OTLP)
-		default:
-			return nil, fmt.Errorf("unsupported protocol %q", *exporter.OTLP.Protocol)
-		}
+	if exportFunc != nil {
+		return exportFunc()
 	}
 	return nil, errors.New("no valid span exporter")
 }
@@ -168,7 +193,7 @@ func spanProcessor(ctx context.Context, processor SpanProcessor) (sdktrace.SpanP
 	return nil, errors.New("unsupported span processor type, must be one of simple or batch")
 }
 
-func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanExporter, error) {
+func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLPGrpcExporter) (sdktrace.SpanExporter, error) {
 	var opts []otlptracegrpc.Option
 
 	if otlpConfig.Endpoint != nil {
@@ -213,8 +238,8 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		opts = append(opts, otlptracegrpc.WithHeaders(headersConfig))
 	}
 
-	if otlpConfig.Certificate != nil || otlpConfig.ClientCertificate != nil || otlpConfig.ClientKey != nil {
-		tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	if otlpConfig.CertificateFile != nil || otlpConfig.ClientCertificateFile != nil || otlpConfig.ClientKeyFile != nil {
+		tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 		if err != nil {
 			return nil, err
 		}
@@ -224,7 +249,7 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 	return otlptracegrpc.New(ctx, opts...)
 }
 
-func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanExporter, error) {
+func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sdktrace.SpanExporter, error) {
 	var opts []otlptracehttp.Option
 
 	if otlpConfig.Endpoint != nil {
@@ -262,7 +287,7 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 		opts = append(opts, otlptracehttp.WithHeaders(headersConfig))
 	}
 
-	tlsConfig, err := createTLSConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+	tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 	if err != nil {
 		return nil, err
 	}

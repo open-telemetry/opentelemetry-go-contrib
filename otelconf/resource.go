@@ -46,7 +46,7 @@ func keyVal(k string, v any) attribute.KeyValue {
 	}
 }
 
-func newResource(res *Resource) *resource.Resource {
+func newResource(res *ResourceJson) *resource.Resource {
 	if res == nil {
 		return resource.Default()
 	}
