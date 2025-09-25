@@ -129,8 +129,7 @@ func TestTracerProviderOptions(t *testing.T) {
 			Processors: []SpanProcessor{{
 				Simple: &SimpleSpanProcessor{
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol: ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpExporter{
 							Endpoint: ptr(srv.URL),
 							Insecure: ptr(true),
 						},
@@ -292,11 +291,7 @@ func TestSpanProcessor(t *testing.T) {
 					ExportTimeout:      ptr(0),
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
-					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol: ptr("http/invalid"),
-						},
-					},
+					Exporter:           SpanExporter{},
 				},
 			},
 			wantErr: "unsupported protocol \"http/invalid\"",
@@ -310,8 +305,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcExporter{
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
@@ -332,8 +326,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcExporter{
 							Endpoint:    ptr("http://localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -355,8 +348,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcExporter{
 							Endpoint:    ptr("unix:collector.sock"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -374,12 +366,11 @@ func TestSpanProcessor(t *testing.T) {
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+						OTLPGrpc: &OTLPGrpcExporter{
+							Endpoint:        ptr("localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
 						},
 					},
 				},
@@ -391,12 +382,11 @@ func TestSpanProcessor(t *testing.T) {
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPGrpc: &OTLPGrpcExporter{
+							Endpoint:        ptr("localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 						},
 					},
 				},
@@ -408,13 +398,12 @@ func TestSpanProcessor(t *testing.T) {
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:          ptr("grpc"),
-							Endpoint:          ptr("localhost:4317"),
-							Compression:       ptr("gzip"),
-							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPGrpc: &OTLPGrpcExporter{
+							Endpoint:              ptr("localhost:4317"),
+							Compression:           ptr("gzip"),
+							Timeout:               ptr(1000),
+							ClientCertificateFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientKeyFile:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 						},
 					},
 				},
@@ -426,8 +415,7 @@ func TestSpanProcessor(t *testing.T) {
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcExporter{
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -447,8 +435,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcExporter{
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -470,8 +457,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcExporter{
 							Endpoint:    ptr(" "),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -493,8 +479,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcExporter{
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),
@@ -516,8 +501,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpExporter{
 							Endpoint:    ptr("http://localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -535,12 +519,11 @@ func TestSpanProcessor(t *testing.T) {
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+						OTLPHttp: &OTLPHttpExporter{
+							Endpoint:        ptr("localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
 						},
 					},
 				},
@@ -552,12 +535,11 @@ func TestSpanProcessor(t *testing.T) {
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPHttp: &OTLPHttpExporter{
+							Endpoint:        ptr("localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 						},
 					},
 				},
@@ -569,13 +551,12 @@ func TestSpanProcessor(t *testing.T) {
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:          ptr("http/protobuf"),
-							Endpoint:          ptr("localhost:4317"),
-							Compression:       ptr("gzip"),
-							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPHttp: &OTLPHttpExporter{
+							Endpoint:              ptr("localhost:4317"),
+							Compression:           ptr("gzip"),
+							Timeout:               ptr(1000),
+							ClientCertificateFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientKeyFile:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 						},
 					},
 				},
@@ -587,8 +568,7 @@ func TestSpanProcessor(t *testing.T) {
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpExporter{
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -608,8 +588,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpExporter{
 							Endpoint:    ptr("http://localhost:4318/path/123"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -631,8 +610,8 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpExporter{
+
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
@@ -653,8 +632,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -676,8 +654,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpExporter{
 							Endpoint:    ptr(" "),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -699,8 +676,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -722,8 +698,7 @@ func TestSpanProcessor(t *testing.T) {
 					MaxQueueSize:       ptr(0),
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
-						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),
@@ -921,8 +896,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			name: "no TLS config",
 			args: args{
 				ctx: t.Context(),
-				otlpConfig: &OTLP{
-					Protocol:    ptr("grpc"),
+				OTLPGrpc: &OTLPGrpcExporter{
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Insecure:    ptr(true),
@@ -939,11 +913,10 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			name: "with TLS config",
 			args: args{
 				ctx: t.Context(),
-				otlpConfig: &OTLP{
-					Protocol:    ptr("grpc"),
-					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
-					Certificate: ptr("testdata/server-certs/server.crt"),
+				otlpConfig: &OTLPGrpcExporter{
+					Compression:     ptr("gzip"),
+					Timeout:         ptr(5000),
+					CertificateFile: ptr("testdata/server-certs/server.crt"),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -963,13 +936,12 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			name: "with TLS config and client key",
 			args: args{
 				ctx: t.Context(),
-				otlpConfig: &OTLP{
-					Protocol:          ptr("grpc"),
-					Compression:       ptr("gzip"),
-					Timeout:           ptr(5000),
-					Certificate:       ptr("testdata/server-certs/server.crt"),
-					ClientKey:         ptr("testdata/client-certs/client.key"),
-					ClientCertificate: ptr("testdata/client-certs/client.crt"),
+				otlpConfig: &OTLPGrpcExporter{
+					Compression:           ptr("gzip"),
+					Timeout:               ptr(5000),
+					CertificateFile:       ptr("testdata/server-certs/server.crt"),
+					ClientKeyFile:         ptr("testdata/client-certs/client.key"),
+					ClientCertificateFile: ptr("testdata/client-certs/client.crt"),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
