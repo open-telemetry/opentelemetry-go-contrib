@@ -11,11 +11,11 @@ import (
 )
 
 // MarshalJSON implements json.Marshaler.
-func (j *AttributeNameValueType) MarshalJSON() ([]byte, error) {
+func (j *AttributeType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j.Value)
 }
 
-var enumValuesAttributeNameValueType = []any{
+var enumValuesAttributeType = []any{
 	nil,
 	"string",
 	"bool",
@@ -28,7 +28,7 @@ var enumValuesAttributeNameValueType = []any{
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *AttributeNameValueType) UnmarshalJSON(b []byte) error {
+func (j *AttributeType) UnmarshalJSON(b []byte) error {
 	var v struct {
 		Value any
 	}
@@ -36,16 +36,16 @@ func (j *AttributeNameValueType) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	var ok bool
-	for _, expected := range enumValuesAttributeNameValueType {
+	for _, expected := range enumValuesAttributeType {
 		if reflect.DeepEqual(v.Value, expected) {
 			ok = true
 			break
 		}
 	}
 	if !ok {
-		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValuesAttributeNameValueType, v.Value)
+		return fmt.Errorf("invalid value (expected one of %#v): %#v", enumValuesAttributeType, v.Value)
 	}
-	*j = AttributeNameValueType(v)
+	*j = AttributeType(v)
 	return nil
 }
 
