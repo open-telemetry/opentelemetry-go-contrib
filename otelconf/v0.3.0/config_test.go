@@ -418,11 +418,11 @@ var v03OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 			{Name: "env_var_in_key", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
 			{Name: "replace_me", Type: &AttributeNameValueType{Value: "string"}, Value: "${DO_NOT_REPLACE_ME}"},
 			{Name: "undefined_defaults_to_var", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE}"},
-			// {Name: "escaped_does_not_substitute", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE}"},
+			{Name: "escaped_does_not_substitute", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE}"},
+			{Name: "escaped_does_not_substitute_fallback", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE:-fallback}"},
+			{Name: "escaped_and_substituted_fallback", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE:-value}"},
 			{Name: "escaped_and_substituted", Type: &AttributeNameValueType{Value: "string"}, Value: "$value"},
-			// key: $$$${STRING_VALUE}
-			// key: $${STRING_VALUE:-fallback}
-			// key: $${STRING_VALUE:-${STRING_VALUE}}
+			{Name: "multiple_escaped_and_not_substituted", Type: &AttributeNameValueType{Value: "string"}, Value: "$${STRING_VALUE}"},
 			{Name: "undefined_key_with_escape_sequence_in_fallback", Type: &AttributeNameValueType{Value: "string"}, Value: "${UNDEFINED_KEY}"},
 			{Name: "value_with_escape", Type: &AttributeNameValueType{Value: "string"}, Value: "value$$"},
 			{Name: "escape_sequence", Type: &AttributeNameValueType{Value: "string"}, Value: "a $ b"},

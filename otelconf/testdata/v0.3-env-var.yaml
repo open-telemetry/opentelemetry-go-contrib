@@ -103,11 +103,20 @@ resource:
     - name: undefined_defaults_to_var
       value: ${UNDEFINED_KEY:-${STRING_VALUE}}
       type: string
-    # - name: escaped_does_not_substitute
-    #   value: $${STRING_VALUE}
-    #   type: string
+    - name: escaped_does_not_substitute
+      value: $${STRING_VALUE}
+      type: string
+    - name: escaped_does_not_substitute_fallback
+      value: $${STRING_VALUE:-fallback}
+      type: string
+    - name: escaped_and_substituted_fallback
+      value: $${STRING_VALUE:-${STRING_VALUE}}
+      type: string
     - name: escaped_and_substituted
       value: $$${STRING_VALUE}
+      type: string
+    - name: multiple_escaped_and_not_substituted
+      value: $$$${STRING_VALUE}
       type: string
     - name: undefined_key_with_escape_sequence_in_fallback
       value: ${UNDEFINED_KEY:-$${UNDEFINED_KEY}}

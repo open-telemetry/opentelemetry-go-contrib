@@ -181,10 +181,12 @@ func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) Configurat
 
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
 func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
-	file, err := provider.ReplaceEnvVars(provider.EscapeDollarSigns(file))
+	file, err := provider.ReplaceEnvVars(provider.EscapeAndEncodeDollarSigns(file))
 	if err != nil {
 		return nil, err
 	}
+
+	file = provider.DecodeDollarSigns(file)
 
 	var cfg OpenTelemetryConfiguration
 	err = yaml.Unmarshal(file, &cfg)
