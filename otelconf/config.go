@@ -26,9 +26,6 @@ import (
 )
 
 const (
-	protocolProtobufHTTP = "http/protobuf"
-	protocolProtobufGRPC = "grpc"
-
 	compressionGzip = "gzip"
 	compressionNone = "none"
 )
@@ -95,7 +92,11 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, nil
 	}
 
-	r := newResource(o.opentelemetryConfig.Resource)
+	resource, ok := o.opentelemetryConfig.Resource.(ResourceJson)
+	if !ok {
+		return noopSDK, errors.New("invalid resource")
+	}
+	r := newResource(&resource)
 
 	mp, mpShutdown, err := meterProvider(o, r)
 	if err != nil {
