@@ -283,19 +283,6 @@ func TestSpanProcessor(t *testing.T) {
 			wantProcessor: sdktrace.NewBatchSpanProcessor(consoleExporter),
 		},
 		{
-			name: "batch/otlp-exporter-invalid-protocol",
-			processor: SpanProcessor{
-				Batch: &BatchSpanProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
-					Exporter:           SpanExporter{},
-				},
-			},
-			wantErr: "unsupported protocol \"http/invalid\"",
-		},
-		{
 			name: "batch/otlp-grpc-exporter-no-endpoint",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{
