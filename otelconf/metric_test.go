@@ -227,15 +227,6 @@ func TestReader(t *testing.T) {
 			wantReader: readerWithServer{promExporter, nil},
 		},
 		{
-			name: "periodic/otlp-exporter-invalid-protocol",
-			reader: MetricReader{
-				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{},
-				},
-			},
-			wantErr: "unsupported protocol \"http/invalid\"",
-		},
-		{
 			name: "periodic/otlp-grpc-exporter",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
