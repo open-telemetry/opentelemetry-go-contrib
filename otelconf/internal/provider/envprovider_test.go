@@ -206,13 +206,6 @@ func TestReplaceEnvVars(t *testing.T) {
 	}
 }
 
-func TestEscapeDollarSigns(t *testing.T) {
-	require.Equal(t, []byte("${KEY}"), DecodeDollarSigns(EscapeAndEncodeDollarSigns([]byte("${KEY}"))))
-	require.Equal(t, []byte("${KEY}"), DecodeDollarSigns(EscapeAndEncodeDollarSigns([]byte("$${KEY}"))))
-	require.Equal(t, []byte("$${KEY}"), DecodeDollarSigns(EscapeAndEncodeDollarSigns([]byte("$$${KEY}"))))
-	require.Equal(t, []byte("$${KEY}"), DecodeDollarSigns(EscapeAndEncodeDollarSigns([]byte("$$$${KEY}"))))
-}
-
 func TestCheckRawConfTypeNil(t *testing.T) {
 	err := checkRawConfType([]byte{})
 	require.Error(t, err)

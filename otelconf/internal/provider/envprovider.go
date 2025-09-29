@@ -19,15 +19,8 @@ const validationPattern = `^[a-zA-Z_][a-zA-Z0-9_]*$`
 
 var validationRegexp = regexp.MustCompile(validationPattern)
 
-func EscapeAndEncodeDollarSigns(input []byte) []byte {
-	return []byte(strings.ReplaceAll(string(input), "$$", "$|"))
-}
-
-func DecodeDollarSigns(input []byte) []byte {
-	return []byte(strings.ReplaceAll(string(input), "$|", "$"))
-}
-
 func ReplaceEnvVars(input []byte) ([]byte, error) {
+	preprocess := []byte(strings.ReplaceAll(string(input), "$$", "$|"))
 	re := regexp.MustCompile(`\$\{([a-zA-Z_][a-zA-Z0-9_]*-?[^}]*)\}`)
 
 	replaceEnvVars := func(input []byte) ([]byte, error) {
@@ -40,7 +33,12 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 		})
 		return out, err
 	}
-	return replaceEnvVars(input)
+
+	out, err := replaceEnvVars(preprocess)
+	if err != nil {
+		return out, err
+	}
+	return []byte(strings.ReplaceAll(string(out), "$|", "$")), nil
 }
 
 func replaceEnvVar(uri string) ([]byte, error) {
