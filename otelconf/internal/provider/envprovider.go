@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
+	"go.yaml.in/yaml/v3"
 )
 
 const validationPattern = `^[a-zA-Z_][a-zA-Z0-9_]*$`
