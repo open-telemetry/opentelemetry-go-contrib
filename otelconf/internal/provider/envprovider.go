@@ -55,7 +55,6 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 				return data
 			}
 			data = append(dollarSigns[0:(len(dollarSigns)/2)], []byte(fmt.Sprintf("{%s", data))...)
-
 		}
 		return data
 	})
