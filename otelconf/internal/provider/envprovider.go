@@ -20,25 +20,49 @@ const validationPattern = `^[a-zA-Z_][a-zA-Z0-9_]*$`
 var validationRegexp = regexp.MustCompile(validationPattern)
 
 func ReplaceEnvVars(input []byte) ([]byte, error) {
-	preprocess := []byte(strings.ReplaceAll(string(input), "$$", "$|"))
-	re := regexp.MustCompile(`\$\{([a-zA-Z_][a-zA-Z0-9_]*-?[^}]*)\}`)
+	// start by replacing all $$ that are not followed by a {
+	doubleDollarSigns := regexp.MustCompile(`\$\$([^{$])`)
+	out := doubleDollarSigns.ReplaceAllFunc(input, func(s []byte) []byte {
+		return append([]byte("$"), doubleDollarSigns.FindSubmatch(s)[1]...)
+	})
 
-	replaceEnvVars := func(input []byte) ([]byte, error) {
-		var err error
-		out := re.ReplaceAllFunc(input, func(s []byte) []byte {
-			match := re.FindSubmatch(s)
-			var data []byte
-			data, err = replaceEnvVar(string(match[1]))
-			return data
-		})
-		return out, err
-	}
+	var err error
+	re := regexp.MustCompile(`([$]*)\{([a-zA-Z_][a-zA-Z0-9_]*-?[^}]*)\}`)
+	out = re.ReplaceAllFunc(out, func(s []byte) []byte {
+		match := re.FindSubmatch(s)
+		var data []byte
 
-	out, err := replaceEnvVars(preprocess)
+		// check if we have an odd number of $, which indicates that
+		// env var replacement should be done
+		dollarSigns := match[1]
+		if len(match) > 2 && (len(dollarSigns)%2 == 1) {
+			data, err = replaceEnvVar(string(match[2]))
+			if err != nil {
+				return data
+			}
+			if len(dollarSigns) > 1 {
+				data = append(dollarSigns[0:(len(dollarSigns)/2)], data...)
+			}
+		} else {
+			// need to expand any default value env var to support the case $${STRING_VALUE:-${STRING_VALUE}}
+			_, defaultValuePtr := parseEnvVarURI(string(match[2]))
+			if defaultValuePtr == nil || !strings.Contains(*defaultValuePtr, "$") {
+				return append(dollarSigns[0:(len(dollarSigns)/2)], []byte(fmt.Sprintf("{%s}", match[2]))...)
+			}
+			// expand the default value
+			data, err = ReplaceEnvVars(append(match[2], byte('}')))
+			if err != nil {
+				return data
+			}
+			data = append(dollarSigns[0:(len(dollarSigns)/2)], []byte(fmt.Sprintf("{%s", data))...)
+
+		}
+		return data
+	})
 	if err != nil {
-		return out, err
+		return []byte{}, err
 	}
-	return []byte(strings.ReplaceAll(string(out), "$|", "$")), nil
+	return out, nil
 }
 
 func replaceEnvVar(uri string) ([]byte, error) {
@@ -52,7 +76,7 @@ func replaceEnvVar(uri string) ([]byte, error) {
 
 	val := os.Getenv(envVarName)
 	if val == "" && defaultValuePtr != nil {
-		val = *defaultValuePtr
+		val = strings.ReplaceAll(*defaultValuePtr, "$$", "$")
 	}
 	if val == "" {
 		return nil, nil
