@@ -373,11 +373,58 @@ func TestWithPublicEndpointFn(t *testing.T) {
 	}
 }
 
+func TestDefaultMetricAttributes(t *testing.T) {
+	defaultMetricAttributes := []attribute.KeyValue{
+		attribute.String("http.route", "/user/{id:[0-9]+}"),
+		attribute.String("server.address", "foobar"),
+	}
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware("foobar",
+		otelmux.WithMeterProvider(meterProvider),
+	))
+
+	router.HandleFunc("/user/{id:[0-9]+}", ok)
+	r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", http.NoBody)
+	require.NoError(t, err)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, r)
+
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(t.Context(), &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+
+	// Verify that the additional attribute is present in the metrics.
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch m.Data.(type) {
+		case metricdata.Histogram[int64]:
+			d, ok := m.Data.(metricdata.Histogram[int64])
+			assert.True(t, ok)
+			assert.Len(t, d.DataPoints, 1)
+			containsAttributes(t, d.DataPoints[0].Attributes, defaultMetricAttributes)
+		case metricdata.Histogram[float64]:
+			d, ok := m.Data.(metricdata.Histogram[float64])
+			assert.True(t, ok)
+			assert.Len(t, d.DataPoints, 1)
+			containsAttributes(t, d.DataPoints[0].Attributes, defaultMetricAttributes)
+		default:
+			// Intentional failure to keep the test updated with changes in metrics
+			t.Errorf("Unexpected metric type")
+		}
+	}
+
+}
+
 func TestHandlerWithMetricAttributesFn(t *testing.T) {
 	const (
-		serverRequestSize  = "http.server.request.size"
-		serverResponseSize = "http.server.response.size"
-		serverDuration     = "http.server.duration"
+		serverRequestSize  = "http.server.request.body.size"
+		serverResponseSize = "http.server.response.body.size"
+		serverDuration     = "http.server.request.duration"
 	)
 	testCases := []struct {
 		name                    string
@@ -430,7 +477,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		for _, m := range rm.ScopeMetrics[0].Metrics {
 			switch m.Name {
 			case serverRequestSize, serverResponseSize:
-				d, ok := m.Data.(metricdata.Sum[int64])
+				d, ok := m.Data.(metricdata.Histogram[int64])
 				assert.True(t, ok)
 				assert.Len(t, d.DataPoints, 1)
 				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].wantAdditionalAttribute)
@@ -439,6 +486,9 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 				assert.True(t, ok)
 				assert.Len(t, d.DataPoints, 1)
 				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].wantAdditionalAttribute)
+			default:
+				// Intentional failure to keep the test updated with changes in metrics
+				t.Errorf("Unexpected metric name")
 			}
 		}
 	}

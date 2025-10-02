@@ -193,6 +193,9 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		AdditionalAttributes: tw.metricAttributesFromRequest(r),
 	}
 
+	rAttr := tw.semconv.Route(routeStr)
+	metricAttributes.AdditionalAttributes = append(metricAttributes.AdditionalAttributes, rAttr)
+
 	tw.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
 		ServerName:       tw.service,
 		ResponseSize:     rww.BytesWritten(),
