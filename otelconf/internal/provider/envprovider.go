@@ -17,19 +17,23 @@ import (
 
 const validationPattern = `^[a-zA-Z_][a-zA-Z0-9_]*$`
 
-var validationRegexp = regexp.MustCompile(validationPattern)
+var (
+	validationRegexp        = regexp.MustCompile(validationPattern)
+	doubleDollarSignsRegexp = regexp.MustCompile(`\$\$([^{$])`)
+	envVarRegexp            = regexp.MustCompile(`([$]*)\{([a-zA-Z_][a-zA-Z0-9_]*-?[^}]*)\}`)
+)
 
 func ReplaceEnvVars(input []byte) ([]byte, error) {
 	// start by replacing all $$ that are not followed by a {
-	doubleDollarSigns := regexp.MustCompile(`\$\$([^{$])`)
-	out := doubleDollarSigns.ReplaceAllFunc(input, func(s []byte) []byte {
-		return append([]byte("$"), doubleDollarSigns.FindSubmatch(s)[1]...)
+
+	out := doubleDollarSignsRegexp.ReplaceAllFunc(input, func(s []byte) []byte {
+		return append([]byte("$"), doubleDollarSignsRegexp.FindSubmatch(s)[1]...)
 	})
 
 	var err error
-	re := regexp.MustCompile(`([$]*)\{([a-zA-Z_][a-zA-Z0-9_]*-?[^}]*)\}`)
-	out = re.ReplaceAllFunc(out, func(s []byte) []byte {
-		match := re.FindSubmatch(s)
+
+	out = envVarRegexp.ReplaceAllFunc(out, func(s []byte) []byte {
+		match := envVarRegexp.FindSubmatch(s)
 		var data []byte
 
 		// check if we have an odd number of $, which indicates that
