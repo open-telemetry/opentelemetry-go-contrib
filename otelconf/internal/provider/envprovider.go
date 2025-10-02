@@ -45,7 +45,7 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 			}
 		} else {
 			// need to expand any default value env var to support the case $${STRING_VALUE:-${STRING_VALUE}}
-			_, defaultValuePtr := parseEnvVarURI(string(match[2]))
+			_, defaultValuePtr := parseEnvVar(string(match[2]))
 			if defaultValuePtr == nil || !strings.Contains(*defaultValuePtr, "$") {
 				return append(dollarSigns[0:(len(dollarSigns)/2)], []byte(fmt.Sprintf("{%s}", match[2]))...)
 			}
@@ -64,8 +64,8 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 	return out, nil
 }
 
-func replaceEnvVar(uri string) ([]byte, error) {
-	envVarName, defaultValuePtr := parseEnvVarURI(uri)
+func replaceEnvVar(in string) ([]byte, error) {
+	envVarName, defaultValuePtr := parseEnvVar(in)
 	if strings.Contains(envVarName, ":") {
 		return nil, fmt.Errorf("invalid environment variable name: %s", envVarName)
 	}
@@ -89,14 +89,14 @@ func replaceEnvVar(uri string) ([]byte, error) {
 	return out, nil
 }
 
-func parseEnvVarURI(uri string) (string, *string) {
-	uri = strings.TrimPrefix(uri, "env:")
+func parseEnvVar(in string) (string, *string) {
+	in = strings.TrimPrefix(in, "env:")
 	const defaultSuffix = ":-"
-	if strings.Contains(uri, defaultSuffix) {
-		parts := strings.SplitN(uri, defaultSuffix, 2)
+	if strings.Contains(in, defaultSuffix) {
+		parts := strings.SplitN(in, defaultSuffix, 2)
 		return parts[0], &parts[1]
 	}
-	return uri, nil
+	return in, nil
 }
 
 func checkRawConfType(val []byte) error {
