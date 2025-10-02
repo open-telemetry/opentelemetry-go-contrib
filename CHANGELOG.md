@@ -13,7 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Drop support for [Go 1.23]. (#7831)
 - Remove deprecated `go.opentelemetry.io/contrib/detectors/aws/ec2` module, please use `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` instead. (#7841)
 - Remove the deprecated `Extract` and `Inject` functions from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7952)
-- Adding `http.route` metric attribute to otelmux instrumentation library. (#7966)
+- Add the `http.route` metric attribute to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7966)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
