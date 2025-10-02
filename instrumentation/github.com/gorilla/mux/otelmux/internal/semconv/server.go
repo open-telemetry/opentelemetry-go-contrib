@@ -36,7 +36,7 @@ type ResponseTelemetry struct {
 	WriteError error
 }
 
-type HTTPServer struct{
+type HTTPServer struct {
 	requestBodySizeHistogram  httpconv.ServerRequestBodySize
 	responseBodySizeHistogram httpconv.ServerResponseBodySize
 	requestDurationHistogram  httpconv.ServerRequestDuration
@@ -240,6 +240,7 @@ type ServerMetricData struct {
 type MetricAttributes struct {
 	Req                  *http.Request
 	StatusCode           int
+	Route                string
 	AdditionalAttributes []attribute.KeyValue
 }
 
@@ -265,7 +266,7 @@ var (
 )
 
 func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
-	attributes := n.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.AdditionalAttributes)
+	attributes := n.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.Route, md.AdditionalAttributes)
 	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 	recordOpts := metricRecordOptionPool.Get().(*[]metric.RecordOption)
 	*recordOpts = append(*recordOpts, o)
@@ -342,7 +343,7 @@ func (n HTTPServer) Route(route string) attribute.KeyValue {
 	return semconv.HTTPRoute(route)
 }
 
-func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
+func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCode int, route string, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
 	num := len(additionalAttributes) + 3
 	var host string
 	var p int
@@ -371,6 +372,10 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 		num++
 	}
 
+	if route != "" {
+		num++
+	}
+
 	attributes := slices.Grow(additionalAttributes, num)
 	attributes = append(attributes,
 		semconv.HTTPRequestMethodKey.String(standardizeHTTPMethod(req.Method)),
@@ -389,6 +394,10 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 
 	if statusCode > 0 {
 		attributes = append(attributes, semconv.HTTPResponseStatusCode(statusCode))
+	}
+
+	if route != "" {
+		attributes = append(attributes, semconv.HTTPRoute(route))
 	}
 	return attributes
 }
