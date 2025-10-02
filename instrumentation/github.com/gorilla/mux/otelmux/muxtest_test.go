@@ -401,15 +401,11 @@ func TestDefaultMetricAttributes(t *testing.T) {
 
 	// Verify that the additional attribute is present in the metrics.
 	for _, m := range rm.ScopeMetrics[0].Metrics {
-		switch m.Data.(type) {
+		switch d := m.Data.(type) {
 		case metricdata.Histogram[int64]:
-			d, ok := m.Data.(metricdata.Histogram[int64])
-			assert.True(t, ok)
 			assert.Len(t, d.DataPoints, 1)
 			containsAttributes(t, d.DataPoints[0].Attributes, defaultMetricAttributes)
 		case metricdata.Histogram[float64]:
-			d, ok := m.Data.(metricdata.Histogram[float64])
-			assert.True(t, ok)
 			assert.Len(t, d.DataPoints, 1)
 			containsAttributes(t, d.DataPoints[0].Attributes, defaultMetricAttributes)
 		default:
@@ -417,7 +413,6 @@ func TestDefaultMetricAttributes(t *testing.T) {
 			t.Errorf("Unexpected metric type")
 		}
 	}
-
 }
 
 func TestHandlerWithMetricAttributesFn(t *testing.T) {
