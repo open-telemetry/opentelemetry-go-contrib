@@ -10,10 +10,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
-var (
-	errInvalidPropagatorEmpty = errors.New("invalid propagator name: empty")
-	errInvalidPropagatorNil   = errors.New("invalid propagator name: nil")
-)
+var errInvalidPropagatorNil = errors.New("invalid propagator name: nil")
 
 func propagator(cfg configOptions) (propagation.TextMapPropagator, error) {
 	if cfg.opentelemetryConfig.Propagator == nil {
@@ -25,16 +22,20 @@ func propagator(cfg configOptions) (propagation.TextMapPropagator, error) {
 		return autoprop.NewTextMapPropagator(), nil
 	}
 
-	names := make([]string, 0, n)
+	var names []string
 	for _, name := range cfg.opentelemetryConfig.Propagator.Composite {
 		if name == nil {
 			return nil, errInvalidPropagatorNil
 		}
 		if *name == "" {
-			return nil, errInvalidPropagatorEmpty
+			continue
+			// return nil, errInvalidPropagatorEmpty
 		}
 
 		names = append(names, *name)
+	}
+	if len(names) == 0 {
+		return autoprop.NewTextMapPropagator(), nil
 	}
 
 	return autoprop.TextMapPropagator(names...)

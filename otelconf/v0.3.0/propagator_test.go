@@ -150,8 +150,8 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    nil,
-			wantErr: true,
+			want:    propagation.TraceContext{},
+			wantErr: false,
 		},
 		{
 			name: "nil propagator name",
