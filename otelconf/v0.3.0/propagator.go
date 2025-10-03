@@ -6,8 +6,9 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 import (
 	"errors"
 
-	"go.opentelemetry.io/contrib/propagators/autoprop"
 	"go.opentelemetry.io/otel/propagation"
+
+	"go.opentelemetry.io/contrib/propagators/autoprop"
 )
 
 var errInvalidPropagatorNil = errors.New("invalid propagator name: nil")
@@ -29,7 +30,6 @@ func propagator(cfg configOptions) (propagation.TextMapPropagator, error) {
 		}
 		if *name == "" {
 			continue
-			// return nil, errInvalidPropagatorEmpty
 		}
 
 		names = append(names, *name)
