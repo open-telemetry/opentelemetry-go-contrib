@@ -14,6 +14,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove deprecated `go.opentelemetry.io/contrib/detectors/aws/ec2` module, please use `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` instead. (#7841)
 - Remove the deprecated `Extract` and `Inject` functions from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7952)
 
+### Added
+
+- Add support for configuring propagators in `go.opentelemetry.io/contrib/config`. (#7977)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -32,7 +36,6 @@ The next release will require at least [Go 1.24].
 - Add the `WithTraceAttributeFn` option to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7556)
 - Add support for HTTP server metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. (#7668)
 - Support testing of [Go 1.25]. (#7732)
-- Add support for configuring propagators in `go.opentelemetry.io/contrib/config`. (#7977)
 
 ### Changed
 
