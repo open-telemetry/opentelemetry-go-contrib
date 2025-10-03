@@ -32,7 +32,7 @@ The next release will require at least [Go 1.24].
 - Add the `WithTraceAttributeFn` option to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7556)
 - Add support for HTTP server metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. (#7668)
 - Support testing of [Go 1.25]. (#7732)
-- Add support for configuring propagators in `go.opentelemetry.io/contrib/config`. (#6727)
+- Add support for configuring propagators in `go.opentelemetry.io/contrib/config`. (#7977)
 
 ### Changed
 
