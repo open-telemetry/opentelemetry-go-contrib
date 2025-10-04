@@ -190,6 +190,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	metricAttributes := semconv.MetricAttributes{
 		Req:                  r,
 		StatusCode:           statusCode,
+		Route:                routeStr,
 		AdditionalAttributes: tw.metricAttributesFromRequest(r),
 	}
 
