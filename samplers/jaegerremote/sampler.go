@@ -209,8 +209,7 @@ func (*guaranteedThroughputProbabilisticSampler) Description() string {
 // perOperationSampler is a delegating sampler that applies guaranteedThroughputProbabilisticSampler
 // on a per-operation basis.
 type perOperationSampler struct {
-	sync.RWMutex
-
+	mu             sync.RWMutex
 	samplers       map[string]*guaranteedThroughputProbabilisticSampler
 	defaultSampler *probabilisticSampler
 	lowerBound     float64
@@ -265,15 +264,15 @@ func (s *perOperationSampler) ShouldSample(p trace.SamplingParameters) trace.Sam
 }
 
 func (s *perOperationSampler) getSamplerForOperation(operation string) trace.Sampler {
-	s.RLock()
+	s.mu.RLock()
 	sampler, ok := s.samplers[operation]
 	if ok {
-		defer s.RUnlock()
+		defer s.mu.RUnlock()
 		return sampler
 	}
-	s.RUnlock()
-	s.Lock()
-	defer s.Unlock()
+	s.mu.RUnlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
 	// Check if sampler has already been created
 	sampler, ok = s.samplers[operation]
@@ -294,8 +293,8 @@ func (*perOperationSampler) Description() string {
 }
 
 func (s *perOperationSampler) update(strategies *jaeger_api_v2.PerOperationSamplingStrategies) {
-	s.Lock()
-	defer s.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 	newSamplers := map[string]*guaranteedThroughputProbabilisticSampler{}
 	for _, strategy := range strategies.PerOperationStrategies {
 		operation := strategy.Operation

@@ -58,7 +58,6 @@ linters:
       disabled-checks:
         - appendAssign
         - exitAfterDefer
-        - exposedSyncMutex
         - hugeParam
         - unnamedResult
       enable-all: true
