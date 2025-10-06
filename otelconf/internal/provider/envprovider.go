@@ -49,8 +49,8 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 			}
 		} else {
 			// need to expand any default value env var to support the case $${STRING_VALUE:-${STRING_VALUE}}
-			_, defaultValuePtr := parseEnvVar(string(match[2]))
-			if defaultValuePtr == nil || !strings.Contains(*defaultValuePtr, "$") {
+			_, defaultValue := parseEnvVar(string(match[2]))
+			if !defaultValue.valid || !strings.Contains(defaultValue.data, "$") {
 				return fmt.Appendf(dollarSigns[0:(len(dollarSigns)/2)], "{%s}", match[2])
 			}
 			// expand the default value
@@ -69,7 +69,7 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 }
 
 func replaceEnvVar(in string) ([]byte, error) {
-	envVarName, defaultValuePtr := parseEnvVar(in)
+	envVarName, defaultValue := parseEnvVar(in)
 	if strings.Contains(envVarName, ":") {
 		return nil, fmt.Errorf("invalid environment variable name: %s", envVarName)
 	}
@@ -78,8 +78,8 @@ func replaceEnvVar(in string) ([]byte, error) {
 	}
 
 	val := os.Getenv(envVarName)
-	if val == "" && defaultValuePtr != nil {
-		val = strings.ReplaceAll(*defaultValuePtr, "$$", "$")
+	if val == "" && defaultValue.valid {
+		val = strings.ReplaceAll(defaultValue.data, "$$", "$")
 	}
 	if val == "" {
 		return nil, nil
@@ -93,16 +93,19 @@ func replaceEnvVar(in string) ([]byte, error) {
 	return out, nil
 }
 
-func parseEnvVar(in string) (string, *string) {
+type defaultValue struct {
+	data  string
+	valid bool
+}
+
+func parseEnvVar(in string) (string, defaultValue) {
 	in = strings.TrimPrefix(in, "env:")
 	const sep = ":-"
 	if i := strings.Index(in, sep); i >= 0 {
-		def := in[i+len(sep):]
-		return in[:i], &def
+		return in[:i], defaultValue{data: in[i+len(sep):], valid: true}
 	}
-	return in, nil
+	return in, defaultValue{}
 }
-
 
 func checkRawConfType(val []byte) error {
 	var rawConf any
