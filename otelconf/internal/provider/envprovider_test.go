@@ -64,8 +64,8 @@ func TestReplaceEnvVar(t *testing.T) {
 		},
 		{
 			name:  "escaped dollar sign - double escape produces single dollar",
-			input: "key: $$${NOT_REPLACED}",
-			want:  "key: $",
+			input: "key: $$${TEST_VAR}",
+			want:  "key: $test_value",
 		},
 		{
 			name:  "escaped dollar sign - triple escape",
