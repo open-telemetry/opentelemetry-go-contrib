@@ -95,13 +95,14 @@ func replaceEnvVar(in string) ([]byte, error) {
 
 func parseEnvVar(in string) (string, *string) {
 	in = strings.TrimPrefix(in, "env:")
-	const defaultSuffix = ":-"
-	if strings.Contains(in, defaultSuffix) {
-		parts := strings.SplitN(in, defaultSuffix, 2)
-		return parts[0], &parts[1]
+	const sep = ":-"
+	if i := strings.Index(in, sep); i >= 0 {
+		def := in[i+len(sep):]
+		return in[:i], &def
 	}
 	return in, nil
 }
+
 
 func checkRawConfType(val []byte) error {
 	var rawConf any
