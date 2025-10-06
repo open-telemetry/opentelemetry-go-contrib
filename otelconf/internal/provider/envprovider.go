@@ -51,14 +51,14 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 			// need to expand any default value env var to support the case $${STRING_VALUE:-${STRING_VALUE}}
 			_, defaultValuePtr := parseEnvVar(string(match[2]))
 			if defaultValuePtr == nil || !strings.Contains(*defaultValuePtr, "$") {
-				return append(dollarSigns[0:(len(dollarSigns)/2)], []byte(fmt.Sprintf("{%s}", match[2]))...)
+				return fmt.Appendf(dollarSigns[0:(len(dollarSigns)/2)], "{%s}", match[2])
 			}
 			// expand the default value
 			data, err = ReplaceEnvVars(append(match[2], byte('}')))
 			if err != nil {
 				return data
 			}
-			data = append(dollarSigns[0:(len(dollarSigns)/2)], []byte(fmt.Sprintf("{%s", data))...)
+			data = fmt.Appendf(dollarSigns[0:(len(dollarSigns)/2)], "{%s", data)
 		}
 		return data
 	})
