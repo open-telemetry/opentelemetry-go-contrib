@@ -194,12 +194,6 @@ func TestReplaceEnvVar(t *testing.T) {
 			want:     "key: value|with$|pipes",
 		},
 		{
-			name:     "pipe test",
-			input:    "key: ${PIPE_VAR}",
-			setupEnv: func(t *testing.T) { t.Setenv("PIPE_VAR", "value|with$|pipes") },
-			want:     "key: value|with$|pipes",
-		},
-		{
 			name:     "$$ escape sequence is replaced with $",
 			input:    "key: $${STRING_VALUE:-${STRING_VALUE}}",
 			setupEnv: func(t *testing.T) { t.Setenv("STRING_VALUE", "value") },

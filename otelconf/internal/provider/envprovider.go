@@ -63,7 +63,7 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 		return data
 	})
 	if err != nil {
-		return []byte{}, err
+		return nil, err
 	}
 	return out, nil
 }
