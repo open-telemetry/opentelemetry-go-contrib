@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/event"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/drivertest"
@@ -307,10 +306,7 @@ func TestPeerInfo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			evt := &event.CommandStartedEvent{
-				ConnectionID: tc.connectionID,
-			}
-			host, port := peerInfo(evt)
+			host, port := peerInfo(tc.connectionID)
 			assert.Equal(t, tc.expectedHost, host)
 			assert.Equal(t, tc.expectedPort, port)
 		})
