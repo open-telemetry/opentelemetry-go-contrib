@@ -9,9 +9,10 @@ import (
 	"os"
 	"path/filepath"
 
-	otelconf "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log/global"
+
+	otelconf "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 )
 
 func Example() {
@@ -22,7 +23,6 @@ func Example() {
 
 	// parse a configuration file into an OpenTelemetryConfiguration model
 	c, err := otelconf.ParseYAML(b)
-
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -48,5 +48,4 @@ func Example() {
 
 	// set global tracer provider
 	otel.SetTracerProvider(s.TracerProvider())
-
 }
