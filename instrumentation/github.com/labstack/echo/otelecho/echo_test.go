@@ -371,3 +371,72 @@ func TestWithEchoMetricAttributeFn(t *testing.T) {
 	assert.True(t, foundID, "echo param id attribute should be found")
 	assert.True(t, foundPath, "echo path attribute should be found")
 }
+
+func TestServerNameProvidedOrFromHost_SplitsAddressAndPort(t *testing.T) {
+	tests := []struct {
+		name           string
+		serverName     string
+		reqHost        string
+		expectedServer string
+		expectedPort   int64
+	}{
+		{
+			name:           "serverName with port is split",
+			serverName:     "example.com:8080",
+			reqHost:        "ignored-host:9090",
+			expectedServer: "example.com",
+			expectedPort:   8080,
+		},
+		{
+			name:           "empty serverName falls back to host header and splits port",
+			serverName:     "",
+			reqHost:        "hostheader:8081",
+			expectedServer: "hostheader",
+			expectedPort:   8081,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			reader := sdkmetric.NewManualReader()
+			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			e := echo.New()
+			e.Use(Middleware(tc.serverName, WithMeterProvider(meterProvider)))
+			e.GET("/test", func(c echo.Context) error {
+				return c.NoContent(http.StatusOK)
+			})
+
+			r := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+			r.Host = tc.reqHost
+			w := httptest.NewRecorder()
+			e.ServeHTTP(w, r)
+
+			// collect metrics
+			rm := metricdata.ResourceMetrics{}
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+			require.Len(t, rm.ScopeMetrics, 1)
+			sm := rm.ScopeMetrics[0]
+
+			foundAddr := false
+			foundPort := false
+			for _, metric := range sm.Metrics {
+				if metric.Name == "http.server.request.duration" {
+					hist := metric.Data.(metricdata.Histogram[float64])
+					require.Len(t, hist.DataPoints, 1)
+					attrs := hist.DataPoints[0].Attributes.ToSlice()
+					for _, attr := range attrs {
+						if attr.Key == "server.address" && attr.Value.AsString() == tc.expectedServer {
+							foundAddr = true
+						}
+						if attr.Key == "server.port" && attr.Value.AsInt64() == tc.expectedPort {
+							foundPort = true
+						}
+					}
+				}
+			}
+			require.True(t, foundAddr, "server.address attribute with value %q should be present", tc.expectedServer)
+			require.True(t, foundPort, "server.port attribute with value %d should be present", tc.expectedPort)
+		})
+	}
+}
