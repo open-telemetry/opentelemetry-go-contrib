@@ -18,6 +18,8 @@ type config struct {
 	Tracer trace.Tracer
 
 	CommandAttributeDisabled bool
+
+	SpanNameFormatter SpanNameFormatterFunc
 }
 
 // newConfig returns a config with all Options set.
@@ -26,6 +28,15 @@ func newConfig(opts ...Option) config {
 		TracerProvider:           otel.GetTracerProvider(),
 		CommandAttributeDisabled: true,
 	}
+
+	cfg.SpanNameFormatter = func(collection string, command string) string {
+		if collection != "" {
+			return collection + "." + command
+		}
+
+		return command
+	}
+
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
@@ -46,6 +57,20 @@ type optionFunc func(*config)
 
 func (o optionFunc) apply(c *config) {
 	o(c)
+}
+
+type SpanNameFormatterFunc func(collection string, command string) string
+
+// WithSpanNameFormatter specifies a function that resolves the span name given the
+// collection and command name. If none is specified, the default resolver is used,
+// which returns "<collection>.<command>" if the collection is non-empty, and just
+// "<command>" otherwise.
+func WithSpanNameFormatter(resolver SpanNameFormatterFunc) Option {
+	return optionFunc(func(cfg *config) {
+		if resolver != nil {
+			cfg.SpanNameFormatter = resolver
+		}
+	})
 }
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.

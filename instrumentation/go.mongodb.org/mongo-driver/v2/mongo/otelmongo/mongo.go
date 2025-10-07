@@ -30,8 +30,6 @@ type monitor struct {
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
-	var spanName string
-
 	hostname, port := peerInfo(evt)
 
 	attrs := []attribute.KeyValue{
@@ -45,11 +43,14 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	if !m.cfg.CommandAttributeDisabled {
 		attrs = append(attrs, semconv.DBQueryText(sanitizeCommand(evt.Command)))
 	}
-	if collection, err := extractCollection(evt); err == nil && collection != "" {
-		spanName = collection + "."
+
+	collection, err := extractCollection(evt)
+	if err == nil && collection != "" {
 		attrs = append(attrs, semconv.DBCollectionName(collection))
 	}
-	spanName += evt.CommandName
+
+	spanName := m.cfg.SpanNameFormatter(collection, evt.CommandName)
+
 	opts := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attrs...),
