@@ -29,7 +29,7 @@ func newConfig(opts ...Option) config {
 		CommandAttributeDisabled: true,
 	}
 
-	cfg.SpanNameFormatter = func(collection string, command string) string {
+	cfg.SpanNameFormatter = func(collection, command string) string {
 		if collection != "" {
 			return collection + "." + command
 		}
@@ -59,7 +59,9 @@ func (o optionFunc) apply(c *config) {
 	o(c)
 }
 
-type SpanNameFormatterFunc func(collection string, command string) string
+// SpanNameFormatterFunc is a function that resolves the span name given the
+// collection and command name.
+type SpanNameFormatterFunc func(collection, command string) string
 
 // WithSpanNameFormatter specifies a function that resolves the span name given the
 // collection and command name. If none is specified, the default resolver is used,
