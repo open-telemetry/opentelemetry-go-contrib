@@ -15,6 +15,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove the deprecated `Extract` and `Inject` functions from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7952)
 - Add the `http.route` metric attribute to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7966)
 
+### Added
+
+- Add a `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7986)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -33,7 +37,6 @@ The next release will require at least [Go 1.24].
 - Add the `WithTraceAttributeFn` option to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7556)
 - Add support for HTTP server metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. (#7668)
 - Support testing of [Go 1.25]. (#7732)
-- Add a `WithSpanNameFormatter` option to otelmongo (#7986)
 
 ### Changed
 
