@@ -21,31 +21,27 @@ func Example() {
 		log.Fatal(err)
 	}
 
-	// parse a configuration file into an OpenTelemetryConfiguration model
+	// Parse a configuration file into an OpenTelemetryConfiguration model.
 	c, err := otelconf.ParseYAML(b)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// instantiating SDK components with the parsed configuration
+	// Create SDK components with the parsed configuration.
 	s, err := otelconf.NewSDK(otelconf.WithOpenTelemetryConfiguration(*c))
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// ensure shutdown is eventually called for all components of the SDK
+	// Ensure shutdown is eventually called for all components of the SDK.
 	defer func() {
 		if err := s.Shutdown(context.Background()); err != nil {
 			log.Fatal(err)
 		}
 	}()
 
-	// set global meter provider
-	otel.SetMeterProvider(s.MeterProvider())
-
-	// set global logger provider
-	global.SetLoggerProvider(s.LoggerProvider())
-
-	// set global tracer provider
+	// Set the global providers.
 	otel.SetTracerProvider(s.TracerProvider())
+	otel.SetMeterProvider(s.MeterProvider())
+	global.SetLoggerProvider(s.LoggerProvider())
 }
