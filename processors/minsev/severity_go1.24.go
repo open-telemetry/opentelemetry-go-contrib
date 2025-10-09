@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build go1.24
-// +build go1.24
 
 package minsev // import "go.opentelemetry.io/contrib/processors/minsev"
 
