@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package provider // import "go.opentelemetry.io/contrib/internal/provider"
+package provider // import "go.opentelemetry.io/contrib/otelconf/internal/provider"
 
 import (
 	"errors"
