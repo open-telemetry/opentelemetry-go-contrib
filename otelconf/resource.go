@@ -4,6 +4,7 @@
 package otelconf // import "go.opentelemetry.io/contrib/otelconf/v1.0.0-rc.1"
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -46,18 +47,23 @@ func keyVal(k string, v any) attribute.KeyValue {
 	}
 }
 
-func newResource(res *ResourceJson) *resource.Resource {
+func newResource(res OpenTelemetryConfigurationResource) (*resource.Resource, error) {
 	if res == nil {
-		return resource.Default()
+		return resource.Default(), nil
+	}
+
+	r, ok := res.(*ResourceJson)
+	if !ok {
+		return nil, errors.New("invalid resource")
 	}
 
 	var attrs []attribute.KeyValue
-	for _, v := range res.Attributes {
+	for _, v := range r.Attributes {
 		attrs = append(attrs, keyVal(v.Name, v.Value))
 	}
 
-	if res.SchemaUrl == nil {
-		return resource.NewSchemaless(attrs...)
+	if r.SchemaUrl == nil {
+		return resource.NewSchemaless(attrs...), nil
 	}
-	return resource.NewWithAttributes(*res.SchemaUrl, attrs...)
+	return resource.NewWithAttributes(*r.SchemaUrl, attrs...), nil
 }
