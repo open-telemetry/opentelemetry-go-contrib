@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
@@ -19,7 +20,7 @@ func TestNewResource(t *testing.T) {
 	other := mockType{}
 	tests := []struct {
 		name         string
-		config       *ResourceJson
+		config       OpenTelemetryConfigurationResource
 		wantResource *resource.Resource
 	}{
 		{
@@ -105,7 +106,8 @@ func TestNewResource(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := newResource(tt.config)
+			got, err := newResource(tt.config)
+			require.NoError(t, err)
 			assert.Equal(t, tt.wantResource, got)
 		})
 	}
