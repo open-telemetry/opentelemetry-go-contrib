@@ -12,10 +12,20 @@ import (
 
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/event"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/dbconv"
 	"go.opentelemetry.io/otel/trace"
+)
+
+const (
+	// statusCodeOK represents a successful MongoDB operation status.
+	statusCodeOK = "OK"
+	// statusCodeError represents a failed MongoDB operation status.
+	statusCodeError = "ERROR"
 )
 
 type spanKey struct {
@@ -24,6 +34,8 @@ type spanKey struct {
 }
 
 type monitor struct {
+	ClientOperationDuration dbconv.ClientOperationDuration
+
 	sync.Mutex
 	spans map[spanKey]trace.Span
 	cfg   config
@@ -32,7 +44,7 @@ type monitor struct {
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	var spanName string
 
-	hostname, port := peerInfo(evt)
+	hostname, port := peerInfo(evt.ConnectionID)
 
 	attrs := []attribute.KeyValue{
 		semconv.DBSystemNameMongoDB,
@@ -64,12 +76,57 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	m.Unlock()
 }
 
-func (m *monitor) Succeeded(_ context.Context, evt *event.CommandSucceededEvent) {
+func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEvent) {
 	m.Finished(&evt.CommandFinishedEvent, nil)
+
+	hostname, port := peerInfo(evt.ConnectionID)
+	attrs := []attribute.KeyValue{
+		// No need to add semconv.DBSystemMongoDB, it will be added by metrics recorder.
+		semconv.DBOperationName(evt.CommandName),
+		semconv.DBNamespace(evt.DatabaseName),
+		semconv.NetworkPeerAddress(hostname),
+		semconv.NetworkPeerPort(port),
+		semconv.NetworkTransportTCP,
+		semconv.DBResponseStatusCode(statusCodeOK),
+	}
+	// TODO db.query.text attribute is currently disabled by default.
+	// Because event does not provide the query text directly.
+	// command := m.extractCommand(evt)
+	// attrs = append(attrs, semconv.DBQueryText(sanitizeCommand(evt.Command)))
+
+	m.ClientOperationDuration.Record(
+		ctx,
+		evt.Duration.Seconds(),
+		dbconv.SystemNameMongoDB,
+		attrs...,
+	)
 }
 
-func (m *monitor) Failed(_ context.Context, evt *event.CommandFailedEvent) {
+func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
 	m.Finished(&evt.CommandFinishedEvent, evt.Failure)
+
+	hostname, port := peerInfo(evt.ConnectionID)
+	attrs := []attribute.KeyValue{
+		// No need to add semconv.DBSystemMongoDB, it will be added by metrics recorder.
+		semconv.DBOperationName(evt.CommandName),
+		semconv.DBNamespace(evt.DatabaseName),
+		semconv.NetworkPeerAddress(hostname),
+		semconv.NetworkPeerPort(port),
+		semconv.NetworkTransportTCP,
+		semconv.DBResponseStatusCode(statusCodeError),
+		semconv.ErrorType(evt.Failure),
+	}
+	// TODO db.query.text attribute is currently disabled by default.
+	// Because event does not provide the query text directly.
+	// command := m.extractCommand(evt)
+	// attrs = append(attrs, semconv.DBQueryText(sanitizeCommand(evt.Command)))
+
+	m.ClientOperationDuration.Record(
+		ctx,
+		evt.Duration.Seconds(),
+		dbconv.SystemNameMongoDB,
+		attrs...,
+	)
 }
 
 func (m *monitor) Finished(evt *event.CommandFinishedEvent, err error) {
@@ -123,9 +180,18 @@ func extractCollection(evt *event.CommandStartedEvent) (string, error) {
 // NewMonitor creates a new mongodb event CommandMonitor.
 func NewMonitor(opts ...Option) *event.CommandMonitor {
 	cfg := newConfig(opts...)
+	clientOperationDuration, err := dbconv.NewClientOperationDuration(
+		cfg.Meter,
+		metric.WithExplicitBucketBoundaries(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 10),
+	)
+	if err != nil {
+		otel.Handle(err)
+	}
 	m := &monitor{
 		spans: make(map[spanKey]trace.Span),
 		cfg:   cfg,
+
+		ClientOperationDuration: clientOperationDuration,
 	}
 	return &event.CommandMonitor{
 		Started:   m.Started,
@@ -135,12 +201,12 @@ func NewMonitor(opts ...Option) *event.CommandMonitor {
 }
 
 // peerInfo will parse the hostname and port from the mongo connection ID.
-func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
+func peerInfo(connectionID string) (hostname string, port int) {
 	defaultMongoPort := 27017
-	hostname, portStr, err := net.SplitHostPort(evt.ConnectionID)
+	hostname, portStr, err := net.SplitHostPort(connectionID)
 	if err != nil {
 		// If parsing fails, assume default MongoDB port and return the entire ConnectionID as hostname
-		hostname = evt.ConnectionID
+		hostname = connectionID
 		port = defaultMongoPort
 		return hostname, port
 	}
