@@ -630,8 +630,6 @@ func TestMetrics(t *testing.T) {
 // 3. The logging goroutine needs the trace context for correlation
 //
 // Regression test for #8014.
-//
-// Run with: go test -race -run TestMiddlewareContextRace -v
 func TestMiddlewareContextRace(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 
@@ -684,7 +682,7 @@ func TestMiddlewareContextRace(t *testing.T) {
 	})
 
 	// Make a single request
-	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, req)
 
