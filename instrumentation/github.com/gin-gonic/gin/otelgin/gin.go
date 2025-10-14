@@ -79,11 +79,8 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			}
 		}
 		c.Set(tracerKey, tracer)
-		savedCtx := c.Request.Context()
-		defer func() {
-			c.Request = c.Request.WithContext(savedCtx)
-		}()
-		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
+		reqCtx := c.Request.Context()
+		ctx := cfg.Propagators.Extract(reqCtx, propagation.HeaderCarrier(c.Request.Header))
 
 		requestTraceAttrOpts := semconv.RequestTraceAttrsOpts{
 			// Gin's ClientIP method can detect the client's IP from various headers set by proxies, and it's configurable
@@ -169,12 +166,9 @@ func HTML(c *gin.Context, code int, name string, obj any) {
 			oteltrace.WithInstrumentationVersion(Version()),
 		)
 	}
-	savedContext := c.Request.Context()
-	defer func() {
-		c.Request = c.Request.WithContext(savedContext)
-	}()
+	reqCtx := c.Request.Context()
 	opt := oteltrace.WithAttributes(attribute.String("go.template", name))
-	_, span := tracer.Start(savedContext, "gin.renderer.html", opt)
+	_, span := tracer.Start(reqCtx, "gin.renderer.html", opt)
 	defer span.End()
 	c.HTML(code, name, obj)
 }
