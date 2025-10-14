@@ -13,7 +13,9 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -617,4 +619,83 @@ func TestMetrics(t *testing.T) {
 			}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	}
+}
+
+// TestMiddlewareContextRace tests that the middleware does not cause data races
+// when other middleware spawns goroutines that access the request context.
+//
+// This test simulates a common production pattern:
+// 1. otelgin middleware adds tracing context
+// 2. Another middleware logs request details in a goroutine
+// 3. The logging goroutine needs the trace context for correlation
+//
+// Regression test for #8014.
+//
+// Run with: go test -race -run TestMiddlewareContextRace -v
+func TestMiddlewareContextRace(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	var wg sync.WaitGroup
+
+	router := gin.New()
+
+	// Setup otelgin middleware (creates trace context)
+	router.Use(otelgin.Middleware("test-service", otelgin.WithTracerProvider(provider)))
+
+	// Add goroutine-based logging middleware (common production pattern)
+	// This middleware logs request details in a separate goroutine
+	router.Use(func(c *gin.Context) {
+		c.Next()
+
+		// Capture method and path before spawning goroutine
+		method := c.Request.Method
+		path := c.Request.URL.Path
+		status := c.Writer.Status()
+
+		wg.Add(1)
+
+		// Spawn goroutine to log without blocking response (standard production pattern)
+		go func() {
+			defer wg.Done()
+
+			// Wait a bit to ensure handler has fully returned
+			time.Sleep(2 * time.Millisecond)
+
+			// Read the context for trace correlation
+			ctx := c.Request.Context()
+			span := trace.SpanFromContext(ctx)
+
+			// Simulate using the trace context for structured logging
+			// (linking logs to traces for observability)
+			_ = method
+			_ = path
+			_ = status
+			_ = span.SpanContext().TraceID().String()
+			_ = span.SpanContext().SpanID().String()
+		}()
+	})
+
+	// Simple handler
+	router.GET("/test", func(c *gin.Context) {
+		c.String(http.StatusOK, "ok")
+	})
+
+	// Make a single request
+	req := httptest.NewRequest(http.MethodGet, "/test", nil)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code, "expected 200 OK response")
+
+	// Wait for logging goroutine to complete
+	wg.Wait()
+
+	// Verify span was created
+	spans := sr.Ended()
+
+	// At least one span should be created by otelgin middleware
+	assert.GreaterOrEqual(t, len(spans), 1, "expected at least one span to be created")
 }
