@@ -834,13 +834,14 @@ func TestParseYAML(t *testing.T) {
 			wantType: &OpenTelemetryConfiguration{
 				Disabled:   ptr(false),
 				FileFormat: "0.1",
+				LogLevel:   ptr("info"),
 			},
 		},
 		{
 			name:  "invalid config",
 			input: "invalid_bool.yaml",
 			wantErr: errors.New(`yaml: unmarshal errors:
-  line 2: cannot unmarshal !!str ` + "`notabool`" + ` into bool`),
+  line 1: cannot unmarshal !!str ` + "`notabool`" + ` into bool`),
 		},
 		{
 			name:    "invalid nil name",
@@ -1492,7 +1493,4 @@ func TestUnmarshalSpanLimits(t *testing.T) {
 			assert.ErrorIs(t, err, tt.wantErrT)
 		})
 	}
-}
-func ptr[T any](v T) *T {
-	return &v
 }
