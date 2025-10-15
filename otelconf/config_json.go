@@ -63,6 +63,18 @@ func (j *BatchLogRecordProcessor) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
+	if plain.ExportTimeout != nil && 0 > *plain.ExportTimeout {
+		return fmt.Errorf("field %s: must be >= %v", "export_timeout", 0)
+	}
+	if plain.MaxExportBatchSize != nil && 0 >= *plain.MaxExportBatchSize {
+		return fmt.Errorf("field %s: must be > %v", "max_export_batch_size", 0)
+	}
+	if plain.MaxQueueSize != nil && 0 >= *plain.MaxQueueSize {
+		return fmt.Errorf("field %s: must be > %v", "max_queue_size", 0)
+	}
+	if plain.ScheduleDelay != nil && 0 > *plain.ScheduleDelay {
+		return fmt.Errorf("field %s: must be >= %v", "schedule_delay", 0)
+	}
 	*j = BatchLogRecordProcessor(plain)
 	return nil
 }
@@ -80,6 +92,18 @@ func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
+	}
+	if plain.ExportTimeout != nil && 0 > *plain.ExportTimeout {
+		return fmt.Errorf("field %s: must be >= %v", "export_timeout", 0)
+	}
+	if plain.MaxExportBatchSize != nil && 0 >= *plain.MaxExportBatchSize {
+		return fmt.Errorf("field %s: must be > %v", "max_export_batch_size", 0)
+	}
+	if plain.MaxQueueSize != nil && 0 >= *plain.MaxQueueSize {
+		return fmt.Errorf("field %s: must be > %v", "max_queue_size", 0)
+	}
+	if plain.ScheduleDelay != nil && 0 > *plain.ScheduleDelay {
+		return fmt.Errorf("field %s: must be >= %v", "schedule_delay", 0)
 	}
 	*j = BatchSpanProcessor(plain)
 	return nil
@@ -173,6 +197,9 @@ func (j *OTLPHttpMetricExporter) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return fmt.Errorf("field %s: must be >= %v", "timeout", 0)
+	}
 	*j = OTLPHttpMetricExporter(plain)
 	return nil
 }
@@ -190,6 +217,9 @@ func (j *OTLPGrpcMetricExporter) UnmarshalJSON(b []byte) error {
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
+	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return fmt.Errorf("field %s: must be >= %v", "timeout", 0)
 	}
 	*j = OTLPGrpcMetricExporter(plain)
 	return nil
@@ -209,6 +239,9 @@ func (j *OTLPHttpExporter) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return fmt.Errorf("field %s: must be >= %v", "timeout", 0)
+	}
 	*j = OTLPHttpExporter(plain)
 	return nil
 }
@@ -226,6 +259,9 @@ func (j *OTLPGrpcExporter) UnmarshalJSON(b []byte) error {
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
+	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return fmt.Errorf("field %s: must be >= %v", "timeout", 0)
 	}
 	*j = OTLPGrpcExporter(plain)
 	return nil
@@ -262,6 +298,12 @@ func (j *PeriodicMetricReader) UnmarshalJSON(b []byte) error {
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
+	}
+	if plain.Interval != nil && 0 > *plain.Interval {
+		return fmt.Errorf("field %s: must be >= %v", "interval", 0)
+	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return fmt.Errorf("field %s: must be >= %v", "timeout", 0)
 	}
 	*j = PeriodicMetricReader(plain)
 	return nil
@@ -323,6 +365,7 @@ func (j *SimpleSpanProcessor) UnmarshalJSON(b []byte) error {
 
 var enumValuesViewSelectorInstrumentType = []any{
 	"counter",
+	"gauge",
 	"histogram",
 	"observable_counter",
 	"observable_gauge",
@@ -363,6 +406,9 @@ func (j *ZipkinSpanExporter) UnmarshalJSON(b []byte) error {
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
+	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return fmt.Errorf("field %s: must be >= %v", "timeout", 0)
 	}
 	*j = ZipkinSpanExporter(plain)
 	return nil
