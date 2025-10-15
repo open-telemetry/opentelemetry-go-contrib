@@ -1104,12 +1104,13 @@ func TestSerializeJSON(t *testing.T) {
 			wantType: OpenTelemetryConfiguration{
 				Disabled:   ptr(false),
 				FileFormat: "0.1",
+				LogLevel:   ptr("info"),
 			},
 		},
 		{
 			name:    "invalid config",
 			input:   "invalid_bool.json",
-			wantErr: errors.New(`json: cannot unmarshal string into Go struct field Plain.disabled of type bool`),
+			wantErr: errors.New(`json: cannot unmarshal string into Go value of type bool`),
 		},
 		{
 			name:    "invalid nil name",
@@ -1124,11 +1125,16 @@ func TestSerializeJSON(t *testing.T) {
 		{
 			name:    "valid v0.2 config",
 			input:   "v0.2.json",
-			wantErr: errors.New(`json: cannot unmarshal object into Go struct field LogRecordProcessor.logger_provider.processors.batch`),
+			wantErr: errors.New(`json: cannot unmarshal array into Go struct field View.views.stream.attribute_keys of type otelconf.IncludeExclude`),
 		},
 		{
-			name:     "valid v0.3 config",
-			input:    "v0.3.json",
+			name:    "valid v0.3 config",
+			input:   "v0.3.json",
+			wantErr: errors.New(`json: cannot unmarshal string into Go struct field PropagatorJson.composite of type map[string]interface {}`),
+		},
+		{
+			name:     "valid v1.0.0 config",
+			input:    "v1.0.0-rc.1.json",
 			wantType: v10OpenTelemetryConfig,
 		},
 	}
