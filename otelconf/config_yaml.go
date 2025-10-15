@@ -41,12 +41,90 @@ func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
+	type Plain OpenTelemetryConfiguration
+	var plain Plain
+
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+
+	marshaled, err := yaml.Marshal(plain.LoggerProvider)
+	if err != nil {
+		return err
+	}
+
+	var lp LoggerProviderJson
+	if err := yaml.Unmarshal(marshaled, &lp); err != nil {
+		return err
+	}
+	plain.LoggerProvider = &lp
+
+	marshaled, err = yaml.Marshal(plain.MeterProvider)
+	if err != nil {
+		return err
+	}
+
+	var mp MeterProviderJson
+	if err := yaml.Unmarshal(marshaled, &mp); err != nil {
+		return err
+	}
+	plain.MeterProvider = &mp
+
+	marshaled, err = yaml.Marshal(plain.TracerProvider)
+	if err != nil {
+		return err
+	}
+
+	var tp TracerProviderJson
+	if err := yaml.Unmarshal(marshaled, &tp); err != nil {
+		return err
+	}
+	plain.TracerProvider = &tp
+
+	marshaled, err = yaml.Marshal(plain.Propagator)
+	if err != nil {
+		return err
+	}
+
+	var p PropagatorJson
+	if err := yaml.Unmarshal(marshaled, &p); err != nil {
+		return err
+	}
+	plain.Propagator = &p
+
+	marshaled, err = yaml.Marshal(plain.Resource)
+	if err != nil {
+		return err
+	}
+
+	var r ResourceJson
+	if err := yaml.Unmarshal(marshaled, &r); err != nil {
+		return err
+	}
+	plain.Resource = &r
+
+	marshaled, err = yaml.Marshal(plain.InstrumentationDevelopment)
+	if err != nil {
+		return err
+	}
+
+	var i InstrumentationJson
+	if err := yaml.Unmarshal(marshaled, &i); err != nil {
+		return err
+	}
+	plain.InstrumentationDevelopment = &i
+
+	*j = OpenTelemetryConfiguration(plain)
+	return nil
+}
+
 // UnmarshalYAML implements yaml.Unmarshaler.
-func (j *AttributeType) UnmarshalYAML(unmarshal func(any) error) error {
+func (j *AttributeType) UnmarshalYAML(node *yaml.Node) error {
 	var v struct {
 		Value any
 	}
-	if err := unmarshal(&v.Value); err != nil {
+	if err := node.Decode(&v.Value); err != nil {
 		return err
 	}
 	var ok bool
@@ -144,9 +222,9 @@ func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 	*j = BatchLogRecordProcessor(plain)
 	return nil
 }
-func (j *NameStringValuePair) UnmarshalYAML(unmarshal func(any) error) error {
+func (j *NameStringValuePair) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
-	if err := unmarshal(&raw); err != nil {
+	if err := node.Decode(&raw); err != nil {
 		return err
 	}
 	if _, ok := raw["name"]; !ok {
@@ -167,6 +245,137 @@ func (j *NameStringValuePair) UnmarshalYAML(unmarshal func(any) error) error {
 		Name:  name,
 		Value: &value,
 	}
+	return nil
+}
+
+func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	type Plain PushMetricExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	// console can be nil, must check and set here
+	if _, ok := raw["console"]; ok {
+		plain.Console = ConsoleExporter{}
+	}
+	*j = PushMetricExporter(plain)
+	return nil
+}
+
+func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	type Plain SpanExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	// console can be nil, must check and set here
+	if _, ok := raw["console"]; ok {
+		plain.Console = ConsoleExporter{}
+	}
+	*j = SpanExporter(plain)
+	return nil
+}
+
+func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	type Plain LogRecordExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	// console can be nil, must check and set here
+	if _, ok := raw["console"]; ok {
+		plain.Console = ConsoleExporter{}
+	}
+	*j = LogRecordExporter(plain)
+	return nil
+}
+
+func (j *Sampler) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	type Plain Sampler
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	// console can be nil, must check and set here
+	if _, ok := raw["always_on"]; ok {
+		plain.AlwaysOn = AlwaysOnSampler{}
+	}
+	if _, ok := raw["always_off"]; ok {
+		plain.AlwaysOff = AlwaysOffSampler{}
+	}
+	*j = Sampler(plain)
+	return nil
+}
+
+func (j *MetricProducer) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	type Plain MetricProducer
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	// opencensus can be nil, must check and set here
+	if v, ok := raw["opencensus"]; ok && v == nil {
+		delete(raw, "opencensus")
+		plain.Opencensus = OpenCensusMetricProducer{}
+	}
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = MetricProducer(plain)
+	return nil
+}
+
+func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	type Plain TextMapPropagator
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	// b3 can be nil, must check and set here
+	if v, ok := raw["b3"]; ok && v == nil {
+		plain.B3 = B3Propagator{}
+	}
+	if v, ok := raw["b3multi"]; ok && v == nil {
+		plain.B3Multi = B3MultiPropagator{}
+	}
+	if v, ok := raw["baggage"]; ok && v == nil {
+		plain.Baggage = BaggagePropagator{}
+	}
+	if v, ok := raw["jaeger"]; ok && v == nil {
+		plain.Jaeger = JaegerPropagator{}
+	}
+	if v, ok := raw["ottrace"]; ok && v == nil {
+		plain.Ottrace = OpenTracingPropagator{}
+	}
+	if v, ok := raw["tracecontext"]; ok && v == nil {
+		plain.Tracecontext = TraceContextPropagator{}
+	}
+	*j = TextMapPropagator(plain)
 	return nil
 }
 
