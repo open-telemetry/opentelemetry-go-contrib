@@ -313,9 +313,9 @@ func TestNewSDK(t *testing.T) {
 	}
 }
 
-var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
+var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 	Disabled:   ptr(false),
-	FileFormat: "0.3",
+	FileFormat: "1.0-rc.1",
 	AttributeLimits: &AttributeLimits{
 		AttributeCountLimit:       ptr(128),
 		AttributeValueLengthLimit: ptr(4096),
@@ -395,7 +395,21 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 		},
 	},
+	LogLevel: ptr("info"),
 	LoggerProvider: &LoggerProviderJson{
+		LoggerConfiguratorDevelopment: &ExperimentalLoggerConfigurator{
+			DefaultConfig: &ExperimentalLoggerConfig{
+				Disabled: ptr(true),
+			},
+			Loggers: []ExperimentalLoggerMatcherAndConfig{
+				{
+					Config: &ExperimentalLoggerConfig{
+						Disabled: ptr(false),
+					},
+					Name: ptr("io.opentelemetry.contrib.*"),
+				},
+			},
+		},
 		Limits: &LogRecordLimits{
 			AttributeCountLimit:       ptr(128),
 			AttributeValueLengthLimit: ptr(4096),
@@ -410,6 +424,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 							ClientCertificateFile: ptr("/app/cert.pem"),
 							ClientKeyFile:         ptr("/app/cert.pem"),
 							Compression:           ptr("gzip"),
+							Encoding:              ptr(OTLPHttpEncodingProtobuf),
 							Endpoint:              ptr("http://localhost:4318/v1/logs"),
 							Headers: []NameStringValuePair{
 								{Name: "api-key", Value: ptr("1234")},
@@ -424,6 +439,43 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 				},
 			},
 			{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLPGrpc: &OTLPGrpcExporter{
+							CertificateFile:       ptr("/app/cert.pem"),
+							ClientCertificateFile: ptr("/app/cert.pem"),
+							ClientKeyFile:         ptr("/app/cert.pem"),
+							Compression:           ptr("gzip"),
+							Endpoint:              ptr("http://localhost:4317"),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
+							},
+							HeadersList: ptr("api-key=1234"),
+							Timeout:     ptr(10000),
+							Insecure:    ptr(false),
+						},
+					},
+				},
+			},
+			{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("file:///var/log/logs.jsonl"),
+						},
+					},
+				},
+			},
+			{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("stdout"),
+						},
+					},
+				},
+			},
+			{
 				Simple: &SimpleLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						Console: ConsoleExporter{},
@@ -433,9 +485,38 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 		},
 	},
 	MeterProvider: &MeterProviderJson{
+		ExemplarFilter: ptr(ExemplarFilter("trace_based")),
+		MeterConfiguratorDevelopment: &ExperimentalMeterConfigurator{
+			DefaultConfig: &ExperimentalMeterConfig{
+				Disabled: ptr(true),
+			},
+			Meters: []ExperimentalMeterMatcherAndConfig{
+				{
+					Config: &ExperimentalMeterConfig{
+						Disabled: ptr(false),
+					},
+					Name: ptr("io.opentelemetry.contrib.*"),
+				},
+			},
+		},
 		Readers: []MetricReader{
 			{
 				Pull: &PullMetricReader{
+					Producers: []MetricProducer{
+						{
+							Opencensus: OpenCensusMetricProducer{},
+						},
+					},
+					CardinalityLimits: &CardinalityLimits{
+						Default:                 ptr(2000),
+						Counter:                 ptr(2000),
+						Gauge:                   ptr(2000),
+						Histogram:               ptr(2000),
+						ObservableCounter:       ptr(2000),
+						ObservableGauge:         ptr(2000),
+						ObservableUpDownCounter: ptr(2000),
+						UpDownCounter:           ptr(2000),
+					},
 					Exporter: PullMetricExporter{
 						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
 							Host: ptr("localhost"),
@@ -444,15 +525,30 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 								Excluded: []string{"service.attr1"},
 								Included: []string{"service*"},
 							},
-							WithoutScopeInfo:  ptr(false),
-							WithoutTypeSuffix: ptr(false),
-							WithoutUnits:      ptr(false),
+							WithoutScopeInfo: ptr(false),
 						},
 					},
 				},
 			},
 			{
 				Periodic: &PeriodicMetricReader{
+					Producers: []MetricProducer{
+						{
+							AdditionalProperties: map[string]any{
+								"prometheus": nil,
+							},
+						},
+					},
+					CardinalityLimits: &CardinalityLimits{
+						Default:                 ptr(2000),
+						Counter:                 ptr(2000),
+						Gauge:                   ptr(2000),
+						Histogram:               ptr(2000),
+						ObservableCounter:       ptr(2000),
+						ObservableGauge:         ptr(2000),
+						ObservableUpDownCounter: ptr(2000),
+						UpDownCounter:           ptr(2000),
+					},
 					Exporter: PushMetricExporter{
 						OTLPHttp: &OTLPHttpMetricExporter{
 							CertificateFile:             ptr("/app/cert.pem"),
@@ -461,6 +557,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 							Compression:                 ptr("gzip"),
 							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
 							Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
+							Encoding:                    ptr(OTLPHttpEncodingProtobuf),
 							Headers: []NameStringValuePair{
 								{Name: "api-key", Value: ptr("1234")},
 							},
@@ -469,8 +566,51 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 							Timeout:               ptr(10000),
 						},
 					},
-					Interval: ptr(5000),
+					Interval: ptr(60000),
 					Timeout:  ptr(30000),
+				},
+			},
+			{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLPGrpc: &OTLPGrpcMetricExporter{
+							CertificateFile:             ptr("/app/cert.pem"),
+							ClientCertificateFile:       ptr("/app/cert.pem"),
+							ClientKeyFile:               ptr("/app/cert.pem"),
+							Compression:                 ptr("gzip"),
+							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+							Endpoint:                    ptr("http://localhost:4317"),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
+							},
+							HeadersList:           ptr("api-key=1234"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
+							Timeout:               ptr(10000),
+							Insecure:              ptr(false),
+						},
+					},
+				},
+			},
+			{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
+							OutputStream:                ptr("file:///var/log/metrics.jsonl"),
+							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+							TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
+						},
+					},
+				},
+			},
+			{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
+							OutputStream:                ptr("stdout"),
+							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+							TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
+						},
+					},
 				},
 			},
 			{
@@ -498,6 +638,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 							RecordMinMax: ptr(true),
 						},
 					},
+					AggregationCardinalityLimit: ptr(2000),
 					AttributeKeys: &IncludeExclude{
 						Included: []string{"key1", "key2"},
 						Excluded: []string{"key3"},
@@ -509,7 +650,27 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 		},
 	},
 	Propagator: &PropagatorJson{
-		// Composite: []TextMapPropagator{TraceContextPropagator, ptr("tracecontext"), ptr("baggage"), ptr("b3"), ptr("b3multi"), ptr("jaeger"), ptr("xray"), ptr("ottrace")},
+		Composite: []TextMapPropagator{
+			{
+				Tracecontext: TraceContextPropagator{},
+			},
+			{
+				Baggage: BaggagePropagator{},
+			},
+			{
+				B3: B3Propagator{},
+			},
+			{
+				B3Multi: B3MultiPropagator{},
+			},
+			{
+				Jaeger: JaegerPropagator{},
+			},
+			{
+				Ottrace: OpenTracingPropagator{},
+			},
+		},
+		CompositeList: ptr("tracecontext,baggage,b3,b3multi,jaeger,ottrace,xray"),
 	},
 	Resource: &ResourceJson{
 		Attributes: []AttributeNameValue{
@@ -529,10 +690,25 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Excluded: []string{"process.command_args"},
 				Included: []string{"process.*"},
 			},
+			// TODO: implement resource detectors
+			// Detectors: []ExperimentalResourceDetector{}
+			// },
 		},
 		SchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
 	},
 	TracerProvider: &TracerProviderJson{
+		TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
+			DefaultConfig: &ExperimentalTracerConfig{
+				Disabled: true,
+			},
+			Tracers: []ExperimentalTracerMatcherAndConfig{
+				{
+					Config: ExperimentalTracerConfig{},
+					Name:   "io.opentelemetry.contrib.*",
+				},
+			},
+		},
+
 		Limits: &SpanLimits{
 			AttributeCountLimit:       ptr(128),
 			AttributeValueLengthLimit: ptr(4096),
@@ -551,6 +727,7 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 							ClientCertificateFile: ptr("/app/cert.pem"),
 							ClientKeyFile:         ptr("/app/cert.pem"),
 							Compression:           ptr("gzip"),
+							Encoding:              ptr(OTLPHttpEncodingProtobuf),
 							Endpoint:              ptr("http://localhost:4318/v1/traces"),
 							Headers: []NameStringValuePair{
 								{Name: "api-key", Value: ptr("1234")},
@@ -562,6 +739,43 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 					MaxExportBatchSize: ptr(512),
 					MaxQueueSize:       ptr(2048),
 					ScheduleDelay:      ptr(5000),
+				},
+			},
+			{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLPGrpc: &OTLPGrpcExporter{
+							CertificateFile:       ptr("/app/cert.pem"),
+							ClientCertificateFile: ptr("/app/cert.pem"),
+							ClientKeyFile:         ptr("/app/cert.pem"),
+							Compression:           ptr("gzip"),
+							Endpoint:              ptr("http://localhost:4317"),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
+							},
+							HeadersList: ptr("api-key=1234"),
+							Timeout:     ptr(10000),
+							Insecure:    ptr(false),
+						},
+					},
+				},
+			},
+			{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("file:///var/log/traces.jsonl"),
+						},
+					},
+				},
+			},
+			{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("stdout"),
+						},
+					},
 				},
 			},
 			{
@@ -630,28 +844,36 @@ func TestParseYAML(t *testing.T) {
 		},
 		{
 			name:    "invalid nil name",
-			input:   "invalid_nil_name.yaml",
+			input:   "v1.0.0_invalid_nil_name.yaml",
 			wantErr: errors.New(`yaml: cannot unmarshal field name in NameStringValuePair required`),
 		},
 		{
 			name:    "invalid nil value",
-			input:   "invalid_nil_value.yaml",
+			input:   "v1.0.0_invalid_nil_value.yaml",
 			wantErr: errors.New(`yaml: cannot unmarshal field value in NameStringValuePair required`),
 		},
 		{
 			name:  "valid v0.2 config",
 			input: "v0.2.yaml",
 			wantErr: errors.New(`yaml: unmarshal errors:
-  line 81: cannot unmarshal !!map into []otelconf.NameStringValuePair
-  line 185: cannot unmarshal !!map into []otelconf.NameStringValuePair
-  line 244: cannot unmarshal !!seq into otelconf.IncludeExclude
-  line 305: cannot unmarshal !!map into []otelconf.NameStringValuePair
-  line 408: cannot unmarshal !!map into []otelconf.AttributeNameValue`),
+  line 64: cannot unmarshal !!seq into otelconf.IncludeExclude`),
 		},
 		{
-			name:     "valid v0.3 config",
-			input:    "v0.3.yaml",
-			wantType: &v03OpenTelemetryConfig,
+			name:  "valid v0.3 config",
+			input: "v0.3.yaml",
+			wantErr: errors.New(`yaml: unmarshal errors:
+  line 2: cannot unmarshal !!str` + " `traceco...`" + ` into map[string]interface {}
+  line 3: cannot unmarshal !!str` + " `baggage`" + ` into map[string]interface {}
+  line 4: cannot unmarshal !!str` + " `b3`" + ` into map[string]interface {}
+  line 5: cannot unmarshal !!str` + " `b3multi`" + ` into map[string]interface {}
+  line 6: cannot unmarshal !!str` + " `jaeger`" + ` into map[string]interface {}
+  line 7: cannot unmarshal !!str` + " `xray`" + ` into map[string]interface {}
+  line 8: cannot unmarshal !!str` + " `ottrace`" + ` into map[string]interface {}`),
+		},
+		{
+			name:     "valid v1.0.0 config",
+			input:    "v1.0.0-rc.1.yaml",
+			wantType: &v10OpenTelemetryConfig,
 		},
 	}
 
@@ -795,12 +1017,12 @@ func TestSerializeJSON(t *testing.T) {
 		},
 		{
 			name:    "invalid nil name",
-			input:   "invalid_nil_name.json",
+			input:   "v1.0.0_invalid_nil_name.json",
 			wantErr: errors.New(`json: cannot unmarshal field name in NameStringValuePair required`),
 		},
 		{
 			name:    "invalid nil value",
-			input:   "invalid_nil_value.json",
+			input:   "v1.0.0_invalid_nil_value.json",
 			wantErr: errors.New(`json: cannot unmarshal field value in NameStringValuePair required`),
 		},
 		{
@@ -811,7 +1033,7 @@ func TestSerializeJSON(t *testing.T) {
 		{
 			name:     "valid v0.3 config",
 			input:    "v0.3.json",
-			wantType: v03OpenTelemetryConfig,
+			wantType: v10OpenTelemetryConfig,
 		},
 	}
 
