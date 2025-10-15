@@ -42,78 +42,138 @@ func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 }
 
 func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+
 	type Plain OpenTelemetryConfiguration
 	var plain Plain
 
-	if err := node.Decode(&plain); err != nil {
-		return err
+	if v, ok := raw["logger_provider"]; ok && v != nil {
+		marshaled, err := yaml.Marshal(v)
+		if err != nil {
+			return err
+		}
+		var lp LoggerProviderJson
+		if err := yaml.Unmarshal(marshaled, &lp); err != nil {
+			return err
+		}
+		plain.LoggerProvider = &lp
 	}
 
-	marshaled, err := yaml.Marshal(plain.LoggerProvider)
-	if err != nil {
-		return err
+	if v, ok := raw["meter_provider"]; ok && v != nil {
+		marshaled, err := yaml.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		var mp MeterProviderJson
+		if err := yaml.Unmarshal(marshaled, &mp); err != nil {
+			return err
+		}
+		plain.MeterProvider = &mp
 	}
 
-	var lp LoggerProviderJson
-	if err := yaml.Unmarshal(marshaled, &lp); err != nil {
-		return err
-	}
-	plain.LoggerProvider = &lp
+	if v, ok := raw["tracer_provider"]; ok && v != nil {
+		marshaled, err := yaml.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	marshaled, err = yaml.Marshal(plain.MeterProvider)
-	if err != nil {
-		return err
-	}
-
-	var mp MeterProviderJson
-	if err := yaml.Unmarshal(marshaled, &mp); err != nil {
-		return err
-	}
-	plain.MeterProvider = &mp
-
-	marshaled, err = yaml.Marshal(plain.TracerProvider)
-	if err != nil {
-		return err
+		var tp TracerProviderJson
+		if err := yaml.Unmarshal(marshaled, &tp); err != nil {
+			return err
+		}
+		plain.TracerProvider = &tp
 	}
 
-	var tp TracerProviderJson
-	if err := yaml.Unmarshal(marshaled, &tp); err != nil {
-		return err
-	}
-	plain.TracerProvider = &tp
+	if v, ok := raw["propagator"]; ok && v != nil {
+		marshaled, err := yaml.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	marshaled, err = yaml.Marshal(plain.Propagator)
-	if err != nil {
-		return err
-	}
-
-	var p PropagatorJson
-	if err := yaml.Unmarshal(marshaled, &p); err != nil {
-		return err
-	}
-	plain.Propagator = &p
-
-	marshaled, err = yaml.Marshal(plain.Resource)
-	if err != nil {
-		return err
+		var p PropagatorJson
+		if err := yaml.Unmarshal(marshaled, &p); err != nil {
+			return err
+		}
+		plain.Propagator = &p
 	}
 
-	var r ResourceJson
-	if err := yaml.Unmarshal(marshaled, &r); err != nil {
-		return err
-	}
-	plain.Resource = &r
+	if v, ok := raw["resource"]; ok && v != nil {
+		marshaled, err := yaml.Marshal(v)
+		if err != nil {
+			return err
+		}
 
-	marshaled, err = yaml.Marshal(plain.InstrumentationDevelopment)
-	if err != nil {
-		return err
+		var r ResourceJson
+		if err := yaml.Unmarshal(marshaled, &r); err != nil {
+			return err
+		}
+		plain.Resource = &r
 	}
 
-	var i InstrumentationJson
-	if err := yaml.Unmarshal(marshaled, &i); err != nil {
-		return err
+	if v, ok := raw["instrumentation/development"]; ok && v != nil {
+		marshaled, err := yaml.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		var i InstrumentationJson
+		if err := yaml.Unmarshal(marshaled, &i); err != nil {
+			return err
+		}
+		plain.InstrumentationDevelopment = &i
 	}
-	plain.InstrumentationDevelopment = &i
+
+	if v, ok := raw["attribute_limits"]; ok && v != nil {
+		marshaled, err := yaml.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		var a AttributeLimits
+		if err := yaml.Unmarshal(marshaled, &a); err != nil {
+			return err
+		}
+		plain.AttributeLimits = &a
+	}
+
+	// Configure if the SDK is disabled or not.
+	// If omitted or null, false is used.
+	plain.Disabled = ptr(false)
+	if v, ok := raw["disabled"]; ok && v != nil {
+		marshaled, err := yaml.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		var disabled bool
+		if err := yaml.Unmarshal(marshaled, &disabled); err != nil {
+			return err
+		}
+		plain.Disabled = &disabled
+	}
+
+	// Configure the log level of the internal logger used by the SDK.
+	// If omitted, info is used.
+	plain.LogLevel = ptr("info")
+	if v, ok := raw["log_level"]; ok && v != nil {
+		marshaled, err := yaml.Marshal(v)
+		if err != nil {
+			return err
+		}
+
+		var logLevel string
+		if err := yaml.Unmarshal(marshaled, &logLevel); err != nil {
+			return err
+		}
+		plain.LogLevel = &logLevel
+	}
+
+	plain.FileFormat = fmt.Sprintf("%v", raw["file_format"])
 
 	*j = OpenTelemetryConfiguration(plain)
 	return nil
@@ -312,10 +372,11 @@ func (j *Sampler) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return err
 	}
-	// console can be nil, must check and set here
+	// always_on can be nil, must check and set here
 	if _, ok := raw["always_on"]; ok {
 		plain.AlwaysOn = AlwaysOnSampler{}
 	}
+	// always_off can be nil, must check and set here
 	if _, ok := raw["always_off"]; ok {
 		plain.AlwaysOff = AlwaysOffSampler{}
 	}
