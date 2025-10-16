@@ -307,8 +307,7 @@ func (j *BatchLogRecordProcessor) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
 		return err
 	}
-	err := validateBatchLogRecordProcessor((*BatchLogRecordProcessor)(&sh.Plain))
-	if err != nil {
+	if err := validateBatchLogRecordProcessor((*BatchLogRecordProcessor)(&sh.Plain)); err != nil {
 		return err
 	}
 	*j = BatchLogRecordProcessor(sh.Plain)
