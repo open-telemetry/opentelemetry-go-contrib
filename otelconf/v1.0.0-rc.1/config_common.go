@@ -14,13 +14,13 @@ func ptr[T any](v T) *T {
 	return &v
 }
 
-// MarshalUnmarshaler combines marshal and unmarshal operations
+// MarshalUnmarshaler combines marshal and unmarshal operations.
 type MarshalUnmarshaler interface {
 	Marshal(v any) ([]byte, error)
 	Unmarshal(data []byte, v any) error
 }
 
-// jsonCodec implements MarshalUnmarshaler for JSON
+// jsonCodec implements MarshalUnmarshaler for JSON.
 type jsonCodec struct{}
 
 func (jsonCodec) Marshal(v any) ([]byte, error) {
@@ -31,7 +31,7 @@ func (jsonCodec) Unmarshal(data []byte, v any) error {
 	return json.Unmarshal(data, v)
 }
 
-// yamlCodec implements MarshalUnmarshaler for YAML
+// yamlCodec implements MarshalUnmarshaler for YAML.
 type yamlCodec struct{}
 
 func (yamlCodec) Marshal(v any) ([]byte, error) {
@@ -42,7 +42,7 @@ func (yamlCodec) Unmarshal(data []byte, v any) error {
 	return yaml.Unmarshal(data, v)
 }
 
-// setConfigDefaults sets default values for disabled and log_level
+// setConfigDefaults sets default values for disabled and log_level.
 func setConfigDefaults(raw map[string]any, plain *OpenTelemetryConfiguration, codec MarshalUnmarshaler) error {
 	// Configure if the SDK is disabled or not.
 	// If omitted or null, false is used.
@@ -77,7 +77,7 @@ func setConfigDefaults(raw map[string]any, plain *OpenTelemetryConfiguration, co
 	return nil
 }
 
-// validateStringField validates a string field is present and correct type
+// validateStringField validates a string field is present and correct type.
 func validateStringField(raw map[string]any, fieldName string) (string, error) {
 	v, ok := raw[fieldName]
 	if !ok {
@@ -90,14 +90,14 @@ func validateStringField(raw map[string]any, fieldName string) (string, error) {
 	return str, nil
 }
 
-// unmarshalExporterWithConsole handles the console exporter unmarshaling pattern
-// Returns true if console field was present in raw
+// unmarshalExporterWithConsole handles the console exporter unmarshaling pattern.
+// Returns true if console field was present in raw.
 func checkConsoleExporter(raw map[string]any) bool {
 	_, ok := raw["console"]
 	return ok
 }
 
-// unmarshalSamplerTypes handles always_on and always_off sampler unmarshaling
+// unmarshalSamplerTypes handles always_on and always_off sampler unmarshaling.
 func unmarshalSamplerTypes(raw map[string]any, plain *Sampler) {
 	// always_on can be nil, must check and set here
 	if _, ok := raw["always_on"]; ok {
@@ -109,7 +109,7 @@ func unmarshalSamplerTypes(raw map[string]any, plain *Sampler) {
 	}
 }
 
-// unmarshalTextMapPropagatorTypes handles all propagator type unmarshaling
+// unmarshalTextMapPropagatorTypes handles all propagator type unmarshaling.
 func unmarshalTextMapPropagatorTypes(raw map[string]any, plain *TextMapPropagator) {
 	// b3 can be nil, must check and set here
 	if v, ok := raw["b3"]; ok && v == nil {
@@ -132,7 +132,7 @@ func unmarshalTextMapPropagatorTypes(raw map[string]any, plain *TextMapPropagato
 	}
 }
 
-// unmarshalMetricProducer handles opencensus metric producer unmarshaling
+// unmarshalMetricProducer handles opencensus metric producer unmarshaling.
 func unmarshalMetricProducer(raw map[string]any, plain *MetricProducer) {
 	// opencensus can be nil, must check and set here
 	if v, ok := raw["opencensus"]; ok && v == nil {
