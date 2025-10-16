@@ -1209,3 +1209,16 @@ func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
 	*j = TextMapPropagator(plain)
 	return nil
 }
+
+func (j *CardinalityLimits) UnmarshalJSON(value []byte) error {
+	type Plain CardinalityLimits
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	if err := validateCardinalityLimits((*CardinalityLimits)(&plain)); err != nil {
+		return err
+	}
+	*j = CardinalityLimits(plain)
+	return nil
+}

@@ -755,3 +755,16 @@ func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 	*j = BatchSpanProcessor(plain)
 	return nil
 }
+
+func (j *CardinalityLimits) UnmarshalYAML(node *yaml.Node) error {
+	type Plain CardinalityLimits
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	if err := validateCardinalityLimits((*CardinalityLimits)(&plain)); err != nil {
+		return err
+	}
+	*j = CardinalityLimits(plain)
+	return nil
+}
