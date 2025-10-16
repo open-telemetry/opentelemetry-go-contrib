@@ -4,7 +4,6 @@
 package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import (
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -141,41 +140,13 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 		plain.AttributeLimits = &a
 	}
 
-	// Configure if the SDK is disabled or not.
-	// If omitted or null, false is used.
-	plain.Disabled = ptr(false)
-	if v, ok := raw["disabled"]; ok && v != nil {
-		marshaled, err := yaml.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		var disabled bool
-		if err := yaml.Unmarshal(marshaled, &disabled); err != nil {
-			return err
-		}
-		plain.Disabled = &disabled
-	}
-
-	// Configure the log level of the internal logger used by the SDK.
-	// If omitted, info is used.
-	plain.LogLevel = ptr("info")
-	if v, ok := raw["log_level"]; ok && v != nil {
-		marshaled, err := yaml.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		var logLevel string
-		if err := yaml.Unmarshal(marshaled, &logLevel); err != nil {
-			return err
-		}
-		plain.LogLevel = &logLevel
+	plainConfig := (*OpenTelemetryConfiguration)(&plain)
+	if err := setConfigDefaults(raw, plainConfig, yamlCodec{}); err != nil {
+		return err
 	}
 
 	plain.FileFormat = fmt.Sprintf("%v", raw["file_format"])
-
-	*j = OpenTelemetryConfiguration(plain)
+	*j = *plainConfig
 	return nil
 }
 
@@ -287,20 +258,17 @@ func (j *NameStringValuePair) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&raw); err != nil {
 		return err
 	}
-	if _, ok := raw["name"]; !ok {
-		return errors.New("yaml: cannot unmarshal field name in NameStringValuePair required")
+
+	name, err := validateStringField(raw, "name")
+	if err != nil {
+		return err
 	}
-	if _, ok := raw["value"]; !ok {
-		return errors.New("yaml: cannot unmarshal field value in NameStringValuePair required")
+
+	value, err := validateStringField(raw, "value")
+	if err != nil {
+		return err
 	}
-	var name, value string
-	var ok bool
-	if name, ok = raw["name"].(string); !ok {
-		return errors.New("yaml: cannot unmarshal field name in NameStringValuePair must be string")
-	}
-	if value, ok = raw["value"].(string); !ok {
-		return errors.New("yaml: cannot unmarshal field value in NameStringValuePair must be string")
-	}
+
 	*j = NameStringValuePair{
 		Name:  name,
 		Value: &value,
@@ -319,7 +287,7 @@ func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
+	if checkConsoleExporter(raw) {
 		plain.Console = ConsoleExporter{}
 	}
 	*j = PushMetricExporter(plain)
@@ -337,7 +305,7 @@ func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
+	if checkConsoleExporter(raw) {
 		plain.Console = ConsoleExporter{}
 	}
 	*j = SpanExporter(plain)
@@ -355,7 +323,7 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
+	if checkConsoleExporter(raw) {
 		plain.Console = ConsoleExporter{}
 	}
 	*j = LogRecordExporter(plain)
@@ -372,14 +340,7 @@ func (j *Sampler) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return err
 	}
-	// always_on can be nil, must check and set here
-	if _, ok := raw["always_on"]; ok {
-		plain.AlwaysOn = AlwaysOnSampler{}
-	}
-	// always_off can be nil, must check and set here
-	if _, ok := raw["always_off"]; ok {
-		plain.AlwaysOff = AlwaysOffSampler{}
-	}
+	unmarshalSamplerTypes(raw, (*Sampler)(&plain))
 	*j = Sampler(plain)
 	return nil
 }
@@ -394,15 +355,7 @@ func (j *MetricProducer) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return err
 	}
-	// opencensus can be nil, must check and set here
-	if v, ok := raw["opencensus"]; ok && v == nil {
-		delete(raw, "opencensus")
-		plain.Opencensus = OpenCensusMetricProducer{}
-	}
-	if len(raw) > 0 {
-		plain.AdditionalProperties = raw
-	}
-
+	unmarshalMetricProducer(raw, (*MetricProducer)(&plain))
 	*j = MetricProducer(plain)
 	return nil
 }
@@ -417,25 +370,7 @@ func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return err
 	}
-	// b3 can be nil, must check and set here
-	if v, ok := raw["b3"]; ok && v == nil {
-		plain.B3 = B3Propagator{}
-	}
-	if v, ok := raw["b3multi"]; ok && v == nil {
-		plain.B3Multi = B3MultiPropagator{}
-	}
-	if v, ok := raw["baggage"]; ok && v == nil {
-		plain.Baggage = BaggagePropagator{}
-	}
-	if v, ok := raw["jaeger"]; ok && v == nil {
-		plain.Jaeger = JaegerPropagator{}
-	}
-	if v, ok := raw["ottrace"]; ok && v == nil {
-		plain.Ottrace = OpenTracingPropagator{}
-	}
-	if v, ok := raw["tracecontext"]; ok && v == nil {
-		plain.Tracecontext = TraceContextPropagator{}
-	}
+	unmarshalTextMapPropagatorTypes(raw, (*TextMapPropagator)(&plain))
 	*j = TextMapPropagator(plain)
 	return nil
 }

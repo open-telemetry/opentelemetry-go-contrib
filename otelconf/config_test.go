@@ -941,12 +941,12 @@ func TestParseYAML(t *testing.T) {
 		{
 			name:    "invalid nil name",
 			input:   "v1.0.0_invalid_nil_name.yaml",
-			wantErr: errors.New(`yaml: cannot unmarshal field name in NameStringValuePair required`),
+			wantErr: errors.New(`cannot unmarshal field name in NameStringValuePair required`),
 		},
 		{
 			name:    "invalid nil value",
 			input:   "v1.0.0_invalid_nil_value.yaml",
-			wantErr: errors.New(`yaml: cannot unmarshal field value in NameStringValuePair required`),
+			wantErr: errors.New(`cannot unmarshal field value in NameStringValuePair required`),
 		},
 		{
 			name:  "valid v0.2 config",
@@ -1115,12 +1115,12 @@ func TestSerializeJSON(t *testing.T) {
 		{
 			name:    "invalid nil name",
 			input:   "v1.0.0_invalid_nil_name.json",
-			wantErr: errors.New(`json: cannot unmarshal field name in NameStringValuePair required`),
+			wantErr: errors.New(`cannot unmarshal field name in NameStringValuePair required`),
 		},
 		{
 			name:    "invalid nil value",
 			input:   "v1.0.0_invalid_nil_value.json",
-			wantErr: errors.New(`json: cannot unmarshal field value in NameStringValuePair required`),
+			wantErr: errors.New(`cannot unmarshal field value in NameStringValuePair required`),
 		},
 		{
 			name:    "valid v0.2 config",

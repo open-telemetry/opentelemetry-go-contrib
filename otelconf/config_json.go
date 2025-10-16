@@ -380,19 +380,15 @@ func (j *NameStringValuePair) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
-	if _, ok := raw["name"]; !ok {
-		return errors.New("json: cannot unmarshal field name in NameStringValuePair required")
+
+	name, err := validateStringField(raw, "name")
+	if err != nil {
+		return err
 	}
-	if _, ok := raw["value"]; !ok {
-		return errors.New("json: cannot unmarshal field value in NameStringValuePair required")
-	}
-	var name, value string
-	var ok bool
-	if name, ok = raw["name"].(string); !ok {
-		return errors.New("json: cannot unmarshal field name in NameStringValuePair must be string")
-	}
-	if value, ok = raw["value"].(string); !ok {
-		return errors.New("json: cannot unmarshal field value in NameStringValuePair must be string")
+
+	value, err := validateStringField(raw, "value")
+	if err != nil {
+		return err
 	}
 
 	*j = NameStringValuePair{
@@ -613,36 +609,9 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 		plain.AttributeLimits = &a
 	}
 
-	// Configure if the SDK is disabled or not.
-	// If omitted or null, false is used.
-	plain.Disabled = ptr(false)
-	if v, ok := raw["disabled"]; ok && v != nil {
-		marshaled, err := json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		var disabled bool
-		if err := json.Unmarshal(marshaled, &disabled); err != nil {
-			return err
-		}
-		plain.Disabled = &disabled
-	}
-
-	// Configure the log level of the internal logger used by the SDK.
-	// If omitted, info is used.
-	plain.LogLevel = ptr("info")
-	if v, ok := raw["log_level"]; ok && v != nil {
-		marshaled, err := json.Marshal(v)
-		if err != nil {
-			return err
-		}
-
-		var logLevel string
-		if err := json.Unmarshal(marshaled, &logLevel); err != nil {
-			return err
-		}
-		plain.LogLevel = &logLevel
+	plainConfig := (*OpenTelemetryConfiguration)(&plain)
+	if err := setConfigDefaults(raw, plainConfig, jsonCodec{}); err != nil {
+		return err
 	}
 
 	plain.FileFormat = fmt.Sprintf("%v", raw["file_format"])
@@ -1161,7 +1130,7 @@ func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
+	if checkConsoleExporter(raw) {
 		plain.Console = ConsoleExporter{}
 	}
 	*j = PushMetricExporter(plain)
@@ -1179,7 +1148,7 @@ func (j *SpanExporter) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
+	if checkConsoleExporter(raw) {
 		plain.Console = ConsoleExporter{}
 	}
 	*j = SpanExporter(plain)
@@ -1197,7 +1166,7 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
+	if checkConsoleExporter(raw) {
 		plain.Console = ConsoleExporter{}
 	}
 	*j = LogRecordExporter(plain)
@@ -1214,14 +1183,7 @@ func (j *Sampler) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
-	// always_on can be nil, must check and set here
-	if _, ok := raw["always_on"]; ok {
-		plain.AlwaysOn = AlwaysOnSampler{}
-	}
-	// always_off can be nil, must check and set here
-	if _, ok := raw["always_off"]; ok {
-		plain.AlwaysOff = AlwaysOffSampler{}
-	}
+	unmarshalSamplerTypes(raw, (*Sampler)(&plain))
 	*j = Sampler(plain)
 	return nil
 }
@@ -1236,15 +1198,7 @@ func (j *MetricProducer) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
-	// opencensus can be nil, must check and set here
-	if v, ok := raw["opencensus"]; ok && v == nil {
-		delete(raw, "opencensus")
-		plain.Opencensus = OpenCensusMetricProducer{}
-	}
-	if len(raw) > 0 {
-		plain.AdditionalProperties = raw
-	}
-
+	unmarshalMetricProducer(raw, (*MetricProducer)(&plain))
 	*j = MetricProducer(plain)
 	return nil
 }
@@ -1259,25 +1213,7 @@ func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &plain); err != nil {
 		return err
 	}
-	// b3 can be nil, must check and set here
-	if v, ok := raw["b3"]; ok && v == nil {
-		plain.B3 = B3Propagator{}
-	}
-	if v, ok := raw["b3multi"]; ok && v == nil {
-		plain.B3Multi = B3MultiPropagator{}
-	}
-	if v, ok := raw["baggage"]; ok && v == nil {
-		plain.Baggage = BaggagePropagator{}
-	}
-	if v, ok := raw["jaeger"]; ok && v == nil {
-		plain.Jaeger = JaegerPropagator{}
-	}
-	if v, ok := raw["ottrace"]; ok && v == nil {
-		plain.Ottrace = OpenTracingPropagator{}
-	}
-	if v, ok := raw["tracecontext"]; ok && v == nil {
-		plain.Tracecontext = TraceContextPropagator{}
-	}
+	unmarshalTextMapPropagatorTypes(raw, (*TextMapPropagator)(&plain))
 	*j = TextMapPropagator(plain)
 	return nil
 }
