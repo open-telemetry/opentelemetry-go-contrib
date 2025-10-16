@@ -1210,6 +1210,7 @@ func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *CardinalityLimits) UnmarshalJSON(value []byte) error {
 	type Plain CardinalityLimits
 	var plain Plain
@@ -1220,5 +1221,19 @@ func (j *CardinalityLimits) UnmarshalJSON(value []byte) error {
 		return err
 	}
 	*j = CardinalityLimits(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *SpanLimits) UnmarshalJSON(value []byte) error {
+	type Plain SpanLimits
+	var plain Plain
+	if err := json.Unmarshal(value, &plain); err != nil {
+		return err
+	}
+	if err := validateSpanLimits((*SpanLimits)(&plain)); err != nil {
+		return err
+	}
+	*j = SpanLimits(plain)
 	return nil
 }

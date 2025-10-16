@@ -756,6 +756,7 @@ func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *CardinalityLimits) UnmarshalYAML(node *yaml.Node) error {
 	type Plain CardinalityLimits
 	var plain Plain
@@ -766,5 +767,19 @@ func (j *CardinalityLimits) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	*j = CardinalityLimits(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *SpanLimits) UnmarshalYAML(node *yaml.Node) error {
+	type Plain SpanLimits
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	if err := validateSpanLimits((*SpanLimits)(&plain)); err != nil {
+		return err
+	}
+	*j = SpanLimits(plain)
 	return nil
 }

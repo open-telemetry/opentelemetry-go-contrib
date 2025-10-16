@@ -2427,3 +2427,83 @@ func TestUnmarshalPullMetricReader(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalSpanLimits(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		yamlConfig []byte
+		jsonConfig []byte
+		wantErr    string
+	}{
+		{
+			name:       "valid with all fields positive",
+			jsonConfig: []byte(`{"attribute_count_limit":100,"attribute_value_length_limit":200,"event_attribute_count_limit":300,"event_count_limit":400,"link_attribute_count_limit":500,"link_count_limit":600}`),
+			yamlConfig: []byte("attribute_count_limit: 100\nattribute_value_length_limit: 200\nevent_attribute_count_limit: 300\nevent_count_limit: 400\nlink_attribute_count_limit: 500\nlink_count_limit: 600"),
+		},
+		{
+			name:       "valid with single field",
+			jsonConfig: []byte(`{"attribute_value_length_limit":2000}`),
+			yamlConfig: []byte("attribute_value_length_limit: 2000"),
+		},
+		{
+			name:       "valid empty",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+		},
+		{
+			name:       "invalid attribute_count_limit negative",
+			jsonConfig: []byte(`{"attribute_count_limit":-1}`),
+			yamlConfig: []byte("attribute_count_limit: -1"),
+			wantErr:    "field attribute_count_limit: must be >= 0",
+		},
+		{
+			name:       "invalid attribute_value_length_limit negative",
+			jsonConfig: []byte(`{"attribute_value_length_limit":-1}`),
+			yamlConfig: []byte("attribute_value_length_limit: -1"),
+			wantErr:    "field attribute_value_length_limit: must be >= 0",
+		},
+		{
+			name:       "invalid event_attribute_count_limit negative",
+			jsonConfig: []byte(`{"event_attribute_count_limit":-1}`),
+			yamlConfig: []byte("event_attribute_count_limit: -1"),
+			wantErr:    "field event_attribute_count_limit: must be >= 0",
+		},
+		{
+			name:       "invalid event_count_limit negative",
+			jsonConfig: []byte(`{"event_count_limit":-1}`),
+			yamlConfig: []byte("event_count_limit: -1"),
+			wantErr:    "field event_count_limit: must be >= 0",
+		},
+		{
+			name:       "invalid link_attribute_count_limit negative",
+			jsonConfig: []byte(`{"link_attribute_count_limit":-1}`),
+			yamlConfig: []byte("link_attribute_count_limit: -1"),
+			wantErr:    "field link_attribute_count_limit: must be >= 0",
+		},
+		{
+			name:       "invalid link_count_limit negative",
+			jsonConfig: []byte(`{"link_count_limit":-1}`),
+			yamlConfig: []byte("link_count_limit: -1"),
+			wantErr:    "field link_count_limit: must be >= 0",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := SpanLimits{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+			cl = SpanLimits{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

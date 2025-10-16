@@ -218,3 +218,26 @@ func validateCardinalityLimits(plain *CardinalityLimits) error {
 	}
 	return nil
 }
+
+// validateSpanLimits handles validation for SpanLimits.
+func validateSpanLimits(plain *SpanLimits) error {
+	if plain.AttributeCountLimit != nil && 0 > *plain.AttributeCountLimit {
+		return fmt.Errorf("field %s: must be >= %v", "attribute_count_limit", 0)
+	}
+	if plain.AttributeValueLengthLimit != nil && 0 > *plain.AttributeValueLengthLimit {
+		return fmt.Errorf("field %s: must be >= %v", "attribute_value_length_limit", 0)
+	}
+	if plain.EventAttributeCountLimit != nil && 0 > *plain.EventAttributeCountLimit {
+		return fmt.Errorf("field %s: must be >= %v", "event_attribute_count_limit", 0)
+	}
+	if plain.EventCountLimit != nil && 0 > *plain.EventCountLimit {
+		return fmt.Errorf("field %s: must be >= %v", "event_count_limit", 0)
+	}
+	if plain.LinkAttributeCountLimit != nil && 0 > *plain.LinkAttributeCountLimit {
+		return fmt.Errorf("field %s: must be >= %v", "link_attribute_count_limit", 0)
+	}
+	if plain.LinkCountLimit != nil && 0 > *plain.LinkCountLimit {
+		return fmt.Errorf("field %s: must be >= %v", "link_count_limit", 0)
+	}
+	return nil
+}
