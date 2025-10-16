@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"os"
 
+	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
@@ -179,8 +180,12 @@ func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) Configurat
 
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
 func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
+	file, err := provider.ReplaceEnvVars(file)
+	if err != nil {
+		return nil, err
+	}
 	var cfg OpenTelemetryConfiguration
-	err := yaml.Unmarshal(file, &cfg)
+	err = yaml.Unmarshal(file, &cfg)
 	if err != nil {
 		return nil, err
 	}
