@@ -4,6 +4,7 @@
 package otelconf // import "go.opentelemetry.io/contrib/otelconf/v1.0.0-rc.1"
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -280,5 +281,26 @@ func (j *ExperimentalLanguageSpecificInstrumentation) UnmarshalYAML(unmarshal fu
 	}
 
 	*j = raw
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return errors.New("field exporter in BatchLogRecordProcessor: required")
+	}
+	type Plain BatchLogRecordProcessor
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	if err := validateBatchLogRecordProcessor((*BatchLogRecordProcessor)(&plain)); err != nil {
+		return err
+	}
+	*j = BatchLogRecordProcessor(plain)
 	return nil
 }
