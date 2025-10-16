@@ -142,6 +142,10 @@ func periodicExporter(ctx context.Context, exporter PushMetricExporter, opts ...
 			return sdkmetric.NewPeriodicReader(exp, opts...), nil
 		}
 	}
+	if exporter.OTLPFileDevelopment != nil {
+		exportersConfigured++
+		// TODO: implement file exporter https://github.com/open-telemetry/opentelemetry-go/issues/5408
+	}
 
 	if exportersConfigured > 1 {
 		return nil, errors.New("must not specify multiple exporters")

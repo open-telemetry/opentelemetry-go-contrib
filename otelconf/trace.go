@@ -155,7 +155,7 @@ func spanExporter(ctx context.Context, exporter SpanExporter) (sdktrace.SpanExpo
 	}
 	if exporter.OTLPFileDevelopment != nil {
 		exportersConfigured++
-		// TODO: implement file exporter
+		// TODO: implement file exporter https://github.com/open-telemetry/opentelemetry-go/issues/5408
 	}
 	if exporter.Zipkin != nil {
 		exportersConfigured++
