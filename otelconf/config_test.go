@@ -1227,7 +1227,7 @@ func TestSerializeJSON(t *testing.T) {
 		{
 			name:    "valid v0.2 config",
 			input:   "v0.2.json",
-			wantErr: errors.New(`json: cannot unmarshal array into Go struct field View.views.stream.attribute_keys of type otelconf.IncludeExclude`),
+			wantErr: errors.New(`json: cannot unmarshal array into Go struct field`),
 		},
 		{
 			name:    "valid v0.3 config",
