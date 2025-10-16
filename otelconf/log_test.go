@@ -496,7 +496,6 @@ func TestLogProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: LogRecordExporter{
 						OTLPHttp: &OTLPHttpExporter{
-
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{

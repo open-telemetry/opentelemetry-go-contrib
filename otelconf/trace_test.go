@@ -597,7 +597,6 @@ func TestSpanProcessor(t *testing.T) {
 					ScheduleDelay:      ptr(0),
 					Exporter: SpanExporter{
 						OTLPHttp: &OTLPHttpExporter{
-
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
