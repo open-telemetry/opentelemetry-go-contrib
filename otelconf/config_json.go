@@ -198,18 +198,6 @@ func (j *AttributeType) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j.Value)
 }
 
-var enumValuesAttributeType = []any{
-	nil,
-	"string",
-	"bool",
-	"int",
-	"double",
-	"string_array",
-	"bool_array",
-	"int_array",
-	"double_array",
-}
-
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *AttributeType) UnmarshalJSON(b []byte) error {
 	var v struct {
