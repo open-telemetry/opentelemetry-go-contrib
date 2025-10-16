@@ -10,6 +10,7 @@ import (
 	yaml "go.yaml.in/yaml/v3"
 )
 
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
 
@@ -166,6 +167,7 @@ func (j *NameStringValuePair) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
 	if err := node.Decode(&raw); err != nil {
@@ -184,6 +186,7 @@ func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
 	if err := node.Decode(&raw); err != nil {
@@ -202,6 +205,7 @@ func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
 	if err := node.Decode(&raw); err != nil {
@@ -220,6 +224,7 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *Sampler) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
 	if err := node.Decode(&raw); err != nil {
@@ -235,6 +240,7 @@ func (j *Sampler) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *MetricProducer) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
 	if err := node.Decode(&raw); err != nil {
@@ -250,6 +256,7 @@ func (j *MetricProducer) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
 	if err := node.Decode(&raw); err != nil {
