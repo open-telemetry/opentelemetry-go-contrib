@@ -22,6 +22,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
+	yaml "go.yaml.in/yaml/v3"
 )
 
 func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
