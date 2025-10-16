@@ -14,6 +14,18 @@ func ptr[T any](v T) *T {
 	return &v
 }
 
+var enumValuesAttributeType = []any{
+	nil,
+	"string",
+	"bool",
+	"int",
+	"double",
+	"string_array",
+	"bool_array",
+	"int_array",
+	"double_array",
+}
+
 // MarshalUnmarshaler combines marshal and unmarshal operations.
 type MarshalUnmarshaler interface {
 	Marshal(v any) ([]byte, error)
