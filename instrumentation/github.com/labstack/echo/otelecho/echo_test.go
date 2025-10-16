@@ -372,7 +372,7 @@ func TestWithEchoMetricAttributeFn(t *testing.T) {
 	assert.True(t, foundPath, "echo path attribute should be found")
 }
 
-func TestHandleError(t *testing.T) {
+func TestErrorNotHandled(t *testing.T) {
 	r := httptest.NewRequest("GET", "/ping", http.NoBody)
 	w := httptest.NewRecorder()
 
@@ -391,27 +391,5 @@ func TestHandleError(t *testing.T) {
 
 	router.ServeHTTP(w, r)
 	assert.Equal(t, http.StatusTeapot, w.Result().StatusCode, "should call the 'ping' handler")
-	assert.Equal(t, 2, handlerCalled, "global error handler must be called twice")
-}
-
-func TestWithoutHandleError(t *testing.T) {
-	r := httptest.NewRequest("GET", "/ping", http.NoBody)
-	w := httptest.NewRecorder()
-
-	router := echo.New()
-	router.Use(Middleware("foobar", WithoutHandleError()))
-	router.GET("/ping", func(_ echo.Context) error {
-		return assert.AnError
-	})
-
-	handlerCalled := 0
-	router.HTTPErrorHandler = func(err error, c echo.Context) {
-		handlerCalled++
-		assert.ErrorIs(t, err, assert.AnError, "test error is expected in error handler")
-		assert.NoError(t, c.NoContent(http.StatusTeapot))
-	}
-
-	router.ServeHTTP(w, r)
-	assert.Equal(t, http.StatusTeapot, w.Result().StatusCode, "should call the 'ping' handler")
-	assert.Equal(t, 1, handlerCalled, "global error handler must be called only once")
+	assert.Equal(t, 1, handlerCalled, "global error handler must be called once")
 }

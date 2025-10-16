@@ -22,7 +22,6 @@ type config struct {
 	Skipper               middleware.Skipper
 	MetricAttributeFn     MetricAttributeFn
 	EchoMetricAttributeFn EchoMetricAttributeFn
-	HandleError           bool
 }
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
@@ -99,12 +98,5 @@ func WithMetricAttributeFn(f MetricAttributeFn) Option {
 func WithEchoMetricAttributeFn(f EchoMetricAttributeFn) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.EchoMetricAttributeFn = f
-	})
-}
-
-// WithoutHandleError instructs middleware to not call global error handler when next middleware/handler returns an error.
-func WithoutHandleError() Option {
-	return optionFunc(func(cfg *config) {
-		cfg.HandleError = false
 	})
 }
