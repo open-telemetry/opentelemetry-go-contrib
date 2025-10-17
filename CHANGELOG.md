@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - `ParseYAML` in `go.opentelemetry.io/contrib/otelconf` now supports environment variables substitution in the format `${[env:]VAR_NAME[:-defaultvalue]}`. (#6215)
-- Breaking change: otelecho middleware in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` doesn't call error handler anymore. (#4420)
+- WithOnError option for otelecho middleware in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` to specify the behavior when an error occurs. (#4420)
 
 ### Removed
 
