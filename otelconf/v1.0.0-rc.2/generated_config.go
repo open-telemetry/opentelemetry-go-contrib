@@ -271,19 +271,24 @@ type ExperimentalPrometheusMetricExporter struct {
 	// Port corresponds to the JSON schema field "port".
 	Port *int `json:"port,omitempty" yaml:"port,omitempty" mapstructure:"port,omitempty"`
 
+	// TranslationStrategy corresponds to the JSON schema field
+	// "translation_strategy".
+	TranslationStrategy *ExperimentalPrometheusMetricExporterTranslationStrategy `json:"translation_strategy,omitempty" yaml:"translation_strategy,omitempty" mapstructure:"translation_strategy,omitempty"`
+
 	// WithResourceConstantLabels corresponds to the JSON schema field
 	// "with_resource_constant_labels".
 	WithResourceConstantLabels *IncludeExclude `json:"with_resource_constant_labels,omitempty" yaml:"with_resource_constant_labels,omitempty" mapstructure:"with_resource_constant_labels,omitempty"`
 
 	// WithoutScopeInfo corresponds to the JSON schema field "without_scope_info".
 	WithoutScopeInfo *bool `json:"without_scope_info,omitempty" yaml:"without_scope_info,omitempty" mapstructure:"without_scope_info,omitempty"`
-
-	// WithoutTypeSuffix corresponds to the JSON schema field "without_type_suffix".
-	WithoutTypeSuffix *bool `json:"without_type_suffix,omitempty" yaml:"without_type_suffix,omitempty" mapstructure:"without_type_suffix,omitempty"`
-
-	// WithoutUnits corresponds to the JSON schema field "without_units".
-	WithoutUnits *bool `json:"without_units,omitempty" yaml:"without_units,omitempty" mapstructure:"without_units,omitempty"`
 }
+
+type ExperimentalPrometheusMetricExporterTranslationStrategy string
+
+const ExperimentalPrometheusMetricExporterTranslationStrategyNoTranslation ExperimentalPrometheusMetricExporterTranslationStrategy = "NoTranslation"
+const ExperimentalPrometheusMetricExporterTranslationStrategyNoUTF8EscapingWithSuffixes ExperimentalPrometheusMetricExporterTranslationStrategy = "NoUTF8EscapingWithSuffixes"
+const ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes ExperimentalPrometheusMetricExporterTranslationStrategy = "UnderscoreEscapingWithSuffixes"
+const ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithoutSuffixes ExperimentalPrometheusMetricExporterTranslationStrategy = "UnderscoreEscapingWithoutSuffixes"
 
 type ExperimentalResourceDetection struct {
 	// Attributes corresponds to the JSON schema field "attributes".
@@ -293,13 +298,27 @@ type ExperimentalResourceDetection struct {
 	Detectors []ExperimentalResourceDetector `json:"detectors,omitempty" yaml:"detectors,omitempty" mapstructure:"detectors,omitempty"`
 }
 
-type ExperimentalResourceDetector map[string]interface{}
+type ExperimentalResourceDetector struct {
+	// Container corresponds to the JSON schema field "container".
+	Container ExperimentalContainerResourceDetector `json:"container,omitempty" yaml:"container,omitempty" mapstructure:"container,omitempty"`
+
+	// Host corresponds to the JSON schema field "host".
+	Host ExperimentalHostResourceDetector `json:"host,omitempty" yaml:"host,omitempty" mapstructure:"host,omitempty"`
+
+	// Process corresponds to the JSON schema field "process".
+	Process ExperimentalProcessResourceDetector `json:"process,omitempty" yaml:"process,omitempty" mapstructure:"process,omitempty"`
+
+	// Service corresponds to the JSON schema field "service".
+	Service ExperimentalServiceResourceDetector `json:"service,omitempty" yaml:"service,omitempty" mapstructure:"service,omitempty"`
+
+	AdditionalProperties interface{} `mapstructure:",remain"`
+}
 
 type ExperimentalServiceResourceDetector map[string]interface{}
 
 type ExperimentalTracerConfig struct {
 	// Disabled corresponds to the JSON schema field "disabled".
-	Disabled bool `json:"disabled" yaml:"disabled" mapstructure:"disabled"`
+	Disabled *bool `json:"disabled,omitempty" yaml:"disabled,omitempty" mapstructure:"disabled,omitempty"`
 }
 
 type ExperimentalTracerConfigurator struct {
@@ -312,10 +331,10 @@ type ExperimentalTracerConfigurator struct {
 
 type ExperimentalTracerMatcherAndConfig struct {
 	// Config corresponds to the JSON schema field "config".
-	Config ExperimentalTracerConfig `json:"config" yaml:"config" mapstructure:"config"`
+	Config *ExperimentalTracerConfig `json:"config,omitempty" yaml:"config,omitempty" mapstructure:"config,omitempty"`
 
 	// Name corresponds to the JSON schema field "name".
-	Name string `json:"name" yaml:"name" mapstructure:"name"`
+	Name *string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
 }
 
 type ExplicitBucketHistogramAggregation struct {
