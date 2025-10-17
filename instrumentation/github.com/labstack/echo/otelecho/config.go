@@ -22,7 +22,12 @@ type config struct {
 	Skipper               middleware.Skipper
 	MetricAttributeFn     MetricAttributeFn
 	EchoMetricAttributeFn EchoMetricAttributeFn
+	OnError               func(echo.Context, error)
 }
+
+// DefaultOnError is the default function called when an error occurs during request processing.
+// The call to c.Error(err) ensures tracing data is correct, but forces the global HTTPErrorHandler to be called twice.
+var DefaultOnError = func(c echo.Context, err error) { c.Error(err) }
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
 // and return them as a slice of attribute.KeyValue.
@@ -98,5 +103,22 @@ func WithMetricAttributeFn(f MetricAttributeFn) Option {
 func WithEchoMetricAttributeFn(f EchoMetricAttributeFn) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.EchoMetricAttributeFn = f
+	})
+}
+
+// WithOnError specifies a function that is called when an error occurs during request processing.
+// If nil is provided, it does nothing.
+//
+// WARNING: If the passed function doesn't call c.Error and the global HTTPErrorHandler modifies the response,
+// the tracing span can contain invalid data.
+// If it calls c.Error, HTTPErrorHandler will be executed twice, but the span will be correct.
+// To fix this, check response commitment status (c.Response().Committed) before writing to it.
+func WithOnError(fn func(echo.Context, error)) Option {
+	if fn == nil {
+		fn = func(_ echo.Context, _ error) {}
+	}
+
+	return optionFunc(func(cfg *config) {
+		cfg.OnError = fn
 	})
 }
