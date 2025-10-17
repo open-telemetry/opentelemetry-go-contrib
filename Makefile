@@ -329,12 +329,11 @@ OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v1.0.0-rc.2
 genjsonschema-cleanup:
 	rm -Rf ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 
-GENERATED_CONFIG=./otelconf/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}/generated_config.go
+GENERATED_CONFIG=./otelconf/generated_config.go
 
 # Generate structs for configuration from opentelemetry-configuration schema
 genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	mkdir -p ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
-	mkdir -p ./otelconf/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}
 	curl -sSL https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION} | tar xz --strip 1 -C ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 	$(GOJSONSCHEMA) \
 		--capitalization ID \
