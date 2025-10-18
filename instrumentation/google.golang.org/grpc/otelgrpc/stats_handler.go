@@ -28,7 +28,7 @@ type gRPCContextKey struct{}
 type gRPCContext struct {
 	inMessages  int64
 	outMessages int64
-	metricAttrs []attribute.KeyValue
+	metricAttrs attribute.Set
 	record      bool
 }
 
@@ -129,8 +129,11 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		)
 	}
 
+	// Make a new slice to avoid aliasing into the same attrs slice used by traces.
+	metricAttrs := make([]attribute.KeyValue, 0, len(attrs)+len(h.MetricAttributes))
+	metricAttrs = append(append(metricAttrs, attrs...), h.MetricAttributes...)
 	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.MetricAttributes...),
+		metricAttrs: attribute.NewSet(metricAttrs...),
 		record:      record,
 	}
 
@@ -227,8 +230,11 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		)
 	}
 
+	// Make a new slice to avoid aliasing into the same attrs slice used by traces.
+	metricAttrs := make([]attribute.KeyValue, 0, len(attrs)+len(h.MetricAttributes))
+	metricAttrs = append(append(metricAttrs, attrs...), h.MetricAttributes...)
 	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.MetricAttributes...),
+		metricAttrs: attribute.NewSet(metricAttrs...),
 		record:      record,
 	}
 
@@ -262,7 +268,7 @@ func (*clientHandler) HandleConn(context.Context, stats.ConnStats) {
 }
 
 type int64Hist interface {
-	Record(context.Context, int64, ...attribute.KeyValue)
+	RecordSet(context.Context, int64, attribute.Set)
 }
 
 func (c *config) handleRPC(
@@ -286,7 +292,7 @@ func (c *config) handleRPC(
 	case *stats.InPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.inMessages, 1)
-			inSize.Record(ctx, int64(rs.Length), gctx.metricAttrs...)
+			inSize.RecordSet(ctx, int64(rs.Length), gctx.metricAttrs)
 		}
 
 		if c.ReceivedEvent && span.IsRecording() {
@@ -302,7 +308,7 @@ func (c *config) handleRPC(
 	case *stats.OutPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.outMessages, 1)
-			outSize.Record(ctx, int64(rs.Length), gctx.metricAttrs...)
+			outSize.RecordSet(ctx, int64(rs.Length), gctx.metricAttrs)
 		}
 
 		if c.SentEvent && span.IsRecording() {
@@ -341,14 +347,13 @@ func (c *config) handleRPC(
 			span.End()
 		}
 
-		var metricAttrs []attribute.KeyValue
-		if gctx != nil {
-			metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
-			metricAttrs = append(metricAttrs, gctx.metricAttrs...)
-		}
-		metricAttrs = append(metricAttrs, rpcStatusAttr)
 		// Allocate vararg slice once.
-		recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
+		var recordOpts []metric.RecordOption
+		if gctx != nil {
+			recordOpts = []metric.RecordOption{metric.WithAttributeSet(gctx.metricAttrs), metric.WithAttributes(rpcStatusAttr)}
+		} else {
+			recordOpts = []metric.RecordOption{metric.WithAttributes(rpcStatusAttr)}
+		}
 
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		// Measure right before calling Record() to capture as much elapsed time as possible.
