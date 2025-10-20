@@ -26,10 +26,11 @@ import (
 type gRPCContextKey struct{}
 
 type gRPCContext struct {
-	inMessages  int64
-	outMessages int64
-	metricAttrs attribute.Set
-	record      bool
+	inMessages    int64
+	outMessages   int64
+	metricAttrs   []attribute.KeyValue
+	metricAttrSet attribute.Set
+	record        bool
 }
 
 type serverHandler struct {
@@ -133,9 +134,10 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 
 	gctx := gRPCContext{
-		metricAttrs: attribute.NewSet(append(attrs, h.MetricAttributes...)...),
+		metricAttrs: append(attrs, h.MetricAttributes...),
 		record:      record,
 	}
+	gctx.metricAttrSet = attribute.NewSet(gctx.metricAttrs...)
 
 	return context.WithValue(ctx, gRPCContextKey{}, &gctx)
 }
@@ -234,9 +236,10 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 
 	gctx := gRPCContext{
-		metricAttrs: attribute.NewSet(append(attrs, h.MetricAttributes...)...),
+		metricAttrs: append(attrs, h.MetricAttributes...),
 		record:      record,
 	}
+	gctx.metricAttrSet = attribute.NewSet(gctx.metricAttrs...)
 
 	return inject(context.WithValue(ctx, gRPCContextKey{}, &gctx), h.Propagators)
 }
@@ -292,7 +295,7 @@ func (c *config) handleRPC(
 	case *stats.InPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.inMessages, 1)
-			inSize.RecordSet(ctx, int64(rs.Length), gctx.metricAttrs)
+			inSize.RecordSet(ctx, int64(rs.Length), gctx.metricAttrSet)
 		}
 
 		if c.ReceivedEvent && span.IsRecording() {
@@ -308,7 +311,7 @@ func (c *config) handleRPC(
 	case *stats.OutPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.outMessages, 1)
-			outSize.RecordSet(ctx, int64(rs.Length), gctx.metricAttrs)
+			outSize.RecordSet(ctx, int64(rs.Length), gctx.metricAttrSet)
 		}
 
 		if c.SentEvent && span.IsRecording() {
@@ -347,14 +350,18 @@ func (c *config) handleRPC(
 			span.End()
 		}
 
-		// Allocate vararg slice once.
-		var recordOpts []metric.RecordOption
+		var metricAttrs []attribute.KeyValue
 		if gctx != nil {
-			recordOpts = []metric.RecordOption{metric.WithAttributeSet(gctx.metricAttrs), metric.WithAttributes(rpcStatusAttr)}
-		} else {
-			recordOpts = []metric.RecordOption{metric.WithAttributes(rpcStatusAttr)}
+			// Don't use gctx.metricAttrSet here, because it requires passing
+			// multiple RecordOptions, which would call metric.mergeSets and
+			// allocate a new set for each Record call.
+			metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
+			metricAttrs = append(metricAttrs, gctx.metricAttrs...)
 		}
-
+		metricAttrs = append(metricAttrs, rpcStatusAttr)
+		// Allocate vararg slice once.
+		// recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
+		recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		// Measure right before calling Record() to capture as much elapsed time as possible.
 		elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Millisecond)
