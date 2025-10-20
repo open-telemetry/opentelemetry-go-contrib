@@ -33,6 +33,12 @@ func TestUnmarshalCardinalityLimits(t *testing.T) {
 			yamlConfig: []byte("{}"),
 		},
 		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("counter: !!str 2000"),
+			wantErr:    "unmarshaling error cardinality_limit",
+		},
+		{
 			name:       "invalid counter zero",
 			jsonConfig: []byte(`{"counter":0}`),
 			yamlConfig: []byte("counter: 0"),
@@ -171,6 +177,12 @@ func TestUnmarshalSpanLimits(t *testing.T) {
 			name:       "valid empty",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("attribute_count_limit: !!str 2000"),
+			wantErr:    "unmarshaling error span_limit",
 		},
 		{
 			name:       "invalid attribute_count_limit negative",
