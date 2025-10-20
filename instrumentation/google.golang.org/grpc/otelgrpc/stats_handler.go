@@ -360,8 +360,8 @@ func (c *config) handleRPC(
 		}
 		metricAttrs = append(metricAttrs, rpcStatusAttr)
 		// Allocate vararg slice once.
-		// recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
 		recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
+
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		// Measure right before calling Record() to capture as much elapsed time as possible.
 		elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Millisecond)
