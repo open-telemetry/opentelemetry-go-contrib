@@ -3,14 +3,17 @@
 
 package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
-import "encoding/json"
+import (
+	"encoding/json"
+	"errors"
+)
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *CardinalityLimits) UnmarshalJSON(value []byte) error {
 	type Plain CardinalityLimits
 	var plain Plain
 	if err := json.Unmarshal(value, &plain); err != nil {
-		return err
+		return errors.Join(errors.New("unmarshaling error cardinality_limit"))
 	}
 	if err := validateCardinalityLimits((*CardinalityLimits)(&plain)); err != nil {
 		return err
@@ -24,7 +27,7 @@ func (j *SpanLimits) UnmarshalJSON(value []byte) error {
 	type Plain SpanLimits
 	var plain Plain
 	if err := json.Unmarshal(value, &plain); err != nil {
-		return err
+		return errors.Join(errors.New("unmarshaling error span_limit"), err)
 	}
 	if err := validateSpanLimits((*SpanLimits)(&plain)); err != nil {
 		return err
