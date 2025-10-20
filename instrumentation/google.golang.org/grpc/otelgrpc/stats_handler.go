@@ -39,8 +39,8 @@ type serverHandler struct {
 	tracer trace.Tracer
 
 	duration rpcconv.ServerDuration
-	inSize   rpcconv.ServerRequestSize
-	outSize  rpcconv.ServerResponseSize
+	inSize   int64Hist
+	outSize  int64Hist
 	inMsg    rpcconv.ServerRequestsPerRPC
 	outMsg   rpcconv.ServerResponsesPerRPC
 }
@@ -162,8 +162,8 @@ type clientHandler struct {
 	tracer trace.Tracer
 
 	duration rpcconv.ClientDuration
-	inSize   rpcconv.ClientResponseSize
-	outSize  rpcconv.ClientRequestSize
+	inSize   int64Hist
+	outSize  int64Hist
 	inMsg    rpcconv.ClientResponsesPerRPC
 	outMsg   rpcconv.ClientRequestsPerRPC
 }
