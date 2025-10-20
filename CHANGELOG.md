@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - `ParseYAML` in `go.opentelemetry.io/contrib/otelconf` now supports environment variables substitution in the format `${[env:]VAR_NAME[:-defaultvalue]}`. (#6215)
+- Introduce v1.0.0-rc.2 model in `go.opentelemetry.io/contrib/otelconf`. (#8031)
 
 ### Removed
 
