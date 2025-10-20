@@ -111,9 +111,12 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 
 	if record {
+		// Make a new slice to avoid aliasing into the same attrs slice used by metrics.
+		spanAttributes := make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
+		spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
 		opts := []trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindServer),
-			trace.WithAttributes(append(attrs, h.SpanAttributes...)...),
+			trace.WithAttributes(spanAttributes...),
 		}
 		if h.PublicEndpoint || (h.PublicEndpointFn != nil && h.PublicEndpointFn(ctx, info)) {
 			opts = append(opts, trace.WithNewRoot())
@@ -129,11 +132,8 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		)
 	}
 
-	// Make a new slice to avoid aliasing into the same attrs slice used by traces.
-	metricAttrs := make([]attribute.KeyValue, 0, len(attrs)+len(h.MetricAttributes))
-	metricAttrs = append(append(metricAttrs, attrs...), h.MetricAttributes...)
 	gctx := gRPCContext{
-		metricAttrs: attribute.NewSet(metricAttrs...),
+		metricAttrs: attribute.NewSet(append(attrs, h.MetricAttributes...)...),
 		record:      record,
 	}
 
@@ -222,19 +222,19 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 
 	if record {
+		// Make a new slice to avoid aliasing into the same attrs slice used by metrics.
+		spanAttributes := make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
+		spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
 		ctx, _ = h.tracer.Start(
 			ctx,
 			name,
 			trace.WithSpanKind(trace.SpanKindClient),
-			trace.WithAttributes(append(attrs, h.SpanAttributes...)...),
+			trace.WithAttributes(spanAttributes...),
 		)
 	}
 
-	// Make a new slice to avoid aliasing into the same attrs slice used by traces.
-	metricAttrs := make([]attribute.KeyValue, 0, len(attrs)+len(h.MetricAttributes))
-	metricAttrs = append(append(metricAttrs, attrs...), h.MetricAttributes...)
 	gctx := gRPCContext{
-		metricAttrs: attribute.NewSet(metricAttrs...),
+		metricAttrs: attribute.NewSet(append(attrs, h.MetricAttributes...)...),
 		record:      record,
 	}
 
