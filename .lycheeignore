@@ -6,3 +6,4 @@ localhost:14250
 file:///var/log/logs.jsonl
 file:///var/log/metrics.jsonl
 file:///var/log/traces.jsonl
+file:///path/to/file.jsonl
