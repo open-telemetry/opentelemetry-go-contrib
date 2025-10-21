@@ -28,7 +28,7 @@ const (
 
 // Middleware returns echo middleware which will trace incoming requests.
 func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
-	cfg := config{OnError: DefaultOnError}
+	cfg := config{OnError: defaultOnError}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
