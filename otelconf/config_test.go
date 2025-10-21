@@ -10,6 +10,51 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+func TestUnmarshalTextMapPropagator(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		yamlConfig []byte
+		jsonConfig []byte
+		wantErr    string
+	}{
+		{
+			name:       "valid with b3 propagator",
+			jsonConfig: []byte(`{"b3":{}}`),
+			yamlConfig: []byte("b3: {}\n"),
+		},
+		{
+			name:       "valid with all propagators nil",
+			jsonConfig: []byte(`{"b3":null,"b3multi":null,"baggage":null,"jaeger":null,"ottrace":null,"tracecontext":null}`),
+			yamlConfig: []byte("b3:\nb3multi:\nbaggage:\njaeger:\nottrace:\ntracecontext:\n"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{"b3":2000}`),
+			yamlConfig: []byte("b3: !!str str"),
+			wantErr:    "unmarshaling error TextMapPropagator",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			tmp := TextMapPropagator{}
+			err := tmp.UnmarshalJSON(tt.jsonConfig)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+			tmp = TextMapPropagator{}
+			err = yaml.Unmarshal(tt.yamlConfig, &tmp)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.wantErr)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
