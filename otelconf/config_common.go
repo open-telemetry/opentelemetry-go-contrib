@@ -9,8 +9,10 @@ import (
 )
 
 var (
-	errUnmarshalingCardinalityLimits = errors.New("unmarshaling cardinality_limit")
-	errUnmarshalingSpanLimits        = errors.New("unmarshaling span_limit")
+	errUnmarshalingCardinalityLimits       = errors.New("unmarshaling cardinality_limit")
+	errUnmarshalingSpanLimits              = errors.New("unmarshaling span_limit")
+	errUnmarshalingBatchLogRecordProcessor = errors.New("unmarshaling BatchLogRecordProcessor")
+	errUnmarshalingBatchSpanProcessor      = errors.New("unmarshaling BatchSpanProcessor")
 )
 
 type errBound struct {
@@ -31,6 +33,22 @@ func (e *errBound) Is(target error) bool {
 	return e.Field == t.Field && e.Bound == t.Bound && e.Op == t.Op
 }
 
+type errRequiredExporter struct {
+	Object string
+}
+
+func (e *errRequiredExporter) Error() string {
+	return fmt.Sprintf("field exporter in %s: required", e.Object)
+}
+
+func (e *errRequiredExporter) Is(target error) bool {
+	t, ok := target.(*errRequiredExporter)
+	if !ok {
+		return false
+	}
+	return e.Object == t.Object
+}
+
 // newErrGreaterOrEqualZero creates a new error indicating that the field must be greater than
 // or equal to zero.
 func newErrGreaterOrEqualZero(field string) error {
@@ -41,6 +59,45 @@ func newErrGreaterOrEqualZero(field string) error {
 // than zero.
 func newErrGreaterThanZero(field string) error {
 	return &errBound{Field: field, Bound: 0, Op: ">"}
+}
+
+// newErrRequiredExporter creates a new error indicating that the exporter field is required.
+func newErrRequiredExporter(object string) error {
+	return &errRequiredExporter{Object: object}
+}
+
+// validateBatchLogRecordProcessor handles validation for BatchLogRecordProcessor.
+func validateBatchLogRecordProcessor(plain *BatchLogRecordProcessor) error {
+	if plain.ExportTimeout != nil && 0 > *plain.ExportTimeout {
+		return newErrGreaterOrEqualZero("export_timeout")
+	}
+	if plain.MaxExportBatchSize != nil && 0 >= *plain.MaxExportBatchSize {
+		return newErrGreaterThanZero("max_export_batch_size")
+	}
+	if plain.MaxQueueSize != nil && 0 >= *plain.MaxQueueSize {
+		return newErrGreaterThanZero("max_queue_size")
+	}
+	if plain.ScheduleDelay != nil && 0 > *plain.ScheduleDelay {
+		return newErrGreaterOrEqualZero("schedule_delay")
+	}
+	return nil
+}
+
+// validateBatchSpanProcessor handles validation for BatchSpanProcessor.
+func validateBatchSpanProcessor(plain *BatchSpanProcessor) error {
+	if plain.ExportTimeout != nil && 0 > *plain.ExportTimeout {
+		return newErrGreaterOrEqualZero("export_timeout")
+	}
+	if plain.MaxExportBatchSize != nil && 0 >= *plain.MaxExportBatchSize {
+		return newErrGreaterThanZero("max_export_batch_size")
+	}
+	if plain.MaxQueueSize != nil && 0 >= *plain.MaxQueueSize {
+		return newErrGreaterThanZero("max_queue_size")
+	}
+	if plain.ScheduleDelay != nil && 0 > *plain.ScheduleDelay {
+		return newErrGreaterOrEqualZero("schedule_delay")
+	}
+	return nil
 }
 
 // validateCardinalityLimits handles validation for CardinalityLimits.

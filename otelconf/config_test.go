@@ -10,6 +10,182 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		yamlConfig []byte
+		jsonConfig []byte
+		wantErrT   error
+	}{
+		{
+			name:       "valid with console exporter",
+			jsonConfig: []byte(`{"exporter":{"console":{}}}`),
+			yamlConfig: []byte("exporter:\n  console: {}"),
+		},
+		{
+			name:       "valid with all fields positive",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":5000,"max_export_batch_size":512,"max_queue_size":2048,"schedule_delay":1000}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 5000\nmax_export_batch_size: 512\nmax_queue_size: 2048\nschedule_delay: 1000"),
+		},
+		{
+			name:       "valid with zero export_timeout",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 0"),
+		},
+		{
+			name:       "valid with zero schedule_delay",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"schedule_delay":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nschedule_delay: 0"),
+		},
+		{
+			name:       "missing required exporter field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequiredExporter("BatchLogRecordProcessor"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: !!str str"),
+			wantErrT:   errUnmarshalingBatchLogRecordProcessor,
+		},
+		{
+			name:       "invalid export_timeout negative",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":-1}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("export_timeout"),
+		},
+		{
+			name:       "invalid max_export_batch_size zero",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"max_export_batch_size":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nmax_export_batch_size: 0"),
+			wantErrT:   newErrGreaterThanZero("max_export_batch_size"),
+		},
+		{
+			name:       "invalid max_export_batch_size negative",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"max_export_batch_size":-1}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nmax_export_batch_size: -1"),
+			wantErrT:   newErrGreaterThanZero("max_export_batch_size"),
+		},
+		{
+			name:       "invalid max_queue_size zero",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"max_queue_size":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nmax_queue_size: 0"),
+			wantErrT:   newErrGreaterThanZero("max_queue_size"),
+		},
+		{
+			name:       "invalid max_queue_size negative",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"max_queue_size":-1}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nmax_queue_size: -1"),
+			wantErrT:   newErrGreaterThanZero("max_queue_size"),
+		},
+		{
+			name:       "invalid schedule_delay negative",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"schedule_delay":-1}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nschedule_delay: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("schedule_delay"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := BatchLogRecordProcessor{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+
+			cl = BatchLogRecordProcessor{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+		})
+	}
+}
+
+func TestUnmarshalBatchSpanProcessor(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		yamlConfig []byte
+		jsonConfig []byte
+		wantErrT   error
+	}{
+		{
+			name:       "valid with console exporter",
+			jsonConfig: []byte(`{"exporter":{"console":{}}}`),
+			yamlConfig: []byte("exporter:\n  console: {}"),
+		},
+		{
+			name:       "valid with all fields positive",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":5000,"max_export_batch_size":512,"max_queue_size":2048,"schedule_delay":1000}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 5000\nmax_export_batch_size: 512\nmax_queue_size: 2048\nschedule_delay: 1000"),
+		},
+		{
+			name:       "valid with zero export_timeout",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 0"),
+		},
+		{
+			name:       "valid with zero schedule_delay",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"schedule_delay":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nschedule_delay: 0"),
+		},
+		{
+			name:       "missing required exporter field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequiredExporter("BatchSpanProcessor"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: !!str str"),
+			wantErrT:   errUnmarshalingBatchSpanProcessor,
+		},
+		{
+			name:       "invalid export_timeout negative",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":-1}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("export_timeout"),
+		},
+		{
+			name:       "invalid max_export_batch_size zero",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"max_export_batch_size":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nmax_export_batch_size: 0"),
+			wantErrT:   newErrGreaterThanZero("max_export_batch_size"),
+		},
+		{
+			name:       "invalid max_export_batch_size negative",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"max_export_batch_size":-1}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nmax_export_batch_size: -1"),
+			wantErrT:   newErrGreaterThanZero("max_export_batch_size"),
+		},
+		{
+			name:       "invalid max_queue_size zero",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"max_queue_size":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nmax_queue_size: 0"),
+			wantErrT:   newErrGreaterThanZero("max_queue_size"),
+		},
+		{
+			name:       "invalid max_queue_size negative",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"max_queue_size":-1}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nmax_queue_size: -1"),
+			wantErrT:   newErrGreaterThanZero("max_queue_size"),
+		},
+		{
+			name:       "invalid schedule_delay negative",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"schedule_delay":-1}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nschedule_delay: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("schedule_delay"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := BatchSpanProcessor{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+
+			cl = BatchSpanProcessor{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+		})
+	}
+}
+
 func TestUnmarshalCardinalityLimits(t *testing.T) {
 	for _, tt := range []struct {
 		name       string

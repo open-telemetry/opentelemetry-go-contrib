@@ -9,6 +9,48 @@ import (
 )
 
 // UnmarshalJSON implements json.Unmarshaler.
+func (j *BatchLogRecordProcessor) UnmarshalJSON(b []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(errUnmarshalingBatchLogRecordProcessor, err)
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return newErrRequiredExporter("BatchLogRecordProcessor")
+	}
+	type Plain BatchLogRecordProcessor
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return errors.Join(errUnmarshalingBatchLogRecordProcessor, err)
+	}
+	if err := validateBatchLogRecordProcessor((*BatchLogRecordProcessor)(&plain)); err != nil {
+		return err
+	}
+	*j = BatchLogRecordProcessor(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(errUnmarshalingBatchSpanProcessor, err)
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return newErrRequiredExporter("BatchSpanProcessor")
+	}
+	type Plain BatchSpanProcessor
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return errors.Join(errUnmarshalingBatchSpanProcessor, err)
+	}
+	if err := validateBatchSpanProcessor((*BatchSpanProcessor)(&plain)); err != nil {
+		return err
+	}
+	*j = BatchSpanProcessor(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *CardinalityLimits) UnmarshalJSON(value []byte) error {
 	type Plain CardinalityLimits
 	var plain Plain

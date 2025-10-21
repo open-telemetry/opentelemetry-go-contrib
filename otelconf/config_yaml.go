@@ -10,6 +10,48 @@ import (
 )
 
 // UnmarshalYAML implements yaml.Unmarshaler.
+func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return errors.Join(errUnmarshalingBatchLogRecordProcessor, err)
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return newErrRequiredExporter("BatchLogRecordProcessor")
+	}
+	type Plain BatchLogRecordProcessor
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(errUnmarshalingBatchLogRecordProcessor, err)
+	}
+	if err := validateBatchLogRecordProcessor((*BatchLogRecordProcessor)(&plain)); err != nil {
+		return err
+	}
+	*j = BatchLogRecordProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return errors.Join(errUnmarshalingBatchSpanProcessor, err)
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return newErrRequiredExporter("BatchSpanProcessor")
+	}
+	type Plain BatchSpanProcessor
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(errUnmarshalingBatchSpanProcessor, err)
+	}
+	if err := validateBatchSpanProcessor((*BatchSpanProcessor)(&plain)); err != nil {
+		return err
+	}
+	*j = BatchSpanProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *CardinalityLimits) UnmarshalYAML(node *yaml.Node) error {
 	type Plain CardinalityLimits
 	var plain Plain
