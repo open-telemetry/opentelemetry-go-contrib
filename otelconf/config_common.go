@@ -5,6 +5,40 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import "fmt"
 
+// validateBatchLogRecordProcessor handles validation for BatchLogRecordProcessor.
+func validateBatchLogRecordProcessor(plain *BatchLogRecordProcessor) error {
+	if plain.ExportTimeout != nil && 0 > *plain.ExportTimeout {
+		return fmt.Errorf("field %s: must be >= %v", "export_timeout", 0)
+	}
+	if plain.MaxExportBatchSize != nil && 0 >= *plain.MaxExportBatchSize {
+		return fmt.Errorf("field %s: must be > %v", "max_export_batch_size", 0)
+	}
+	if plain.MaxQueueSize != nil && 0 >= *plain.MaxQueueSize {
+		return fmt.Errorf("field %s: must be > %v", "max_queue_size", 0)
+	}
+	if plain.ScheduleDelay != nil && 0 > *plain.ScheduleDelay {
+		return fmt.Errorf("field %s: must be >= %v", "schedule_delay", 0)
+	}
+	return nil
+}
+
+// validateBatchSpanProcessor handles validation for BatchSpanProcessor.
+func validateBatchSpanProcessor(plain *BatchSpanProcessor) error {
+	if plain.ExportTimeout != nil && 0 > *plain.ExportTimeout {
+		return fmt.Errorf("field %s: must be >= %v", "export_timeout", 0)
+	}
+	if plain.MaxExportBatchSize != nil && 0 >= *plain.MaxExportBatchSize {
+		return fmt.Errorf("field %s: must be > %v", "max_export_batch_size", 0)
+	}
+	if plain.MaxQueueSize != nil && 0 >= *plain.MaxQueueSize {
+		return fmt.Errorf("field %s: must be > %v", "max_queue_size", 0)
+	}
+	if plain.ScheduleDelay != nil && 0 > *plain.ScheduleDelay {
+		return fmt.Errorf("field %s: must be >= %v", "schedule_delay", 0)
+	}
+	return nil
+}
+
 // validateCardinalityLimits handles validation for CardinalityLimits.
 func validateCardinalityLimits(plain *CardinalityLimits) error {
 	if plain.Counter != nil && 0 >= *plain.Counter {
