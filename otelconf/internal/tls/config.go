@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package provides functionality to translate configuration options into tls.Config.
 package tls // import "go.opentelemetry.io/contrib/otelconf/internal/tls"
 
 import (
