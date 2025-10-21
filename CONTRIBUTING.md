@@ -138,7 +138,7 @@ For more information about the triager role, see the [community repository](http
 - [Aaron Clawson](https://github.com/MadVikingGod)
 - [Anthony Mirabella](https://github.com/Aneurysm9)
 - [Chester Cheung](https://github.com/hanyuancheung)
-- [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
+- [Cheng-Zhen Yang](https://github.com/scorpionknifes)
 - [Evan Torrie](https://github.com/evantorrie)
 - [Gustavo Silva Paiva](https://github.com/paivagustavo)
 - [Josh MacDonald](https://github.com/jmacd)
