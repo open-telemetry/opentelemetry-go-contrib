@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package contains function to translate name value pairs into
+// attribute.KeyValue.
 package kv // import "go.opentelemetry.io/contrib/otelconf/internal/kv"
 
 import (
