@@ -97,6 +97,22 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(errors.New("unmarshaling error TextMapPropagator"))
+	}
+	type Plain TextMapPropagator
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return errors.Join(errors.New("unmarshaling error TextMapPropagator"))
+	}
+	unmarshalTextMapPropagatorTypes(raw, (*TextMapPropagator)(&plain))
+	*j = TextMapPropagator(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *BatchLogRecordProcessor) UnmarshalJSON(b []byte) error {
 	type Plain BatchLogRecordProcessor
 	type shadow struct {

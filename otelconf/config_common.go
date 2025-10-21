@@ -91,6 +91,34 @@ func validatePeriodicMetricReader(plain *PeriodicMetricReader) error {
 	return nil
 }
 
+// unmarshalTextMapPropagatorTypes handles all propagator type unmarshaling.
+func unmarshalTextMapPropagatorTypes(raw map[string]any, plain *TextMapPropagator) {
+	// the value for b3 is nillable, if so, set it here
+	if v, ok := raw["b3"]; ok && v == nil {
+		plain.B3 = B3Propagator{}
+	}
+	// the value for b3multi is nillable, if so, set it here
+	if v, ok := raw["b3multi"]; ok && v == nil {
+		plain.B3Multi = B3MultiPropagator{}
+	}
+	// the value for baggage is nillable, if so, set it here
+	if v, ok := raw["baggage"]; ok && v == nil {
+		plain.Baggage = BaggagePropagator{}
+	}
+	// the value for jaeger is nillable, if so, set it here
+	if v, ok := raw["jaeger"]; ok && v == nil {
+		plain.Jaeger = JaegerPropagator{}
+	}
+	// the value for ottrace is nillable, if so, set it here
+	if v, ok := raw["ottrace"]; ok && v == nil {
+		plain.Ottrace = OpenTracingPropagator{}
+	}
+	// the value for tracecontext is nillable, if so, set it here
+	if v, ok := raw["tracecontext"]; ok && v == nil {
+		plain.Tracecontext = TraceContextPropagator{}
+	}
+}
+
 // validateBatchLogRecordProcessor handles validation for BatchLogRecordProcessor.
 func validateBatchLogRecordProcessor(plain *BatchLogRecordProcessor) error {
 	if plain.ExportTimeout != nil && 0 > *plain.ExportTimeout {

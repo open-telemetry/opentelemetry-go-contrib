@@ -70,6 +70,22 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
+func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return errors.Join(errors.New("unmarshaling error TextMapPropagator"))
+	}
+	type Plain TextMapPropagator
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(errors.New("unmarshaling error TextMapPropagator"))
+	}
+	unmarshalTextMapPropagatorTypes(raw, (*TextMapPropagator)(&plain))
+	*j = TextMapPropagator(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 	if !hasYAMLMapKey(node, "exporter") {
 		return newErrRequiredExporter(j)
