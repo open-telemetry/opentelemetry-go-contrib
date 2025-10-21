@@ -4,9 +4,10 @@
 package otelconf // import "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 
 import (
-	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
 
 func newResource(res *Resource) *resource.Resource {
