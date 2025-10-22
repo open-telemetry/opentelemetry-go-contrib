@@ -31,43 +31,43 @@ func (e *errBound) Is(target error) bool {
 	return e.Field == t.Field && e.Bound == t.Bound && e.Op == t.Op
 }
 
-// newErrMin creates a new error indicating that the field must be greater than
-// or equal to the bound.
-func newErrMin(field string, bound int) error {
-	return &errBound{Field: field, Bound: bound, Op: ">="}
+// newErrGreaterOrEqualZero creates a new error indicating that the field must be greater than
+// or equal to zero.
+func newErrGreaterOrEqualZero(field string) error {
+	return &errBound{Field: field, Bound: 0, Op: ">="}
 }
 
-// newErrExclMin creates a new error indicating that the field must be greater
-// than the bound.
-func newErrExclMin(field string, bound int) error {
-	return &errBound{Field: field, Bound: bound, Op: ">"}
+// newErrGreaterThanZero creates a new error indicating that the field must be greater
+// than zero.
+func newErrGreaterThanZero(field string) error {
+	return &errBound{Field: field, Bound: 0, Op: ">"}
 }
 
 // validateCardinalityLimits handles validation for CardinalityLimits.
 func validateCardinalityLimits(plain *CardinalityLimits) error {
 	if plain.Counter != nil && 0 >= *plain.Counter {
-		return newErrExclMin("counter", 0)
+		return newErrGreaterThanZero("counter")
 	}
 	if plain.Default != nil && 0 >= *plain.Default {
-		return newErrExclMin("default", 0)
+		return newErrGreaterThanZero("default")
 	}
 	if plain.Gauge != nil && 0 >= *plain.Gauge {
-		return newErrExclMin("gauge", 0)
+		return newErrGreaterThanZero("gauge")
 	}
 	if plain.Histogram != nil && 0 >= *plain.Histogram {
-		return newErrExclMin("histogram", 0)
+		return newErrGreaterThanZero("histogram")
 	}
 	if plain.ObservableCounter != nil && 0 >= *plain.ObservableCounter {
-		return newErrExclMin("observable_counter", 0)
+		return newErrGreaterThanZero("observable_counter")
 	}
 	if plain.ObservableGauge != nil && 0 >= *plain.ObservableGauge {
-		return newErrExclMin("observable_gauge", 0)
+		return newErrGreaterThanZero("observable_gauge")
 	}
 	if plain.ObservableUpDownCounter != nil && 0 >= *plain.ObservableUpDownCounter {
-		return newErrExclMin("observable_up_down_counter", 0)
+		return newErrGreaterThanZero("observable_up_down_counter")
 	}
 	if plain.UpDownCounter != nil && 0 >= *plain.UpDownCounter {
-		return newErrExclMin("up_down_counter", 0)
+		return newErrGreaterThanZero("up_down_counter")
 	}
 	return nil
 }
@@ -75,22 +75,22 @@ func validateCardinalityLimits(plain *CardinalityLimits) error {
 // validateSpanLimits handles validation for SpanLimits.
 func validateSpanLimits(plain *SpanLimits) error {
 	if plain.AttributeCountLimit != nil && 0 > *plain.AttributeCountLimit {
-		return newErrMin("attribute_count_limit", 0)
+		return newErrGreaterOrEqualZero("attribute_count_limit")
 	}
 	if plain.AttributeValueLengthLimit != nil && 0 > *plain.AttributeValueLengthLimit {
-		return newErrMin("attribute_value_length_limit", 0)
+		return newErrGreaterOrEqualZero("attribute_value_length_limit")
 	}
 	if plain.EventAttributeCountLimit != nil && 0 > *plain.EventAttributeCountLimit {
-		return newErrMin("event_attribute_count_limit", 0)
+		return newErrGreaterOrEqualZero("event_attribute_count_limit")
 	}
 	if plain.EventCountLimit != nil && 0 > *plain.EventCountLimit {
-		return newErrMin("event_count_limit", 0)
+		return newErrGreaterOrEqualZero("event_count_limit")
 	}
 	if plain.LinkAttributeCountLimit != nil && 0 > *plain.LinkAttributeCountLimit {
-		return newErrMin("link_attribute_count_limit", 0)
+		return newErrGreaterOrEqualZero("link_attribute_count_limit")
 	}
 	if plain.LinkCountLimit != nil && 0 > *plain.LinkCountLimit {
-		return newErrMin("link_count_limit", 0)
+		return newErrGreaterOrEqualZero("link_count_limit")
 	}
 	return nil
 }
