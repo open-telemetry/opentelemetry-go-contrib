@@ -381,17 +381,17 @@ func TestWithOnError(t *testing.T) {
 	tests := []struct {
 		name              string
 		opt               Option
-		errorHandlerCalls int
+		wantHandlerCalled int
 	}{
 		{
 			name:              "without WithOnError option (default)",
 			opt:               nil,
-			errorHandlerCalls: 2,
+			wantHandlerCalled: 2,
 		},
 		{
 			name:              "nil WithOnError option",
 			opt:               WithOnError(nil),
-			errorHandlerCalls: 1,
+			wantHandlerCalled: 1,
 		},
 		{
 			name: "custom WithOnError with c.Error call",
@@ -399,14 +399,14 @@ func TestWithOnError(t *testing.T) {
 				err = fmt.Errorf("call from OnError: %w", err)
 				c.Error(err)
 			}),
-			errorHandlerCalls: 2,
+			wantHandlerCalled: 2,
 		},
 		{
 			name: "custom onError without c.Error call",
 			opt: WithOnError(func(_ echo.Context, err error) {
 				t.Logf("Inside custom OnError: %v", err)
 			}),
-			errorHandlerCalls: 1,
+			wantHandlerCalled: 1,
 		},
 	}
 
@@ -435,7 +435,7 @@ func TestWithOnError(t *testing.T) {
 
 			router.ServeHTTP(w, r)
 			assert.Equal(t, http.StatusTeapot, w.Result().StatusCode, "should call the 'ping' handler")
-			assert.Equal(t, tt.errorHandlerCalls, handlerCalled, "handler called times mismatch")
+			assert.Equal(t, tt.wantHandlerCalled, handlerCalled, "handler called times mismatch")
 		})
 	}
 }

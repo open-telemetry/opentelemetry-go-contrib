@@ -113,7 +113,7 @@ func WithEchoMetricAttributeFn(f EchoMetricAttributeFn) Option {
 // To fix this, check response commitment status (c.Response().Committed) before writing to it.
 func WithOnError(fn func(echo.Context, error)) Option {
 	if fn == nil {
-		fn = func(_ echo.Context, _ error) {}
+		fn = func(echo.Context, error) {}
 	}
 
 	return optionFunc(func(cfg *config) {

@@ -28,7 +28,7 @@ const (
 
 // Middleware returns echo middleware which will trace incoming requests.
 func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
-	cfg := config{OnError: defaultOnError}
+	cfg := config{}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
@@ -47,6 +47,9 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 	}
 	if cfg.Skipper == nil {
 		cfg.Skipper = middleware.DefaultSkipper
+	}
+	if cfg.OnError == nil {
+		cfg.OnError = defaultOnError
 	}
 
 	meter := cfg.MeterProvider.Meter(
