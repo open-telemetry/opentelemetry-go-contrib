@@ -130,7 +130,6 @@ For more information about the approver role, see the [community repository](htt
 ### Triagers
 
 - [Alex Kats](https://github.com/akats7), Capital One
-- [Cheng-Zhen Yang](https://github.com/scorpionknifes), Independent
 
 For more information about the triager role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#triager).
 
@@ -139,6 +138,7 @@ For more information about the triager role, see the [community repository](http
 - [Aaron Clawson](https://github.com/MadVikingGod)
 - [Anthony Mirabella](https://github.com/Aneurysm9)
 - [Chester Cheung](https://github.com/hanyuancheung)
+- [Cheng-Zhen Yang](https://github.com/scorpionknifes)
 - [Evan Torrie](https://github.com/evantorrie)
 - [Gustavo Silva Paiva](https://github.com/paivagustavo)
 - [Josh MacDonald](https://github.com/jmacd)
