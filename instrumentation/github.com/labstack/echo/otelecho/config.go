@@ -25,6 +25,8 @@ type config struct {
 	OnError               func(echo.Context, error)
 }
 
+// defaultOnError is the default function called when an error occurs during request processing.
+// Note: it makes the global error handler run twice.
 var defaultOnError = func(c echo.Context, err error) { c.Error(err) }
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
