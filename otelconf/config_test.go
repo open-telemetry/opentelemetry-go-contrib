@@ -6,7 +6,7 @@ package otelconf
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -15,7 +15,7 @@ func TestUnmarshalCardinalityLimits(t *testing.T) {
 		name       string
 		yamlConfig []byte
 		jsonConfig []byte
-		wantErr    string
+		wantErrT   error
 	}{
 		{
 			name:       "valid with all fields positive",
@@ -36,122 +36,113 @@ func TestUnmarshalCardinalityLimits(t *testing.T) {
 			name:       "invalid data",
 			jsonConfig: []byte(`{:2000}`),
 			yamlConfig: []byte("counter: !!str 2000"),
-			wantErr:    "unmarshaling error cardinality_limit",
+			wantErrT:   errUnmarshalingCardinalityLimits,
 		},
 		{
 			name:       "invalid counter zero",
 			jsonConfig: []byte(`{"counter":0}`),
 			yamlConfig: []byte("counter: 0"),
-			wantErr:    "field counter: must be > 0",
+			wantErrT:   newErrExclMin("counter", 0),
 		},
 		{
 			name:       "invalid counter negative",
 			jsonConfig: []byte(`{"counter":-1}`),
 			yamlConfig: []byte("counter: -1"),
-			wantErr:    "field counter: must be > 0",
+			wantErrT:   newErrExclMin("counter", 0),
 		},
 		{
 			name:       "invalid default zero",
 			jsonConfig: []byte(`{"default":0}`),
 			yamlConfig: []byte("default: 0"),
-			wantErr:    "field default: must be > 0",
+			wantErrT:   newErrExclMin("default", 0),
 		},
 		{
 			name:       "invalid default negative",
 			jsonConfig: []byte(`{"default":-1}`),
 			yamlConfig: []byte("default: -1"),
-			wantErr:    "field default: must be > 0",
+			wantErrT:   newErrExclMin("default", 0),
 		},
 		{
 			name:       "invalid gauge zero",
 			jsonConfig: []byte(`{"gauge":0}`),
 			yamlConfig: []byte("gauge: 0"),
-			wantErr:    "field gauge: must be > 0",
+			wantErrT:   newErrExclMin("gauge", 0),
 		},
 		{
 			name:       "invalid gauge negative",
 			jsonConfig: []byte(`{"gauge":-1}`),
 			yamlConfig: []byte("gauge: -1"),
-			wantErr:    "field gauge: must be > 0",
+			wantErrT:   newErrExclMin("gauge", 0),
 		},
 		{
 			name:       "invalid histogram zero",
 			jsonConfig: []byte(`{"histogram":0}`),
 			yamlConfig: []byte("histogram: 0"),
-			wantErr:    "field histogram: must be > 0",
+			wantErrT:   newErrExclMin("histogram", 0),
 		},
 		{
 			name:       "invalid histogram negative",
 			jsonConfig: []byte(`{"histogram":-1}`),
 			yamlConfig: []byte("histogram: -1"),
-			wantErr:    "field histogram: must be > 0",
+			wantErrT:   newErrExclMin("histogram", 0),
 		},
 		{
 			name:       "invalid observable_counter zero",
 			jsonConfig: []byte(`{"observable_counter":0}`),
 			yamlConfig: []byte("observable_counter: 0"),
-			wantErr:    "field observable_counter: must be > 0",
+			wantErrT:   newErrExclMin("observable_counter", 0),
 		},
 		{
 			name:       "invalid observable_counter negative",
 			jsonConfig: []byte(`{"observable_counter":-1}`),
 			yamlConfig: []byte("observable_counter: -1"),
-			wantErr:    "field observable_counter: must be > 0",
+			wantErrT:   newErrExclMin("observable_counter", 0),
 		},
 		{
 			name:       "invalid observable_gauge zero",
 			jsonConfig: []byte(`{"observable_gauge":0}`),
 			yamlConfig: []byte("observable_gauge: 0"),
-			wantErr:    "field observable_gauge: must be > 0",
+			wantErrT:   newErrExclMin("observable_gauge", 0),
 		},
 		{
 			name:       "invalid observable_gauge negative",
 			jsonConfig: []byte(`{"observable_gauge":-1}`),
 			yamlConfig: []byte("observable_gauge: -1"),
-			wantErr:    "field observable_gauge: must be > 0",
+			wantErrT:   newErrExclMin("observable_gauge", 0),
 		},
 		{
 			name:       "invalid observable_up_down_counter zero",
 			jsonConfig: []byte(`{"observable_up_down_counter":0}`),
 			yamlConfig: []byte("observable_up_down_counter: 0"),
-			wantErr:    "field observable_up_down_counter: must be > 0",
+			wantErrT:   newErrExclMin("observable_up_down_counter", 0),
 		},
 		{
 			name:       "invalid observable_up_down_counter negative",
 			jsonConfig: []byte(`{"observable_up_down_counter":-1}`),
 			yamlConfig: []byte("observable_up_down_counter: -1"),
-			wantErr:    "field observable_up_down_counter: must be > 0",
+			wantErrT:   newErrExclMin("observable_up_down_counter", 0),
 		},
 		{
 			name:       "invalid up_down_counter zero",
 			jsonConfig: []byte(`{"up_down_counter":0}`),
 			yamlConfig: []byte("up_down_counter: 0"),
-			wantErr:    "field up_down_counter: must be > 0",
+			wantErrT:   newErrExclMin("up_down_counter", 0),
 		},
 		{
 			name:       "invalid up_down_counter negative",
 			jsonConfig: []byte(`{"up_down_counter":-1}`),
 			yamlConfig: []byte("up_down_counter: -1"),
-			wantErr:    "field up_down_counter: must be > 0",
+			wantErrT:   newErrExclMin("up_down_counter", 0),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			cl := CardinalityLimits{}
 			err := cl.UnmarshalJSON(tt.jsonConfig)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
+			assert.ErrorIs(t, err, tt.wantErrT)
+
 			cl = CardinalityLimits{}
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
+			assert.ErrorIs(t, err, tt.wantErrT)
 		})
 	}
 }
@@ -161,7 +152,7 @@ func TestUnmarshalSpanLimits(t *testing.T) {
 		name       string
 		yamlConfig []byte
 		jsonConfig []byte
-		wantErr    string
+		wantErrT   error
 	}{
 		{
 			name:       "valid with all fields positive",
@@ -182,62 +173,53 @@ func TestUnmarshalSpanLimits(t *testing.T) {
 			name:       "invalid data",
 			jsonConfig: []byte(`{:2000}`),
 			yamlConfig: []byte("attribute_count_limit: !!str 2000"),
-			wantErr:    "unmarshaling error span_limit",
+			wantErrT:   errUnmarshalingSpanLimits,
 		},
 		{
 			name:       "invalid attribute_count_limit negative",
 			jsonConfig: []byte(`{"attribute_count_limit":-1}`),
 			yamlConfig: []byte("attribute_count_limit: -1"),
-			wantErr:    "field attribute_count_limit: must be >= 0",
+			wantErrT:   newErrMin("attribute_count_limit", 0),
 		},
 		{
 			name:       "invalid attribute_value_length_limit negative",
 			jsonConfig: []byte(`{"attribute_value_length_limit":-1}`),
 			yamlConfig: []byte("attribute_value_length_limit: -1"),
-			wantErr:    "field attribute_value_length_limit: must be >= 0",
+			wantErrT:   newErrMin("attribute_value_length_limit", 0),
 		},
 		{
 			name:       "invalid event_attribute_count_limit negative",
 			jsonConfig: []byte(`{"event_attribute_count_limit":-1}`),
 			yamlConfig: []byte("event_attribute_count_limit: -1"),
-			wantErr:    "field event_attribute_count_limit: must be >= 0",
+			wantErrT:   newErrMin("event_attribute_count_limit", 0),
 		},
 		{
 			name:       "invalid event_count_limit negative",
 			jsonConfig: []byte(`{"event_count_limit":-1}`),
 			yamlConfig: []byte("event_count_limit: -1"),
-			wantErr:    "field event_count_limit: must be >= 0",
+			wantErrT:   newErrMin("event_count_limit", 0),
 		},
 		{
 			name:       "invalid link_attribute_count_limit negative",
 			jsonConfig: []byte(`{"link_attribute_count_limit":-1}`),
 			yamlConfig: []byte("link_attribute_count_limit: -1"),
-			wantErr:    "field link_attribute_count_limit: must be >= 0",
+			wantErrT:   newErrMin("link_attribute_count_limit", 0),
 		},
 		{
 			name:       "invalid link_count_limit negative",
 			jsonConfig: []byte(`{"link_count_limit":-1}`),
 			yamlConfig: []byte("link_count_limit: -1"),
-			wantErr:    "field link_count_limit: must be >= 0",
+			wantErrT:   newErrMin("link_count_limit", 0),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			cl := SpanLimits{}
 			err := cl.UnmarshalJSON(tt.jsonConfig)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
+			assert.ErrorIs(t, err, tt.wantErrT)
+
 			cl = SpanLimits{}
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
+			assert.ErrorIs(t, err, tt.wantErrT)
 		})
 	}
 }

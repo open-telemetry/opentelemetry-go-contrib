@@ -13,7 +13,7 @@ func (j *CardinalityLimits) UnmarshalJSON(value []byte) error {
 	type Plain CardinalityLimits
 	var plain Plain
 	if err := json.Unmarshal(value, &plain); err != nil {
-		return errors.Join(errors.New("unmarshaling error cardinality_limit"))
+		return errors.Join(errUnmarshalingCardinalityLimits, err)
 	}
 	if err := validateCardinalityLimits((*CardinalityLimits)(&plain)); err != nil {
 		return err
@@ -27,7 +27,7 @@ func (j *SpanLimits) UnmarshalJSON(value []byte) error {
 	type Plain SpanLimits
 	var plain Plain
 	if err := json.Unmarshal(value, &plain); err != nil {
-		return errors.Join(errors.New("unmarshaling error span_limit"), err)
+		return errors.Join(errUnmarshalingSpanLimits, err)
 	}
 	if err := validateSpanLimits((*SpanLimits)(&plain)); err != nil {
 		return err
