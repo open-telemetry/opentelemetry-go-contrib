@@ -59,6 +59,7 @@ func main() {
 	helloHandler := func(w http.ResponseWriter, req *http.Request) {
 		ctx := req.Context()
 		span := trace.SpanFromContext(ctx)
+		defer span.End()
 		bag := baggage.FromContext(ctx)
 		span.AddEvent("handling this...", trace.WithAttributes(uk.String(bag.Member("username").Value())))
 
