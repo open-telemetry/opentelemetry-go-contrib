@@ -22,12 +22,8 @@ type config struct {
 	Skipper               middleware.Skipper
 	MetricAttributeFn     MetricAttributeFn
 	EchoMetricAttributeFn EchoMetricAttributeFn
-	OnError               func(echo.Context, error)
+	OnError               OnErrorFn
 }
-
-// defaultOnError is the default function called when an error occurs during request processing.
-// Note: it makes the global error handler run twice.
-var defaultOnError = func(c echo.Context, err error) { c.Error(err) }
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
 // and return them as a slice of attribute.KeyValue.
@@ -36,6 +32,13 @@ type MetricAttributeFn func(*http.Request) []attribute.KeyValue
 // EchoMetricAttributeFn is used to extract additional attributes from the echo.Context
 // and return them as a slice of attribute.KeyValue.
 type EchoMetricAttributeFn func(echo.Context) []attribute.KeyValue
+
+// OnErrorFn is used to specify how errors are handled in the middleware.
+type OnErrorFn func(echo.Context, error)
+
+// defaultOnError is the default function called when an error occurs during request processing.
+// Note: it makes the global error handler run twice.
+var defaultOnError = func(c echo.Context, err error) { c.Error(err) }
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -107,18 +110,15 @@ func WithEchoMetricAttributeFn(f EchoMetricAttributeFn) Option {
 }
 
 // WithOnError specifies a function that is called when an error occurs during request processing.
-// If nil is provided, it does nothing.
 //
 // WARNING: If the passed function doesn't call c.Error and the global HTTPErrorHandler modifies the response,
 // the tracing span can contain invalid data.
 // If it calls c.Error, HTTPErrorHandler will be executed twice, but the span will be correct.
 // To fix this, check response commitment status (c.Response().Committed) before writing to it.
-func WithOnError(fn func(echo.Context, error)) Option {
-	if fn == nil {
-		fn = func(echo.Context, error) {}
-	}
-
+func WithOnError(f OnErrorFn) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.OnError = fn
+		if f != nil {
+			cfg.OnError = f
+		}
 	})
 }
