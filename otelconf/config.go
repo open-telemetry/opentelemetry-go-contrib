@@ -6,11 +6,8 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf/v1.0.0-rc.1"
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
-	"os"
 
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log"
@@ -192,33 +189,6 @@ func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
 	}
 
 	return &cfg, nil
-}
-
-// createTLSConfig creates a tls.Config from certificate files.
-func createTLSConfig(caCertFile, clientCertFile, clientKeyFile *string) (*tls.Config, error) {
-	tlsConfig := &tls.Config{}
-	if caCertFile != nil {
-		caText, err := os.ReadFile(*caCertFile)
-		if err != nil {
-			return nil, err
-		}
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM(caText) {
-			return nil, errors.New("could not create certificate authority chain from certificate")
-		}
-		tlsConfig.RootCAs = certPool
-	}
-	if clientCertFile != nil {
-		if clientKeyFile == nil {
-			return nil, errors.New("client certificate was provided but no client key was provided")
-		}
-		clientCert, err := tls.LoadX509KeyPair(*clientCertFile, *clientKeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("could not use client certificate: %w", err)
-		}
-		tlsConfig.Certificates = []tls.Certificate{clientCert}
-	}
-	return tlsConfig, nil
 }
 
 // createHeadersConfig combines the two header config fields. Headers take precedence over headersList.
