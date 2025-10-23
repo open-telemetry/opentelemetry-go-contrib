@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	errUnmarshalingCardinalityLimits = errors.New("unmarshaling error cardinality_limit")
-	errUnmarshalingSpanLimits        = errors.New("unmarshaling error span_limit")
+	errUnmarshalingCardinalityLimits = errors.New("unmarshaling cardinality_limit")
+	errUnmarshalingSpanLimits        = errors.New("unmarshaling span_limit")
 )
 
 type errBound struct {
