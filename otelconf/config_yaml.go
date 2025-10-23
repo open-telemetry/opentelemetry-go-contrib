@@ -10,6 +10,63 @@ import (
 )
 
 // UnmarshalYAML implements yaml.Unmarshaler.
+func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	type Plain PushMetricExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	// console can be nil, must check and set here
+	if _, ok := raw["console"]; ok {
+		plain.Console = ConsoleExporter{}
+	}
+	*j = PushMetricExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	type Plain SpanExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	// console can be nil, must check and set here
+	if _, ok := raw["console"]; ok {
+		plain.Console = ConsoleExporter{}
+	}
+	*j = SpanExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	type Plain LogRecordExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	// console can be nil, must check and set here
+	if _, ok := raw["console"]; ok {
+		plain.Console = ConsoleExporter{}
+	}
+	*j = LogRecordExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
 	if err := node.Decode(&raw); err != nil {
@@ -48,6 +105,27 @@ func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	*j = BatchSpanProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *PeriodicMetricReader) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return errors.Join(errUnmarshalingPeriodicMetricReader, err)
+	}
+	if _, ok := raw["exporter"]; raw != nil && !ok {
+		return newErrRequiredExporter("PeriodicMetricReader")
+	}
+	type Plain PeriodicMetricReader
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(errUnmarshalingPeriodicMetricReader, err)
+	}
+	if err := validatePeriodicMetricReader((*PeriodicMetricReader)(&plain)); err != nil {
+		return err
+	}
+	*j = PeriodicMetricReader(plain)
 	return nil
 }
 

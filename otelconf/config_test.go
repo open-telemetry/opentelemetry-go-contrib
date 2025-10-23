@@ -186,6 +186,70 @@ func TestUnmarshalBatchSpanProcessor(t *testing.T) {
 	}
 }
 
+func TestUnmarshalPeriodicMetricReader(t *testing.T) {
+	for _, tt := range []struct {
+		name       string
+		yamlConfig []byte
+		jsonConfig []byte
+		wantErrT   error
+	}{
+		{
+			name:       "valid with console exporter",
+			jsonConfig: []byte(`{"exporter":{"console":{}}}`),
+			yamlConfig: []byte("exporter:\n  console: {}"),
+		},
+		{
+			name:       "valid with all fields positive",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"timeout":5000,"interval":1000}`),
+			yamlConfig: []byte("exporter:\n  console: {}\ntimeout: 5000\ninterval: 1000"),
+		},
+		{
+			name:       "valid with zero export_timeout",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 0"),
+		},
+		{
+			name:       "valid with zero schedule_delay",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"schedule_delay":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\nschedule_delay: 0"),
+		},
+		{
+			name:       "missing required exporter field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequiredExporter("PeriodicMetricReader"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("exporter:\n  console: {}\ntimeout: !!str str"),
+			wantErrT:   errUnmarshalingPeriodicMetricReader,
+		},
+		{
+			name:       "invalid timeout negative",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"timeout":-1}`),
+			yamlConfig: []byte("exporter:\n  console: {}\ntimeout: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("timeout"),
+		},
+		{
+			name:       "invalid interval negative",
+			jsonConfig: []byte(`{"exporter":{"console":{}},"interval":-1}`),
+			yamlConfig: []byte("exporter:\n  console: {}\ninterval: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("interval"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			pmr := PeriodicMetricReader{}
+			err := pmr.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+
+			pmr = PeriodicMetricReader{}
+			err = yaml.Unmarshal(tt.yamlConfig, &pmr)
+			assert.ErrorIs(t, err, tt.wantErrT)
+		})
+	}
+}
+
 func TestUnmarshalCardinalityLimits(t *testing.T) {
 	for _, tt := range []struct {
 		name       string

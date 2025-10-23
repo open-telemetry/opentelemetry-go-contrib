@@ -13,6 +13,7 @@ var (
 	errUnmarshalingSpanLimits              = errors.New("unmarshaling span_limit")
 	errUnmarshalingBatchLogRecordProcessor = errors.New("unmarshaling BatchLogRecordProcessor")
 	errUnmarshalingBatchSpanProcessor      = errors.New("unmarshaling BatchSpanProcessor")
+	errUnmarshalingPeriodicMetricReader    = errors.New("unmarshaling PeriodicMetricReader")
 )
 
 type errBound struct {
@@ -64,6 +65,17 @@ func newErrGreaterThanZero(field string) error {
 // newErrRequiredExporter creates a new error indicating that the exporter field is required.
 func newErrRequiredExporter(object string) error {
 	return &errRequiredExporter{Object: object}
+}
+
+// validatePeriodicMetricReader handles validation for PeriodicMetricReader.
+func validatePeriodicMetricReader(plain *PeriodicMetricReader) error {
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return newErrGreaterOrEqualZero("timeout")
+	}
+	if plain.Interval != nil && 0 > *plain.Interval {
+		return newErrGreaterOrEqualZero("interval")
+	}
+	return nil
 }
 
 // validateBatchLogRecordProcessor handles validation for BatchLogRecordProcessor.
