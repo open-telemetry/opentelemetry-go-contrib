@@ -31,6 +31,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"google.golang.org/grpc/credentials"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/tls"
 )
 
 var zeroScope instrumentation.Scope
@@ -208,7 +210,7 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPHttpMetricExpor
 		}
 	}
 
-	tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
+	tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -274,7 +276,7 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPGrpcMetricExpor
 	}
 
 	if otlpConfig.CertificateFile != nil || otlpConfig.ClientCertificateFile != nil || otlpConfig.ClientKeyFile != nil {
-		tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
+		tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 		if err != nil {
 			return nil, err
 		}

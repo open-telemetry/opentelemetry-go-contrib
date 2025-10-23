@@ -18,6 +18,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/grpc/credentials"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/tls"
 )
 
 var errInvalidSamplerConfiguration = errors.New("invalid sampler configuration")
@@ -239,7 +241,7 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLPGrpcExporter) (sd
 	}
 
 	if otlpConfig.CertificateFile != nil || otlpConfig.ClientCertificateFile != nil || otlpConfig.ClientKeyFile != nil {
-		tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
+		tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 		if err != nil {
 			return nil, err
 		}
@@ -287,7 +289,7 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sd
 		opts = append(opts, otlptracehttp.WithHeaders(headersConfig))
 	}
 
-	tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
+	tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 	if err != nil {
 		return nil, err
 	}

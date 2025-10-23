@@ -18,6 +18,8 @@ import (
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"google.golang.org/grpc/credentials"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/tls"
 )
 
 func loggerProvider(cfg configOptions, res *resource.Resource) (log.LoggerProvider, shutdownFunc, error) {
@@ -179,7 +181,7 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sdk
 		opts = append(opts, otlploghttp.WithHeaders(headersConfig))
 	}
 
-	tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
+	tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 	if err != nil {
 		return nil, err
 	}
@@ -232,7 +234,7 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLPGrpcExporter) (sdk
 	}
 
 	if otlpConfig.CertificateFile != nil || otlpConfig.ClientCertificateFile != nil || otlpConfig.ClientKeyFile != nil {
-		tlsConfig, err := createTLSConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
+		tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
 		if err != nil {
 			return nil, err
 		}
