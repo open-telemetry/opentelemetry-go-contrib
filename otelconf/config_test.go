@@ -26,6 +26,36 @@ func TestUnmarshalPeriodicMetricReaderWithConsoleExporter(t *testing.T) {
 	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
 }
 
+func TestUnmarshalBatchSpanProcessorWithConsoleExporter(t *testing.T) {
+	cl := BatchSpanProcessor{}
+	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":{}}}`)))
+	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
+	cl = BatchSpanProcessor{}
+	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":null}}`)))
+	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
+	cl = BatchSpanProcessor{}
+	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: {}"), &cl))
+	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
+	cl = BatchSpanProcessor{}
+	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: \n"), &cl))
+	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
+}
+
+func TestUnmarshalBatchLogRecordProcessorWithConsoleExporter(t *testing.T) {
+	cl := BatchLogRecordProcessor{}
+	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":{}}}`)))
+	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
+	cl = BatchLogRecordProcessor{}
+	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":null}}`)))
+	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
+	cl = BatchLogRecordProcessor{}
+	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: {}"), &cl))
+	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
+	cl = BatchLogRecordProcessor{}
+	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: \n"), &cl))
+	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
+}
+
 func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
 	cl := PushMetricExporter{}
 	err := cl.UnmarshalJSON([]byte(`{:2000}`))
