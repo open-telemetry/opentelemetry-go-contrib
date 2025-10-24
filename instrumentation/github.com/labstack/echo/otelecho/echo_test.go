@@ -372,11 +372,6 @@ func TestWithEchoMetricAttributeFn(t *testing.T) {
 	assert.True(t, foundPath, "echo path attribute should be found")
 }
 
-// TestWithOnError verifies middleware error handling behavior:
-// - Default: calls global handler twice (middleware + echo framework)
-// - WithOnError(nil): default behavior (2 handler calls)
-// - Custom with c.Error(): calls custom handler, then global handler (2x total)
-// - Custom without c.Error(): only custom handler called (1x total)
 func TestWithOnError(t *testing.T) {
 	tests := []struct {
 		name              string
