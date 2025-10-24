@@ -111,7 +111,7 @@ func WithEchoMetricAttributeFn(f EchoMetricAttributeFn) Option {
 
 // WithOnError specifies a function that is called when an error occurs during request processing.
 //
-// WARNING: If the passed function doesn't call c.Error and the global HTTPErrorHandler modifies the response,
+// WARNING: If the passed function doesn't call `c.Error` and the global HTTPErrorHandler modifies the response,
 // the tracing span can contain invalid data.
 // If it calls c.Error, HTTPErrorHandler will be executed twice, but the span will be correct.
 // To fix this, check response commitment status (c.Response().Committed) before writing to it.
