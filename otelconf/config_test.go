@@ -246,12 +246,12 @@ func TestUnmarshalPeriodicMetricReader(t *testing.T) {
 			yamlConfig: []byte("exporter:\n  console: {}\ntimeout: 5000\ninterval: 1000"),
 		},
 		{
-			name:       "valid with zero export_timeout",
+			name:       "valid with zero timeout",
 			jsonConfig: []byte(`{"exporter":{"console":{}},"timeout":0}`),
 			yamlConfig: []byte("exporter:\n  console: {}\ntimeout: 0"),
 		},
 		{
-			name:       "valid with zero schedule_delay",
+			name:       "valid with zero interval",
 			jsonConfig: []byte(`{"exporter":{"console":{}},"interval":0}`),
 			yamlConfig: []byte("exporter:\n  console: {}\ninterval: 0"),
 		},
