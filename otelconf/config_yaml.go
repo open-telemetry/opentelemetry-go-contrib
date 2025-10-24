@@ -26,17 +26,13 @@ func hasYAMLMapKey(node *yaml.Node, key string) bool {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return errors.Join(newErrUnmarshal("PushMetricExporter"), err)
-	}
 	type Plain PushMetricExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal("PushMetricExporter"), err)
 	}
 	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
+	if hasYAMLMapKey(node, "console") && plain.Console == nil {
 		plain.Console = ConsoleExporter{}
 	}
 	*j = PushMetricExporter(plain)
@@ -45,17 +41,13 @@ func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return errors.Join(newErrUnmarshal("SpanExporter"), err)
-	}
 	type Plain SpanExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal("SpanExporter"), err)
 	}
 	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
+	if hasYAMLMapKey(node, "console") && plain.Console == nil {
 		plain.Console = ConsoleExporter{}
 	}
 	*j = SpanExporter(plain)
@@ -64,17 +56,13 @@ func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return errors.Join(newErrUnmarshal("LogRecordExporter"), err)
-	}
 	type Plain LogRecordExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal("LogRecordExporter"), err)
 	}
 	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
+	if hasYAMLMapKey(node, "console") && plain.Console == nil {
 		plain.Console = ConsoleExporter{}
 	}
 	*j = LogRecordExporter(plain)

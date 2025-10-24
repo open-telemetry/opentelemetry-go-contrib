@@ -15,7 +15,14 @@ func TestUnmarshalPeriodicMetricReaderWithConsoleExporter(t *testing.T) {
 	cl := PeriodicMetricReader{}
 	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":{}}}`)))
 	require.Equal(t, cl.Exporter.Console, ConsoleExporter{})
+	cl = PeriodicMetricReader{}
 	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":null}}`)))
+	require.Equal(t, cl.Exporter.Console, ConsoleExporter{})
+	cl = PeriodicMetricReader{}
+	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: {}"), &cl))
+	require.Equal(t, cl.Exporter.Console, ConsoleExporter{})
+	cl = PeriodicMetricReader{}
+	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: \n"), &cl))
 	require.Equal(t, cl.Exporter.Console, ConsoleExporter{})
 }
 
