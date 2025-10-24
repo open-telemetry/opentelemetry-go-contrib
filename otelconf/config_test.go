@@ -7,54 +7,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"go.yaml.in/yaml/v3"
 )
-
-func TestUnmarshalPeriodicMetricReaderWithConsoleExporter(t *testing.T) {
-	cl := PeriodicMetricReader{}
-	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":{}}}`)))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-	cl = PeriodicMetricReader{}
-	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":null}}`)))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-	cl = PeriodicMetricReader{}
-	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: {}"), &cl))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-	cl = PeriodicMetricReader{}
-	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: \n"), &cl))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-}
-
-func TestUnmarshalBatchSpanProcessorWithConsoleExporter(t *testing.T) {
-	cl := BatchSpanProcessor{}
-	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":{}}}`)))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-	cl = BatchSpanProcessor{}
-	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":null}}`)))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-	cl = BatchSpanProcessor{}
-	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: {}"), &cl))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-	cl = BatchSpanProcessor{}
-	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: \n"), &cl))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-}
-
-func TestUnmarshalBatchLogRecordProcessorWithConsoleExporter(t *testing.T) {
-	cl := BatchLogRecordProcessor{}
-	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":{}}}`)))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-	cl = BatchLogRecordProcessor{}
-	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":null}}`)))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-	cl = BatchLogRecordProcessor{}
-	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: {}"), &cl))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-	cl = BatchLogRecordProcessor{}
-	require.NoError(t, yaml.Unmarshal([]byte("exporter:\n  console: \n"), &cl))
-	require.Equal(t, ConsoleExporter{}, cl.Exporter.Console)
-}
 
 func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
 	cl := PushMetricExporter{}
@@ -100,30 +54,41 @@ func TestUnmarshalSpanExporterInvalidData(t *testing.T) {
 
 func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
 	for _, tt := range []struct {
-		name       string
-		yamlConfig []byte
-		jsonConfig []byte
-		wantErrT   error
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter LogRecordExporter
 	}{
 		{
-			name:       "valid with console exporter",
-			jsonConfig: []byte(`{"exporter":{"console":{}}}`),
-			yamlConfig: []byte("exporter:\n  console: {}"),
+			name:         "valid with console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":{}}}`),
+			yamlConfig:   []byte("exporter:\n  console: {}"),
+			wantExporter: LogRecordExporter{Console: ConsoleExporter{}},
 		},
 		{
-			name:       "valid with all fields positive",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":5000,"max_export_batch_size":512,"max_queue_size":2048,"schedule_delay":1000}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 5000\nmax_export_batch_size: 512\nmax_queue_size: 2048\nschedule_delay: 1000"),
+			name:         "valid with null console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":null}}`),
+			yamlConfig:   []byte("exporter:\n  console:\n"),
+			wantExporter: LogRecordExporter{Console: ConsoleExporter{}},
 		},
 		{
-			name:       "valid with zero export_timeout",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 0"),
+			name:         "valid with all fields positive",
+			jsonConfig:   []byte(`{"exporter":{"console":{}},"export_timeout":5000,"max_export_batch_size":512,"max_queue_size":2048,"schedule_delay":1000}`),
+			yamlConfig:   []byte("exporter:\n  console: {}\nexport_timeout: 5000\nmax_export_batch_size: 512\nmax_queue_size: 2048\nschedule_delay: 1000"),
+			wantExporter: LogRecordExporter{Console: ConsoleExporter{}},
 		},
 		{
-			name:       "valid with zero schedule_delay",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"schedule_delay":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nschedule_delay: 0"),
+			name:         "valid with zero export_timeout",
+			jsonConfig:   []byte(`{"exporter":{"console":{}},"export_timeout":0}`),
+			yamlConfig:   []byte("exporter:\n  console: {}\nexport_timeout: 0"),
+			wantExporter: LogRecordExporter{Console: ConsoleExporter{}},
+		},
+		{
+			name:         "valid with zero schedule_delay",
+			jsonConfig:   []byte(`{"exporter":{"console":{}},"schedule_delay":0}`),
+			yamlConfig:   []byte("exporter:\n  console: {}\nschedule_delay: 0"),
+			wantExporter: LogRecordExporter{Console: ConsoleExporter{}},
 		},
 		{
 			name:       "missing required exporter field",
@@ -178,40 +143,53 @@ func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
 			cl := BatchLogRecordProcessor{}
 			err := cl.UnmarshalJSON(tt.jsonConfig)
 			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
 
 			cl = BatchLogRecordProcessor{}
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
 			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
 		})
 	}
 }
 
 func TestUnmarshalBatchSpanProcessor(t *testing.T) {
 	for _, tt := range []struct {
-		name       string
-		yamlConfig []byte
-		jsonConfig []byte
-		wantErrT   error
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter SpanExporter
 	}{
 		{
-			name:       "valid with console exporter",
-			jsonConfig: []byte(`{"exporter":{"console":{}}}`),
-			yamlConfig: []byte("exporter:\n  console: {}"),
+			name:         "valid with null console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":null}}`),
+			yamlConfig:   []byte("exporter:\n  console:\n"),
+			wantExporter: SpanExporter{Console: ConsoleExporter{}},
 		},
 		{
-			name:       "valid with all fields positive",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":5000,"max_export_batch_size":512,"max_queue_size":2048,"schedule_delay":1000}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 5000\nmax_export_batch_size: 512\nmax_queue_size: 2048\nschedule_delay: 1000"),
+			name:         "valid with console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":{}}}`),
+			yamlConfig:   []byte("exporter:\n  console: {}"),
+			wantExporter: SpanExporter{Console: ConsoleExporter{}},
 		},
 		{
-			name:       "valid with zero export_timeout",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 0"),
+			name:         "valid with all fields positive",
+			jsonConfig:   []byte(`{"exporter":{"console":{}},"export_timeout":5000,"max_export_batch_size":512,"max_queue_size":2048,"schedule_delay":1000}`),
+			yamlConfig:   []byte("exporter:\n  console: {}\nexport_timeout: 5000\nmax_export_batch_size: 512\nmax_queue_size: 2048\nschedule_delay: 1000"),
+			wantExporter: SpanExporter{Console: ConsoleExporter{}},
 		},
 		{
-			name:       "valid with zero schedule_delay",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"schedule_delay":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nschedule_delay: 0"),
+			name:         "valid with zero export_timeout",
+			jsonConfig:   []byte(`{"exporter":{"console":{}},"export_timeout":0}`),
+			yamlConfig:   []byte("exporter:\n  console: {}\nexport_timeout: 0"),
+			wantExporter: SpanExporter{Console: ConsoleExporter{}},
+		},
+		{
+			name:         "valid with zero schedule_delay",
+			jsonConfig:   []byte(`{"exporter":{"console":{}},"schedule_delay":0}`),
+			yamlConfig:   []byte("exporter:\n  console: {}\nschedule_delay: 0"),
+			wantExporter: SpanExporter{Console: ConsoleExporter{}},
 		},
 		{
 			name:       "missing required exporter field",
@@ -266,40 +244,53 @@ func TestUnmarshalBatchSpanProcessor(t *testing.T) {
 			cl := BatchSpanProcessor{}
 			err := cl.UnmarshalJSON(tt.jsonConfig)
 			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
 
 			cl = BatchSpanProcessor{}
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
 			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
 		})
 	}
 }
 
 func TestUnmarshalPeriodicMetricReader(t *testing.T) {
 	for _, tt := range []struct {
-		name       string
-		yamlConfig []byte
-		jsonConfig []byte
-		wantErrT   error
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter PushMetricExporter
 	}{
 		{
-			name:       "valid with console exporter",
-			jsonConfig: []byte(`{"exporter":{"console":{}}}`),
-			yamlConfig: []byte("exporter:\n  console: {}"),
+			name:         "valid with null console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":null}}`),
+			yamlConfig:   []byte("exporter:\n  console:\n"),
+			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
 		},
 		{
-			name:       "valid with all fields positive",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"timeout":5000,"interval":1000}`),
-			yamlConfig: []byte("exporter:\n  console: {}\ntimeout: 5000\ninterval: 1000"),
+			name:         "valid with console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":{}}}`),
+			yamlConfig:   []byte("exporter:\n  console: {}"),
+			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
 		},
 		{
-			name:       "valid with zero timeout",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"timeout":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\ntimeout: 0"),
+			name:         "valid with all fields positive",
+			jsonConfig:   []byte(`{"exporter":{"console":{}},"timeout":5000,"interval":1000}`),
+			yamlConfig:   []byte("exporter:\n  console: {}\ntimeout: 5000\ninterval: 1000"),
+			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
 		},
 		{
-			name:       "valid with zero interval",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"interval":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\ninterval: 0"),
+			name:         "valid with zero timeout",
+			jsonConfig:   []byte(`{"exporter":{"console":{}},"timeout":0}`),
+			yamlConfig:   []byte("exporter:\n  console: {}\ntimeout: 0"),
+			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
+		},
+		{
+			name:         "valid with zero interval",
+			jsonConfig:   []byte(`{"exporter":{"console":{}},"interval":0}`),
+			yamlConfig:   []byte("exporter:\n  console: {}\ninterval: 0"),
+			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
 		},
 		{
 			name:       "missing required exporter field",
@@ -330,10 +321,12 @@ func TestUnmarshalPeriodicMetricReader(t *testing.T) {
 			pmr := PeriodicMetricReader{}
 			err := pmr.UnmarshalJSON(tt.jsonConfig)
 			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, pmr.Exporter)
 
 			pmr = PeriodicMetricReader{}
 			err = yaml.Unmarshal(tt.yamlConfig, &pmr)
 			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, pmr.Exporter)
 		})
 	}
 }
