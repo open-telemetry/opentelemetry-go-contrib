@@ -113,7 +113,7 @@ func WithEchoMetricAttributeFn(f EchoMetricAttributeFn) Option {
 //
 // WARNING: If the passed function doesn't call `c.Error` and the global HTTPErrorHandler modifies the response,
 // the tracing span can contain invalid data.
-// If it calls c.Error, HTTPErrorHandler will be executed twice, but the span will be correct.
+// If it calls `c.Error`, `HTTPErrorHandler` will be executed twice, but the span will have the actual response data.
 // To fix this, check response commitment status (c.Response().Committed) before writing to it.
 func WithOnError(f OnErrorFn) Option {
 	return optionFunc(func(cfg *config) {
