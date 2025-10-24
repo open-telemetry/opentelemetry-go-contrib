@@ -47,7 +47,7 @@ type errUnmarshal struct {
 }
 
 func (e *errUnmarshal) Error() string {
-	return fmt.Sprintf("unmarshal error in %s", reflect.TypeOf(e.Object))
+	return fmt.Sprintf("unmarshal error in %T", e.Object)
 }
 
 func (e *errUnmarshal) Is(target error) bool {
