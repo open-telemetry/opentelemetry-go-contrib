@@ -13,7 +13,7 @@ func (j *ConsoleExporter) UnmarshalJSON(b []byte) error {
 	type plain ConsoleExporter
 	var p plain
 	if err := json.Unmarshal(b, &p); err != nil {
-		return errors.Join(newErrUnmarshal("ConsoleExporter"), err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	// If key is present (even if empty object), ensure non-nil value.
 	if p == nil {
@@ -34,7 +34,7 @@ func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
 	}
 	var sh shadow
 	if err := json.Unmarshal(b, &sh); err != nil {
-		return errors.Join(newErrUnmarshal("PushMetricExporter"), err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 
 	if sh.Console != nil {
@@ -58,7 +58,7 @@ func (j *SpanExporter) UnmarshalJSON(b []byte) error {
 	}
 	var sh shadow
 	if err := json.Unmarshal(b, &sh); err != nil {
-		return errors.Join(newErrUnmarshal("SpanExporter"), err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 
 	if sh.Console != nil {
@@ -82,7 +82,7 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 	}
 	var sh shadow
 	if err := json.Unmarshal(b, &sh); err != nil {
-		return errors.Join(newErrUnmarshal("LogRecordExporter"), err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 
 	if sh.Console != nil {
@@ -105,10 +105,10 @@ func (j *BatchLogRecordProcessor) UnmarshalJSON(b []byte) error {
 	}
 	var sh shadow
 	if err := json.Unmarshal(b, &sh); err != nil {
-		return errors.Join(errUnmarshalingBatchLogRecordProcessor, err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	if sh.Exporter == nil {
-		return newErrRequiredExporter("BatchLogRecordProcessor")
+		return newErrRequiredExporter(j)
 	}
 	// Hydrate the exporter into the underlying field.
 	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
@@ -131,10 +131,10 @@ func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
 	}
 	var sh shadow
 	if err := json.Unmarshal(b, &sh); err != nil {
-		return errors.Join(errUnmarshalingBatchSpanProcessor, err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	if sh.Exporter == nil {
-		return newErrRequiredExporter("BatchSpanProcessor")
+		return newErrRequiredExporter(j)
 	}
 	// Hydrate the exporter into the underlying field.
 	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
@@ -157,10 +157,10 @@ func (j *PeriodicMetricReader) UnmarshalJSON(b []byte) error {
 	}
 	var sh shadow
 	if err := json.Unmarshal(b, &sh); err != nil {
-		return errors.Join(errUnmarshalingPeriodicMetricReader, err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	if sh.Exporter == nil {
-		return newErrRequiredExporter("PeriodicMetricReader")
+		return newErrRequiredExporter(j)
 	}
 	// Hydrate the exporter into the underlying field.
 	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
@@ -179,7 +179,7 @@ func (j *CardinalityLimits) UnmarshalJSON(value []byte) error {
 	type Plain CardinalityLimits
 	var plain Plain
 	if err := json.Unmarshal(value, &plain); err != nil {
-		return errors.Join(errUnmarshalingCardinalityLimits, err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	if err := validateCardinalityLimits((*CardinalityLimits)(&plain)); err != nil {
 		return err
@@ -193,7 +193,7 @@ func (j *SpanLimits) UnmarshalJSON(value []byte) error {
 	type Plain SpanLimits
 	var plain Plain
 	if err := json.Unmarshal(value, &plain); err != nil {
-		return errors.Join(errUnmarshalingSpanLimits, err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	if err := validateSpanLimits((*SpanLimits)(&plain)); err != nil {
 		return err

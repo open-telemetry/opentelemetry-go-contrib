@@ -13,43 +13,43 @@ import (
 func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
 	cl := PushMetricExporter{}
 	err := cl.UnmarshalJSON([]byte(`{:2000}`))
-	assert.ErrorIs(t, err, newErrUnmarshal("PushMetricExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal(&PushMetricExporter{}))
 
 	cl = PushMetricExporter{}
 	err = cl.UnmarshalJSON([]byte(`{"console":2000}`))
-	assert.ErrorIs(t, err, newErrUnmarshal("ConsoleExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal(&ConsoleExporter{}))
 
 	cl = PushMetricExporter{}
 	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)
-	assert.ErrorIs(t, err, newErrUnmarshal("PushMetricExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal(&PushMetricExporter{}))
 }
 
 func TestUnmarshalLogRecordExporterInvalidData(t *testing.T) {
 	cl := LogRecordExporter{}
 	err := cl.UnmarshalJSON([]byte(`{:2000}`))
-	assert.ErrorIs(t, err, newErrUnmarshal("LogRecordExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal(&LogRecordExporter{}))
 
 	cl = LogRecordExporter{}
 	err = cl.UnmarshalJSON([]byte(`{"console":2000}`))
-	assert.ErrorIs(t, err, newErrUnmarshal("ConsoleExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal(&ConsoleExporter{}))
 
 	cl = LogRecordExporter{}
 	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)
-	assert.ErrorIs(t, err, newErrUnmarshal("LogRecordExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal(&LogRecordExporter{}))
 }
 
 func TestUnmarshalSpanExporterInvalidData(t *testing.T) {
 	cl := SpanExporter{}
 	err := cl.UnmarshalJSON([]byte(`{:2000}`))
-	assert.ErrorIs(t, err, newErrUnmarshal("SpanExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal(&SpanExporter{}))
 
 	cl = SpanExporter{}
 	err = cl.UnmarshalJSON([]byte(`{"console":2000}`))
-	assert.ErrorIs(t, err, newErrUnmarshal("ConsoleExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal(&ConsoleExporter{}))
 
 	cl = SpanExporter{}
 	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)
-	assert.ErrorIs(t, err, newErrUnmarshal("SpanExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal(&SpanExporter{}))
 }
 
 func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
@@ -94,13 +94,13 @@ func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
 			name:       "missing required exporter field",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequiredExporter("BatchLogRecordProcessor"),
+			wantErrT:   newErrRequiredExporter(&BatchLogRecordProcessor{}),
 		},
 		{
 			name:       "invalid data",
 			jsonConfig: []byte(`{:2000}`),
 			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: !!str str"),
-			wantErrT:   errUnmarshalingBatchLogRecordProcessor,
+			wantErrT:   newErrUnmarshal(&BatchLogRecordProcessor{}),
 		},
 		{
 			name:       "invalid export_timeout negative",
@@ -195,13 +195,13 @@ func TestUnmarshalBatchSpanProcessor(t *testing.T) {
 			name:       "missing required exporter field",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequiredExporter("BatchSpanProcessor"),
+			wantErrT:   newErrRequiredExporter(&BatchSpanProcessor{}),
 		},
 		{
 			name:       "invalid data",
 			jsonConfig: []byte(`{:2000}`),
 			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: !!str str"),
-			wantErrT:   errUnmarshalingBatchSpanProcessor,
+			wantErrT:   newErrUnmarshal(&BatchSpanProcessor{}),
 		},
 		{
 			name:       "invalid export_timeout negative",
@@ -296,13 +296,13 @@ func TestUnmarshalPeriodicMetricReader(t *testing.T) {
 			name:       "missing required exporter field",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequiredExporter("PeriodicMetricReader"),
+			wantErrT:   newErrRequiredExporter(&PeriodicMetricReader{}),
 		},
 		{
 			name:       "invalid data",
 			jsonConfig: []byte(`{:2000}`),
 			yamlConfig: []byte("exporter:\n  console: {}\ntimeout: !!str str"),
-			wantErrT:   errUnmarshalingPeriodicMetricReader,
+			wantErrT:   newErrUnmarshal(&PeriodicMetricReader{}),
 		},
 		{
 			name:       "invalid timeout negative",
@@ -357,7 +357,7 @@ func TestUnmarshalCardinalityLimits(t *testing.T) {
 			name:       "invalid data",
 			jsonConfig: []byte(`{:2000}`),
 			yamlConfig: []byte("counter: !!str 2000"),
-			wantErrT:   errUnmarshalingCardinalityLimits,
+			wantErrT:   newErrUnmarshal(&CardinalityLimits{}),
 		},
 		{
 			name:       "invalid counter zero",
@@ -494,7 +494,7 @@ func TestUnmarshalSpanLimits(t *testing.T) {
 			name:       "invalid data",
 			jsonConfig: []byte(`{:2000}`),
 			yamlConfig: []byte("attribute_count_limit: !!str 2000"),
-			wantErrT:   errUnmarshalingSpanLimits,
+			wantErrT:   newErrUnmarshal(&SpanLimits{}),
 		},
 		{
 			name:       "invalid attribute_count_limit negative",

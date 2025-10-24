@@ -4,16 +4,8 @@
 package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import (
-	"errors"
 	"fmt"
-)
-
-var (
-	errUnmarshalingCardinalityLimits       = errors.New("unmarshaling cardinality_limit")
-	errUnmarshalingSpanLimits              = errors.New("unmarshaling span_limit")
-	errUnmarshalingBatchLogRecordProcessor = errors.New("unmarshaling BatchLogRecordProcessor")
-	errUnmarshalingBatchSpanProcessor      = errors.New("unmarshaling BatchSpanProcessor")
-	errUnmarshalingPeriodicMetricReader    = errors.New("unmarshaling PeriodicMetricReader")
+	"reflect"
 )
 
 type errBound struct {
@@ -35,11 +27,11 @@ func (e *errBound) Is(target error) bool {
 }
 
 type errRequiredExporter struct {
-	Object string
+	Object any
 }
 
 func (e *errRequiredExporter) Error() string {
-	return fmt.Sprintf("field exporter in %s: required", e.Object)
+	return fmt.Sprintf("field exporter in %s: required", reflect.TypeOf(e.Object))
 }
 
 func (e *errRequiredExporter) Is(target error) bool {
@@ -47,15 +39,15 @@ func (e *errRequiredExporter) Is(target error) bool {
 	if !ok {
 		return false
 	}
-	return e.Object == t.Object
+	return reflect.TypeOf(e.Object) == reflect.TypeOf(t.Object)
 }
 
 type errUnmarshal struct {
-	Object string
+	Object any
 }
 
 func (e *errUnmarshal) Error() string {
-	return "unmarshal error in" + e.Object
+	return fmt.Sprintf("unmarshal error in %s", reflect.TypeOf(e.Object))
 }
 
 func (e *errUnmarshal) Is(target error) bool {
@@ -63,7 +55,7 @@ func (e *errUnmarshal) Is(target error) bool {
 	if !ok {
 		return false
 	}
-	return e.Object == t.Object
+	return reflect.TypeOf(e.Object) == reflect.TypeOf(t.Object)
 }
 
 // newErrGreaterOrEqualZero creates a new error indicating that the field must be greater than
@@ -79,12 +71,12 @@ func newErrGreaterThanZero(field string) error {
 }
 
 // newErrRequiredExporter creates a new error indicating that the exporter field is required.
-func newErrRequiredExporter(object string) error {
+func newErrRequiredExporter(object any) error {
 	return &errRequiredExporter{Object: object}
 }
 
 // newErrUnmarshal creates a new error indicating that an error occurred during unmarshaling.
-func newErrUnmarshal(object string) error {
+func newErrUnmarshal(object any) error {
 	return &errUnmarshal{Object: object}
 }
 

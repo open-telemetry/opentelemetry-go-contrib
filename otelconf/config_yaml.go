@@ -29,7 +29,7 @@ func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	type Plain PushMetricExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
-		return errors.Join(newErrUnmarshal("PushMetricExporter"), err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	// console can be nil, must check and set here
 	if hasYAMLMapKey(node, "console") && plain.Console == nil {
@@ -44,7 +44,7 @@ func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
 	type Plain SpanExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
-		return errors.Join(newErrUnmarshal("SpanExporter"), err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	// console can be nil, must check and set here
 	if hasYAMLMapKey(node, "console") && plain.Console == nil {
@@ -59,7 +59,7 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 	type Plain LogRecordExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
-		return errors.Join(newErrUnmarshal("LogRecordExporter"), err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	// console can be nil, must check and set here
 	if hasYAMLMapKey(node, "console") && plain.Console == nil {
@@ -72,12 +72,12 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 	if !hasYAMLMapKey(node, "exporter") {
-		return newErrRequiredExporter("BatchLogRecordProcessor")
+		return newErrRequiredExporter(j)
 	}
 	type Plain BatchLogRecordProcessor
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
-		return errors.Join(errUnmarshalingBatchLogRecordProcessor, err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	if err := validateBatchLogRecordProcessor((*BatchLogRecordProcessor)(&plain)); err != nil {
 		return err
@@ -89,12 +89,12 @@ func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 	if !hasYAMLMapKey(node, "exporter") {
-		return newErrRequiredExporter("BatchSpanProcessor")
+		return newErrRequiredExporter(j)
 	}
 	type Plain BatchSpanProcessor
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
-		return errors.Join(errUnmarshalingBatchSpanProcessor, err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	if err := validateBatchSpanProcessor((*BatchSpanProcessor)(&plain)); err != nil {
 		return err
@@ -106,12 +106,12 @@ func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PeriodicMetricReader) UnmarshalYAML(node *yaml.Node) error {
 	if !hasYAMLMapKey(node, "exporter") {
-		return newErrRequiredExporter("PeriodicMetricReader")
+		return newErrRequiredExporter(j)
 	}
 	type Plain PeriodicMetricReader
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
-		return errors.Join(errUnmarshalingPeriodicMetricReader, err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	if err := validatePeriodicMetricReader((*PeriodicMetricReader)(&plain)); err != nil {
 		return err
@@ -125,7 +125,7 @@ func (j *CardinalityLimits) UnmarshalYAML(node *yaml.Node) error {
 	type Plain CardinalityLimits
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
-		return errors.Join(errUnmarshalingCardinalityLimits, err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	if err := validateCardinalityLimits((*CardinalityLimits)(&plain)); err != nil {
 		return err
@@ -139,7 +139,7 @@ func (j *SpanLimits) UnmarshalYAML(node *yaml.Node) error {
 	type Plain SpanLimits
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
-		return errors.Join(errUnmarshalingSpanLimits, err)
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	if err := validateSpanLimits((*SpanLimits)(&plain)); err != nil {
 		return err
