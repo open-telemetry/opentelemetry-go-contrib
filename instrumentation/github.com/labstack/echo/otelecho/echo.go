@@ -48,6 +48,9 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 	if cfg.Skipper == nil {
 		cfg.Skipper = middleware.DefaultSkipper
 	}
+	if cfg.OnError == nil {
+		cfg.OnError = defaultOnError
+	}
 
 	meter := cfg.MeterProvider.Meter(
 		ScopeName,
@@ -93,8 +96,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 			err := next(c)
 			if err != nil {
 				span.SetAttributes(attribute.String("echo.error", err.Error()))
-				// invokes the registered HTTP error handler
-				c.Error(err)
+				cfg.OnError(c, err)
 			}
 
 			status := c.Response().Status
