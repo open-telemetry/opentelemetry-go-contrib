@@ -12,12 +12,12 @@ import (
 func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
+		return errors.Join(newErrUnmarshal("PushMetricExporter"), err)
 	}
 	type Plain PushMetricExporter
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
+		return errors.Join(newErrUnmarshal("PushMetricExporter"), err)
 	}
 	// console can be nil, must check and set here
 	if _, ok := raw["console"]; ok {
@@ -31,12 +31,12 @@ func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
 func (j *SpanExporter) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
+		return errors.Join(newErrUnmarshal("SpanExporter"), err)
 	}
 	type Plain SpanExporter
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
+		return errors.Join(newErrUnmarshal("SpanExporter"), err)
 	}
 	// console can be nil, must check and set here
 	if _, ok := raw["console"]; ok {
@@ -50,12 +50,12 @@ func (j *SpanExporter) UnmarshalJSON(b []byte) error {
 func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
+		return errors.Join(newErrUnmarshal("LogRecordExporter"), err)
 	}
 	type Plain LogRecordExporter
 	var plain Plain
 	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
+		return errors.Join(newErrUnmarshal("LogRecordExporter"), err)
 	}
 	// console can be nil, must check and set here
 	if _, ok := raw["console"]; ok {

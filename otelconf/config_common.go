@@ -50,6 +50,22 @@ func (e *errRequiredExporter) Is(target error) bool {
 	return e.Object == t.Object
 }
 
+type errUnmarshal struct {
+	Object string
+}
+
+func (e *errUnmarshal) Error() string {
+	return "unmarshal error in" + e.Object
+}
+
+func (e *errUnmarshal) Is(target error) bool {
+	t, ok := target.(*errUnmarshal)
+	if !ok {
+		return false
+	}
+	return e.Object == t.Object
+}
+
 // newErrGreaterOrEqualZero creates a new error indicating that the field must be greater than
 // or equal to zero.
 func newErrGreaterOrEqualZero(field string) error {
@@ -65,6 +81,11 @@ func newErrGreaterThanZero(field string) error {
 // newErrRequiredExporter creates a new error indicating that the exporter field is required.
 func newErrRequiredExporter(object string) error {
 	return &errRequiredExporter{Object: object}
+}
+
+// newErrUnmarshal creates a new error indicating that an error occurred during unmarshaling.
+func newErrUnmarshal(object string) error {
+	return &errUnmarshal{Object: object}
 }
 
 // validatePeriodicMetricReader handles validation for PeriodicMetricReader.

@@ -10,6 +10,48 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
+	cl := PushMetricExporter{}
+	err := cl.UnmarshalJSON([]byte(`{:2000}`))
+	assert.ErrorIs(t, err, newErrUnmarshal("PushMetricExporter"))
+
+	cl = PushMetricExporter{}
+	err = cl.UnmarshalJSON([]byte(`{"console":2000}`))
+	assert.ErrorIs(t, err, newErrUnmarshal("PushMetricExporter"))
+
+	cl = PushMetricExporter{}
+	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)
+	assert.ErrorIs(t, err, newErrUnmarshal("PushMetricExporter"))
+}
+
+func TestUnmarshalLogRecordExporterInvalidData(t *testing.T) {
+	cl := LogRecordExporter{}
+	err := cl.UnmarshalJSON([]byte(`{:2000}`))
+	assert.ErrorIs(t, err, newErrUnmarshal("LogRecordExporter"))
+
+	cl = LogRecordExporter{}
+	err = cl.UnmarshalJSON([]byte(`{"console":2000}`))
+	assert.ErrorIs(t, err, newErrUnmarshal("LogRecordExporter"))
+
+	cl = LogRecordExporter{}
+	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)
+	assert.ErrorIs(t, err, newErrUnmarshal("LogRecordExporter"))
+}
+
+func TestUnmarshalSpanExporterInvalidData(t *testing.T) {
+	cl := SpanExporter{}
+	err := cl.UnmarshalJSON([]byte(`{:2000}`))
+	assert.ErrorIs(t, err, newErrUnmarshal("SpanExporter"))
+
+	cl = SpanExporter{}
+	err = cl.UnmarshalJSON([]byte(`{"console":2000}`))
+	assert.ErrorIs(t, err, newErrUnmarshal("SpanExporter"))
+
+	cl = SpanExporter{}
+	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)
+	assert.ErrorIs(t, err, newErrUnmarshal("SpanExporter"))
+}
+
 func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
