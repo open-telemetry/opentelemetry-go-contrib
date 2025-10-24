@@ -247,13 +247,13 @@ func TestUnmarshalPeriodicMetricReader(t *testing.T) {
 		},
 		{
 			name:       "valid with zero export_timeout",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 0"),
+			jsonConfig: []byte(`{"exporter":{"console":{}},"timeout":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\ntimeout: 0"),
 		},
 		{
 			name:       "valid with zero schedule_delay",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"schedule_delay":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nschedule_delay: 0"),
+			jsonConfig: []byte(`{"exporter":{"console":{}},"interval":0}`),
+			yamlConfig: []byte("exporter:\n  console: {}\ninterval: 0"),
 		},
 		{
 			name:       "missing required exporter field",
