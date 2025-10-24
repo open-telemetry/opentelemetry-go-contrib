@@ -371,3 +371,66 @@ func TestWithEchoMetricAttributeFn(t *testing.T) {
 	assert.True(t, foundID, "echo param id attribute should be found")
 	assert.True(t, foundPath, "echo path attribute should be found")
 }
+
+func TestWithOnError(t *testing.T) {
+	tests := []struct {
+		name              string
+		opt               Option
+		wantHandlerCalled int
+	}{
+		{
+			name:              "without WithOnError option (default)",
+			opt:               nil,
+			wantHandlerCalled: 2,
+		},
+		{
+			name:              "nil WithOnError option",
+			opt:               WithOnError(nil),
+			wantHandlerCalled: 2,
+		},
+		{
+			name: "custom WithOnError with c.Error call",
+			opt: WithOnError(func(c echo.Context, err error) {
+				err = fmt.Errorf("call from OnError: %w", err)
+				c.Error(err)
+			}),
+			wantHandlerCalled: 2,
+		},
+		{
+			name: "custom onError without c.Error call",
+			opt: WithOnError(func(_ echo.Context, err error) {
+				t.Logf("Inside custom OnError: %v", err)
+			}),
+			wantHandlerCalled: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := httptest.NewRequest("GET", "/ping", http.NoBody)
+			w := httptest.NewRecorder()
+
+			router := echo.New()
+			if tt.opt != nil {
+				router.Use(Middleware("foobar", tt.opt))
+			} else {
+				router.Use(Middleware("foobar"))
+			}
+
+			router.GET("/ping", func(_ echo.Context) error {
+				return assert.AnError
+			})
+
+			handlerCalled := 0
+			router.HTTPErrorHandler = func(err error, c echo.Context) {
+				handlerCalled++
+				assert.ErrorIs(t, err, assert.AnError, "test error is expected in error handler")
+				assert.NoError(t, c.NoContent(http.StatusTeapot))
+			}
+
+			router.ServeHTTP(w, r)
+			assert.Equal(t, http.StatusTeapot, w.Result().StatusCode, "should call the 'ping' handler")
+			assert.Equal(t, tt.wantHandlerCalled, handlerCalled, "handler called times mismatch")
+		})
+	}
+}
