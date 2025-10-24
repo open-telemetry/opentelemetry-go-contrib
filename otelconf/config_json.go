@@ -98,64 +98,79 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *BatchLogRecordProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
+	type Plain BatchLogRecordProcessor
+	type shadow struct {
+		Plain
+		Exporter json.RawMessage `json:"exporter"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
 		return errors.Join(errUnmarshalingBatchLogRecordProcessor, err)
 	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
+	if sh.Exporter == nil {
 		return newErrRequiredExporter("BatchLogRecordProcessor")
 	}
-	type Plain BatchLogRecordProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return errors.Join(errUnmarshalingBatchLogRecordProcessor, err)
-	}
-	if err := validateBatchLogRecordProcessor((*BatchLogRecordProcessor)(&plain)); err != nil {
+	// Hydrate the exporter into the underlying field.
+	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
 		return err
 	}
-	*j = BatchLogRecordProcessor(plain)
+	err := validateBatchLogRecordProcessor((*BatchLogRecordProcessor)(&sh.Plain))
+	if err != nil {
+		return err
+	}
+	*j = BatchLogRecordProcessor(sh.Plain)
 	return nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
+	type Plain BatchSpanProcessor
+	type shadow struct {
+		Plain
+		Exporter json.RawMessage `json:"exporter"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
 		return errors.Join(errUnmarshalingBatchSpanProcessor, err)
 	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
+	if sh.Exporter == nil {
 		return newErrRequiredExporter("BatchSpanProcessor")
 	}
-	type Plain BatchSpanProcessor
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return errors.Join(errUnmarshalingBatchSpanProcessor, err)
-	}
-	if err := validateBatchSpanProcessor((*BatchSpanProcessor)(&plain)); err != nil {
+	// Hydrate the exporter into the underlying field.
+	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
 		return err
 	}
-	*j = BatchSpanProcessor(plain)
+	err := validateBatchSpanProcessor((*BatchSpanProcessor)(&sh.Plain))
+	if err != nil {
+		return err
+	}
+	*j = BatchSpanProcessor(sh.Plain)
 	return nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *PeriodicMetricReader) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
+	type Plain PeriodicMetricReader
+	type shadow struct {
+		Plain
+		Exporter json.RawMessage `json:"exporter"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
 		return errors.Join(errUnmarshalingPeriodicMetricReader, err)
 	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
+	if sh.Exporter == nil {
 		return newErrRequiredExporter("PeriodicMetricReader")
 	}
-	type Plain PeriodicMetricReader
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return errors.Join(errUnmarshalingPeriodicMetricReader, err)
-	}
-	if err := validatePeriodicMetricReader((*PeriodicMetricReader)(&plain)); err != nil {
+	// Hydrate the exporter into the underlying field.
+	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
 		return err
 	}
-	*j = PeriodicMetricReader(plain)
+	err := validatePeriodicMetricReader((*PeriodicMetricReader)(&sh.Plain))
+	if err != nil {
+		return err
+	}
+	*j = PeriodicMetricReader(sh.Plain)
 	return nil
 }
 
