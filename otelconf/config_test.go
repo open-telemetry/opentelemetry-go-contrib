@@ -7,8 +7,17 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.yaml.in/yaml/v3"
 )
+
+func TestUnmarshalPeriodicMetricReaderWithConsoleExporter(t *testing.T) {
+	cl := PeriodicMetricReader{}
+	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":{}}}`)))
+	require.Equal(t, cl.Exporter.Console, ConsoleExporter{})
+	require.NoError(t, cl.UnmarshalJSON([]byte(`{"exporter":{"console":null}}`)))
+	require.Equal(t, cl.Exporter.Console, ConsoleExporter{})
+}
 
 func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
 	cl := PushMetricExporter{}
@@ -17,7 +26,7 @@ func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
 
 	cl = PushMetricExporter{}
 	err = cl.UnmarshalJSON([]byte(`{"console":2000}`))
-	assert.ErrorIs(t, err, newErrUnmarshal("PushMetricExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal("ConsoleExporter"))
 
 	cl = PushMetricExporter{}
 	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)
@@ -31,7 +40,7 @@ func TestUnmarshalLogRecordExporterInvalidData(t *testing.T) {
 
 	cl = LogRecordExporter{}
 	err = cl.UnmarshalJSON([]byte(`{"console":2000}`))
-	assert.ErrorIs(t, err, newErrUnmarshal("LogRecordExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal("ConsoleExporter"))
 
 	cl = LogRecordExporter{}
 	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)
@@ -45,7 +54,7 @@ func TestUnmarshalSpanExporterInvalidData(t *testing.T) {
 
 	cl = SpanExporter{}
 	err = cl.UnmarshalJSON([]byte(`{"console":2000}`))
-	assert.ErrorIs(t, err, newErrUnmarshal("SpanExporter"))
+	assert.ErrorIs(t, err, newErrUnmarshal("ConsoleExporter"))
 
 	cl = SpanExporter{}
 	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)

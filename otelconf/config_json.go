@@ -8,60 +8,90 @@ import (
 	"errors"
 )
 
+func (j *ConsoleExporter) UnmarshalJSON(b []byte) error {
+	type plain ConsoleExporter
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal("ConsoleExporter"), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = ConsoleExporter{}
+	} else {
+		*j = ConsoleExporter(p)
+	}
+	return nil
+}
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return errors.Join(newErrUnmarshal("PushMetricExporter"), err)
-	}
+	// Use a shadow struct with a RawMessage field to detect key presence.
 	type Plain PushMetricExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
+	type shadow struct {
+		Plain
+		Console json.RawMessage `json:"console"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
 		return errors.Join(newErrUnmarshal("PushMetricExporter"), err)
 	}
-	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
-		plain.Console = ConsoleExporter{}
+
+	if sh.Console != nil {
+		var c ConsoleExporter
+		if err := json.Unmarshal(sh.Console, &c); err != nil {
+			return err
+		}
+		sh.Plain.Console = c
 	}
-	*j = PushMetricExporter(plain)
+	*j = PushMetricExporter(sh.Plain)
 	return nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *SpanExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return errors.Join(newErrUnmarshal("SpanExporter"), err)
-	}
+	// Use a shadow struct with a RawMessage field to detect key presence.
 	type Plain SpanExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
+	type shadow struct {
+		Plain
+		Console json.RawMessage `json:"console"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
 		return errors.Join(newErrUnmarshal("SpanExporter"), err)
 	}
-	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
-		plain.Console = ConsoleExporter{}
+
+	if sh.Console != nil {
+		var c ConsoleExporter
+		if err := json.Unmarshal(sh.Console, &c); err != nil {
+			return err
+		}
+		sh.Plain.Console = c
 	}
-	*j = SpanExporter(plain)
+	*j = SpanExporter(sh.Plain)
 	return nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return errors.Join(newErrUnmarshal("LogRecordExporter"), err)
-	}
+	// Use a shadow struct with a RawMessage field to detect key presence.
 	type Plain LogRecordExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
+	type shadow struct {
+		Plain
+		Console json.RawMessage `json:"console"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
 		return errors.Join(newErrUnmarshal("LogRecordExporter"), err)
 	}
-	// console can be nil, must check and set here
-	if _, ok := raw["console"]; ok {
-		plain.Console = ConsoleExporter{}
+
+	if sh.Console != nil {
+		var c ConsoleExporter
+		if err := json.Unmarshal(sh.Console, &c); err != nil {
+			return err
+		}
+		sh.Plain.Console = c
 	}
-	*j = LogRecordExporter(plain)
+	*j = LogRecordExporter(sh.Plain)
 	return nil
 }
 
