@@ -9,6 +9,21 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
+// hasYAMLMapKey reports whether the provided mapping node contains the given
+// key. It assumes the node is a mapping node and performs a linear scan of its
+// key nodes.
+func hasYAMLMapKey(node *yaml.Node, key string) bool {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return false
+	}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Kind == yaml.ScalarNode && node.Content[i].Value == key {
+			return true
+		}
+	}
+	return false
+}
+
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
@@ -68,11 +83,7 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return errors.Join(errUnmarshalingBatchLogRecordProcessor, err)
-	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
+	if !hasYAMLMapKey(node, "exporter") {
 		return newErrRequiredExporter("BatchLogRecordProcessor")
 	}
 	type Plain BatchLogRecordProcessor
@@ -89,11 +100,7 @@ func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return errors.Join(errUnmarshalingBatchSpanProcessor, err)
-	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
+	if !hasYAMLMapKey(node, "exporter") {
 		return newErrRequiredExporter("BatchSpanProcessor")
 	}
 	type Plain BatchSpanProcessor
@@ -110,11 +117,7 @@ func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PeriodicMetricReader) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return errors.Join(errUnmarshalingPeriodicMetricReader, err)
-	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
+	if !hasYAMLMapKey(node, "exporter") {
 		return newErrRequiredExporter("PeriodicMetricReader")
 	}
 	type Plain PeriodicMetricReader
