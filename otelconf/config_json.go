@@ -8,6 +8,7 @@ import (
 	"errors"
 )
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *ConsoleExporter) UnmarshalJSON(b []byte) error {
 	type plain ConsoleExporter
 	var p plain
