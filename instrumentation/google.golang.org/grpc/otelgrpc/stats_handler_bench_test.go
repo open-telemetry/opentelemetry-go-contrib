@@ -10,6 +10,7 @@ import (
 	"time"
 
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/grpc/peer"
@@ -29,7 +30,7 @@ func benchmarkServerHandlerHandleRPC(b *testing.B, stat stats.RPCStats) {
 		WithTracerProvider(trace.NewTracerProvider(
 			trace.WithSampler(trace.AlwaysSample()),
 		)),
-		WithMeterProvider(metricnoop.NewMeterProvider()),
+		WithMeterProvider(metric.NewMeterProvider()),
 		WithMessageEvents(ReceivedEvents, SentEvents),
 	)
 	ctx := b.Context()
