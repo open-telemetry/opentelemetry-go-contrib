@@ -27,6 +27,7 @@ import (
 
 	jaeger_api_v2 "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -74,6 +75,7 @@ func TestProbabilisticSampler(t *testing.T) {
 	binary.BigEndian.PutUint64(traceID[8:], testMaxID-20)
 	result = sampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
 	assert.Equal(t, trace.RecordAndSample, result.Decision)
+	assert.Nil(t, result.Attributes)
 
 	t.Run("test_64bit_id", func(t *testing.T) {
 		binary.BigEndian.PutUint64(traceID[:8], math.MaxUint64)
@@ -114,6 +116,7 @@ func TestRateLimitingSampler(t *testing.T) {
 	sampler := newRateLimitingSampler(2)
 	result := sampler.ShouldSample(trace.SamplingParameters{Name: testOperationName})
 	assert.Equal(t, trace.RecordAndSample, result.Decision)
+	assert.Nil(t, result.Attributes)
 	result = sampler.ShouldSample(trace.SamplingParameters{Name: testOperationName})
 	assert.Equal(t, trace.RecordAndSample, result.Decision)
 	result = sampler.ShouldSample(trace.SamplingParameters{Name: testOperationName})
@@ -285,4 +288,89 @@ func TestMaxOperations(t *testing.T) {
 
 	result := sampler.ShouldSample(makeSamplingParameters(testMaxID-10, testFirstTimeOperationName))
 	assert.Equal(t, trace.RecordAndSample, result.Decision)
+}
+
+func TestWithAttributesOn(t *testing.T) {
+	t.Parallel()
+
+	t.Run("probabilistic", func(t *testing.T) {
+		t.Parallel()
+
+		var traceID oteltrace.TraceID
+		s := newProbabilisticSampler(0.5, withAttributesOn())
+		binary.BigEndian.PutUint64(traceID[:8], math.MaxUint64)
+		binary.BigEndian.PutUint64(traceID[8:], testMaxID+10)
+		result := s.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+		assert.Equal(t, trace.Drop, result.Decision)
+		assert.Nil(t, result.Attributes)
+
+		binary.BigEndian.PutUint64(traceID[8:], testMaxID-20)
+		result = s.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueProbabilistic), attribute.Float64(samplerParamKey, 0.5)}, result.Attributes)
+
+		s = newProbabilisticSampler(1.0, withAttributesOn())
+		result = s.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueProbabilistic), attribute.Float64(samplerParamKey, 1.0)}, result.Attributes)
+	})
+
+	t.Run("ratelimiting", func(t *testing.T) {
+		t.Parallel()
+
+		s := newRateLimitingSampler(2, withAttributesOn())
+		result := s.ShouldSample(trace.SamplingParameters{Name: testOperationName})
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		result = s.ShouldSample(trace.SamplingParameters{Name: testOperationName})
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueRateLimiting), attribute.Float64(samplerParamKey, 2)}, result.Attributes)
+		result = s.ShouldSample(trace.SamplingParameters{Name: testOperationName})
+		assert.Equal(t, trace.Drop, result.Decision)
+		assert.Nil(t, result.Attributes)
+
+		s = newRateLimitingSampler(0.1, withAttributesOn())
+		result = s.ShouldSample(trace.SamplingParameters{Name: testOperationName})
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueRateLimiting), attribute.Float64(samplerParamKey, 0.1)}, result.Attributes)
+		result = s.ShouldSample(trace.SamplingParameters{Name: testOperationName})
+		assert.Equal(t, trace.Drop, result.Decision)
+		assert.Nil(t, result.Attributes)
+	})
+
+	t.Run("per operation", func(t *testing.T) {
+		t.Parallel()
+
+		samplingRates := []*jaeger_api_v2.OperationSamplingStrategy{
+			{
+				Operation:             testOperationName,
+				ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{SamplingRate: testDefaultSamplingProbability},
+			},
+		}
+		strategies := &jaeger_api_v2.PerOperationSamplingStrategies{
+			DefaultSamplingProbability:       testDefaultSamplingProbability,
+			DefaultLowerBoundTracesPerSecond: 1.0,
+			PerOperationStrategies:           samplingRates,
+		}
+		s := newPerOperationSampler(perOperationSamplerParams{
+			MaxOperations: testDefaultMaxOperations,
+			Strategies:    strategies,
+		}, withAttributesOn())
+
+		result := s.ShouldSample(makeSamplingParameters(testMaxID+10, testOperationName))
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueRateLimiting), attribute.Float64(samplerParamKey, 1)}, result.Attributes)
+
+		result = s.ShouldSample(makeSamplingParameters(testMaxID-20, testOperationName))
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueProbabilistic), attribute.Float64(samplerParamKey, 0.5)}, result.Attributes)
+
+		result = s.ShouldSample(makeSamplingParameters(testMaxID+10, testOperationName))
+		assert.Equal(t, trace.Drop, result.Decision)
+		assert.Nil(t, result.Attributes)
+
+		// This operation is seen for the first time by the s
+		result = s.ShouldSample(makeSamplingParameters(testMaxID, testFirstTimeOperationName))
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueRateLimiting), attribute.Float64(samplerParamKey, 1)}, result.Attributes)
+	})
 }

@@ -31,6 +31,7 @@ import (
 	jaeger_api_v2 "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
@@ -134,6 +135,26 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	assert.Same(t, parser, sampler.samplingParser)
 	assert.EqualValues(t, &perOperationSamplerUpdater{MaxOperations: 42, OperationNameLateBinding: true}, sampler.updaters[0])
 	assert.Equal(t, logger, sampler.logger)
+
+	t.Run("with attributes on", func(t *testing.T) {
+		t.Parallel()
+
+		s := New(
+			"test",
+			WithSamplingStrategyFetcher(new(fakeSamplingFetcher)),
+			WithAttributesOn(),
+		)
+		defer s.Close()
+
+		want := samplerOptions{
+			attributesOn: true,
+		}
+		got := samplerOptions{}
+		for _, opt := range s.samplerOptions {
+			opt(&got)
+		}
+		assert.Equal(t, want, got)
+	})
 }
 
 func TestRemoteSamplerOptionsDefaults(t *testing.T) {
@@ -191,6 +212,7 @@ func TestRemotelyControlledSampler(t *testing.T) {
 	assert.Equal(t, trace.Drop, result.Decision)
 	result = remoteSampler.ShouldSample(makeSamplingParameters(testMaxID-10, testOperationName))
 	assert.Equal(t, trace.RecordAndSample, result.Decision)
+	assert.Nil(t, result.Attributes)
 
 	remoteSampler.setSampler(defaultSampler)
 
@@ -286,9 +308,11 @@ func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
 			// First call is always sampled
 			result := sampler.ShouldSample(makeSamplingParameters(testMaxID+10, testOperationName))
 			assert.Equal(t, trace.RecordAndSample, result.Decision)
+			assert.Nil(t, result.Attributes)
 
 			result = sampler.ShouldSample(makeSamplingParameters(testMaxID-10, testOperationName))
 			assert.Equal(t, trace.RecordAndSample, result.Decision)
+			assert.Nil(t, result.Attributes)
 		})
 	}
 }
@@ -352,6 +376,7 @@ func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {
 
 	result := sampler.ShouldSample(makeSamplingParameters(testMaxID-10, testUnusedOpName))
 	assert.Equal(t, trace.RecordAndSample, result.Decision) // first call always pass
+	assert.Nil(t, result.Attributes)
 	result = sampler.ShouldSample(makeSamplingParameters(testMaxID, testUnusedOpName))
 	assert.Equal(t, trace.Drop, result.Decision)
 }
@@ -683,4 +708,52 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestRemotelyControlledSampler_withAttributes(t *testing.T) {
+	agent, err := testutils.StartMockAgent()
+	require.NoError(t, err)
+
+	remoteSampler := New(
+		"client app",
+		WithSamplingServerURL("http://"+agent.SamplingServerAddr()),
+		WithMaxOperations(testDefaultMaxOperations),
+		WithSamplingRefreshInterval(time.Minute),
+		WithAttributesOn(),
+	)
+	remoteSampler.Close() // stop timer-based updates, we want to call them manually
+	defer agent.Close()
+
+	var traceID oteltrace.TraceID
+	binary.BigEndian.PutUint64(traceID[8:], testMaxID-20)
+
+	// Probabilistic
+	agent.AddSamplingStrategy("client app",
+		getSamplingStrategyResponse(jaeger_api_v2.SamplingStrategyType_PROBABILISTIC, 0.5))
+	remoteSampler.UpdateSampler()
+
+	result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+	assert.Equal(t, trace.RecordAndSample, result.Decision)
+	assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueProbabilistic), attribute.Float64(samplerParamKey, 0.5)}, result.Attributes)
+
+	// Ratelimiting
+	agent.AddSamplingStrategy("client app",
+		getSamplingStrategyResponse(jaeger_api_v2.SamplingStrategyType_RATE_LIMITING, 1))
+	remoteSampler.UpdateSampler()
+
+	result = remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+	assert.Equal(t, trace.RecordAndSample, result.Decision)
+	assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueRateLimiting), attribute.Float64(samplerParamKey, 1)}, result.Attributes)
+
+	// PerOperation
+	strategies := &jaeger_api_v2.PerOperationSamplingStrategies{
+		DefaultSamplingProbability:       testDefaultSamplingProbability,
+		DefaultLowerBoundTracesPerSecond: 1.0,
+	}
+	agent.AddSamplingStrategy("client app", &jaeger_api_v2.SamplingStrategyResponse{OperationSampling: strategies})
+	remoteSampler.UpdateSampler()
+
+	result = remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+	assert.Equal(t, trace.RecordAndSample, result.Decision)
+	assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueProbabilistic), attribute.Float64(samplerParamKey, 0.5)}, result.Attributes)
 }
