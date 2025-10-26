@@ -35,6 +35,7 @@ type config struct {
 	samplingRefreshInterval time.Duration
 	samplingFetcher         SamplingStrategyFetcher
 	samplingParser          samplingStrategyParser
+	samplerOptions          []samplerOptionFunc
 	updaters                []samplerUpdater
 	posParams               perOperationSamplerParams
 	logger                  logr.Logger
@@ -87,7 +88,6 @@ func getEnvOptions() ([]Option, []error) {
 // newConfig returns an appropriately configured config.
 func newConfig(options ...Option) config {
 	c := config{
-		sampler:                 newProbabilisticSampler(0.001),
 		samplingServerURL:       defaultSamplingServerURL,
 		samplingRefreshInterval: defaultSamplingRefreshInterval,
 		samplingFetcher:         newHTTPSamplingStrategyFetcher(defaultSamplingServerURL),
@@ -120,6 +120,11 @@ func newConfig(options ...Option) config {
 		MaxOperations:            c.posParams.MaxOperations,
 		OperationNameLateBinding: c.posParams.OperationNameLateBinding,
 	}}, c.updaters...)
+
+	if c.sampler == nil {
+		c.sampler = newProbabilisticSampler(0.001, c.samplerOptions...)
+	}
+
 	return c
 }
 
@@ -189,6 +194,13 @@ func WithLogger(logger logr.Logger) Option {
 func WithSamplingStrategyFetcher(fetcher SamplingStrategyFetcher) Option {
 	return optionFunc(func(c *config) {
 		c.samplingFetcher = fetcher
+	})
+}
+
+// WithAttributesOn configures the sampler to set attributes sampler.type and sampler.param for each sampled span.
+func WithAttributesOn() Option {
+	return optionFunc(func(c *config) {
+		c.samplerOptions = append(c.samplerOptions, withAttributesOn())
 	})
 }
 
