@@ -140,3 +140,41 @@ func BenchmarkServerHandler_HandleRPC_NoOp_End(b *testing.B) {
 func BenchmarkServerHandler_HandleRPC_NoOp_Nil(b *testing.B) {
 	benchmarkServerHandlerHandleRPCNoOp(b, nil)
 }
+
+func BenchmarkServerHandler_TagRPCNoOp(b *testing.B) {
+	handler := NewServerHandler(
+		WithTracerProvider(tracenoop.NewTracerProvider()),
+		WithMeterProvider(metricnoop.NewMeterProvider()),
+		WithMessageEvents(ReceivedEvents, SentEvents),
+	)
+	ctx := b.Context()
+
+	tagInfo := &stats.RPCTagInfo{
+		FullMethodName: "/package.service/method",
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for range b.N {
+		_ = handler.TagRPC(ctx, tagInfo)
+	}
+}
+
+func BenchmarkClientHandler_TagRPCNoOp(b *testing.B) {
+	handler := NewClientHandler(
+		WithTracerProvider(tracenoop.NewTracerProvider()),
+		WithMeterProvider(metricnoop.NewMeterProvider()),
+		WithMessageEvents(ReceivedEvents, SentEvents),
+	)
+	ctx := b.Context()
+
+	tagInfo := &stats.RPCTagInfo{
+		FullMethodName: "/package.service/method",
+	}
+
+	b.ResetTimer()
+	b.ReportAllocs()
+	for range b.N {
+		_ = handler.TagRPC(ctx, tagInfo)
+	}
+}
