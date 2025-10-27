@@ -191,6 +191,7 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 		sh.Plain.Console = c
 	}
 	*j = LogRecordExporter(sh.Plain)
+	return nil
 }
 
 // MarshalJSON implements json.Marshaler.
@@ -1106,63 +1107,6 @@ func (j *PullMetricReader) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain PushMetricExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	// console can be nil, must check and set here
-	if checkConsoleExporter(raw) {
-		plain.Console = ConsoleExporter{}
-	}
-	*j = PushMetricExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *SpanExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain SpanExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	// console can be nil, must check and set here
-	if checkConsoleExporter(raw) {
-		plain.Console = ConsoleExporter{}
-	}
-	*j = SpanExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain LogRecordExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	// console can be nil, must check and set here
-	if checkConsoleExporter(raw) {
-		plain.Console = ConsoleExporter{}
-	}
-	*j = LogRecordExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
 func (j *Sampler) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
@@ -1191,49 +1135,5 @@ func (j *MetricProducer) UnmarshalJSON(b []byte) error {
 	}
 	unmarshalMetricProducer(raw, (*MetricProducer)(&plain))
 	*j = MetricProducer(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	type Plain TextMapPropagator
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	unmarshalTextMapPropagatorTypes(raw, (*TextMapPropagator)(&plain))
-	*j = TextMapPropagator(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *CardinalityLimits) UnmarshalJSON(value []byte) error {
-	type Plain CardinalityLimits
-	var plain Plain
-	if err := json.Unmarshal(value, &plain); err != nil {
-		return err
-	}
-	if err := validateCardinalityLimits((*CardinalityLimits)(&plain)); err != nil {
-		return err
-	}
-	*j = CardinalityLimits(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *SpanLimits) UnmarshalJSON(value []byte) error {
-	type Plain SpanLimits
-	var plain Plain
-	if err := json.Unmarshal(value, &plain); err != nil {
-		return err
-	}
-	if err := validateSpanLimits((*SpanLimits)(&plain)); err != nil {
-		return err
-	}
-	*j = SpanLimits(plain)
 	return nil
 }

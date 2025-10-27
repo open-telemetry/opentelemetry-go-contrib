@@ -12,16 +12,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.yaml.in/yaml/v3"
-
-	"github.com/stretchr/testify/require"
 	lognoop "go.opentelemetry.io/otel/log/noop"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
-	yaml "go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
@@ -410,7 +407,7 @@ func TestNewSDK(t *testing.T) {
 
 var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 	Disabled:   ptr(false),
-	FileFormat: "1.0-rc.1",
+	FileFormat: "1.0-rc.2",
 	AttributeLimits: &AttributeLimits{
 		AttributeCountLimit:       ptr(128),
 		AttributeValueLengthLimit: ptr(4096),
@@ -614,8 +611,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					},
 					Exporter: PullMetricExporter{
 						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
-							Host: ptr("localhost"),
-							Port: ptr(9464),
+							Host:                ptr("localhost"),
+							Port:                ptr(9464),
+							TranslationStrategy: ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes),
 							WithResourceConstantLabels: &IncludeExclude{
 								Excluded: []string{"service.attr1"},
 								Included: []string{"service*"},
@@ -794,12 +792,14 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 	TracerProvider: &TracerProviderJson{
 		TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
 			DefaultConfig: &ExperimentalTracerConfig{
-				Disabled: true,
+				Disabled: ptr(true),
 			},
 			Tracers: []ExperimentalTracerMatcherAndConfig{
 				{
-					Config: ExperimentalTracerConfig{},
-					Name:   "io.opentelemetry.contrib.*",
+					Config: ptr(ExperimentalTracerConfig{
+						Disabled: ptr(false),
+					}),
+					Name: ptr("io.opentelemetry.contrib.*"),
 				},
 			},
 		},
@@ -997,14 +997,18 @@ func TestParseYAML(t *testing.T) {
   line 1: cannot unmarshal !!str ` + "`notabool`" + ` into bool`),
 		},
 		{
-			name:    "invalid nil name",
-			input:   "v1.0.0_invalid_nil_name.yaml",
-			wantErr: errors.New(`cannot unmarshal field name in NameStringValuePair required`),
+			name:  "invalid nil name",
+			input: "v1.0.0_invalid_nil_name.yaml",
+			wantErr: errors.New(`unmarshal error in *otelconf.BatchSpanProcessor
+unmarshal error in *otelconf.SpanExporter
+cannot unmarshal field name in NameStringValuePair required`),
 		},
 		{
-			name:    "invalid nil value",
-			input:   "v1.0.0_invalid_nil_value.yaml",
-			wantErr: errors.New(`cannot unmarshal field value in NameStringValuePair required`),
+			name:  "invalid nil value",
+			input: "v1.0.0_invalid_nil_value.yaml",
+			wantErr: errors.New(`unmarshal error in *otelconf.BatchLogRecordProcessor
+unmarshal error in *otelconf.LogRecordExporter
+cannot unmarshal field value in NameStringValuePair required`),
 		},
 		{
 			name:  "valid v0.2 config",
@@ -1015,25 +1019,20 @@ func TestParseYAML(t *testing.T) {
 		{
 			name:  "valid v0.3 config",
 			input: "v0.3.yaml",
-			wantErr: errors.New(`yaml: unmarshal errors:
-  line 2: cannot unmarshal !!str` + " `traceco...`" + ` into map[string]interface {}
-  line 3: cannot unmarshal !!str` + " `baggage`" + ` into map[string]interface {}
-  line 4: cannot unmarshal !!str` + " `b3`" + ` into map[string]interface {}
-  line 5: cannot unmarshal !!str` + " `b3multi`" + ` into map[string]interface {}
-  line 6: cannot unmarshal !!str` + " `jaeger`" + ` into map[string]interface {}
-  line 7: cannot unmarshal !!str` + " `xray`" + ` into map[string]interface {}
-  line 8: cannot unmarshal !!str` + " `ottrace`" + ` into map[string]interface {}`),
+			wantErr: errors.New(`unmarshal error in *otelconf.TextMapPropagator
+yaml: unmarshal errors:
+  line 2: cannot unmarshal !!str` + " `traceco...`" + ` into otelconf.Plain`),
 		},
 		{
 			name:     "valid v1.0.0 config",
-			input:    "v1.0.0-rc.1.yaml",
+			input:    "v1.0.0.yaml",
 			wantType: &v10OpenTelemetryConfig,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := os.ReadFile(filepath.Join("..", "testdata", tt.input))
+			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
 			require.NoError(t, err)
 
 			got, err := ParseYAML(b)
@@ -1178,7 +1177,7 @@ func TestParseYAMLWithEnvironmentVariables(t *testing.T) {
 	t.Setenv("VALUE_WITH_ESCAPE", "value$$")              // A valid replacement text, used verbatim, not replaced with "Never use this value"
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := os.ReadFile(filepath.Join("..", "testdata", tt.input))
+			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
 			require.NoError(t, err)
 
 			got, err := ParseYAML(b)
@@ -1232,18 +1231,18 @@ func TestSerializeJSON(t *testing.T) {
 		{
 			name:    "valid v0.3 config",
 			input:   "v0.3.json",
-			wantErr: errors.New(`json: cannot unmarshal string into Go struct field PropagatorJson.composite of type map[string]interface {}`),
+			wantErr: errors.New(`unmarshal error in *otelconf.TextMapPropagator`),
 		},
 		{
 			name:     "valid v1.0.0 config",
-			input:    "v1.0.0-rc.1.json",
+			input:    "v1.0.0.json",
 			wantType: v10OpenTelemetryConfig,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := os.ReadFile(filepath.Join("..", "testdata", tt.input))
+			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
 			require.NoError(t, err)
 
 			var got OpenTelemetryConfiguration

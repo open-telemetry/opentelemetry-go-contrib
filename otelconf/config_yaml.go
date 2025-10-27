@@ -279,63 +279,6 @@ func (j *NameStringValuePair) UnmarshalYAML(node *yaml.Node) error {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
-func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return err
-	}
-	type Plain PushMetricExporter
-	var plain Plain
-	if err := node.Decode(&plain); err != nil {
-		return err
-	}
-	// console can be nil, must check and set here
-	if checkConsoleExporter(raw) {
-		plain.Console = ConsoleExporter{}
-	}
-	*j = PushMetricExporter(plain)
-	return nil
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler.
-func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return err
-	}
-	type Plain SpanExporter
-	var plain Plain
-	if err := node.Decode(&plain); err != nil {
-		return err
-	}
-	// console can be nil, must check and set here
-	if checkConsoleExporter(raw) {
-		plain.Console = ConsoleExporter{}
-	}
-	*j = SpanExporter(plain)
-	return nil
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler.
-func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return err
-	}
-	type Plain LogRecordExporter
-	var plain Plain
-	if err := node.Decode(&plain); err != nil {
-		return err
-	}
-	// console can be nil, must check and set here
-	if checkConsoleExporter(raw) {
-		plain.Console = ConsoleExporter{}
-	}
-	*j = LogRecordExporter(plain)
-	return nil
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *Sampler) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
 	if err := node.Decode(&raw); err != nil {
@@ -364,22 +307,6 @@ func (j *MetricProducer) UnmarshalYAML(node *yaml.Node) error {
 	}
 	unmarshalMetricProducer(raw, (*MetricProducer)(&plain))
 	*j = MetricProducer(plain)
-	return nil
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler.
-func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return err
-	}
-	type Plain TextMapPropagator
-	var plain Plain
-	if err := node.Decode(&plain); err != nil {
-		return err
-	}
-	unmarshalTextMapPropagatorTypes(raw, (*TextMapPropagator)(&plain))
-	*j = TextMapPropagator(plain)
 	return nil
 }
 
@@ -711,75 +638,5 @@ func (j *ExperimentalLanguageSpecificInstrumentation) UnmarshalYAML(unmarshal fu
 	}
 
 	*j = raw
-	return nil
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler.
-func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return err
-	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return errors.New("field exporter in BatchLogRecordProcessor: required")
-	}
-	type Plain BatchLogRecordProcessor
-	var plain Plain
-	if err := node.Decode(&plain); err != nil {
-		return err
-	}
-	if err := validateBatchLogRecordProcessor((*BatchLogRecordProcessor)(&plain)); err != nil {
-		return err
-	}
-	*j = BatchLogRecordProcessor(plain)
-	return nil
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler.
-func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return err
-	}
-	if _, ok := raw["exporter"]; raw != nil && !ok {
-		return errors.New("field exporter in BatchSpanProcessor: required")
-	}
-	type Plain BatchSpanProcessor
-	var plain Plain
-	if err := node.Decode(&plain); err != nil {
-		return err
-	}
-	if err := validateBatchSpanProcessor((*BatchSpanProcessor)(&plain)); err != nil {
-		return err
-	}
-	*j = BatchSpanProcessor(plain)
-	return nil
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler.
-func (j *CardinalityLimits) UnmarshalYAML(node *yaml.Node) error {
-	type Plain CardinalityLimits
-	var plain Plain
-	if err := node.Decode(&plain); err != nil {
-		return err
-	}
-	if err := validateCardinalityLimits((*CardinalityLimits)(&plain)); err != nil {
-		return err
-	}
-	*j = CardinalityLimits(plain)
-	return nil
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler.
-func (j *SpanLimits) UnmarshalYAML(node *yaml.Node) error {
-	type Plain SpanLimits
-	var plain Plain
-	if err := node.Decode(&plain); err != nil {
-		return err
-	}
-	if err := validateSpanLimits((*SpanLimits)(&plain)); err != nil {
-		return err
-	}
-	*j = SpanLimits(plain)
 	return nil
 }
