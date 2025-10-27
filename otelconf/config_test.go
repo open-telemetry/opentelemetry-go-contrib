@@ -11,8 +11,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.yaml.in/yaml/v3"
-
 	"github.com/stretchr/testify/require"
 	lognoop "go.opentelemetry.io/otel/log/noop"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
@@ -20,7 +18,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
-	yaml "go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v3"
 )
 
 func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
@@ -315,7 +313,7 @@ func TestNewSDK(t *testing.T) {
 
 var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 	Disabled:   ptr(false),
-	FileFormat: "1.0-rc.1",
+	FileFormat: "1.0-rc.2",
 	AttributeLimits: &AttributeLimits{
 		AttributeCountLimit:       ptr(128),
 		AttributeValueLengthLimit: ptr(4096),
@@ -519,8 +517,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					},
 					Exporter: PullMetricExporter{
 						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
-							Host: ptr("localhost"),
-							Port: ptr(9464),
+							Host:                ptr("localhost"),
+							Port:                ptr(9464),
+							TranslationStrategy: ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes),
 							WithResourceConstantLabels: &IncludeExclude{
 								Excluded: []string{"service.attr1"},
 								Included: []string{"service*"},
@@ -699,12 +698,14 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 	TracerProvider: &TracerProviderJson{
 		TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
 			DefaultConfig: &ExperimentalTracerConfig{
-				Disabled: true,
+				Disabled: ptr(true),
 			},
 			Tracers: []ExperimentalTracerMatcherAndConfig{
 				{
-					Config: ExperimentalTracerConfig{},
-					Name:   "io.opentelemetry.contrib.*",
+					Config: ptr(ExperimentalTracerConfig{
+						Disabled: ptr(false),
+					}),
+					Name: ptr("io.opentelemetry.contrib.*"),
 				},
 			},
 		},
@@ -902,14 +903,18 @@ func TestParseYAML(t *testing.T) {
   line 1: cannot unmarshal !!str ` + "`notabool`" + ` into bool`),
 		},
 		{
-			name:    "invalid nil name",
-			input:   "v1.0.0_invalid_nil_name.yaml",
-			wantErr: errors.New(`cannot unmarshal field name in NameStringValuePair required`),
+			name:  "invalid nil name",
+			input: "v1.0.0_invalid_nil_name.yaml",
+			wantErr: errors.New(`unmarshal error in *otelconf.BatchSpanProcessor
+unmarshal error in *otelconf.SpanExporter
+cannot unmarshal field name in NameStringValuePair required`),
 		},
 		{
-			name:    "invalid nil value",
-			input:   "v1.0.0_invalid_nil_value.yaml",
-			wantErr: errors.New(`cannot unmarshal field value in NameStringValuePair required`),
+			name:  "invalid nil value",
+			input: "v1.0.0_invalid_nil_value.yaml",
+			wantErr: errors.New(`unmarshal error in *otelconf.BatchLogRecordProcessor
+unmarshal error in *otelconf.LogRecordExporter
+cannot unmarshal field value in NameStringValuePair required`),
 		},
 		{
 			name:  "valid v0.2 config",
@@ -920,25 +925,20 @@ func TestParseYAML(t *testing.T) {
 		{
 			name:  "valid v0.3 config",
 			input: "v0.3.yaml",
-			wantErr: errors.New(`yaml: unmarshal errors:
-  line 2: cannot unmarshal !!str` + " `traceco...`" + ` into map[string]interface {}
-  line 3: cannot unmarshal !!str` + " `baggage`" + ` into map[string]interface {}
-  line 4: cannot unmarshal !!str` + " `b3`" + ` into map[string]interface {}
-  line 5: cannot unmarshal !!str` + " `b3multi`" + ` into map[string]interface {}
-  line 6: cannot unmarshal !!str` + " `jaeger`" + ` into map[string]interface {}
-  line 7: cannot unmarshal !!str` + " `xray`" + ` into map[string]interface {}
-  line 8: cannot unmarshal !!str` + " `ottrace`" + ` into map[string]interface {}`),
+			wantErr: errors.New(`unmarshal error in *otelconf.TextMapPropagator
+yaml: unmarshal errors:
+  line 2: cannot unmarshal !!str` + " `traceco...`" + ` into otelconf.Plain`),
 		},
 		{
 			name:     "valid v1.0.0 config",
-			input:    "v1.0.0-rc.1.yaml",
+			input:    "v1.0.0.yaml",
 			wantType: &v10OpenTelemetryConfig,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := os.ReadFile(filepath.Join("..", "testdata", tt.input))
+			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
 			require.NoError(t, err)
 
 			got, err := ParseYAML(b)
@@ -1083,7 +1083,7 @@ func TestParseYAMLWithEnvironmentVariables(t *testing.T) {
 	t.Setenv("VALUE_WITH_ESCAPE", "value$$")              // A valid replacement text, used verbatim, not replaced with "Never use this value"
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := os.ReadFile(filepath.Join("..", "testdata", tt.input))
+			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
 			require.NoError(t, err)
 
 			got, err := ParseYAML(b)
@@ -1137,18 +1137,18 @@ func TestSerializeJSON(t *testing.T) {
 		{
 			name:    "valid v0.3 config",
 			input:   "v0.3.json",
-			wantErr: errors.New(`json: cannot unmarshal string into Go struct field PropagatorJson.composite of type map[string]interface {}`),
+			wantErr: errors.New(`unmarshal error in *otelconf.TextMapPropagator`),
 		},
 		{
 			name:     "valid v1.0.0 config",
-			input:    "v1.0.0-rc.1.json",
+			input:    "v1.0.0.json",
 			wantType: v10OpenTelemetryConfig,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := os.ReadFile(filepath.Join("..", "testdata", tt.input))
+			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
 			require.NoError(t, err)
 
 			var got OpenTelemetryConfiguration
@@ -1544,317 +1544,6 @@ func TestUnmarshalSpanLimits(t *testing.T) {
 			cl = SpanLimits{}
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
 			assert.ErrorIs(t, err, tt.wantErrT)
-		})
-	}
-}
-
-func TestUnmarshalBatchSpanProcessor(t *testing.T) {
-	for _, tt := range []struct {
-		name       string
-		yamlConfig []byte
-		jsonConfig []byte
-		wantErr    string
-	}{
-		{
-			name:       "valid with console exporter",
-			jsonConfig: []byte(`{"exporter":{"console":{}}}`),
-			yamlConfig: []byte("exporter:\n  console: {}"),
-		},
-		{
-			name:       "valid with all fields positive",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":5000,"max_export_batch_size":512,"max_queue_size":2048,"schedule_delay":1000}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 5000\nmax_export_batch_size: 512\nmax_queue_size: 2048\nschedule_delay: 1000"),
-		},
-		{
-			name:       "valid with zero export_timeout",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: 0"),
-		},
-		{
-			name:       "valid with zero schedule_delay",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"schedule_delay":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nschedule_delay: 0"),
-		},
-		{
-			name:       "missing required exporter field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErr:    "field exporter in BatchSpanProcessor: required",
-		},
-		{
-			name:       "invalid export_timeout negative",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"export_timeout":-1}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nexport_timeout: -1"),
-			wantErr:    "field export_timeout: must be >= 0",
-		},
-		{
-			name:       "invalid max_export_batch_size zero",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"max_export_batch_size":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nmax_export_batch_size: 0"),
-			wantErr:    "field max_export_batch_size: must be > 0",
-		},
-		{
-			name:       "invalid max_export_batch_size negative",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"max_export_batch_size":-1}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nmax_export_batch_size: -1"),
-			wantErr:    "field max_export_batch_size: must be > 0",
-		},
-		{
-			name:       "invalid max_queue_size zero",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"max_queue_size":0}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nmax_queue_size: 0"),
-			wantErr:    "field max_queue_size: must be > 0",
-		},
-		{
-			name:       "invalid max_queue_size negative",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"max_queue_size":-1}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nmax_queue_size: -1"),
-			wantErr:    "field max_queue_size: must be > 0",
-		},
-		{
-			name:       "invalid schedule_delay negative",
-			jsonConfig: []byte(`{"exporter":{"console":{}},"schedule_delay":-1}`),
-			yamlConfig: []byte("exporter:\n  console: {}\nschedule_delay: -1"),
-			wantErr:    "field schedule_delay: must be >= 0",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			bsp := BatchSpanProcessor{}
-			err := bsp.UnmarshalJSON(tt.jsonConfig)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
-			bsp = BatchSpanProcessor{}
-			err = yaml.Unmarshal(tt.yamlConfig, &bsp)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestUnmarshalCardinalityLimits(t *testing.T) {
-	for _, tt := range []struct {
-		name       string
-		yamlConfig []byte
-		jsonConfig []byte
-		wantErr    string
-	}{
-		{
-			name:       "valid with all fields positive",
-			jsonConfig: []byte(`{"counter":100,"default":200,"gauge":300,"histogram":400,"observable_counter":500,"observable_gauge":600,"observable_up_down_counter":700,"up_down_counter":800}`),
-			yamlConfig: []byte("counter: 100\ndefault: 200\ngauge: 300\nhistogram: 400\nobservable_counter: 500\nobservable_gauge: 600\nobservable_up_down_counter: 700\nup_down_counter: 800"),
-		},
-		{
-			name:       "valid with single field",
-			jsonConfig: []byte(`{"default":2000}`),
-			yamlConfig: []byte("default: 2000"),
-		},
-		{
-			name:       "valid empty",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-		},
-		{
-			name:       "invalid counter zero",
-			jsonConfig: []byte(`{"counter":0}`),
-			yamlConfig: []byte("counter: 0"),
-			wantErr:    "field counter: must be > 0",
-		},
-		{
-			name:       "invalid counter negative",
-			jsonConfig: []byte(`{"counter":-1}`),
-			yamlConfig: []byte("counter: -1"),
-			wantErr:    "field counter: must be > 0",
-		},
-		{
-			name:       "invalid default zero",
-			jsonConfig: []byte(`{"default":0}`),
-			yamlConfig: []byte("default: 0"),
-			wantErr:    "field default: must be > 0",
-		},
-		{
-			name:       "invalid default negative",
-			jsonConfig: []byte(`{"default":-1}`),
-			yamlConfig: []byte("default: -1"),
-			wantErr:    "field default: must be > 0",
-		},
-		{
-			name:       "invalid gauge zero",
-			jsonConfig: []byte(`{"gauge":0}`),
-			yamlConfig: []byte("gauge: 0"),
-			wantErr:    "field gauge: must be > 0",
-		},
-		{
-			name:       "invalid gauge negative",
-			jsonConfig: []byte(`{"gauge":-1}`),
-			yamlConfig: []byte("gauge: -1"),
-			wantErr:    "field gauge: must be > 0",
-		},
-		{
-			name:       "invalid histogram zero",
-			jsonConfig: []byte(`{"histogram":0}`),
-			yamlConfig: []byte("histogram: 0"),
-			wantErr:    "field histogram: must be > 0",
-		},
-		{
-			name:       "invalid histogram negative",
-			jsonConfig: []byte(`{"histogram":-1}`),
-			yamlConfig: []byte("histogram: -1"),
-			wantErr:    "field histogram: must be > 0",
-		},
-		{
-			name:       "invalid observable_counter zero",
-			jsonConfig: []byte(`{"observable_counter":0}`),
-			yamlConfig: []byte("observable_counter: 0"),
-			wantErr:    "field observable_counter: must be > 0",
-		},
-		{
-			name:       "invalid observable_counter negative",
-			jsonConfig: []byte(`{"observable_counter":-1}`),
-			yamlConfig: []byte("observable_counter: -1"),
-			wantErr:    "field observable_counter: must be > 0",
-		},
-		{
-			name:       "invalid observable_gauge zero",
-			jsonConfig: []byte(`{"observable_gauge":0}`),
-			yamlConfig: []byte("observable_gauge: 0"),
-			wantErr:    "field observable_gauge: must be > 0",
-		},
-		{
-			name:       "invalid observable_gauge negative",
-			jsonConfig: []byte(`{"observable_gauge":-1}`),
-			yamlConfig: []byte("observable_gauge: -1"),
-			wantErr:    "field observable_gauge: must be > 0",
-		},
-		{
-			name:       "invalid observable_up_down_counter zero",
-			jsonConfig: []byte(`{"observable_up_down_counter":0}`),
-			yamlConfig: []byte("observable_up_down_counter: 0"),
-			wantErr:    "field observable_up_down_counter: must be > 0",
-		},
-		{
-			name:       "invalid observable_up_down_counter negative",
-			jsonConfig: []byte(`{"observable_up_down_counter":-1}`),
-			yamlConfig: []byte("observable_up_down_counter: -1"),
-			wantErr:    "field observable_up_down_counter: must be > 0",
-		},
-		{
-			name:       "invalid up_down_counter zero",
-			jsonConfig: []byte(`{"up_down_counter":0}`),
-			yamlConfig: []byte("up_down_counter: 0"),
-			wantErr:    "field up_down_counter: must be > 0",
-		},
-		{
-			name:       "invalid up_down_counter negative",
-			jsonConfig: []byte(`{"up_down_counter":-1}`),
-			yamlConfig: []byte("up_down_counter: -1"),
-			wantErr:    "field up_down_counter: must be > 0",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			cl := CardinalityLimits{}
-			err := cl.UnmarshalJSON(tt.jsonConfig)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
-			cl = CardinalityLimits{}
-			err = yaml.Unmarshal(tt.yamlConfig, &cl)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
-		})
-	}
-}
-
-func TestUnmarshalSpanLimits(t *testing.T) {
-	for _, tt := range []struct {
-		name       string
-		yamlConfig []byte
-		jsonConfig []byte
-		wantErr    string
-	}{
-		{
-			name:       "valid with all fields positive",
-			jsonConfig: []byte(`{"attribute_count_limit":100,"attribute_value_length_limit":200,"event_attribute_count_limit":300,"event_count_limit":400,"link_attribute_count_limit":500,"link_count_limit":600}`),
-			yamlConfig: []byte("attribute_count_limit: 100\nattribute_value_length_limit: 200\nevent_attribute_count_limit: 300\nevent_count_limit: 400\nlink_attribute_count_limit: 500\nlink_count_limit: 600"),
-		},
-		{
-			name:       "valid with single field",
-			jsonConfig: []byte(`{"attribute_value_length_limit":2000}`),
-			yamlConfig: []byte("attribute_value_length_limit: 2000"),
-		},
-		{
-			name:       "valid empty",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-		},
-		{
-			name:       "invalid attribute_count_limit negative",
-			jsonConfig: []byte(`{"attribute_count_limit":-1}`),
-			yamlConfig: []byte("attribute_count_limit: -1"),
-			wantErr:    "field attribute_count_limit: must be >= 0",
-		},
-		{
-			name:       "invalid attribute_value_length_limit negative",
-			jsonConfig: []byte(`{"attribute_value_length_limit":-1}`),
-			yamlConfig: []byte("attribute_value_length_limit: -1"),
-			wantErr:    "field attribute_value_length_limit: must be >= 0",
-		},
-		{
-			name:       "invalid event_attribute_count_limit negative",
-			jsonConfig: []byte(`{"event_attribute_count_limit":-1}`),
-			yamlConfig: []byte("event_attribute_count_limit: -1"),
-			wantErr:    "field event_attribute_count_limit: must be >= 0",
-		},
-		{
-			name:       "invalid event_count_limit negative",
-			jsonConfig: []byte(`{"event_count_limit":-1}`),
-			yamlConfig: []byte("event_count_limit: -1"),
-			wantErr:    "field event_count_limit: must be >= 0",
-		},
-		{
-			name:       "invalid link_attribute_count_limit negative",
-			jsonConfig: []byte(`{"link_attribute_count_limit":-1}`),
-			yamlConfig: []byte("link_attribute_count_limit: -1"),
-			wantErr:    "field link_attribute_count_limit: must be >= 0",
-		},
-		{
-			name:       "invalid link_count_limit negative",
-			jsonConfig: []byte(`{"link_count_limit":-1}`),
-			yamlConfig: []byte("link_count_limit: -1"),
-			wantErr:    "field link_count_limit: must be >= 0",
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			cl := SpanLimits{}
-			err := cl.UnmarshalJSON(tt.jsonConfig)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
-			cl = SpanLimits{}
-			err = yaml.Unmarshal(tt.yamlConfig, &cl)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErr)
-			} else {
-				require.NoError(t, err)
-			}
 		})
 	}
 }
