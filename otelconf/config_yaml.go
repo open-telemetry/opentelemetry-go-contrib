@@ -71,16 +71,35 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-	if err := node.Decode(&raw); err != nil {
-		return errors.Join(errors.New("unmarshaling error TextMapPropagator"))
-	}
 	type Plain TextMapPropagator
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
-		return errors.Join(errors.New("unmarshaling error TextMapPropagator"))
+		return errors.Join(newErrUnmarshal(j), err)
 	}
-	unmarshalTextMapPropagatorTypes(raw, (*TextMapPropagator)(&plain))
+	// b3 can be nil, must check and set here
+	if hasYAMLMapKey(node, "b3") && plain.B3 == nil {
+		plain.B3 = B3Propagator{}
+	}
+	// b3multi can be nil, must check and set here
+	if hasYAMLMapKey(node, "b3multi") && plain.B3Multi == nil {
+		plain.B3Multi = B3MultiPropagator{}
+	}
+	// baggage can be nil, must check and set here
+	if hasYAMLMapKey(node, "baggage") && plain.Baggage == nil {
+		plain.Baggage = BaggagePropagator{}
+	}
+	// jaeger can be nil, must check and set here
+	if hasYAMLMapKey(node, "jaeger") && plain.Jaeger == nil {
+		plain.Jaeger = JaegerPropagator{}
+	}
+	// ottrace can be nil, must check and set here
+	if hasYAMLMapKey(node, "ottrace") && plain.Ottrace == nil {
+		plain.Ottrace = OpenTracingPropagator{}
+	}
+	// tracecontext can be nil, must check and set here
+	if hasYAMLMapKey(node, "tracecontext") && plain.Tracecontext == nil {
+		plain.Tracecontext = TraceContextPropagator{}
+	}
 	*j = TextMapPropagator(plain)
 	return nil
 }

@@ -25,6 +25,102 @@ func (j *ConsoleExporter) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+func (j *B3Propagator) UnmarshalJSON(b []byte) error {
+	type plain ConsoleExporter
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = B3Propagator{}
+	} else {
+		*j = B3Propagator(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *B3MultiPropagator) UnmarshalJSON(b []byte) error {
+	type plain ConsoleExporter
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = B3MultiPropagator{}
+	} else {
+		*j = B3MultiPropagator(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *BaggagePropagator) UnmarshalJSON(b []byte) error {
+	type plain ConsoleExporter
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = BaggagePropagator{}
+	} else {
+		*j = BaggagePropagator(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *JaegerPropagator) UnmarshalJSON(b []byte) error {
+	type plain ConsoleExporter
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = JaegerPropagator{}
+	} else {
+		*j = JaegerPropagator(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *OpenTracingPropagator) UnmarshalJSON(b []byte) error {
+	type plain ConsoleExporter
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = OpenTracingPropagator{}
+	} else {
+		*j = OpenTracingPropagator(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *TraceContextPropagator) UnmarshalJSON(b []byte) error {
+	type plain ConsoleExporter
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = TraceContextPropagator{}
+	} else {
+		*j = TraceContextPropagator(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
 	// Use a shadow struct with a RawMessage field to detect key presence.
 	type Plain PushMetricExporter
@@ -100,15 +196,72 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
-		return errors.Join(errors.New("unmarshaling error TextMapPropagator"))
+		return errors.Join(newErrUnmarshal(j), err)
 	}
 	type Plain TextMapPropagator
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return errors.Join(errors.New("unmarshaling error TextMapPropagator"))
+	type shadow struct {
+		Plain
+		B3           json.RawMessage `json:"b3"`
+		B3Multi      json.RawMessage `json:"b3multi"`
+		Baggage      json.RawMessage `json:"baggage"`
+		Jaeger       json.RawMessage `json:"jaeger"`
+		Ottrace      json.RawMessage `json:"ottrace"`
+		Tracecontext json.RawMessage `json:"tracecontext"`
 	}
-	unmarshalTextMapPropagatorTypes(raw, (*TextMapPropagator)(&plain))
-	*j = TextMapPropagator(plain)
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if sh.B3 != nil {
+		var p B3Propagator
+		if err := json.Unmarshal(sh.B3, &p); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.B3 = p
+	}
+
+	if sh.B3Multi != nil {
+		var p B3MultiPropagator
+		if err := json.Unmarshal(sh.B3Multi, &p); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.B3Multi = p
+	}
+
+	if sh.Baggage != nil {
+		var p BaggagePropagator
+		if err := json.Unmarshal(sh.Baggage, &p); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.Baggage = p
+	}
+
+	if sh.Jaeger != nil {
+		var p JaegerPropagator
+		if err := json.Unmarshal(sh.Jaeger, &p); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.Jaeger = p
+	}
+
+	if sh.Ottrace != nil {
+		var p OpenTracingPropagator
+		if err := json.Unmarshal(sh.Ottrace, &p); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.Ottrace = p
+	}
+
+	if sh.Tracecontext != nil {
+		var p TraceContextPropagator
+		if err := json.Unmarshal(sh.Tracecontext, &p); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.Tracecontext = p
+	}
+
+	*j = TextMapPropagator(sh.Plain)
 	return nil
 }
 
