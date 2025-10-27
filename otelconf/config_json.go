@@ -194,10 +194,6 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return errors.Join(newErrUnmarshal(j), err)
-	}
 	type Plain TextMapPropagator
 	type shadow struct {
 		Plain
