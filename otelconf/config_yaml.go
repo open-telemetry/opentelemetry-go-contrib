@@ -70,6 +70,41 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
+func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
+	type Plain TextMapPropagator
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// b3 can be nil, must check and set here
+	if hasYAMLMapKey(node, "b3") && plain.B3 == nil {
+		plain.B3 = B3Propagator{}
+	}
+	// b3multi can be nil, must check and set here
+	if hasYAMLMapKey(node, "b3multi") && plain.B3Multi == nil {
+		plain.B3Multi = B3MultiPropagator{}
+	}
+	// baggage can be nil, must check and set here
+	if hasYAMLMapKey(node, "baggage") && plain.Baggage == nil {
+		plain.Baggage = BaggagePropagator{}
+	}
+	// jaeger can be nil, must check and set here
+	if hasYAMLMapKey(node, "jaeger") && plain.Jaeger == nil {
+		plain.Jaeger = JaegerPropagator{}
+	}
+	// ottrace can be nil, must check and set here
+	if hasYAMLMapKey(node, "ottrace") && plain.Ottrace == nil {
+		plain.Ottrace = OpenTracingPropagator{}
+	}
+	// tracecontext can be nil, must check and set here
+	if hasYAMLMapKey(node, "tracecontext") && plain.Tracecontext == nil {
+		plain.Tracecontext = TraceContextPropagator{}
+	}
+	*j = TextMapPropagator(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 	if !hasYAMLMapKey(node, "exporter") {
 		return newErrRequiredExporter(j)
