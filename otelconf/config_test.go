@@ -1157,7 +1157,7 @@ func TestParseYAMLWithEnvironmentVariables(t *testing.T) {
 	}{
 		{
 			name:     "valid v1.0.0 config with env vars",
-			input:    "v1.0.0-env-var.yaml",
+			input:    "v1.0.0_env_var.yaml",
 			wantType: &v100OpenTelemetryConfigEnvParsing,
 		},
 	}
