@@ -20,7 +20,7 @@ func newResource(res OpenTelemetryConfigurationResource) (*resource.Resource, er
 		return nil, newErrInvalid("resource")
 	}
 
-	var attrs []attribute.KeyValue
+	attrs := make([]attribute.KeyValue, 0, len(r.Attributes))
 	for _, v := range r.Attributes {
 		attrs = append(attrs, kv.FromNameValue(v.Name, v.Value))
 	}
