@@ -46,7 +46,7 @@ func TestNewResource(t *testing.T) {
 			name: "resource-with-attributes",
 			config: &ResourceJson{
 				Attributes: []AttributeNameValue{
-					{Name: "service.name", Value: "service-a"},
+					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
 			},
 			wantResource: resource.NewWithAttributes("",
@@ -57,7 +57,7 @@ func TestNewResource(t *testing.T) {
 			name: "resource-with-attributes-and-schema",
 			config: &ResourceJson{
 				Attributes: []AttributeNameValue{
-					{Name: "service.name", Value: "service-a"},
+					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
@@ -69,7 +69,7 @@ func TestNewResource(t *testing.T) {
 			name: "resource-with-additional-attributes-and-schema",
 			config: &ResourceJson{
 				Attributes: []AttributeNameValue{
-					{Name: "service.name", Value: "service-a"},
+					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 					{Name: "attr-bool", Value: true},
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
