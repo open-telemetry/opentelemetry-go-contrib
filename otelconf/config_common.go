@@ -80,6 +80,27 @@ func newErrUnmarshal(object any) error {
 	return &errUnmarshal{Object: object}
 }
 
+type errInvalid struct {
+	Identifier string
+}
+
+func (e *errInvalid) Error() string {
+	return "invalid " + e.Identifier
+}
+
+func (e *errInvalid) Is(target error) bool {
+	t, ok := target.(*errInvalid)
+	if !ok {
+		return false
+	}
+	return reflect.TypeOf(e.Identifier) == reflect.TypeOf(t.Identifier)
+}
+
+// newErrInvalid creates a new error indicating that an error occurred due to misconfiguration.
+func newErrInvalid(id string) error {
+	return &errInvalid{Identifier: id}
+}
+
 // validatePeriodicMetricReader handles validation for PeriodicMetricReader.
 func validatePeriodicMetricReader(plain *PeriodicMetricReader) error {
 	if plain.Timeout != nil && 0 > *plain.Timeout {
@@ -175,4 +196,8 @@ func validateSpanLimits(plain *SpanLimits) error {
 		return newErrGreaterOrEqualZero("link_count_limit")
 	}
 	return nil
+}
+
+func ptr[T any](v T) *T {
+	return &v
 }
