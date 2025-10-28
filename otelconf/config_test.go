@@ -52,6 +52,97 @@ func TestUnmarshalSpanExporterInvalidData(t *testing.T) {
 	assert.ErrorIs(t, err, newErrUnmarshal(&SpanExporter{}))
 }
 
+func TestUnmarshalTextMapPropagator(t *testing.T) {
+	for _, tt := range []struct {
+		name                  string
+		yamlConfig            []byte
+		jsonConfig            []byte
+		wantErrT              error
+		wantTextMapPropagator TextMapPropagator
+	}{
+		{
+			name:                  "valid with b3 propagator",
+			jsonConfig:            []byte(`{"b3":{}}`),
+			yamlConfig:            []byte("b3: {}\n"),
+			wantTextMapPropagator: TextMapPropagator{B3: B3Propagator{}},
+		},
+		{
+			name:       "valid with all propagators",
+			jsonConfig: []byte(`{"b3":{},"b3multi":{},"baggage":{},"jaeger":{},"ottrace":{},"tracecontext":{}}`),
+			yamlConfig: []byte("b3: {}\nb3multi: {}\nbaggage: {}\njaeger: {}\nottrace: {}\ntracecontext: {}\n"),
+			wantTextMapPropagator: TextMapPropagator{
+				B3:           B3Propagator{},
+				B3Multi:      B3MultiPropagator{},
+				Baggage:      BaggagePropagator{},
+				Jaeger:       JaegerPropagator{},
+				Ottrace:      OpenTracingPropagator{},
+				Tracecontext: TraceContextPropagator{},
+			},
+		},
+		{
+			name:       "valid with all propagators nil",
+			jsonConfig: []byte(`{"b3":null,"b3multi":null,"baggage":null,"jaeger":null,"ottrace":null,"tracecontext":null}`),
+			yamlConfig: []byte("b3:\nb3multi:\nbaggage:\njaeger:\nottrace:\ntracecontext:\n"),
+			wantTextMapPropagator: TextMapPropagator{
+				B3:           B3Propagator{},
+				B3Multi:      B3MultiPropagator{},
+				Baggage:      BaggagePropagator{},
+				Jaeger:       JaegerPropagator{},
+				Ottrace:      OpenTracingPropagator{},
+				Tracecontext: TraceContextPropagator{},
+			},
+		},
+		{
+			name:       "invalid b3 data",
+			jsonConfig: []byte(`{"b3":2000}`),
+			yamlConfig: []byte("b3: !!str str"),
+			wantErrT:   newErrUnmarshal(&TextMapPropagator{}),
+		},
+		{
+			name:       "invalid b3multi data",
+			jsonConfig: []byte(`{"b3multi":2000}`),
+			yamlConfig: []byte("b3multi: !!str str"),
+			wantErrT:   newErrUnmarshal(&TextMapPropagator{}),
+		},
+		{
+			name:       "invalid baggage data",
+			jsonConfig: []byte(`{"baggage":2000}`),
+			yamlConfig: []byte("baggage: !!str str"),
+			wantErrT:   newErrUnmarshal(&TextMapPropagator{}),
+		},
+		{
+			name:       "invalid jaeger data",
+			jsonConfig: []byte(`{"jaeger":2000}`),
+			yamlConfig: []byte("jaeger: !!str str"),
+			wantErrT:   newErrUnmarshal(&TextMapPropagator{}),
+		},
+		{
+			name:       "invalid ottrace data",
+			jsonConfig: []byte(`{"ottrace":2000}`),
+			yamlConfig: []byte("ottrace: !!str str"),
+			wantErrT:   newErrUnmarshal(&TextMapPropagator{}),
+		},
+		{
+			name:       "invalid tracecontext data",
+			jsonConfig: []byte(`{"tracecontext":2000}`),
+			yamlConfig: []byte("tracecontext: !!str str"),
+			wantErrT:   newErrUnmarshal(&TextMapPropagator{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := TextMapPropagator{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantTextMapPropagator, cl)
+
+			cl = TextMapPropagator{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantTextMapPropagator, cl)
+		})
+	}
+}
+
 func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
 	for _, tt := range []struct {
 		name         string
