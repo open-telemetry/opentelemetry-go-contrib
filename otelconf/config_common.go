@@ -169,29 +169,6 @@ func unmarshalSamplerTypes(raw map[string]any, plain *Sampler) {
 	}
 }
 
-// unmarshalTextMapPropagatorTypes handles all propagator type unmarshaling.
-func unmarshalTextMapPropagatorTypes(raw map[string]any, plain *TextMapPropagator) {
-	// b3 can be nil, must check and set here
-	if v, ok := raw["b3"]; ok && v == nil {
-		plain.B3 = B3Propagator{}
-	}
-	if v, ok := raw["b3multi"]; ok && v == nil {
-		plain.B3Multi = B3MultiPropagator{}
-	}
-	if v, ok := raw["baggage"]; ok && v == nil {
-		plain.Baggage = BaggagePropagator{}
-	}
-	if v, ok := raw["jaeger"]; ok && v == nil {
-		plain.Jaeger = JaegerPropagator{}
-	}
-	if v, ok := raw["ottrace"]; ok && v == nil {
-		plain.Ottrace = OpenTracingPropagator{}
-	}
-	if v, ok := raw["tracecontext"]; ok && v == nil {
-		plain.Tracecontext = TraceContextPropagator{}
-	}
-}
-
 // unmarshalMetricProducer handles opencensus metric producer unmarshaling.
 func unmarshalMetricProducer(raw map[string]any, plain *MetricProducer) {
 	// opencensus can be nil, must check and set here
