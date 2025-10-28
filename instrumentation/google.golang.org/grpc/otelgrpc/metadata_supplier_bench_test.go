@@ -4,20 +4,19 @@
 package otelgrpc
 
 import (
-	"context"
 	"testing"
 
 	"go.opentelemetry.io/otel"
 )
 
 func BenchmarkMetadataSupplier(b *testing.B) {
-	ctx := context.Background()
+	ctx := b.Context()
 	propagator := otel.GetTextMapPropagator()
 
 	b.Run("extract", func(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = extract(ctx, propagator)
 		}
 	})
@@ -25,9 +24,8 @@ func BenchmarkMetadataSupplier(b *testing.B) {
 	b.Run("inject", func(b *testing.B) {
 		b.ReportAllocs()
 		b.ResetTimer()
-		for i := 0; i < b.N; i++ {
+		for range b.N {
 			_ = inject(ctx, propagator)
 		}
 	})
-
 }
