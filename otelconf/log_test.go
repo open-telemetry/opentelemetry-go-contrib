@@ -47,6 +47,18 @@ func TestLoggerProvider(t *testing.T) {
 			wantProvider: noop.NewLoggerProvider(),
 		},
 		{
+			name: "invalid-provider",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					LoggerProvider: &MeterProviderJson{
+						Readers: []MetricReader{},
+					},
+				},
+			},
+			wantProvider: noop.NewLoggerProvider(),
+			wantErr:      newErrInvalid("logger_provider"),
+		},
+		{
 			name: "error-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
@@ -65,10 +77,12 @@ func TestLoggerProvider(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		mp, shutdown, err := loggerProvider(tt.cfg, resource.Default())
-		require.Equal(t, tt.wantProvider, mp)
-		assert.ErrorIs(t, err, tt.wantErr)
-		require.NoError(t, shutdown(t.Context()))
+		t.Run(tt.name, func(t *testing.T) {
+			mp, shutdown, err := loggerProvider(tt.cfg, resource.Default())
+			require.Equal(t, tt.wantProvider, mp)
+			assert.ErrorIs(t, err, tt.wantErr)
+			require.NoError(t, shutdown(t.Context()))
+		})
 	}
 }
 

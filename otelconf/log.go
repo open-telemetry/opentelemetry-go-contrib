@@ -23,10 +23,10 @@ import (
 )
 
 func loggerProvider(cfg configOptions, res *resource.Resource) (log.LoggerProvider, shutdownFunc, error) {
-	provider, ok := cfg.opentelemetryConfig.LoggerProvider.(*LoggerProviderJson)
-	if provider == nil {
+	if cfg.opentelemetryConfig.LoggerProvider == nil {
 		return noop.NewLoggerProvider(), noopShutdown, nil
 	}
+	provider, ok := cfg.opentelemetryConfig.LoggerProvider.(*LoggerProviderJson)
 	if !ok {
 		return noop.NewLoggerProvider(), noopShutdown, newErrInvalid("logger_provider")
 	}
