@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package otelconf provides an OpenTelemetry declarative configuration SDK.
-package otelconf // import "go.opentelemetry.io/contrib/otelconf/v1.0.0-rc.1"
+package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import (
 	"context"
 	"errors"
-	"fmt"
 
-	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
@@ -23,25 +21,6 @@ import (
 
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
-
-const (
-	compressionGzip = "gzip"
-	compressionNone = "none"
-)
-
-type configOptions struct {
-	ctx                   context.Context
-	opentelemetryConfig   OpenTelemetryConfiguration
-	loggerProviderOptions []sdklog.LoggerProviderOption
-	meterProviderOptions  []sdkmetric.Option
-	tracerProviderOptions []sdktrace.TracerProviderOption
-}
-
-type shutdownFunc func(context.Context) error
-
-func noopShutdown(context.Context) error {
-	return nil
-}
 
 // SDK is a struct that contains all the providers
 // configured via the configuration model.
@@ -189,28 +168,4 @@ func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
 	}
 
 	return &cfg, nil
-}
-
-// createHeadersConfig combines the two header config fields. Headers take precedence over headersList.
-func createHeadersConfig(headers []NameStringValuePair, headersList *string) (map[string]string, error) {
-	result := make(map[string]string)
-	if headersList != nil {
-		// Parsing follows https://github.com/open-telemetry/opentelemetry-configuration/blob/568e5080816d40d75792eb754fc96bde09654159/schema/type_descriptions.yaml#L584.
-		headerslist, err := baggage.Parse(*headersList)
-		if err != nil {
-			return nil, fmt.Errorf("invalid headers list: %w", err)
-		}
-		for _, kv := range headerslist.Members() {
-			result[kv.Key()] = kv.Value()
-		}
-	}
-	// Headers take precedence over HeadersList, so this has to be after HeadersList is processed
-	if len(headers) > 0 {
-		for _, kv := range headers {
-			if kv.Value != nil {
-				result[kv.Name] = *kv.Value
-			}
-		}
-	}
-	return result, nil
 }

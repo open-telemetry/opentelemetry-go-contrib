@@ -255,6 +255,8 @@ func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 	*j = BatchLogRecordProcessor(plain)
 	return nil
 }
+
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *NameStringValuePair) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
 	if err := node.Decode(&raw); err != nil {
@@ -371,6 +373,8 @@ func (j *SpanLimits) UnmarshalYAML(node *yaml.Node) error {
 	*j = SpanLimits(plain)
 	return nil
 }
+
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *ExperimentalLanguageSpecificInstrumentation) UnmarshalYAML(unmarshal func(any) error) error {
 	var raw map[string]any
 	if err := unmarshal(&raw); err != nil {
