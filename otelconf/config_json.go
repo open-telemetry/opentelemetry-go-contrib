@@ -646,6 +646,8 @@ func (j *CardinalityLimits) UnmarshalJSON(value []byte) error {
 	*j = CardinalityLimits(plain)
 	return nil
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *PullMetricReader) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
@@ -676,6 +678,8 @@ func (j *SpanLimits) UnmarshalJSON(value []byte) error {
 	*j = SpanLimits(plain)
 	return nil
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *SimpleLogRecordProcessor) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf // import "go.opentelemetry.io/contrib/otelconf/v1.0.0-rc.1"
+package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import (
 	"context"

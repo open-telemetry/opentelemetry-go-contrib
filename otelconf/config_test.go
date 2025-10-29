@@ -1378,6 +1378,7 @@ func TestUnmarshalCardinalityLimits(t *testing.T) {
 		})
 	}
 }
+
 func TestCreateHeadersConfig(t *testing.T) {
 	tests := []struct {
 		name        string
