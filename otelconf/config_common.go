@@ -11,6 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel/baggage"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 )
 
 const (
@@ -21,6 +22,7 @@ const (
 type configOptions struct {
 	ctx                   context.Context
 	opentelemetryConfig   OpenTelemetryConfiguration
+	meterProviderOptions  []sdkmetric.Option
 	loggerProviderOptions []sdklog.LoggerProviderOption
 }
 
