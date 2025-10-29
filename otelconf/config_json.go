@@ -411,48 +411,6 @@ func (j *ExporterDefaultHistogramAggregation) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLPHttpMetricExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["endpoint"]; raw != nil && !ok {
-		return errors.New("field endpoint in OTLPMetric: required")
-	}
-	type Plain OTLPHttpMetricExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if plain.Timeout != nil && 0 > *plain.Timeout {
-		return fmt.Errorf("field %s: must be >= %v", "timeout", 0)
-	}
-	*j = OTLPHttpMetricExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLPGrpcMetricExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["endpoint"]; raw != nil && !ok {
-		return errors.New("field endpoint in OTLPMetric: required")
-	}
-	type Plain OTLPGrpcMetricExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if plain.Timeout != nil && 0 > *plain.Timeout {
-		return fmt.Errorf("field %s: must be >= %v", "timeout", 0)
-	}
-	*j = OTLPGrpcMetricExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
 func (j *OTLPHttpExporter) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
@@ -646,6 +604,8 @@ func (j *CardinalityLimits) UnmarshalJSON(value []byte) error {
 	*j = CardinalityLimits(plain)
 	return nil
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *PullMetricReader) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {

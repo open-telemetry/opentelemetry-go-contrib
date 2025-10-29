@@ -255,6 +255,8 @@ func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 	*j = BatchLogRecordProcessor(plain)
 	return nil
 }
+
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *NameStringValuePair) UnmarshalYAML(node *yaml.Node) error {
 	var raw map[string]any
 	if err := node.Decode(&raw); err != nil {

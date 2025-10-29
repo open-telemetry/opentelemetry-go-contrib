@@ -1472,13 +1472,14 @@ func TestUnmarshalCardinalityLimits(t *testing.T) {
 		})
 	}
 }
+
 func TestCreateHeadersConfig(t *testing.T) {
 	tests := []struct {
 		name        string
 		headers     []NameStringValuePair
 		headersList *string
 		wantHeaders map[string]string
-		wantErr     string
+		wantErr     error
 	}{
 		{
 			name:        "no headers",
@@ -1548,18 +1549,13 @@ func TestCreateHeadersConfig(t *testing.T) {
 		{
 			name:        "invalid headerslist",
 			headersList: ptr("==="),
-			wantErr:     "invalid headers list: invalid key: \"\"",
+			wantErr:     newErrInvalid("invalid headers_list"),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			headersMap, err := createHeadersConfig(tt.headers, tt.headersList)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Equal(t, tt.wantErr, err.Error())
-			} else {
-				require.NoError(t, err)
-			}
+			require.ErrorIs(t, err, tt.wantErr)
 			require.Equal(t, tt.wantHeaders, headersMap)
 		})
 	}

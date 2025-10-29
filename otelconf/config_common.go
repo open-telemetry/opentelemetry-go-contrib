@@ -52,8 +52,8 @@ var enumValuesOTLPMetricDefaultHistogramAggregation = []any{
 type configOptions struct {
 	ctx                   context.Context
 	opentelemetryConfig   OpenTelemetryConfiguration
-	meterProviderOptions  []sdkmetric.Option
 	loggerProviderOptions []sdklog.LoggerProviderOption
+	meterProviderOptions  []sdkmetric.Option
 	tracerProviderOptions []sdktrace.TracerProviderOption
 }
 
