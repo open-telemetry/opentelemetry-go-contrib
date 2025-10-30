@@ -831,6 +831,17 @@ func TestReader(t *testing.T) {
 				sdkmetric.WithTimeout(5_000*time.Millisecond),
 			),
 		},
+		{
+			name: "periodic/otlp_file",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("otlp_file/development"),
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
