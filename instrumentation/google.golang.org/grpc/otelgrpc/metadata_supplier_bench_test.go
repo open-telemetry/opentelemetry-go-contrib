@@ -15,16 +15,14 @@ func BenchmarkMetadataSupplier(b *testing.B) {
 
 	b.Run("extract", func(b *testing.B) {
 		b.ReportAllocs()
-		b.ResetTimer()
-		for range b.N {
+		for b.Loop() {
 			_ = extract(ctx, propagator)
 		}
 	})
 
 	b.Run("inject", func(b *testing.B) {
 		b.ReportAllocs()
-		b.ResetTimer()
-		for range b.N {
+		for b.Loop() {
 			_ = inject(ctx, propagator)
 		}
 	})

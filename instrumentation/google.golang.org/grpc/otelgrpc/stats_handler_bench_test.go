@@ -153,9 +153,8 @@ func BenchmarkServerHandler_TagRPCNoOp(b *testing.B) {
 		FullMethodName: "/package.service/method",
 	}
 
-	b.ResetTimer()
 	b.ReportAllocs()
-	for range b.N {
+	for b.Loop() {
 		_ = handler.TagRPC(ctx, tagInfo)
 	}
 }
@@ -172,9 +171,8 @@ func BenchmarkClientHandler_TagRPCNoOp(b *testing.B) {
 		FullMethodName: "/package.service/method",
 	}
 
-	b.ResetTimer()
 	b.ReportAllocs()
-	for range b.N {
+	for b.Loop() {
 		_ = handler.TagRPC(ctx, tagInfo)
 	}
 }
