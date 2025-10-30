@@ -8,6 +8,7 @@ import (
 	"math/rand"
 )
 
+// rolldice is the outer function which does the error handling.
 func rolldice(rolls int) ([]int, error) {
 	if rolls <= 0 {
 		return nil, errors.New("rolls must be positive")

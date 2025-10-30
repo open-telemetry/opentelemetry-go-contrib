@@ -96,7 +96,7 @@ func handleRollDice(w http.ResponseWriter, r *http.Request) {
 
 	results, err := rolldice(rolls)
 	if err != nil {
-		// Library signals invalid input (<=0)
+		// Signals invalid input (<=0)
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("ERROR: %v", err)
 		return
