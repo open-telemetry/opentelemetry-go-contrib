@@ -4,26 +4,28 @@
 package main
 
 import (
-	"io"
-	"log"
+	"errors"
 	"math/rand"
-	"net/http"
-	"strconv"
 )
 
-func rolldice(w http.ResponseWriter, r *http.Request) {
+func rolldice(rolls int) ([]int, error) {
+	if rolls <= 0 {
+		return nil, errors.New("rolls must be positive")
+	}
+
+	if rolls == 1 {
+		return []int{rollOnce()}, nil
+	}
+
+	results := make([]int, rolls)
+	for i := 0; i < rolls; i++ {
+		results[i] = rollOnce()
+	}
+	return results, nil
+}
+
+// rollOnce is the inner function — returns a random number 1–6.
+func rollOnce() int {
 	roll := 1 + rand.Intn(6) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
-
-	var msg string
-	if player := r.PathValue("player"); player != "" {
-		msg = player + " is rolling the dice"
-	} else {
-		msg = "Anonymous player is rolling the dice"
-	}
-	log.Printf("%s, result: %d", msg, roll)
-
-	resp := strconv.Itoa(roll) + "\n"
-	if _, err := io.WriteString(w, resp); err != nil {
-		log.Printf("Write failed: %v", err)
-	}
+	return roll
 }
