@@ -557,9 +557,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					ExportTimeout: ptr(30000),
 					Exporter: LogRecordExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							CertificateFile:       ptr("/app/cert.pem"),
-							ClientCertificateFile: ptr("/app/cert.pem"),
-							ClientKeyFile:         ptr("/app/cert.pem"),
+							CertificateFile:       ptr("testdata/ca.crt"),
+							ClientCertificateFile: ptr("testdata/client.crt"),
+							ClientKeyFile:         ptr("testdata/client.key"),
 							Compression:           ptr("gzip"),
 							Encoding:              ptr(OTLPHttpEncodingProtobuf),
 							Endpoint:              ptr("http://localhost:4318/v1/logs"),
@@ -579,9 +579,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							CertificateFile:       ptr("/app/cert.pem"),
-							ClientCertificateFile: ptr("/app/cert.pem"),
-							ClientKeyFile:         ptr("/app/cert.pem"),
+							CertificateFile:       ptr("testdata/ca.crt"),
+							ClientCertificateFile: ptr("testdata/client.crt"),
+							ClientKeyFile:         ptr("testdata/client.key"),
 							Compression:           ptr("gzip"),
 							Endpoint:              ptr("http://localhost:4317"),
 							Headers: []NameStringValuePair{
@@ -689,9 +689,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					},
 					Exporter: PushMetricExporter{
 						OTLPHttp: &OTLPHttpMetricExporter{
-							CertificateFile:             ptr("/app/cert.pem"),
-							ClientCertificateFile:       ptr("/app/cert.pem"),
-							ClientKeyFile:               ptr("/app/cert.pem"),
+							CertificateFile:             ptr("testdata/ca.crt"),
+							ClientCertificateFile:       ptr("testdata/client.crt"),
+							ClientKeyFile:               ptr("testdata/client.key"),
 							Compression:                 ptr("gzip"),
 							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
 							Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
@@ -712,9 +712,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPGrpc: &OTLPGrpcMetricExporter{
-							CertificateFile:             ptr("/app/cert.pem"),
-							ClientCertificateFile:       ptr("/app/cert.pem"),
-							ClientKeyFile:               ptr("/app/cert.pem"),
+							CertificateFile:             ptr("testdata/ca.crt"),
+							ClientCertificateFile:       ptr("testdata/client.crt"),
+							ClientKeyFile:               ptr("testdata/client.key"),
 							Compression:                 ptr("gzip"),
 							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
 							Endpoint:                    ptr("http://localhost:4317"),
@@ -863,9 +863,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					ExportTimeout: ptr(30000),
 					Exporter: SpanExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							CertificateFile:       ptr("/app/cert.pem"),
-							ClientCertificateFile: ptr("/app/cert.pem"),
-							ClientKeyFile:         ptr("/app/cert.pem"),
+							CertificateFile:       ptr("testdata/ca.crt"),
+							ClientCertificateFile: ptr("testdata/client.crt"),
+							ClientKeyFile:         ptr("testdata/client.key"),
 							Compression:           ptr("gzip"),
 							Encoding:              ptr(OTLPHttpEncodingProtobuf),
 							Endpoint:              ptr("http://localhost:4318/v1/traces"),
@@ -885,9 +885,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							CertificateFile:       ptr("/app/cert.pem"),
-							ClientCertificateFile: ptr("/app/cert.pem"),
-							ClientKeyFile:         ptr("/app/cert.pem"),
+							CertificateFile:       ptr("testdata/ca.crt"),
+							ClientCertificateFile: ptr("testdata/client.crt"),
+							ClientKeyFile:         ptr("testdata/client.key"),
 							Compression:           ptr("gzip"),
 							Endpoint:              ptr("http://localhost:4317"),
 							Headers: []NameStringValuePair{
