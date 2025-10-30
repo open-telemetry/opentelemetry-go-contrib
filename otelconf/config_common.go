@@ -12,6 +12,8 @@ import (
 
 	"go.opentelemetry.io/otel/baggage"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	yaml "go.yaml.in/yaml/v3"
 )
 
@@ -24,6 +26,8 @@ type configOptions struct {
 	ctx                   context.Context
 	opentelemetryConfig   OpenTelemetryConfiguration
 	loggerProviderOptions []sdklog.LoggerProviderOption
+	meterProviderOptions  []sdkmetric.Option
+	tracerProviderOptions []sdktrace.TracerProviderOption
 }
 
 type shutdownFunc func(context.Context) error
