@@ -238,11 +238,9 @@ func createHeadersConfig(headers []NameStringValuePair, headersList *string) (ma
 		}
 	}
 	// Headers take precedence over HeadersList, so this has to be after HeadersList is processed
-	if len(headers) > 0 {
-		for _, kv := range headers {
-			if kv.Value != nil {
-				result[kv.Name] = *kv.Value
-			}
+	for _, kv := range headers {
+		if kv.Value != nil {
+			result[kv.Name] = *kv.Value
 		}
 	}
 	return result, nil
