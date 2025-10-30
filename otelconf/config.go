@@ -7,8 +7,12 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 import (
 	"context"
 	"errors"
+	"log"
+	"os"
 
-	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel"
+	apilog "go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/global"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
@@ -27,7 +31,7 @@ import (
 type SDK struct {
 	meterProvider  metric.MeterProvider
 	tracerProvider trace.TracerProvider
-	loggerProvider log.LoggerProvider
+	loggerProvider apilog.LoggerProvider
 	shutdown       shutdownFunc
 }
 
@@ -41,8 +45,8 @@ func (s *SDK) MeterProvider() metric.MeterProvider {
 	return s.meterProvider
 }
 
-// LoggerProvider returns a configured log.LoggerProvider.
-func (s *SDK) LoggerProvider() log.LoggerProvider {
+// LoggerProvider returns a configured apilog.LoggerProvider.
+func (s *SDK) LoggerProvider() apilog.LoggerProvider {
 	return s.loggerProvider
 }
 
@@ -56,6 +60,50 @@ var noopSDK = SDK{
 	meterProvider:  noopmetric.MeterProvider{},
 	tracerProvider: nooptrace.TracerProvider{},
 	shutdown:       func(context.Context) error { return nil },
+}
+
+var sdk *SDK
+
+// init checks the local environment and uses the file set in the variable
+// `OTEL_EXPERIMENTAL_CONFIG_FILE` to configure the SDK automatically.
+func init() {
+	// look for the env variable
+	filename, ok := os.LookupEnv("OTEL_EXPERIMENTAL_CONFIG_FILE")
+	if !ok {
+		return
+	}
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Parse a configuration file into an OpenTelemetryConfiguration model.
+	c, err := ParseYAML(b)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Create SDK components with the parsed configuration.
+	s, err := NewSDK(WithOpenTelemetryConfiguration(*c))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Set the global providers.
+	otel.SetTracerProvider(s.TracerProvider())
+	otel.SetMeterProvider(s.MeterProvider())
+	global.SetLoggerProvider(s.LoggerProvider())
+	sdk = &s
+}
+
+// Shutdown calls the shutdown function of the global SDK instantiated if
+func Shutdown(ctx context.Context) {
+	if sdk == nil {
+		return
+	}
+	if err := sdk.Shutdown(ctx); err != nil {
+		log.Fatal(err)
+	}
 }
 
 // NewSDK creates SDK providers based on the configuration model.
