@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
@@ -53,14 +54,17 @@ func TestTracezHandler_ServeHTTP_BasicResponse(t *testing.T) {
 }
 
 func TestTracezHandler_ServeHTTP_WithRealSpans(t *testing.T) {
-	// a real tracer with our span processor
 	sp := NewSpanProcessor()
-	defer sp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, sp.Shutdown(context.Background()))
+	}()
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 	)
-	defer tp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, tp.Shutdown(context.Background()))
+	}()
 
 	tracer := tp.Tracer("test-tracer")
 
@@ -96,17 +100,20 @@ func TestTracezHandler_ServeHTTP_WithRealSpans(t *testing.T) {
 
 func TestTracezHandler_ServeHTTP_WithSpanNameQuery(t *testing.T) {
 	sp := NewSpanProcessor()
-	defer sp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, sp.Shutdown(context.Background()))
+	}()
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 	)
-	defer tp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, tp.Shutdown(context.Background()))
+	}()
 
 	tracer := tp.Tracer("test-tracer")
 	ctx := context.Background()
 
-	// Create a span
 	_, span := tracer.Start(ctx, "query-span")
 	span.End()
 
@@ -154,12 +161,16 @@ func TestTracezHandler_ServeHTTP_WithSpanNameQuery(t *testing.T) {
 
 func TestTracezHandler_ServeHTTP_SpanTypes(t *testing.T) {
 	sp := NewSpanProcessor()
-	defer sp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, sp.Shutdown(context.Background()))
+	}()
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 	)
-	defer tp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, tp.Shutdown(context.Background()))
+	}()
 
 	tracer := tp.Tracer("test-tracer")
 	ctx := context.Background()
@@ -212,12 +223,16 @@ func TestTracezHandler_ServeHTTP_SpanTypes(t *testing.T) {
 
 func TestTracezHandler_ServeHTTP_LatencyBucket(t *testing.T) {
 	sp := NewSpanProcessor()
-	defer sp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, sp.Shutdown(context.Background()))
+	}()
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 	)
-	defer tp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, tp.Shutdown(context.Background()))
+	}()
 
 	tracer := tp.Tracer("test-tracer")
 	ctx := context.Background()
@@ -244,7 +259,6 @@ func TestTracezHandler_ServeHTTP_InvalidForm(t *testing.T) {
 	sp := NewSpanProcessor()
 	handler := NewTracezHandler(sp)
 
-	// request with an invalid form
 	req := httptest.NewRequest(http.MethodGet, "/tracez?%zzz", nil)
 	w := httptest.NewRecorder()
 
@@ -260,17 +274,20 @@ func TestTracezHandler_ServeHTTP_InvalidForm(t *testing.T) {
 
 func TestTracezHandler_ServeHTTP_MultipleSpans(t *testing.T) {
 	sp := NewSpanProcessor()
-	defer sp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, sp.Shutdown(context.Background()))
+	}()
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 	)
-	defer tp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, tp.Shutdown(context.Background()))
+	}()
 
 	tracer := tp.Tracer("test-tracer")
 	ctx := context.Background()
 
-	// multiple spans with the same name
 	for i := 0; i < 5; i++ {
 		_, span := tracer.Start(ctx, "multi-span")
 		span.End()
@@ -298,17 +315,20 @@ func TestTracezHandler_ServeHTTP_MultipleSpans(t *testing.T) {
 
 func TestTracezHandler_ServeHTTP_AllQueryParameters(t *testing.T) {
 	sp := NewSpanProcessor()
-	defer sp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, sp.Shutdown(context.Background()))
+	}()
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 	)
-	defer tp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, tp.Shutdown(context.Background()))
+	}()
 
 	tracer := tp.Tracer("test-tracer")
 	ctx := context.Background()
 
-	// Add a test span
 	_, span := tracer.Start(ctx, "param-test")
 	span.End()
 
@@ -318,26 +338,11 @@ func TestTracezHandler_ServeHTTP_AllQueryParameters(t *testing.T) {
 		name string
 		url  string
 	}{
-		{
-			name: "with all parameters",
-			url:  "/tracez?zspanname=param-test&ztype=1&zlatencybucket=2",
-		},
-		{
-			name: "with type only",
-			url:  "/tracez?ztype=1",
-		},
-		{
-			name: "with latency bucket only",
-			url:  "/tracez?zlatencybucket=3",
-		},
-		{
-			name: "with invalid type value",
-			url:  "/tracez?ztype=invalid",
-		},
-		{
-			name: "with negative latency bucket",
-			url:  "/tracez?zlatencybucket=-1",
-		},
+		{"with all parameters", "/tracez?zspanname=param-test&ztype=1&zlatencybucket=2"},
+		{"with type only", "/tracez?ztype=1"},
+		{"with latency bucket only", "/tracez?zlatencybucket=3"},
+		{"with invalid type value", "/tracez?ztype=invalid"},
+		{"with negative latency bucket", "/tracez?zlatencybucket=-1"},
 	}
 
 	for _, tt := range tests {
@@ -381,16 +386,20 @@ func TestTracezHandler_ServeHTTP_EmptySpanProcessor(t *testing.T) {
 
 func TestTracezHandler_ServeHTTP_ConcurrentRequests(t *testing.T) {
 	sp := NewSpanProcessor()
-	defer sp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, sp.Shutdown(context.Background()))
+	}()
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 	)
-	defer tp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, tp.Shutdown(context.Background()))
+	}()
 
 	tracer := tp.Tracer("test-tracer")
-
 	ctx := context.Background()
+
 	for i := 0; i < 10; i++ {
 		_, span := tracer.Start(ctx, "concurrent-span")
 		span.End()
@@ -409,14 +418,11 @@ func TestTracezHandler_ServeHTTP_ConcurrentRequests(t *testing.T) {
 			resp := w.Result()
 			resp.Body.Close()
 
-			if resp.StatusCode != http.StatusOK {
-				t.Errorf("expected status OK, got %v", resp.StatusCode)
-			}
+			require.Equal(t, http.StatusOK, resp.StatusCode)
 			done <- true
 		}()
 	}
 
-	// Wait for all requests to complete
 	for i := 0; i < 5; i++ {
 		<-done
 	}
@@ -424,14 +430,17 @@ func TestTracezHandler_ServeHTTP_ConcurrentRequests(t *testing.T) {
 
 func TestTracezHandler_Integration(t *testing.T) {
 	sp := NewSpanProcessor()
-	defer sp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, sp.Shutdown(context.Background()))
+	}()
 
 	tp := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(sp),
 	)
-	defer tp.Shutdown(context.Background())
+	defer func() {
+		require.NoError(t, tp.Shutdown(context.Background()))
+	}()
 
-	// Set as global tracer provider
 	otel.SetTracerProvider(tp)
 
 	tracer := otel.Tracer("integration-test")
@@ -450,15 +459,9 @@ func TestTracezHandler_Integration(t *testing.T) {
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		t.Errorf("expected status OK, got %v", w.Code)
-	}
+	require.Equal(t, http.StatusOK, w.Code)
 
 	body := w.Body.String()
-	if !strings.Contains(body, "normal-operation") {
-		t.Error("expected normal span in output")
-	}
-	if !strings.Contains(body, "error-operation") {
-		t.Error("expected error span in output")
-	}
+	require.Contains(t, body, "normal-operation")
+	require.Contains(t, body, "error-operation")
 }
