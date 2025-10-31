@@ -335,6 +335,10 @@ func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
 			return false
 		}
 
+		if len(included) == 0 {
+			return true
+		}
+
 		_, ok := included[kv.Key]
 		return ok
 	}, nil
