@@ -1,0 +1,464 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package zpages
+
+import (
+	"context"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+)
+
+func TestNewTracezHandler(t *testing.T) {
+	sp := NewSpanProcessor()
+	handler := NewTracezHandler(sp)
+
+	if handler == nil {
+		t.Fatal("NewTracezHandler returned nil")
+	}
+
+	var _ http.Handler = handler
+}
+
+func TestTracezHandler_ServeHTTP_BasicResponse(t *testing.T) {
+	sp := NewSpanProcessor()
+	handler := NewTracezHandler(sp)
+
+	req := httptest.NewRequest(http.MethodGet, "/tracez", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", resp.StatusCode)
+	}
+
+	contentType := resp.Header.Get("Content-Type")
+	if contentType != "text/html; charset=utf-8" {
+		t.Errorf("expected Content-Type 'text/html; charset=utf-8', got %q", contentType)
+	}
+
+	body := w.Body.String()
+	if body == "" {
+		t.Error("expected non-empty response body")
+	}
+}
+
+func TestTracezHandler_ServeHTTP_WithRealSpans(t *testing.T) {
+	// a real tracer with our span processor
+	sp := NewSpanProcessor()
+	defer sp.Shutdown(context.Background())
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer tp.Shutdown(context.Background())
+
+	tracer := tp.Tracer("test-tracer")
+
+	ctx := context.Background()
+	_, span1 := tracer.Start(ctx, "test-span-1")
+	span1.End()
+
+	_, span2 := tracer.Start(ctx, "test-span-2")
+	span2.End()
+
+	handler := NewTracezHandler(sp)
+
+	req := httptest.NewRequest(http.MethodGet, "/tracez", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", resp.StatusCode)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "test-span-1") {
+		t.Error("expected response to contain span name 'test-span-1'")
+	}
+	if !strings.Contains(body, "test-span-2") {
+		t.Error("expected response to contain span name 'test-span-2'")
+	}
+}
+
+func TestTracezHandler_ServeHTTP_WithSpanNameQuery(t *testing.T) {
+	sp := NewSpanProcessor()
+	defer sp.Shutdown(context.Background())
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer tp.Shutdown(context.Background())
+
+	tracer := tp.Tracer("test-tracer")
+	ctx := context.Background()
+
+	// Create a span
+	_, span := tracer.Start(ctx, "query-span")
+	span.End()
+
+	handler := NewTracezHandler(sp)
+
+	tests := []struct {
+		name      string
+		queryPath string
+		wantSpan  bool
+	}{
+		{
+			name:      "query for existing span",
+			queryPath: "/tracez?zspanname=query-span",
+			wantSpan:  true,
+		},
+		{
+			name:      "query for non-existing span",
+			queryPath: "/tracez?zspanname=non-existing",
+			wantSpan:  false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.queryPath, nil)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			resp := w.Result()
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("expected status OK, got %v", resp.StatusCode)
+			}
+
+			body := w.Body.String()
+			containsSpan := strings.Contains(body, "query-span")
+			if tt.wantSpan && !containsSpan {
+				t.Error("expected response to contain span name")
+			}
+		})
+	}
+}
+
+func TestTracezHandler_ServeHTTP_SpanTypes(t *testing.T) {
+	sp := NewSpanProcessor()
+	defer sp.Shutdown(context.Background())
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer tp.Shutdown(context.Background())
+
+	tracer := tp.Tracer("test-tracer")
+	ctx := context.Background()
+
+	_, completedSpan := tracer.Start(ctx, "completed-span")
+	completedSpan.End()
+
+	_, errorSpan := tracer.Start(ctx, "error-span")
+	errorSpan.RecordError(context.DeadlineExceeded)
+	errorSpan.End()
+
+	handler := NewTracezHandler(sp)
+
+	tests := []struct {
+		name       string
+		spanName   string
+		spanType   string
+		wantStatus int
+	}{
+		{
+			name:       "latency spans (type=1)",
+			spanName:   "completed-span",
+			spanType:   "1",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "error spans (type=2)",
+			spanName:   "error-span",
+			spanType:   "2",
+			wantStatus: http.StatusOK,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname="+tt.spanName+"&ztype="+tt.spanType, nil)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			resp := w.Result()
+			defer resp.Body.Close()
+
+			if resp.StatusCode != tt.wantStatus {
+				t.Errorf("expected status %v, got %v", tt.wantStatus, resp.StatusCode)
+			}
+		})
+	}
+}
+
+func TestTracezHandler_ServeHTTP_LatencyBucket(t *testing.T) {
+	sp := NewSpanProcessor()
+	defer sp.Shutdown(context.Background())
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer tp.Shutdown(context.Background())
+
+	tracer := tp.Tracer("test-tracer")
+	ctx := context.Background()
+
+	_, span := tracer.Start(ctx, "latency-span")
+	span.End()
+
+	handler := NewTracezHandler(sp)
+
+	req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname=latency-span&ztype=1&zlatencybucket=0", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", resp.StatusCode)
+	}
+}
+
+func TestTracezHandler_ServeHTTP_InvalidForm(t *testing.T) {
+	sp := NewSpanProcessor()
+	handler := NewTracezHandler(sp)
+
+	// request with an invalid form
+	req := httptest.NewRequest(http.MethodGet, "/tracez?%zzz", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadRequest {
+		t.Errorf("expected status OK or BadRequest, got %v", resp.StatusCode)
+	}
+}
+
+func TestTracezHandler_ServeHTTP_MultipleSpans(t *testing.T) {
+	sp := NewSpanProcessor()
+	defer sp.Shutdown(context.Background())
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer tp.Shutdown(context.Background())
+
+	tracer := tp.Tracer("test-tracer")
+	ctx := context.Background()
+
+	// multiple spans with the same name
+	for i := 0; i < 5; i++ {
+		_, span := tracer.Start(ctx, "multi-span")
+		span.End()
+	}
+
+	handler := NewTracezHandler(sp)
+
+	req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname=multi-span&ztype=1", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", resp.StatusCode)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "multi-span") {
+		t.Error("expected response to contain span name")
+	}
+}
+
+func TestTracezHandler_ServeHTTP_AllQueryParameters(t *testing.T) {
+	sp := NewSpanProcessor()
+	defer sp.Shutdown(context.Background())
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer tp.Shutdown(context.Background())
+
+	tracer := tp.Tracer("test-tracer")
+	ctx := context.Background()
+
+	// Add a test span
+	_, span := tracer.Start(ctx, "param-test")
+	span.End()
+
+	handler := NewTracezHandler(sp)
+
+	tests := []struct {
+		name string
+		url  string
+	}{
+		{
+			name: "with all parameters",
+			url:  "/tracez?zspanname=param-test&ztype=1&zlatencybucket=2",
+		},
+		{
+			name: "with type only",
+			url:  "/tracez?ztype=1",
+		},
+		{
+			name: "with latency bucket only",
+			url:  "/tracez?zlatencybucket=3",
+		},
+		{
+			name: "with invalid type value",
+			url:  "/tracez?ztype=invalid",
+		},
+		{
+			name: "with negative latency bucket",
+			url:  "/tracez?zlatencybucket=-1",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			resp := w.Result()
+			defer resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("expected status OK, got %v", resp.StatusCode)
+			}
+		})
+	}
+}
+
+func TestTracezHandler_ServeHTTP_EmptySpanProcessor(t *testing.T) {
+	sp := NewSpanProcessor()
+	handler := NewTracezHandler(sp)
+
+	req := httptest.NewRequest(http.MethodGet, "/tracez", nil)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("expected status OK, got %v", resp.StatusCode)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "html") && !strings.Contains(body, "HTML") {
+		t.Error("expected HTML response even with empty processor")
+	}
+}
+
+func TestTracezHandler_ServeHTTP_ConcurrentRequests(t *testing.T) {
+	sp := NewSpanProcessor()
+	defer sp.Shutdown(context.Background())
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer tp.Shutdown(context.Background())
+
+	tracer := tp.Tracer("test-tracer")
+
+	ctx := context.Background()
+	for i := 0; i < 10; i++ {
+		_, span := tracer.Start(ctx, "concurrent-span")
+		span.End()
+	}
+
+	handler := NewTracezHandler(sp)
+
+	done := make(chan bool, 5)
+	for i := 0; i < 5; i++ {
+		go func() {
+			req := httptest.NewRequest(http.MethodGet, "/tracez", nil)
+			w := httptest.NewRecorder()
+
+			handler.ServeHTTP(w, req)
+
+			resp := w.Result()
+			resp.Body.Close()
+
+			if resp.StatusCode != http.StatusOK {
+				t.Errorf("expected status OK, got %v", resp.StatusCode)
+			}
+			done <- true
+		}()
+	}
+
+	// Wait for all requests to complete
+	for i := 0; i < 5; i++ {
+		<-done
+	}
+}
+
+func TestTracezHandler_Integration(t *testing.T) {
+	sp := NewSpanProcessor()
+	defer sp.Shutdown(context.Background())
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer tp.Shutdown(context.Background())
+
+	// Set as global tracer provider
+	otel.SetTracerProvider(tp)
+
+	tracer := otel.Tracer("integration-test")
+	ctx := context.Background()
+
+	_, normalSpan := tracer.Start(ctx, "normal-operation")
+	normalSpan.End()
+
+	_, errorSpan := tracer.Start(ctx, "error-operation")
+	errorSpan.RecordError(context.Canceled)
+	errorSpan.End()
+
+	handler := NewTracezHandler(sp)
+
+	req := httptest.NewRequest(http.MethodGet, "/tracez", nil)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("expected status OK, got %v", w.Code)
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "normal-operation") {
+		t.Error("expected normal span in output")
+	}
+	if !strings.Contains(body, "error-operation") {
+		t.Error("expected error span in output")
+	}
+}
