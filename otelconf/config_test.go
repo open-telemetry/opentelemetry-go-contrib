@@ -1001,6 +1001,7 @@ func TestParseYAML(t *testing.T) {
 			input: "v1.0.0_invalid_nil_name.yaml",
 			wantErr: errors.New(`unmarshal error in *otelconf.BatchSpanProcessor
 unmarshal error in *otelconf.SpanExporter
+unmarshal error in *otelconf.OTLPHttpExporter
 cannot unmarshal field name in NameStringValuePair required`),
 		},
 		{
@@ -1008,6 +1009,7 @@ cannot unmarshal field name in NameStringValuePair required`),
 			input: "v1.0.0_invalid_nil_value.yaml",
 			wantErr: errors.New(`unmarshal error in *otelconf.BatchLogRecordProcessor
 unmarshal error in *otelconf.LogRecordExporter
+unmarshal error in *otelconf.OTLPHttpExporter
 cannot unmarshal field value in NameStringValuePair required`),
 		},
 		{
@@ -1469,94 +1471,6 @@ func TestUnmarshalCardinalityLimits(t *testing.T) {
 			cl = CardinalityLimits{}
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
 			assert.ErrorIs(t, err, tt.wantErrT)
-		})
-	}
-}
-
-func TestCreateHeadersConfig(t *testing.T) {
-	tests := []struct {
-		name        string
-		headers     []NameStringValuePair
-		headersList *string
-		wantHeaders map[string]string
-		wantErr     error
-	}{
-		{
-			name:        "no headers",
-			headers:     []NameStringValuePair{},
-			headersList: nil,
-			wantHeaders: map[string]string{},
-		},
-		{
-			name:        "headerslist only",
-			headers:     []NameStringValuePair{},
-			headersList: ptr("a=b,c=d"),
-			wantHeaders: map[string]string{
-				"a": "b",
-				"c": "d",
-			},
-		},
-		{
-			name: "headers only",
-			headers: []NameStringValuePair{
-				{
-					Name:  "a",
-					Value: ptr("b"),
-				},
-				{
-					Name:  "c",
-					Value: ptr("d"),
-				},
-			},
-			headersList: nil,
-			wantHeaders: map[string]string{
-				"a": "b",
-				"c": "d",
-			},
-		},
-		{
-			name: "both headers and headerslist",
-			headers: []NameStringValuePair{
-				{
-					Name:  "a",
-					Value: ptr("b"),
-				},
-			},
-			headersList: ptr("c=d"),
-			wantHeaders: map[string]string{
-				"a": "b",
-				"c": "d",
-			},
-		},
-		{
-			name: "headers supersedes headerslist",
-			headers: []NameStringValuePair{
-				{
-					Name:  "a",
-					Value: ptr("b"),
-				},
-				{
-					Name:  "c",
-					Value: ptr("override"),
-				},
-			},
-			headersList: ptr("c=d"),
-			wantHeaders: map[string]string{
-				"a": "b",
-				"c": "override",
-			},
-		},
-		{
-			name:        "invalid headerslist",
-			headersList: ptr("==="),
-			wantErr:     newErrInvalid("invalid headers_list"),
-		},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			headersMap, err := createHeadersConfig(tt.headers, tt.headersList)
-			require.ErrorIs(t, err, tt.wantErr)
-			require.Equal(t, tt.wantHeaders, headersMap)
 		})
 	}
 }

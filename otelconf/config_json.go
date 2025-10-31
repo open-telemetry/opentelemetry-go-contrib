@@ -411,48 +411,6 @@ func (j *ExporterDefaultHistogramAggregation) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLPHttpExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["endpoint"]; raw != nil && !ok {
-		return errors.New("field endpoint in OTLP: required")
-	}
-	type Plain OTLPHttpExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if plain.Timeout != nil && 0 > *plain.Timeout {
-		return fmt.Errorf("field %s: must be >= %v", "timeout", 0)
-	}
-	*j = OTLPHttpExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *OTLPGrpcExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-	if _, ok := raw["endpoint"]; raw != nil && !ok {
-		return errors.New("field endpoint in OTLP: required")
-	}
-	type Plain OTLPGrpcExporter
-	var plain Plain
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-	if plain.Timeout != nil && 0 > *plain.Timeout {
-		return fmt.Errorf("field %s: must be >= %v", "timeout", 0)
-	}
-	*j = OTLPGrpcExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
 func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
@@ -661,6 +619,7 @@ func (j *OTLPHttpMetricExporter) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *SimpleLogRecordProcessor) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
@@ -701,6 +660,8 @@ func (j *OTLPGrpcMetricExporter) UnmarshalJSON(b []byte) error {
 	*j = OTLPGrpcMetricExporter(sh.Plain)
 	return nil
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *SimpleSpanProcessor) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
@@ -772,6 +733,7 @@ func (j *OTLPHttpExporter) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *ZipkinSpanExporter) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {
