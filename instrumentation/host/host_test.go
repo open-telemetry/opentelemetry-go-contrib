@@ -4,6 +4,7 @@
 package host_test
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -125,5 +126,20 @@ func TestHostMetrics(t *testing.T) {
 			},
 		},
 	}
-	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+	baseMetrics := rm.ScopeMetrics[0]
+	filteredMetrics := metricdata.ScopeMetrics{
+		Scope:   baseMetrics.Scope,
+		Metrics: []metricdata.Metrics{},
+	}
+
+	for _, m := range baseMetrics.Metrics {
+		// Skip PSI metrics in this test - we test those separately
+		if strings.HasPrefix(m.Name, "system.psi.") {
+			continue
+		}
+		filteredMetrics.Metrics = append(filteredMetrics.Metrics, m)
+	}
+
+	metricdatatest.AssertEqual(t, want, filteredMetrics, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
