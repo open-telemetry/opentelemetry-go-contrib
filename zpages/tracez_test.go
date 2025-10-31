@@ -24,7 +24,7 @@ func TestNewTracezHandler(t *testing.T) {
 		t.Fatal("NewTracezHandler returned nil")
 	}
 
-	var _ = handler
+	_ = handler
 }
 
 func TestTracezHandler_ServeHTTP_BasicResponse(t *testing.T) {
