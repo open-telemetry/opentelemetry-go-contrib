@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/baggage"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 const (
@@ -24,6 +25,7 @@ type configOptions struct {
 	opentelemetryConfig   OpenTelemetryConfiguration
 	meterProviderOptions  []sdkmetric.Option
 	loggerProviderOptions []sdklog.LoggerProviderOption
+	tracerProviderOptions []sdktrace.TracerProviderOption
 }
 
 type shutdownFunc func(context.Context) error

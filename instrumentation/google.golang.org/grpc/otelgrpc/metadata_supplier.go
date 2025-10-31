@@ -15,9 +15,9 @@ type metadataSupplier struct {
 }
 
 // assert that metadataSupplier implements the TextMapCarrier interface.
-var _ propagation.TextMapCarrier = &metadataSupplier{}
+var _ propagation.TextMapCarrier = metadataSupplier{}
 
-func (s *metadataSupplier) Get(key string) string {
+func (s metadataSupplier) Get(key string) string {
 	values := s.metadata.Get(key)
 	if len(values) == 0 {
 		return ""
@@ -25,11 +25,11 @@ func (s *metadataSupplier) Get(key string) string {
 	return values[0]
 }
 
-func (s *metadataSupplier) Set(key, value string) {
+func (s metadataSupplier) Set(key, value string) {
 	s.metadata.Set(key, value)
 }
 
-func (s *metadataSupplier) Keys() []string {
+func (s metadataSupplier) Keys() []string {
 	out := make([]string, 0, len(s.metadata))
 	for key := range s.metadata {
 		out = append(out, key)
@@ -42,7 +42,7 @@ func inject(ctx context.Context, propagators propagation.TextMapPropagator) cont
 	if !ok {
 		md = metadata.MD{}
 	}
-	propagators.Inject(ctx, &metadataSupplier{
+	propagators.Inject(ctx, metadataSupplier{
 		metadata: md,
 	})
 	return metadata.NewOutgoingContext(ctx, md)
@@ -54,7 +54,7 @@ func extract(ctx context.Context, propagators propagation.TextMapPropagator) con
 		md = metadata.MD{}
 	}
 
-	return propagators.Extract(ctx, &metadataSupplier{
+	return propagators.Extract(ctx, metadataSupplier{
 		metadata: md,
 	})
 }
