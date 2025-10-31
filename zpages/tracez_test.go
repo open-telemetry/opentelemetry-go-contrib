@@ -30,7 +30,7 @@ func TestTracezHandler_ServeHTTP_BasicResponse(t *testing.T) {
 	sp := NewSpanProcessor()
 	handler := NewTracezHandler(sp)
 
-	req := httptest.NewRequest(http.MethodGet, "/tracez", nil)
+	req := httptest.NewRequest(http.MethodGet, "/tracez", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -77,7 +77,7 @@ func TestTracezHandler_ServeHTTP_WithRealSpans(t *testing.T) {
 
 	handler := NewTracezHandler(sp)
 
-	req := httptest.NewRequest(http.MethodGet, "/tracez", nil)
+	req := httptest.NewRequest(http.MethodGet, "/tracez", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -138,7 +138,7 @@ func TestTracezHandler_ServeHTTP_WithSpanNameQuery(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tt.queryPath, nil)
+			req := httptest.NewRequest(http.MethodGet, tt.queryPath, http.NoBody)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, req)
@@ -206,7 +206,7 @@ func TestTracezHandler_ServeHTTP_SpanTypes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname="+tt.spanName+"&ztype="+tt.spanType, nil)
+			req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname="+tt.spanName+"&ztype="+tt.spanType, http.NoBody)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, req)
@@ -242,7 +242,7 @@ func TestTracezHandler_ServeHTTP_LatencyBucket(t *testing.T) {
 
 	handler := NewTracezHandler(sp)
 
-	req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname=latency-span&ztype=1&zlatencybucket=0", nil)
+	req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname=latency-span&ztype=1&zlatencybucket=0", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -259,7 +259,7 @@ func TestTracezHandler_ServeHTTP_InvalidForm(t *testing.T) {
 	sp := NewSpanProcessor()
 	handler := NewTracezHandler(sp)
 
-	req := httptest.NewRequest(http.MethodGet, "/tracez?%zzz", nil)
+	req := httptest.NewRequest(http.MethodGet, "/tracez?%zzz", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -295,7 +295,7 @@ func TestTracezHandler_ServeHTTP_MultipleSpans(t *testing.T) {
 
 	handler := NewTracezHandler(sp)
 
-	req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname=multi-span&ztype=1", nil)
+	req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname=multi-span&ztype=1", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -347,7 +347,7 @@ func TestTracezHandler_ServeHTTP_AllQueryParameters(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tt.url, nil)
+			req := httptest.NewRequest(http.MethodGet, tt.url, http.NoBody)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, req)
@@ -366,7 +366,7 @@ func TestTracezHandler_ServeHTTP_EmptySpanProcessor(t *testing.T) {
 	sp := NewSpanProcessor()
 	handler := NewTracezHandler(sp)
 
-	req := httptest.NewRequest(http.MethodGet, "/tracez", nil)
+	req := httptest.NewRequest(http.MethodGet, "/tracez", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
@@ -410,7 +410,7 @@ func TestTracezHandler_ServeHTTP_ConcurrentRequests(t *testing.T) {
 	done := make(chan bool, 5)
 	for i := 0; i < 5; i++ {
 		go func() {
-			req := httptest.NewRequest(http.MethodGet, "/tracez", nil)
+			req := httptest.NewRequest(http.MethodGet, "/tracez", http.NoBody)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, req)
