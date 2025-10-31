@@ -5,6 +5,7 @@ package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mong
 
 import (
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -12,9 +13,14 @@ import (
 const ScopeName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo"
 
 // config is used to configure the mongo tracer.
+// when you want to disable metrics or traces, use the [WithMeterProvider] options
+// to set a [go.opentelemetry.io/otel/metric/noop.MeterProvider] or
+// [WithTracerProvider] options to set a [go.opentelemetry.io/otel/trace/noop.TracerProvider]
 type config struct {
+	MeterProvider  metric.MeterProvider
 	TracerProvider trace.TracerProvider
 
+	Meter  metric.Meter
 	Tracer trace.Tracer
 
 	CommandAttributeDisabled bool
@@ -23,12 +29,18 @@ type config struct {
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
+		MeterProvider:            otel.GetMeterProvider(),
 		TracerProvider:           otel.GetTracerProvider(),
 		CommandAttributeDisabled: true,
 	}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
+
+	cfg.Meter = cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+	)
 
 	cfg.Tracer = cfg.TracerProvider.Tracer(
 		ScopeName,
@@ -46,6 +58,16 @@ type optionFunc func(*config)
 
 func (o optionFunc) apply(c *config) {
 	o(c)
+}
+
+// WithMeterProvider specifies a meter provider to use for creating a meter.
+// If none is specified, the global provider is used.
+func WithMeterProvider(provider metric.MeterProvider) Option {
+	return optionFunc(func(cfg *config) {
+		if provider != nil {
+			cfg.MeterProvider = provider
+		}
+	})
 }
 
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
