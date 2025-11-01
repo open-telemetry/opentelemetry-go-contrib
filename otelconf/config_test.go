@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -185,7 +186,7 @@ func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
 			name:       "missing required exporter field",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequiredExporter(&BatchLogRecordProcessor{}),
+			wantErrT:   newErrRequired(&BatchLogRecordProcessor{}, "exporter"),
 		},
 		{
 			name:       "invalid data",
@@ -286,7 +287,7 @@ func TestUnmarshalBatchSpanProcessor(t *testing.T) {
 			name:       "missing required exporter field",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequiredExporter(&BatchSpanProcessor{}),
+			wantErrT:   newErrRequired(&BatchSpanProcessor{}, "exporter"),
 		},
 		{
 			name:       "invalid data",
@@ -387,7 +388,7 @@ func TestUnmarshalPeriodicMetricReader(t *testing.T) {
 			name:       "missing required exporter field",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequiredExporter(&PeriodicMetricReader{}),
+			wantErrT:   newErrRequired(&PeriodicMetricReader{}, "exporter"),
 		},
 		{
 			name:       "invalid data",
@@ -559,6 +560,94 @@ func TestUnmarshalCardinalityLimits(t *testing.T) {
 	}
 }
 
+func TestCreateHeadersConfig(t *testing.T) {
+	tests := []struct {
+		name        string
+		headers     []NameStringValuePair
+		headersList *string
+		wantHeaders map[string]string
+		wantErr     error
+	}{
+		{
+			name:        "no headers",
+			headers:     []NameStringValuePair{},
+			headersList: nil,
+			wantHeaders: map[string]string{},
+		},
+		{
+			name:        "headerslist only",
+			headers:     []NameStringValuePair{},
+			headersList: ptr("a=b,c=d"),
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "d",
+			},
+		},
+		{
+			name: "headers only",
+			headers: []NameStringValuePair{
+				{
+					Name:  "a",
+					Value: ptr("b"),
+				},
+				{
+					Name:  "c",
+					Value: ptr("d"),
+				},
+			},
+			headersList: nil,
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "d",
+			},
+		},
+		{
+			name: "both headers and headerslist",
+			headers: []NameStringValuePair{
+				{
+					Name:  "a",
+					Value: ptr("b"),
+				},
+			},
+			headersList: ptr("c=d"),
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "d",
+			},
+		},
+		{
+			name: "headers supersedes headerslist",
+			headers: []NameStringValuePair{
+				{
+					Name:  "a",
+					Value: ptr("b"),
+				},
+				{
+					Name:  "c",
+					Value: ptr("override"),
+				},
+			},
+			headersList: ptr("c=d"),
+			wantHeaders: map[string]string{
+				"a": "b",
+				"c": "override",
+			},
+		},
+		{
+			name:        "invalid headerslist",
+			headersList: ptr("==="),
+			wantErr:     newErrInvalid("invalid headers_list"),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			headersMap, err := createHeadersConfig(tt.headers, tt.headersList)
+			require.ErrorIs(t, err, tt.wantErr)
+			require.Equal(t, tt.wantHeaders, headersMap)
+		})
+	}
+}
+
 func TestUnmarshalSpanLimits(t *testing.T) {
 	for _, tt := range []struct {
 		name       string
@@ -632,6 +721,218 @@ func TestUnmarshalSpanLimits(t *testing.T) {
 			cl = SpanLimits{}
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
 			assert.ErrorIs(t, err, tt.wantErrT)
+		})
+	}
+}
+
+func TestUnmarshalOTLPHttpExporter(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter OTLPHttpExporter
+	}{
+		{
+			name:         "valid with exporter",
+			jsonConfig:   []byte(`{"endpoint":"localhost:4318"}`),
+			yamlConfig:   []byte("endpoint: localhost:4318\n"),
+			wantExporter: OTLPHttpExporter{Endpoint: ptr("localhost:4318")},
+		},
+		{
+			name:       "missing required endpoint field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&OTLPHttpExporter{}, "endpoint"),
+		},
+		{
+			name:         "valid with zero timeout",
+			jsonConfig:   []byte(`{"endpoint":"localhost:4318", "timeout":0}`),
+			yamlConfig:   []byte("endpoint: localhost:4318\ntimeout: 0"),
+			wantExporter: OTLPHttpExporter{Endpoint: ptr("localhost:4318"), Timeout: ptr(0)},
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("endpoint: localhost:4318\ntimeout: !!str str"),
+			wantErrT:   newErrUnmarshal(&OTLPHttpExporter{}),
+		},
+		{
+			name:       "invalid timeout negative",
+			jsonConfig: []byte(`{"endpoint":"localhost:4318", "timeout":-1}`),
+			yamlConfig: []byte("endpoint: localhost:4318\ntimeout: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("timeout"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := OTLPHttpExporter{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
+
+			cl = OTLPHttpExporter{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
+		})
+	}
+}
+
+func TestUnmarshalOTLPGrpcExporter(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter OTLPGrpcExporter
+	}{
+		{
+			name:         "valid with exporter",
+			jsonConfig:   []byte(`{"endpoint":"localhost:4318"}`),
+			yamlConfig:   []byte("endpoint: localhost:4318\n"),
+			wantExporter: OTLPGrpcExporter{Endpoint: ptr("localhost:4318")},
+		},
+		{
+			name:       "missing required endpoint field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&OTLPGrpcExporter{}, "endpoint"),
+		},
+		{
+			name:         "valid with zero timeout",
+			jsonConfig:   []byte(`{"endpoint":"localhost:4318", "timeout":0}`),
+			yamlConfig:   []byte("endpoint: localhost:4318\ntimeout: 0"),
+			wantExporter: OTLPGrpcExporter{Endpoint: ptr("localhost:4318"), Timeout: ptr(0)},
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("endpoint: localhost:4318\ntimeout: !!str str"),
+			wantErrT:   newErrUnmarshal(&OTLPGrpcExporter{}),
+		},
+		{
+			name:       "invalid timeout negative",
+			jsonConfig: []byte(`{"endpoint":"localhost:4318", "timeout":-1}`),
+			yamlConfig: []byte("endpoint: localhost:4318\ntimeout: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("timeout"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := OTLPGrpcExporter{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
+
+			cl = OTLPGrpcExporter{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
+		})
+	}
+}
+
+func TestUnmarshalOTLPHttpMetricExporter(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter OTLPHttpMetricExporter
+	}{
+		{
+			name:         "valid with exporter",
+			jsonConfig:   []byte(`{"endpoint":"localhost:4318"}`),
+			yamlConfig:   []byte("endpoint: localhost:4318\n"),
+			wantExporter: OTLPHttpMetricExporter{Endpoint: ptr("localhost:4318")},
+		},
+		{
+			name:       "missing required endpoint field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&OTLPHttpMetricExporter{}, "endpoint"),
+		},
+		{
+			name:         "valid with zero timeout",
+			jsonConfig:   []byte(`{"endpoint":"localhost:4318", "timeout":0}`),
+			yamlConfig:   []byte("endpoint: localhost:4318\ntimeout: 0"),
+			wantExporter: OTLPHttpMetricExporter{Endpoint: ptr("localhost:4318"), Timeout: ptr(0)},
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("endpoint: localhost:4318\ntimeout: !!str str"),
+			wantErrT:   newErrUnmarshal(&OTLPHttpMetricExporter{}),
+		},
+		{
+			name:       "invalid timeout negative",
+			jsonConfig: []byte(`{"endpoint":"localhost:4318", "timeout":-1}`),
+			yamlConfig: []byte("endpoint: localhost:4318\ntimeout: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("timeout"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := OTLPHttpMetricExporter{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
+
+			cl = OTLPHttpMetricExporter{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
+		})
+	}
+}
+
+func TestUnmarshalOTLPGrpcMetricExporter(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter OTLPGrpcMetricExporter
+	}{
+		{
+			name:         "valid with exporter",
+			jsonConfig:   []byte(`{"endpoint":"localhost:4318"}`),
+			yamlConfig:   []byte("endpoint: localhost:4318\n"),
+			wantExporter: OTLPGrpcMetricExporter{Endpoint: ptr("localhost:4318")},
+		},
+		{
+			name:       "missing required endpoint field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&OTLPGrpcMetricExporter{}, "endpoint"),
+		},
+		{
+			name:         "valid with zero timeout",
+			jsonConfig:   []byte(`{"endpoint":"localhost:4318", "timeout":0}`),
+			yamlConfig:   []byte("endpoint: localhost:4318\ntimeout: 0"),
+			wantExporter: OTLPGrpcMetricExporter{Endpoint: ptr("localhost:4318"), Timeout: ptr(0)},
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("endpoint: localhost:4318\ntimeout: !!str str"),
+			wantErrT:   newErrUnmarshal(&OTLPGrpcMetricExporter{}),
+		},
+		{
+			name:       "invalid timeout negative",
+			jsonConfig: []byte(`{"endpoint":"localhost:4318", "timeout":-1}`),
+			yamlConfig: []byte("endpoint: localhost:4318\ntimeout: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("timeout"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := OTLPGrpcMetricExporter{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
+
+			cl = OTLPGrpcMetricExporter{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
 		})
 	}
 }

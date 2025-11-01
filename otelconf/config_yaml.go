@@ -107,7 +107,7 @@ func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 	if !hasYAMLMapKey(node, "exporter") {
-		return newErrRequiredExporter(j)
+		return newErrRequired(j, "exporter")
 	}
 	type Plain BatchLogRecordProcessor
 	var plain Plain
@@ -124,7 +124,7 @@ func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 	if !hasYAMLMapKey(node, "exporter") {
-		return newErrRequiredExporter(j)
+		return newErrRequired(j, "exporter")
 	}
 	type Plain BatchSpanProcessor
 	var plain Plain
@@ -141,7 +141,7 @@ func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PeriodicMetricReader) UnmarshalYAML(node *yaml.Node) error {
 	if !hasYAMLMapKey(node, "exporter") {
-		return newErrRequiredExporter(j)
+		return newErrRequired(j, "exporter")
 	}
 	type Plain PeriodicMetricReader
 	var plain Plain
@@ -180,5 +180,73 @@ func (j *SpanLimits) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	*j = SpanLimits(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *OTLPHttpMetricExporter) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "endpoint") {
+		return newErrRequired(j, "endpoint")
+	}
+	type Plain OTLPHttpMetricExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return newErrGreaterOrEqualZero("timeout")
+	}
+	*j = OTLPHttpMetricExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *OTLPGrpcMetricExporter) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "endpoint") {
+		return newErrRequired(j, "endpoint")
+	}
+	type Plain OTLPGrpcMetricExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return newErrGreaterOrEqualZero("timeout")
+	}
+	*j = OTLPGrpcMetricExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *OTLPHttpExporter) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "endpoint") {
+		return newErrRequired(j, "endpoint")
+	}
+	type Plain OTLPHttpExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return newErrGreaterOrEqualZero("timeout")
+	}
+	*j = OTLPHttpExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *OTLPGrpcExporter) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "endpoint") {
+		return newErrRequired(j, "endpoint")
+	}
+	type Plain OTLPGrpcExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return newErrGreaterOrEqualZero("timeout")
+	}
+	*j = OTLPGrpcExporter(plain)
 	return nil
 }

@@ -52,16 +52,17 @@ func (e *errBound) Is(target error) bool {
 	return e.Field == t.Field && e.Bound == t.Bound && e.Op == t.Op
 }
 
-type errRequiredExporter struct {
+type errRequired struct {
 	Object any
+	Field  string
 }
 
-func (e *errRequiredExporter) Error() string {
-	return fmt.Sprintf("field exporter in %s: required", reflect.TypeOf(e.Object))
+func (e *errRequired) Error() string {
+	return fmt.Sprintf("field %s in %s: required", e.Field, reflect.TypeOf(e.Object))
 }
 
-func (e *errRequiredExporter) Is(target error) bool {
-	t, ok := target.(*errRequiredExporter)
+func (e *errRequired) Is(target error) bool {
+	t, ok := target.(*errRequired)
 	if !ok {
 		return false
 	}
@@ -96,9 +97,9 @@ func newErrGreaterThanZero(field string) error {
 	return &errBound{Field: field, Bound: 0, Op: ">"}
 }
 
-// newErrRequiredExporter creates a new error indicating that the exporter field is required.
-func newErrRequiredExporter(object any) error {
-	return &errRequiredExporter{Object: object}
+// newErrRequired creates a new error indicating that the exporter field is required.
+func newErrRequired(object any, field string) error {
+	return &errRequired{Object: object, Field: field}
 }
 
 // newErrUnmarshal creates a new error indicating that an error occurred during unmarshaling.
