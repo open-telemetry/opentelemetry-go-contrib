@@ -1452,38 +1452,42 @@ func TestPrometheusIPv6(t *testing.T) {
 }
 
 func TestPrometheusReaderErrorCases(t *testing.T) {
-	t.Run("missing host", func(t *testing.T) {
-		port := 8080
-		cfg := Prometheus{Port: &port}
-		reader, err := prometheusReader(context.Background(), &cfg)
-		assert.Error(t, err)
-		assert.ErrorContains(t, err, "host must be specified")
-		assert.Nil(t, reader)
-	})
+	tests := []struct {
+		name   string
+		config Prometheus
+		errMsg string
+	}{
+		{
+			name:   "missing host",
+			config: Prometheus{Port: ptr(8080)},
+			errMsg: "host must be specified",
+		},
+		{
+			name:   "missing port",
+			config: Prometheus{Host: ptr("localhost")},
+			errMsg: "port must be specified",
+		},
+		{
+			name: "invalid port",
+			config: Prometheus{
+				Host:                       ptr("localhost"),
+				Port:                       ptr(99999), // invalid port
+				WithoutScopeInfo:           ptr(true),
+				WithoutTypeSuffix:          ptr(true),
+				WithoutUnits:               ptr(true),
+				WithResourceConstantLabels: &IncludeExclude{},
+			},
+			errMsg: "binding address",
+		},
+	}
 
-	t.Run("missing port", func(t *testing.T) {
-		host := "localhost"
-		cfg := Prometheus{Host: &host}
-		reader, err := prometheusReader(context.Background(), &cfg)
-		assert.ErrorContains(t, err, "port must be specified")
-		assert.Nil(t, reader)
-	})
-
-	t.Run("invalid port", func(t *testing.T) {
-		host := "localhost"
-		port := 99999 // invalid port
-		cfg := Prometheus{
-			Host:                       &host,
-			Port:                       &port,
-			WithoutScopeInfo:           ptr(true),
-			WithoutTypeSuffix:          ptr(true),
-			WithoutUnits:               ptr(true),
-			WithResourceConstantLabels: &IncludeExclude{},
-		}
-		reader, err := prometheusReader(context.Background(), &cfg)
-		assert.ErrorContains(t, err, "binding address")
-		assert.Nil(t, reader)
-	})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader, err := prometheusReader(context.Background(), &tt.config)
+			assert.ErrorContains(t, err, tt.errMsg)
+			assert.Nil(t, reader)
+		})
+	}
 }
 
 func TestPrometheusReaderHostParsing(t *testing.T) {
@@ -1574,7 +1578,7 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 	// localhost resolves to 127.0.0.1, so we expect the resolved IP
 	assert.Contains(t, addr, "127.0.0.1")
 
-	resp, err := http.DefaultClient.Get("http://" + addr + "/metrics")
+	resp, err := http.Get("http://" + addr + "/metrics")
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
