@@ -4,9 +4,35 @@
 package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"reflect"
+
+	"go.opentelemetry.io/otel/baggage"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
+
+const (
+	compressionGzip = "gzip"
+	compressionNone = "none"
+)
+
+type configOptions struct {
+	ctx                   context.Context
+	opentelemetryConfig   OpenTelemetryConfiguration
+	meterProviderOptions  []sdkmetric.Option
+	loggerProviderOptions []sdklog.LoggerProviderOption
+	tracerProviderOptions []sdktrace.TracerProviderOption
+}
+
+type shutdownFunc func(context.Context) error
+
+func noopShutdown(context.Context) error {
+	return nil
+}
 
 type errBound struct {
 	Field string
@@ -78,6 +104,27 @@ func newErrRequiredExporter(object any) error {
 // newErrUnmarshal creates a new error indicating that an error occurred during unmarshaling.
 func newErrUnmarshal(object any) error {
 	return &errUnmarshal{Object: object}
+}
+
+type errInvalid struct {
+	Identifier string
+}
+
+func (e *errInvalid) Error() string {
+	return "invalid config: " + e.Identifier
+}
+
+func (e *errInvalid) Is(target error) bool {
+	t, ok := target.(*errInvalid)
+	if !ok {
+		return false
+	}
+	return reflect.TypeOf(e.Identifier) == reflect.TypeOf(t.Identifier)
+}
+
+// newErrInvalid creates a new error indicating that an error occurred due to misconfiguration.
+func newErrInvalid(id string) error {
+	return &errInvalid{Identifier: id}
 }
 
 // validatePeriodicMetricReader handles validation for PeriodicMetricReader.
@@ -175,4 +222,30 @@ func validateSpanLimits(plain *SpanLimits) error {
 		return newErrGreaterOrEqualZero("link_count_limit")
 	}
 	return nil
+}
+
+func ptr[T any](v T) *T {
+	return &v
+}
+
+// createHeadersConfig combines the two header config fields. Headers take precedence over headersList.
+func createHeadersConfig(headers []NameStringValuePair, headersList *string) (map[string]string, error) {
+	result := make(map[string]string)
+	if headersList != nil {
+		// Parsing follows https://github.com/open-telemetry/opentelemetry-configuration/blob/568e5080816d40d75792eb754fc96bde09654159/schema/type_descriptions.yaml#L584.
+		headerslist, err := baggage.Parse(*headersList)
+		if err != nil {
+			return nil, errors.Join(newErrInvalid("invalid headers_list"), err)
+		}
+		for _, kv := range headerslist.Members() {
+			result[kv.Key()] = kv.Value()
+		}
+	}
+	// Headers take precedence over HeadersList, so this has to be after HeadersList is processed.
+	for _, kv := range headers {
+		if kv.Value != nil {
+			result[kv.Name] = *kv.Value
+		}
+	}
+	return result, nil
 }
