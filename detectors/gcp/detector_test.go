@@ -4,14 +4,13 @@
 package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
 	"github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 func TestDetect(t *testing.T) {
@@ -237,7 +236,7 @@ func TestDetect(t *testing.T) {
 		},
 	} {
 		t.Run(tc.desc, func(t *testing.T) {
-			res, err := tc.detector.Detect(context.TODO())
+			res, err := tc.detector.Detect(t.Context())
 			if tc.expectErr {
 				assert.Error(t, err)
 			} else {

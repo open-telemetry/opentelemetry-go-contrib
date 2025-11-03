@@ -23,7 +23,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -152,7 +152,7 @@ func main() {
 		"CollectorExporter-Example",
 		trace.WithAttributes(commonAttrs...))
 	defer span.End()
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))
 		runCount.Add(ctx, 1, metric.WithAttributes(commonAttrs...))
 		log.Printf("Doing really hard work (%d / 10)\n", i+1)

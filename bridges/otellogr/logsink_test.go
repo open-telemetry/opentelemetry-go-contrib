@@ -197,6 +197,8 @@ func TestLogSink(t *testing.T) {
 					"string", "str",
 					"time", time.Unix(1000, 1000),
 					"uint64", uint64(3),
+					"log-attribute", log.MapValue(log.String("foo", "bar")),
+					"standard-attribute", attribute.StringSliceValue([]string{"one", "two"}),
 				)
 			},
 			want: logtest.Recording{
@@ -213,6 +215,8 @@ func TestLogSink(t *testing.T) {
 							log.String("string", "str"),
 							log.Int64("time", time.Unix(1000, 1000).UnixNano()),
 							log.Int64("uint64", 3),
+							log.Map("log-attribute", log.String("foo", "bar")),
+							log.Slice("standard-attribute", log.StringValue("one"), log.StringValue("two")),
 						},
 					},
 				},
@@ -370,7 +374,7 @@ func TestLogSink(t *testing.T) {
 
 func TestLogSinkContext(t *testing.T) {
 	name := "name"
-	ctx := context.WithValue(context.Background(), "key", "value") // nolint:revive,staticcheck // test context
+	ctx := context.WithValue(t.Context(), "key", "value") //nolint:revive,staticcheck // test context
 
 	tests := []struct {
 		name string
@@ -384,6 +388,7 @@ func TestLogSinkContext(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
+					//nolint:usetesting // This place was originally intended to test the default context.
 					{Context: context.Background()},
 				},
 			},
@@ -444,7 +449,7 @@ func TestLogSinkEnabled(t *testing.T) {
 }
 
 func TestConvertKVs(t *testing.T) {
-	ctx := context.WithValue(context.Background(), "key", "value") // nolint: revive,staticcheck // test context
+	ctx := context.WithValue(t.Context(), "key", "value") //nolint:revive,staticcheck // test context
 
 	for _, tt := range []struct {
 		name    string
@@ -494,13 +499,13 @@ func TestConvertKVs(t *testing.T) {
 		},
 		{
 			name:    "last_context",
-			kvs:     []any{"key", context.Background(), "ctx", ctx},
+			kvs:     []any{"key", t.Context(), "ctx", ctx},
 			wantKVs: []log.KeyValue{},
 			wantCtx: ctx,
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx, kvs := convertKVs(nil, tt.kvs...) // nolint: staticcheck // pass nil context
+			ctx, kvs := convertKVs(nil, tt.kvs...) //nolint:staticcheck // pass nil context
 			assert.Equal(t, tt.wantKVs, kvs)
 			assert.Equal(t, tt.wantCtx, ctx)
 		})

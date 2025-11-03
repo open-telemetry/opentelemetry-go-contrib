@@ -62,7 +62,7 @@ func Test_otelMiddlewares_finalizeMiddlewareAfter(t *testing.T) {
 		return nil, middleware.Metadata{}, nil
 	})
 
-	_, _, err = stack.Finalize.HandleMiddleware(context.Background(), input, next)
+	_, _, err = stack.Finalize.HandleMiddleware(t.Context(), input, next)
 	require.NoError(t, err)
 
 	// Assert header has been updated with injected values
@@ -97,7 +97,7 @@ func Test_otelMiddlewares_finalizeMiddlewareAfter_Noop(t *testing.T) {
 		return nil, middleware.Metadata{}, nil
 	})
 
-	_, _, err = stack.Finalize.HandleMiddleware(context.Background(), input, next)
+	_, _, err = stack.Finalize.HandleMiddleware(t.Context(), input, next)
 	assert.NoError(t, err)
 }
 
@@ -155,7 +155,7 @@ func Test_otelMiddlewares_presignedRequests(t *testing.T) {
 		return nil, middleware.Metadata{}, nil
 	})
 
-	ctx := awsSignerV4.SetPayloadHash(context.Background(), "mock-hash")
+	ctx := awsSignerV4.SetPayloadHash(t.Context(), "mock-hash")
 	url, _, err := stack.Finalize.HandleMiddleware(ctx, input, next)
 
 	// verify we actually went through the presign flow

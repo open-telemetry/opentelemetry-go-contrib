@@ -4,7 +4,6 @@
 package jaeger_test
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
@@ -41,7 +40,7 @@ func TestExtractJaeger(t *testing.T) {
 					header.Set(k, v)
 				}
 
-				ctx := context.Background()
+				ctx := t.Context()
 				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(header))
 				resSc := trace.SpanContextFromContext(ctx)
 				comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
@@ -80,7 +79,7 @@ func TestInjectJaeger(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				header := http.Header{}
 				ctx := trace.ContextWithSpanContext(
-					jaeger.WithDebug(context.Background(), tc.debug),
+					jaeger.WithDebug(t.Context(), tc.debug),
 					trace.NewSpanContext(tc.scc),
 				)
 				propagator.Inject(ctx, propagation.HeaderCarrier(header))

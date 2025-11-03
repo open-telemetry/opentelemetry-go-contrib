@@ -113,7 +113,7 @@ func TestTracerProvider(t *testing.T) {
 		tp, shutdown, err := tracerProvider(tt.cfg, resource.Default())
 		require.Equal(t, tt.wantProvider, tp)
 		assert.Equal(t, tt.wantErr, err)
-		require.NoError(t, shutdown(context.Background()))
+		require.NoError(t, shutdown(t.Context()))
 	}
 }
 
@@ -152,14 +152,14 @@ func TestTracerProviderOptions(t *testing.T) {
 	)
 	require.NoError(t, err)
 	defer func() {
-		assert.NoError(t, sdk.Shutdown(context.Background()))
+		assert.NoError(t, sdk.Shutdown(t.Context()))
 	}()
 
 	// The exporter, which we passed in as an extra option to NewSDK,
 	// should be wired up to the provider in addition to the
 	// configuration-based OTLP exporter.
 	tracer := sdk.TracerProvider().Tracer("test")
-	_, span := tracer.Start(context.Background(), "span")
+	_, span := tracer.Start(t.Context(), "span")
 	span.End()
 	assert.NotZero(t, buf)
 	assert.Equal(t, 1, calls)
@@ -174,7 +174,7 @@ func TestSpanProcessor(t *testing.T) {
 		stdouttrace.WithPrettyPrint(),
 	)
 	require.NoError(t, err)
-	ctx := context.Background()
+	ctx := t.Context()
 	otlpGRPCExporter, err := otlptracegrpc.New(ctx)
 	require.NoError(t, err)
 	otlpHTTPExporter, err := otlptracehttp.New(ctx)
@@ -759,7 +759,7 @@ func TestSpanProcessor(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := spanProcessor(context.Background(), tt.processor)
+			got, err := spanProcessor(t.Context(), tt.processor)
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				require.Equal(t, tt.wantErr, err.Error())
@@ -920,7 +920,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 		{
 			name: "no TLS config",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
@@ -938,7 +938,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 		{
 			name: "with TLS config",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
@@ -962,7 +962,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 		{
 			name: "with TLS config and client key",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLP{
 					Protocol:          ptr("grpc"),
 					Compression:       ptr("gzip"),
@@ -1026,7 +1026,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			}
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.ExportSpans(context.Background(), input.Snapshots()))
+				assert.NoError(collect, exporter.ExportSpans(t.Context(), input.Snapshots()))
 			}, 10*time.Second, 1*time.Second)
 		})
 	}

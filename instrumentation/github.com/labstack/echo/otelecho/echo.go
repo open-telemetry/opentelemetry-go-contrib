@@ -7,11 +7,13 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
@@ -25,7 +27,7 @@ const (
 )
 
 // Middleware returns echo middleware which will trace incoming requests.
-func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
+func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 	cfg := config{}
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -40,15 +42,26 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
-
+	if cfg.MeterProvider == nil {
+		cfg.MeterProvider = otel.GetMeterProvider()
+	}
 	if cfg.Skipper == nil {
 		cfg.Skipper = middleware.DefaultSkipper
 	}
+	if cfg.OnError == nil {
+		cfg.OnError = defaultOnError
+	}
 
-	semconvSrv := semconv.NewHTTPServer(nil)
+	meter := cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+	)
+
+	semconvSrv := semconv.NewHTTPServer(meter)
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			requestStartTime := time.Now()
 			if cfg.Skipper(c) {
 				return next(c)
 			}
@@ -63,7 +76,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
 			opts := []oteltrace.SpanStartOption{
 				oteltrace.WithAttributes(
-					semconvSrv.RequestTraceAttrs(service, request, semconv.RequestTraceAttrsOpts{})...,
+					semconvSrv.RequestTraceAttrs(serverName, request, semconv.RequestTraceAttrsOpts{})...,
 				),
 				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 			}
@@ -83,15 +96,41 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			err := next(c)
 			if err != nil {
 				span.SetAttributes(attribute.String("echo.error", err.Error()))
-				// invokes the registered HTTP error handler
-				c.Error(err)
+				cfg.OnError(c, err)
 			}
 
 			status := c.Response().Status
 			span.SetStatus(semconvSrv.Status(status))
 			span.SetAttributes(semconvSrv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 				StatusCode: status,
+				WriteBytes: c.Response().Size,
 			})...)
+
+			// Record the server-side attributes.
+			var additionalAttributes []attribute.KeyValue
+			if path := c.Path(); path != "" {
+				additionalAttributes = append(additionalAttributes, semconvSrv.Route(path))
+			}
+			if cfg.MetricAttributeFn != nil {
+				additionalAttributes = append(additionalAttributes, cfg.MetricAttributeFn(request)...)
+			}
+			if cfg.EchoMetricAttributeFn != nil {
+				additionalAttributes = append(additionalAttributes, cfg.EchoMetricAttributeFn(c)...)
+			}
+
+			semconvSrv.RecordMetrics(ctx, semconv.ServerMetricData{
+				ServerName:   serverName,
+				ResponseSize: c.Response().Size,
+				MetricAttributes: semconv.MetricAttributes{
+					Req:                  request,
+					StatusCode:           status,
+					AdditionalAttributes: additionalAttributes,
+				},
+				MetricData: semconv.MetricData{
+					RequestSize: request.ContentLength,
+					ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Millisecond),
+				},
+			})
 
 			return err
 		}

@@ -4,7 +4,6 @@
 package otelgrpc_test
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -16,8 +15,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/rpcconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/rpcconv"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
@@ -147,7 +146,7 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 			methodName := serviceName + "/" + name
 			fullMethodName := "/" + methodName
 			// call the server handler
-			ctx := serverHandler.TagRPC(context.Background(), &stats.RPCTagInfo{
+			ctx := serverHandler.TagRPC(t.Context(), &stats.RPCTagInfo{
 				FullMethodName: fullMethodName,
 			})
 
@@ -249,7 +248,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 		},
 	}
 	rm := metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), &rm)
+	err := reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())

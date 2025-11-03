@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/rpcconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/rpcconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -95,7 +95,7 @@ func TestStatsHandler(t *testing.T) {
 					),
 				},
 			)
-			ctx, cancel := context.WithCancel(context.Background())
+			ctx, cancel := context.WithCancel(t.Context())
 			defer cancel()
 			doCalls(ctx, client)
 
@@ -122,7 +122,7 @@ func TestStatsHandler(t *testing.T) {
 
 				t.Run("ClientMetrics", func(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
-					err := clientMetricReader.Collect(context.Background(), &rm)
+					err := clientMetricReader.Collect(t.Context(), &rm)
 					assert.NoError(t, err)
 					require.Empty(t, rm.ScopeMetrics)
 				})
@@ -133,7 +133,7 @@ func TestStatsHandler(t *testing.T) {
 
 				t.Run("ServerMetrics", func(t *testing.T) {
 					rm := metricdata.ResourceMetrics{}
-					err := serverMetricReader.Collect(context.Background(), &rm)
+					err := serverMetricReader.Collect(t.Context(), &rm)
 					assert.NoError(t, err)
 					require.Empty(t, rm.ScopeMetrics)
 				})
@@ -715,7 +715,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 
 func checkClientMetrics(t *testing.T, reader metric.Reader) {
 	rm := metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), &rm)
+	err := reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 5)
@@ -1093,7 +1093,7 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 
 func checkServerMetrics(t *testing.T, reader metric.Reader) {
 	rm := metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), &rm)
+	err := reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 5)
@@ -1485,8 +1485,8 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 	)
 
 	const n = 10
-	for i := 0; i < n; i++ {
-		ctx, cancel := context.WithCancel(context.Background())
+	for range n {
+		ctx, cancel := context.WithCancel(t.Context())
 		stream, err := client.FullDuplexCall(ctx)
 		require.NoError(t, err)
 
@@ -1496,7 +1496,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for i := 0; i < messageCount; i++ {
+			for range messageCount {
 				const reqSize = 1
 				pl := test.ClientNewPayload(testpb.PayloadType_COMPRESSABLE, reqSize)
 				respParam := []*testpb.ResponseParameters{
@@ -1522,7 +1522,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for i := 0; i < messageCount; i++ {
+			for i := range messageCount {
 				_, err := stream.Recv()
 				if i > messageCount/2 {
 					cancel()
@@ -1550,7 +1550,7 @@ func TestServerHandlerTagRPC(t *testing.T) {
 		{
 			name:   "start a span without filters",
 			server: otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider())),
-			ctx:    context.Background(),
+			ctx:    t.Context(),
 			info: &stats.RPCTagInfo{
 				FullMethodName: "/grpc.health.v1.Health/Check",
 			},
@@ -1561,7 +1561,7 @@ func TestServerHandlerTagRPC(t *testing.T) {
 			server: otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider()), otelgrpc.WithFilter(func(ri *stats.RPCTagInfo) bool {
 				return ri.FullMethodName != "/grpc.health.v1.Health/Check"
 			})),
-			ctx: context.Background(),
+			ctx: t.Context(),
 			info: &stats.RPCTagInfo{
 				FullMethodName: "/grpc.health.v1.Health/Check",
 			},
@@ -1572,7 +1572,7 @@ func TestServerHandlerTagRPC(t *testing.T) {
 			server: otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider()), otelgrpc.WithFilter(func(ri *stats.RPCTagInfo) bool {
 				return ri.FullMethodName != "/grpc.health.v1.Health/Check"
 			})),
-			ctx: context.Background(),
+			ctx: t.Context(),
 			info: &stats.RPCTagInfo{
 				FullMethodName: "/app.v1.Service/Get",
 			},
@@ -1604,7 +1604,7 @@ func TestClientHandlerTagRPC(t *testing.T) {
 		{
 			name:   "start a span without filters",
 			client: otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider())),
-			ctx:    context.Background(),
+			ctx:    t.Context(),
 			info: &stats.RPCTagInfo{
 				FullMethodName: "/grpc.health.v1.Health/Check",
 			},
@@ -1615,7 +1615,7 @@ func TestClientHandlerTagRPC(t *testing.T) {
 			client: otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider()), otelgrpc.WithFilter(func(ri *stats.RPCTagInfo) bool {
 				return ri.FullMethodName != "/grpc.health.v1.Health/Check"
 			})),
-			ctx: context.Background(),
+			ctx: t.Context(),
 			info: &stats.RPCTagInfo{
 				FullMethodName: "/grpc.health.v1.Health/Check",
 			},
@@ -1626,7 +1626,7 @@ func TestClientHandlerTagRPC(t *testing.T) {
 			client: otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(trace.NewTracerProvider()), otelgrpc.WithFilter(func(ri *stats.RPCTagInfo) bool {
 				return ri.FullMethodName != "/grpc.health.v1.Health/Check"
 			})),
-			ctx: context.Background(),
+			ctx: t.Context(),
 			info: &stats.RPCTagInfo{
 				FullMethodName: "/app.v1.Service/Get",
 			},

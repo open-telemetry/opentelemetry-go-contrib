@@ -23,6 +23,8 @@ import (
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 )
 
+const miB = 1 << 20
+
 func TestEventToCarrier(t *testing.T) {
 	t.Setenv("_X_AMZN_TRACE_ID", "traceID")
 	carrier := xrayEventToCarrier([]byte{})
@@ -33,11 +35,11 @@ func TestEventToCarrier(t *testing.T) {
 func TestEventToCarrierWithPropagator(t *testing.T) {
 	t.Setenv("_X_AMZN_TRACE_ID", "Root=1-5759e988-bd862e3fe1be46a994272793;Parent=53995c3f42cd8ad8;Sampled=1")
 	carrier := xrayEventToCarrier([]byte{})
-	ctx := xray.Propagator{}.Extract(context.Background(), carrier)
+	ctx := xray.Propagator{}.Extract(t.Context(), carrier)
 
 	expectedTraceID, _ := trace.TraceIDFromHex("5759e988bd862e3fe1be46a994272793")
 	expectedSpanID, _ := trace.SpanIDFromHex("53995c3f42cd8ad8")
-	expectedCtx := trace.ContextWithRemoteSpanContext(context.Background(), trace.NewSpanContext(trace.SpanContextConfig{
+	expectedCtx := trace.ContextWithRemoteSpanContext(t.Context(), trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    expectedTraceID,
 		SpanID:     expectedSpanID,
 		TraceFlags: trace.FlagsSampled,
@@ -107,7 +109,7 @@ var (
 			{Key: "cloud.provider", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "aws"}}},
 			{Key: "cloud.region", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "us-texas-1"}}},
 			{Key: "faas.instance", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"}}},
-			{Key: "faas.max_memory", Value: &v1common.AnyValue{Value: &v1common.AnyValue_IntValue{IntValue: 128}}},
+			{Key: "faas.max_memory", Value: &v1common.AnyValue{Value: &v1common.AnyValue_IntValue{IntValue: 128 * miB}}},
 			{Key: "faas.name", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "testFunction"}}},
 			{Key: "faas.version", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "$LATEST"}}},
 		},
@@ -156,7 +158,7 @@ func assertSpanEqualsIgnoreTimeAndSpanID(t *testing.T, expected, actual *v1trace
 func TestWrapEndToEnd(t *testing.T) {
 	setEnvVars(t)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	tp, err := NewTracerProvider(ctx)
 	assert.NoError(t, err)
 

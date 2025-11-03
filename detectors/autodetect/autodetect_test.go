@@ -96,7 +96,7 @@ func TestOptDetectorDetect(t *testing.T) {
 	opt := resource.WithAttributes(want)
 	detector := optDetector{opt: opt}
 
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 	if err != nil {
 		t.Fatalf("got error: %v, expected no error", err)
 	}
@@ -123,7 +123,7 @@ func TestCompositeDetect(t *testing.T) {
 	}
 	comp := newComposite(detectors)
 
-	res, err := comp.Detect(context.Background())
+	res, err := comp.Detect(t.Context())
 	if !errors.Is(err, knownErr) {
 		t.Errorf("got error %v, expected %v", err, knownErr)
 	}
@@ -159,7 +159,7 @@ func TestCompositeDetectMergeError(t *testing.T) {
 	}
 	comp := newComposite(detectors)
 
-	res, err := comp.Detect(context.Background())
+	res, err := comp.Detect(t.Context())
 	if !errors.Is(err, resource.ErrSchemaURLConflict) {
 		t.Errorf("got error %v, expected %v", err, resource.ErrSchemaURLConflict)
 	}

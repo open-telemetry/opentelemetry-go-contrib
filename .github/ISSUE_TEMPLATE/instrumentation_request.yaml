@@ -1,0 +1,128 @@
+name: Instrumentation Request
+description: Suggest instrumentation to include in this project
+title: "Request to Add Instrumentation for <package-name>"
+labels: ["enhancement", "area: instrumentation"]
+
+body:
+  - type: input
+    id: package_link
+    attributes:
+      label: Package Link
+      description: Add link to the package here
+      placeholder: "https://pkg.go.dev/go.opentelemetry.io/contrib"
+    validations:
+      required: true
+
+  - type: textarea
+    id: package_usage
+    attributes:
+      label: How is this package commonly used?
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_not_in_package
+    attributes:
+      label: Why can this instrumentation not be included in the package itself?
+    validations:
+      required: true
+
+  - type: textarea
+    id: why_not_dedicated_repo
+    attributes:
+      label: Why can this instrumentation not be hosted in a dedicated repository?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: High-level description of how instrumentation can wrap or hook-in to the package
+    validations:
+      required: true
+
+  - type: textarea
+    id: tracing
+    attributes:
+      label: Tracing
+      description: Add proposed attributes, events, and links
+      placeholder: |
+        attributes:
+          - example_attribute
+        events:
+          - example_event
+        links:
+          - example_link
+    validations:
+      required: false
+
+  - type: textarea
+    id: metrics
+    attributes:
+      label: Metrics
+      description: Proposed instruments with type, unit, description, and attributes
+      placeholder: |
+        instrument_name:
+          type: counter
+          unit: ms
+          description: measures response time
+          attributes:
+            - example_attribute
+    validations:
+      required: false
+
+  - type: textarea
+    id: prior_art
+    attributes:
+      label: Prior Art
+      description: List other established instrumentation for this package that can be referenced
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: tasks_code_complete
+    attributes:
+      label: Tasks — Code complete
+      options:
+        - label: Comprehensive unit tests.
+          required: true
+        - label: End-to-end integration tests.
+          required: true
+        - label: Tests all passing.
+          required: true
+        - label: Instrumentation functionality verified.
+          required: true
+
+  - type: checkboxes
+    id: tasks_documented
+    attributes:
+      label: Tasks — Documented
+      description: >
+        Checklist for completion before merging the new instrumentation.
+      options:
+        - label: Added to the [OpenTelemetry Registry](https://opentelemetry.io/registry/)
+          required: true
+        - label: README included for the module describing high-level purpose.
+          required: true
+        - label: Complete documentation of all public API including package documentation
+          required: true
+        - label: Instrumentation [documentation](https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/instrumentation/README.md#instrumentation-packages) updated.
+          required: true
+
+  - type: checkboxes
+    id: tasks_examples
+    attributes:
+      label: Tasks — Examples
+      options:
+        - label: Dockerfile file to build example application.
+          required: true
+        - label: docker-compose.yml to run example in a docker environment to demonstrate instrumentation.
+          required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        **Tip**: [React](https://github.blog/news-insights/product-news/add-reactions-to-pull-requests-issues-and-comments/) with 👍 to help prioritize this issue.  
+        Please use comments to provide useful context, avoiding `+1` or `me too`, to help us triage it.  
+        Learn more [here](https://opentelemetry.io/community/end-user/issue-participation/).

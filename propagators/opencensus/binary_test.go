@@ -4,7 +4,6 @@
 package opencensus
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -78,7 +77,7 @@ func TestInject(t *testing.T) {
 	} {
 		t.Run(tt.desc, func(t *testing.T) {
 			header := http.Header{}
-			ctx := context.Background()
+			ctx := t.Context()
 			if sc := trace.NewSpanContext(tt.scc); sc.IsValid() {
 				ctx = trace.ContextWithRemoteSpanContext(ctx, sc)
 			}
@@ -132,7 +131,7 @@ func TestExtract(t *testing.T) {
 				http.CanonicalHeaderKey("grpc-trace-bin"): []string{tt.header},
 			}
 
-			ctx := context.Background()
+			ctx := t.Context()
 			ctx = prop.Extract(ctx, propagation.HeaderCarrier(header))
 			gotSc := trace.SpanContextFromContext(ctx)
 			comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {

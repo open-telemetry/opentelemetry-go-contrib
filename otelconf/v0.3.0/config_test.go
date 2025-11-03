@@ -4,8 +4,6 @@
 package otelconf
 
 import (
-	"context"
-	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"os"
@@ -41,7 +39,7 @@ func TestNewSDK(t *testing.T) {
 		{
 			name: "with-configuration",
 			cfg: []ConfigurationOption{
-				WithContext(context.Background()),
+				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
 					TracerProvider: &TracerProvider{},
 					MeterProvider:  &MeterProvider{},
@@ -55,7 +53,7 @@ func TestNewSDK(t *testing.T) {
 		{
 			name: "with-sdk-disabled",
 			cfg: []ConfigurationOption{
-				WithContext(context.Background()),
+				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
 					Disabled:       ptr(true),
 					TracerProvider: &TracerProvider{},
@@ -74,7 +72,7 @@ func TestNewSDK(t *testing.T) {
 		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
 		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
 		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
-		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(context.Background()))
+		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
 	}
 }
 
@@ -383,6 +381,63 @@ var v03OpenTelemetryConfig = OpenTelemetryConfiguration{
 	},
 }
 
+var v03OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
+	Disabled:   ptr(false),
+	FileFormat: ptr("0.3"),
+	AttributeLimits: &AttributeLimits{
+		AttributeCountLimit:       ptr(128),
+		AttributeValueLengthLimit: ptr(4096),
+	},
+	Resource: &Resource{
+		Attributes: []AttributeNameValue{
+			{Name: "service.name", Value: "unknown_service"},
+			{Name: "string_key", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
+			{Name: "bool_key", Type: &AttributeNameValueType{Value: "bool"}, Value: true},
+			{Name: "int_key", Type: &AttributeNameValueType{Value: "int"}, Value: 1},
+			{Name: "double_key", Type: &AttributeNameValueType{Value: "double"}, Value: 1.1},
+			{Name: "string_array_key", Type: &AttributeNameValueType{Value: "string_array"}, Value: []any{"value1", "value2"}},
+			{Name: "bool_array_key", Type: &AttributeNameValueType{Value: "bool_array"}, Value: []any{true, false}},
+			{Name: "int_array_key", Type: &AttributeNameValueType{Value: "int_array"}, Value: []any{1, 2}},
+			{Name: "double_array_key", Type: &AttributeNameValueType{Value: "double_array"}, Value: []any{1.1, 2.2}},
+			{Name: "string_value", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
+			{Name: "bool_value", Type: &AttributeNameValueType{Value: "bool"}, Value: true},
+			{Name: "int_value", Type: &AttributeNameValueType{Value: "int"}, Value: 1},
+			{Name: "float_value", Type: &AttributeNameValueType{Value: "double"}, Value: 1.1},
+			{Name: "hex_value", Type: &AttributeNameValueType{Value: "int"}, Value: int(48879)},
+			{Name: "quoted_string_value", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
+			{Name: "quoted_bool_value", Type: &AttributeNameValueType{Value: "string"}, Value: "true"},
+			{Name: "quoted_int_value", Type: &AttributeNameValueType{Value: "string"}, Value: "1"},
+			{Name: "quoted_float_value", Type: &AttributeNameValueType{Value: "string"}, Value: "1.1"},
+			{Name: "quoted_hex_value", Type: &AttributeNameValueType{Value: "string"}, Value: "0xbeef"},
+			{Name: "alternative_env_syntax", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
+			{Name: "invalid_map_value", Type: &AttributeNameValueType{Value: "string"}, Value: "value\nkey:value"},
+			{Name: "multiple_references_inject", Type: &AttributeNameValueType{Value: "string"}, Value: "foo value 1.1"},
+			{Name: "undefined_key", Type: &AttributeNameValueType{Value: "string"}, Value: nil},
+			{Name: "undefined_key_fallback", Type: &AttributeNameValueType{Value: "string"}, Value: "fallback"},
+			{Name: "env_var_in_key", Type: &AttributeNameValueType{Value: "string"}, Value: "value"},
+			{Name: "replace_me", Type: &AttributeNameValueType{Value: "string"}, Value: "${DO_NOT_REPLACE_ME}"},
+			{Name: "undefined_defaults_to_var", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE}"},
+			{Name: "escaped_does_not_substitute", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE}"},
+			{Name: "escaped_does_not_substitute_fallback", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE:-fallback}"},
+			{Name: "escaped_and_substituted_fallback", Type: &AttributeNameValueType{Value: "string"}, Value: "${STRING_VALUE:-value}"},
+			{Name: "escaped_and_substituted", Type: &AttributeNameValueType{Value: "string"}, Value: "$value"},
+			{Name: "multiple_escaped_and_not_substituted", Type: &AttributeNameValueType{Value: "string"}, Value: "$${STRING_VALUE}"},
+			{Name: "undefined_key_with_escape_sequence_in_fallback", Type: &AttributeNameValueType{Value: "string"}, Value: "${UNDEFINED_KEY}"},
+			{Name: "value_with_escape", Type: &AttributeNameValueType{Value: "string"}, Value: "value$$"},
+			{Name: "escape_sequence", Type: &AttributeNameValueType{Value: "string"}, Value: "a $ b"},
+			{Name: "no_escape_sequence", Type: &AttributeNameValueType{Value: "string"}, Value: "a $ b"},
+		},
+		AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
+		Detectors: &Detectors{
+			Attributes: &DetectorsAttributes{
+				Excluded: []string{"process.command_args"},
+				Included: []string{"process.*"},
+			},
+		},
+		SchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
+	},
+}
+
 func TestParseYAML(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -449,6 +504,49 @@ func TestParseYAML(t *testing.T) {
 	}
 }
 
+func TestParseYAMLWithEnvironmentVariables(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantErr  error
+		wantType any
+	}{
+		{
+			name:     "valid v0.3 config with env vars",
+			input:    "v0.3-env-var.yaml",
+			wantType: &v03OpenTelemetryConfigEnvParsing,
+		},
+	}
+
+	t.Setenv("OTEL_SDK_DISABLED", "false")
+	t.Setenv("OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT", "4096")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+	t.Setenv("STRING_VALUE", "value")
+	t.Setenv("BOOL_VALUE", "true")
+	t.Setenv("INT_VALUE", "1")
+	t.Setenv("FLOAT_VALUE", "1.1")
+	t.Setenv("HEX_VALUE", "0xbeef")                       // A valid integer value (i.e. 3735928559) written in hexadecimal
+	t.Setenv("INVALID_MAP_VALUE", "value\\nkey:value")    // An invalid attempt to inject a map key into the YAML
+	t.Setenv("ENV_VAR_IN_KEY", "env_var_in_key")          // An env var in key
+	t.Setenv("DO_NOT_REPLACE_ME", "Never use this value") // An unused environment variable
+	t.Setenv("REPLACE_ME", "${DO_NOT_REPLACE_ME}")        // A valid replacement text, used verbatim, not replaced with "Never use this value"
+	t.Setenv("VALUE_WITH_ESCAPE", "value$$")              // A valid replacement text, used verbatim, not replaced with "Never use this value"
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := os.ReadFile(filepath.Join("..", "testdata", tt.input))
+			require.NoError(t, err)
+
+			got, err := ParseYAML(b)
+			if tt.wantErr != nil {
+				require.Equal(t, tt.wantErr.Error(), err.Error())
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.wantType, got)
+			}
+		})
+	}
+}
+
 func TestSerializeJSON(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -506,62 +604,6 @@ func TestSerializeJSON(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.wantType, got)
-			}
-		})
-	}
-}
-
-func TestCreateTLSConfig(t *testing.T) {
-	tests := []struct {
-		name            string
-		caCertFile      *string
-		clientCertFile  *string
-		clientKeyFile   *string
-		wantErrContains string
-		want            func(*tls.Config, *testing.T)
-	}{
-		{
-			name: "no-input",
-			want: func(result *tls.Config, t *testing.T) {
-				require.Nil(t, result.Certificates)
-				require.Nil(t, result.RootCAs)
-			},
-		},
-		{
-			name:       "only-cacert-provided",
-			caCertFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
-			want: func(result *tls.Config, t *testing.T) {
-				require.Nil(t, result.Certificates)
-				require.NotNil(t, result.RootCAs)
-			},
-		},
-		{
-			name:            "nonexistent-cacert-file",
-			caCertFile:      ptr("nowhere.crt"),
-			wantErrContains: "open nowhere.crt:",
-		},
-		{
-			name:            "nonexistent-clientcert-file",
-			clientCertFile:  ptr("nowhere.crt"),
-			clientKeyFile:   ptr("nowhere.crt"),
-			wantErrContains: "could not use client certificate: open nowhere.crt:",
-		},
-		{
-			name:            "bad-cacert-file",
-			caCertFile:      ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-			wantErrContains: "could not create certificate authority chain from certificate",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := createTLSConfig(tt.caCertFile, tt.clientCertFile, tt.clientKeyFile)
-
-			if tt.wantErrContains != "" {
-				require.Contains(t, err.Error(), tt.wantErrContains)
-			} else {
-				require.NoError(t, err)
-				tt.want(got, t)
 			}
 		})
 	}

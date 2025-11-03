@@ -124,7 +124,7 @@ func TestExtract(t *testing.T) {
 
 			// prop := P
 
-			ctx := Propagator{}.Extract(context.Background(), carrier)
+			ctx := Propagator{}.Extract(t.Context(), carrier)
 			sc := trace.SpanContextFromContext(ctx)
 
 			if sc.IsValid() != tc.wantValid {
@@ -255,9 +255,9 @@ func TestInject(t *testing.T) {
 					TraceFlags: tc.traceFlags,
 				})
 
-				ctx = trace.ContextWithSpanContext(context.Background(), sc)
+				ctx = trace.ContextWithSpanContext(t.Context(), sc)
 			} else {
-				ctx = context.Background()
+				ctx = t.Context()
 			}
 
 			propagator.Inject(ctx, carrier)
@@ -284,7 +284,7 @@ func TestInjectWithNoSpanContext(t *testing.T) {
 	propagator := Propagator{}
 	carrier := propagation.MapCarrier{}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	propagator.Inject(ctx, carrier)
 
@@ -301,7 +301,7 @@ func TestInjectWithInvalidSpanContext(t *testing.T) {
 	carrier := propagation.MapCarrier{}
 
 	sc := trace.SpanContext{}
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
 
 	propagator.Inject(ctx, carrier)
 
@@ -314,7 +314,7 @@ func TestInjectWithInvalidSpanContext(t *testing.T) {
 func BenchmarkPropagatorExtract(b *testing.B) {
 	propagator := Propagator{}
 
-	ctx := context.Background()
+	ctx := b.Context()
 	req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
 
 	req.Header.Set("Root", "1-8a3c60f7-d188f8fa79d48a391a778fa6")
@@ -322,7 +322,7 @@ func BenchmarkPropagatorExtract(b *testing.B) {
 	req.Header.Set("Sampled", "1")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = propagator.Extract(ctx, propagation.HeaderCarrier(req.Header))
 	}
 }
@@ -332,10 +332,10 @@ func BenchmarkPropagatorInject(b *testing.B) {
 	tracer := otel.Tracer("test")
 
 	req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
-	ctx, _ := tracer.Start(context.Background(), "Parent operation...")
+	ctx, _ := tracer.Start(b.Context(), "Parent operation...")
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		propagator.Inject(ctx, propagation.HeaderCarrier(req.Header))
 	}
 }

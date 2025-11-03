@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/v2/event"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -142,7 +142,7 @@ func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
 		// If parsing fails, assume default MongoDB port and return the entire ConnectionID as hostname
 		hostname = evt.ConnectionID
 		port = defaultMongoPort
-		return
+		return hostname, port
 	}
 
 	port, err = strconv.Atoi(portStr)

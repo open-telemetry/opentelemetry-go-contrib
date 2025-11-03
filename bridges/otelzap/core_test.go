@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -66,7 +66,7 @@ func TestCore(t *testing.T) {
 	t.Run("WriteContext", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		ctx = context.WithValue(ctx, testEntry, true)
 		logger.Info(testMessage, zap.Any("ctx", ctx))
 
@@ -92,7 +92,7 @@ func TestCore(t *testing.T) {
 	t.Run("WithContext", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		ctx = context.WithValue(ctx, testEntry, false)
 		childlogger := logger.With(zap.Reflect("ctx", ctx))
 		childlogger.Info(testMessage)
@@ -183,7 +183,7 @@ func TestCoreWriteContextConcurrentSafe(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = context.WithValue(ctx, testEntry, true)
 
 	var wg sync.WaitGroup

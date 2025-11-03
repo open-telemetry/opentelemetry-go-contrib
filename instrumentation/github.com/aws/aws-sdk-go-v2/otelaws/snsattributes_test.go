@@ -4,7 +4,6 @@
 package otelaws
 
 import (
-	"context"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -12,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 func TestPublishInput(t *testing.T) {
@@ -22,7 +21,7 @@ func TestPublishInput(t *testing.T) {
 		},
 	}
 
-	attributes := SNSAttributeBuilder(context.Background(), input, middleware.InitializeOutput{})
+	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
 	assert.Contains(t, attributes, semconv.MessagingDestinationName("my-topic"))
@@ -35,7 +34,7 @@ func TestPublishInputWithNoDestination(t *testing.T) {
 		Parameters: &sns.PublishInput{},
 	}
 
-	attributes := SNSAttributeBuilder(context.Background(), input, middleware.InitializeOutput{})
+	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
 	assert.Contains(t, attributes, semconv.MessagingDestinationName(""))
@@ -51,7 +50,7 @@ func TestPublishBatchInput(t *testing.T) {
 		},
 	}
 
-	attributes := SNSAttributeBuilder(context.Background(), input, middleware.InitializeOutput{})
+	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
 	assert.Contains(t, attributes, semconv.MessagingDestinationName("my-topic-batch"))

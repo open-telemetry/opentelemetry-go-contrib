@@ -6,7 +6,6 @@
 package otelgin_test
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"html/template"
@@ -51,7 +50,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/ping", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
-	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	response := w.Result()
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 }
 
@@ -62,7 +61,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x01},
 		SpanID:  trace.SpanID{0x01},
@@ -89,7 +88,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x01},
 		SpanID:  trace.SpanID{0x01},
@@ -155,7 +154,7 @@ func TestTrace200(t *testing.T) {
 
 	// do and verify the request
 	router.ServeHTTP(w, r)
-	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	response := w.Result()
 	require.Equal(t, http.StatusOK, response.StatusCode)
 
 	// verify traces look good
@@ -191,7 +190,7 @@ func TestError(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/server_err", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
-	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	response := w.Result()
 	assert.Equal(t, http.StatusInternalServerError, response.StatusCode)
 
 	// verify the errors and status are correct
@@ -359,7 +358,7 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 
 	// do and verify the request
 	router.ServeHTTP(w, r)
-	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	response := w.Result()
 	require.Equal(t, http.StatusOK, response.StatusCode)
 
 	// verify traces look good
@@ -392,7 +391,7 @@ func TestHTML(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/hello", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
-	response := w.Result() //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	response := w.Result()
 	assert.Equal(t, http.StatusOK, response.StatusCode)
 	assert.Equal(t, "hello world", w.Body.String())
 
@@ -549,7 +548,7 @@ func TestMetrics(t *testing.T) {
 
 			// verify metrics
 			rm := metricdata.ResourceMetrics{}
-			require.NoError(t, reader.Collect(context.Background(), &rm))
+			require.NoError(t, reader.Collect(t.Context(), &rm))
 
 			require.Len(t, rm.ScopeMetrics, 1)
 			sm := rm.ScopeMetrics[0]

@@ -97,7 +97,7 @@ func TestMeterProvider(t *testing.T) {
 		mp, shutdown, err := meterProvider(tt.cfg, resource.Default())
 		require.Equal(t, tt.wantProvider, mp)
 		assert.Equal(t, tt.wantErr, err)
-		require.NoError(t, shutdown(context.Background()))
+		require.NoError(t, shutdown(t.Context()))
 	}
 }
 
@@ -136,7 +136,7 @@ func TestMeterProviderOptions(t *testing.T) {
 	)
 	require.NoError(t, err)
 	defer func() {
-		assert.NoError(t, sdk.Shutdown(context.Background()))
+		assert.NoError(t, sdk.Shutdown(t.Context()))
 		// The exporter, which we passed in as an extra option to NewSDK,
 		// should be wired up to the provider in addition to the
 		// configuration-based OTLP exporter.
@@ -150,7 +150,7 @@ func TestMeterProviderOptions(t *testing.T) {
 	}()
 
 	counter, _ := sdk.MeterProvider().Meter("test").Int64Counter("counter")
-	counter.Add(context.Background(), 1)
+	counter.Add(t.Context(), 1)
 }
 
 func TestReader(t *testing.T) {
@@ -158,7 +158,7 @@ func TestReader(t *testing.T) {
 		stdoutmetric.WithPrettyPrint(),
 	)
 	require.NoError(t, err)
-	ctx := context.Background()
+	ctx := t.Context()
 	otlpGRPCExporter, err := otlpmetricgrpc.New(ctx)
 	require.NoError(t, err)
 	otlpHTTPExporter, err := otlpmetrichttp.New(ctx)
@@ -862,7 +862,7 @@ func TestReader(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := metricReader(context.Background(), tt.reader)
+			got, err := metricReader(t.Context(), tt.reader)
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				require.Equal(t, tt.wantErr, err.Error())
@@ -885,7 +885,7 @@ func TestReader(t *testing.T) {
 				wantExporterType := reflect.Indirect(reflect.ValueOf(tt.wantReader)).FieldByName(fieldName).Elem().Type()
 				gotExporterType := reflect.Indirect(reflect.ValueOf(got)).FieldByName(fieldName).Elem().Type()
 				require.Equal(t, wantExporterType.String(), gotExporterType.String())
-				require.NoError(t, got.Shutdown(context.Background()))
+				require.NoError(t, got.Shutdown(t.Context()))
 			}
 		})
 	}
@@ -1432,8 +1432,9 @@ func TestPrometheusIPv6(t *testing.T) {
 				WithResourceConstantLabels: &IncludeExclude{},
 			}
 
-			rs, err := prometheusReader(context.Background(), &cfg)
+			rs, err := prometheusReader(t.Context(), &cfg)
 			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 				require.NoError(t, rs.Shutdown(context.Background()))
 			})
 			require.NoError(t, err)
@@ -1602,7 +1603,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 		{
 			name: "no TLS config",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLPMetric{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
@@ -1620,7 +1621,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 		{
 			name: "with TLS config",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLPMetric{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
@@ -1644,7 +1645,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 		{
 			name: "with TLS config and client key",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLPMetric{
 					Protocol:          ptr("grpc"),
 					Compression:       ptr("gzip"),
@@ -1701,11 +1702,11 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			exporter, err := otlpGRPCMetricExporter(tt.args.ctx, tt.args.otlpConfig)
 			require.NoError(t, err)
 
-			res, err := resource.New(context.Background())
+			res, err := resource.New(t.Context())
 			require.NoError(t, err)
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{
+				assert.NoError(collect, exporter.Export(t.Context(), &metricdata.ResourceMetrics{
 					Resource: res,
 					ScopeMetrics: []metricdata.ScopeMetrics{
 						{

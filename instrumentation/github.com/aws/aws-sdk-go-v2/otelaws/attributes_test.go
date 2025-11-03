@@ -4,7 +4,6 @@
 package otelaws
 
 import (
-	"context"
 	"testing"
 
 	awsMiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
@@ -12,7 +11,7 @@ import (
 	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 func TestOperationAttr(t *testing.T) {
@@ -45,14 +44,14 @@ func TestSystemAttribute(t *testing.T) {
 }
 
 func TestDefaultAttributeBuilderNotSupportedService(t *testing.T) {
-	testCtx := awsMiddleware.SetServiceID(context.TODO(), "not-implemented-service")
+	testCtx := awsMiddleware.SetServiceID(t.Context(), "not-implemented-service")
 
 	attr := DefaultAttributeBuilder(testCtx, middleware.InitializeInput{}, middleware.InitializeOutput{})
 	assert.Empty(t, attr)
 }
 
 func TestDefaultAttributeBuilderOnSupportedService(t *testing.T) {
-	testCtx := awsMiddleware.SetServiceID(context.TODO(), sqs.ServiceID)
+	testCtx := awsMiddleware.SetServiceID(t.Context(), sqs.ServiceID)
 	testQueueURL := "test-queue-url"
 
 	attr := DefaultAttributeBuilder(testCtx, middleware.InitializeInput{

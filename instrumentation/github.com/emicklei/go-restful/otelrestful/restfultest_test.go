@@ -4,7 +4,6 @@
 package otelrestful_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -230,12 +229,12 @@ func TestWithPublicEndpoint(t *testing.T) {
 	require.NoError(t, err)
 
 	sc := oteltrace.NewSpanContext(remoteSpan)
-	ctx := oteltrace.ContextWithSpanContext(context.Background(), sc)
+	ctx := oteltrace.ContextWithSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	rr := httptest.NewRecorder()
 	container.ServeHTTP(rr, r)
-	assert.Equal(t, 200, rr.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	assert.Equal(t, 200, rr.Result().StatusCode)
 
 	// Recorded span should be linked with an incoming span context.
 	assert.NoError(t, spanRecorder.ForceFlush(ctx))
@@ -320,12 +319,12 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			require.NoError(t, err)
 
 			sc := oteltrace.NewSpanContext(remoteSpan)
-			ctx := oteltrace.ContextWithSpanContext(context.Background(), sc)
+			ctx := oteltrace.ContextWithSpanContext(t.Context(), sc)
 			prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 			rr := httptest.NewRecorder()
 			container.ServeHTTP(rr, r)
-			assert.Equal(t, http.StatusOK, rr.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+			assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 			// Recorded span should be linked with an incoming span context.
 			assert.NoError(t, spanRecorder.ForceFlush(ctx))

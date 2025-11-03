@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	pb "google.golang.org/grpc/interop/grpc_testing"
@@ -71,7 +71,7 @@ func doCalls(ctx context.Context, client pb.TestServiceClient) {
 	test.DoPingPong(ctx, client)
 }
 
-func assertEvents(t *testing.T, expected, actual []trace.Event) bool { //nolint:unparam
+func assertEvents(t *testing.T, expected, actual []trace.Event) bool { //nolint:unparam // ignore unparam lint
 	if !assert.Len(t, actual, len(expected)) {
 		return false
 	}
@@ -89,7 +89,7 @@ func assertEvents(t *testing.T, expected, actual []trace.Event) bool { //nolint:
 	return !failed
 }
 
-func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) { //nolint:unparam
+func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) { //nolint:unparam // ignore unparam lint
 	for _, kv := range kvs {
 		if kv.Key == key {
 			return kv, true

@@ -24,13 +24,15 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 )
+
+const miB = 1 << 20
 
 var errorLogger = log.New(log.Writer(), "OTel Lambda Test Error: ", 0)
 
@@ -142,7 +144,7 @@ var (
 			attribute.String("faas.name", "testFunction"),
 			attribute.String("faas.version", "$LATEST"),
 			attribute.String("faas.instance", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
-			attribute.Int("faas.max_memory", 128)),
+			attribute.Int("faas.max_memory", 128*miB)),
 		InstrumentationScope: instrumentation.Scope{
 			Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda",
 			Version: otellambda.Version(),
@@ -337,7 +339,7 @@ var (
 			attribute.String("faas.name", "testFunction"),
 			attribute.String("faas.version", "$LATEST"),
 			attribute.String("faas.instance", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
-			attribute.Int("faas.max_memory", 128)),
+			attribute.Int("faas.max_memory", 128*miB)),
 		InstrumentationScope: instrumentation.Scope{
 			Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda",
 			Version: otellambda.Version(),

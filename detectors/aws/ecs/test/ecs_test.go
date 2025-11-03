@@ -4,7 +4,6 @@
 package ecs
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 
 	ecs "go.opentelemetry.io/contrib/detectors/aws/ecs"
 )
@@ -77,7 +76,7 @@ func TestDetectV4LaunchTypeEc2(t *testing.T) {
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ecs.NewResourceDetector()
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 
 	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
@@ -137,7 +136,7 @@ func TestDetectV4LaunchTypeEc2BadContainerArn(t *testing.T) {
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ecs.NewResourceDetector()
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 
 	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
@@ -197,7 +196,7 @@ func TestDetectV4LaunchTypeEc2BadTaskArn(t *testing.T) {
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ecs.NewResourceDetector()
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 
 	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
@@ -257,7 +256,7 @@ func TestDetectV4LaunchTypeFargate(t *testing.T) {
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ecs.NewResourceDetector()
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 
 	assert.NoError(t, err, "Detector should not fail")
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")

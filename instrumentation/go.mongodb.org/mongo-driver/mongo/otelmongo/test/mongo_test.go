@@ -81,8 +81,6 @@ func TestDBCrudOperation(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		title := tc.title
 		if tc.excludeCommand {
 			title += "/excludeCommand"
@@ -95,7 +93,7 @@ func TestDBCrudOperation(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
 			defer cancel()
 
 			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
@@ -195,14 +193,12 @@ func TestDBCollectionAttribute(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 		mt.Run(tc.title, func(mt *mtest.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
 			defer cancel()
 
 			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
@@ -287,8 +283,6 @@ func TestSemanticConventionOptIn(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		mt := mtest.New(t, mtest.NewOptions().ClientType(mtest.Mock))
 
 		mt.Run(tc.name, func(mt *mtest.T) {
@@ -297,7 +291,7 @@ func TestSemanticConventionOptIn(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
 			defer cancel()
 
 			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")

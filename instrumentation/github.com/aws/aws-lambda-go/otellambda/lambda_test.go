@@ -97,7 +97,7 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 		{
 			name:     "handler returning two values does not declare error as the second return value",
 			expected: errors.New("handler returns two values, but the second does not implement error"),
-			handler: func() (error, string) { // nolint:staticcheck  // Tests error first.
+			handler: func() (error, string) { //nolint:staticcheck  // Tests error first.
 				return nil, "hello"
 			},
 			args: []reflect.Value{reflect.ValueOf(mockContext), reflect.ValueOf(emptyPayload)},
@@ -119,7 +119,6 @@ func TestLambdaHandlerSignatures(t *testing.T) {
 		},
 	}
 	for i, testCase := range testCases {
-		testCase := testCase
 		t.Run(fmt.Sprintf("testCase[%d] %s", i, testCase.name), func(t *testing.T) {
 			lambdaHandler := InstrumentHandler(testCase.handler)
 			handler := reflect.ValueOf(lambdaHandler)
@@ -216,7 +215,6 @@ func TestHandlerInvokes(t *testing.T) {
 
 	// test invocation via a lambda handler
 	for i, testCase := range testCases {
-		testCase := testCase
 		t.Run(fmt.Sprintf("lambdaHandlerTestCase[%d] %s", i, testCase.name), func(t *testing.T) {
 			lambdaHandler := InstrumentHandler(testCase.handler)
 			handler := reflect.ValueOf(lambdaHandler)
@@ -241,7 +239,6 @@ func TestHandlerInvokes(t *testing.T) {
 
 	// test invocation via a Handler
 	for i, testCase := range testCases {
-		testCase := testCase
 		t.Run(fmt.Sprintf("handlerTestCase[%d] %s", i, testCase.name), func(t *testing.T) {
 			handler := WrapHandler(lambda.NewHandler(testCase.handler))
 			inputPayload, _ := json.Marshal(testCase.input)
@@ -269,7 +266,7 @@ func BenchmarkInstrumentHandler(b *testing.B) {
 	args := []reflect.Value{ctx, payload}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		wrappedCallable.Call(args)
 	}
 }
@@ -280,7 +277,7 @@ func BenchmarkWrapHandler(b *testing.B) {
 	wrapped := WrapHandler(emptyHandler{})
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, _ = wrapped.Invoke(mockContext, []byte{0})
 	}
 }

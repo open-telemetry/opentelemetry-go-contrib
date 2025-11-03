@@ -81,8 +81,6 @@ func TestDBCrudOperation(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		title := tc.title
 		if tc.excludeCommand {
 			title += "/excludeCommand"
@@ -96,15 +94,14 @@ func TestDBCrudOperation(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
 			defer cancel()
 
 			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			//nolint:staticcheck
-			opts.Deployment = md // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
+			opts.Deployment = md //nolint:staticcheck // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
 			opts.Monitor = NewMonitor(
 				WithTracerProvider(provider),
 				WithCommandAttributeDisabled(tc.excludeCommand),
@@ -114,7 +111,7 @@ func TestDBCrudOperation(t *testing.T) {
 			md.AddResponses(tc.mockResponses...)
 			client, err := mongo.Connect(opts)
 			defer func() {
-				err := client.Disconnect(context.Background())
+				err := client.Disconnect(t.Context())
 				require.NoError(t, err)
 			}()
 			require.NoError(t, err)
@@ -199,23 +196,20 @@ func TestDBCollectionAttribute(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		t.Run(tc.title, func(t *testing.T) {
 			md := drivertest.NewMockDeployment()
 
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
 			defer cancel()
 
 			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			//nolint:staticcheck
-			opts.Deployment = md // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
+			opts.Deployment = md //nolint:staticcheck // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
 			opts.Monitor = NewMonitor(
 				WithTracerProvider(provider),
 				WithCommandAttributeDisabled(true),
@@ -227,7 +221,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			require.NoError(t, err)
 
 			defer func() {
-				err := client.Disconnect(context.Background())
+				err := client.Disconnect(t.Context())
 				require.NoError(t, err)
 			}()
 

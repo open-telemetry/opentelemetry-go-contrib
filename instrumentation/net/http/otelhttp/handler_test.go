@@ -4,7 +4,6 @@
 package otelhttp
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -97,7 +96,7 @@ func TestHandler(t *testing.T) {
 
 			rr := httptest.NewRecorder()
 			tc.handler(t).ServeHTTP(rr, r)
-			assert.Equal(t, tc.expectedStatusCode, rr.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+			assert.Equal(t, tc.expectedStatusCode, rr.Result().StatusCode)
 		})
 	}
 }
@@ -136,7 +135,7 @@ func TestHandlerBasics(t *testing.T) {
 	h.ServeHTTP(rr, r)
 
 	rm := metricdata.ResourceMetrics{}
-	err = reader.Collect(context.Background(), &rm)
+	err = reader.Collect(t.Context(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	attrs := attribute.NewSet(
@@ -150,7 +149,7 @@ func TestHandlerBasics(t *testing.T) {
 	)
 	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 
-	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected { //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
 		t.Fatalf("got %d, expected %d", got, expected)
 	}
 
@@ -162,7 +161,7 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatalf("invalid span created: %#v", spans[0].SpanContext())
 	}
 
-	d, err := io.ReadAll(rr.Result().Body) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	d, err := io.ReadAll(rr.Result().Body)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -419,11 +418,11 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 		sdktrace.WithSpanProcessor(spanRecorder),
 	)
 	tracer := provider.Tracer("")
-	ctx, span := tracer.Start(context.Background(), "test_request")
+	ctx, span := tracer.Start(t.Context(), "test_request")
 	r = r.WithContext(ctx)
 
 	h.ServeHTTP(rr, r)
-	assert.Equal(t, http.StatusOK, rr.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 	span.End()
 
@@ -488,7 +487,7 @@ func TestWithSpanNameFormatter(t *testing.T) {
 			h.ServeHTTP(rr, r)
 			assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
-			assert.NoError(t, spanRecorder.ForceFlush(context.Background()))
+			assert.NoError(t, spanRecorder.ForceFlush(t.Context()))
 			spans := spanRecorder.Ended()
 			assert.Len(t, spans, 1)
 			assert.Equal(t, tt.wantSpanName, spans[0].Name())
@@ -526,12 +525,12 @@ func TestWithPublicEndpoint(t *testing.T) {
 	require.NoError(t, err)
 
 	sc := trace.NewSpanContext(remoteSpan)
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, r)
-	assert.Equal(t, http.StatusOK, rr.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 	// Recorded span should be linked with an incoming span context.
 	assert.NoError(t, spanRecorder.ForceFlush(ctx))
@@ -610,12 +609,12 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			require.NoError(t, err)
 
 			sc := trace.NewSpanContext(remoteSpan)
-			ctx := trace.ContextWithSpanContext(context.Background(), sc)
+			ctx := trace.ContextWithSpanContext(t.Context(), sc)
 			prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, r)
-			assert.Equal(t, http.StatusOK, rr.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+			assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 			// Recorded span should be linked with an incoming span context.
 			assert.NoError(t, spanRecorder.ForceFlush(ctx))
@@ -685,7 +684,7 @@ func TestWithRouteTag(t *testing.T) {
 	require.Contains(t, gotSpan.Attributes(), want, "should add route to span attributes")
 
 	rm := metricdata.ResourceMetrics{}
-	err := metricReader.Collect(context.Background(), &rm)
+	err := metricReader.Collect(t.Context(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1, "should emit metrics for one scope")
 	gotMetrics := rm.ScopeMetrics[0].Metrics
@@ -771,7 +770,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		h.ServeHTTP(rr, r)
 
 		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(context.Background(), &rm)
+		err = reader.Collect(t.Context(), &rm)
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)
@@ -828,7 +827,7 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
+			for range b.N {
 				bb.handler.ServeHTTP(rr, r)
 			}
 		})

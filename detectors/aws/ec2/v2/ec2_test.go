@@ -21,7 +21,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 type mockClient struct {
@@ -103,7 +103,7 @@ func TestAWSResourceDetection(t *testing.T) {
 				Return(tc.metadataOutput, tc.metadataErr)
 
 			detector := &resourceDetector{c: clientMock}
-			res, _ := detector.Detect(context.Background())
+			res, _ := detector.Detect(t.Context())
 
 			if tc.expectedAttrs == nil {
 				assert.Equal(t, resource.Empty(), res, "Resource should be empty")
@@ -117,7 +117,7 @@ func TestAWSResourceDetection(t *testing.T) {
 
 func TestAWSInvalidClient(t *testing.T) {
 	detector := &resourceDetector{c: nil}
-	_, err := detector.Detect(context.Background())
+	_, err := detector.Detect(t.Context())
 	assert.ErrorIs(t, err, errClient)
 }
 
@@ -148,7 +148,7 @@ func TestRecordErrors(t *testing.T) {
 				Return(tc.metadataOutput, tc.metadataErr)
 
 			detector := &resourceDetector{c: clientMock}
-			_, err := detector.Detect(context.Background())
+			_, err := detector.Detect(t.Context())
 			assert.ErrorIs(t, err, tc.expectedErr)
 		})
 	}

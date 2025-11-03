@@ -21,8 +21,8 @@ import (
 
 func TestSpanProcessorDoNothing(t *testing.T) {
 	zsp := NewSpanProcessor()
-	assert.NoError(t, zsp.ForceFlush(context.Background()))
-	assert.NoError(t, zsp.Shutdown(context.Background()))
+	assert.NoError(t, zsp.ForceFlush(t.Context()))
+	assert.NoError(t, zsp.Shutdown(t.Context()))
 }
 
 func TestSpanProcessor(t *testing.T) {
@@ -53,7 +53,7 @@ func TestSpanProcessor(t *testing.T) {
 	}
 	// No ended spans so there will be no error, no latency samples.
 	assert.Empty(t, zsp.errorSpans(spanName))
-	for i := 0; i < defaultBoundaries.numBuckets(); i++ {
+	for i := range defaultBoundaries.numBuckets() {
 		assert.Empty(t, zsp.spansByLatency(spanName, i))
 	}
 	spansPM := zsp.spansPerMethod()
@@ -69,7 +69,7 @@ func TestSpanProcessor(t *testing.T) {
 	assert.Empty(t, zsp.activeSpans(spanName))
 	assert.Len(t, zsp.errorSpans(spanName), 1)
 	numLatencySamples := 0
-	for i := 0; i < defaultBoundaries.numBuckets(); i++ {
+	for i := range defaultBoundaries.numBuckets() {
 		numLatencySamples += len(zsp.spansByLatency(spanName, i))
 	}
 	assert.GreaterOrEqual(t, numLatencySamples, 1)
@@ -104,11 +104,21 @@ func TestSpanProcessorFuzzer(t *testing.T) {
 
 	assert.Empty(t, zsp.activeSpans("testSpan1"))
 	assert.GreaterOrEqual(t, len(zsp.errorSpans("testSpan1")), 1)
-	assert.GreaterOrEqual(t, len(zsp.spansByLatency("testSpan1", 1)), 1)
+	// Count latency samples across all buckets instead of a single bucket to avoid flakes
+	numLatencySamples1 := 0
+	for i := range defaultBoundaries.numBuckets() {
+		numLatencySamples1 += len(zsp.spansByLatency("testSpan1", i))
+	}
+	assert.GreaterOrEqual(t, numLatencySamples1, 1)
 
 	assert.Empty(t, zsp.activeSpans("testSpan2"))
 	assert.GreaterOrEqual(t, len(zsp.errorSpans("testSpan2")), 1)
-	assert.GreaterOrEqual(t, len(zsp.spansByLatency("testSpan2", 1)), 1)
+	// Count latency samples across all buckets instead of a single bucket to avoid flakes
+	numLatencySamples2 := 0
+	for i := range defaultBoundaries.numBuckets() {
+		numLatencySamples2 += len(zsp.spansByLatency("testSpan2", i))
+	}
+	assert.GreaterOrEqual(t, numLatencySamples2, 1)
 }
 
 func TestSpanProcessorNegativeLatency(t *testing.T) {
@@ -128,7 +138,7 @@ func TestSpanProcessorNegativeLatency(t *testing.T) {
 			Description: "",
 		},
 	}
-	zsp.OnStart(context.Background(), ts)
+	zsp.OnStart(t.Context(), ts)
 
 	spansPM := zsp.spansPerMethod()
 	require.Len(t, spansPM, 1)
@@ -154,7 +164,7 @@ func TestSpanProcessorSpansByLatencyWrongIndex(t *testing.T) {
 }
 
 func createEndedSpans(tracer trace.Tracer, spanName string, numSpans int) {
-	for i := 0; i < numSpans; i++ {
+	for i := range numSpans {
 		_, span := tracer.Start(context.Background(), spanName)
 		span.SetStatus(codes.Code(i%3), "")
 		span.End()
@@ -163,7 +173,7 @@ func createEndedSpans(tracer trace.Tracer, spanName string, numSpans int) {
 
 func createActiveSpans(tracer trace.Tracer, spanName string, numSpans int) []trace.Span {
 	var spans []trace.Span
-	for i := 0; i < numSpans; i++ {
+	for i := range numSpans {
 		_, span := tracer.Start(context.Background(), spanName)
 		span.SetStatus(codes.Code(i%3), "")
 		spans = append(spans, span)

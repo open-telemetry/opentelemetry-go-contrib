@@ -68,12 +68,12 @@ func TestLoggerProvider(t *testing.T) {
 		mp, shutdown, err := loggerProvider(tt.cfg, resource.Default())
 		require.Equal(t, tt.wantProvider, mp)
 		assert.Equal(t, tt.wantErr, err)
-		require.NoError(t, shutdown(context.Background()))
+		require.NoError(t, shutdown(t.Context()))
 	}
 }
 
 func TestLogProcessor(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	otlpHTTPExporter, err := otlploghttp.New(ctx)
 	require.NoError(t, err)
@@ -689,7 +689,7 @@ func TestLogProcessor(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := logProcessor(context.Background(), tt.processor)
+			got, err := logProcessor(t.Context(), tt.processor)
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				require.Equal(t, tt.wantErr, err.Error())
@@ -743,14 +743,14 @@ func TestLoggerProviderOptions(t *testing.T) {
 	)
 	require.NoError(t, err)
 	defer func() {
-		assert.NoError(t, sdk.Shutdown(context.Background()))
+		assert.NoError(t, sdk.Shutdown(t.Context()))
 	}()
 
 	// The exporter, which we passed in as an extra option to NewSDK,
 	// should be wired up to the provider in addition to the
 	// configuration-based OTLP exporter.
 	logger := sdk.LoggerProvider().Logger("test")
-	logger.Emit(context.Background(), log.Record{})
+	logger.Emit(t.Context(), log.Record{})
 	assert.NotZero(t, buf)
 	assert.Equal(t, 1, calls)
 	// Options provided by WithMeterProviderOptions may be overridden
@@ -776,7 +776,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 		{
 			name: "no TLS config",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
@@ -794,7 +794,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 		{
 			name: "with TLS config",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
@@ -818,7 +818,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 		{
 			name: "with TLS config and client key",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLP{
 					Protocol:          ptr("grpc"),
 					Compression:       ptr("gzip"),
@@ -880,7 +880,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			}
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{
+				assert.NoError(collect, exporter.Export(t.Context(), []sdklog.Record{
 					logFactory.NewRecord(),
 				}))
 			}, 10*time.Second, 1*time.Second)

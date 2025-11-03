@@ -28,20 +28,20 @@ import (
 
 func TestMetricExporterNone(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "none")
-	got, err := NewMetricReader(context.Background())
+	got, err := NewMetricReader(t.Context())
 	assert.NoError(t, err)
 	t.Cleanup(func() {
-		assert.NoError(t, got.Shutdown(context.Background()))
+		assert.NoError(t, got.Shutdown(t.Context()))
 	})
 	assert.True(t, IsNoneMetricReader(got))
 }
 
 func TestMetricExporterConsole(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "console")
-	got, err := NewMetricReader(context.Background())
+	got, err := NewMetricReader(t.Context())
 	assert.NoError(t, err)
 	t.Cleanup(func() {
-		assert.NoError(t, got.Shutdown(context.Background()))
+		assert.NoError(t, got.Shutdown(t.Context()))
 	})
 	assert.IsType(t, &metric.PeriodicReader{}, got)
 	exporterType := reflect.Indirect(reflect.ValueOf(got)).FieldByName("exporter").Elem().Type()
@@ -61,9 +61,10 @@ func TestMetricExporterOTLP(t *testing.T) {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", tc.protocol)
 
-			got, err := NewMetricReader(context.Background())
+			got, err := NewMetricReader(t.Context())
 			assert.NoError(t, err)
 			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 				assert.NoError(t, got.Shutdown(context.Background()))
 			})
 			assert.IsType(t, &metric.PeriodicReader{}, got)
@@ -88,9 +89,10 @@ func TestMetricExporterOTLPWithDedicatedProtocol(t *testing.T) {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_METRICS_PROTOCOL", tc.protocol)
 
-			got, err := NewMetricReader(context.Background())
+			got, err := NewMetricReader(t.Context())
 			assert.NoError(t, err)
 			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
 				assert.NoError(t, got.Shutdown(context.Background()))
 			})
 			assert.IsType(t, &metric.PeriodicReader{}, got)
@@ -106,7 +108,7 @@ func TestMetricExporterOTLPOverInvalidProtocol(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "otlp")
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "invalid-protocol")
 
-	_, err := NewMetricReader(context.Background())
+	_, err := NewMetricReader(t.Context())
 	assert.Error(t, err)
 }
 
@@ -125,7 +127,7 @@ func TestMetricExporterPrometheus(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
 	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "0")
 
-	r, err := NewMetricReader(context.Background())
+	r, err := NewMetricReader(t.Context())
 	assert.NoError(t, err)
 
 	// pull-based exporters like Prometheus need to be registered
@@ -143,7 +145,7 @@ func TestMetricExporterPrometheus(t *testing.T) {
 	require.NoError(t, err)
 	assert.Contains(t, string(body), "# HELP")
 
-	assert.NoError(t, mp.Shutdown(context.Background()))
+	assert.NoError(t, mp.Shutdown(t.Context()))
 	goleak.VerifyNone(t)
 }
 
@@ -151,7 +153,7 @@ func TestMetricExporterPrometheusInvalidPort(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
 	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "invalid-port")
 
-	_, err := NewMetricReader(context.Background())
+	_, err := NewMetricReader(t.Context())
 	assert.ErrorContains(t, err, "binding")
 }
 
@@ -180,7 +182,7 @@ func TestMetricProducerPrometheusWithOTLPExporter(t *testing.T) {
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
 	t.Setenv("OTEL_METRICS_PRODUCERS", "prometheus")
 
-	r, err := NewMetricReader(context.Background())
+	r, err := NewMetricReader(t.Context())
 	assert.NoError(t, err)
 	assert.IsType(t, &metric.PeriodicReader{}, r)
 
@@ -189,7 +191,7 @@ func TestMetricProducerPrometheusWithOTLPExporter(t *testing.T) {
 	metric.NewMeterProvider(metric.WithReader(r))
 
 	// Shutdown actually makes an export call.
-	assert.NoError(t, r.Shutdown(context.Background()))
+	assert.NoError(t, r.Shutdown(t.Context()))
 
 	<-requestWaitChan
 	ts.Close()
@@ -203,7 +205,7 @@ func TestMetricProducerPrometheusWithPrometheusExporter(t *testing.T) {
 	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "0")
 	t.Setenv("OTEL_METRICS_PRODUCERS", "prometheus")
 
-	r, err := NewMetricReader(context.Background())
+	r, err := NewMetricReader(t.Context())
 	assert.NoError(t, err)
 
 	// pull-based exporters like Prometheus need to be registered
@@ -224,7 +226,7 @@ func TestMetricProducerPrometheusWithPrometheusExporter(t *testing.T) {
 	// But by including the prometheus producer we should have more.
 	assert.Greater(t, strings.Count(string(body), "# HELP"), 2)
 
-	assert.NoError(t, mp.Shutdown(context.Background()))
+	assert.NoError(t, mp.Shutdown(t.Context()))
 	goleak.VerifyNone(t)
 }
 
@@ -245,7 +247,7 @@ func TestMetricProducerFallbackWithPrometheusExporter(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
 	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "0")
 
-	r, err := NewMetricReader(context.Background())
+	r, err := NewMetricReader(t.Context())
 	assert.NoError(t, err)
 
 	// pull-based exporters like Prometheus need to be registered
@@ -264,7 +266,7 @@ func TestMetricProducerFallbackWithPrometheusExporter(t *testing.T) {
 
 	assert.Contains(t, string(body), "HELP dummy_metric_total dummy metric")
 
-	assert.NoError(t, mp.Shutdown(context.Background()))
+	assert.NoError(t, mp.Shutdown(t.Context()))
 	goleak.VerifyNone(t)
 }
 
@@ -303,9 +305,9 @@ func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
 		metricNames := []string{}
 		sm := req.ResourceMetrics[0].ScopeMetrics
 
-		for i := 0; i < len(sm); i++ {
+		for i := range sm {
 			m := sm[i].Metrics
-			for i := 0; i < len(m); i++ {
+			for i := range m {
 				metricNames = append(metricNames, m[i].Name)
 			}
 		}
@@ -320,7 +322,7 @@ func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
 	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
 	t.Setenv("OTEL_METRICS_PRODUCERS", "first_producer,second_producer,first_producer")
 
-	r, err := NewMetricReader(context.Background())
+	r, err := NewMetricReader(t.Context())
 	assert.NoError(t, err)
 	assert.IsType(t, &metric.PeriodicReader{}, r)
 
@@ -329,7 +331,7 @@ func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
 	metric.NewMeterProvider(metric.WithReader(r))
 
 	// Shutdown actually makes an export call.
-	assert.NoError(t, r.Shutdown(context.Background()))
+	assert.NoError(t, r.Shutdown(t.Context()))
 
 	<-requestWaitChan
 	ts.Close()

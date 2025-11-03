@@ -7,7 +7,6 @@
 package semconv_test
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -67,7 +66,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 		attribute.String("url.scheme", "http"),
 	)
 
-	// the CurrentHTTPServer version
+	// the HTTPServer version
 	expectedCurrentScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name: "test",
@@ -199,7 +198,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 			req, err := http.NewRequest("POST", "http://example.com", http.NoBody)
 			assert.NoError(t, err)
 
-			server.RecordMetrics(context.Background(), semconv.ServerMetricData{
+			server.RecordMetrics(t.Context(), semconv.ServerMetricData{
 				ServerName:   "stuff",
 				ResponseSize: 200,
 				MetricAttributes: semconv.MetricAttributes{
@@ -216,7 +215,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 			})
 
 			rm := metricdata.ResourceMetrics{}
-			require.NoError(t, reader.Collect(context.Background(), &rm))
+			require.NoError(t, reader.Collect(t.Context(), &rm))
 			tt.wantFunc(t, rm)
 		})
 	}
@@ -265,7 +264,7 @@ func TestNewTraceResponse(t *testing.T) {
 
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got := semconv.CurrentHTTPServer{}.ResponseTraceAttrs(tt.resp)
+			got := semconv.HTTPServer{}.ResponseTraceAttrs(tt.resp)
 			assert.ElementsMatch(t, tt.want, got)
 		})
 	}
@@ -318,7 +317,7 @@ func TestClientRequest(t *testing.T) {
 		attribute.Int("server.port", 8888),
 		attribute.String("network.protocol.version", "1.1"),
 	}
-	got := semconv.CurrentHTTPClient{}.RequestTraceAttrs(req)
+	got := semconv.HTTPClient{}.RequestTraceAttrs(req)
 	assert.ElementsMatch(t, want, got)
 }
 
@@ -332,7 +331,7 @@ func TestClientResponse(t *testing.T) {
 	}
 
 	for _, tt := range testcases {
-		got := semconv.CurrentHTTPClient{}.ResponseTraceAttrs(&tt.resp)
+		got := semconv.HTTPClient{}.ResponseTraceAttrs(&tt.resp)
 		assert.ElementsMatch(t, tt.want, got)
 	}
 }
@@ -347,7 +346,7 @@ func TestRequestErrorType(t *testing.T) {
 	}
 
 	for _, tt := range testcases {
-		got := semconv.CurrentHTTPClient{}.ErrorType(tt.err)
+		got := semconv.HTTPClient{}.ErrorType(tt.err)
 		assert.Equal(t, tt.want, got)
 	}
 }
@@ -362,7 +361,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 		attribute.String("url.scheme", "http"),
 	)
 
-	// the CurrentHTTPClient version
+	// the HTTPClient version
 	expectedCurrentScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name: "test",
@@ -434,7 +433,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 			req, err := http.NewRequest("POST", "http://example.com", http.NoBody)
 			assert.NoError(t, err)
 
-			client.RecordMetrics(context.Background(), semconv.MetricData{
+			client.RecordMetrics(t.Context(), semconv.MetricData{
 				RequestSize: 100,
 				ElapsedTime: 300,
 			}, client.MetricOptions(semconv.MetricAttributes{
@@ -443,7 +442,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 			}))
 
 			rm := metricdata.ResourceMetrics{}
-			require.NoError(t, reader.Collect(context.Background(), &rm))
+			require.NoError(t, reader.Collect(t.Context(), &rm))
 			tt.wantFunc(t, rm)
 		})
 	}
