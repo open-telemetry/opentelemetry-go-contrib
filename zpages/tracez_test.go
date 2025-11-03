@@ -7,7 +7,6 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,87 +18,11 @@ import (
 func TestNewTracezHandler(t *testing.T) {
 	sp := NewSpanProcessor()
 	handler := NewTracezHandler(sp)
-
-	if handler == nil {
-		t.Fatal("NewTracezHandler returned nil")
-	}
-
-	_ = handler
+	require.NotNil(t, handler, "NewTracezHandler returned nil")
 }
 
-func TestTracezHandler_ServeHTTP_BasicResponse(t *testing.T) {
-	sp := NewSpanProcessor()
-	handler := NewTracezHandler(sp)
-
-	req := httptest.NewRequest(http.MethodGet, "/tracez", http.NoBody)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected status OK, got %v", resp.StatusCode)
-	}
-
-	contentType := resp.Header.Get("Content-Type")
-	if contentType != "text/html; charset=utf-8" {
-		t.Errorf("expected Content-Type 'text/html; charset=utf-8', got %q", contentType)
-	}
-
-	body := w.Body.String()
-	if body == "" {
-		t.Error("expected non-empty response body")
-	}
-}
-
-func TestTracezHandler_ServeHTTP_WithRealSpans(t *testing.T) {
-	sp := NewSpanProcessor()
-	defer func() {
-		require.NoError(t, sp.Shutdown(t.Context()))
-	}()
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sp),
-	)
-	defer func() {
-		require.NoError(t, tp.Shutdown(t.Context()))
-	}()
-
-	tracer := tp.Tracer("test-tracer")
-
-	ctx := t.Context()
-	_, span1 := tracer.Start(ctx, "test-span-1")
-	span1.End()
-
-	_, span2 := tracer.Start(ctx, "test-span-2")
-	span2.End()
-
-	handler := NewTracezHandler(sp)
-
-	req := httptest.NewRequest(http.MethodGet, "/tracez", http.NoBody)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected status OK, got %v", resp.StatusCode)
-	}
-
-	body := w.Body.String()
-	if !strings.Contains(body, "test-span-1") {
-		t.Error("expected response to contain span name 'test-span-1'")
-	}
-	if !strings.Contains(body, "test-span-2") {
-		t.Error("expected response to contain span name 'test-span-2'")
-	}
-}
-
-func TestTracezHandler_ServeHTTP_WithSpanNameQuery(t *testing.T) {
+func TestTracezHandler_ServeHTTP(t *testing.T) {
+	// Setup common test infrastructure
 	sp := NewSpanProcessor()
 	defer func() {
 		require.NoError(t, sp.Shutdown(t.Context()))
@@ -115,67 +38,7 @@ func TestTracezHandler_ServeHTTP_WithSpanNameQuery(t *testing.T) {
 	tracer := tp.Tracer("test-tracer")
 	ctx := t.Context()
 
-	_, span := tracer.Start(ctx, "query-span")
-	span.End()
-
-	handler := NewTracezHandler(sp)
-
-	tests := []struct {
-		name      string
-		queryPath string
-		wantSpan  bool
-	}{
-		{
-			name:      "query for existing span",
-			queryPath: "/tracez?zspanname=query-span",
-			wantSpan:  true,
-		},
-		{
-			name:      "query for non-existing span",
-			queryPath: "/tracez?zspanname=non-existing",
-			wantSpan:  false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tt.queryPath, http.NoBody)
-			w := httptest.NewRecorder()
-
-			handler.ServeHTTP(w, req)
-
-			resp := w.Result()
-			defer resp.Body.Close()
-
-			if resp.StatusCode != http.StatusOK {
-				t.Errorf("expected status OK, got %v", resp.StatusCode)
-			}
-
-			body := w.Body.String()
-			containsSpan := strings.Contains(body, "query-span")
-			if tt.wantSpan && !containsSpan {
-				t.Error("expected response to contain span name")
-			}
-		})
-	}
-}
-
-func TestTracezHandler_ServeHTTP_SpanTypes(t *testing.T) {
-	sp := NewSpanProcessor()
-	defer func() {
-		require.NoError(t, sp.Shutdown(t.Context()))
-	}()
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sp),
-	)
-	defer func() {
-		require.NoError(t, tp.Shutdown(t.Context()))
-	}()
-
-	tracer := tp.Tracer("test-tracer")
-	ctx := t.Context()
-
+	// Create test spans
 	_, completedSpan := tracer.Start(ctx, "completed-span")
 	completedSpan.End()
 
@@ -183,111 +46,8 @@ func TestTracezHandler_ServeHTTP_SpanTypes(t *testing.T) {
 	errorSpan.RecordError(context.DeadlineExceeded)
 	errorSpan.End()
 
-	handler := NewTracezHandler(sp)
-
-	tests := []struct {
-		name       string
-		spanName   string
-		spanType   string
-		wantStatus int
-	}{
-		{
-			name:       "latency spans (type=1)",
-			spanName:   "completed-span",
-			spanType:   "1",
-			wantStatus: http.StatusOK,
-		},
-		{
-			name:       "error spans (type=2)",
-			spanName:   "error-span",
-			spanType:   "2",
-			wantStatus: http.StatusOK,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname="+tt.spanName+"&ztype="+tt.spanType, http.NoBody)
-			w := httptest.NewRecorder()
-
-			handler.ServeHTTP(w, req)
-
-			resp := w.Result()
-			defer resp.Body.Close()
-
-			if resp.StatusCode != tt.wantStatus {
-				t.Errorf("expected status %v, got %v", tt.wantStatus, resp.StatusCode)
-			}
-		})
-	}
-}
-
-func TestTracezHandler_ServeHTTP_LatencyBucket(t *testing.T) {
-	sp := NewSpanProcessor()
-	defer func() {
-		require.NoError(t, sp.Shutdown(t.Context()))
-	}()
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sp),
-	)
-	defer func() {
-		require.NoError(t, tp.Shutdown(t.Context()))
-	}()
-
-	tracer := tp.Tracer("test-tracer")
-	ctx := t.Context()
-
-	_, span := tracer.Start(ctx, "latency-span")
-	span.End()
-
-	handler := NewTracezHandler(sp)
-
-	req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname=latency-span&ztype=1&zlatencybucket=0", http.NoBody)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected status OK, got %v", resp.StatusCode)
-	}
-}
-
-func TestTracezHandler_ServeHTTP_InvalidForm(t *testing.T) {
-	sp := NewSpanProcessor()
-	handler := NewTracezHandler(sp)
-
-	req := httptest.NewRequest(http.MethodGet, "/tracez?%zzz", http.NoBody)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("expected status OK or BadRequest, got %v", resp.StatusCode)
-	}
-}
-
-func TestTracezHandler_ServeHTTP_MultipleSpans(t *testing.T) {
-	sp := NewSpanProcessor()
-	defer func() {
-		require.NoError(t, sp.Shutdown(t.Context()))
-	}()
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sp),
-	)
-	defer func() {
-		require.NoError(t, tp.Shutdown(t.Context()))
-	}()
-
-	tracer := tp.Tracer("test-tracer")
-	ctx := t.Context()
+	_, querySpan := tracer.Start(ctx, "query-span")
+	querySpan.End()
 
 	for range 5 {
 		_, span := tracer.Start(ctx, "multi-span")
@@ -296,54 +56,89 @@ func TestTracezHandler_ServeHTTP_MultipleSpans(t *testing.T) {
 
 	handler := NewTracezHandler(sp)
 
-	req := httptest.NewRequest(http.MethodGet, "/tracez?zspanname=multi-span&ztype=1", http.NoBody)
-	w := httptest.NewRecorder()
-
-	handler.ServeHTTP(w, req)
-
-	resp := w.Result()
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		t.Errorf("expected status OK, got %v", resp.StatusCode)
-	}
-
-	body := w.Body.String()
-	if !strings.Contains(body, "multi-span") {
-		t.Error("expected response to contain span name")
-	}
-}
-
-func TestTracezHandler_ServeHTTP_AllQueryParameters(t *testing.T) {
-	sp := NewSpanProcessor()
-	defer func() {
-		require.NoError(t, sp.Shutdown(t.Context()))
-	}()
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sp),
-	)
-	defer func() {
-		require.NoError(t, tp.Shutdown(t.Context()))
-	}()
-
-	tracer := tp.Tracer("test-tracer")
-	ctx := t.Context()
-
-	_, span := tracer.Start(ctx, "param-test")
-	span.End()
-
-	handler := NewTracezHandler(sp)
-
 	tests := []struct {
-		name string
-		url  string
+		name           string
+		url            string
+		wantStatus     int
+		wantContains   []string
+		wantNotContain []string
 	}{
-		{"with all parameters", "/tracez?zspanname=param-test&ztype=1&zlatencybucket=2"},
-		{"with type only", "/tracez?ztype=1"},
-		{"with latency bucket only", "/tracez?zlatencybucket=3"},
-		{"with invalid type value", "/tracez?ztype=invalid"},
-		{"with negative latency bucket", "/tracez?zlatencybucket=-1"},
+		{
+			name:         "basic response with no query params",
+			url:          "/tracez",
+			wantStatus:   http.StatusOK,
+			wantContains: []string{"completed-span", "error-span", "query-span", "multi-span"},
+		},
+		{
+			name:         "query for existing span",
+			url:          "/tracez?zspanname=query-span",
+			wantStatus:   http.StatusOK,
+			wantContains: []string{"query-span"},
+		},
+		{
+			name:       "query for non-existing span",
+			url:        "/tracez?zspanname=non-existing",
+			wantStatus: http.StatusOK,
+			// Note: The handler displays the queried span name in the response
+			// (e.g., "Span Name: non-existing") even when no matching spans exist.
+			// This verifies the query parameter was processed, but doesn't verify
+			// that the span was actually found (which it shouldn't be).
+			wantContains: []string{"non-existing"},
+		},
+		{
+			name:         "latency spans (type=1)",
+			url:          "/tracez?zspanname=completed-span&ztype=1",
+			wantStatus:   http.StatusOK,
+			wantContains: []string{},
+		},
+		{
+			name:         "error spans (type=2)",
+			url:          "/tracez?zspanname=error-span&ztype=2",
+			wantStatus:   http.StatusOK,
+			wantContains: []string{},
+		},
+		{
+			name:       "with latency bucket",
+			url:        "/tracez?zspanname=completed-span&ztype=1&zlatencybucket=0",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:         "all parameters",
+			url:          "/tracez?zspanname=completed-span&ztype=1&zlatencybucket=2",
+			wantStatus:   http.StatusOK,
+			wantContains: []string{},
+		},
+		{
+			name:       "type only",
+			url:        "/tracez?ztype=1",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "latency bucket only",
+			url:        "/tracez?zlatencybucket=3",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "invalid type value",
+			url:        "/tracez?ztype=invalid",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:       "negative latency bucket",
+			url:        "/tracez?zlatencybucket=-1",
+			wantStatus: http.StatusOK,
+		},
+		{
+			name:         "multiple spans with same name",
+			url:          "/tracez?zspanname=multi-span&ztype=1",
+			wantStatus:   http.StatusOK,
+			wantContains: []string{"multi-span"},
+		},
+		{
+			name:       "invalid form encoding",
+			url:        "/tracez?%zzz",
+			wantStatus: http.StatusBadRequest,
+		},
 	}
 
 	for _, tt := range tests {
@@ -356,14 +151,31 @@ func TestTracezHandler_ServeHTTP_AllQueryParameters(t *testing.T) {
 			resp := w.Result()
 			defer resp.Body.Close()
 
-			if resp.StatusCode != http.StatusOK {
-				t.Errorf("expected status OK, got %v", resp.StatusCode)
+			assert.Equal(t, tt.wantStatus, resp.StatusCode)
+
+			// Verify content type for successful responses
+			if resp.StatusCode == http.StatusOK && tt.url == "/tracez" {
+				assert.Equal(t, "text/html; charset=utf-8", resp.Header.Get("Content-Type"))
+			}
+
+			body := w.Body.String()
+
+			// Only check body content for successful responses
+			if resp.StatusCode == http.StatusOK {
+				assert.NotEmpty(t, body, "expected non-empty response body")
+
+				for _, want := range tt.wantContains {
+					assert.Contains(t, body, want)
+				}
+				for _, notWant := range tt.wantNotContain {
+					assert.NotContains(t, body, notWant)
+				}
 			}
 		})
 	}
 }
 
-func TestTracezHandler_ServeHTTP_ConcurrentRequests(t *testing.T) {
+func TestTracezHandler_ConcurrentRequests(t *testing.T) {
 	sp := NewSpanProcessor()
 	defer func() {
 		require.NoError(t, sp.Shutdown(t.Context()))
