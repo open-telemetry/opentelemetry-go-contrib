@@ -1189,7 +1189,7 @@ func TestPrometheusReaderErrorCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			reader, err := prometheusReader(context.Background(), tt.config)
+			reader, err := prometheusReader(t.Context(), tt.config)
 			assert.ErrorContains(t, err, tt.errMsg)
 			assert.Nil(t, reader)
 		})
@@ -1211,12 +1211,12 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 		},
 	}
 
-	reader, err := prometheusReader(context.Background(), cfg)
+	reader, err := prometheusReader(t.Context(), cfg)
 	require.NoError(t, err)
 	require.NotNil(t, reader)
 
 	t.Cleanup(func() {
-		require.NoError(t, reader.Shutdown(context.Background()))
+		require.NoError(t, reader.Shutdown(t.Context()))
 	})
 
 	rws, ok := reader.(readerWithServer)
@@ -1274,12 +1274,12 @@ func TestPrometheusReaderHostParsing(t *testing.T) {
 				WithResourceConstantLabels: &IncludeExclude{},
 			}
 
-			reader, err := prometheusReader(context.Background(), &cfg)
+			reader, err := prometheusReader(t.Context(), &cfg)
 			require.NoError(t, err)
 			require.NotNil(t, reader)
 
 			t.Cleanup(func() {
-				require.NoError(t, reader.Shutdown(context.Background()))
+				require.NoError(t, reader.Shutdown(t.Context()))
 			})
 
 			rws, ok := reader.(readerWithServer)
