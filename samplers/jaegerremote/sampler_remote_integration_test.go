@@ -40,18 +40,46 @@ func TestRemotelyControlledSampler_WithAttributesOn(t *testing.T) {
 	var traceID oteltrace.TraceID
 	binary.BigEndian.PutUint64(traceID[8:], testMaxID-20)
 
-	// Probabilistic
-	agent.AddSamplingStrategy("client app",
-		&jaeger_api_v2.SamplingStrategyResponse{
-			StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
-			ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
-				SamplingRate: testDefaultSamplingProbability,
-			},
-		},
-	)
-	remoteSampler.UpdateSampler()
+	t.Run("probabilistic", func(t *testing.T) {
+		agent.AddSamplingStrategy("client app",
+			&jaeger_api_v2.SamplingStrategyResponse{
+				StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
+				ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
+					SamplingRate: testDefaultSamplingProbability,
+				},
+			})
+		remoteSampler.UpdateSampler()
 
-	result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
-	assert.Equal(t, trace.RecordAndSample, result.Decision)
-	assert.Equal(t, []attribute.KeyValue{attribute.String("sampler.type", "probabilistic"), attribute.Float64("sampler.param", 0.5)}, result.Attributes)
+		result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Equal(t, []attribute.KeyValue{attribute.String("sampler.type", "probabilistic"), attribute.Float64("sampler.param", 0.5)}, result.Attributes)
+	})
+
+	t.Run("ratelimitng", func(t *testing.T) {
+		agent.AddSamplingStrategy("client app",
+			&jaeger_api_v2.SamplingStrategyResponse{
+				StrategyType: jaeger_api_v2.SamplingStrategyType_RATE_LIMITING,
+				RateLimitingSampling: &jaeger_api_v2.RateLimitingSamplingStrategy{
+					MaxTracesPerSecond: 1,
+				},
+			})
+		remoteSampler.UpdateSampler()
+
+		result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Equal(t, []attribute.KeyValue{attribute.String("sampler.type", "ratelimiting"), attribute.Float64("sampler.param", 1)}, result.Attributes)
+	})
+
+	t.Run("per operation", func(t *testing.T) {
+		agent.AddSamplingStrategy("client app",
+			&jaeger_api_v2.SamplingStrategyResponse{OperationSampling: &jaeger_api_v2.PerOperationSamplingStrategies{
+				DefaultSamplingProbability:       testDefaultSamplingProbability,
+				DefaultLowerBoundTracesPerSecond: 1.0,
+			}})
+		remoteSampler.UpdateSampler()
+
+		result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Equal(t, []attribute.KeyValue{attribute.String("sampler.type", "probabilistic"), attribute.Float64("sampler.param", 0.5)}, result.Attributes)
+	})
 }

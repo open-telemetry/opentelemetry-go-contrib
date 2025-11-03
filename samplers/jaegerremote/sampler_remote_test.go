@@ -31,7 +31,6 @@ import (
 	jaeger_api_v2 "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
@@ -708,52 +707,4 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 			})
 		}
 	})
-}
-
-func TestRemotelyControlledSampler_withAttributes(t *testing.T) {
-	agent, err := testutils.StartMockAgent()
-	require.NoError(t, err)
-
-	remoteSampler := New(
-		"client app",
-		WithSamplingServerURL("http://"+agent.SamplingServerAddr()),
-		WithMaxOperations(testDefaultMaxOperations),
-		WithSamplingRefreshInterval(time.Minute),
-		WithAttributesOn(),
-	)
-	remoteSampler.Close() // stop timer-based updates, we want to call them manually
-	defer agent.Close()
-
-	var traceID oteltrace.TraceID
-	binary.BigEndian.PutUint64(traceID[8:], testMaxID-20)
-
-	// Probabilistic
-	agent.AddSamplingStrategy("client app",
-		getSamplingStrategyResponse(jaeger_api_v2.SamplingStrategyType_PROBABILISTIC, 0.5))
-	remoteSampler.UpdateSampler()
-
-	result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
-	assert.Equal(t, trace.RecordAndSample, result.Decision)
-	assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueProbabilistic), attribute.Float64(samplerParamKey, 0.5)}, result.Attributes)
-
-	// Ratelimiting
-	agent.AddSamplingStrategy("client app",
-		getSamplingStrategyResponse(jaeger_api_v2.SamplingStrategyType_RATE_LIMITING, 1))
-	remoteSampler.UpdateSampler()
-
-	result = remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
-	assert.Equal(t, trace.RecordAndSample, result.Decision)
-	assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueRateLimiting), attribute.Float64(samplerParamKey, 1)}, result.Attributes)
-
-	// PerOperation
-	strategies := &jaeger_api_v2.PerOperationSamplingStrategies{
-		DefaultSamplingProbability:       testDefaultSamplingProbability,
-		DefaultLowerBoundTracesPerSecond: 1.0,
-	}
-	agent.AddSamplingStrategy("client app", &jaeger_api_v2.SamplingStrategyResponse{OperationSampling: strategies})
-	remoteSampler.UpdateSampler()
-
-	result = remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
-	assert.Equal(t, trace.RecordAndSample, result.Decision)
-	assert.Equal(t, []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueProbabilistic), attribute.Float64(samplerParamKey, 0.5)}, result.Attributes)
 }
