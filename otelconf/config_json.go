@@ -384,7 +384,7 @@ func (j *OTLPHttpMetricExporter) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(sh.Endpoint, &sh.Plain.Endpoint); err != nil {
 		return err
 	}
-	if sh.Plain.Timeout != nil && 0 > *sh.Plain.Timeout {
+	if sh.Timeout != nil && 0 > *sh.Timeout {
 		return newErrGreaterOrEqualZero("timeout")
 	}
 	*j = OTLPHttpMetricExporter(sh.Plain)
@@ -408,7 +408,7 @@ func (j *OTLPGrpcMetricExporter) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(sh.Endpoint, &sh.Plain.Endpoint); err != nil {
 		return err
 	}
-	if sh.Plain.Timeout != nil && 0 > *sh.Plain.Timeout {
+	if sh.Timeout != nil && 0 > *sh.Timeout {
 		return newErrGreaterOrEqualZero("timeout")
 	}
 	*j = OTLPGrpcMetricExporter(sh.Plain)
@@ -432,7 +432,7 @@ func (j *OTLPHttpExporter) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(sh.Endpoint, &sh.Plain.Endpoint); err != nil {
 		return err
 	}
-	if sh.Plain.Timeout != nil && 0 > *sh.Plain.Timeout {
+	if sh.Timeout != nil && 0 > *sh.Timeout {
 		return newErrGreaterOrEqualZero("timeout")
 	}
 	*j = OTLPHttpExporter(sh.Plain)
@@ -456,7 +456,7 @@ func (j *OTLPGrpcExporter) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(sh.Endpoint, &sh.Plain.Endpoint); err != nil {
 		return err
 	}
-	if sh.Plain.Timeout != nil && 0 > *sh.Plain.Timeout {
+	if sh.Timeout != nil && 0 > *sh.Timeout {
 		return newErrGreaterOrEqualZero("timeout")
 	}
 	*j = OTLPGrpcExporter(sh.Plain)
