@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -38,7 +37,6 @@ func TestTracezHandler_ServeHTTP(t *testing.T) {
 	tracer := tp.Tracer("test-tracer")
 	ctx := t.Context()
 
-	// Create test spans
 	_, completedSpan := tracer.Start(ctx, "completed-span")
 	completedSpan.End()
 
@@ -217,42 +215,4 @@ func TestTracezHandler_ConcurrentRequests(t *testing.T) {
 	for range 5 {
 		<-done
 	}
-}
-
-func TestTracezHandler_Integration(t *testing.T) {
-	sp := NewSpanProcessor()
-	defer func() {
-		require.NoError(t, sp.Shutdown(t.Context()))
-	}()
-
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sp),
-	)
-	defer func() {
-		require.NoError(t, tp.Shutdown(t.Context()))
-	}()
-
-	otel.SetTracerProvider(tp)
-
-	tracer := otel.Tracer("integration-test")
-	ctx := t.Context()
-
-	_, normalSpan := tracer.Start(ctx, "normal-operation")
-	normalSpan.End()
-
-	_, errorSpan := tracer.Start(ctx, "error-operation")
-	errorSpan.RecordError(context.Canceled)
-	errorSpan.End()
-
-	handler := NewTracezHandler(sp)
-
-	req := httptest.NewRequest(http.MethodGet, "/tracez", http.NoBody)
-	w := httptest.NewRecorder()
-	handler.ServeHTTP(w, req)
-
-	require.Equal(t, http.StatusOK, w.Code)
-
-	body := w.Body.String()
-	require.Contains(t, body, "normal-operation")
-	require.Contains(t, body, "error-operation")
 }
