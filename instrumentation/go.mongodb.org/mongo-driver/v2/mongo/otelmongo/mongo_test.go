@@ -46,8 +46,8 @@ func TestWithSpanNameFormatter(t *testing.T) {
 			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
-			SpanNameFormatter: func(_, command string) string {
-				return "my-" + command + "-span"
+			SpanNameFormatter: func(_ string, event *event.CommandStartedEvent) string {
+				return "my-" + event.CommandName + "-span"
 			},
 			expectedSpanName: "my-delete-span",
 			mockResponses:    []bson.D{{{Key: "ok", Value: 1}}},

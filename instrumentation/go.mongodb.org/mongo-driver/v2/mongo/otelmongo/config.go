@@ -4,6 +4,7 @@
 package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo"
 
 import (
+	"go.mongodb.org/mongo-driver/v2/event"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -29,12 +30,12 @@ func newConfig(opts ...Option) config {
 		CommandAttributeDisabled: true,
 	}
 
-	cfg.SpanNameFormatter = func(collection, command string) string {
+	cfg.SpanNameFormatter = func(collection string, event *event.CommandStartedEvent) string {
 		if collection != "" {
-			return collection + "." + command
+			return collection + "." + event.CommandName
 		}
 
-		return command
+		return event.CommandName
 	}
 
 	for _, opt := range opts {
@@ -61,12 +62,12 @@ func (o optionFunc) apply(c *config) {
 
 // SpanNameFormatterFunc is a function that resolves the span name given the
 // collection and command name.
-type SpanNameFormatterFunc func(collection, command string) string
+type SpanNameFormatterFunc func(collection string, event *event.CommandStartedEvent) string
 
 // WithSpanNameFormatter specifies a function that resolves the span name given the
-// collection and command name. If none is specified, the default resolver is used,
-// which returns "<collection>.<command>" if the collection is non-empty, and just
-// "<command>" otherwise.
+// collection and a *event.CommandStartedEvent. If none is specified, the default
+// resolver is used, which returns "<collection>.<command>" if the collection is
+// non-empty, and just "<command>" otherwise.
 func WithSpanNameFormatter(resolver SpanNameFormatterFunc) Option {
 	return optionFunc(func(cfg *config) {
 		if resolver != nil {

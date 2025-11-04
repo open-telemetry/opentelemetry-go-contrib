@@ -49,7 +49,7 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		attrs = append(attrs, semconv.DBCollectionName(collection))
 	}
 
-	spanName := m.cfg.SpanNameFormatter(collection, evt.CommandName)
+	spanName := m.cfg.SpanNameFormatter(collection, evt)
 
 	opts := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindClient),
