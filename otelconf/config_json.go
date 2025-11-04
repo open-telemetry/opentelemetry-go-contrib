@@ -6,6 +6,8 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"reflect"
 )
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -460,5 +462,80 @@ func (j *OTLPGrpcExporter) UnmarshalJSON(b []byte) error {
 		return newErrGreaterOrEqualZero("timeout")
 	}
 	*j = OTLPGrpcExporter(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *AttributeType) UnmarshalJSON(b []byte) error {
+	var v struct {
+		Value any
+	}
+	if err := json.Unmarshal(b, &v.Value); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	var ok bool
+	for _, expected := range enumValuesAttributeType {
+		if reflect.DeepEqual(v.Value, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return newErrInvalid(fmt.Sprintf("unexpected value type %#v, expected one of %#v)", v.Value, enumValuesAttributeType))
+	}
+	*j = AttributeType(v)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *AttributeNameValue) UnmarshalJSON(b []byte) error {
+	type Plain AttributeNameValue
+	type shadow struct {
+		Plain
+		Name  json.RawMessage `json:"name"`
+		Value json.RawMessage `json:"value"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Name == nil {
+		return newErrRequired(j, "name")
+	}
+	if err := json.Unmarshal(sh.Name, &sh.Plain.Name); err != nil {
+		return err
+	}
+	if sh.Value == nil {
+		return newErrRequired(j, "value")
+	}
+	if err := json.Unmarshal(sh.Value, &sh.Plain.Value); err != nil {
+		return err
+	}
+
+	// json unmarshaller defaults to unmarshalling to float for int values
+	if sh.Type != nil && sh.Type.Value == "int" {
+		val, ok := sh.Plain.Value.(float64)
+		if ok {
+			sh.Plain.Value = int(val)
+		}
+	}
+
+	if sh.Type != nil && sh.Type.Value == "int_array" {
+		m, ok := sh.Plain.Value.([]any)
+		if ok {
+			var vals []any
+			for _, v := range m {
+				val, ok := v.(float64)
+				if ok {
+					vals = append(vals, int(val))
+				} else {
+					vals = append(vals, v)
+				}
+			}
+			sh.Plain.Value = vals
+		}
+	}
+
+	*j = AttributeNameValue(sh.Plain)
 	return nil
 }

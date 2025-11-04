@@ -5,6 +5,8 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -248,5 +250,69 @@ func (j *OTLPGrpcExporter) UnmarshalYAML(node *yaml.Node) error {
 		return newErrGreaterOrEqualZero("timeout")
 	}
 	*j = OTLPGrpcExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *AttributeType) UnmarshalYAML(node *yaml.Node) error {
+	var v struct {
+		Value any
+	}
+	if err := node.Decode(&v.Value); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	var ok bool
+	for _, expected := range enumValuesAttributeType {
+		if reflect.DeepEqual(v.Value, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return newErrInvalid(fmt.Sprintf("unexpected value type %#v, expected one of %#v)", v.Value, enumValuesAttributeType))
+	}
+	*j = AttributeType(v)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *AttributeNameValue) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "name") {
+		return newErrRequired(j, "name")
+	}
+	if !hasYAMLMapKey(node, "value") {
+		return newErrRequired(j, "value")
+	}
+	type Plain AttributeNameValue
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	// yaml unmarshaller defaults to unmarshalling to int
+	if plain.Type != nil && plain.Type.Value == "double" {
+		val, ok := plain.Value.(int)
+		if ok {
+			plain.Value = float64(val)
+		}
+	}
+
+	if plain.Type != nil && plain.Type.Value == "double_array" {
+		m, ok := plain.Value.([]any)
+		if ok {
+			var vals []any
+			for _, v := range m {
+				val, ok := v.(int)
+				if ok {
+					vals = append(vals, float64(val))
+				} else {
+					vals = append(vals, v)
+				}
+			}
+			plain.Value = vals
+		}
+	}
+
+	*j = AttributeNameValue(plain)
 	return nil
 }

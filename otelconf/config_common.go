@@ -20,6 +20,18 @@ const (
 	compressionNone = "none"
 )
 
+var enumValuesAttributeType = []any{
+	nil,
+	"string",
+	"bool",
+	"int",
+	"double",
+	"string_array",
+	"bool_array",
+	"int_array",
+	"double_array",
+}
+
 type configOptions struct {
 	ctx                   context.Context
 	opentelemetryConfig   OpenTelemetryConfiguration
@@ -66,7 +78,7 @@ func (e *errRequired) Is(target error) bool {
 	if !ok {
 		return false
 	}
-	return reflect.TypeOf(e.Object) == reflect.TypeOf(t.Object)
+	return reflect.TypeOf(e.Object) == reflect.TypeOf(t.Object) && e.Field == t.Field
 }
 
 type errUnmarshal struct {

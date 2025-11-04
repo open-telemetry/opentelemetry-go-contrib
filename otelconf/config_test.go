@@ -936,3 +936,130 @@ func TestUnmarshalOTLPGrpcMetricExporter(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalAttributeNameValueType(t *testing.T) {
+	for _, tt := range []struct {
+		name                   string
+		yamlConfig             []byte
+		jsonConfig             []byte
+		wantErrT               error
+		wantAttributeNameValue AttributeNameValue
+	}{
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("name: []\nvalue: true\ntype: bool\n"),
+			wantErrT:   newErrUnmarshal(&AttributeNameValue{}),
+		},
+		{
+			name:       "missing required name field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&AttributeNameValue{}, "name"),
+		},
+		{
+			name:       "missing required value field",
+			jsonConfig: []byte(`{"name":"test"}`),
+			yamlConfig: []byte("name: test"),
+			wantErrT:   newErrRequired(&AttributeNameValue{}, "value"),
+		},
+		{
+			name:       "valid string value",
+			jsonConfig: []byte(`{"name":"test", "value": "test-val", "type": "string"}`),
+			yamlConfig: []byte("name: test\nvalue: test-val\ntype: string\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: "test-val",
+				Type:  &AttributeType{Value: "string"},
+			},
+		},
+		{
+			name:       "valid string_array value",
+			jsonConfig: []byte(`{"name":"test", "value": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("name: test\nvalue: [test-val, test-val-2]\ntype: string_array\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: []any{"test-val", "test-val-2"},
+				Type:  &AttributeType{Value: "string_array"},
+			},
+		},
+		{
+			name:       "valid bool value",
+			jsonConfig: []byte(`{"name":"test", "value": true, "type": "bool"}`),
+			yamlConfig: []byte("name: test\nvalue: true\ntype: bool\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: true,
+				Type:  &AttributeType{Value: "bool"},
+			},
+		},
+		{
+			name:       "valid string_array value",
+			jsonConfig: []byte(`{"name":"test", "value": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("name: test\nvalue: [test-val, test-val-2]\ntype: string_array\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: []any{"test-val", "test-val-2"},
+				Type:  &AttributeType{Value: "string_array"},
+			},
+		},
+		{
+			name:       "valid int value",
+			jsonConfig: []byte(`{"name":"test", "value": 1, "type": "int"}`),
+			yamlConfig: []byte("name: test\nvalue: 1\ntype: int\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: int(1),
+				Type:  &AttributeType{Value: "int"},
+			},
+		},
+		{
+			name:       "valid int_array value",
+			jsonConfig: []byte(`{"name":"test", "value": [1, 2], "type": "int_array"}`),
+			yamlConfig: []byte("name: test\nvalue: [1, 2]\ntype: int_array\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: []any{1, 2},
+				Type:  &AttributeType{Value: "int_array"},
+			},
+		},
+		{
+			name:       "valid double value",
+			jsonConfig: []byte(`{"name":"test", "value": 1, "type": "double"}`),
+			yamlConfig: []byte("name: test\nvalue: 1\ntype: double\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: float64(1),
+				Type:  &AttributeType{Value: "double"},
+			},
+		},
+		{
+			name:       "valid double_array value",
+			jsonConfig: []byte(`{"name":"test", "value": [1, 2], "type": "double_array"}`),
+			yamlConfig: []byte("name: test\nvalue: [1.0, 2.0]\ntype: double_array\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: []any{float64(1), float64(2)},
+				Type:  &AttributeType{Value: "double_array"},
+			},
+		},
+		{
+			name:       "invalid type",
+			jsonConfig: []byte(`{"name":"test", "value": 1, "type": "float"}`),
+			yamlConfig: []byte("name: test\nvalue: 1\ntype: float\n"),
+			wantErrT:   newErrInvalid("unexpected value type"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			val := AttributeNameValue{}
+			err := val.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantAttributeNameValue, val)
+
+			val = AttributeNameValue{}
+			err = yaml.Unmarshal(tt.yamlConfig, &val)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantAttributeNameValue, val)
+		})
+	}
+}
