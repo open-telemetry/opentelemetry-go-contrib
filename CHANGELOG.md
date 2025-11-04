@@ -22,6 +22,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8035)
 
+### Deprecated
+
+- `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.
+  The route is already added automatically for spans.
+  For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8117)
+
 ### Removed
 
 - Drop support for [Go 1.23]. (#7831)
