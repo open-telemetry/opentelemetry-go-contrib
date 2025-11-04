@@ -144,6 +144,100 @@ func TestUnmarshalTextMapPropagator(t *testing.T) {
 	}
 }
 
+func TestUnmarshalSimpleLogRecordProcessor(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter LogRecordExporter
+	}{
+		{
+			name:         "valid with console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":{}}}`),
+			yamlConfig:   []byte("exporter:\n  console: {}"),
+			wantExporter: LogRecordExporter{Console: ConsoleExporter{}},
+		},
+		{
+			name:         "valid with null console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":null}}`),
+			yamlConfig:   []byte("exporter:\n  console:\n"),
+			wantExporter: LogRecordExporter{Console: ConsoleExporter{}},
+		},
+		{
+			name:       "missing required exporter field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&SimpleLogRecordProcessor{}, "exporter"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("exporter:\n  console: []"),
+			wantErrT:   newErrUnmarshal(&SimpleLogRecordProcessor{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := SimpleLogRecordProcessor{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
+
+			cl = SimpleLogRecordProcessor{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
+		})
+	}
+}
+
+func TestUnmarshalSimpleSpanProcessor(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter SpanExporter
+	}{
+		{
+			name:         "valid with null console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":null}}`),
+			yamlConfig:   []byte("exporter:\n  console:\n"),
+			wantExporter: SpanExporter{Console: ConsoleExporter{}},
+		},
+		{
+			name:         "valid with console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":{}}}`),
+			yamlConfig:   []byte("exporter:\n  console: {}"),
+			wantExporter: SpanExporter{Console: ConsoleExporter{}},
+		},
+		{
+			name:       "missing required exporter field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&SimpleSpanProcessor{}, "exporter"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("exporter:\n  console: []"),
+			wantErrT:   newErrUnmarshal(&SimpleSpanProcessor{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := SimpleSpanProcessor{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
+
+			cl = SimpleSpanProcessor{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
+		})
+	}
+}
+
 func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
 	for _, tt := range []struct {
 		name         string
@@ -930,6 +1024,59 @@ func TestUnmarshalOTLPGrpcMetricExporter(t *testing.T) {
 			assert.Equal(t, tt.wantExporter, cl)
 
 			cl = OTLPGrpcMetricExporter{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
+		})
+	}
+}
+
+func TestUnmarshalZipkinSpanExporter(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter ZipkinSpanExporter
+	}{
+		{
+			name:         "valid with exporter",
+			jsonConfig:   []byte(`{"endpoint":"localhost:9000"}`),
+			yamlConfig:   []byte("endpoint: localhost:9000\n"),
+			wantExporter: ZipkinSpanExporter{Endpoint: ptr("localhost:9000")},
+		},
+		{
+			name:       "missing required endpoint field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&ZipkinSpanExporter{}, "endpoint"),
+		},
+		{
+			name:         "valid with zero timeout",
+			jsonConfig:   []byte(`{"endpoint":"localhost:9000", "timeout":0}`),
+			yamlConfig:   []byte("endpoint: localhost:9000\ntimeout: 0"),
+			wantExporter: ZipkinSpanExporter{Endpoint: ptr("localhost:9000"), Timeout: ptr(0)},
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("endpoint: localhost:9000\ntimeout: !!str str"),
+			wantErrT:   newErrUnmarshal(&ZipkinSpanExporter{}),
+		},
+		{
+			name:       "invalid timeout negative",
+			jsonConfig: []byte(`{"endpoint":"localhost:9000", "timeout":-1}`),
+			yamlConfig: []byte("endpoint: localhost:9000\ntimeout: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("timeout"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := ZipkinSpanExporter{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
+
+			cl = ZipkinSpanExporter{}
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
 			assert.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantExporter, cl)

@@ -539,3 +539,72 @@ func (j *AttributeNameValue) UnmarshalJSON(b []byte) error {
 	*j = AttributeNameValue(sh.Plain)
 	return nil
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *SimpleLogRecordProcessor) UnmarshalJSON(b []byte) error {
+	type Plain SimpleLogRecordProcessor
+	type shadow struct {
+		Plain
+		Exporter json.RawMessage `json:"exporter"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Exporter == nil {
+		return newErrRequired(j, "exporter")
+	}
+	// Hydrate the exporter into the underlying field.
+	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
+		return err
+	}
+	*j = SimpleLogRecordProcessor(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *SimpleSpanProcessor) UnmarshalJSON(b []byte) error {
+	type Plain SimpleSpanProcessor
+	type shadow struct {
+		Plain
+		Exporter json.RawMessage `json:"exporter"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Exporter == nil {
+		return newErrRequired(j, "exporter")
+	}
+	// Hydrate the exporter into the underlying field.
+	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
+		return err
+	}
+	*j = SimpleSpanProcessor(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ZipkinSpanExporter) UnmarshalJSON(b []byte) error {
+	type Plain ZipkinSpanExporter
+	type shadow struct {
+		Plain
+		Endpoint json.RawMessage `json:"endpoint"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Endpoint == nil {
+		return newErrRequired(j, "endpoint")
+	}
+
+	if err := json.Unmarshal(sh.Endpoint, &sh.Plain.Endpoint); err != nil {
+		return err
+	}
+	if sh.Timeout != nil && 0 > *sh.Timeout {
+		return newErrGreaterOrEqualZero("timeout")
+	}
+	*j = ZipkinSpanExporter(sh.Plain)
+	return nil
+}

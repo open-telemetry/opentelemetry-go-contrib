@@ -316,3 +316,48 @@ func (j *AttributeNameValue) UnmarshalYAML(node *yaml.Node) error {
 	*j = AttributeNameValue(plain)
 	return nil
 }
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *SimpleLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "exporter") {
+		return newErrRequired(j, "exporter")
+	}
+	type Plain SimpleLogRecordProcessor
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	*j = SimpleLogRecordProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *SimpleSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "exporter") {
+		return newErrRequired(j, "exporter")
+	}
+	type Plain SimpleSpanProcessor
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	*j = SimpleSpanProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *ZipkinSpanExporter) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "endpoint") {
+		return newErrRequired(j, "endpoint")
+	}
+	type Plain ZipkinSpanExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return newErrGreaterOrEqualZero("timeout")
+	}
+	*j = ZipkinSpanExporter(plain)
+	return nil
+}
