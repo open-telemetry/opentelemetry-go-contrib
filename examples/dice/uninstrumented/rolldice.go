@@ -16,6 +16,7 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters.
 	rollsParam := r.URL.Query().Get("rolls")
 	player := r.URL.Query().Get("player")
+	maxRolls := 1000 // Arbitrary limit to prevent Slice memory allocation with excessive size value.
 
 	// Default rolls = 1 if not defined.
 	if rollsParam == "" {
@@ -36,7 +37,7 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	results, err := rolldice(rolls)
-	if err != nil {
+	if err != nil || rolls > maxRolls {
 		// Signals invalid input (<=0).
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("ERROR: %v", err)
