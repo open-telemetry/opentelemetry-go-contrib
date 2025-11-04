@@ -44,12 +44,12 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		attrs = append(attrs, semconv.DBQueryText(sanitizeCommand(evt.Command)))
 	}
 
-	collection, err := extractCollection(evt)
+	collection, err := ExtractCollection(evt)
 	if err == nil && collection != "" {
 		attrs = append(attrs, semconv.DBCollectionName(collection))
 	}
 
-	spanName := m.cfg.SpanNameFormatter(collection, evt)
+	spanName := m.cfg.SpanNameFormatter(evt)
 
 	opts := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindClient),
@@ -102,11 +102,11 @@ func sanitizeCommand(command bson.Raw) string {
 	return string(b)
 }
 
-// extractCollection extracts the collection for the given mongodb command event.
+// ExtractCollection extracts the collection for the given mongodb command event.
 // For CRUD operations, this is the first key/value string pair in the bson
 // document where key == "<operation>" (e.g. key == "insert").
 // For database meta-level operations, such a key may not exist.
-func extractCollection(evt *event.CommandStartedEvent) (string, error) {
+func ExtractCollection(evt *event.CommandStartedEvent) (string, error) {
 	elt, err := evt.Command.IndexErr(0)
 	if err != nil {
 		return "", err

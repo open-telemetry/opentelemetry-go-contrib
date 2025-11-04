@@ -52,8 +52,13 @@ func ExampleWithSpanNameFormatter() {
 	// connect to MongoDB
 	opts := options.Client()
 	opts.Monitor = otelmongo.NewMonitor(
-		otelmongo.WithSpanNameFormatter(func(collection string, event *event.CommandStartedEvent) string {
-			return fmt.Sprintf("my-prefix-%s-%s", collection, event.CommandName)
+		otelmongo.WithSpanNameFormatter(func(event *event.CommandStartedEvent) string {
+			collection, err := otelmongo.ExtractCollection(event)
+			if err != nil {
+				return fmt.Sprintf("my-prefix-%s-%s", collection, event.CommandName)
+			}
+
+			return fmt.Sprintf("my-prefix-%s", event.CommandName)
 		}),
 	)
 	opts.ApplyURI("mongodb://localhost:27017")
