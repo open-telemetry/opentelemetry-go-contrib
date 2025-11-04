@@ -12,7 +12,7 @@ import (
 	"strconv"
 )
 
-func handleRollDice(w http.ResponseWriter, r *http.Request) {
+func handleRolldice(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters.
 	rollsParam := r.URL.Query().Get("rolls")
 	player := r.URL.Query().Get("player")

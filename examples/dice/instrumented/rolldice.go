@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"log"
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -70,7 +69,7 @@ func init() {
 	}
 }
 
-func handleRollDice(w http.ResponseWriter, r *http.Request) {
+func handleRolldice(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters.
 	rollsParam := r.URL.Query().Get("rolls")
 	player := r.URL.Query().Get("player")
@@ -97,16 +96,16 @@ func handleRollDice(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		// Signals invalid input (<=0).
 		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("ERROR: %v", err)
+		logger.ErrorContext(r.Context(), err.Error())
 		return
 	}
 
 	if player == "" {
-		log.Printf("DEBUG: anonymous player rolled %v", results)
+		logger.DebugContext(r.Context(), "anonymous player rolled", results)
 	} else {
-		log.Printf("DEBUG: player=%s rolled %v", player, results)
+		logger.DebugContext(r.Context(), "player=%s rolled %v", player, results)
 	}
-	log.Printf("INFO: %s %s -> 200 OK", r.Method, r.URL.String())
+	logger.InfoContext(r.Context(), " %s %s -> 200 OK", r.Method, r.URL.String())
 
 	w.Header().Set("Content-Type", "application/json")
 	if len(results) == 1 {

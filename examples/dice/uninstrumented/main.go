@@ -65,6 +65,6 @@ func newHTTPHandler() http.Handler {
 	mux := http.NewServeMux()
 
 	// Register handlers.
-	mux.HandleFunc("/rolldice", handleRollDice)
+	mux.HandleFunc("/rolldice", handleRolldice)
 	return mux
 }
