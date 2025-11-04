@@ -361,3 +361,22 @@ func (j *ZipkinSpanExporter) UnmarshalYAML(node *yaml.Node) error {
 	*j = ZipkinSpanExporter(plain)
 	return nil
 }
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *NameStringValuePair) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "name") {
+		return newErrRequired(j, "name")
+	}
+	if !hasYAMLMapKey(node, "value") {
+		return newErrRequired(j, "value")
+	}
+
+	type Plain NameStringValuePair
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	*j = NameStringValuePair(plain)
+	return nil
+}

@@ -608,3 +608,32 @@ func (j *ZipkinSpanExporter) UnmarshalJSON(b []byte) error {
 	*j = ZipkinSpanExporter(sh.Plain)
 	return nil
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *NameStringValuePair) UnmarshalJSON(b []byte) error {
+	type Plain NameStringValuePair
+	type shadow struct {
+		Plain
+		Name  json.RawMessage `json:"name"`
+		Value json.RawMessage `json:"value"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Name == nil {
+		return newErrRequired(j, "name")
+	}
+	if err := json.Unmarshal(sh.Name, &sh.Plain.Name); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Value == nil {
+		return newErrRequired(j, "value")
+	}
+	if err := json.Unmarshal(sh.Value, &sh.Plain.Value); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	*j = NameStringValuePair(sh.Plain)
+	return nil
+}

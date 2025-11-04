@@ -1210,3 +1210,59 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalNameStringValuePairType(t *testing.T) {
+	for _, tt := range []struct {
+		name                    string
+		yamlConfig              []byte
+		jsonConfig              []byte
+		wantErrT                error
+		wantNameStringValuePair NameStringValuePair
+	}{
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("name: []\nvalue: true\ntype: bool\n"),
+			wantErrT:   newErrUnmarshal(&NameStringValuePair{}),
+		},
+		{
+			name:       "missing required name field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&NameStringValuePair{}, "name"),
+		},
+		{
+			name:       "missing required value field",
+			jsonConfig: []byte(`{"name":"test"}`),
+			yamlConfig: []byte("name: test"),
+			wantErrT:   newErrRequired(&NameStringValuePair{}, "value"),
+		},
+		{
+			name:       "valid string value",
+			jsonConfig: []byte(`{"name":"test", "value": "test-val", "type": "string"}`),
+			yamlConfig: []byte("name: test\nvalue: test-val\ntype: string\n"),
+			wantNameStringValuePair: NameStringValuePair{
+				Name:  "test",
+				Value: ptr("test-val"),
+			},
+		},
+		{
+			name:       "invalid string_array value",
+			jsonConfig: []byte(`{"name":"test", "value": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("name: test\nvalue: [test-val, test-val-2]\ntype: string_array\n"),
+			wantErrT:   newErrUnmarshal(&NameStringValuePair{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			val := NameStringValuePair{}
+			err := val.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantNameStringValuePair, val)
+
+			val = NameStringValuePair{}
+			err = yaml.Unmarshal(tt.yamlConfig, &val)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantNameStringValuePair, val)
+		})
+	}
+}
