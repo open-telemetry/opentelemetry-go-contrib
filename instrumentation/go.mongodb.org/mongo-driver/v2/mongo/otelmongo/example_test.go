@@ -54,11 +54,11 @@ func ExampleWithSpanNameFormatter() {
 	opts.Monitor = otelmongo.NewMonitor(
 		otelmongo.WithSpanNameFormatter(func(event *event.CommandStartedEvent) string {
 			collection, err := otelmongo.ExtractCollection(event)
-			if err != nil {
-				return fmt.Sprintf("my-prefix-%s-%s", collection, event.CommandName)
+			if err != nil || collection == "" {
+				return fmt.Sprintf("my-prefix-%s", event.CommandName)
 			}
 
-			return fmt.Sprintf("my-prefix-%s", event.CommandName)
+			return fmt.Sprintf("my-prefix-%s-%s", collection, event.CommandName)
 		}),
 	)
 	opts.ApplyURI("mongodb://localhost:27017")
