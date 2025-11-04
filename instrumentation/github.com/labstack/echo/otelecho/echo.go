@@ -27,7 +27,7 @@ const (
 )
 
 // Middleware returns echo middleware which will trace incoming requests.
-func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
+func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 	cfg := config{}
 	for _, opt := range opts {
 		opt.apply(&cfg)
@@ -73,7 +73,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(request.Header))
 			opts := []oteltrace.SpanStartOption{
 				oteltrace.WithAttributes(
-					semconvSrv.RequestTraceAttrs(service, request, semconv.RequestTraceAttrsOpts{})...,
+					semconvSrv.RequestTraceAttrs(serverName, request, semconv.RequestTraceAttrsOpts{})...,
 				),
 				oteltrace.WithSpanKind(oteltrace.SpanKindServer),
 			}
@@ -117,7 +117,7 @@ func Middleware(service string, opts ...Option) echo.MiddlewareFunc {
 			}
 
 			semconvSrv.RecordMetrics(ctx, semconv.ServerMetricData{
-				ServerName:   service,
+				ServerName:   serverName,
 				ResponseSize: c.Response().Size,
 				MetricAttributes: semconv.MetricAttributes{
 					Req:                  request,
