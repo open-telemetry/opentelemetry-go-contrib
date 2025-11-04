@@ -637,3 +637,16 @@ func (j *NameStringValuePair) UnmarshalJSON(b []byte) error {
 	*j = NameStringValuePair(sh.Plain)
 	return nil
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *InstrumentType) UnmarshalJSON(b []byte) error {
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if !supportedInstrumentType(InstrumentType(v)) {
+		return newErrInvalid(fmt.Sprintf("invalid selector (expected one of %#v): %#v", enumValuesViewSelectorInstrumentType, v))
+	}
+	*j = InstrumentType(v)
+	return nil
+}

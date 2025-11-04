@@ -380,3 +380,18 @@ func (j *NameStringValuePair) UnmarshalYAML(node *yaml.Node) error {
 	*j = NameStringValuePair(plain)
 	return nil
 }
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *InstrumentType) UnmarshalYAML(node *yaml.Node) error {
+	type Plain InstrumentType
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if !supportedInstrumentType(InstrumentType(plain)) {
+		return newErrInvalid(fmt.Sprintf("invalid selector (expected one of %#v): %#v", enumValuesViewSelectorInstrumentType, plain))
+	}
+
+	*j = InstrumentType(plain)
+	return nil
+}

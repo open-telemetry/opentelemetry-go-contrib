@@ -1266,3 +1266,45 @@ func TestUnmarshalNameStringValuePairType(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalInstrumentType(t *testing.T) {
+	var instrumentType InstrumentType
+	for _, tt := range []struct {
+		name               string
+		yamlConfig         []byte
+		jsonConfig         []byte
+		wantErrT           error
+		wantInstrumentType InstrumentType
+	}{
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("name: []\nvalue: true\ntype: bool\n"),
+			wantErrT:   newErrUnmarshal(&instrumentType),
+		},
+		{
+			name:       "invalid instrument type",
+			jsonConfig: []byte(`"test"`),
+			yamlConfig: []byte("test"),
+			wantErrT:   newErrInvalid(`invalid selector (expected one of []interface {}{"counter", "gauge", "histogram", "observable_counter", "observable_gauge", "observable_up_down_counter", "up_down_counter"}): "test""`),
+		},
+		{
+			name:               "valid instrument type",
+			jsonConfig:         []byte(`"counter"`),
+			yamlConfig:         []byte("counter"),
+			wantInstrumentType: InstrumentTypeCounter,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			val := InstrumentType("")
+			err := val.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantInstrumentType, val)
+
+			val = InstrumentType("")
+			err = yaml.Unmarshal(tt.yamlConfig, &val)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantInstrumentType, val)
+		})
+	}
+}

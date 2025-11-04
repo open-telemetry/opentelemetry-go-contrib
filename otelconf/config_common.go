@@ -32,6 +32,16 @@ var enumValuesAttributeType = []any{
 	"double_array",
 }
 
+var enumValuesViewSelectorInstrumentType = []any{
+	"counter",
+	"gauge",
+	"histogram",
+	"observable_counter",
+	"observable_gauge",
+	"observable_up_down_counter",
+	"up_down_counter",
+}
+
 type configOptions struct {
 	ctx                   context.Context
 	opentelemetryConfig   OpenTelemetryConfiguration
@@ -261,4 +271,14 @@ func createHeadersConfig(headers []NameStringValuePair, headersList *string) (ma
 		}
 	}
 	return result, nil
+}
+
+// supportedInstrumentType return true if the instrument type is supported.
+func supportedInstrumentType(in InstrumentType) bool {
+	for _, expected := range enumValuesViewSelectorInstrumentType {
+		if string(in) == fmt.Sprintf("%s", expected) {
+			return true
+		}
+	}
+	return false
 }
