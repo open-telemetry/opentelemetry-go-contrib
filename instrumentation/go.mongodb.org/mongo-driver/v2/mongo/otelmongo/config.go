@@ -61,8 +61,8 @@ func (o optionFunc) apply(c *config) {
 	o(c)
 }
 
-// SpanNameFormatterFunc is a function that resolves the span name given the
-// collection and command name.
+// SpanNameFormatterFunc is a function that resolves the span name given an
+// *event.CommandStartedEvent.
 type SpanNameFormatterFunc func(event *event.CommandStartedEvent) string
 
 // WithSpanNameFormatter specifies a function that resolves the span name given an

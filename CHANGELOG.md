@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add unmarshaling and validation for `BatchLogRecordProcessor`, `BatchSpanProcessor`, and `PeriodicMetricReader` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8049)
 - Add unmarshaling and validation for `TextMapPropagator` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8052)
 - Add unmarshaling and validation for `OTLPHttpExporter`, `OTLPGrpcExporter`, `OTLPGrpcMetricExporter` and `OTLPHttpMetricExporter` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8112)
+- Add a `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7986)
 
 ### Changed
 
@@ -34,10 +35,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove deprecated `go.opentelemetry.io/contrib/detectors/aws/ec2` module, please use `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` instead. (#7841)
 - Remove the deprecated `Extract` and `Inject` functions from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7952)
 - Add the `http.route` metric attribute to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7966)
-
-### Added
-
-- Add a `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7986)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
