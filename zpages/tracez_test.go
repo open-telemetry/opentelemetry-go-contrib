@@ -7,6 +7,7 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -173,7 +174,7 @@ func TestTracezHandler_ServeHTTP(t *testing.T) {
 	}
 }
 
-func TestTracezHandler_ConcurrentRequests(t *testing.T) {
+func TestTracezHandler_ConcurrentSafe(t *testing.T) {
 	sp := NewSpanProcessor()
 	defer func() {
 		require.NoError(t, sp.Shutdown(t.Context()))
@@ -196,9 +197,11 @@ func TestTracezHandler_ConcurrentRequests(t *testing.T) {
 
 	handler := NewTracezHandler(sp)
 
-	done := make(chan bool, 5)
-	for range 5 {
+	var wg sync.WaitGroup
+	for i := 0; i < 5; i++ {
+		wg.Add(1)
 		go func() {
+			defer wg.Done()
 			req := httptest.NewRequest(http.MethodGet, "/tracez", http.NoBody)
 			w := httptest.NewRecorder()
 
@@ -208,11 +211,7 @@ func TestTracezHandler_ConcurrentRequests(t *testing.T) {
 			_ = resp.Body.Close()
 
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
-			done <- true
 		}()
 	}
-
-	for range 5 {
-		<-done
-	}
+	wg.Wait()
 }
