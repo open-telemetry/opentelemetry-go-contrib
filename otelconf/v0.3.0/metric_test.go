@@ -1435,7 +1435,7 @@ func TestPrometheusIPv6(t *testing.T) {
 			rs, err := prometheusReader(t.Context(), &cfg)
 			t.Cleanup(func() {
 				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
-				require.NoError(t, rs.Shutdown(t.Context()))
+				require.NoError(t, rs.Shutdown(context.Background()))
 			})
 			require.NoError(t, err)
 
