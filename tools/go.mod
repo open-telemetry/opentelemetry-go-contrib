@@ -12,9 +12,9 @@ require (
 	github.com/jcchavezs/porto v0.7.0
 	github.com/stretchr/testify v1.11.1
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
-	go.opentelemetry.io/build-tools/crosslink v0.28.1
-	go.opentelemetry.io/build-tools/gotmpl v0.28.1
-	go.opentelemetry.io/build-tools/multimod v0.28.1
+	go.opentelemetry.io/build-tools/crosslink v0.29.0
+	go.opentelemetry.io/build-tools/gotmpl v0.29.0
+	go.opentelemetry.io/build-tools/multimod v0.29.0
 	golang.org/x/exp v0.0.0-20251023183803-a4bb9ffd2546
 	golang.org/x/tools v0.38.0
 	golang.org/x/vuln v1.1.4
@@ -68,13 +68,13 @@ require (
 	github.com/charmbracelet/lipgloss v1.1.0 // indirect
 	github.com/charmbracelet/x/ansi v0.10.2 // indirect
 	github.com/charmbracelet/x/cellbuf v0.0.13-0.20250311204145-2c3ea96c31dd // indirect
-	github.com/charmbracelet/x/term v0.2.1 // indirect
+	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/ckaznocha/intrange v0.3.1 // indirect
 	github.com/clipperhouse/stringish v0.1.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.3.0 // indirect
 	github.com/cloudflare/circl v1.6.1 // indirect
 	github.com/curioswitch/go-reassign v0.3.0 // indirect
-	github.com/cyphar/filepath-securejoin v0.5.0 // indirect
+	github.com/cyphar/filepath-securejoin v0.6.0 // indirect
 	github.com/daixiang0/gci v0.13.7 // indirect
 	github.com/dave/dst v0.27.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
@@ -230,7 +230,7 @@ require (
 	go-simpler.org/sloglint v0.11.1 // indirect
 	go.augendre.info/arangolint v0.3.1 // indirect
 	go.augendre.info/fatcontext v0.9.0 // indirect
-	go.opentelemetry.io/build-tools v0.28.1 // indirect
+	go.opentelemetry.io/build-tools v0.29.0 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
