@@ -15,6 +15,21 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo"
 )
 
+func extractCollection(evt *event.CommandStartedEvent) string {
+	elt, err := evt.Command.IndexErr(0)
+	if err != nil {
+		return ""
+	}
+	if key, e := elt.KeyErr(); e == nil && key == evt.CommandName {
+		var v bson.RawValue
+		if v, e = elt.ValueErr(); e != nil || v.Type != bson.TypeString {
+			return ""
+		}
+		return v.StringValue()
+	}
+	return ""
+}
+
 func Example() {
 	// connect to MongoDB
 	opts := options.Client()
@@ -53,8 +68,8 @@ func ExampleWithSpanNameFormatter() {
 	opts := options.Client()
 	opts.Monitor = otelmongo.NewMonitor(
 		otelmongo.WithSpanNameFormatter(func(event *event.CommandStartedEvent) string {
-			collection, err := otelmongo.ExtractCollection(event)
-			if err != nil || collection == "" {
+			collection := extractCollection(event)
+			if collection == "" {
 				return fmt.Sprintf("my-prefix-%s", event.CommandName)
 			}
 

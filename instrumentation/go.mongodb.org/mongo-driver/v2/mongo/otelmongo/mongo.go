@@ -44,7 +44,7 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 		attrs = append(attrs, semconv.DBQueryText(sanitizeCommand(evt.Command)))
 	}
 
-	collection, err := ExtractCollection(evt)
+	collection, err := extractCollection(evt)
 	if err == nil && collection != "" {
 		attrs = append(attrs, semconv.DBCollectionName(collection))
 	}
@@ -102,14 +102,12 @@ func sanitizeCommand(command bson.Raw) string {
 	return string(b)
 }
 
-// ExtractCollection extracts the collection for the given mongodb command event.
+// extractCollection extracts the collection for the given mongodb command event.
 // For CRUD operations, this is the first key/value string pair in the bson
 // document where key == "<operation>" (e.g. key == "insert").
 // For database meta-level operations, such a key may not exist.
-// This function is exported as a temporary convenience until DRIVERS-2575/GODRIVER-3688
-// adds the collection name to CommandStartedEvent in the Go Driver.
 // This function returns the collection name or an error if no collection can be determined.
-func ExtractCollection(evt *event.CommandStartedEvent) (string, error) {
+func extractCollection(evt *event.CommandStartedEvent) (string, error) {
 	elt, err := evt.Command.IndexErr(0)
 	if err != nil {
 		return "", err

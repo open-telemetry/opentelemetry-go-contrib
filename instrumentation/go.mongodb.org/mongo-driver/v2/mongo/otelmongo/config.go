@@ -31,7 +31,7 @@ func newConfig(opts ...Option) config {
 	}
 
 	cfg.SpanNameFormatter = func(event *event.CommandStartedEvent) string {
-		collection, _ := ExtractCollection(event)
+		collection, _ := extractCollection(event)
 		if collection != "" {
 			return collection + "." + event.CommandName
 		}
@@ -63,7 +63,7 @@ func (o optionFunc) apply(c *config) {
 
 // SpanNameFormatterFunc is a function that resolves the span name given an
 // *event.CommandStartedEvent.
-type SpanNameFormatterFunc func(event *event.CommandStartedEvent) string
+type SpanNameFormatterFunc func(e *event.CommandStartedEvent) string
 
 // WithSpanNameFormatter specifies a function that resolves the span name given an
 // *event.CommandStartedEvent. If none is specified, the default resolver is used,
