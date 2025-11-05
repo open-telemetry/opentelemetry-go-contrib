@@ -198,7 +198,7 @@ func TestTracezHandler_ConcurrentSafe(t *testing.T) {
 	handler := NewTracezHandler(sp)
 
 	var wg sync.WaitGroup
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
@@ -213,5 +213,6 @@ func TestTracezHandler_ConcurrentSafe(t *testing.T) {
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
 		}()
 	}
+
 	wg.Wait()
 }
