@@ -7,7 +7,7 @@ exclude github.com/blizzy78/varnamelen v0.6.1
 require (
 	github.com/atombender/go-jsonschema v0.18.0
 	github.com/client9/misspell v0.3.4
-	github.com/golangci/golangci-lint/v2 v2.6.0
+	github.com/golangci/golangci-lint/v2 v2.6.1
 	github.com/itchyny/gojq v0.12.17
 	github.com/jcchavezs/porto v0.7.0
 	github.com/stretchr/testify v1.11.1
@@ -242,7 +242,7 @@ require (
 	golang.org/x/net v0.46.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.37.0 // indirect
-	golang.org/x/telemetry v0.0.0-20251028164327-d7a2859f34e8 // indirect
+	golang.org/x/telemetry v0.0.0-20251104151223-ab4e49a9e6f4 // indirect
 	golang.org/x/text v0.30.0 // indirect
 	google.golang.org/protobuf v1.36.10 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
