@@ -18,7 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add unmarshaling and validation for `TextMapPropagator` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8052)
 - Add unmarshaling and validation for `OTLPHttpExporter`, `OTLPGrpcExporter`, `OTLPGrpcMetricExporter` and `OTLPHttpMetricExporter` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8112)
 - Add a `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7986)
-- Add unmarshaling and validation for `AttributeType`, `AttributeNameValue`, `SimpleSpanProcessor`, `SimpleLogRecordProcessor`, `ZipkinSpanExporter`, `NameStringValuePair`, `InstrumentType` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8127)
+- Add unmarshaling and validation for `AttributeType`, `AttributeNameValue`, `SimpleSpanProcessor`, `SimpleLogRecordProcessor`, `ZipkinSpanExporter`, `NameStringValuePair`, `InstrumentType`, `ExperimentalPeerInstrumentationServiceMappingElem` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8127)
 
 ### Changed
 

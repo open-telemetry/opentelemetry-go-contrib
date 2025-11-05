@@ -395,3 +395,22 @@ func (j *InstrumentType) UnmarshalYAML(node *yaml.Node) error {
 	*j = InstrumentType(plain)
 	return nil
 }
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *ExperimentalPeerInstrumentationServiceMappingElem) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "peer") {
+		return newErrRequired(j, "peer")
+	}
+	if !hasYAMLMapKey(node, "service") {
+		return newErrRequired(j, "service")
+	}
+
+	type Plain ExperimentalPeerInstrumentationServiceMappingElem
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	*j = ExperimentalPeerInstrumentationServiceMappingElem(plain)
+	return nil
+}

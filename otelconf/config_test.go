@@ -1238,6 +1238,12 @@ func TestUnmarshalNameStringValuePairType(t *testing.T) {
 			wantErrT:   newErrRequired(&NameStringValuePair{}, "value"),
 		},
 		{
+			name:       "invalid array name",
+			jsonConfig: []byte(`{"name":[], "value": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("name: []\nvalue: [test-val, test-val-2]\ntype: string_array\n"),
+			wantErrT:   newErrUnmarshal(&NameStringValuePair{}),
+		},
+		{
 			name:       "valid string value",
 			jsonConfig: []byte(`{"name":"test", "value": "test-val", "type": "string"}`),
 			yamlConfig: []byte("name: test\nvalue: test-val\ntype: string\n"),
@@ -1305,6 +1311,68 @@ func TestUnmarshalInstrumentType(t *testing.T) {
 			err = yaml.Unmarshal(tt.yamlConfig, &val)
 			assert.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantInstrumentType, val)
+		})
+	}
+}
+
+func TestUnmarshalExperimentalPeerInstrumentationServiceMappingElemType(t *testing.T) {
+	for _, tt := range []struct {
+		name                                                  string
+		yamlConfig                                            []byte
+		jsonConfig                                            []byte
+		wantErrT                                              error
+		wantExperimentalPeerInstrumentationServiceMappingElem ExperimentalPeerInstrumentationServiceMappingElem
+	}{
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("peer: []\nservice: true"),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
+		},
+		{
+			name:       "missing required peer field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&ExperimentalPeerInstrumentationServiceMappingElem{}, "peer"),
+		},
+		{
+			name:       "missing required service field",
+			jsonConfig: []byte(`{"peer":"test"}`),
+			yamlConfig: []byte("peer: test"),
+			wantErrT:   newErrRequired(&ExperimentalPeerInstrumentationServiceMappingElem{}, "service"),
+		},
+		{
+			name:       "invalid string_array peer",
+			jsonConfig: []byte(`{"peer":[], "service": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("peer: []\nservice: [test-val, test-val-2]\ntype: string_array\n"),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
+		},
+		{
+			name:       "valid string service",
+			jsonConfig: []byte(`{"peer":"test", "service": "test-val"}`),
+			yamlConfig: []byte("peer: test\nservice: test-val"),
+			wantExperimentalPeerInstrumentationServiceMappingElem: ExperimentalPeerInstrumentationServiceMappingElem{
+				Peer:    "test",
+				Service: "test-val",
+			},
+		},
+		{
+			name:       "invalid string_array service",
+			jsonConfig: []byte(`{"peer":"test", "service": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("peer: test\nservice: [test-val, test-val-2]\ntype: string_array\n"),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			val := ExperimentalPeerInstrumentationServiceMappingElem{}
+			err := val.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExperimentalPeerInstrumentationServiceMappingElem, val)
+
+			val = ExperimentalPeerInstrumentationServiceMappingElem{}
+			err = yaml.Unmarshal(tt.yamlConfig, &val)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExperimentalPeerInstrumentationServiceMappingElem, val)
 		})
 	}
 }

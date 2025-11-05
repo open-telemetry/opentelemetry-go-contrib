@@ -650,3 +650,32 @@ func (j *InstrumentType) UnmarshalJSON(b []byte) error {
 	*j = InstrumentType(v)
 	return nil
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalPeerInstrumentationServiceMappingElem) UnmarshalJSON(b []byte) error {
+	type Plain ExperimentalPeerInstrumentationServiceMappingElem
+	type shadow struct {
+		Plain
+		Peer    json.RawMessage `json:"peer"`
+		Service json.RawMessage `json:"service"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Peer == nil {
+		return newErrRequired(j, "peer")
+	}
+	if err := json.Unmarshal(sh.Peer, &sh.Plain.Peer); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Service == nil {
+		return newErrRequired(j, "service")
+	}
+	if err := json.Unmarshal(sh.Service, &sh.Plain.Service); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	*j = ExperimentalPeerInstrumentationServiceMappingElem(sh.Plain)
+	return nil
+}
