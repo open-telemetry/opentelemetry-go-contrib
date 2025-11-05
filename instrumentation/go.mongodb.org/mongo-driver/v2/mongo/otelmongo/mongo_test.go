@@ -33,7 +33,7 @@ func TestWithSpanNameFormatter(t *testing.T) {
 		SpanNameFormatter SpanNameFormatterFunc
 	}{
 		{
-			title: "insert",
+			title: "insert using default SpanNameFormatter",
 			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
