@@ -429,3 +429,17 @@ func (j *ExporterDefaultHistogramAggregation) UnmarshalYAML(node *yaml.Node) err
 	*j = ExporterDefaultHistogramAggregation(plain)
 	return nil
 }
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *PullMetricReader) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "exporter") {
+		return newErrRequired(j, "exporter")
+	}
+	type Plain PullMetricReader
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	*j = PullMetricReader(plain)
+	return nil
+}

@@ -692,3 +692,25 @@ func (j *ExporterDefaultHistogramAggregation) UnmarshalJSON(b []byte) error {
 	*j = ExporterDefaultHistogramAggregation(v)
 	return nil
 }
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *PullMetricReader) UnmarshalJSON(b []byte) error {
+	type Plain PullMetricReader
+	type shadow struct {
+		Plain
+		Exporter json.RawMessage `json:"exporter"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Exporter == nil {
+		return newErrRequired(j, "exporter")
+	}
+	// Hydrate the exporter into the underlying field.
+	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
+		return err
+	}
+	*j = PullMetricReader(sh.Plain)
+	return nil
+}

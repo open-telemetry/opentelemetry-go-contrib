@@ -1418,3 +1418,44 @@ func TestUnmarshalExporterDefaultHistogramAggregation(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalPullMetricReader(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter PullMetricExporter
+	}{
+		{
+			name:         "valid with proemtheus exporter",
+			jsonConfig:   []byte(`{"exporter":{"prometheus/development":{}}}`),
+			yamlConfig:   []byte("exporter:\n  prometheus/development: {}"),
+			wantExporter: PullMetricExporter{PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{}},
+		},
+		{
+			name:       "missing required exporter field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&PullMetricReader{}, "exporter"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("exporter:\n  prometheus/development: []"),
+			wantErrT:   newErrUnmarshal(&PullMetricReader{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := PullMetricReader{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
+
+			cl = PullMetricReader{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
+		})
+	}
+}
