@@ -106,6 +106,9 @@ func sanitizeCommand(command bson.Raw) string {
 // For CRUD operations, this is the first key/value string pair in the bson
 // document where key == "<operation>" (e.g. key == "insert").
 // For database meta-level operations, such a key may not exist.
+// This function is exported as a temporary convenience until DRIVERS-2575/GODRIVER-3688
+// adds the collection name to CommandStartedEvent in the Go Driver.
+// This function returns the collection name or an error if no collection can be determined.
 func ExtractCollection(evt *event.CommandStartedEvent) (string, error) {
 	elt, err := evt.Command.IndexErr(0)
 	if err != nil {
