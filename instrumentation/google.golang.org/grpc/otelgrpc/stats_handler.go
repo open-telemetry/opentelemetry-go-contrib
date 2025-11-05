@@ -139,6 +139,11 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 	gctx.metricAttrSet = attribute.NewSet(gctx.metricAttrs...)
 
+	labeler, found := LabelerFromContext(ctx, ServerLabelerDirection)
+	if !found {
+		ctx = ContextWithLabeler(ctx, labeler, ServerLabelerDirection)
+	}
+
 	return context.WithValue(ctx, gRPCContextKey{}, &gctx)
 }
 
@@ -153,6 +158,7 @@ func (h *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 		h.inMsg.Inst(),
 		h.outMsg.Inst(),
 		serverStatus,
+		ServerLabelerDirection,
 	)
 }
 
@@ -257,6 +263,7 @@ func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 		func(s *status.Status) (codes.Code, string) {
 			return codes.Error, s.Message()
 		},
+		ClientLabelerDirection,
 	)
 }
 
@@ -281,6 +288,7 @@ func (c *config) handleRPC(
 	inSize, outSize int64Hist,
 	inMsg, outMsg metric.Int64Histogram,
 	recordStatus func(*status.Status) (codes.Code, string),
+	direction LabelerDirection,
 ) {
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
 	if gctx != nil && !gctx.record {
@@ -295,7 +303,8 @@ func (c *config) handleRPC(
 	case *stats.InPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.inMessages, 1)
-			inSize.RecordSet(ctx, int64(rs.Length), gctx.metricAttrSet)
+			metricAttrs := buildMetricAttrsWithLabeler(ctx, gctx, direction)
+			inSize.RecordSet(ctx, int64(rs.Length), attribute.NewSet(metricAttrs...))
 		}
 
 		if c.ReceivedEvent && span.IsRecording() {
@@ -311,7 +320,8 @@ func (c *config) handleRPC(
 	case *stats.OutPayload:
 		if gctx != nil {
 			messageId = atomic.AddInt64(&gctx.outMessages, 1)
-			outSize.RecordSet(ctx, int64(rs.Length), gctx.metricAttrSet)
+			metricAttrs := buildMetricAttrsWithLabeler(ctx, gctx, direction)
+			outSize.RecordSet(ctx, int64(rs.Length), attribute.NewSet(metricAttrs...))
 		}
 
 		if c.SentEvent && span.IsRecording() {
@@ -358,6 +368,12 @@ func (c *config) handleRPC(
 			metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
 			metricAttrs = append(metricAttrs, gctx.metricAttrs...)
 		}
+
+		labeler, ok := LabelerFromContext(ctx, direction)
+		if ok {
+			metricAttrs = append(metricAttrs, labeler.Get()...)
+		}
+
 		metricAttrs = append(metricAttrs, rpcStatusAttr)
 		// Allocate vararg slice once.
 		recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
@@ -374,4 +390,15 @@ func (c *config) handleRPC(
 	default:
 		return
 	}
+}
+
+func buildMetricAttrsWithLabeler(ctx context.Context, gctx *gRPCContext, direction LabelerDirection) []attribute.KeyValue {
+	metricAttrs := make([]attribute.KeyValue, 0, len(gctx.metricAttrs))
+	metricAttrs = append(metricAttrs, gctx.metricAttrs...)
+	labeler, ok := LabelerFromContext(ctx, direction)
+	if ok {
+		metricAttrs = append(metricAttrs, labeler.Get()...)
+	}
+
+	return metricAttrs
 }
