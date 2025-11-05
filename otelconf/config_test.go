@@ -1376,3 +1376,45 @@ func TestUnmarshalExperimentalPeerInstrumentationServiceMappingElemType(t *testi
 		})
 	}
 }
+
+func TestUnmarshalExporterDefaultHistogramAggregation(t *testing.T) {
+	var exporterDefaultHistogramAggregation ExporterDefaultHistogramAggregation
+	for _, tt := range []struct {
+		name                                    string
+		yamlConfig                              []byte
+		jsonConfig                              []byte
+		wantErrT                                error
+		wantExporterDefaultHistogramAggregation ExporterDefaultHistogramAggregation
+	}{
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("name: []\nvalue: true\ntype: bool\n"),
+			wantErrT:   newErrUnmarshal(&exporterDefaultHistogramAggregation),
+		},
+		{
+			name:       "invalid histogram aggregation",
+			jsonConfig: []byte(`"test"`),
+			yamlConfig: []byte("test"),
+			wantErrT:   newErrInvalid(`invalid histogram aggregation (expected one of []interface {}{"explicit_bucket_histogram", "base2_exponential_bucket_histogram"}): "test""`),
+		},
+		{
+			name:                                    "valid histogram aggregation",
+			jsonConfig:                              []byte(`"base2_exponential_bucket_histogram"`),
+			yamlConfig:                              []byte("base2_exponential_bucket_histogram"),
+			wantExporterDefaultHistogramAggregation: ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			val := ExporterDefaultHistogramAggregation("")
+			err := val.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporterDefaultHistogramAggregation, val)
+
+			val = ExporterDefaultHistogramAggregation("")
+			err = yaml.Unmarshal(tt.yamlConfig, &val)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporterDefaultHistogramAggregation, val)
+		})
+	}
+}

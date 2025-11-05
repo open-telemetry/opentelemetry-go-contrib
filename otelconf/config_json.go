@@ -644,8 +644,8 @@ func (j *InstrumentType) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &v); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
-	if !supportedInstrumentType(InstrumentType(v)) {
-		return newErrInvalid(fmt.Sprintf("invalid selector (expected one of %#v): %#v", enumValuesViewSelectorInstrumentType, v))
+	if err := supportedInstrumentType(InstrumentType(v)); err != nil {
+		return err
 	}
 	*j = InstrumentType(v)
 	return nil
@@ -677,5 +677,18 @@ func (j *ExperimentalPeerInstrumentationServiceMappingElem) UnmarshalJSON(b []by
 	}
 
 	*j = ExperimentalPeerInstrumentationServiceMappingElem(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExporterDefaultHistogramAggregation) UnmarshalJSON(b []byte) error {
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if err := supportedHistogramAggregation(ExporterDefaultHistogramAggregation(v)); err != nil {
+		return err
+	}
+	*j = ExporterDefaultHistogramAggregation(v)
 	return nil
 }

@@ -388,8 +388,8 @@ func (j *InstrumentType) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
-	if !supportedInstrumentType(InstrumentType(plain)) {
-		return newErrInvalid(fmt.Sprintf("invalid selector (expected one of %#v): %#v", enumValuesViewSelectorInstrumentType, plain))
+	if err := supportedInstrumentType(InstrumentType(plain)); err != nil {
+		return err
 	}
 
 	*j = InstrumentType(plain)
@@ -412,5 +412,20 @@ func (j *ExperimentalPeerInstrumentationServiceMappingElem) UnmarshalYAML(node *
 	}
 
 	*j = ExperimentalPeerInstrumentationServiceMappingElem(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *ExporterDefaultHistogramAggregation) UnmarshalYAML(node *yaml.Node) error {
+	type Plain ExporterDefaultHistogramAggregation
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if err := supportedHistogramAggregation(ExporterDefaultHistogramAggregation(plain)); err != nil {
+		return err
+	}
+
+	*j = ExporterDefaultHistogramAggregation(plain)
 	return nil
 }

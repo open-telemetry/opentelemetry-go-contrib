@@ -42,6 +42,11 @@ var enumValuesViewSelectorInstrumentType = []any{
 	"up_down_counter",
 }
 
+var enumValuesOTLPMetricDefaultHistogramAggregation = []any{
+	"explicit_bucket_histogram",
+	"base2_exponential_bucket_histogram",
+}
+
 type configOptions struct {
 	ctx                   context.Context
 	opentelemetryConfig   OpenTelemetryConfiguration
@@ -273,12 +278,22 @@ func createHeadersConfig(headers []NameStringValuePair, headersList *string) (ma
 	return result, nil
 }
 
-// supportedInstrumentType return true if the instrument type is supported.
-func supportedInstrumentType(in InstrumentType) bool {
+// supportedInstrumentType return an error if the instrument type is not supported.
+func supportedInstrumentType(in InstrumentType) error {
 	for _, expected := range enumValuesViewSelectorInstrumentType {
 		if string(in) == fmt.Sprintf("%s", expected) {
-			return true
+			return nil
 		}
 	}
-	return false
+	return newErrInvalid(fmt.Sprintf("invalid selector (expected one of %#v): %#v", enumValuesViewSelectorInstrumentType, in))
+}
+
+// supportedHistogramAggregation return an error if the histogram aggregation is not supported.
+func supportedHistogramAggregation(in ExporterDefaultHistogramAggregation) error {
+	for _, expected := range enumValuesOTLPMetricDefaultHistogramAggregation {
+		if string(in) == fmt.Sprintf("%s", expected) {
+			return nil
+		}
+	}
+	return newErrInvalid(fmt.Sprintf("invalid histogram aggregation (expected one of %#v): %#v", enumValuesOTLPMetricDefaultHistogramAggregation, in))
 }
