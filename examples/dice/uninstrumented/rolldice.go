@@ -13,10 +13,11 @@ import (
 )
 
 func handleRolldice(w http.ResponseWriter, r *http.Request) {
+	const maxRolls = 1000 // Arbitrary limit to prevent Slice memory allocation with excessive size value.
+
 	// Parse query parameters.
 	rollsParam := r.URL.Query().Get("rolls")
 	player := r.URL.Query().Get("player")
-	maxRolls := 1000 // Arbitrary limit to prevent Slice memory allocation with excessive size value.
 
 	// Default rolls = 1 if not defined.
 	if rollsParam == "" {
