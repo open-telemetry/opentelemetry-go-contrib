@@ -129,16 +129,6 @@ func rollDice(ctx context.Context, rolls int) ([]int, error) {
 		return nil, err
 	}
 
-	if rolls == 1 {
-		val := rollOnce(ctx)
-		rollsAttr := attribute.Int("rolls", rolls)
-		span.SetAttributes(rollsAttr)
-		rollCnt.Add(ctx, 1, metric.WithAttributes(rollsAttr))
-		outcomeHist.Record(ctx, int64(val))
-		lastRolls.Store(int64(rolls))
-		return []int{val}, nil
-	}
-
 	results := make([]int, rolls)
 	for i := 0; i < rolls; i++ {
 		results[i] = rollOnce(ctx)
