@@ -42,7 +42,7 @@ func TestWithSpanNameFormatter(t *testing.T) {
 			mockResponses:     []bson.D{{{Key: "ok", Value: 1}}},
 		},
 		{
-			title: "delete",
+			title: "delete with custom SpanNameFormatter",
 			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
