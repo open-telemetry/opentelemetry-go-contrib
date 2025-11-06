@@ -189,7 +189,7 @@ func WithSpanAttributes(a ...attribute.KeyValue) Option {
 func WithMetricAttributes(a ...attribute.KeyValue) Option {
 	return optionFunc(func(c *config) {
 		if a != nil {
-			c.MetricAttributes = a
+			c.MetricAttributes = append(c.MetricAttributes, a...)
 		}
 	})
 }
