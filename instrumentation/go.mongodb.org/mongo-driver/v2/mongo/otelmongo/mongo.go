@@ -21,13 +21,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-const (
-	// statusCodeOK represents a successful MongoDB operation status.
-	statusCodeOK = "OK"
-	// statusCodeError represents a failed MongoDB operation status.
-	statusCodeError = "ERROR"
-)
-
 type spanKey struct {
 	ConnectionID string
 	RequestID    int64
@@ -87,7 +80,6 @@ func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEven
 		semconv.NetworkPeerAddress(hostname),
 		semconv.NetworkPeerPort(port),
 		semconv.NetworkTransportTCP,
-		semconv.DBResponseStatusCode(statusCodeOK),
 	}
 	// TODO db.query.text attribute is currently disabled by default.
 	// Because event does not provide the query text directly.
@@ -113,7 +105,6 @@ func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
 		semconv.NetworkPeerAddress(hostname),
 		semconv.NetworkPeerPort(port),
 		semconv.NetworkTransportTCP,
-		semconv.DBResponseStatusCode(statusCodeError),
 		semconv.ErrorType(evt.Failure),
 	}
 	// TODO: db.query.text attribute is currently disabled by default.
