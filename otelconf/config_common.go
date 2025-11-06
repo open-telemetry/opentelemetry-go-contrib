@@ -324,18 +324,6 @@ func supportedHistogramAggregation(in ExporterDefaultHistogramAggregation) error
 	return newErrInvalid(fmt.Sprintf("invalid histogram aggregation (expected one of %#v): %#v", enumValuesOTLPMetricDefaultHistogramAggregation, in))
 }
 
-var enumValuesAttributeType = []any{
-	nil,
-	"string",
-	"bool",
-	"int",
-	"double",
-	"string_array",
-	"bool_array",
-	"int_array",
-	"double_array",
-}
-
 // MarshalUnmarshaler combines marshal and unmarshal operations.
 type MarshalUnmarshaler interface {
 	Marshal(v any) ([]byte, error)
@@ -397,17 +385,4 @@ func setConfigDefaults(raw map[string]any, plain *OpenTelemetryConfiguration, co
 	}
 
 	return nil
-}
-
-// validateStringField validates a string field is present and correct type.
-func validateStringField(raw map[string]any, fieldName string) (string, error) {
-	v, ok := raw[fieldName]
-	if !ok {
-		return "", fmt.Errorf("cannot unmarshal field %s in NameStringValuePair required", fieldName)
-	}
-	str, ok := v.(string)
-	if !ok {
-		return "", fmt.Errorf("cannot unmarshal field %s in NameStringValuePair must be string", fieldName)
-	}
-	return str, nil
 }
