@@ -43,112 +43,66 @@ func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
-	var raw map[string]any
-
-	if err := node.Decode(&raw); err != nil {
-		return errors.Join(newErrUnmarshal(j), err)
+	if !hasYAMLMapKey(node, "file_format") {
+		return newErrRequired(j, "file_format")
 	}
-
 	type Plain OpenTelemetryConfiguration
-	var plain Plain
-
-	if v, ok := raw["logger_provider"]; ok && v != nil {
-		marshaled, err := yaml.Marshal(v)
-		if err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-		var lp LoggerProviderJson
-		if err := yaml.Unmarshal(marshaled, &lp); err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-		plain.LoggerProvider = &lp
+	type shadow struct {
+		Plain
+		AttributeLimits            *AttributeLimits     `yaml:"attribute_limits,omitempty"`
+		Disabled                   *bool                `yaml:"disabled,omitempty"`
+		FileFormat                 string               `yaml:"file_format"`
+		LoggerProvider             *LoggerProviderJson  `yaml:"logger_provider,omitempty"`
+		MeterProvider              *MeterProviderJson   `yaml:"meter_provider,omitempty"`
+		TracerProvider             *TracerProviderJson  `yaml:"tracer_provider,omitempty"`
+		Propagator                 *PropagatorJson      `yaml:"propagator,omitempty"`
+		Resource                   *ResourceJson        `yaml:"resource,omitempty"`
+		InstrumentationDevelopment *InstrumentationJson `yaml:"instrumentation/development"`
 	}
+	var sh shadow
 
-	if v, ok := raw["meter_provider"]; ok && v != nil {
-		marshaled, err := yaml.Marshal(v)
-		if err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-
-		var mp MeterProviderJson
-		if err := yaml.Unmarshal(marshaled, &mp); err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-		plain.MeterProvider = &mp
-	}
-
-	if v, ok := raw["tracer_provider"]; ok && v != nil {
-		marshaled, err := yaml.Marshal(v)
-		if err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-
-		var tp TracerProviderJson
-		if err := yaml.Unmarshal(marshaled, &tp); err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-		plain.TracerProvider = &tp
-	}
-
-	if v, ok := raw["propagator"]; ok && v != nil {
-		marshaled, err := yaml.Marshal(v)
-		if err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-
-		var p PropagatorJson
-		if err := yaml.Unmarshal(marshaled, &p); err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-		plain.Propagator = &p
-	}
-
-	if v, ok := raw["resource"]; ok && v != nil {
-		marshaled, err := yaml.Marshal(v)
-		if err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-
-		var r ResourceJson
-		if err := yaml.Unmarshal(marshaled, &r); err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-		plain.Resource = &r
-	}
-
-	if v, ok := raw["instrumentation/development"]; ok && v != nil {
-		marshaled, err := yaml.Marshal(v)
-		if err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-
-		var i InstrumentationJson
-		if err := yaml.Unmarshal(marshaled, &i); err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-		plain.InstrumentationDevelopment = &i
-	}
-
-	if v, ok := raw["attribute_limits"]; ok && v != nil {
-		marshaled, err := yaml.Marshal(v)
-		if err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-
-		var a AttributeLimits
-		if err := yaml.Unmarshal(marshaled, &a); err != nil {
-			return errors.Join(newErrUnmarshal(j), err)
-		}
-		plain.AttributeLimits = &a
-	}
-
-	plainConfig := (*OpenTelemetryConfiguration)(&plain)
-	if err := setConfigDefaults(raw, plainConfig, yamlCodec{}); err != nil {
+	if err := node.Decode(&sh); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
 
-	plain.FileFormat = fmt.Sprintf("%v", raw["file_format"])
-	*j = *plainConfig
+	if sh.AttributeLimits != nil {
+		sh.Plain.AttributeLimits = sh.AttributeLimits
+	}
+
+	sh.Plain.FileFormat = sh.FileFormat
+	if sh.Disabled != nil {
+		sh.Plain.Disabled = sh.Disabled
+	} else {
+		// Configure the log level of the internal logger used by the SDK.
+		// If omitted, info is used.
+		sh.Plain.Disabled = ptr(false)
+	}
+	if sh.LoggerProvider != nil {
+		sh.Plain.LoggerProvider = sh.LoggerProvider
+	}
+	if sh.MeterProvider != nil {
+		sh.Plain.MeterProvider = sh.MeterProvider
+	}
+	if sh.TracerProvider != nil {
+		sh.Plain.TracerProvider = sh.TracerProvider
+	}
+	if sh.Propagator != nil {
+		sh.Plain.Propagator = sh.Propagator
+	}
+	if sh.Resource != nil {
+		sh.Plain.Resource = sh.Resource
+	}
+	if sh.InstrumentationDevelopment != nil {
+		sh.Plain.InstrumentationDevelopment = sh.InstrumentationDevelopment
+	}
+
+	if sh.Plain.LogLevel == nil {
+		// Configure the log level of the internal logger used by the SDK.
+		// If omitted, info is used.
+		sh.Plain.LogLevel = ptr("info")
+	}
+
+	*j = OpenTelemetryConfiguration(sh.Plain)
 	return nil
 }
 

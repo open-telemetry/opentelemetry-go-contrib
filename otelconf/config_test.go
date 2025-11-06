@@ -981,12 +981,23 @@ func TestUnmarshalOpenTelemetryConfiguration(t *testing.T) {
 		wantType *OpenTelemetryConfiguration
 	}{
 		{
-			name:    "valid empty config",
-			input:   `valid_empty`,
-			wantErr: nil,
+			name:     "invalid config missing required file_format",
+			input:    `missing_file_format`,
+			wantErr:  newErrRequired(&OpenTelemetryConfiguration{}, "file_format"),
+			wantType: &OpenTelemetryConfiguration{},
+		},
+		{
+			name:     "file_format invalid",
+			input:    `invalid_file_format`,
+			wantErr:  newErrUnmarshal(&OpenTelemetryConfiguration{}),
+			wantType: &OpenTelemetryConfiguration{},
+		},
+		{
+			name:  "valid defaults config",
+			input: `valid_defaults`,
 			wantType: &OpenTelemetryConfiguration{
 				Disabled:   ptr(false),
-				FileFormat: "0.1",
+				FileFormat: "1.0",
 				LogLevel:   ptr("info"),
 			},
 		},

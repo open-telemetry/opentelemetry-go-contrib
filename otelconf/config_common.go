@@ -5,7 +5,6 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"reflect"
@@ -14,7 +13,6 @@ import (
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	yaml "go.yaml.in/yaml/v3"
 )
 
 const (
@@ -322,67 +320,4 @@ func supportedHistogramAggregation(in ExporterDefaultHistogramAggregation) error
 		}
 	}
 	return newErrInvalid(fmt.Sprintf("invalid histogram aggregation (expected one of %#v): %#v", enumValuesOTLPMetricDefaultHistogramAggregation, in))
-}
-
-// MarshalUnmarshaler combines marshal and unmarshal operations.
-type MarshalUnmarshaler interface {
-	Marshal(v any) ([]byte, error)
-	Unmarshal(data []byte, v any) error
-}
-
-// jsonCodec implements MarshalUnmarshaler for JSON.
-type jsonCodec struct{}
-
-func (jsonCodec) Marshal(v any) ([]byte, error) {
-	return json.Marshal(v)
-}
-
-func (jsonCodec) Unmarshal(data []byte, v any) error {
-	return json.Unmarshal(data, v)
-}
-
-// yamlCodec implements MarshalUnmarshaler for YAML.
-type yamlCodec struct{}
-
-func (yamlCodec) Marshal(v any) ([]byte, error) {
-	return yaml.Marshal(v)
-}
-
-func (yamlCodec) Unmarshal(data []byte, v any) error {
-	return yaml.Unmarshal(data, v)
-}
-
-// setConfigDefaults sets default values for disabled and log_level.
-func setConfigDefaults(raw map[string]any, plain *OpenTelemetryConfiguration, codec MarshalUnmarshaler) error {
-	// Configure if the SDK is disabled or not.
-	// If omitted or null, false is used.
-	plain.Disabled = ptr(false)
-	if v, ok := raw["disabled"]; ok && v != nil {
-		marshaled, err := codec.Marshal(v)
-		if err != nil {
-			return err
-		}
-		var disabled bool
-		if err := codec.Unmarshal(marshaled, &disabled); err != nil {
-			return err
-		}
-		plain.Disabled = &disabled
-	}
-
-	// Configure the log level of the internal logger used by the SDK.
-	// If omitted, info is used.
-	plain.LogLevel = ptr("info")
-	if v, ok := raw["log_level"]; ok && v != nil {
-		marshaled, err := codec.Marshal(v)
-		if err != nil {
-			return err
-		}
-		var logLevel string
-		if err := codec.Unmarshal(marshaled, &logLevel); err != nil {
-			return err
-		}
-		plain.LogLevel = &logLevel
-	}
-
-	return nil
 }
