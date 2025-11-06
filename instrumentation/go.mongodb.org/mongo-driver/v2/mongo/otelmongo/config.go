@@ -60,8 +60,9 @@ func (o optionFunc) apply(c *config) {
 	o(c)
 }
 
-// WithMeterProvider specifies a meter provider to use for creating a meter.
-// If none is specified, the global provider is used.
+// WithMeterProvider specifies a [metric.MeterProvider] to use for creating a Meter.
+// If none is specified, the global MeterProvider is used. If no global MeterProvider
+// has been registered, a no-op [go.opentelemetry.io/otel/metric/noop.MeterProvider] is used.
 func WithMeterProvider(provider metric.MeterProvider) Option {
 	return optionFunc(func(cfg *config) {
 		if provider != nil {
