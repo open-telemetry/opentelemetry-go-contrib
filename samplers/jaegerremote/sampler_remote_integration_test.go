@@ -24,7 +24,7 @@ const (
 	testMaxID                      = uint64(1) << 63
 )
 
-func TestRemotelyControlledSampler_WithAttributesOn(t *testing.T) {
+func TestRemotelyControlledSampler_Attributes(t *testing.T) {
 	agent, err := testutils.StartMockAgent()
 	require.NoError(t, err)
 
@@ -32,7 +32,6 @@ func TestRemotelyControlledSampler_WithAttributesOn(t *testing.T) {
 		"client app",
 		jaegerremote.WithSamplingServerURL("http://"+agent.SamplingServerAddr()),
 		jaegerremote.WithSamplingRefreshInterval(time.Minute),
-		jaegerremote.WithAttributesOn(),
 	)
 	remoteSampler.Close() // stop timer-based updates, we want to call them manually
 	defer agent.Close()
@@ -81,5 +80,65 @@ func TestRemotelyControlledSampler_WithAttributesOn(t *testing.T) {
 		result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
 		assert.Equal(t, trace.RecordAndSample, result.Decision)
 		assert.Equal(t, []attribute.KeyValue{attribute.String("jaeger.sampler.type", "probabilistic"), attribute.Float64("jaeger.sampler.param", 0.5)}, result.Attributes)
+	})
+}
+
+func TestRemotelyControlledSampler_AttributesDisabled(t *testing.T) {
+	agent, err := testutils.StartMockAgent()
+	require.NoError(t, err)
+
+	remoteSampler := jaegerremote.New(
+		"client app",
+		jaegerremote.WithSamplingServerURL("http://"+agent.SamplingServerAddr()),
+		jaegerremote.WithSamplingRefreshInterval(time.Minute),
+		jaegerremote.WithAttributesDisabled(),
+	)
+	remoteSampler.Close() // stop timer-based updates, we want to call them manually
+	defer agent.Close()
+
+	var traceID oteltrace.TraceID
+	binary.BigEndian.PutUint64(traceID[8:], testMaxID-20)
+
+	t.Run("probabilistic", func(t *testing.T) {
+		agent.AddSamplingStrategy("client app",
+			&jaeger_api_v2.SamplingStrategyResponse{
+				StrategyType: jaeger_api_v2.SamplingStrategyType_PROBABILISTIC,
+				ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
+					SamplingRate: testDefaultSamplingProbability,
+				},
+			})
+		remoteSampler.UpdateSampler()
+
+		result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Nil(t, result.Attributes)
+	})
+
+	t.Run("ratelimitng", func(t *testing.T) {
+		agent.AddSamplingStrategy("client app",
+			&jaeger_api_v2.SamplingStrategyResponse{
+				StrategyType: jaeger_api_v2.SamplingStrategyType_RATE_LIMITING,
+				RateLimitingSampling: &jaeger_api_v2.RateLimitingSamplingStrategy{
+					MaxTracesPerSecond: 1,
+				},
+			})
+		remoteSampler.UpdateSampler()
+
+		result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Nil(t, result.Attributes)
+	})
+
+	t.Run("per operation", func(t *testing.T) {
+		agent.AddSamplingStrategy("client app",
+			&jaeger_api_v2.SamplingStrategyResponse{OperationSampling: &jaeger_api_v2.PerOperationSamplingStrategies{
+				DefaultSamplingProbability:       testDefaultSamplingProbability,
+				DefaultLowerBoundTracesPerSecond: 1.0,
+			}})
+		remoteSampler.UpdateSampler()
+
+		result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
+		assert.Equal(t, trace.RecordAndSample, result.Decision)
+		assert.Nil(t, result.Attributes)
 	})
 }

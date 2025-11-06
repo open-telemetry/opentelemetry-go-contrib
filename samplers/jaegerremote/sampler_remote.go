@@ -61,7 +61,7 @@ type samplingStrategyParser interface {
 //
 // Sampler invokes the updaters while holding a lock on the main sampler.
 type samplerUpdater interface {
-	Update(sampler trace.Sampler, strategy any, samplerOptions ...samplerOptionFunc) (modified trace.Sampler, err error)
+	Update(sampler trace.Sampler, strategy any, attributesDisabled bool) (modified trace.Sampler, err error)
 }
 
 // Sampler is a delegating sampler that polls a remote server
@@ -174,7 +174,7 @@ func (s *Sampler) UpdateSampler() {
 // NB: this function should only be called while holding a Write lock.
 func (s *Sampler) updateSamplerViaUpdaters(strategy any) error {
 	for _, updater := range s.updaters {
-		sampler, err := updater.Update(s.sampler, strategy, s.samplerOptions...)
+		sampler, err := updater.Update(s.sampler, strategy, s.attributesDisabled)
 		if err != nil {
 			return err
 		}
@@ -192,7 +192,7 @@ func (s *Sampler) updateSamplerViaUpdaters(strategy any) error {
 type probabilisticSamplerUpdater struct{}
 
 // Update implements Update of samplerUpdater.
-func (*probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy any, samplerOptions ...samplerOptionFunc) (trace.Sampler, error) {
+func (*probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy any, attributesDisabled bool) (trace.Sampler, error) {
 	type response interface {
 		GetProbabilisticSampling() *jaeger_api_v2.ProbabilisticSamplingStrategy
 	}
@@ -205,7 +205,7 @@ func (*probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy any, 
 				}
 				return sampler, nil
 			}
-			return newProbabilisticSampler(probabilistic.SamplingRate, samplerOptions...), nil
+			return newProbabilisticSampler(probabilistic.SamplingRate, attributesDisabled), nil
 		}
 	}
 	return nil, nil
@@ -217,7 +217,7 @@ func (*probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy any, 
 type rateLimitingSamplerUpdater struct{}
 
 // Update implements Update of samplerUpdater.
-func (*rateLimitingSamplerUpdater) Update(sampler trace.Sampler, strategy any, samplerOptions ...samplerOptionFunc) (trace.Sampler, error) {
+func (*rateLimitingSamplerUpdater) Update(sampler trace.Sampler, strategy any, attributesDisabled bool) (trace.Sampler, error) {
 	type response interface {
 		GetRateLimitingSampling() *jaeger_api_v2.RateLimitingSamplingStrategy
 	}
@@ -229,7 +229,7 @@ func (*rateLimitingSamplerUpdater) Update(sampler trace.Sampler, strategy any, s
 				rl.Update(rateLimit)
 				return rl, nil
 			}
-			return newRateLimitingSampler(rateLimit, samplerOptions...), nil
+			return newRateLimitingSampler(rateLimit, attributesDisabled), nil
 		}
 	}
 	return nil, nil
@@ -245,7 +245,7 @@ type perOperationSamplerUpdater struct {
 }
 
 // Update implements Update of samplerUpdater.
-func (u *perOperationSamplerUpdater) Update(sampler trace.Sampler, strategy any, samplerOptions ...samplerOptionFunc) (trace.Sampler, error) {
+func (u *perOperationSamplerUpdater) Update(sampler trace.Sampler, strategy any, attributesDisabled bool) (trace.Sampler, error) {
 	type response interface {
 		GetOperationSampling() *jaeger_api_v2.PerOperationSamplingStrategies
 	}
@@ -260,7 +260,7 @@ func (u *perOperationSamplerUpdater) Update(sampler trace.Sampler, strategy any,
 				MaxOperations:            u.MaxOperations,
 				OperationNameLateBinding: u.OperationNameLateBinding,
 				Strategies:               operations,
-			}, samplerOptions...), nil
+			}, attributesDisabled), nil
 		}
 	}
 	return nil, nil

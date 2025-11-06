@@ -35,10 +35,10 @@ type config struct {
 	samplingRefreshInterval time.Duration
 	samplingFetcher         SamplingStrategyFetcher
 	samplingParser          samplingStrategyParser
-	samplerOptions          []samplerOptionFunc
 	updaters                []samplerUpdater
 	posParams               perOperationSamplerParams
 	logger                  logr.Logger
+	attributesDisabled      bool
 }
 
 func getEnvOptions() ([]Option, []error) {
@@ -122,7 +122,7 @@ func newConfig(options ...Option) config {
 	}}, c.updaters...)
 
 	if c.sampler == nil {
-		c.sampler = newProbabilisticSampler(0.001, c.samplerOptions...)
+		c.sampler = newProbabilisticSampler(0.001, c.attributesDisabled)
 	}
 
 	return c
@@ -197,10 +197,10 @@ func WithSamplingStrategyFetcher(fetcher SamplingStrategyFetcher) Option {
 	})
 }
 
-// WithAttributesOn configures the sampler to set attributes sampler.type and sampler.param for each sampled span.
-func WithAttributesOn() Option {
+// WithAttributesDisabled configures the sampler to disable setting attributes jaeger.sampler.type and jaeger.sampler.param.
+func WithAttributesDisabled() Option {
 	return optionFunc(func(c *config) {
-		c.samplerOptions = append(c.samplerOptions, withAttributesOn())
+		c.attributesDisabled = true
 	})
 }
 
