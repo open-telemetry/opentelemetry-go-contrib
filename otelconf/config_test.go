@@ -394,6 +394,51 @@ func TestNewSDK(t *testing.T) {
 			wantMeterProvider:  metricnoop.NewMeterProvider(),
 			wantLoggerProvider: lognoop.NewLoggerProvider(),
 		},
+		{
+			name: "invalid resource",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					TracerProvider: &TracerProviderJson{},
+					MeterProvider:  &MeterProviderJson{},
+					LoggerProvider: &LoggerProviderJson{},
+					Resource:       &LoggerProviderJson{},
+				}),
+			},
+			wantErr:            newErrInvalid("resource"),
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+		},
+		{
+			name: "invalid logger provider",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					TracerProvider: &TracerProviderJson{},
+					MeterProvider:  &MeterProviderJson{},
+					LoggerProvider: &ResourceJson{},
+					Resource:       &ResourceJson{},
+				}),
+			},
+			wantErr:            newErrInvalid("logger_provider"),
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+		},
+		{
+			name: "invalid tracer provider",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					TracerProvider: &ResourceJson{},
+				}),
+			},
+			wantErr:            newErrInvalid("tracer_provider"),
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+		},
 	}
 	for _, tt := range tests {
 		sdk, err := NewSDK(tt.cfg...)
@@ -973,40 +1018,13 @@ var v100OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 	},
 }
 
-func TestUnmarshalOpenTelemetryConfiguration(t *testing.T) {
+func TestParseFiles(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
 		wantErr  error
 		wantType *OpenTelemetryConfiguration
 	}{
-		{
-			name:     "invalid config missing required file_format",
-			input:    `missing_file_format`,
-			wantErr:  newErrRequired(&OpenTelemetryConfiguration{}, "file_format"),
-			wantType: &OpenTelemetryConfiguration{},
-		},
-		{
-			name:     "file_format invalid",
-			input:    `invalid_file_format`,
-			wantErr:  newErrUnmarshal(&OpenTelemetryConfiguration{}),
-			wantType: &OpenTelemetryConfiguration{},
-		},
-		{
-			name:  "valid defaults config",
-			input: `valid_defaults`,
-			wantType: &OpenTelemetryConfiguration{
-				Disabled:   ptr(false),
-				FileFormat: "1.0",
-				LogLevel:   ptr("info"),
-			},
-		},
-		{
-			name:     "invalid config",
-			input:    "invalid_bool",
-			wantErr:  newErrUnmarshal(&OpenTelemetryConfiguration{}),
-			wantType: &OpenTelemetryConfiguration{},
-		},
 		{
 			name:     "invalid nil name",
 			input:    "v1.0.0_invalid_nil_name",
@@ -1057,6 +1075,89 @@ func TestUnmarshalOpenTelemetryConfiguration(t *testing.T) {
 			err = json.Unmarshal(b, &got)
 			require.ErrorIs(t, err, tt.wantErr)
 			assert.Equal(t, tt.wantType, &got)
+		})
+	}
+}
+
+func TestUnmarshalOpenTelemetryConfiguration(t *testing.T) {
+	tests := []struct {
+		name       string
+		jsonConfig []byte
+		yamlConfig []byte
+		wantErr    error
+		wantType   OpenTelemetryConfiguration
+	}{
+		{
+			name:       "valid defaults config",
+			jsonConfig: []byte(`{"file_format": "1.0"}`),
+			yamlConfig: []byte("file_format: 1.0"),
+			wantType: OpenTelemetryConfiguration{
+				Disabled:   ptr(false),
+				FileFormat: "1.0",
+				LogLevel:   ptr("info"),
+			},
+		},
+		{
+			name:       "invalid config missing required file_format",
+			jsonConfig: []byte(`{"disabled": false}`),
+			yamlConfig: []byte("disabled: false"),
+			wantErr:    newErrRequired(&OpenTelemetryConfiguration{}, "file_format"),
+		},
+		{
+			name:       "file_format invalid",
+			jsonConfig: []byte(`{"file_format":[], "disabled": false}`),
+			yamlConfig: []byte("file_format: []\ndisabled: false"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "invalid config",
+			jsonConfig: []byte(`{"file_format": "yaml", "disabled": "notabool"}`),
+			yamlConfig: []byte("file_format: []\ndisabled: notabool"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("disabled: []\nconsole: {}\nfile_format: str"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "resource invalid",
+			jsonConfig: []byte(`{"resource":[], "file_format": "1.0"}`),
+			yamlConfig: []byte("resource: []\nfile_format: 1.0"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "attribute_limits invalid",
+			jsonConfig: []byte(`{"attribute_limits":[], "file_format": "1.0"}`),
+			yamlConfig: []byte("attribute_limits: []\nfile_format: 1.0"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "instrumentation invalid",
+			jsonConfig: []byte(`{"instrumentation/development":[], "file_format": "1.0"}`),
+			yamlConfig: []byte("instrumentation/development: []\nfile_format: 1.0"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "log_level invalid",
+			jsonConfig: []byte(`{"log_level":[], "file_format": "1.0"}`),
+			yamlConfig: []byte("log_level: []\nfile_format: 1.0"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := OpenTelemetryConfiguration{}
+			err := got.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.wantType, got)
+
+			got = OpenTelemetryConfiguration{}
+			err = yaml.Unmarshal(tt.yamlConfig, &got)
+			assert.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.wantType, got)
 		})
 	}
 }

@@ -49,6 +49,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	type Plain OpenTelemetryConfiguration
 	type shadow struct {
 		Plain
+		LogLevel                   *string              `yaml:"log_level,omitempty"`
 		AttributeLimits            *AttributeLimits     `yaml:"attribute_limits,omitempty"`
 		Disabled                   *bool                `yaml:"disabled,omitempty"`
 		FileFormat                 string               `yaml:"file_format"`
@@ -96,7 +97,9 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 		sh.Plain.InstrumentationDevelopment = sh.InstrumentationDevelopment
 	}
 
-	if sh.Plain.LogLevel == nil {
+	if sh.LogLevel != nil {
+		sh.Plain.LogLevel = sh.LogLevel
+	} else {
 		// Configure the log level of the internal logger used by the SDK.
 		// If omitted, info is used.
 		sh.Plain.LogLevel = ptr("info")

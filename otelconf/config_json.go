@@ -194,11 +194,6 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
-// MarshalJSON implements json.Marshaler.
-func (j *AttributeType) MarshalJSON() ([]byte, error) {
-	return json.Marshal(j.Value)
-}
-
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
 	type Plain TextMapPropagator
