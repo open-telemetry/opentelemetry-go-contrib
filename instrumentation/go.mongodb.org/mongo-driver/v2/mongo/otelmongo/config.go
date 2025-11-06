@@ -4,6 +4,7 @@
 package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo"
 
 import (
+	"go.mongodb.org/mongo-driver/v2/event"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
@@ -24,6 +25,8 @@ type config struct {
 	Tracer trace.Tracer
 
 	CommandAttributeDisabled bool
+
+	SpanNameFormatter SpanNameFormatterFunc
 }
 
 // newConfig returns a config with all Options set.
@@ -33,6 +36,16 @@ func newConfig(opts ...Option) config {
 		TracerProvider:           otel.GetTracerProvider(),
 		CommandAttributeDisabled: true,
 	}
+
+	cfg.SpanNameFormatter = func(event *event.CommandStartedEvent) string {
+		collection, _ := extractCollection(event)
+		if collection != "" {
+			return collection + "." + event.CommandName
+		}
+
+		return event.CommandName
+	}
+
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
@@ -67,6 +80,22 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 	return optionFunc(func(cfg *config) {
 		if provider != nil {
 			cfg.MeterProvider = provider
+		}
+	})
+}
+
+// SpanNameFormatterFunc is a function that resolves the span name given an
+// *event.CommandStartedEvent.
+type SpanNameFormatterFunc func(e *event.CommandStartedEvent) string
+
+// WithSpanNameFormatter specifies a function that resolves the span name given an
+// *event.CommandStartedEvent. If none is specified, the default resolver is used,
+// which returns "<collection>.<command>" if the collection is non-empty,
+// and just "<command>" otherwise.
+func WithSpanNameFormatter(resolver SpanNameFormatterFunc) Option {
+	return optionFunc(func(cfg *config) {
+		if resolver != nil {
+			cfg.SpanNameFormatter = resolver
 		}
 	})
 }

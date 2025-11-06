@@ -10,6 +10,7 @@ import (
 	"time"
 
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/grpc/peer"
@@ -29,7 +30,7 @@ func benchmarkServerHandlerHandleRPC(b *testing.B, stat stats.RPCStats) {
 		WithTracerProvider(trace.NewTracerProvider(
 			trace.WithSampler(trace.AlwaysSample()),
 		)),
-		WithMeterProvider(metricnoop.NewMeterProvider()),
+		WithMeterProvider(metric.NewMeterProvider()),
 		WithMessageEvents(ReceivedEvents, SentEvents),
 	)
 	ctx := b.Context()
@@ -139,4 +140,40 @@ func BenchmarkServerHandler_HandleRPC_NoOp_End(b *testing.B) {
 
 func BenchmarkServerHandler_HandleRPC_NoOp_Nil(b *testing.B) {
 	benchmarkServerHandlerHandleRPCNoOp(b, nil)
+}
+
+func BenchmarkServerHandler_TagRPCNoOp(b *testing.B) {
+	handler := NewServerHandler(
+		WithTracerProvider(tracenoop.NewTracerProvider()),
+		WithMeterProvider(metricnoop.NewMeterProvider()),
+		WithMessageEvents(ReceivedEvents, SentEvents),
+	)
+	ctx := b.Context()
+
+	tagInfo := &stats.RPCTagInfo{
+		FullMethodName: "/package.service/method",
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		_ = handler.TagRPC(ctx, tagInfo)
+	}
+}
+
+func BenchmarkClientHandler_TagRPCNoOp(b *testing.B) {
+	handler := NewClientHandler(
+		WithTracerProvider(tracenoop.NewTracerProvider()),
+		WithMeterProvider(metricnoop.NewMeterProvider()),
+		WithMessageEvents(ReceivedEvents, SentEvents),
+	)
+	ctx := b.Context()
+
+	tagInfo := &stats.RPCTagInfo{
+		FullMethodName: "/package.service/method",
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		_ = handler.TagRPC(ctx, tagInfo)
+	}
 }

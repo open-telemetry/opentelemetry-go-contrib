@@ -35,8 +35,6 @@ type monitor struct {
 }
 
 func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
-	var spanName string
-
 	hostname, port := peerInfo(evt.ConnectionID)
 
 	attrs := []attribute.KeyValue{
@@ -50,11 +48,14 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 	if !m.cfg.CommandAttributeDisabled {
 		attrs = append(attrs, semconv.DBQueryText(sanitizeCommand(evt.Command)))
 	}
-	if collection, err := extractCollection(evt); err == nil && collection != "" {
-		spanName = collection + "."
+
+	collection, err := extractCollection(evt)
+	if err == nil && collection != "" {
 		attrs = append(attrs, semconv.DBCollectionName(collection))
 	}
-	spanName += evt.CommandName
+
+	spanName := m.cfg.SpanNameFormatter(evt)
+
 	opts := []trace.SpanStartOption{
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(attrs...),
@@ -153,6 +154,7 @@ func sanitizeCommand(command bson.Raw) string {
 // For CRUD operations, this is the first key/value string pair in the bson
 // document where key == "<operation>" (e.g. key == "insert").
 // For database meta-level operations, such a key may not exist.
+// This function returns the collection name or an error if no collection can be determined.
 func extractCollection(evt *event.CommandStartedEvent) (string, error) {
 	elt, err := evt.Command.IndexErr(0)
 	if err != nil {

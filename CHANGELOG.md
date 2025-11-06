@@ -8,6 +8,27 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- `ParseYAML` in `go.opentelemetry.io/contrib/otelconf` now supports environment variables substitution in the format `${[env:]VAR_NAME[:-defaultvalue]}`. (#6215)
+- WithOnError option for otelecho middleware in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` to specify the behavior when an error occurs. (#8025)
+- Introduce v1.0.0-rc.2 model in `go.opentelemetry.io/contrib/otelconf`. (#8031)
+- Add unmarshaling and validation for `CardinalityLimits` and `SpanLimits` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8043)
+- Add unmarshaling and validation for `BatchLogRecordProcessor`, `BatchSpanProcessor`, and `PeriodicMetricReader` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8049)
+- Add unmarshaling and validation for `TextMapPropagator` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8052)
+- Add unmarshaling and validation for `OTLPHttpExporter`, `OTLPGrpcExporter`, `OTLPGrpcMetricExporter` and `OTLPHttpMetricExporter` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8112)
+- Add a `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7986)
+
+### Changed
+
+- Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8035)
+
+### Deprecated
+
+- `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.
+  The route is already added automatically for spans.
+  For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8117)
+
 ### Removed
 
 - Drop support for [Go 1.23]. (#7831)

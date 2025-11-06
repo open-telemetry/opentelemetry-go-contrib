@@ -23,6 +23,75 @@ import (
 
 type validator func(sdktrace.ReadOnlySpan) bool
 
+func TestWithSpanNameFormatter(t *testing.T) {
+	tt := []struct {
+		title             string
+		operation         func(context.Context, *mongo.Database) (any, error)
+		expectedSpanName  string
+		mockResponses     []bson.D
+		SpanNameFormatter SpanNameFormatterFunc
+	}{
+		{
+			title: "insert using default SpanNameFormatter",
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
+				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+			},
+			expectedSpanName:  "test-collection.insert",
+			SpanNameFormatter: nil,
+			mockResponses:     []bson.D{{{Key: "ok", Value: 1}}},
+		},
+		{
+			title: "delete with custom SpanNameFormatter",
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
+				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+			},
+			SpanNameFormatter: func(event *event.CommandStartedEvent) string {
+				return "my-" + event.CommandName + "-span"
+			},
+			expectedSpanName: "my-delete-span",
+			mockResponses:    []bson.D{{{Key: "ok", Value: 1}}},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.title, func(t *testing.T) {
+			md := drivertest.NewMockDeployment()
+
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
+			defer cancel()
+
+			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
+			addr := "mongodb://localhost:27017/?connect=direct"
+			opts := options.Client()
+			opts.Deployment = md //nolint:staticcheck // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
+			opts.Monitor = NewMonitor(
+				WithTracerProvider(provider),
+				WithSpanNameFormatter(tc.SpanNameFormatter),
+			)
+			opts.ApplyURI(addr)
+
+			md.AddResponses(tc.mockResponses...)
+			client, err := mongo.Connect(opts)
+			defer func() {
+				e := client.Disconnect(t.Context())
+				require.NoError(t, e)
+			}()
+			require.NoError(t, err)
+
+			_, err = tc.operation(ctx, client.Database("test-database"))
+			require.NoError(t, err)
+
+			span.End()
+			spans := sr.Ended()
+
+			s := spans[0]
+			assert.Equal(t, tc.expectedSpanName, s.Name())
+		})
+	}
+}
+
 func TestDBCrudOperation(t *testing.T) {
 	commonValidators := []validator{
 		func(s sdktrace.ReadOnlySpan) bool {

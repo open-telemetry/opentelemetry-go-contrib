@@ -22,6 +22,7 @@ type config struct {
 	Skipper               middleware.Skipper
 	MetricAttributeFn     MetricAttributeFn
 	EchoMetricAttributeFn EchoMetricAttributeFn
+	OnError               OnErrorFn
 }
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
@@ -31,6 +32,13 @@ type MetricAttributeFn func(*http.Request) []attribute.KeyValue
 // EchoMetricAttributeFn is used to extract additional attributes from the echo.Context
 // and return them as a slice of attribute.KeyValue.
 type EchoMetricAttributeFn func(echo.Context) []attribute.KeyValue
+
+// OnErrorFn is used to specify how errors are handled in the middleware.
+type OnErrorFn func(echo.Context, error)
+
+// defaultOnError is the default function called when an error occurs during request processing.
+// Note: it makes the global error handler run twice.
+var defaultOnError = func(c echo.Context, err error) { c.Error(err) }
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -98,5 +106,19 @@ func WithMetricAttributeFn(f MetricAttributeFn) Option {
 func WithEchoMetricAttributeFn(f EchoMetricAttributeFn) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.EchoMetricAttributeFn = f
+	})
+}
+
+// WithOnError specifies a function that is called when an error occurs during request processing.
+//
+// WARNING: If the passed function doesn't call `c.Error` and the global HTTPErrorHandler modifies the response,
+// the tracing span can contain invalid data.
+// If it calls `c.Error`, `HTTPErrorHandler` will be executed twice, but the span will have the actual response data.
+// To fix this, check the response commitment status with `c.Response().Committed` before modifying the response.
+func WithOnError(f OnErrorFn) Option {
+	return optionFunc(func(cfg *config) {
+		if f != nil {
+			cfg.OnError = f
+		}
 	})
 }
