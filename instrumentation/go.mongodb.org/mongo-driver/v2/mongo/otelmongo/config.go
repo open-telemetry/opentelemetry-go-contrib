@@ -14,9 +14,6 @@ import (
 const ScopeName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo"
 
 // config is used to configure the mongo tracer.
-// when you want to disable metrics or traces, use the [WithMeterProvider] options
-// to set a [go.opentelemetry.io/otel/metric/noop.MeterProvider] or
-// [WithTracerProvider] options to set a [go.opentelemetry.io/otel/trace/noop.TracerProvider]
 type config struct {
 	MeterProvider  metric.MeterProvider
 	TracerProvider trace.TracerProvider
@@ -74,8 +71,7 @@ func (o optionFunc) apply(c *config) {
 }
 
 // WithMeterProvider specifies a [metric.MeterProvider] to use for creating a Meter.
-// If none is specified, the global MeterProvider is used. If no global MeterProvider
-// has been registered, a no-op [go.opentelemetry.io/otel/metric/noop.MeterProvider] is used.
+// If none is specified, the global MeterProvider is used.
 func WithMeterProvider(provider metric.MeterProvider) Option {
 	return optionFunc(func(cfg *config) {
 		if provider != nil {
