@@ -52,7 +52,7 @@ func TestRemotelyControlledSampler_WithAttributesOn(t *testing.T) {
 
 		result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
 		assert.Equal(t, trace.RecordAndSample, result.Decision)
-		assert.Equal(t, []attribute.KeyValue{attribute.String("sampler.type", "probabilistic"), attribute.Float64("sampler.param", 0.5)}, result.Attributes)
+		assert.Equal(t, []attribute.KeyValue{attribute.String("jaeger.sampler.type", "probabilistic"), attribute.Float64("jaeger.sampler.param", 0.5)}, result.Attributes)
 	})
 
 	t.Run("ratelimitng", func(t *testing.T) {
@@ -67,7 +67,7 @@ func TestRemotelyControlledSampler_WithAttributesOn(t *testing.T) {
 
 		result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
 		assert.Equal(t, trace.RecordAndSample, result.Decision)
-		assert.Equal(t, []attribute.KeyValue{attribute.String("sampler.type", "ratelimiting"), attribute.Float64("sampler.param", 1)}, result.Attributes)
+		assert.Equal(t, []attribute.KeyValue{attribute.String("jaeger.sampler.type", "ratelimiting"), attribute.Float64("jaeger.sampler.param", 1)}, result.Attributes)
 	})
 
 	t.Run("per operation", func(t *testing.T) {
@@ -80,6 +80,6 @@ func TestRemotelyControlledSampler_WithAttributesOn(t *testing.T) {
 
 		result := remoteSampler.ShouldSample(trace.SamplingParameters{TraceID: traceID})
 		assert.Equal(t, trace.RecordAndSample, result.Decision)
-		assert.Equal(t, []attribute.KeyValue{attribute.String("sampler.type", "probabilistic"), attribute.Float64("sampler.param", 0.5)}, result.Attributes)
+		assert.Equal(t, []attribute.KeyValue{attribute.String("jaeger.sampler.type", "probabilistic"), attribute.Float64("jaeger.sampler.param", 0.5)}, result.Attributes)
 	})
 }

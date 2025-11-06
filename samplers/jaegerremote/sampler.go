@@ -36,10 +36,10 @@ const (
 )
 
 const (
-	samplerTypeKey                = "sampler.type"
+	samplerTypeKey                = "jaeger.sampler.type"
+	samplerParamKey               = "jaeger.sampler.param"
 	samplerTypeValueProbabilistic = "probabilistic"
 	samplerTypeValueRateLimiting  = "ratelimiting"
-	samplerParamKey               = "sampler.param"
 )
 
 type samplerOptions struct {
