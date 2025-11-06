@@ -73,6 +73,10 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEvent) {
 	m.Finished(&evt.CommandFinishedEvent, nil)
 
+	if m.ClientOperationDuration == nil {
+		return
+	}
+
 	hostname, port := peerInfo(evt.ConnectionID)
 	attrs := []attribute.KeyValue{
 		// No need to add semconv.DBSystemMongoDB, it will be added by metrics recorder.
@@ -97,6 +101,10 @@ func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEven
 
 func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
 	m.Finished(&evt.CommandFinishedEvent, evt.Failure)
+
+	if m.ClientOperationDuration == nil {
+		return
+	}
 
 	hostname, port := peerInfo(evt.ConnectionID)
 	attrs := []attribute.KeyValue{
