@@ -116,7 +116,7 @@ func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
 		semconv.DBResponseStatusCode(statusCodeError),
 		semconv.ErrorType(evt.Failure),
 	}
-	// TODO db.query.text attribute is currently disabled by default.
+	// TODO: db.query.text attribute is currently disabled by default.
 	// Because event does not provide the query text directly.
 	// command := m.extractCommand(evt)
 	// attrs = append(attrs, semconv.DBQueryText(sanitizeCommand(evt.Command)))
