@@ -5,6 +5,8 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -248,5 +250,196 @@ func (j *OTLPGrpcExporter) UnmarshalYAML(node *yaml.Node) error {
 		return newErrGreaterOrEqualZero("timeout")
 	}
 	*j = OTLPGrpcExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *AttributeType) UnmarshalYAML(node *yaml.Node) error {
+	var v struct {
+		Value any
+	}
+	if err := node.Decode(&v.Value); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	var ok bool
+	for _, expected := range enumValuesAttributeType {
+		if reflect.DeepEqual(v.Value, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return newErrInvalid(fmt.Sprintf("unexpected value type %#v, expected one of %#v)", v.Value, enumValuesAttributeType))
+	}
+	*j = AttributeType(v)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *AttributeNameValue) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "name") {
+		return newErrRequired(j, "name")
+	}
+	if !hasYAMLMapKey(node, "value") {
+		return newErrRequired(j, "value")
+	}
+	type Plain AttributeNameValue
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	// yaml unmarshaller defaults to unmarshalling to int
+	if plain.Type != nil && plain.Type.Value == "double" {
+		val, ok := plain.Value.(int)
+		if ok {
+			plain.Value = float64(val)
+		}
+	}
+
+	if plain.Type != nil && plain.Type.Value == "double_array" {
+		m, ok := plain.Value.([]any)
+		if ok {
+			var vals []any
+			for _, v := range m {
+				val, ok := v.(int)
+				if ok {
+					vals = append(vals, float64(val))
+				} else {
+					vals = append(vals, v)
+				}
+			}
+			plain.Value = vals
+		}
+	}
+
+	*j = AttributeNameValue(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *SimpleLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "exporter") {
+		return newErrRequired(j, "exporter")
+	}
+	type Plain SimpleLogRecordProcessor
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	*j = SimpleLogRecordProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *SimpleSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "exporter") {
+		return newErrRequired(j, "exporter")
+	}
+	type Plain SimpleSpanProcessor
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	*j = SimpleSpanProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *ZipkinSpanExporter) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "endpoint") {
+		return newErrRequired(j, "endpoint")
+	}
+	type Plain ZipkinSpanExporter
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if plain.Timeout != nil && 0 > *plain.Timeout {
+		return newErrGreaterOrEqualZero("timeout")
+	}
+	*j = ZipkinSpanExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *NameStringValuePair) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "name") {
+		return newErrRequired(j, "name")
+	}
+	if !hasYAMLMapKey(node, "value") {
+		return newErrRequired(j, "value")
+	}
+
+	type Plain NameStringValuePair
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	*j = NameStringValuePair(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *InstrumentType) UnmarshalYAML(node *yaml.Node) error {
+	type Plain InstrumentType
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if err := supportedInstrumentType(InstrumentType(plain)); err != nil {
+		return err
+	}
+
+	*j = InstrumentType(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *ExperimentalPeerInstrumentationServiceMappingElem) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "peer") {
+		return newErrRequired(j, "peer")
+	}
+	if !hasYAMLMapKey(node, "service") {
+		return newErrRequired(j, "service")
+	}
+
+	type Plain ExperimentalPeerInstrumentationServiceMappingElem
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	*j = ExperimentalPeerInstrumentationServiceMappingElem(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *ExporterDefaultHistogramAggregation) UnmarshalYAML(node *yaml.Node) error {
+	type Plain ExporterDefaultHistogramAggregation
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if err := supportedHistogramAggregation(ExporterDefaultHistogramAggregation(plain)); err != nil {
+		return err
+	}
+
+	*j = ExporterDefaultHistogramAggregation(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *PullMetricReader) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "exporter") {
+		return newErrRequired(j, "exporter")
+	}
+	type Plain PullMetricReader
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	*j = PullMetricReader(plain)
 	return nil
 }

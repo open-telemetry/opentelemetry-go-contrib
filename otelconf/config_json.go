@@ -6,6 +6,8 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"reflect"
 )
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -460,5 +462,255 @@ func (j *OTLPGrpcExporter) UnmarshalJSON(b []byte) error {
 		return newErrGreaterOrEqualZero("timeout")
 	}
 	*j = OTLPGrpcExporter(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *AttributeType) UnmarshalJSON(b []byte) error {
+	var v struct {
+		Value any
+	}
+	if err := json.Unmarshal(b, &v.Value); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	var ok bool
+	for _, expected := range enumValuesAttributeType {
+		if reflect.DeepEqual(v.Value, expected) {
+			ok = true
+			break
+		}
+	}
+	if !ok {
+		return newErrInvalid(fmt.Sprintf("unexpected value type %#v, expected one of %#v)", v.Value, enumValuesAttributeType))
+	}
+	*j = AttributeType(v)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *AttributeNameValue) UnmarshalJSON(b []byte) error {
+	type Plain AttributeNameValue
+	type shadow struct {
+		Plain
+		Name  json.RawMessage `json:"name"`
+		Value json.RawMessage `json:"value"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Name == nil {
+		return newErrRequired(j, "name")
+	}
+	if err := json.Unmarshal(sh.Name, &sh.Plain.Name); err != nil {
+		return err
+	}
+	if sh.Value == nil {
+		return newErrRequired(j, "value")
+	}
+	if err := json.Unmarshal(sh.Value, &sh.Plain.Value); err != nil {
+		return err
+	}
+
+	// json unmarshaller defaults to unmarshalling to float for int values
+	if sh.Type != nil && sh.Type.Value == "int" {
+		val, ok := sh.Plain.Value.(float64)
+		if ok {
+			sh.Plain.Value = int(val)
+		}
+	}
+
+	if sh.Type != nil && sh.Type.Value == "int_array" {
+		m, ok := sh.Plain.Value.([]any)
+		if ok {
+			var vals []any
+			for _, v := range m {
+				val, ok := v.(float64)
+				if ok {
+					vals = append(vals, int(val))
+				} else {
+					vals = append(vals, v)
+				}
+			}
+			sh.Plain.Value = vals
+		}
+	}
+
+	*j = AttributeNameValue(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *SimpleLogRecordProcessor) UnmarshalJSON(b []byte) error {
+	type Plain SimpleLogRecordProcessor
+	type shadow struct {
+		Plain
+		Exporter json.RawMessage `json:"exporter"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Exporter == nil {
+		return newErrRequired(j, "exporter")
+	}
+	// Hydrate the exporter into the underlying field.
+	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
+		return err
+	}
+	*j = SimpleLogRecordProcessor(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *SimpleSpanProcessor) UnmarshalJSON(b []byte) error {
+	type Plain SimpleSpanProcessor
+	type shadow struct {
+		Plain
+		Exporter json.RawMessage `json:"exporter"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Exporter == nil {
+		return newErrRequired(j, "exporter")
+	}
+	// Hydrate the exporter into the underlying field.
+	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
+		return err
+	}
+	*j = SimpleSpanProcessor(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ZipkinSpanExporter) UnmarshalJSON(b []byte) error {
+	type Plain ZipkinSpanExporter
+	type shadow struct {
+		Plain
+		Endpoint json.RawMessage `json:"endpoint"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Endpoint == nil {
+		return newErrRequired(j, "endpoint")
+	}
+
+	if err := json.Unmarshal(sh.Endpoint, &sh.Plain.Endpoint); err != nil {
+		return err
+	}
+	if sh.Timeout != nil && 0 > *sh.Timeout {
+		return newErrGreaterOrEqualZero("timeout")
+	}
+	*j = ZipkinSpanExporter(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *NameStringValuePair) UnmarshalJSON(b []byte) error {
+	type Plain NameStringValuePair
+	type shadow struct {
+		Plain
+		Name  json.RawMessage `json:"name"`
+		Value json.RawMessage `json:"value"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Name == nil {
+		return newErrRequired(j, "name")
+	}
+	if err := json.Unmarshal(sh.Name, &sh.Plain.Name); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Value == nil {
+		return newErrRequired(j, "value")
+	}
+	if err := json.Unmarshal(sh.Value, &sh.Plain.Value); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	*j = NameStringValuePair(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *InstrumentType) UnmarshalJSON(b []byte) error {
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if err := supportedInstrumentType(InstrumentType(v)); err != nil {
+		return err
+	}
+	*j = InstrumentType(v)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalPeerInstrumentationServiceMappingElem) UnmarshalJSON(b []byte) error {
+	type Plain ExperimentalPeerInstrumentationServiceMappingElem
+	type shadow struct {
+		Plain
+		Peer    json.RawMessage `json:"peer"`
+		Service json.RawMessage `json:"service"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Peer == nil {
+		return newErrRequired(j, "peer")
+	}
+	if err := json.Unmarshal(sh.Peer, &sh.Plain.Peer); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Service == nil {
+		return newErrRequired(j, "service")
+	}
+	if err := json.Unmarshal(sh.Service, &sh.Plain.Service); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	*j = ExperimentalPeerInstrumentationServiceMappingElem(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExporterDefaultHistogramAggregation) UnmarshalJSON(b []byte) error {
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if err := supportedHistogramAggregation(ExporterDefaultHistogramAggregation(v)); err != nil {
+		return err
+	}
+	*j = ExporterDefaultHistogramAggregation(v)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *PullMetricReader) UnmarshalJSON(b []byte) error {
+	type Plain PullMetricReader
+	type shadow struct {
+		Plain
+		Exporter json.RawMessage `json:"exporter"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Exporter == nil {
+		return newErrRequired(j, "exporter")
+	}
+	// Hydrate the exporter into the underlying field.
+	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
+		return err
+	}
+	*j = PullMetricReader(sh.Plain)
 	return nil
 }
