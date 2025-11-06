@@ -20,6 +20,33 @@ const (
 	compressionNone = "none"
 )
 
+var enumValuesAttributeType = []any{
+	nil,
+	"string",
+	"bool",
+	"int",
+	"double",
+	"string_array",
+	"bool_array",
+	"int_array",
+	"double_array",
+}
+
+var enumValuesViewSelectorInstrumentType = []any{
+	"counter",
+	"gauge",
+	"histogram",
+	"observable_counter",
+	"observable_gauge",
+	"observable_up_down_counter",
+	"up_down_counter",
+}
+
+var enumValuesOTLPMetricDefaultHistogramAggregation = []any{
+	"explicit_bucket_histogram",
+	"base2_exponential_bucket_histogram",
+}
+
 type configOptions struct {
 	ctx                   context.Context
 	opentelemetryConfig   OpenTelemetryConfiguration
@@ -66,7 +93,7 @@ func (e *errRequired) Is(target error) bool {
 	if !ok {
 		return false
 	}
-	return reflect.TypeOf(e.Object) == reflect.TypeOf(t.Object)
+	return reflect.TypeOf(e.Object) == reflect.TypeOf(t.Object) && e.Field == t.Field
 }
 
 type errUnmarshal struct {
@@ -249,4 +276,24 @@ func createHeadersConfig(headers []NameStringValuePair, headersList *string) (ma
 		}
 	}
 	return result, nil
+}
+
+// supportedInstrumentType return an error if the instrument type is not supported.
+func supportedInstrumentType(in InstrumentType) error {
+	for _, expected := range enumValuesViewSelectorInstrumentType {
+		if string(in) == fmt.Sprintf("%s", expected) {
+			return nil
+		}
+	}
+	return newErrInvalid(fmt.Sprintf("invalid selector (expected one of %#v): %#v", enumValuesViewSelectorInstrumentType, in))
+}
+
+// supportedHistogramAggregation return an error if the histogram aggregation is not supported.
+func supportedHistogramAggregation(in ExporterDefaultHistogramAggregation) error {
+	for _, expected := range enumValuesOTLPMetricDefaultHistogramAggregation {
+		if string(in) == fmt.Sprintf("%s", expected) {
+			return nil
+		}
+	}
+	return newErrInvalid(fmt.Sprintf("invalid histogram aggregation (expected one of %#v): %#v", enumValuesOTLPMetricDefaultHistogramAggregation, in))
 }
