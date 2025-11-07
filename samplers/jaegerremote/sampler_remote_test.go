@@ -129,7 +129,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	assert.Equal(t, 42*time.Second, sampler.samplingRefreshInterval)
 	assert.Same(t, fetcher, sampler.samplingFetcher)
 	assert.Same(t, parser, sampler.samplingParser)
-	assert.EqualValues(t, &perOperationSamplerUpdater{MaxOperations: 42, OperationNameLateBinding: true}, sampler.updaters[0])
+	assert.EqualValues(t, &perOperationSamplerUpdater{MaxOperations: 42, OperationNameLateBinding: true, attributesDisabled: true}, sampler.updaters[0])
 	assert.Equal(t, logger, sampler.logger)
 	assert.True(t, sampler.attributesDisabled)
 }

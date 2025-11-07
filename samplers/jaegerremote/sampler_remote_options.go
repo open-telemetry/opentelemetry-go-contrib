@@ -115,9 +115,10 @@ func newConfig(options ...Option) config {
 		&perOperationSamplerUpdater{
 			MaxOperations:            c.posParams.MaxOperations,
 			OperationNameLateBinding: c.posParams.OperationNameLateBinding,
+			attributesDisabled:       c.attributesDisabled,
 		},
-		new(probabilisticSamplerUpdater),
-		new(rateLimitingSamplerUpdater),
+		&probabilisticSamplerUpdater{attributesDisabled: c.attributesDisabled},
+		&rateLimitingSamplerUpdater{attributesDisabled: c.attributesDisabled},
 	}
 
 	if c.sampler == nil {
