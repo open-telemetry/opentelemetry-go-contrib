@@ -11,6 +11,8 @@ import (
 	"strings"
 )
 
+// Deprecated: This will be deleted in the future.
+//
 // DefaultClient is the default Client and is used by Get, Head, Post and PostForm.
 // Please be careful of initialization order - for example, if you change
 // the global propagator, the DefaultClient might still be using the old one.
