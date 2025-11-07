@@ -92,10 +92,6 @@ func newConfig(options ...Option) config {
 		samplingRefreshInterval: defaultSamplingRefreshInterval,
 		samplingFetcher:         newHTTPSamplingStrategyFetcher(defaultSamplingServerURL),
 		samplingParser:          new(samplingStrategyParserImpl),
-		updaters: []samplerUpdater{
-			new(probabilisticSamplerUpdater),
-			new(rateLimitingSamplerUpdater),
-		},
 		posParams: perOperationSamplerParams{
 			MaxOperations:            defaultSamplingMaxOperations,
 			OperationNameLateBinding: defaultSamplingOperationNameLateBinding,
@@ -115,11 +111,14 @@ func newConfig(options ...Option) config {
 	for _, err := range errs {
 		c.logger.Error(err, "env variable parsing failure")
 	}
-
-	c.updaters = append([]samplerUpdater{&perOperationSamplerUpdater{
-		MaxOperations:            c.posParams.MaxOperations,
-		OperationNameLateBinding: c.posParams.OperationNameLateBinding,
-	}}, c.updaters...)
+	c.updaters = []samplerUpdater{
+		&perOperationSamplerUpdater{
+			MaxOperations:            c.posParams.MaxOperations,
+			OperationNameLateBinding: c.posParams.OperationNameLateBinding,
+		},
+		new(probabilisticSamplerUpdater),
+		new(rateLimitingSamplerUpdater),
+	}
 
 	if c.sampler == nil {
 		c.sampler = newProbabilisticSampler(0.001, c.attributesDisabled)
@@ -208,12 +207,5 @@ func WithAttributesDisabled() Option {
 func withSamplingStrategyParser(parser samplingStrategyParser) Option {
 	return optionFunc(func(c *config) {
 		c.samplingParser = parser
-	})
-}
-
-// withUpdaters creates a Option that initializes sampler updaters.
-func withUpdaters(updaters ...samplerUpdater) Option {
-	return optionFunc(func(c *config) {
-		c.updaters = updaters
 	})
 }

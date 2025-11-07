@@ -41,7 +41,6 @@ func TestRemotelyControlledSampler_updateConcurrentSafe(*testing.T) {
 	initSampler := newProbabilisticSampler(0.123, false)
 	fetcher := &testSamplingStrategyFetcher{response: []byte("probabilistic")}
 	parser := new(testSamplingStrategyParser)
-	updaters := []samplerUpdater{new(probabilisticSamplerUpdater)}
 	sampler := New(
 		"test",
 		WithMaxOperations(42),
@@ -51,7 +50,6 @@ func TestRemotelyControlledSampler_updateConcurrentSafe(*testing.T) {
 		WithSamplingRefreshInterval(time.Millisecond),
 		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
-		withUpdaters(updaters...),
 	)
 
 	defer sampler.Close()
@@ -111,7 +109,6 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	fetcher := new(fakeSamplingFetcher)
 	parser := new(samplingStrategyParserImpl)
 	logger := testr.New(t)
-	updaters := []samplerUpdater{new(probabilisticSamplerUpdater)}
 	sampler := New(
 		"test",
 		WithMaxOperations(42),
@@ -121,7 +118,6 @@ func TestRemoteSamplerOptions(t *testing.T) {
 		WithSamplingRefreshInterval(42*time.Second),
 		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
-		withUpdaters(updaters...),
 		WithLogger(logger),
 		WithAttributesDisabled(),
 	)
@@ -299,7 +295,6 @@ func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
 	initSampler := newProbabilisticSampler(0.123, false)
 	fetcher := &testSamplingStrategyFetcher{response: []byte("rateLimiting")}
 	parser := new(testSamplingStrategyParser)
-	updaters := []samplerUpdater{new(probabilisticSamplerUpdater), new(rateLimitingSamplerUpdater)}
 	sampler := New(
 		"test",
 		WithMaxOperations(42),
@@ -309,7 +304,6 @@ func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
 		WithSamplingRefreshInterval(10*time.Minute),
 		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
-		withUpdaters(updaters...),
 	)
 	time.Sleep(100 * time.Millisecond) // waiting for s.pollController
 	sampler.Close()                    // stop pollController, avoid date race
@@ -496,10 +490,6 @@ func TestRemotelyControlledSampler_updateRateLimitingOrProbabilisticSampler(t *t
 			remoteSampler := New(
 				"test",
 				WithInitialSampler(testCase.initSampler),
-				withUpdaters(
-					new(probabilisticSamplerUpdater),
-					new(rateLimitingSamplerUpdater),
-				),
 			)
 			defer remoteSampler.Close()
 			err := remoteSampler.updateSamplerViaUpdaters(testCase.res)
