@@ -13,7 +13,7 @@ The following instrumentation packages are provided for popular Go packages and 
 | :---------------------: | :-----: | :----: |
 | [github.com/aws/aws-sdk-go-v2](./github.com/aws/aws-sdk-go-v2/otelaws)|  | ✓ |
 | [github.com/emicklei/go-restful](./github.com/emicklei/go-restful/otelrestful) |  | ✓ |
-| [github.com/gin-gonic/gin](./github.com/gin-gonic/gin/otelgin) |  | ✓ |
+| [github.com/gin-gonic/gin](./github.com/gin-gonic/gin/otelgin) | ✓ | ✓ |
 | [github.com/gorilla/mux](./github.com/gorilla/mux/otelmux) |  | ✓ |
 | [github.com/labstack/echo](./github.com/labstack/echo/otelecho) |  | ✓ |
 | [go.mongodb.org/mongo-driver](./go.mongodb.org/mongo-driver/mongo/otelmongo) |  | ✓ |
