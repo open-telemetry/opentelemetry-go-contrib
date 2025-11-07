@@ -1,7 +1,3 @@
-### Changed
-
-- Change `Version()` function in `otelhttp` package to a `const Version` string. (#8134)
-
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -25,7 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add unmarshaling and validation for `AttributeType`, `AttributeNameValue`, `SimpleSpanProcessor`, `SimpleLogRecordProcessor`, `ZipkinSpanExporter`, `NameStringValuePair`, `InstrumentType`, `ExperimentalPeerInstrumentationServiceMappingElem`, `ExporterDefaultHistogramAggregation`, `PullMetricReader` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8127)
 
 ### Changed
-
+- Change `Version()` function in `otelhttp` package to a `const Version` string. (#8134)
 - Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8035)
 
 ### Deprecated
