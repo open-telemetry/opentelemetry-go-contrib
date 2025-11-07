@@ -1622,3 +1622,7 @@ First official tagged release of `contrib` repository.
 [Go 1.18]: https://go.dev/doc/go1.18
 
 [GO-2024-2687]: https://pkg.go.dev/vuln/GO-2024-2687
+
+### Changed
+
+- Change `Version()` function in `otelhttp` package to a `const Version` string. (#8134)
