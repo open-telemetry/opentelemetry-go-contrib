@@ -1,3 +1,7 @@
+### Changed
+
+- Change `Version()` function in `otelhttp` package to a `const Version` string. (#8134)
+
 # Changelog
 
 All notable changes to this project will be documented in this file.
@@ -1623,6 +1627,4 @@ First official tagged release of `contrib` repository.
 
 [GO-2024-2687]: https://pkg.go.dev/vuln/GO-2024-2687
 
-### Changed
 
-- Change `Version()` function in `otelhttp` package to a `const Version` string. (#8134)
