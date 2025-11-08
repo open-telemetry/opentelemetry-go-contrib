@@ -27,7 +27,7 @@ type spanKey struct {
 }
 
 type monitor struct {
-	ClientOperationDuration dbconv.ClientOperationDuration
+	ClientOperationDuration *dbconv.ClientOperationDuration
 
 	sync.Mutex
 	spans map[spanKey]trace.Span
@@ -72,6 +72,9 @@ func (m *monitor) Started(ctx context.Context, evt *event.CommandStartedEvent) {
 
 func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEvent) {
 	m.Finished(&evt.CommandFinishedEvent, nil)
+	if m.ClientOperationDuration == nil {
+		return
+	}
 
 	hostname, port := peerInfo(evt.ConnectionID)
 	attrs := []attribute.KeyValue{
@@ -101,6 +104,9 @@ func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEven
 
 func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
 	m.Finished(&evt.CommandFinishedEvent, evt.Failure)
+	if m.ClientOperationDuration == nil {
+		return
+	}
 
 	hostname, port := peerInfo(evt.ConnectionID)
 	attrs := []attribute.KeyValue{
@@ -180,13 +186,18 @@ func extractCollection(evt *event.CommandStartedEvent) (string, error) {
 // NewMonitor creates a new mongodb event CommandMonitor.
 func NewMonitor(opts ...Option) *event.CommandMonitor {
 	cfg := newConfig(opts...)
-	clientOperationDuration, err := dbconv.NewClientOperationDuration(
+	var clientOperationDuration *dbconv.ClientOperationDuration
+	operationDuration, err := dbconv.NewClientOperationDuration(
 		cfg.Meter,
 		metric.WithExplicitBucketBoundaries(0.001, 0.005, 0.01, 0.05, 0.1, 0.5, 1, 5, 10),
 	)
 	if err != nil {
+		clientOperationDuration = nil
 		otel.Handle(err)
+	} else {
+		clientOperationDuration = &operationDuration
 	}
+
 	m := &monitor{
 		spans: make(map[spanKey]trace.Span),
 		cfg:   cfg,
