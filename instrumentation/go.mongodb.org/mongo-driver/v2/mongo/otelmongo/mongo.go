@@ -81,8 +81,12 @@ func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEven
 		semconv.NetworkPeerAddress(hostname),
 		semconv.NetworkPeerPort(port),
 		semconv.NetworkTransportTCP,
+		// `db.response.status_code` is excluded for succeeded events.
+		// Succeeded processes an [go.mongodb.org/mongo-driver/v2/event.CommandSucceededEvent] for OTel,
+		// including collecting metrics. The status code metric is excluded since MongoDB server indicates
+		// a successful operation with {ok: 1}, which doesn't map to a traditional status code.
 	}
-	// TODO db.query.text attribute is currently disabled by default.
+	// TODO: db.query.text attribute is currently disabled by default.
 	// Because event does not provide the query text directly.
 	// command := m.extractCommand(evt)
 	// attrs = append(attrs, semconv.DBQueryText(sanitizeCommand(evt.Command)))
@@ -106,6 +110,9 @@ func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
 		semconv.NetworkPeerAddress(hostname),
 		semconv.NetworkPeerPort(port),
 		semconv.NetworkTransportTCP,
+		// TODO: The status code should not be static, but reflect server behavior.
+		// Assert the error as [go.mongodb.org/mongo-driver/v2/x/mongo/driver.Error] and pull the code from there.
+		// ref. https://jira.mongodb.org/browse/GODRIVER-3690
 		semconv.ErrorType(evt.Failure),
 	}
 	// TODO: db.query.text attribute is currently disabled by default.
