@@ -13,6 +13,7 @@
 //	go.goroutine.count      {goroutine}   Count of live goroutines.
 //	go.processor.limit      {thread}      The number of OS threads that can execute user-level Go code simultaneously.
 //	go.config.gogc          %             Heap size target percentage configured by the user, otherwise 100.
+//	go.schedule.duration    s             The time goroutines have spent in the scheduler in a runnable state before actually running.
 //
 // When the OTEL_GO_X_DEPRECATED_RUNTIME_METRICS environment variable is set to
 // true, the following deprecated metrics are produced:
