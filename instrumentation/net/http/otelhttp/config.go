@@ -143,7 +143,6 @@ func WithFilter(f Filter) Option {
 	})
 }
 
-// Change the unexported 'event' type to exported 'Event'
 type Event int
 
 // Different types of events that can be recorded, see WithMessageEvents.
