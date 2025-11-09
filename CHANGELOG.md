@@ -20,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8035)
+- Export the Event type in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` for use with `WithMessageEvents`, replacing the previously unexported event type. (#8153)
 
 ### Removed
 
