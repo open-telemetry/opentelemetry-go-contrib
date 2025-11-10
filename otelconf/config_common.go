@@ -4,9 +4,62 @@
 package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"reflect"
+
+	"go.opentelemetry.io/otel/baggage"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
+
+const (
+	compressionGzip = "gzip"
+	compressionNone = "none"
+)
+
+var enumValuesAttributeType = []any{
+	nil,
+	"string",
+	"bool",
+	"int",
+	"double",
+	"string_array",
+	"bool_array",
+	"int_array",
+	"double_array",
+}
+
+var enumValuesViewSelectorInstrumentType = []any{
+	"counter",
+	"gauge",
+	"histogram",
+	"observable_counter",
+	"observable_gauge",
+	"observable_up_down_counter",
+	"up_down_counter",
+}
+
+var enumValuesOTLPMetricDefaultHistogramAggregation = []any{
+	"explicit_bucket_histogram",
+	"base2_exponential_bucket_histogram",
+}
+
+type configOptions struct {
+	ctx                   context.Context
+	opentelemetryConfig   OpenTelemetryConfiguration
+	meterProviderOptions  []sdkmetric.Option
+	loggerProviderOptions []sdklog.LoggerProviderOption
+	tracerProviderOptions []sdktrace.TracerProviderOption
+}
+
+type shutdownFunc func(context.Context) error
+
+func noopShutdown(context.Context) error {
+	return nil
+}
 
 type errBound struct {
 	Field string
@@ -26,20 +79,21 @@ func (e *errBound) Is(target error) bool {
 	return e.Field == t.Field && e.Bound == t.Bound && e.Op == t.Op
 }
 
-type errRequiredExporter struct {
+type errRequired struct {
 	Object any
+	Field  string
 }
 
-func (e *errRequiredExporter) Error() string {
-	return fmt.Sprintf("field exporter in %s: required", reflect.TypeOf(e.Object))
+func (e *errRequired) Error() string {
+	return fmt.Sprintf("field %s in %s: required", e.Field, reflect.TypeOf(e.Object))
 }
 
-func (e *errRequiredExporter) Is(target error) bool {
-	t, ok := target.(*errRequiredExporter)
+func (e *errRequired) Is(target error) bool {
+	t, ok := target.(*errRequired)
 	if !ok {
 		return false
 	}
-	return reflect.TypeOf(e.Object) == reflect.TypeOf(t.Object)
+	return reflect.TypeOf(e.Object) == reflect.TypeOf(t.Object) && e.Field == t.Field
 }
 
 type errUnmarshal struct {
@@ -70,9 +124,9 @@ func newErrGreaterThanZero(field string) error {
 	return &errBound{Field: field, Bound: 0, Op: ">"}
 }
 
-// newErrRequiredExporter creates a new error indicating that the exporter field is required.
-func newErrRequiredExporter(object any) error {
-	return &errRequiredExporter{Object: object}
+// newErrRequired creates a new error indicating that the exporter field is required.
+func newErrRequired(object any, field string) error {
+	return &errRequired{Object: object, Field: field}
 }
 
 // newErrUnmarshal creates a new error indicating that an error occurred during unmarshaling.
@@ -85,7 +139,7 @@ type errInvalid struct {
 }
 
 func (e *errInvalid) Error() string {
-	return "invalid " + e.Identifier
+	return "invalid config: " + e.Identifier
 }
 
 func (e *errInvalid) Is(target error) bool {
@@ -200,4 +254,46 @@ func validateSpanLimits(plain *SpanLimits) error {
 
 func ptr[T any](v T) *T {
 	return &v
+}
+
+// createHeadersConfig combines the two header config fields. Headers take precedence over headersList.
+func createHeadersConfig(headers []NameStringValuePair, headersList *string) (map[string]string, error) {
+	result := make(map[string]string)
+	if headersList != nil {
+		// Parsing follows https://github.com/open-telemetry/opentelemetry-configuration/blob/568e5080816d40d75792eb754fc96bde09654159/schema/type_descriptions.yaml#L584.
+		headerslist, err := baggage.Parse(*headersList)
+		if err != nil {
+			return nil, errors.Join(newErrInvalid("invalid headers_list"), err)
+		}
+		for _, kv := range headerslist.Members() {
+			result[kv.Key()] = kv.Value()
+		}
+	}
+	// Headers take precedence over HeadersList, so this has to be after HeadersList is processed.
+	for _, kv := range headers {
+		if kv.Value != nil {
+			result[kv.Name] = *kv.Value
+		}
+	}
+	return result, nil
+}
+
+// supportedInstrumentType return an error if the instrument type is not supported.
+func supportedInstrumentType(in InstrumentType) error {
+	for _, expected := range enumValuesViewSelectorInstrumentType {
+		if string(in) == fmt.Sprintf("%s", expected) {
+			return nil
+		}
+	}
+	return newErrInvalid(fmt.Sprintf("invalid selector (expected one of %#v): %#v", enumValuesViewSelectorInstrumentType, in))
+}
+
+// supportedHistogramAggregation return an error if the histogram aggregation is not supported.
+func supportedHistogramAggregation(in ExporterDefaultHistogramAggregation) error {
+	for _, expected := range enumValuesOTLPMetricDefaultHistogramAggregation {
+		if string(in) == fmt.Sprintf("%s", expected) {
+			return nil
+		}
+	}
+	return newErrInvalid(fmt.Sprintf("invalid histogram aggregation (expected one of %#v): %#v", enumValuesOTLPMetricDefaultHistogramAggregation, in))
 }

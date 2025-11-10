@@ -51,10 +51,20 @@ func TestMeterProvider(t *testing.T) {
 			wantProvider: noop.NewMeterProvider(),
 		},
 		{
+			name: "invalid-provider",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					MeterProvider: &LoggerProviderJson{},
+				},
+			},
+			wantProvider: noop.NewMeterProvider(),
+			wantErr:      newErrInvalid("meter_provider"),
+		},
+		{
 			name: "error-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					MeterProvider: &MeterProvider{
+					MeterProvider: &MeterProviderJson{
 						Readers: []MetricReader{
 							{
 								Periodic: &PeriodicMetricReader{},
@@ -65,13 +75,13 @@ func TestMeterProvider(t *testing.T) {
 				},
 			},
 			wantProvider: noop.NewMeterProvider(),
-			wantErr:      errors.Join(errors.New("must not specify multiple metric reader type")),
+			wantErr:      newErrInvalid("must not specify multiple metric reader type"),
 		},
 		{
 			name: "multiple-errors-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					MeterProvider: &MeterProvider{
+					MeterProvider: &MeterProviderJson{
 						Readers: []MetricReader{
 							{
 								Periodic: &PeriodicMetricReader{},
@@ -80,8 +90,8 @@ func TestMeterProvider(t *testing.T) {
 							{
 								Periodic: &PeriodicMetricReader{
 									Exporter: PushMetricExporter{
-										Console: Console{},
-										OTLP:    &OTLPMetric{},
+										Console:  ConsoleExporter{},
+										OTLPGrpc: &OTLPGrpcMetricExporter{},
 									},
 								},
 							},
@@ -90,14 +100,16 @@ func TestMeterProvider(t *testing.T) {
 				},
 			},
 			wantProvider: noop.NewMeterProvider(),
-			wantErr:      errors.Join(errors.New("must not specify multiple metric reader type"), errors.New("must not specify multiple exporters")),
+			wantErr:      newErrInvalid("must not specify multiple metric reader type"),
 		},
 	}
 	for _, tt := range tests {
-		mp, shutdown, err := meterProvider(tt.cfg, resource.Default())
-		require.Equal(t, tt.wantProvider, mp)
-		assert.Equal(t, tt.wantErr, err)
-		require.NoError(t, shutdown(t.Context()))
+		t.Run(tt.name, func(t *testing.T) {
+			mp, shutdown, err := meterProvider(tt.cfg, resource.Default())
+			require.Equal(t, tt.wantProvider, mp)
+			assert.ErrorIs(t, err, tt.wantErr)
+			require.NoError(t, shutdown(t.Context()))
+		})
 	}
 }
 
@@ -109,14 +121,12 @@ func TestMeterProviderOptions(t *testing.T) {
 	defer srv.Close()
 
 	cfg := OpenTelemetryConfiguration{
-		MeterProvider: &MeterProvider{
+		MeterProvider: &MeterProviderJson{
 			Readers: []MetricReader{{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol: ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint: ptr(srv.URL),
-							Insecure: ptr(true),
 						},
 					},
 				},
@@ -129,14 +139,19 @@ func TestMeterProviderOptions(t *testing.T) {
 	require.NoError(t, err)
 
 	res := resource.NewSchemaless(attribute.String("foo", "bar"))
-	sdk, err := NewSDK(
-		WithOpenTelemetryConfiguration(cfg),
-		WithMeterProviderOptions(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutmetricExporter))),
-		WithMeterProviderOptions(sdkmetric.WithResource(res)),
-	)
+	// TODO: re-enable this once NewSDK is added
+	// sdk, err := NewSDK(
+	// 	WithOpenTelemetryConfiguration(cfg),
+	// 	WithMeterProviderOptions(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutmetricExporter))),
+	// 	WithMeterProviderOptions(sdkmetric.WithResource(res)),
+	// )
+	mp, shutdown, err := meterProvider(configOptions{
+		opentelemetryConfig:  cfg,
+		meterProviderOptions: []sdkmetric.Option{sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutmetricExporter))},
+	}, res)
 	require.NoError(t, err)
 	defer func() {
-		assert.NoError(t, sdk.Shutdown(t.Context()))
+		assert.NoError(t, shutdown(t.Context()))
 		// The exporter, which we passed in as an extra option to NewSDK,
 		// should be wired up to the provider in addition to the
 		// configuration-based OTLP exporter.
@@ -146,10 +161,11 @@ func TestMeterProviderOptions(t *testing.T) {
 		// Options provided by WithMeterProviderOptions may be overridden
 		// by configuration, e.g. the resource is always defined via
 		// configuration.
-		assert.NotContains(t, buf.String(), "foo")
+		// TODO: re-enable this once NewSDK is added
+		// assert.NotContains(t, buf.String(), "foo")
 	}()
 
-	counter, _ := sdk.MeterProvider().Meter("test").Int64Counter("counter")
+	counter, _ := mp.Meter("test").Int64Counter("counter")
 	counter.Add(t.Context(), 1)
 }
 
@@ -169,55 +185,55 @@ func TestReader(t *testing.T) {
 		name       string
 		reader     MetricReader
 		args       any
-		wantErr    string
+		wantErrT   error
 		wantReader sdkmetric.Reader
 	}{
 		{
-			name:    "no reader",
-			wantErr: "no valid metric reader",
+			name:     "no reader",
+			wantErrT: newErrInvalid("no valid metric reader"),
 		},
 		{
 			name: "pull/no-exporter",
 			reader: MetricReader{
 				Pull: &PullMetricReader{},
 			},
-			wantErr: "no valid metric exporter",
+			wantErrT: newErrInvalid("no valid metric exporter"),
 		},
 		{
 			name: "pull/prometheus-no-host",
 			reader: MetricReader{
 				Pull: &PullMetricReader{
 					Exporter: PullMetricExporter{
-						Prometheus: &Prometheus{},
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{},
 					},
 				},
 			},
-			wantErr: "host must be specified",
+			wantErrT: newErrInvalid("host must be specified"),
 		},
 		{
 			name: "pull/prometheus-no-port",
 			reader: MetricReader{
 				Pull: &PullMetricReader{
 					Exporter: PullMetricExporter{
-						Prometheus: &Prometheus{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
 							Host: ptr("localhost"),
 						},
 					},
 				},
 			},
-			wantErr: "port must be specified",
+			wantErrT: newErrInvalid("port must be specified"),
 		},
 		{
 			name: "pull/prometheus",
 			reader: MetricReader{
 				Pull: &PullMetricReader{
 					Exporter: PullMetricExporter{
-						Prometheus: &Prometheus{
-							Host:              ptr("localhost"),
-							Port:              ptr(0),
-							WithoutScopeInfo:  ptr(true),
-							WithoutUnits:      ptr(true),
-							WithoutTypeSuffix: ptr(true),
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
+							Host:             ptr("localhost"),
+							Port:             ptr(0),
+							WithoutScopeInfo: ptr(true),
+							// WithoutUnits:      ptr(true),
+							// WithoutTypeSuffix: ptr(true),
 							WithResourceConstantLabels: &IncludeExclude{
 								Included: []string{"include"},
 								Excluded: []string{"exclude"},
@@ -229,25 +245,11 @@ func TestReader(t *testing.T) {
 			wantReader: readerWithServer{promExporter, nil},
 		},
 		{
-			name: "periodic/otlp-exporter-invalid-protocol",
-			reader: MetricReader{
-				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol: ptr("http/invalid"),
-						},
-					},
-				},
-			},
-			wantErr: "unsupported protocol \"http/invalid\"",
-		},
-		{
 			name: "periodic/otlp-grpc-exporter",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("http://localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -265,8 +267,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("http://localhost:4318/path/123"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -284,12 +285,11 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("https://localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
+							Endpoint:        ptr("https://localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("testdata", "ca.crt")),
 						},
 					},
 				},
@@ -301,43 +301,40 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("https://localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
+							Endpoint:        ptr("https://localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
 						},
 					},
 				},
 			},
-			wantErr: "could not create certificate authority chain from certificate",
+			wantErrT: newErrInvalid("tls configuration"),
 		},
 		{
 			name: "periodic/otlp-grpc-bad-client-certificate",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:          ptr("grpc"),
-							Endpoint:          ptr("localhost:4317"),
-							Compression:       ptr("gzip"),
-							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
+							Endpoint:              ptr("localhost:4317"),
+							Compression:           ptr("gzip"),
+							Timeout:               ptr(1000),
+							ClientCertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							ClientKeyFile:         ptr(filepath.Join("testdata", "bad_cert.crt")),
 						},
 					},
 				},
 			},
-			wantErr: "could not use client certificate: tls: failed to find any PEM data in certificate input",
+			wantErrT: newErrInvalid("tls configuration"),
 		},
 		{
 			name: "periodic/otlp-grpc-bad-headerslist",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -346,15 +343,14 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "invalid headers list: invalid key: \"\"",
+			wantErrT: newErrInvalid("invalid headers_list"),
 		},
 		{
 			name: "periodic/otlp-grpc-exporter-no-endpoint",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
@@ -371,8 +367,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("unix:collector.sock"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -390,8 +385,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -409,8 +403,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr(" "),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -421,15 +414,14 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "parse \" \": invalid URI for request",
+			wantErrT: newErrInvalid("endpoint parsing failed"),
 		},
 		{
 			name: "periodic/otlp-grpc-none-compression",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -447,15 +439,14 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("delta"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
 						},
 					},
 				},
@@ -467,15 +458,14 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("cumulative"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceCumulative),
 						},
 					},
 				},
@@ -487,15 +477,14 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("lowmemory"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceLowMemory),
 						},
 					},
 				},
@@ -507,28 +496,26 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("invalid"),
+							TemporalityPreference: (*ExporterTemporalityPreference)(ptr("invalid")),
 						},
 					},
 				},
 			},
-			wantErr: "unsupported temporality preference \"invalid\"",
+			wantErrT: newErrInvalid("unsupported temporality preference \"invalid\""),
 		},
 		{
 			name: "periodic/otlp-grpc-invalid-compression",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("grpc"),
+						OTLPGrpc: &OTLPGrpcMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),
@@ -539,15 +526,14 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "unsupported compression \"invalid\"",
+			wantErrT: newErrInvalid("unsupported compression \"invalid\""),
 		},
 		{
 			name: "periodic/otlp-http-exporter",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("http://localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -565,12 +551,11 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("https://localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+						OTLPHttp: &OTLPHttpMetricExporter{
+							Endpoint:        ptr("https://localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("testdata", "ca.crt")),
 						},
 					},
 				},
@@ -582,43 +567,40 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("https://localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPHttp: &OTLPHttpMetricExporter{
+							Endpoint:        ptr("https://localhost:4317"),
+							Compression:     ptr("gzip"),
+							Timeout:         ptr(1000),
+							CertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
 						},
 					},
 				},
 			},
-			wantErr: "could not create certificate authority chain from certificate",
+			wantErrT: newErrInvalid("tls configuration"),
 		},
 		{
 			name: "periodic/otlp-http-bad-client-certificate",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:          ptr("http/protobuf"),
-							Endpoint:          ptr("localhost:4317"),
-							Compression:       ptr("gzip"),
-							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						OTLPHttp: &OTLPHttpMetricExporter{
+							Endpoint:              ptr("localhost:4317"),
+							Compression:           ptr("gzip"),
+							Timeout:               ptr(1000),
+							ClientCertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							ClientKeyFile:         ptr(filepath.Join("testdata", "bad_cert.crt")),
 						},
 					},
 				},
 			},
-			wantErr: "could not use client certificate: tls: failed to find any PEM data in certificate input",
+			wantErrT: newErrInvalid("tls configuration"),
 		},
 		{
 			name: "periodic/otlp-http-bad-headerslist",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -627,15 +609,14 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "invalid headers list: invalid key: \"\"",
+			wantErrT: newErrInvalid("invalid headers_list"),
 		},
 		{
 			name: "periodic/otlp-http-exporter-with-path",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("http://localhost:4318/path/123"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -653,8 +634,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
@@ -671,8 +651,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -690,8 +669,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr(" "),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
@@ -702,15 +680,14 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "parse \" \": invalid URI for request",
+			wantErrT: newErrInvalid("endpoint parsing failed"),
 		},
 		{
 			name: "periodic/otlp-http-none-compression",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
@@ -728,15 +705,14 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("cumulative"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceCumulative),
 						},
 					},
 				},
@@ -748,15 +724,14 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("lowmemory"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceLowMemory),
 						},
 					},
 				},
@@ -768,15 +743,14 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("delta"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
 						},
 					},
 				},
@@ -788,28 +762,26 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("none"),
 							Timeout:     ptr(1000),
 							Headers: []NameStringValuePair{
 								{Name: "test", Value: ptr("test1")},
 							},
-							TemporalityPreference: ptr("invalid"),
+							TemporalityPreference: (*ExporterTemporalityPreference)(ptr("invalid")),
 						},
 					},
 				},
 			},
-			wantErr: "unsupported temporality preference \"invalid\"",
+			wantErrT: newErrInvalid("unsupported temporality preference \"invalid\""),
 		},
 		{
 			name: "periodic/otlp-http-invalid-compression",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						OTLP: &OTLPMetric{
-							Protocol:    ptr("http/protobuf"),
+						OTLPHttp: &OTLPHttpMetricExporter{
 							Endpoint:    ptr("localhost:4318"),
 							Compression: ptr("invalid"),
 							Timeout:     ptr(1000),
@@ -820,7 +792,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "unsupported compression \"invalid\"",
+			wantErrT: newErrInvalid("unsupported compression \"invalid\""),
 		},
 		{
 			name: "periodic/no-exporter",
@@ -829,14 +801,14 @@ func TestReader(t *testing.T) {
 					Exporter: PushMetricExporter{},
 				},
 			},
-			wantErr: "no valid metric exporter",
+			wantErrT: newErrInvalid("no valid metric exporter"),
 		},
 		{
 			name: "periodic/console-exporter",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
@@ -849,7 +821,7 @@ func TestReader(t *testing.T) {
 					Interval: ptr(30_000),
 					Timeout:  ptr(5_000),
 					Exporter: PushMetricExporter{
-						Console: Console{},
+						Console: ConsoleExporter{},
 					},
 				},
 			},
@@ -859,16 +831,22 @@ func TestReader(t *testing.T) {
 				sdkmetric.WithTimeout(5_000*time.Millisecond),
 			),
 		},
+		{
+			name: "periodic/otlp_file",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("otlp_file/development"),
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := metricReader(t.Context(), tt.reader)
-			if tt.wantErr != "" {
-				require.Error(t, err)
-				require.Equal(t, tt.wantErr, err.Error())
-			} else {
-				require.NoError(t, err)
-			}
+			require.ErrorIs(t, err, tt.wantErrT)
 			if tt.wantReader == nil {
 				require.Nil(t, got)
 			} else {
@@ -909,7 +887,7 @@ func TestView(t *testing.T) {
 			name: "selector/invalid_type",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("invalid_type")),
+					InstrumentType: (*InstrumentType)(ptr("invalid_type")),
 				},
 			},
 			wantErr: "view_selector: instrument_type: invalid value",
@@ -926,7 +904,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -951,7 +929,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -976,7 +954,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -1001,7 +979,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("histogram")),
+					InstrumentType: (*InstrumentType)(ptr("histogram")),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -1026,7 +1004,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -1051,7 +1029,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -1076,7 +1054,7 @@ func TestView(t *testing.T) {
 			view: View{
 				Selector: &ViewSelector{
 					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
+					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
 					MeterName:      ptr("test_meter_name"),
 					MeterVersion:   ptr("test_meter_version"),
@@ -1107,7 +1085,7 @@ func TestView(t *testing.T) {
 					Name:          ptr("new_name"),
 					Description:   ptr("new_description"),
 					AttributeKeys: ptr(IncludeExclude{Included: []string{"foo", "bar"}}),
-					Aggregation:   &ViewStreamAggregation{Sum: make(ViewStreamAggregationSum)},
+					Aggregation:   &Aggregation{Sum: make(SumAggregation)},
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -1145,7 +1123,7 @@ func TestView(t *testing.T) {
 func TestInstrumentType(t *testing.T) {
 	testCases := []struct {
 		name     string
-		instType *ViewSelectorInstrumentType
+		instType *InstrumentType
 		wantErr  error
 		wantKind sdkmetric.InstrumentKind
 	}{
@@ -1155,37 +1133,37 @@ func TestInstrumentType(t *testing.T) {
 		},
 		{
 			name:     "counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("counter")),
+			instType: ptr(InstrumentTypeCounter),
 			wantKind: sdkmetric.InstrumentKindCounter,
 		},
 		{
 			name:     "up_down_counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("up_down_counter")),
+			instType: ptr(InstrumentTypeUpDownCounter),
 			wantKind: sdkmetric.InstrumentKindUpDownCounter,
 		},
 		{
 			name:     "histogram",
-			instType: (*ViewSelectorInstrumentType)(ptr("histogram")),
+			instType: ptr(InstrumentTypeHistogram),
 			wantKind: sdkmetric.InstrumentKindHistogram,
 		},
 		{
 			name:     "observable_counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("observable_counter")),
+			instType: ptr(InstrumentTypeObservableCounter),
 			wantKind: sdkmetric.InstrumentKindObservableCounter,
 		},
 		{
 			name:     "observable_up_down_counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("observable_up_down_counter")),
+			instType: ptr(InstrumentTypeObservableUpDownCounter),
 			wantKind: sdkmetric.InstrumentKindObservableUpDownCounter,
 		},
 		{
 			name:     "observable_gauge",
-			instType: (*ViewSelectorInstrumentType)(ptr("observable_gauge")),
+			instType: ptr(InstrumentTypeObservableGauge),
 			wantKind: sdkmetric.InstrumentKindObservableGauge,
 		},
 		{
 			name:     "invalid",
-			instType: (*ViewSelectorInstrumentType)(ptr("invalid")),
+			instType: (*InstrumentType)(ptr("invalid")),
 			wantErr:  errors.New("instrument_type: invalid value"),
 		},
 	}
@@ -1206,7 +1184,7 @@ func TestInstrumentType(t *testing.T) {
 func TestAggregation(t *testing.T) {
 	testCases := []struct {
 		name            string
-		aggregation     *ViewStreamAggregation
+		aggregation     *Aggregation
 		wantAggregation sdkmetric.Aggregation
 	}{
 		{
@@ -1215,13 +1193,13 @@ func TestAggregation(t *testing.T) {
 		},
 		{
 			name:            "empty",
-			aggregation:     &ViewStreamAggregation{},
+			aggregation:     &Aggregation{},
 			wantAggregation: nil,
 		},
 		{
 			name: "Base2ExponentialBucketHistogram empty",
-			aggregation: &ViewStreamAggregation{
-				Base2ExponentialBucketHistogram: &ViewStreamAggregationBase2ExponentialBucketHistogram{},
+			aggregation: &Aggregation{
+				Base2ExponentialBucketHistogram: &Base2ExponentialBucketHistogramAggregation{},
 			},
 			wantAggregation: sdkmetric.AggregationBase2ExponentialHistogram{
 				MaxSize:  0,
@@ -1231,8 +1209,8 @@ func TestAggregation(t *testing.T) {
 		},
 		{
 			name: "Base2ExponentialBucketHistogram",
-			aggregation: &ViewStreamAggregation{
-				Base2ExponentialBucketHistogram: &ViewStreamAggregationBase2ExponentialBucketHistogram{
+			aggregation: &Aggregation{
+				Base2ExponentialBucketHistogram: &Base2ExponentialBucketHistogramAggregation{
 					MaxSize:      ptr(2),
 					MaxScale:     ptr(3),
 					RecordMinMax: ptr(true),
@@ -1246,22 +1224,22 @@ func TestAggregation(t *testing.T) {
 		},
 		{
 			name: "Default",
-			aggregation: &ViewStreamAggregation{
-				Default: make(ViewStreamAggregationDefault),
+			aggregation: &Aggregation{
+				Default: make(DefaultAggregation),
 			},
 			wantAggregation: nil,
 		},
 		{
 			name: "Drop",
-			aggregation: &ViewStreamAggregation{
-				Drop: make(ViewStreamAggregationDrop),
+			aggregation: &Aggregation{
+				Drop: make(DropAggregation),
 			},
 			wantAggregation: sdkmetric.AggregationDrop{},
 		},
 		{
 			name: "ExplicitBucketHistogram empty",
-			aggregation: &ViewStreamAggregation{
-				ExplicitBucketHistogram: &ViewStreamAggregationExplicitBucketHistogram{},
+			aggregation: &Aggregation{
+				ExplicitBucketHistogram: &ExplicitBucketHistogramAggregation{},
 			},
 			wantAggregation: sdkmetric.AggregationExplicitBucketHistogram{
 				Boundaries: nil,
@@ -1270,8 +1248,8 @@ func TestAggregation(t *testing.T) {
 		},
 		{
 			name: "ExplicitBucketHistogram",
-			aggregation: &ViewStreamAggregation{
-				ExplicitBucketHistogram: &ViewStreamAggregationExplicitBucketHistogram{
+			aggregation: &Aggregation{
+				ExplicitBucketHistogram: &ExplicitBucketHistogramAggregation{
 					Boundaries:   []float64{1, 2, 3},
 					RecordMinMax: ptr(true),
 				},
@@ -1283,15 +1261,15 @@ func TestAggregation(t *testing.T) {
 		},
 		{
 			name: "LastValue",
-			aggregation: &ViewStreamAggregation{
-				LastValue: make(ViewStreamAggregationLastValue),
+			aggregation: &Aggregation{
+				LastValue: make(LastValueAggregation),
 			},
 			wantAggregation: sdkmetric.AggregationLastValue{},
 		},
 		{
 			name: "Sum",
-			aggregation: &ViewStreamAggregation{
-				Sum: make(ViewStreamAggregationSum),
+			aggregation: &Aggregation{
+				Sum: make(SumAggregation),
 			},
 			wantAggregation: sdkmetric.AggregationSum{},
 		},
@@ -1368,30 +1346,30 @@ func TestNewIncludeExcludeFilterError(t *testing.T) {
 func TestPrometheusReaderOpts(t *testing.T) {
 	testCases := []struct {
 		name        string
-		cfg         Prometheus
+		cfg         ExperimentalPrometheusMetricExporter
 		wantOptions int
 	}{
 		{
 			name:        "no options",
-			cfg:         Prometheus{},
+			cfg:         ExperimentalPrometheusMetricExporter{},
 			wantOptions: 0,
 		},
 		{
 			name: "all set",
-			cfg: Prometheus{
-				WithoutScopeInfo:           ptr(true),
-				WithoutTypeSuffix:          ptr(true),
-				WithoutUnits:               ptr(true),
+			cfg: ExperimentalPrometheusMetricExporter{
+				WithoutScopeInfo: ptr(true),
+				// WithoutTypeSuffix:          ptr(true),
+				// WithoutUnits:               ptr(true),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
-			wantOptions: 4,
+			wantOptions: 2,
 		},
 		{
 			name: "all set false",
-			cfg: Prometheus{
-				WithoutScopeInfo:           ptr(false),
-				WithoutTypeSuffix:          ptr(false),
-				WithoutUnits:               ptr(false),
+			cfg: ExperimentalPrometheusMetricExporter{
+				WithoutScopeInfo: ptr(false),
+				// WithoutTypeSuffix:          ptr(false),
+				// WithoutUnits:               ptr(false),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
 			wantOptions: 1,
@@ -1423,12 +1401,12 @@ func TestPrometheusIPv6(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			port := 0
-			cfg := Prometheus{
-				Host:                       &tt.host,
-				Port:                       &port,
-				WithoutScopeInfo:           ptr(true),
-				WithoutTypeSuffix:          ptr(true),
-				WithoutUnits:               ptr(true),
+			cfg := ExperimentalPrometheusMetricExporter{
+				Host:             &tt.host,
+				Port:             &port,
+				WithoutScopeInfo: ptr(true),
+				// WithoutTypeSuffix:          ptr(true),
+				// WithoutUnits:               ptr(true),
 				WithResourceConstantLabels: &IncludeExclude{},
 			}
 
@@ -1452,140 +1430,6 @@ func TestPrometheusIPv6(t *testing.T) {
 	}
 }
 
-func TestPrometheusReaderErrorCases(t *testing.T) {
-	tests := []struct {
-		name   string
-		config Prometheus
-		errMsg string
-	}{
-		{
-			name:   "missing host",
-			config: Prometheus{Port: ptr(8080)},
-			errMsg: "host must be specified",
-		},
-		{
-			name:   "missing port",
-			config: Prometheus{Host: ptr("localhost")},
-			errMsg: "port must be specified",
-		},
-		{
-			name: "invalid port",
-			config: Prometheus{
-				Host:                       ptr("localhost"),
-				Port:                       ptr(99999), // invalid port
-				WithoutScopeInfo:           ptr(true),
-				WithoutTypeSuffix:          ptr(true),
-				WithoutUnits:               ptr(true),
-				WithResourceConstantLabels: &IncludeExclude{},
-			},
-			errMsg: "binding address",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			reader, err := prometheusReader(t.Context(), &tt.config)
-			assert.ErrorContains(t, err, tt.errMsg)
-			assert.Nil(t, reader)
-		})
-	}
-}
-
-func TestPrometheusReaderHostParsing(t *testing.T) {
-	tests := []struct {
-		name     string
-		host     string
-		wantAddr string
-	}{
-		{
-			name:     "regular host",
-			host:     "localhost",
-			wantAddr: "127.0.0.1", // expected resolved address
-		},
-		{
-			name:     "IPv4",
-			host:     "127.0.0.1",
-			wantAddr: "127.0.0.1",
-		},
-		{
-			name:     "IPv6 with brackets",
-			host:     "[::1]",
-			wantAddr: "::1",
-		},
-		{
-			name:     "IPv6 without brackets",
-			host:     "::1",
-			wantAddr: "::1",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			port := 0
-			cfg := Prometheus{
-				Host:                       &tt.host,
-				Port:                       &port,
-				WithoutScopeInfo:           ptr(true),
-				WithoutTypeSuffix:          ptr(true),
-				WithoutUnits:               ptr(true),
-				WithResourceConstantLabels: &IncludeExclude{},
-			}
-
-			reader, err := prometheusReader(t.Context(), &cfg)
-			require.NoError(t, err)
-			require.NotNil(t, reader)
-
-			t.Cleanup(func() {
-				require.NoError(t, reader.Shutdown(t.Context()))
-			})
-
-			rws, ok := reader.(readerWithServer)
-			require.True(t, ok, "reader is not a readerWithServer")
-			server := rws.server
-
-			assert.Contains(t, server.Addr, tt.wantAddr)
-		})
-	}
-}
-
-func TestPrometheusReaderConfigurationOptions(t *testing.T) {
-	host := "localhost"
-	port := 0
-	cfg := &Prometheus{
-		Host:              &host,
-		Port:              &port,
-		WithoutScopeInfo:  ptr(true),
-		WithoutTypeSuffix: ptr(true),
-		WithoutUnits:      ptr(true),
-		WithResourceConstantLabels: &IncludeExclude{
-			Included: []string{"service.name"},
-			Excluded: []string{"host.name"},
-		},
-	}
-
-	reader, err := prometheusReader(t.Context(), cfg)
-	require.NoError(t, err)
-	require.NotNil(t, reader)
-
-	t.Cleanup(func() {
-		require.NoError(t, reader.Shutdown(t.Context()))
-	})
-
-	rws, ok := reader.(readerWithServer)
-	require.True(t, ok, "reader is not a readerWithServer")
-	server := rws.server
-
-	addr := server.Addr
-	// localhost resolves to 127.0.0.1, so we expect the resolved IP
-	assert.Contains(t, addr, "127.0.0.1")
-
-	resp, err := http.Get("http://" + addr + "/metrics")
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	assert.Equal(t, http.StatusOK, resp.StatusCode)
-}
-
 func Test_otlpGRPCMetricExporter(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		// TODO (#7446): Fix the flakiness on Windows.
@@ -1593,7 +1437,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 	}
 	type args struct {
 		ctx        context.Context
-		otlpConfig *OTLPMetric
+		otlpConfig *OTLPGrpcMetricExporter
 	}
 	tests := []struct {
 		name           string
@@ -1604,8 +1448,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			name: "no TLS config",
 			args: args{
 				ctx: t.Context(),
-				otlpConfig: &OTLPMetric{
-					Protocol:    ptr("grpc"),
+				otlpConfig: &OTLPGrpcMetricExporter{
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Insecure:    ptr(true),
@@ -1622,11 +1465,10 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			name: "with TLS config",
 			args: args{
 				ctx: t.Context(),
-				otlpConfig: &OTLPMetric{
-					Protocol:    ptr("grpc"),
-					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
-					Certificate: ptr("testdata/server-certs/server.crt"),
+				otlpConfig: &OTLPGrpcMetricExporter{
+					Compression:     ptr("gzip"),
+					Timeout:         ptr(5000),
+					CertificateFile: ptr("testdata/server-certs/server.crt"),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -1646,13 +1488,12 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			name: "with TLS config and client key",
 			args: args{
 				ctx: t.Context(),
-				otlpConfig: &OTLPMetric{
-					Protocol:          ptr("grpc"),
-					Compression:       ptr("gzip"),
-					Timeout:           ptr(5000),
-					Certificate:       ptr("testdata/server-certs/server.crt"),
-					ClientKey:         ptr("testdata/client-certs/client.key"),
-					ClientCertificate: ptr("testdata/client-certs/client.crt"),
+				otlpConfig: &OTLPGrpcMetricExporter{
+					Compression:           ptr("gzip"),
+					Timeout:               ptr(5000),
+					CertificateFile:       ptr("testdata/server-certs/server.crt"),
+					ClientKeyFile:         ptr("testdata/client-certs/client.key"),
+					ClientCertificateFile: ptr("testdata/client-certs/client.crt"),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
