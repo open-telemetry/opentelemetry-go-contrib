@@ -1,0 +1,1070 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package otelconf
+
+import (
+	"bytes"
+	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"errors"
+	"net"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"reflect"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/trace"
+	"go.opentelemetry.io/otel/trace/noop"
+	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+)
+
+func TestTracerProvider(t *testing.T) {
+	tests := []struct {
+		name         string
+		cfg          configOptions
+		wantProvider trace.TracerProvider
+		wantErr      error
+	}{
+		{
+			name:         "no-tracer-provider-configured",
+			wantProvider: noop.NewTracerProvider(),
+		},
+		{
+			name: "error-in-config",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					TracerProvider: &TracerProvider{
+						Processors: []SpanProcessor{
+							{
+								Batch:  &BatchSpanProcessor{},
+								Simple: &SimpleSpanProcessor{},
+							},
+						},
+					},
+				},
+			},
+			wantProvider: noop.NewTracerProvider(),
+			wantErr:      errors.Join(errors.New("must not specify multiple span processor type")),
+		},
+		{
+			name: "multiple-errors-in-config",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					TracerProvider: &TracerProvider{
+						Processors: []SpanProcessor{
+							{
+								Batch:  &BatchSpanProcessor{},
+								Simple: &SimpleSpanProcessor{},
+							},
+							{
+								Simple: &SimpleSpanProcessor{
+									Exporter: SpanExporter{
+										Console: Console{},
+										OTLP:    &OTLP{},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantProvider: noop.NewTracerProvider(),
+			wantErr:      errors.Join(errors.New("must not specify multiple span processor type"), errors.New("must not specify multiple exporters")),
+		},
+		{
+			name: "invalid-sampler-config",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					TracerProvider: &TracerProvider{
+						Processors: []SpanProcessor{
+							{
+								Simple: &SimpleSpanProcessor{
+									Exporter: SpanExporter{
+										Console: Console{},
+									},
+								},
+							},
+						},
+						Sampler: &Sampler{},
+					},
+				},
+			},
+			wantProvider: noop.NewTracerProvider(),
+			wantErr:      errors.Join(errInvalidSamplerConfiguration),
+		},
+	}
+	for _, tt := range tests {
+		tp, shutdown, err := tracerProvider(tt.cfg, resource.Default())
+		require.Equal(t, tt.wantProvider, tp)
+		assert.Equal(t, tt.wantErr, err)
+		require.NoError(t, shutdown(t.Context()))
+	}
+}
+
+func TestTracerProviderOptions(t *testing.T) {
+	var calls int
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+		calls++
+	}))
+	defer srv.Close()
+
+	cfg := OpenTelemetryConfiguration{
+		TracerProvider: &TracerProvider{
+			Processors: []SpanProcessor{{
+				Simple: &SimpleSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol: ptr("http/protobuf"),
+							Endpoint: ptr(srv.URL),
+							Insecure: ptr(true),
+						},
+					},
+				},
+			}},
+		},
+	}
+
+	var buf bytes.Buffer
+	stdouttraceExporter, err := stdouttrace.New(stdouttrace.WithWriter(&buf))
+	require.NoError(t, err)
+
+	res := resource.NewSchemaless(attribute.String("foo", "bar"))
+	sdk, err := NewSDK(
+		WithOpenTelemetryConfiguration(cfg),
+		WithTracerProviderOptions(sdktrace.WithSyncer(stdouttraceExporter)),
+		WithTracerProviderOptions(sdktrace.WithResource(res)),
+	)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, sdk.Shutdown(t.Context()))
+	}()
+
+	// The exporter, which we passed in as an extra option to NewSDK,
+	// should be wired up to the provider in addition to the
+	// configuration-based OTLP exporter.
+	tracer := sdk.TracerProvider().Tracer("test")
+	_, span := tracer.Start(t.Context(), "span")
+	span.End()
+	assert.NotZero(t, buf)
+	assert.Equal(t, 1, calls)
+	// Options provided by WithMeterProviderOptions may be overridden
+	// by configuration, e.g. the resource is always defined via
+	// configuration.
+	assert.NotContains(t, buf.String(), "foo")
+}
+
+func TestSpanProcessor(t *testing.T) {
+	consoleExporter, err := stdouttrace.New(
+		stdouttrace.WithPrettyPrint(),
+	)
+	require.NoError(t, err)
+	ctx := t.Context()
+	otlpGRPCExporter, err := otlptracegrpc.New(ctx)
+	require.NoError(t, err)
+	otlpHTTPExporter, err := otlptracehttp.New(ctx)
+	require.NoError(t, err)
+	testCases := []struct {
+		name          string
+		processor     SpanProcessor
+		args          any
+		wantErr       string
+		wantProcessor sdktrace.SpanProcessor
+	}{
+		{
+			name:    "no processor",
+			wantErr: "unsupported span processor type, must be one of simple or batch",
+		},
+		{
+			name: "multiple processor types",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{},
+				},
+				Simple: &SimpleSpanProcessor{},
+			},
+			wantErr: "must not specify multiple span processor type",
+		},
+		{
+			name: "batch processor invalid exporter",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{},
+				},
+			},
+			wantErr: "no valid span exporter",
+		},
+		{
+			name: "batch processor invalid batch size console exporter",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(-1),
+					Exporter: SpanExporter{
+						Console: Console{},
+					},
+				},
+			},
+			wantErr: "invalid batch size -1",
+		},
+		{
+			name: "batch processor invalid export timeout console exporter",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					ExportTimeout: ptr(-2),
+					Exporter: SpanExporter{
+						Console: Console{},
+					},
+				},
+			},
+			wantErr: "invalid export timeout -2",
+		},
+		{
+			name: "batch processor invalid queue size console exporter",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxQueueSize: ptr(-3),
+					Exporter: SpanExporter{
+						Console: Console{},
+					},
+				},
+			},
+			wantErr: "invalid queue size -3",
+		},
+		{
+			name: "batch processor invalid schedule delay console exporter",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					ScheduleDelay: ptr(-4),
+					Exporter: SpanExporter{
+						Console: Console{},
+					},
+				},
+			},
+			wantErr: "invalid schedule delay -4",
+		},
+		{
+			name: "batch processor with multiple exporters",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						Console: Console{},
+						OTLP:    &OTLP{},
+					},
+				},
+			},
+			wantErr: "must not specify multiple exporters",
+		},
+		{
+			name: "batch processor console exporter",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						Console: Console{},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(consoleExporter),
+		},
+		{
+			name: "batch/otlp-exporter-invalid-protocol",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol: ptr("http/invalid"),
+						},
+					},
+				},
+			},
+			wantErr: "unsupported protocol \"http/invalid\"",
+		},
+		{
+			name: "batch/otlp-grpc-exporter-no-endpoint",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-exporter",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("http://localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-exporter-socket-endpoint",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("unix:collector.sock"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-good-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-bad-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: "could not create certificate authority chain from certificate",
+		},
+		{
+			name: "batch/otlp-grpc-bad-client-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:          ptr("grpc"),
+							Endpoint:          ptr("localhost:4317"),
+							Compression:       ptr("gzip"),
+							Timeout:           ptr(1000),
+							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: "could not use client certificate: tls: failed to find any PEM data in certificate input",
+		},
+		{
+			name: "batch/otlp-grpc-bad-headerslist",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							HeadersList: ptr("==="),
+						},
+					},
+				},
+			},
+			wantErr: "invalid headers list: invalid key: \"\"",
+		},
+		{
+			name: "batch/otlp-grpc-exporter-no-scheme",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpGRPCExporter),
+		},
+		{
+			name: "batch/otlp-grpc-invalid-endpoint",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr(" "),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "parse \" \": invalid URI for request",
+		},
+		{
+			name: "batch/otlp-grpc-invalid-compression",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("grpc"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("invalid"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "unsupported compression \"invalid\"",
+		},
+		{
+			name: "batch/otlp-http-exporter",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("http://localhost:4318"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpHTTPExporter),
+		},
+		{
+			name: "batch/otlp-http-good-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpHTTPExporter),
+		},
+		{
+			name: "batch/otlp-http-bad-ca-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: "could not create certificate authority chain from certificate",
+		},
+		{
+			name: "batch/otlp-http-bad-client-certificate",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:          ptr("http/protobuf"),
+							Endpoint:          ptr("localhost:4317"),
+							Compression:       ptr("gzip"),
+							Timeout:           ptr(1000),
+							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+						},
+					},
+				},
+			},
+			wantErr: "could not use client certificate: tls: failed to find any PEM data in certificate input",
+		},
+		{
+			name: "batch/otlp-http-bad-headerslist",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							HeadersList: ptr("==="),
+						},
+					},
+				},
+			},
+			wantErr: "invalid headers list: invalid key: \"\"",
+		},
+		{
+			name: "batch/otlp-http-exporter-with-path",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("http://localhost:4318/path/123"),
+							Compression: ptr("none"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpHTTPExporter),
+		},
+		{
+			name: "batch/otlp-http-exporter-no-endpoint",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpHTTPExporter),
+		},
+		{
+			name: "batch/otlp-http-exporter-no-scheme",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpHTTPExporter),
+		},
+		{
+			name: "batch/otlp-http-invalid-endpoint",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr(" "),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "parse \" \": invalid URI for request",
+		},
+		{
+			name: "batch/otlp-http-none-compression",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
+							Compression: ptr("none"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpHTTPExporter),
+		},
+		{
+			name: "batch/otlp-http-invalid-compression",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					MaxExportBatchSize: ptr(0),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(0),
+					ScheduleDelay:      ptr(0),
+					Exporter: SpanExporter{
+						OTLP: &OTLP{
+							Protocol:    ptr("http/protobuf"),
+							Endpoint:    ptr("localhost:4318"),
+							Compression: ptr("invalid"),
+							Timeout:     ptr(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: ptr("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "unsupported compression \"invalid\"",
+		},
+		{
+			name: "simple/no-exporter",
+			processor: SpanProcessor{
+				Simple: &SimpleSpanProcessor{
+					Exporter: SpanExporter{},
+				},
+			},
+			wantErr: "no valid span exporter",
+		},
+		{
+			name: "simple/console-exporter",
+			processor: SpanProcessor{
+				Simple: &SimpleSpanProcessor{
+					Exporter: SpanExporter{
+						Console: Console{},
+					},
+				},
+			},
+			wantProcessor: sdktrace.NewSimpleSpanProcessor(consoleExporter),
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := spanProcessor(t.Context(), tt.processor)
+			if tt.wantErr != "" {
+				require.Error(t, err)
+				require.Equal(t, tt.wantErr, err.Error())
+			} else {
+				require.NoError(t, err)
+			}
+			if tt.wantProcessor == nil {
+				require.Nil(t, got)
+			} else {
+				require.Equal(t, reflect.TypeOf(tt.wantProcessor), reflect.TypeOf(got))
+				var fieldName string
+				switch reflect.TypeOf(tt.wantProcessor).String() {
+				case "*trace.simpleSpanProcessor":
+					fieldName = "exporter"
+				default:
+					fieldName = "e"
+				}
+				wantExporterType := reflect.Indirect(reflect.ValueOf(tt.wantProcessor)).FieldByName(fieldName).Elem().Type()
+				gotExporterType := reflect.Indirect(reflect.ValueOf(got)).FieldByName(fieldName).Elem().Type()
+				require.Equal(t, wantExporterType.String(), gotExporterType.String())
+			}
+		})
+	}
+}
+
+func TestSampler(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		sampler     *Sampler
+		wantSampler sdktrace.Sampler
+		wantError   error
+	}{
+		{
+			name:        "no sampler configuration, return default",
+			sampler:     nil,
+			wantSampler: sdktrace.ParentBased(sdktrace.AlwaysSample()),
+		},
+		{
+			name:        "invalid sampler configuration, return error",
+			sampler:     &Sampler{},
+			wantSampler: nil,
+			wantError:   errInvalidSamplerConfiguration,
+		},
+		{
+			name: "sampler configuration always on",
+			sampler: &Sampler{
+				AlwaysOn: SamplerAlwaysOn{},
+			},
+			wantSampler: sdktrace.AlwaysSample(),
+		},
+		{
+			name: "sampler configuration always off",
+			sampler: &Sampler{
+				AlwaysOff: SamplerAlwaysOff{},
+			},
+			wantSampler: sdktrace.NeverSample(),
+		},
+		{
+			name: "sampler configuration trace ID ratio",
+			sampler: &Sampler{
+				TraceIDRatioBased: &SamplerTraceIDRatioBased{
+					Ratio: ptr(0.54),
+				},
+			},
+			wantSampler: sdktrace.TraceIDRatioBased(0.54),
+		},
+		{
+			name: "sampler configuration trace ID ratio no ratio",
+			sampler: &Sampler{
+				TraceIDRatioBased: &SamplerTraceIDRatioBased{},
+			},
+			wantSampler: sdktrace.TraceIDRatioBased(1),
+		},
+		{
+			name: "sampler configuration parent based no options",
+			sampler: &Sampler{
+				ParentBased: &SamplerParentBased{},
+			},
+			wantSampler: sdktrace.ParentBased(sdktrace.AlwaysSample()),
+		},
+		{
+			name: "sampler configuration parent based many options",
+			sampler: &Sampler{
+				ParentBased: &SamplerParentBased{
+					Root: &Sampler{
+						AlwaysOff: SamplerAlwaysOff{},
+					},
+					RemoteParentNotSampled: &Sampler{
+						AlwaysOn: SamplerAlwaysOn{},
+					},
+					RemoteParentSampled: &Sampler{
+						TraceIDRatioBased: &SamplerTraceIDRatioBased{
+							Ratio: ptr(0.009),
+						},
+					},
+					LocalParentNotSampled: &Sampler{
+						AlwaysOff: SamplerAlwaysOff{},
+					},
+					LocalParentSampled: &Sampler{
+						TraceIDRatioBased: &SamplerTraceIDRatioBased{
+							Ratio: ptr(0.05),
+						},
+					},
+				},
+			},
+			wantSampler: sdktrace.ParentBased(
+				sdktrace.NeverSample(),
+				sdktrace.WithLocalParentNotSampled(sdktrace.NeverSample()),
+				sdktrace.WithLocalParentSampled(sdktrace.TraceIDRatioBased(0.05)),
+				sdktrace.WithRemoteParentNotSampled(sdktrace.AlwaysSample()),
+				sdktrace.WithRemoteParentSampled(sdktrace.TraceIDRatioBased(0.009)),
+			),
+		},
+		{
+			name: "sampler configuration with many errors",
+			sampler: &Sampler{
+				ParentBased: &SamplerParentBased{
+					Root:                   &Sampler{},
+					RemoteParentNotSampled: &Sampler{},
+					RemoteParentSampled:    &Sampler{},
+					LocalParentNotSampled:  &Sampler{},
+					LocalParentSampled:     &Sampler{},
+				},
+			},
+			wantError: errors.Join(
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+				errInvalidSamplerConfiguration,
+			),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := sampler(tt.sampler)
+			if tt.wantError != nil {
+				require.Error(t, err)
+				require.EqualError(t, err, tt.wantError.Error())
+			} else {
+				require.NoError(t, err)
+			}
+
+			require.Equal(t, tt.wantSampler, got)
+		})
+	}
+}
+
+func Test_otlpGRPCTraceExporter(t *testing.T) {
+	type args struct {
+		ctx        context.Context
+		otlpConfig *OTLP
+	}
+	tests := []struct {
+		name           string
+		args           args
+		grpcServerOpts func() ([]grpc.ServerOption, error)
+	}{
+		{
+			name: "no TLS config",
+			args: args{
+				ctx: t.Context(),
+				otlpConfig: &OTLP{
+					Protocol:    ptr("grpc"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(5000),
+					Insecure:    ptr(true),
+					Headers: []NameStringValuePair{
+						{Name: "test", Value: ptr("test1")},
+					},
+				},
+			},
+			grpcServerOpts: func() ([]grpc.ServerOption, error) {
+				return []grpc.ServerOption{}, nil
+			},
+		},
+		{
+			name: "with TLS config",
+			args: args{
+				ctx: t.Context(),
+				otlpConfig: &OTLP{
+					Protocol:    ptr("grpc"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(5000),
+					Certificate: ptr("testdata/server-certs/server.crt"),
+					Headers: []NameStringValuePair{
+						{Name: "test", Value: ptr("test1")},
+					},
+				},
+			},
+			grpcServerOpts: func() ([]grpc.ServerOption, error) {
+				opts := []grpc.ServerOption{}
+				tlsCreds, err := credentials.NewServerTLSFromFile("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				if err != nil {
+					return nil, err
+				}
+				opts = append(opts, grpc.Creds(tlsCreds))
+				return opts, nil
+			},
+		},
+		{
+			name: "with TLS config and client key",
+			args: args{
+				ctx: t.Context(),
+				otlpConfig: &OTLP{
+					Protocol:          ptr("grpc"),
+					Compression:       ptr("gzip"),
+					Timeout:           ptr(5000),
+					Certificate:       ptr("testdata/server-certs/server.crt"),
+					ClientKey:         ptr("testdata/client-certs/client.key"),
+					ClientCertificate: ptr("testdata/client-certs/client.crt"),
+					Headers: []NameStringValuePair{
+						{Name: "test", Value: ptr("test1")},
+					},
+				},
+			},
+			grpcServerOpts: func() ([]grpc.ServerOption, error) {
+				opts := []grpc.ServerOption{}
+				cert, err := tls.LoadX509KeyPair("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				if err != nil {
+					return nil, err
+				}
+				caCert, err := os.ReadFile("testdata/ca.crt")
+				if err != nil {
+					return nil, err
+				}
+				caCertPool := x509.NewCertPool()
+				caCertPool.AppendCertsFromPEM(caCert)
+				tlsCreds := credentials.NewTLS(&tls.Config{
+					Certificates: []tls.Certificate{cert},
+					ClientCAs:    caCertPool,
+					ClientAuth:   tls.RequireAndVerifyClientCert,
+				})
+				opts = append(opts, grpc.Creds(tlsCreds))
+				return opts, nil
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			n, err := net.Listen("tcp4", "localhost:0")
+			require.NoError(t, err)
+
+			// We need to manually construct the endpoint using the port on which the server is listening.
+			//
+			// n.Addr() always returns 127.0.0.1 instead of localhost.
+			// But our certificate is created with CN as 'localhost', not '127.0.0.1'.
+			// So we have to manually form the endpoint as "localhost:<port>".
+			_, port, err := net.SplitHostPort(n.Addr().String())
+			require.NoError(t, err)
+			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
+
+			serverOpts, err := tt.grpcServerOpts()
+			require.NoError(t, err)
+
+			startGRPCTraceCollector(t, n, serverOpts)
+
+			exporter, err := otlpGRPCSpanExporter(tt.args.ctx, tt.args.otlpConfig)
+			require.NoError(t, err)
+
+			input := tracetest.SpanStubs{
+				{
+					Name: "test-span",
+				},
+			}
+
+			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+				assert.NoError(collect, exporter.ExportSpans(t.Context(), input.Snapshots()))
+			}, 10*time.Second, 1*time.Second)
+		})
+	}
+}
+
+// grpcTraceCollector is an OTLP gRPC server that collects all requests it receives.
+type grpcTraceCollector struct {
+	v1.UnimplementedTraceServiceServer
+}
+
+var _ v1.TraceServiceServer = (*grpcTraceCollector)(nil)
+
+// startGRPCTraceCollector returns a *grpcTraceCollector that is listening at the provided
+// endpoint.
+//
+// If endpoint is an empty string, the returned collector will be listening on
+// the localhost interface at an OS chosen port.
+func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions []grpc.ServerOption) {
+	srv := grpc.NewServer(serverOptions...)
+	c := &grpcTraceCollector{}
+
+	v1.RegisterTraceServiceServer(srv, c)
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- srv.Serve(listener) }()
+
+	t.Cleanup(func() {
+		srv.GracefulStop()
+		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			assert.NoError(t, err)
+		}
+	})
+}
+
+// Export handles the export req.
+func (*grpcTraceCollector) Export(
+	_ context.Context,
+	_ *v1.ExportTraceServiceRequest,
+) (*v1.ExportTraceServiceResponse, error) {
+	return &v1.ExportTraceServiceResponse{}, nil
+}

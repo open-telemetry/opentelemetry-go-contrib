@@ -21,13 +21,14 @@ import (
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
-func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, err error) {
+func setupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 	var shutdownFuncs []func(context.Context) error
+	var err error
 
 	// shutdown calls cleanup functions registered via shutdownFuncs.
 	// The errors from the calls are joined.
 	// Each registered cleanup will be invoked once.
-	shutdown = func(ctx context.Context) error {
+	shutdown := func(ctx context.Context) error {
 		var err error
 		for _, fn := range shutdownFuncs {
 			err = errors.Join(err, fn(ctx))
@@ -46,10 +47,10 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	otel.SetTextMapPropagator(prop)
 
 	// Set up trace provider.
-	tracerProvider, err := newTraceProvider()
+	tracerProvider, err := newtracerProvider()
 	if err != nil {
 		handleErr(err)
-		return
+		return shutdown, err
 	}
 	shutdownFuncs = append(shutdownFuncs, tracerProvider.Shutdown)
 	otel.SetTracerProvider(tracerProvider)
@@ -58,7 +59,7 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	meterProvider, err := newMeterProvider()
 	if err != nil {
 		handleErr(err)
-		return
+		return shutdown, err
 	}
 	shutdownFuncs = append(shutdownFuncs, meterProvider.Shutdown)
 	otel.SetMeterProvider(meterProvider)
@@ -67,12 +68,12 @@ func setupOTelSDK(ctx context.Context) (shutdown func(context.Context) error, er
 	loggerProvider, err := newLoggerProvider()
 	if err != nil {
 		handleErr(err)
-		return
+		return shutdown, err
 	}
 	shutdownFuncs = append(shutdownFuncs, loggerProvider.Shutdown)
 	global.SetLoggerProvider(loggerProvider)
 
-	return
+	return shutdown, err
 }
 
 func newPropagator() propagation.TextMapPropagator {
@@ -82,19 +83,19 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-func newTraceProvider() (*trace.TracerProvider, error) {
+func newtracerProvider() (*trace.TracerProvider, error) {
 	traceExporter, err := stdouttrace.New(
 		stdouttrace.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}
 
-	traceProvider := trace.NewTracerProvider(
+	tracerProvider := trace.NewTracerProvider(
 		trace.WithBatcher(traceExporter,
 			// Default is 5s. Set to 1s for demonstrative purposes.
 			trace.WithBatchTimeout(time.Second)),
 	)
-	return traceProvider, nil
+	return tracerProvider, nil
 }
 
 func newMeterProvider() (*metric.MeterProvider, error) {

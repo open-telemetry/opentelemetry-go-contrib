@@ -9,14 +9,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	awsSignerV4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"github.com/aws/aws-sdk-go-v2/aws"
-	awsSignerV4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
-
 	"go.opentelemetry.io/otel/propagation"
 )
 
@@ -25,15 +23,15 @@ type mockPropagator struct {
 	injectValue string
 }
 
-func (p mockPropagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
+func (p mockPropagator) Inject(_ context.Context, carrier propagation.TextMapCarrier) {
 	carrier.Set(p.injectKey, p.injectValue)
 }
 
-func (p mockPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (mockPropagator) Extract(context.Context, propagation.TextMapCarrier) context.Context {
 	return context.TODO()
 }
 
-func (p mockPropagator) Fields() []string {
+func (mockPropagator) Fields() []string {
 	return []string{}
 }
 
@@ -60,11 +58,11 @@ func Test_otelMiddlewares_finalizeMiddlewareAfter(t *testing.T) {
 		},
 	}
 
-	next := middleware.HandlerFunc(func(ctx context.Context, input interface{}) (output interface{}, metadata middleware.Metadata, err error) {
+	next := middleware.HandlerFunc(func(context.Context, any) (output any, metadata middleware.Metadata, err error) {
 		return nil, middleware.Metadata{}, nil
 	})
 
-	_, _, err = stack.Finalize.HandleMiddleware(context.Background(), input, next)
+	_, _, err = stack.Finalize.HandleMiddleware(t.Context(), input, next)
 	require.NoError(t, err)
 
 	// Assert header has been updated with injected values
@@ -95,11 +93,11 @@ func Test_otelMiddlewares_finalizeMiddlewareAfter_Noop(t *testing.T) {
 	// Non request input should trigger noop
 	input := &struct{}{}
 
-	next := middleware.HandlerFunc(func(ctx context.Context, input interface{}) (output interface{}, metadata middleware.Metadata, err error) {
+	next := middleware.HandlerFunc(func(context.Context, any) (output any, metadata middleware.Metadata, err error) {
 		return nil, middleware.Metadata{}, nil
 	})
 
-	_, _, err = stack.Finalize.HandleMiddleware(context.Background(), input, next)
+	_, _, err = stack.Finalize.HandleMiddleware(t.Context(), input, next)
 	assert.NoError(t, err)
 }
 
@@ -111,10 +109,10 @@ func (mockCredentialsProvider) Retrieve(context.Context) (aws.Credentials, error
 
 type mockHTTPPresigner struct{}
 
-func (f mockHTTPPresigner) PresignHTTP(
-	ctx context.Context, credentials aws.Credentials, r *http.Request,
-	payloadHash string, service string, region string, signingTime time.Time,
-	optFns ...func(*awsSignerV4.SignerOptions),
+func (mockHTTPPresigner) PresignHTTP(
+	context.Context, aws.Credentials, *http.Request,
+	string, string, string, time.Time,
+	...func(*awsSignerV4.SignerOptions),
 ) (
 	url string, signedHeader http.Header, err error,
 ) {
@@ -153,11 +151,11 @@ func Test_otelMiddlewares_presignedRequests(t *testing.T) {
 		},
 	}
 
-	next := middleware.HandlerFunc(func(ctx context.Context, input interface{}) (output interface{}, metadata middleware.Metadata, err error) {
+	next := middleware.HandlerFunc(func(context.Context, any) (output any, metadata middleware.Metadata, err error) {
 		return nil, middleware.Metadata{}, nil
 	})
 
-	ctx := awsSignerV4.SetPayloadHash(context.Background(), "mock-hash")
+	ctx := awsSignerV4.SetPayloadHash(t.Context(), "mock-hash")
 	url, _, err := stack.Finalize.HandleMiddleware(ctx, input, next)
 
 	// verify we actually went through the presign flow
@@ -180,7 +178,7 @@ func Test_Span_name(t *testing.T) {
 	operation1 := ""
 	operation2 := "Operation"
 
-	assert.Equal(t, "", spanName(serviceID1, operation1))
+	assert.Empty(t, spanName(serviceID1, operation1))
 	assert.Equal(t, spanName(serviceID1, operation2), "."+operation2)
 	assert.Equal(t, spanName(serviceID2, operation1), serviceID2)
 	assert.Equal(t, spanName(serviceID2, operation2), serviceID2+"."+operation2)

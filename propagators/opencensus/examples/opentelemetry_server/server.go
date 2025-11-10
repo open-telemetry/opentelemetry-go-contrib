@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Opentelemetry_server exemplifies the use of the OpenCensus propagator in an
+// OpenTelemetry server.
 package main // import "go.opentelemetry.io/otel/bridge/opencensus/examples/grpc/server"
 
 import (
@@ -12,13 +14,13 @@ import (
 
 	pb "go.opencensus.io/examples/grpc/proto"
 	"go.opencensus.io/trace"
+	"go.opentelemetry.io/otel"
+	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/contrib/propagators/opencensus"
-	"go.opentelemetry.io/otel"
-	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 const address = "localhost:50051"
@@ -27,7 +29,7 @@ const address = "localhost:50051"
 type server struct{}
 
 // SayHello implements helloworld.GreeterServer.
-func (s *server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
+func (*server) SayHello(ctx context.Context, in *pb.HelloRequest) (*pb.HelloReply, error) {
 	_, span := trace.StartSpan(ctx, "sleep")
 	time.Sleep(time.Duration(rand.Float64() * float64(time.Second))) //nolint:gosec // Ignoring G404: Use of weak random number generator (math/rand instead of crypto/rand)
 	span.End()

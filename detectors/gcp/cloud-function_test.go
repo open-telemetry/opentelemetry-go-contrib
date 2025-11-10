@@ -4,16 +4,13 @@
 package gcp
 
 import (
-	"context"
 	"errors"
-	"os"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 var errTest = errors.New("testError")
@@ -57,20 +54,8 @@ type want struct {
 }
 
 func TestCloudFunctionDetect(t *testing.T) {
-	oldValue, ok := os.LookupEnv(gcpFunctionNameKey)
-	if !ok {
-		err := os.Setenv(gcpFunctionNameKey, functionName)
-		if err != nil {
-			t.Error("unable to set environment variable ", err)
-		}
-	}
-	defer func() {
-		if !ok {
-			_ = os.Unsetenv(gcpFunctionNameKey)
-		} else {
-			_ = os.Setenv(gcpFunctionNameKey, oldValue)
-		}
-	}()
+	t.Setenv(gcpFunctionNameKey, functionName)
+
 	tests := []struct {
 		name     string
 		cr       *CloudRun
@@ -94,7 +79,7 @@ func TestCloudFunctionDetect(t *testing.T) {
 			name: "error in reading region",
 			cr: &CloudRun{
 				mc: &metaDataClientImpl{
-					get: func(key string) (string, error) {
+					get: func(string) (string, error) {
 						return "", errTest
 					},
 				},
@@ -111,7 +96,7 @@ func TestCloudFunctionDetect(t *testing.T) {
 					projectID: func() (string, error) {
 						return projectIDValue, nil
 					},
-					get: func(key string) (string, error) {
+					get: func(string) (string, error) {
 						return regionValue, nil
 					},
 				},
@@ -133,7 +118,7 @@ func TestCloudFunctionDetect(t *testing.T) {
 		detector := cloudFunction{
 			cloudRun: test.cr,
 		}
-		res, err := detector.Detect(context.Background())
+		res, err := detector.Detect(t.Context())
 		if !errors.Is(err, test.expected.err) {
 			t.Fatalf("got unexpected failure: %v", err)
 		} else if diff := cmp.Diff(test.expected.res, res); diff != "" {
@@ -143,17 +128,8 @@ func TestCloudFunctionDetect(t *testing.T) {
 }
 
 func TestNotOnCloudFunction(t *testing.T) {
-	oldValue, ok := os.LookupEnv(gcpFunctionNameKey)
-	if ok {
-		_ = os.Unsetenv(gcpFunctionNameKey)
-	}
-	defer func() {
-		if ok {
-			_ = os.Setenv(gcpFunctionNameKey, oldValue)
-		}
-	}()
 	detector := NewCloudFunction()
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 	if err != nil {
 		t.Errorf("expected cloud function detector to return error as nil, but returned %v", err)
 	} else if res != nil {

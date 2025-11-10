@@ -1,16 +1,22 @@
 name: 'Request reviews from code owners of a PR'
 on:
   pull_request_target:
-    types: [opened, synchronize]
+    types:
+      - opened
+      - synchronize
+      - ready_for_review
+
+permissions:
+  contents: read
 
 jobs:
   request_codeowners_review:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
-    if: ${{ github.repository_owner == 'open-telemetry' }}
+    if: ${{ github.repository_owner == 'open-telemetry' && github.event.pull_request.draft == false }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
 
       - name: Run request_codeowners_review.sh
         run: ./tools/request_codeowners_review.sh

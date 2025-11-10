@@ -4,17 +4,15 @@
 package azurevm
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 func TestDetect(t *testing.T) {
@@ -104,7 +102,7 @@ func TestDetect(t *testing.T) {
 		detector := New()
 		detector.endpoint = svr.URL
 
-		azureResource, err := detector.Detect(context.Background())
+		azureResource, err := detector.Detect(t.Context())
 
 		svr.Close()
 

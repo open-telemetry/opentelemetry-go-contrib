@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	api "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/log"
 )
@@ -33,7 +32,7 @@ type emitArgs struct {
 
 type enabledArgs struct {
 	Ctx   context.Context
-	Param api.EnabledParameters
+	Param log.EnabledParameters
 }
 
 type processor struct {
@@ -45,12 +44,18 @@ type processor struct {
 	ShutdownCalls   []context.Context
 }
 
+// Compile time assertion that processor implements log.Processor and log.FilterProcessor.
+var (
+	_ log.Processor       = (*processor)(nil)
+	_ log.FilterProcessor = (*processor)(nil)
+)
+
 func (p *processor) OnEmit(ctx context.Context, r *log.Record) error {
 	p.OnEmitCalls = append(p.OnEmitCalls, emitArgs{ctx, r})
 	return p.ReturnErr
 }
 
-func (p *processor) Enabled(ctx context.Context, param api.EnabledParameters) bool {
+func (p *processor) Enabled(ctx context.Context, param log.EnabledParameters) bool {
 	p.EnabledCalls = append(p.EnabledCalls, enabledArgs{ctx, param})
 	return true
 }
@@ -77,20 +82,20 @@ func TestLogProcessorDynamicSeverity(t *testing.T) {
 	wrapped := new(processor)
 	p := NewLogProcessor(wrapped, sev)
 
-	ctx := context.Background()
-	params := &api.EnabledParameters{Severity: api.SeverityDebug}
-	assert.False(t, p.Enabled(ctx, *params), api.SeverityDebug.String())
+	ctx := t.Context()
+	params := log.EnabledParameters{Severity: api.SeverityDebug}
+	assert.False(t, p.Enabled(ctx, params), api.SeverityDebug.String())
 
 	params.Severity = api.SeverityInfo
-	assert.True(t, p.Enabled(ctx, *params), api.SeverityInfo.String())
+	assert.True(t, p.Enabled(ctx, params), api.SeverityInfo.String())
 
 	sev.Set(SeverityError)
 
 	params.Severity = api.SeverityInfo
-	assert.False(t, p.Enabled(ctx, *params), api.SeverityInfo.String())
+	assert.False(t, p.Enabled(ctx, params), api.SeverityInfo.String())
 
 	params.Severity = api.SeverityError
-	assert.True(t, p.Enabled(ctx, *params), api.SeverityError.String())
+	assert.True(t, p.Enabled(ctx, params), api.SeverityError.String())
 }
 
 func TestLogProcessorOnEmit(t *testing.T) {
@@ -98,7 +103,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 		wrapped := &processor{ReturnErr: assert.AnError}
 
 		p := NewLogProcessor(wrapped, SeverityTrace1)
-		ctx := context.Background()
+		ctx := t.Context()
 		r := &log.Record{}
 		for _, sev := range severities {
 			r.SetSeverity(sev)
@@ -116,7 +121,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 		wrapped := &processor{ReturnErr: assert.AnError}
 
 		p := NewLogProcessor(wrapped, apiSev(api.SeverityFatal4+1))
-		ctx := context.Background()
+		ctx := t.Context()
 		r := &log.Record{}
 		for _, sev := range severities {
 			r.SetSeverity(sev)
@@ -134,8 +139,8 @@ func TestLogProcessorEnabled(t *testing.T) {
 		wrapped := &processor{}
 
 		p := NewLogProcessor(wrapped, SeverityTrace1)
-		ctx := context.Background()
-		param := api.EnabledParameters{}
+		ctx := t.Context()
+		param := log.EnabledParameters{}
 		for _, sev := range severities {
 			param.Severity = sev
 			assert.True(t, p.Enabled(ctx, param), sev.String())
@@ -152,8 +157,8 @@ func TestLogProcessorEnabled(t *testing.T) {
 		wrapped := &processor{}
 
 		p := NewLogProcessor(wrapped, apiSev(api.SeverityFatal4+1))
-		ctx := context.Background()
-		param := api.EnabledParameters{}
+		ctx := t.Context()
+		param := log.EnabledParameters{}
 		for _, sev := range severities {
 			param.Severity = sev
 			assert.False(t, p.Enabled(ctx, param), sev.String())
@@ -169,17 +174,17 @@ func TestLogProcessorEnabled(t *testing.T) {
 
 		pruned := struct{ log.Processor }{wrapped} // Remove the Enabled method.
 		p := NewLogProcessor(pruned, SeverityInfo)
-		ctx := context.Background()
-		params := &api.EnabledParameters{}
+		ctx := t.Context()
+		params := log.EnabledParameters{}
 
 		params.Severity = api.SeverityDebug
-		assert.False(t, p.Enabled(ctx, *params))
+		assert.False(t, p.Enabled(ctx, params))
 
 		params.Severity = api.SeverityInfo
-		assert.True(t, p.Enabled(ctx, *params))
+		assert.True(t, p.Enabled(ctx, params))
 
 		params.Severity = api.SeverityError
-		assert.True(t, p.Enabled(ctx, *params))
+		assert.True(t, p.Enabled(ctx, params))
 
 		assert.Empty(t, wrapped.EnabledCalls)
 	})
@@ -189,7 +194,7 @@ func TestLogProcessorForceFlushPassthrough(t *testing.T) {
 	wrapped := &processor{ReturnErr: assert.AnError}
 
 	p := NewLogProcessor(wrapped, SeverityTrace1)
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.ErrorIs(t, p.ForceFlush(ctx), assert.AnError)
 	assert.Len(t, wrapped.ForceFlushCalls, 1, "ForceFlush not passed-through")
 }
@@ -198,7 +203,7 @@ func TestLogProcessorShutdownPassthrough(t *testing.T) {
 	wrapped := &processor{ReturnErr: assert.AnError}
 
 	p := NewLogProcessor(wrapped, SeverityTrace1)
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.ErrorIs(t, p.Shutdown(ctx), assert.AnError)
 	assert.Len(t, wrapped.ShutdownCalls, 1, "Shutdown not passed-through")
 }
@@ -210,10 +215,10 @@ func TestLogProcessorNilSeverity(t *testing.T) {
 
 func TestLogProcessorNilDownstream(t *testing.T) {
 	p := NewLogProcessor(nil, SeverityTrace1)
-	ctx := context.Background()
+	ctx := t.Context()
 	r := new(log.Record)
 	r.SetSeverity(api.SeverityTrace1)
-	param := api.EnabledParameters{Severity: api.SeverityTrace1}
+	param := log.EnabledParameters{Severity: api.SeverityTrace1}
 	assert.NotPanics(t, func() {
 		assert.NoError(t, p.OnEmit(ctx, r))
 		assert.False(t, p.Enabled(ctx, param))
@@ -225,12 +230,12 @@ func TestLogProcessorNilDownstream(t *testing.T) {
 func BenchmarkLogProcessor(b *testing.B) {
 	r := new(log.Record)
 	r.SetSeverity(api.SeverityTrace)
-	param := api.EnabledParameters{Severity: api.SeverityTrace}
-	ctx := context.Background()
+	param := log.EnabledParameters{Severity: api.SeverityTrace}
+	ctx := b.Context()
 
 	type combo interface {
 		log.Processor
-		filterProcessor
+		log.FilterProcessor
 	}
 
 	run := func(p combo) func(b *testing.B) {
@@ -238,7 +243,7 @@ func BenchmarkLogProcessor(b *testing.B) {
 			var err error
 			var enabled bool
 			b.ReportAllocs()
-			for n := 0; n < b.N; n++ {
+			for range b.N {
 				enabled = p.Enabled(ctx, param)
 				err = p.OnEmit(ctx, r)
 			}

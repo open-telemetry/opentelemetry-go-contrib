@@ -29,11 +29,10 @@ bridges/otelslog                                                        @open-te
 bridges/otellogrus/                                                     @open-telemetry/go-approvers @dmathieu @pellared
 bridges/prometheus/                                                     @open-telemetry/go-approvers @dashpole
 bridges/otelzap/                                                        @open-telemetry/go-approvers @pellared @khushijain21
-bridges/otellogr/                                                       @open-telemetry/go-approvers @scorpionknifes @pellared
+bridges/otellogr/                                                       @open-telemetry/go-approvers @pellared
 
-config/                                                                 @open-telemetry/go-approvers @pellared @codeboten
-
-detectors/aws/ec2                                                       @open-telemetry/go-approvers @pyohannes @akats7
+detectors/autodetect                                                    @open-telemetry/go-approvers @MrAlias
+detectors/aws/ec2/v2                                                    @open-telemetry/go-approvers @akats7
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes @akats7
 detectors/aws/eks                                                       @open-telemetry/go-approvers @pyohannes
 detectors/aws/lambda                                                    @open-telemetry/go-approvers @akats7
@@ -45,16 +44,19 @@ exporters/autoexport                                                    @open-te
 instrumentation/github.com/aws/aws-lambda-go/otellambda/                @open-telemetry/go-approvers @akats7
 instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/                   @open-telemetry/go-approvers @akats7
 instrumentation/github.com/emicklei/go-restful/otelrestful/             @open-telemetry/go-approvers @dashpole
-instrumentation/github.com/gin-gonic/gin/otelgin/                       @open-telemetry/go-approvers @akats7
+instrumentation/github.com/gin-gonic/gin/otelgin/                       @open-telemetry/go-approvers @akats7 @flc1125
 instrumentation/github.com/gorilla/mux/otelmux/                         @open-telemetry/go-approvers @akats7
-instrumentation/github.com/labstack/echo/otelecho/                      @open-telemetry/go-approvers @scorpionknifes
-instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/            @open-telemetry/go-approvers
+instrumentation/github.com/labstack/echo/otelecho/                      @open-telemetry/go-approvers
+instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/            @open-telemetry/go-approvers @prestonvasquez
+instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo/         @open-telemetry/go-approvers @prestonvasquez
 instrumentation/google.golang.org/grpc/otelgrpc/                        @open-telemetry/go-approvers @dashpole
 
 instrumentation/host/                                                   @open-telemetry/go-approvers @dmathieu
 instrumentation/net/http/httptrace/otelhttptrace/                       @open-telemetry/go-approvers @dmathieu
 instrumentation/net/http/otelhttp/                                      @open-telemetry/go-approvers @dmathieu
 instrumentation/runtime/                                                @open-telemetry/go-approvers @dmathieu @dashpole
+
+otelconf/                                                               @open-telemetry/go-approvers @pellared @codeboten
 
 processors/baggagecopy                                                  @open-telemetry/go-approvers @codeboten @MikeGoldsmith
 processors/minsev                                                       @open-telemetry/go-approvers @MrAlias
@@ -70,4 +72,3 @@ samplers/jaegerremote/                                                  @open-te
 samplers/probability/consistent/                                        @open-telemetry/go-approvers
 
 zpages/                                                                 @open-telemetry/go-approvers @dashpole
-instrgen/                                                               @open-telemetry/go-approvers @open-telemetry/go-instrumentation-approvers @MrAlias @pdelewski

@@ -6,16 +6,18 @@ package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"fmt"
 	"net/http"
-	"sync"
+	"time"
 
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconvutil"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconv"
 )
 
 const (
@@ -44,81 +46,70 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	if cfg.spanNameFormatter == nil {
 		cfg.spanNameFormatter = defaultSpanNameFunc
 	}
-
+	if cfg.MeterProvider == nil {
+		cfg.MeterProvider = otel.GetMeterProvider()
+	}
+	meter := cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+	)
 	return func(handler http.Handler) http.Handler {
 		return traceware{
-			service:           service,
-			tracer:            tracer,
-			propagators:       cfg.Propagators,
-			handler:           handler,
-			spanNameFormatter: cfg.spanNameFormatter,
-			publicEndpoint:    cfg.PublicEndpoint,
-			publicEndpointFn:  cfg.PublicEndpointFn,
-			filters:           cfg.Filters,
+			service:            service,
+			tracer:             tracer,
+			propagators:        cfg.Propagators,
+			handler:            handler,
+			spanNameFormatter:  cfg.spanNameFormatter,
+			publicEndpoint:     cfg.PublicEndpoint,
+			publicEndpointFn:   cfg.PublicEndpointFn,
+			filters:            cfg.Filters,
+			meter:              meter,
+			semconv:            semconv.NewHTTPServer(meter),
+			metricAttributesFn: cfg.MetricAttributesFn,
 		}
 	}
 }
 
 type traceware struct {
-	service           string
-	tracer            trace.Tracer
-	propagators       propagation.TextMapPropagator
-	handler           http.Handler
-	spanNameFormatter func(string, *http.Request) string
-	publicEndpoint    bool
-	publicEndpointFn  func(*http.Request) bool
-	filters           []Filter
+	service            string
+	tracer             trace.Tracer
+	propagators        propagation.TextMapPropagator
+	handler            http.Handler
+	spanNameFormatter  func(string, *http.Request) string
+	publicEndpoint     bool
+	publicEndpointFn   func(*http.Request) bool
+	filters            []Filter
+	meter              metric.Meter
+	semconv            semconv.HTTPServer
+	metricAttributesFn func(*http.Request) []attribute.KeyValue
 }
 
-type recordingResponseWriter struct {
-	writer  http.ResponseWriter
-	written bool
-	status  int
+// validMethods are all the OTel recognized HTTP methods.
+var validMethods = map[string]struct{}{
+	http.MethodGet:     {},
+	http.MethodHead:    {},
+	http.MethodPost:    {},
+	http.MethodPut:     {},
+	http.MethodPatch:   {},
+	http.MethodDelete:  {},
+	http.MethodConnect: {},
+	http.MethodOptions: {},
+	http.MethodTrace:   {},
 }
 
-var rrwPool = &sync.Pool{
-	New: func() interface{} {
-		return &recordingResponseWriter{}
-	},
+// defaultSpanNameFunc returns the semconv based default span name.
+func defaultSpanNameFunc(routeName string, r *http.Request) string {
+	method := r.Method
+	if _, ok := validMethods[method]; !ok {
+		method = "HTTP"
+	}
+	return method + " " + routeName
 }
-
-func getRRW(writer http.ResponseWriter) *recordingResponseWriter {
-	rrw := rrwPool.Get().(*recordingResponseWriter)
-	rrw.written = false
-	rrw.status = http.StatusOK
-	rrw.writer = httpsnoop.Wrap(writer, httpsnoop.Hooks{
-		Write: func(next httpsnoop.WriteFunc) httpsnoop.WriteFunc {
-			return func(b []byte) (int, error) {
-				if !rrw.written {
-					rrw.written = true
-				}
-				return next(b)
-			}
-		},
-		WriteHeader: func(next httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
-			return func(statusCode int) {
-				if !rrw.written {
-					rrw.written = true
-					rrw.status = statusCode
-				}
-				next(statusCode)
-			}
-		},
-	})
-	return rrw
-}
-
-func putRRW(rrw *recordingResponseWriter) {
-	rrw.writer = nil
-	rrwPool.Put(rrw)
-}
-
-// defaultSpanNameFunc just reuses the route name as the span name.
-func defaultSpanNameFunc(routeName string, _ *http.Request) string { return routeName }
 
 // ServeHTTP implements the http.Handler interface. It does the actual
 // tracing of the request.
 func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	requestStartTime := time.Now()
 	for _, f := range tw.filters {
 		if !f(r) {
 			// Simply pass through to the handler if a filter rejects the request
@@ -128,21 +119,8 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ctx := tw.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-	routeStr := ""
-	route := mux.CurrentRoute(r)
-	if route != nil {
-		var err error
-		routeStr, err = route.GetPathTemplate()
-		if err != nil {
-			routeStr, err = route.GetPathRegexp()
-			if err != nil {
-				routeStr = ""
-			}
-		}
-	}
-
 	opts := []trace.SpanStartOption{
-		trace.WithAttributes(semconvutil.HTTPServerRequest(tw.service, r)...),
+		trace.WithAttributes(tw.semconv.RequestTraceAttrs(tw.service, r, semconv.RequestTraceAttrsOpts{})...),
 		trace.WithSpanKind(trace.SpanKindServer),
 	}
 
@@ -154,21 +132,95 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	routeStr := extractRoute(r)
+
 	if routeStr == "" {
 		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
 	} else {
-		rAttr := semconv.HTTPRoute(routeStr)
+		rAttr := tw.semconv.Route(routeStr)
 		opts = append(opts, trace.WithAttributes(rAttr))
 	}
-	spanName := tw.spanNameFormatter(routeStr, r)
-	ctx, span := tw.tracer.Start(ctx, spanName, opts...)
+	ctx, span := tw.tracer.Start(ctx, tw.spanNameFormatter(routeStr, r), opts...)
 	defer span.End()
-	r2 := r.WithContext(ctx)
-	rrw := getRRW(w)
-	defer putRRW(rrw)
-	tw.handler.ServeHTTP(rrw.writer, r2)
-	if rrw.status > 0 {
-		span.SetAttributes(semconv.HTTPStatusCode(rrw.status))
+
+	readRecordFunc := func(int64) {}
+	// if request body is nil or NoBody, we don't want to mutate the body as it
+	// will affect the identity of it in an unforeseeable way because we assert
+	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
+	bw := request.NewBodyWrapper(r.Body, readRecordFunc)
+	if r.Body != nil && r.Body != http.NoBody {
+		r.Body = bw
 	}
-	span.SetStatus(semconvutil.HTTPServerStatus(rrw.status))
+
+	writeRecordFunc := func(int64) {}
+	rww := request.NewRespWriterWrapper(w, writeRecordFunc)
+
+	// Wrap w to use our ResponseWriter methods while also exposing
+	// other interfaces that w may implement (http.CloseNotifier,
+	// http.Flusher, http.Hijacker, http.Pusher, io.ReaderFrom).
+	w = httpsnoop.Wrap(w, httpsnoop.Hooks{
+		Header: func(httpsnoop.HeaderFunc) httpsnoop.HeaderFunc {
+			return rww.Header
+		},
+		Write: func(httpsnoop.WriteFunc) httpsnoop.WriteFunc {
+			return rww.Write
+		},
+		WriteHeader: func(httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+			return rww.WriteHeader
+		},
+		Flush: func(httpsnoop.FlushFunc) httpsnoop.FlushFunc {
+			return rww.Flush
+		},
+	})
+
+	tw.handler.ServeHTTP(w, r.WithContext(ctx))
+	statusCode := rww.StatusCode()
+	span.SetStatus(tw.semconv.Status(statusCode))
+	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
+		StatusCode: statusCode,
+		ReadBytes:  bw.BytesRead(),
+		ReadError:  bw.Error(),
+		WriteBytes: rww.BytesWritten(),
+		WriteError: rww.Error(),
+	})...)
+
+	// Use floating point division here for higher precision (instead of Millisecond method).
+	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+
+	metricAttributes := semconv.MetricAttributes{
+		Req:                  r,
+		StatusCode:           statusCode,
+		Route:                routeStr,
+		AdditionalAttributes: tw.metricAttributesFromRequest(r),
+	}
+
+	tw.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
+		ServerName:       tw.service,
+		ResponseSize:     rww.BytesWritten(),
+		MetricAttributes: metricAttributes,
+		MetricData: semconv.MetricData{
+			RequestSize: bw.BytesRead(),
+			ElapsedTime: elapsedTime,
+		},
+	})
+}
+
+func (tw traceware) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
+	var attributeForRequest []attribute.KeyValue
+	if tw.metricAttributesFn != nil {
+		attributeForRequest = tw.metricAttributesFn(r)
+	}
+	return attributeForRequest
+}
+
+func extractRoute(r *http.Request) string {
+	routeStr := r.Pattern
+
+	if routeStr == "" {
+		route := mux.CurrentRoute(r)
+		if route != nil {
+			routeStr, _ = route.GetPathTemplate()
+		}
+	}
+	return routeStr
 }

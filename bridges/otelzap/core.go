@@ -36,19 +36,19 @@ package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
 import (
 	"context"
 	"slices"
-	"strings"
 
-	"go.uber.org/zap/zapcore"
-
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"go.uber.org/zap/zapcore"
 )
 
 type config struct {
-	provider  log.LoggerProvider
-	version   string
-	schemaURL string
+	provider   log.LoggerProvider
+	version    string
+	schemaURL  string
+	attributes []attribute.KeyValue
 }
 
 func newConfig(options []Option) config {
@@ -93,6 +93,15 @@ func WithSchemaURL(schemaURL string) Option {
 	})
 }
 
+// WithAttributes returns an [Option] that configures the instrumentation scope
+// attributes of the [log.Logger] used by a [Core].
+func WithAttributes(attributes ...attribute.KeyValue) Option {
+	return optFunc(func(c config) config {
+		c.attributes = attributes
+		return c
+	})
+}
+
 // WithLoggerProvider returns an [Option] that configures [log.LoggerProvider]
 // used by a [Core] to create its [log.Logger].
 //
@@ -129,6 +138,9 @@ func NewCore(name string, opts ...Option) *Core {
 	}
 	if cfg.schemaURL != "" {
 		loggerOpts = append(loggerOpts, log.WithSchemaURL(cfg.schemaURL))
+	}
+	if cfg.attributes != nil {
+		loggerOpts = append(loggerOpts, log.WithInstrumentationAttributes(cfg.attributes...))
 	}
 
 	logger := cfg.provider.Logger(name, loggerOpts...)
@@ -171,7 +183,7 @@ func (o *Core) clone() *Core {
 }
 
 // Sync flushes buffered logs (if any).
-func (o *Core) Sync() error {
+func (*Core) Sync() error {
 	return nil
 }
 
@@ -201,21 +213,20 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 
 	r.AddAttributes(o.attr...)
 	if ent.Caller.Defined {
-		funcName, namespace := splitFuncName(ent.Caller.Function)
 		r.AddAttributes(
-			log.String(string(semconv.CodeFilepathKey), ent.Caller.File),
+			log.String(string(semconv.CodeFilePathKey), ent.Caller.File),
 			log.Int(string(semconv.CodeLineNumberKey), ent.Caller.Line),
-			log.String(string(semconv.CodeFunctionKey), funcName),
-			log.String(string(semconv.CodeNamespaceKey), namespace),
+			log.String(string(semconv.CodeFunctionNameKey), ent.Caller.Function),
 		)
 	}
 	if ent.Stack != "" {
 		r.AddAttributes(log.String(string(semconv.CodeStacktraceKey), ent.Stack))
 	}
+	emitCtx := o.ctx
 	if len(fields) > 0 {
 		ctx, attrbuf := convertField(fields)
 		if ctx != nil {
-			o.ctx = ctx
+			emitCtx = ctx
 		}
 		r.AddAttributes(attrbuf...)
 	}
@@ -224,7 +235,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	if ent.LoggerName != "" {
 		logger = o.provider.Logger(ent.LoggerName, o.opts...)
 	}
-	logger.Emit(o.ctx, r)
+	logger.Emit(emitCtx, r)
 	return nil
 }
 
@@ -262,16 +273,4 @@ func convertLevel(level zapcore.Level) log.Severity {
 	default:
 		return log.SeverityUndefined
 	}
-}
-
-// splitFuncName splits package path-qualified function name into
-// function name and package full name (namespace). E.g. it splits
-// "github.com/my/repo/pkg.foo" into
-// "foo" and "github.com/my/repo/pkg".
-func splitFuncName(f string) (string, string) {
-	i := strings.LastIndexByte(f, '.')
-	if i < 0 {
-		return "", ""
-	}
-	return f[i+1:], f[:i]
 }

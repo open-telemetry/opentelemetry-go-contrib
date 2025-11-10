@@ -11,9 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/smithy-go/middleware"
-
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 // AWS attributes.
@@ -23,10 +22,10 @@ const (
 	AWSSystemVal string        = "aws-api"
 )
 
-var servicemap = map[string]AttributeSetter{
-	dynamodb.ServiceID: DynamoDBAttributeSetter,
-	sqs.ServiceID:      SQSAttributeSetter,
-	sns.ServiceID:      SNSAttributeSetter,
+var servicemap = map[string]AttributeBuilder{
+	dynamodb.ServiceID: DynamoDBAttributeBuilder,
+	sqs.ServiceID:      SQSAttributeBuilder,
+	sns.ServiceID:      SNSAttributeBuilder,
 }
 
 // SystemAttr return the AWS RPC system attribute.
@@ -54,13 +53,13 @@ func RequestIDAttr(requestID string) attribute.KeyValue {
 	return RequestIDKey.String(requestID)
 }
 
-// DefaultAttributeSetter checks to see if there are service specific attributes available to set for the AWS service.
+// DefaultAttributeBuilder checks to see if there are service specific attributes available to set for the AWS service.
 // If there are service specific attributes available then they will be included.
-func DefaultAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
+func DefaultAttributeBuilder(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue {
 	serviceID := v2Middleware.GetServiceID(ctx)
 
 	if fn, ok := servicemap[serviceID]; ok {
-		return fn(ctx, in)
+		return fn(ctx, in, out)
 	}
 
 	return []attribute.KeyValue{}

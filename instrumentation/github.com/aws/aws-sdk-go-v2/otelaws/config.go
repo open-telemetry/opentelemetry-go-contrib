@@ -11,7 +11,7 @@ import (
 type config struct {
 	TracerProvider    trace.TracerProvider
 	TextMapPropagator propagation.TextMapPropagator
-	AttributeSetter   []AttributeSetter
+	AttributeBuilders []AttributeBuilder
 }
 
 // Option applies an option value.
@@ -47,10 +47,10 @@ func WithTextMapPropagator(propagator propagation.TextMapPropagator) Option {
 	})
 }
 
-// WithAttributeSetter specifies an attribute setter function for setting service specific attributes.
-// If none is specified, the service will be determined by the DefaultAttributeSetter function and the corresponding attributes will be included.
-func WithAttributeSetter(attributesetters ...AttributeSetter) Option {
+// WithAttributeBuilder specifies an attribute setter function for setting service specific attributes.
+// If none is specified, the service will be determined by the DefaultAttributeBuilder function and the corresponding attributes will be included.
+func WithAttributeBuilder(attributeBuilders ...AttributeBuilder) Option {
 	return optionFunc(func(cfg *config) {
-		cfg.AttributeSetter = append(cfg.AttributeSetter, attributesetters...)
+		cfg.AttributeBuilders = append(cfg.AttributeBuilders, attributeBuilders...)
 	})
 }

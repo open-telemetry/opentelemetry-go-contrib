@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package handler provides an HTTP handler.
 package handler // import "go.opentelemetry.io/contrib/examples/passthrough/handler"
 
 import (
@@ -52,7 +53,7 @@ func (h *Handler) HandleHTTPReq(r *http.Request) {
 // makeOutgoingRequest mimics what an instrumented http client does.
 func (h *Handler) makeOutgoingRequest(ctx context.Context) {
 	// make a new http request
-	r, err := http.NewRequest("", "", nil)
+	r, err := http.NewRequest("", "", http.NoBody)
 	if err != nil {
 		panic(err)
 	}

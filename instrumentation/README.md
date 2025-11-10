@@ -2,37 +2,6 @@
 
 Code contained in this directory contains instrumentation for 3rd-party Go packages and some packages from the standard library.
 
-## New Instrumentation
-
-**Do not submit pull requests for new instrumentation without reading the following.**
-
-This project is dedicated to promoting the development of quality instrumentation using OpenTelemetry.
-To achieve this goal, we recognize that the instrumentation needs to be written using the best practices of OpenTelemetry, but also by developers that understand the package they are instrumenting.
-Additionally, the produced instrumentation needs to be maintained and evolved.
-
-The size of the OpenTelemetry Go developer community is not large enough to support an ever growing amount of instrumentation.
-Therefore, to reach our goal, we have the following recommendations for where instrumentation packages should live.
-
-1. Native to the instrumented package
-2. A dedicated public repository
-3. Here in the opentelemetry-go-contrib repository
-
-If possible, OpenTelemetry instrumentation should be included in the instrumented package.
-This will ensure the instrumentation reaches all package users, and is continuously maintained by developers that understand the package.
-
-If instrumentation cannot be directly included in the package it is instrumenting, it should be hosted in a dedicated public repository owned by its maintainer(s).
-This will appropriately assign maintenance responsibilities for the instrumentation and ensure these maintainers have the needed privilege to maintain the code.
-
-The last place instrumentation should be hosted is here in this repository.
-Maintaining instrumentation here hampers the development of OpenTelemetry for Go and therefore should be avoided.
-When instrumentation cannot be included in a target package and there is good reason to not host it in a separate and dedicated repository an [instrumentation request](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/new/choose) should be filed.
-The instrumentation request needs to be accepted before any pull requests for the instrumentation can be considered for merging.
-
-Regardless of where instrumentation is hosted, it needs to be discoverable.
-The [OpenTelemetry registry](https://opentelemetry.io/registry/)
-exists to ensure that instrumentation is discoverable.
-You can find out how to add instrumentation to the registry [here](https://github.com/open-telemetry/opentelemetry.io#adding-a-project-to-the-opentelemetry-registry).
-
 ## Instrumentation Packages
 
 The [OpenTelemetry registry](https://opentelemetry.io/registry/) is the best place to discover instrumentation packages.
@@ -48,6 +17,7 @@ The following instrumentation packages are provided for popular Go packages and 
 | [github.com/gorilla/mux](./github.com/gorilla/mux/otelmux) |  | ✓ |
 | [github.com/labstack/echo](./github.com/labstack/echo/otelecho) |  | ✓ |
 | [go.mongodb.org/mongo-driver](./go.mongodb.org/mongo-driver/mongo/otelmongo) |  | ✓ |
+| [go.mongodb.org/mongo-driver/v2](./go.mongodb.org/mongo-driver/v2/mongo/otelmongo) |  | ✓ |
 | [google.golang.org/grpc](./google.golang.org/grpc/otelgrpc) | ✓ | ✓ |
 | [host](./host) | ✓ |  |
 | [net/http](./net/http/otelhttp) | ✓ | ✓ |

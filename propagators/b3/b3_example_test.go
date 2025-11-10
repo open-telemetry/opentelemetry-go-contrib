@@ -4,8 +4,9 @@
 package b3_test
 
 import (
-	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
+
+	"go.opentelemetry.io/contrib/propagators/b3"
 )
 
 func ExampleNew() {

@@ -21,7 +21,7 @@ func TestDeprecatedRuntimeMetrics(t *testing.T) {
 	t.Run("False", run(setenv(key, "False"), assertEnabled(DeprecatedRuntimeMetrics, false)))
 	t.Run("FALSE", run(setenv(key, "FALSE"), assertEnabled(DeprecatedRuntimeMetrics, false)))
 	t.Run("1", run(setenv(key, "1"), assertEnabled(DeprecatedRuntimeMetrics, true)))
-	t.Run("empty", run(assertEnabled(DeprecatedRuntimeMetrics, true)))
+	t.Run("empty", run(assertEnabled(DeprecatedRuntimeMetrics, false)))
 }
 
 func run(steps ...func(*testing.T)) func(*testing.T) {
@@ -33,7 +33,7 @@ func run(steps ...func(*testing.T)) func(*testing.T) {
 	}
 }
 
-func setenv(k, v string) func(t *testing.T) { //nolint:unparam
+func setenv(k, v string) func(t *testing.T) { //nolint:unparam // ignore linter
 	return func(t *testing.T) { t.Setenv(k, v) }
 }
 

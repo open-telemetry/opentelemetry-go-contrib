@@ -10,16 +10,354 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Generate server metrics with semantic conventions v1.26 in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
+- `ParseYAML` in `go.opentelemetry.io/contrib/otelconf` now supports environment variables substitution in the format `${[env:]VAR_NAME[:-defaultvalue]}`. (#6215)
+- WithOnError option for otelecho middleware in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` to specify the behavior when an error occurs. (#8025)
+- Introduce v1.0.0-rc.2 model in `go.opentelemetry.io/contrib/otelconf`. (#8031)
+- Add unmarshaling and validation for `CardinalityLimits` and `SpanLimits` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8043)
+- Add unmarshaling and validation for `BatchLogRecordProcessor`, `BatchSpanProcessor`, and `PeriodicMetricReader` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8049)
+- Add unmarshaling and validation for `TextMapPropagator` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8052)
+- Add unmarshaling and validation for `OTLPHttpExporter`, `OTLPGrpcExporter`, `OTLPGrpcMetricExporter` and `OTLPHttpMetricExporter` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8112)
+- Add a `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7986)
+- Add unmarshaling and validation for `AttributeType`, `AttributeNameValue`, `SimpleSpanProcessor`, `SimpleLogRecordProcessor`, `ZipkinSpanExporter`, `NameStringValuePair`, `InstrumentType`, `ExperimentalPeerInstrumentationServiceMappingElem`, `ExporterDefaultHistogramAggregation`, `PullMetricReader` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8127)
+
+### Changed
+
+- Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8035)
+
+### Fixed
+
+- Fix issue in `otelgin` middleware where temporary files for multipart/form-data were not being removed. (#6609)
+
+### Deprecated
+
+- `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.
+  The route is already added automatically for spans.
+  For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8117)
+
+### Removed
+
+- Drop support for [Go 1.23]. (#7831)
+- Remove deprecated `go.opentelemetry.io/contrib/detectors/aws/ec2` module, please use `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` instead. (#7841)
+- Remove the deprecated `Extract` and `Inject` functions from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7952)
+- Add the `http.route` metric attribute to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7966)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.38.0/2.0.0/0.63.0/0.32.0/0.18.0/0.13.0/0.11.0/0.10.0] - 2025-08-29
+
+This release is the last to support [Go 1.23].
+The next release will require at least [Go 1.24].
+
+### Added
+
+- Add v2 version of AWS EC2 detector `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` due to deprecation of `github.com/aws/aws-sdk-go`. (#6961)
+- Add the unit `ns` to deprecated runtime metrics `process.runtime.go.gc.pause_total_ns` and `process.runtime.go.gc.pause_ns` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#7490)
+- The `go.opentelemetry.io/contrib/detectors/autodetect` package is added to automatically compose user defined `resource.Detector`s at runtime. (#7522)
+- Add the `WithLoggerProviderOptions`, `WithMeterProviderOptions` and `WithTracerProviderOptions` options to `NewSDK` to allow passing custom options to providers in `go.opentelemetry.io/contrib/otelconf`. (#7552)
+- Set `SeverityText` field to logrus hook in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#7553)
+- Add the `WithTraceAttributeFn` option to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7556)
+- Add support for HTTP server metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. (#7668)
+- Support testing of [Go 1.25]. (#7732)
+
+### Changed
+
+- Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7551)
+- Transform attribute values of `go.opentelemetry.io/otel/attribute.Value` and `go.opentelemetry.io/otel/log.Value` types to appropriate `go.opentelemetry.io/otel/log.Value` type instead of `log.StringValue` in the modules below. (#7660)
+  - `go.opentelemetry.io/contrib/bridges/otellogr`
+  - `go.opentelemetry.io/contrib/bridges/otellogrus`
+  - `go.opentelemetry.io/contrib/bridges/otelslog`
+  - `go.opentelemetry.io/contrib/bridges/otelzap`
+- The `Severity` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, `encoding.TextAppender`, `json.Marshaler`, and `json.Unmarshaler` interfaces. (#7652)
+- The `SeverityVar` type from `go.opentelemetry.io/contrib/processors/minsev` now implements the `fmt.Stringer`, `encoding.TextMarshaler`, `encoding.TextUnmarshaler`, and `encoding.TextAppender` interfaces. (#7652)
+- Change the faas.max_memory unit to be bytes instead of MB to comply with the semantic conventions in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#7745)
+- `Severity.Severity()` in `go.opentelemetry.io/contrib/processors/minsev` now returns `log.SeverityTrace1` for severities less than `minsev.SeverityTrace1` and `log.SeverityFatal4` for severities greater than `minsev.SeverityFatal4` instead of `log.SeverityUndefined`.
+  All other conversions are the same. (#7748)
+
+### Fixed
+
+- Improve the ECS detector correctness in `go.opentelemetry.io/contrib/detectors/aws/ecs`. (#7607)
+
+### Deprecated
+
+- `WithSpanOptions` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is deprecated.
+  It is only used by the deprecated interceptor, and is unused by `NewClientHandler` and `NewServerHandler`. (#7601)
+- `Extract` and `Inject` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` are deprecated.
+  These functions were initially exposed in the public API, but are now considered unnecessary. (#7689)
+- The `go.opentelemetry.io/contrib/detectors/aws/ec2` package is deprecated, use `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` instead. (#7725)
+
+### Removed
+
+- Remove support for the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable as well as support for semantic conventions v1.20.0 in the modules below. (#7584)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+- The deprecated `StreamClientInterceptor` function from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed. (#7646)
+
+## [1.37.0/0.62.0/0.31.0/0.17.0/0.12.0/0.10.0/0.9.0] - 2025-06-25
+
+### Added
+
+- Add the `WithPublicEndpoint` and `WithPublicEndpointFn` options to `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7407)
+
+### Changed
+
+- `go.opentelemetry.io/contrib/instrumentation/runtime` now produces the new metrics by default. Set `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=true` environment variable to additionally produce the deprecated metrics. (#7418)
+- The semantic conventions have been upgraded from `v1.30.0` to `v1.34.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7361)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/detectors/aws/ec2`. (#7373, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/detectors/aws/eks`. (#7375, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/detectors/aws/ecs`. (#7374, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#7376, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. (#7377, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#7361, #7484)
+- The semantic conventions have been upgraded from `v1.27.0` to `v1.34.0` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#7387, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7389, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/detectors/gcp`. (#7378, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#7383, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7383, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7383, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#7383, #7484)
+- The semantic conventions have been upgraded from `v1.26.0` to `v1.34.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#7383, #7484)
+- The semantic conventions have been upgraded in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` to `v1.34.0`. (#7393, #7484)
+- The semantic conventions have been upgraded in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` to `v1.34.0`. (#7393, #7484)
+- The semantic conventions have been upgraded in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` to `v1.34.0`. (#7394, #7484)
+  - The `messaging.system=AmazonSQS` attribute has been corrected to `messaging.system=aws.sqs`.
+  - The `net.peer.addr` attribute key has been upgraded to `server.address`.
+  - The `http.status_code` attribute key has been upgraded to `http.response.status_code`.
+  - The `db.system=dynamodb` attribute has been corrected to `db.system.name=aws.dynamodb`.
+  - The deprecated `messaging.operation.type=publish` attribute has been corrected to `messaging.operation.type=send`.
+- The semantic conventions have been upgraded from `v1.21.0` to `v1.34.0` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#7400, #7484)
+- The semantic conventions in `go.opentelemetry.io/contrib/instrumentation/host` have been upgraded to `v1.34.0`. (#7390, #7484)
+  - The description of `process.cpu.time` is updated to comply with semantic conventions.
+  - `process.cpu.time` now uses the `state` attribute instead of `cpu.mode`.
+  - The `system.cpu.time` metric is renamed to `cpu.time`.
+  - `cpu.time` now uses the `state` attribute instead of `cpu.mode`.
+  - `system.memory.usage` now uses the `state` attribute instead of `system.memory.state`.
+  - `system.memory.utilization` now uses the `state` attribute instead of `system.memory.state`.
+  - The `system.memory.state` attribute (now `state`) value of `available` is now `free` instead.
+
+### Deprecated
+
+- `AttributeCPUTimeUser` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeCPUTimeSystem` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeCPUTimeOther` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeCPUTimeIdle` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeMemoryAvailable` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeMemoryUsed` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeNetworkTransmit` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+- `AttributeNetworkReceive` in `go.opentelemetry.io/contrib/instrumentation/host` is deprecated.
+  Use `go.opentelemetry.io/otel/semconv` instead. (#7390)
+
+### Fixed
+
+- Fix EKS detector erroring outside of Kubernetes in `go.opentelemetry.io/contrib/detectors/aws/eks`. (#7483)
+- Fix data race when writing log entries with `context.Context` fields in `go.opentelemetry.io/contrib/bridges/otelzap`. (#7368)
+- Fix nil pointer dereference when `ClientTracer` did not have a span in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#7464)
+- Record all non-failure metrics on transport round trip errors in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#7146)
+
+### Removed
+
+- The deprecated `StreamServerInterceptor` function from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed. (#7362)
+
+## [1.36.0/0.61.0/0.30.0/0.16.0/0.11.0/0.9.0/0.8.0] - 2025-05-21
+
+### Added
+
+- `http.route` attribute to otelhttp server request spans, when `net/http.Request.Pattern` is set in the modules below.  (#6905, #6937)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+- Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#6962)
+- Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#6965)
+- Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#6966)
+- Add `WithAttributes` option to set instrumentation scope attributes on the created `log.Logger` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#6967)
+- Add the `WithGinMetricAttributes` option to allow setting dynamic, per-request metric attributes based on `*gin.Context` in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6932)
+- Use Gin's own `ClientIP` method to detect the client's IP, which supports custom proxy headers in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6095)
+- Added test for Fields in `go.opentelemetry.io/contrib/propagators/jaeger`. (#7119)
+- Allow configuring samplers in `go.opentelemetry.io/contrib/otelconf`. (#7148)
+- Slog log bridge now sets `SeverityText` attribute using source value in `go.opentelemetry.io/contrib/bridges/otelslog`. (#7198)
+- Add `http.route` metric attribute in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7275)
+- Add the `WithSpanStartOptions` option to add custom options to new spans `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7261)
+- Add instrumentation support for `go.mongodb.org/mongo-driver/v2` in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#6539)
+- Rerun the span name formatter after the request ran if a `req.Pattern` is set, so the span name can include it in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#7192)
+
+### Changed
+
+- Jaeger remote sampler's probabilistic strategy now uses the same sampling algorithm as `trace.TraceIDRatioBased` in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#6892)
+- Switched the default for `OTEL_SEMCONV_STABILITY_OPT_IN` to emit the v1.26.0 semantic conventions by default in the following modules.
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+  The `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable can be still used to emit both the v1.20.0 and v1.26.0 semantic conventions.
+  It is however impossible to emit only the 1.20.0 semantic conventions, as the next release will drop support for that environment variable. (#6899)
+- Improve performance by reducing allocations for http request when using `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` in the modules below. (#7180)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+
+- Update the Jaeger remote sampler to use "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2" in  `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#7061)
+- Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7186)
+- Update `http.route` attribute to support `request.Pattern` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7108)
+- Change the default span name to be `GET /path` so it complies with the HTTP semantic conventions in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6381)
+- Set `url.scheme` attribute to the request URL.Scheme when possible for HTTP client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#6938)
+- The semantic conventions have been upgraded from `v1.17.0` to `v1.30.0` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7270)
+  - All `net.peer.*` and `net.host.*` attributes are now set to correct `server.*` attributes.
+  - No `net.socket.*` attributes are set.
+- Only sample spans when `Sampled=1` in `go.opentelemetry.io/contrib/propagators/aws/xray`. (#7318)
+
+### Fixed
+
+- Record request duration in seconds rather than milliseconds for semconv v1.26.0, per [the specifications](https://github.com/open-telemetry/semantic-conventions/blob/6533b8a39e03e6925e080d5ca39234035cf87e70/docs/non-normative/http-migration.md#http-client-duration-metric) in the following packages. (#6942)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+- Check for TLS related options to be set before creating TLS config in `go.opentelemetry.io/contrib/otelconf`. (#6984)
+- Fixed handling of the `OTEL_SEMCONV_STABILITY_OPT_IN` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#7215)
+- Support mixed categories for `OTEL_SEMCONV_STABILITY_OPT_IN` opt-in in the following packages. (#7246)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`.
+  - `go.opentelemetry.io/contrib/instrumentation/gin-gonic/gin/otelgin`.
+  - `go.opentelemetry.io/contrib/instrumentation/gorilla/mux/otelmux`.
+  - `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`.
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`.
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+
+### Removed
+
+- Drop support for [Go 1.22]. (#6853)
+- The deprecated `go.opentelemetry.io/contrib/config` package is removed, use `go.opentelemetry.io/contrib/otelconf` instead. (#6894)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`, use `Version` function instead. (#7058)
+- The deprecated `SemVersion` function in `go.opentelemetry.io/contrib/samplers/probability/consistent` is removed, use `Version` instead. (#7072)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/test` package, use `Version` instead. (#7077)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, use `Version` function instead. (#7084)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, use `Version` function instead. (#7085)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/test`, use `Version` function instead. (#7142)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/test`, use `Version` function instead. (#7086)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`, use `Version` function instead. (#7140)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/test`, use `Version` function instead. (#7087)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`, use `Version` function instead. (#7089)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/test`, use `Version` function instead. (#7090)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`, use `Version` function instead. (#7091)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/test`, use `Version` function instead. (#7092)
+- The deprecated `UnaryServerInterceptor` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed, use `NewServerHandler` instead. (#7115)
+- The deprecated `DynamoDBAttributeSetter` function is removed `opentelemetry-go-contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/dynamodbattributes.go` , use `Version` function instead.(#7128)
+- The deprecated `SNSAttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use `SNSAttributeBuilder` function instead. (#7136)
+- The deprecated `AttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use the `AttributeBuilder` function instead. (#7137)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/zpages`, use `Version` function instead. (#7147)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/samplers/jaegerremote`, use `Version` function instead. (#7147)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/propagators/opencensus`, use `Version` function instead. (#7147)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/runtime`, use `Version` function instead. (#7147)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, use `Version` function instead. (#7154)
+- The deprecated `DefaultAttributeSetter` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` is removed, use the `DefaultAttributeBuilder` function instead. (#7127)
+- The deprecated `UnaryClientInterceptor` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` use `NewClientHandler` function instead. (#7125)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, use `Version` function instead. (#7167)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, use `Version` function instead. (#7144)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/test`, use `Version` function instead. (#7144)
+- The deprecated `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters/interceptor` package is removed, use `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters` instead. (#7110)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`, use `Version` function instead. (#7143)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/test`, use `Version` function instead. (#7143)
+- The deprecated `SQSAttributeSetter` function is removed in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` package, use `SQSAttributeBuilder` instead. (#7145)
+- The deprecated `SemVersion` function is removed in `go.opentelemetry.io/contrib/instrumentation/host` package, use `Version` instead. (#7203)
+- The `GRPCStatusCodeKey` constant from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` is removed.
+  Use `semconv.RPCGRPCStatusCodeKey` from `go.opentelemetry.io/otel/semconv/*` instead. (#7270)
+
+## [1.35.0/0.60.0/0.29.0/0.15.0/0.10.0/0.8.0/0.7.0] - 2025-03-05
+
+This release is the last to support [Go 1.22].
+The next release will require at least [Go 1.23].
+
+> [!WARNING]
+> This is the last version to use Semantic Conventions v1.20.0 for HTTP libraries
+by default. The next version (0.61.0) will default to v1.26.0, and the
+following one (0.62.0) will drop support for Semantic Conventions v1.20.0
+>
+> You can switch to the new Semantic Conventions right now by setting the
+`OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable in your
+application.
+>
+> See also the [HTTP semantic conventions stability
+migration](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/non-normative/http-migration.md)
+
+### Added
+
+- Add support for configuring `ClientCertificate` and `ClientKey` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6378)
+- Add `WithAttributeBuilder`, `AttributeBuilder`, `DefaultAttributeBuilder`, `DynamoDBAttributeBuilder`, `SNSAttributeBuilder` to support adding attributes based on SDK input and output in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
+- Support for the `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6652)
+- Added the `WithMeterProvider` option to allow passing a custom meter provider to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6648)
+- Added the `WithMetricAttributesFn` option to allow setting dynamic, per-request metric attributes in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6648)
+- Added metrics support, and emit all stable metrics from the [Semantic Conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/http/http-metrics.md) in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6648)
+- Add support for configuring `Insecure` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6658)
+- Support for the `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable in `instrumentation/net/http/httptrace/otelhttptrace` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6720)
+- Support for the `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable in `instrumentation/github.com/emicklei/go-restful/otelrestful` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6710)
+- Added metrics support, and emit all stable metrics from the [Semantic Conventions](https://github.com/open-telemetry/semantic-conventions/blob/main/docs/http/http-metrics.md) in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#6747)
+- Support for the `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#6778)
+- Support `OTEL_SEMCONV_STABILITY_OPT_IN` to emit telemetry following both `go.opentelemetry.io/otel/semconv/v1.21.0` (default) and `go.opentelemetry.io/otel/semconv/v1.26.0` (opt-in) in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` per the [Database semantic convention stability migration guide](https://github.com/open-telemetry/semantic-conventions/blob/cb11bb9bac24f4b0e95ad0f61ce01813d8ceada8/docs/non-normative/db-migration.md#database-semantic-convention-stability-migration-guide). (#6172)
+- Support [Go 1.24]. (#6765)
+- Add support for configuring `HeadersList` field for OTLP exporters in `go.opentelemetry.io/contrib/config`. (#6657)
+- Add `go.opentelemetry.io/contrib/otelconf` module which is a replacement for `go.opentelemetry.io/contrib/config`. (#6796)
+- Added `WithFallbackLogExporter` to allow setting a fallback log exporter when `OTEL_LOGS_EXPORTER` is unset in `go.opentelemetry.io/contrib/exporters/autoexport`. (#6844)
+
+### Changed
+
+- Add custom attribute to the span after execution of the SDK rather than before in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
+- The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelslog` now stores the package path-qualified function name instead of just the function name.
+  The `code.namespace` attribute is no longer added. (#6870)
+- The `code.function` attribute emitted by `go.opentelemetry.io/contrib/bridges/otelzap` now stores the package path-qualified function name instead of just the function name.
+  The `code.namespace` attribute is no longer added. (#6870)
+- Improve performance by reducing allocations for common request protocols in the modules below. (#6845)
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+
+### Deprecated
+
+- Deprecate `WithAttributeSetter`, `AttributeSetter`, `DefaultAttributeSetter`, `DynamoDBAttributeSetter`, `SNSAttributeSetter` in favor of `WithAttributeBuilder`, `AttributeBuilder`, `DefaultAttributeBuilder`, `DynamoDBAttributeBuilder`, `SNSAttributeBuilder` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#6543)
+- Deprecate `go.opentelemetry.io/contrib/config` module in favor of `go.opentelemetry.io/contrib/otelconf`. This is the last release of this module. (#6796)
+
+### Fixed
+
+- Use `context.Background()` as default context instead of nil in `go.opentelemetry.io/contrib/bridges/otellogr`. (#6527)
+- Convert Prometheus histogram buckets to non-cumulative otel histogram buckets in `go.opentelemetry.io/contrib/bridges/prometheus`. (#6685)
+- Don't start spans that never end for filtered out gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#6695)
+- Fix a possible nil dereference panic in `NewSDK` of `go.opentelemetry.io/contrib/config/v0.3.0`. (#6752)
+- Fix prometheus endpoint with an IPv6 address in `go.opentelemetry.io/contrib/config`. (#6815)
+
+## [1.34.0/0.59.0/0.28.0/0.14.0/0.9.0/0.7.0/0.6.0] - 2025-01-17
+
+### Added
+
+- Generate server metrics with semantic conventions `v1.26.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6411)
+- Generate client metrics with semantic conventions `v1.26.0` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when `OTEL_SEMCONV_STABILITY_OPT_IN` is set to `http/dup`. (#6607)
 
 ### Fixed
 
 - Fix error logged by Jaeger remote sampler on empty or unset `OTEL_TRACES_SAMPLER_ARG` environment variable (#6511)
 - Relax minimum Go version to 1.22.0 in various modules. (#6595)
-- Fix issue in `otelgin` middleware where temporary files for multipart/form-data were not being removed. (#6609)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
+- `NewSDK` handles empty `OpenTelemetryConfiguration.Resource` properly in `go.opentelemetry.io/contrib/config/v0.3.0`. (#6606)
+- Fix a possible nil dereference panic in `NewSDK` of `go.opentelemetry.io/contrib/config/v0.3.0`. (#6606)
 
 ## [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0] - 2024-12-12
 
@@ -63,7 +401,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   - Use `baggagecopy.NewLogProcessor` when configuring a Log Provider.
     - `NewLogProcessor` accepts a `Filter` function type that selects which baggage members are added to the log record.
 
-### Changed 
+### Changed
 
 - Transform raw (`slog.KindAny`) attribute values to matching `log.Value` types.
   For example, `[]string{"foo", "bar"}` attribute value is now transformed to `log.SliceValue(log.StringValue("foo"), log.StringValue("bar"))` instead of `log.String("[foo bar"])`. (#6254)
@@ -135,7 +473,7 @@ The next release will require at least [Go 1.22].
 - Add the `WithSpanAttributes` and `WithMetricAttributes` methods to set custom attributes to the stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#5133)
 - The `go.opentelemetry.io/contrib/bridges/otelzap` module.
   This module provides an OpenTelemetry logging bridge for `go.uber.org/zap`. (#5191)
-- Support for the `OTEL_HTTP_CLIENT_COMPATIBILITY_MODE=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#5401)
+- Support for the `OTEL_SEMCONV_STABILITY_OPT_IN=http/dup` environment variable in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to emit attributes for both the v1.20.0 and v1.26.0 semantic conventions. (#5401)
 - The `go.opentelemetry.io/contrib/bridges/otelzerolog` module.
   This module provides an OpenTelemetry logging bridge for `github.com/rs/zerolog`. (#5405)
 - Add `WithGinFilter` filter parameter in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` to allow filtering requests with `*gin.Context`. (#5743)
@@ -452,9 +790,6 @@ The next release will require at least [Go 1.21].
 
 - Change interceptors in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to disable `SENT`/`RECEIVED` events.
   Use `WithMessageEvents()` to turn back on. (#3964)
-
-### Changed
-
 - `go.opentelemetry.io/contrib/detectors/gcp`: Detect `faas.instance` instead of `faas.id`, since `faas.id` is being removed. (#4198)
 
 ### Fixed
@@ -1207,7 +1542,12 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.33.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.38.0...HEAD
+[1.38.0/2.0.0/0.63.0/0.32.0/0.18.0/0.13.0/0.11.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.38.0
+[1.37.0/0.62.0/0.31.0/0.17.0/0.12.0/0.10.0/0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.37.0
+[1.36.0/0.61.0/0.30.0/0.16.0/0.11.0/0.9.0/0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.36.0
+[1.35.0/0.60.0/0.29.0/0.15.0/0.10.0/0.8.0/0.7.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.35.0
+[1.34.0/0.59.0/0.28.0/0.14.0/0.9.0/0.7.0/0.6.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.34.0
 [1.33.0/0.58.0/0.27.0/0.13.0/0.8.0/0.6.0/0.5.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.33.0
 [1.32.0/0.57.0/0.26.0/0.12.0/0.7.0/0.5.0/0.4.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.32.0
 [1.31.0/0.56.0/0.25.0/0.11.0/0.6.0/0.4.0/0.3.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.31.0
@@ -1276,6 +1616,8 @@ First official tagged release of `contrib` repository.
 
 <!-- Released section ended -->
 
+[Go 1.25]: https://go.dev/doc/go1.25
+[Go 1.24]: https://go.dev/doc/go1.24
 [Go 1.23]: https://go.dev/doc/go1.23
 [Go 1.22]: https://go.dev/doc/go1.22
 [Go 1.21]: https://go.dev/doc/go1.21

@@ -4,17 +4,15 @@
 package b3_test
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/google/go-cmp/cmp"
-
-	"go.opentelemetry.io/contrib/propagators/b3"
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/propagators/b3"
 )
 
 func TestExtractB3(t *testing.T) {
@@ -42,7 +40,7 @@ func TestExtractB3(t *testing.T) {
 					header.Set(h, v)
 				}
 
-				ctx := context.Background()
+				ctx := t.Context()
 				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(header))
 				gotSc := trace.SpanContextFromContext(ctx)
 
@@ -92,7 +90,7 @@ func TestInjectB3(t *testing.T) {
 			t.Run(tt.name, func(t *testing.T) {
 				header := http.Header{}
 				ctx := trace.ContextWithSpanContext(
-					context.Background(),
+					t.Context(),
 					trace.NewSpanContext(tt.scc),
 				)
 				ctx = b3.WithDebug(ctx, tt.debug)

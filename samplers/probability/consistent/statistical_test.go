@@ -2,12 +2,10 @@
 // SPDX-License-Identifier: Apache-2.0
 
 //go:build !race
-// +build !race
 
 package consistent
 
 import (
-	"context"
 	"fmt"
 	"math"
 	"math/rand"
@@ -16,7 +14,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
@@ -24,11 +21,9 @@ import (
 const (
 	oneDegree  testDegrees = 1
 	twoDegrees testDegrees = 2
-)
 
-var (
-	trials         = 20
-	populationSize = 1e5
+	trials               = 20
+	populationSize int64 = 1e5
 
 	// These may be computed using Gonum, e.g.,
 	// import "gonum.org/v1/gonum/stat/distuv"
@@ -39,13 +34,13 @@ var (
 	// These have been specified using significance = 0.05:
 	chiSquaredDF1 = 0.003932140000019522
 	chiSquaredDF2 = 0.1025865887751011
-
-	chiSquaredByDF = [3]float64{
-		0,
-		chiSquaredDF1,
-		chiSquaredDF2,
-	}
 )
+
+var chiSquaredByDF = [3]float64{
+	0,
+	chiSquaredDF1,
+	chiSquaredDF2,
+}
 
 func TestSamplerStatistics(t *testing.T) {
 	seedBankRng := rand.New(rand.NewSource(77777677777))
@@ -137,7 +132,7 @@ func TestSamplerStatistics(t *testing.T) {
 				countFailures := func(src rand.Source) int {
 					failed := 0
 
-					for j := 0; j < trials; j++ {
+					for range trials {
 						var x float64
 						x, expected = sampleTrials(t, test.prob, test.degrees, test.upperP, src)
 
@@ -150,16 +145,12 @@ func TestSamplerStatistics(t *testing.T) {
 
 				failed := countFailures(rand.NewSource(seed))
 
-				if failed != 1 && test.seedIndex < 0 {
-					t.Logf("%d probabilistic failures, trying a new seed for %g was 0x%x", failed, test.prob, seed)
-					continue
-				} else if failed != 1 {
-					t.Errorf("wrong number of probabilistic failures for %g, should be 1 was %d for seed 0x%x", test.prob, failed, seed)
-				} else if test.seedIndex < 0 {
-					t.Logf("update the test for %g to use seed index %d", test.prob, seedIndex)
-					t.Fail()
-					return
-				} else {
+				if failed == 1 {
+					if test.seedIndex < 0 {
+						t.Logf("update the test for %g to use seed index %d", test.prob, seedIndex)
+						t.Fail()
+						return
+					}
 					// Note: this can be uncommented to verify that the preceding seed failed the test,
 					// however this just doubles runtime and adds little evidence.  For example:
 					// if seedIndex != 0 && countFailures(rand.NewSource(seedBank[seedIndex-1])) == 1 {
@@ -168,6 +159,11 @@ func TestSamplerStatistics(t *testing.T) {
 					// }
 					break
 				}
+				if test.seedIndex < 0 {
+					t.Logf("%d probabilistic failures, trying a new seed for %g was 0x%x", failed, test.prob, seed)
+					continue
+				}
+				t.Errorf("wrong number of probabilistic failures for %g, should be 1 was %d for seed 0x%x", test.prob, failed, seed)
 			}
 			testSummary = append(testSummary, testResult{
 				test:     test,
@@ -198,7 +194,7 @@ func TestSamplerStatistics(t *testing.T) {
 }
 
 func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue, source rand.Source) (float64, []float64) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	sampler := ProbabilityBased(
 		prob,
@@ -213,7 +209,7 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 
 	tracer := provider.Tracer("test")
 
-	for i := 0; i < int(populationSize); i++ {
+	for range populationSize {
 		_, span := tracer.Start(ctx, "span")
 		span.End()
 	}
@@ -221,8 +217,10 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 	var minP, maxP pValue
 
 	counts := map[pValue]int64{}
+	spans := recorder.GetSpans()
 
-	for idx, r := range recorder.GetSpans() {
+	for idx := range spans {
+		r := &spans[idx]
 		ts := r.SpanContext.TraceState()
 		p, _ := parsePR(ts.Get("ot"))
 
@@ -279,16 +277,16 @@ func sampleTrials(t *testing.T, prob float64, degrees testDegrees, upperP pValue
 		floorChoice = 1
 	}
 
-	expectLowerCount := floorChoice * floorProb * populationSize
-	expectUpperCount := (1 - floorChoice) * ceilingProb * populationSize
-	expectUnsampled := (1 - prob) * populationSize
+	expectLowerCount := floorChoice * floorProb * float64(populationSize)
+	expectUpperCount := (1 - floorChoice) * ceilingProb * float64(populationSize)
+	expectUnsampled := (1 - prob) * float64(populationSize)
 
 	upperCount := int64(0)
 	lowerCount := counts[maxP]
 	if degrees == 2 {
 		upperCount = counts[minP]
 	}
-	unsampled := int64(populationSize) - upperCount - lowerCount
+	unsampled := populationSize - upperCount - lowerCount
 
 	expected := []float64{
 		expectUnsampled,

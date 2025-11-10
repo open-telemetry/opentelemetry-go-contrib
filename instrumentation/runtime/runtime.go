@@ -12,6 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/semconv/v1.37.0/goconv"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime/internal/deprecatedruntime"
 	"go.opentelemetry.io/contrib/instrumentation/runtime/internal/x"
@@ -35,6 +36,7 @@ const (
 )
 
 // Start initializes reporting of runtime metrics using the supplied config.
+// For goroutine scheduling metrics, additionally see [NewProducer].
 func Start(opts ...Option) error {
 	c := newConfig(opts...)
 	meter := c.MeterProvider.Meter(
@@ -42,111 +44,81 @@ func Start(opts ...Option) error {
 		metric.WithInstrumentationVersion(Version()),
 	)
 	if x.DeprecatedRuntimeMetrics.Enabled() {
-		return deprecatedruntime.Start(meter, c.MinimumReadMemStatsInterval)
+		if err := deprecatedruntime.Start(meter, c.MinimumReadMemStatsInterval); err != nil {
+			return err
+		}
 	}
-	memoryUsedInstrument, err := meter.Int64ObservableUpDownCounter(
-		"go.memory.used",
-		metric.WithUnit("By"),
-		metric.WithDescription("Memory used by the Go runtime."),
-	)
+	memoryUsed, err := goconv.NewMemoryUsed(meter)
 	if err != nil {
 		return err
 	}
-	memoryLimitInstrument, err := meter.Int64ObservableUpDownCounter(
-		"go.memory.limit",
-		metric.WithUnit("By"),
-		metric.WithDescription("Go runtime memory limit configured by the user, if a limit exists."),
-	)
+	memoryLimit, err := goconv.NewMemoryLimit(meter)
 	if err != nil {
 		return err
 	}
-	memoryAllocatedInstrument, err := meter.Int64ObservableCounter(
-		"go.memory.allocated",
-		metric.WithUnit("By"),
-		metric.WithDescription("Memory allocated to the heap by the application."),
-	)
+	memoryAllocated, err := goconv.NewMemoryAllocated(meter)
 	if err != nil {
 		return err
 	}
-	memoryAllocationsInstrument, err := meter.Int64ObservableCounter(
-		"go.memory.allocations",
-		metric.WithUnit("{allocation}"),
-		metric.WithDescription("Count of allocations to the heap by the application."),
-	)
+	memoryAllocations, err := goconv.NewMemoryAllocations(meter)
 	if err != nil {
 		return err
 	}
-	memoryGCGoalInstrument, err := meter.Int64ObservableUpDownCounter(
-		"go.memory.gc.goal",
-		metric.WithUnit("By"),
-		metric.WithDescription("Heap size target for the end of the GC cycle."),
-	)
+	memoryGCGoal, err := goconv.NewMemoryGCGoal(meter)
 	if err != nil {
 		return err
 	}
-	goroutineCountInstrument, err := meter.Int64ObservableUpDownCounter(
-		"go.goroutine.count",
-		metric.WithUnit("{goroutine}"),
-		metric.WithDescription("Count of live goroutines."),
-	)
+	goroutineCount, err := goconv.NewGoroutineCount(meter)
 	if err != nil {
 		return err
 	}
-	processorLimitInstrument, err := meter.Int64ObservableUpDownCounter(
-		"go.processor.limit",
-		metric.WithUnit("{thread}"),
-		metric.WithDescription("The number of OS threads that can execute user-level Go code simultaneously."),
-	)
+	processorLimit, err := goconv.NewProcessorLimit(meter)
 	if err != nil {
 		return err
 	}
-	gogcConfigInstrument, err := meter.Int64ObservableUpDownCounter(
-		"go.config.gogc",
-		metric.WithUnit("%"),
-		metric.WithDescription("Heap size target percentage configured by the user, otherwise 100."),
-	)
+	configGogc, err := goconv.NewConfigGogc(meter)
 	if err != nil {
 		return err
 	}
 
 	otherMemoryOpt := metric.WithAttributeSet(
-		attribute.NewSet(attribute.String("go.memory.type", "other")),
+		attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther)),
 	)
 	stackMemoryOpt := metric.WithAttributeSet(
-		attribute.NewSet(attribute.String("go.memory.type", "stack")),
+		attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeStack)),
 	)
 	collector := newCollector(c.MinimumReadMemStatsInterval, runtimeMetrics)
 	var lock sync.Mutex
 	_, err = meter.RegisterCallback(
-		func(ctx context.Context, o metric.Observer) error {
+		func(_ context.Context, o metric.Observer) error {
 			lock.Lock()
 			defer lock.Unlock()
 			collector.refresh()
 			stackMemory := collector.getInt(goHeapMemory)
-			o.ObserveInt64(memoryUsedInstrument, stackMemory, stackMemoryOpt)
+			o.ObserveInt64(memoryUsed.Inst(), stackMemory, stackMemoryOpt)
 			totalMemory := collector.getInt(goTotalMemory) - collector.getInt(goMemoryReleased)
 			otherMemory := totalMemory - stackMemory
-			o.ObserveInt64(memoryUsedInstrument, otherMemory, otherMemoryOpt)
+			o.ObserveInt64(memoryUsed.Inst(), otherMemory, otherMemoryOpt)
 			// Only observe the limit metric if a limit exists
 			if limit := collector.getInt(goMemoryLimit); limit != math.MaxInt64 {
-				o.ObserveInt64(memoryLimitInstrument, limit)
+				o.ObserveInt64(memoryLimit.Inst(), limit)
 			}
-			o.ObserveInt64(memoryAllocatedInstrument, collector.getInt(goMemoryAllocated))
-			o.ObserveInt64(memoryAllocationsInstrument, collector.getInt(goMemoryAllocations))
-			o.ObserveInt64(memoryGCGoalInstrument, collector.getInt(goMemoryGoal))
-			o.ObserveInt64(goroutineCountInstrument, collector.getInt(goGoroutines))
-			o.ObserveInt64(processorLimitInstrument, collector.getInt(goMaxProcs))
-			o.ObserveInt64(gogcConfigInstrument, collector.getInt(goConfigGC))
+			o.ObserveInt64(memoryAllocated.Inst(), collector.getInt(goMemoryAllocated))
+			o.ObserveInt64(memoryAllocations.Inst(), collector.getInt(goMemoryAllocations))
+			o.ObserveInt64(memoryGCGoal.Inst(), collector.getInt(goMemoryGoal))
+			o.ObserveInt64(goroutineCount.Inst(), collector.getInt(goGoroutines))
+			o.ObserveInt64(processorLimit.Inst(), collector.getInt(goMaxProcs))
+			o.ObserveInt64(configGogc.Inst(), collector.getInt(goConfigGC))
 			return nil
 		},
-		memoryUsedInstrument,
-		memoryLimitInstrument,
-		memoryAllocatedInstrument,
-		memoryAllocationsInstrument,
-		memoryGCGoalInstrument,
-		goroutineCountInstrument,
-		processorLimitInstrument,
-		gogcConfigInstrument,
+		memoryUsed.Inst(),
+		memoryLimit.Inst(),
+		memoryAllocated.Inst(),
+		memoryAllocations.Inst(),
+		memoryGCGoal.Inst(),
+		goroutineCount.Inst(),
+		processorLimit.Inst(),
+		configGogc.Inst(),
 	)
 	if err != nil {
 		return err
@@ -215,7 +187,7 @@ func (g *goCollector) getInt(name string) int64 {
 		if v > math.MaxInt64 {
 			return math.MaxInt64
 		}
-		return int64(v) // nolint: gosec  // Overflow checked above.
+		return int64(v)
 	}
 	return 0
 }

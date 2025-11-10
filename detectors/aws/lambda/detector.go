@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package lambda provides a resource detector for AWS Lambda.
 package lambda // import "go.opentelemetry.io/contrib/detectors/aws/lambda"
 
 import (
@@ -11,17 +12,18 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 // For a complete list of reserved environment variables in Lambda, see:
 // https://docs.aws.amazon.com/lambda/latest/dg/configuration-envvars.html
 const (
-	lambdaFunctionNameEnvVar    = "AWS_LAMBDA_FUNCTION_NAME" //nolint:gosec // False positive G101: Potential hardcoded credentials. The function name is added as attribute per semantic conventions.
+	lambdaFunctionNameEnvVar    = "AWS_LAMBDA_FUNCTION_NAME"
 	awsRegionEnvVar             = "AWS_REGION"
 	lambdaFunctionVersionEnvVar = "AWS_LAMBDA_FUNCTION_VERSION"
 	lambdaLogStreamNameEnvVar   = "AWS_LAMBDA_LOG_STREAM_NAME"
 	lambdaMemoryLimitEnvVar     = "AWS_LAMBDA_FUNCTION_MEMORY_SIZE"
+	miB                         = 1 << 20
 )
 
 var (
@@ -41,10 +43,10 @@ func NewResourceDetector() resource.Detector {
 }
 
 // Detect collects resource attributes available when running on lambda.
-func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, error) {
+func (*resourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	// Lambda resources come from ENV
 	lambdaName := os.Getenv(lambdaFunctionNameEnvVar)
-	if len(lambdaName) == 0 {
+	if lambdaName == "" {
 		return empty, errNotOnLambda
 	}
 	awsRegion := os.Getenv(awsRegionEnvVar)
@@ -64,7 +66,7 @@ func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, e
 	maxMemoryStr := os.Getenv(lambdaMemoryLimitEnvVar)
 	maxMemory, err := strconv.Atoi(maxMemoryStr)
 	if err == nil {
-		attrs = append(attrs, semconv.FaaSMaxMemory(maxMemory))
+		attrs = append(attrs, semconv.FaaSMaxMemory(maxMemory*miB))
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), nil

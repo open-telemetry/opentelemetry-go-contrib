@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Client exemplifies the otelhttptrace package for a client.
 package main
 
 import (
@@ -13,16 +14,16 @@ import (
 	"net/http/httptrace"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.20.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func initTracer() (*sdktrace.TracerProvider, error) {
@@ -79,7 +80,7 @@ func main() {
 		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.PeerService("ExampleService")))
 		defer span.End()
 
-		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, *url, nil)
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, *url, http.NoBody)
 
 		fmt.Printf("Sending request...\n")
 		res, err := client.Do(req)

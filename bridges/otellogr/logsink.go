@@ -58,16 +58,17 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 type config struct {
-	provider  log.LoggerProvider
-	version   string
-	schemaURL string
+	provider   log.LoggerProvider
+	version    string
+	schemaURL  string
+	attributes []attribute.KeyValue
 
 	levelSeverity func(int) log.Severity
 }
@@ -127,6 +128,15 @@ func WithSchemaURL(schemaURL string) Option {
 	})
 }
 
+// WithAttributes returns an [Option] that configures the instrumentation scope
+// attributes of the [log.Logger] used by a [LogSink].
+func WithAttributes(attributes ...attribute.KeyValue) Option {
+	return optFunc(func(c config) config {
+		c.attributes = attributes
+		return c
+	})
+}
+
 // WithLoggerProvider returns an [Option] that configures [log.LoggerProvider]
 // used by a [LogSink] to create its [log.Logger].
 //
@@ -169,6 +179,9 @@ func NewLogSink(name string, options ...Option) *LogSink {
 	if c.schemaURL != "" {
 		opts = append(opts, log.WithSchemaURL(c.schemaURL))
 	}
+	if c.attributes != nil {
+		opts = append(opts, log.WithInstrumentationAttributes(c.attributes...))
+	}
 
 	return &LogSink{
 		name:          name,
@@ -176,6 +189,7 @@ func NewLogSink(name string, options ...Option) *LogSink {
 		logger:        c.provider.Logger(name, opts...),
 		levelSeverity: c.levelSeverity,
 		opts:          opts,
+		ctx:           context.Background(),
 	}
 }
 
@@ -183,7 +197,7 @@ func NewLogSink(name string, options ...Option) *LogSink {
 // OpenTelemetry. See package documentation for how conversions are made.
 type LogSink struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
-	noCmp [0]func() //nolint: unused  // This is indeed used.
+	noCmp [0]func() //nolint:unused  // This is indeed used.
 
 	name          string
 	provider      log.LoggerProvider
@@ -240,7 +254,7 @@ func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
 
 // Init receives optional information about the logr library this
 // implementation does not use it.
-func (l *LogSink) Init(info logr.RuntimeInfo) {
+func (*LogSink) Init(logr.RuntimeInfo) {
 	// We don't need to do anything here.
 	// CallDepth is used to calculate the caller's PC.
 	// PC is dropped as part of the conversion to the OpenTelemetry log.Record.

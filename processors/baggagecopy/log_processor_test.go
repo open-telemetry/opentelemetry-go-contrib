@@ -11,7 +11,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/baggage"
 	api "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -23,14 +22,14 @@ type processor struct {
 	records []*log.Record
 }
 
-func (p *processor) OnEmit(ctx context.Context, r *log.Record) error {
+func (p *processor) OnEmit(_ context.Context, r *log.Record) error {
 	p.records = append(p.records, r)
 	return nil
 }
 
-func (p *processor) Shutdown(ctx context.Context) error { return nil }
+func (*processor) Shutdown(context.Context) error { return nil }
 
-func (p *processor) ForceFlush(ctx context.Context) error { return nil }
+func (*processor) ForceFlush(context.Context) error { return nil }
 
 func NewTestProcessor() *processor {
 	return &processor{}
@@ -93,7 +92,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			ctx := baggage.ContextWithBaggage(context.Background(), tt.baggage)
+			ctx := baggage.ContextWithBaggage(t.Context(), tt.baggage)
 
 			wrapped := &processor{}
 			lp := log.NewLoggerProvider(
@@ -125,7 +124,7 @@ func TestZeroLogProcessorNoPanic(t *testing.T) {
 	b, err := baggage.New(m)
 	require.NoError(t, err)
 
-	ctx := baggage.ContextWithBaggage(context.Background(), b)
+	ctx := baggage.ContextWithBaggage(t.Context(), b)
 	assert.NotPanics(t, func() {
 		_ = lp.OnEmit(ctx, &log.Record{})
 		_ = lp.Shutdown(ctx)

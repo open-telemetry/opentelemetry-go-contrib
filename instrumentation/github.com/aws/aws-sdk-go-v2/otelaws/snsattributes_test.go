@@ -4,7 +4,6 @@
 package otelaws
 
 import (
-	"context"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -12,8 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
-
-	semconv "go.opentelemetry.io/otel/semconv/v1.27.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 func TestPublishInput(t *testing.T) {
@@ -23,12 +21,12 @@ func TestPublishInput(t *testing.T) {
 		},
 	}
 
-	attributes := SNSAttributeSetter(context.Background(), input)
+	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
 	assert.Contains(t, attributes, semconv.MessagingDestinationName("my-topic"))
 	assert.Contains(t, attributes, semconv.MessagingOperationName("publish_input"))
-	assert.Contains(t, attributes, semconv.MessagingOperationTypePublish)
+	assert.Contains(t, attributes, semconv.MessagingOperationTypeSend)
 }
 
 func TestPublishInputWithNoDestination(t *testing.T) {
@@ -36,12 +34,12 @@ func TestPublishInputWithNoDestination(t *testing.T) {
 		Parameters: &sns.PublishInput{},
 	}
 
-	attributes := SNSAttributeSetter(context.Background(), input)
+	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
 	assert.Contains(t, attributes, semconv.MessagingDestinationName(""))
 	assert.Contains(t, attributes, semconv.MessagingOperationName("publish_input"))
-	assert.Contains(t, attributes, semconv.MessagingOperationTypePublish)
+	assert.Contains(t, attributes, semconv.MessagingOperationTypeSend)
 }
 
 func TestPublishBatchInput(t *testing.T) {
@@ -52,11 +50,11 @@ func TestPublishBatchInput(t *testing.T) {
 		},
 	}
 
-	attributes := SNSAttributeSetter(context.Background(), input)
+	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
 	assert.Contains(t, attributes, semconv.MessagingDestinationName("my-topic-batch"))
 	assert.Contains(t, attributes, semconv.MessagingOperationName("publish_batch_input"))
-	assert.Contains(t, attributes, semconv.MessagingOperationTypePublish)
+	assert.Contains(t, attributes, semconv.MessagingOperationTypeSend)
 	assert.Contains(t, attributes, semconv.MessagingBatchMessageCount(0))
 }

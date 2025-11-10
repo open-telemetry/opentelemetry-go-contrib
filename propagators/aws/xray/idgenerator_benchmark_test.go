@@ -4,7 +4,6 @@
 package xray
 
 import (
-	"context"
 	"testing"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -23,18 +22,18 @@ func init() {
 }
 
 func BenchmarkStartAndEndSampledSpan(b *testing.B) {
-	for i := 0; i < b.N; i++ {
-		_, span := tracer.Start(context.Background(), "Example Trace")
+	for range b.N {
+		_, span := tracer.Start(b.Context(), "Example Trace")
 		span.End()
 	}
 }
 
 func BenchmarkStartAndEndNestedSampledSpan(b *testing.B) {
-	ctx, parent := tracer.Start(context.Background(), "Parent operation...")
+	ctx, parent := tracer.Start(b.Context(), "Parent operation...")
 	defer parent.End()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_, span := tracer.Start(ctx, "Sub operation...")
 		span.End()
 	}

@@ -92,11 +92,11 @@ func isUCAlpha(r byte) bool {
 	return r >= 'A' && r <= 'Z'
 }
 
-func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { // nolint: revive
+func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //nolint:revive // ignore linter
 	var pval, rval string
 	var unknown []string
 
-	if len(ts) == 0 {
+	if ts == "" {
 		return newTraceState(), nil
 	}
 
@@ -104,7 +104,7 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //
 		return newTraceState(), errTraceStateSyntax
 	}
 
-	for len(ts) > 0 {
+	for ts != "" {
 		eqPos := 0
 		for ; eqPos < len(ts); eqPos++ {
 			if eqPos == 0 {
@@ -132,12 +132,13 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //
 			break
 		}
 
-		if key == pValueSubkey {
+		switch key {
+		case pValueSubkey:
 			// Note: does the spec say how to handle duplicates?
 			pval = tail[0:sepPos]
-		} else if key == rValueSubkey {
+		case rValueSubkey:
 			rval = tail[0:sepPos]
-		} else {
+		default:
 			unknown = append(unknown, ts[0:sepPos+eqPos+1])
 		}
 
@@ -188,7 +189,7 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //
 	return otts, nil
 }
 
-func parseNumber(key string, input string, maximum uint8) (uint8, error) {
+func parseNumber(key, input string, maximum uint8) (uint8, error) {
 	if input == "" {
 		return maximum + 1, nil
 	}
@@ -200,7 +201,7 @@ func parseNumber(key string, input string, maximum uint8) (uint8, error) {
 		return maximum + 1, parseError(key, strconv.ErrRange)
 	}
 	// `value` is strictly less then the uint8 maximum. This cast is safe.
-	return uint8(value), nil // nolint: gosec
+	return uint8(value), nil //nolint:gosec // ignore linter
 }
 
 func parseError(key string, err error) error {

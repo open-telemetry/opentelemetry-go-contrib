@@ -15,6 +15,10 @@ CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tr
 GO = go
 TIMEOUT = 60
 
+# User to run as in docker images.
+DOCKER_USER=$(shell id -u):$(shell id -g)
+DEPENDENCIES_DOCKERFILE=./dependencies.Dockerfile
+
 .DEFAULT_GOAL := precommit
 
 .PHONY: precommit ci
@@ -34,7 +38,7 @@ $(TOOLS)/%: $(TOOLS_MOD_DIR)/go.mod | $(TOOLS)
 	$(GO) build -o $@ $(PACKAGE)
 
 GOLANGCI_LINT = $(TOOLS)/golangci-lint
-$(GOLANGCI_LINT): PACKAGE=github.com/golangci/golangci-lint/cmd/golangci-lint
+$(GOLANGCI_LINT): PACKAGE=github.com/golangci/golangci-lint/v2/cmd/golangci-lint
 
 MISSPELL = $(TOOLS)/misspell
 $(MISSPELL): PACKAGE=github.com/client9/misspell/cmd/misspell
@@ -86,20 +90,20 @@ PIP := $(PYTOOLS)/pip
 WORKDIR := /workdir
 
 # The python image to use for the virtual environment.
-PYTHONIMAGE := python:3.11.3-slim-bullseye
+PYTHONIMAGE := $(shell awk '$$4=="python" {print $$2}' $(DEPENDENCIES_DOCKERFILE))
 
 # Run the python image with the current directory mounted.
-DOCKERPY := docker run --rm -v "$(CURDIR):$(WORKDIR)" -w $(WORKDIR) $(PYTHONIMAGE)
+DOCKERPY := docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" -w $(WORKDIR) $(PYTHONIMAGE)
 
 # Create a virtual environment for Python tools.
 $(PYTOOLS):
 # The `--upgrade` flag is needed to ensure that the virtual environment is
 # created with the latest pip version.
-	@$(DOCKERPY) bash -c "python3 -m venv $(VENVDIR) && $(PIP) install --upgrade pip"
+	@$(DOCKERPY) bash -c "python3 -m venv $(VENVDIR) && $(PIP) install --upgrade --cache-dir=$(WORKDIR)/.cache/pip pip"
 
 # Install python packages into the virtual environment.
 $(PYTOOLS)/%: $(PYTOOLS)
-	@$(DOCKERPY) $(PIP) install -r requirements.txt
+	@$(DOCKERPY) $(PIP) install --cache-dir=$(WORKDIR)/.cache/pip -r requirements.txt
 
 CODESPELL = $(PYTOOLS)/codespell
 $(CODESPELL): PACKAGE=codespell
@@ -319,32 +323,36 @@ update-all-otel-deps:
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelemetry-configuration
 
 # The SHA matching the current version of the opentelemetry-configuration schema to use
-OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.3.0
+OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v1.0.0-rc.2
 
 # Cleanup temporary directory
 genjsonschema-cleanup:
 	rm -Rf ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 
-GENERATED_CONFIG=./config/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}/generated_config.go
+GENERATED_CONFIG=./otelconf/generated_config.go
 
 # Generate structs for configuration from opentelemetry-configuration schema
 genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	mkdir -p ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
-	mkdir -p ./config/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}
 	curl -sSL https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION} | tar xz --strip 1 -C ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 	$(GOJSONSCHEMA) \
 		--capitalization ID \
 		--capitalization OTLP \
 		--struct-name-from-title \
-		--package config \
+		--package otelconf \
 		--only-models \
 		--output ${GENERATED_CONFIG} \
 		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/schema/opentelemetry_configuration.json
 	@echo Modify jsonschema generated files.
-	sed -f ./config/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
+	sed -f ./otelconf/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
 	mv ${GENERATED_CONFIG}.tmp ${GENERATED_CONFIG}
 	$(MAKE) genjsonschema-cleanup
 
 .PHONY: codespell
 codespell: $(CODESPELL)
 	@$(DOCKERPY) $(CODESPELL)
+
+MARKDOWNIMAGE := $(shell awk '$$4=="markdown" {print $$2}' $(DEPENDENCIES_DOCKERFILE))
+.PHONY: lint-markdown
+lint-markdown:
+	docker run --rm -u $(DOCKER_USER) -v "$(CURDIR):$(WORKDIR)" $(MARKDOWNIMAGE) -c $(WORKDIR)/.markdownlint.yaml $(WORKDIR)/**/*.md

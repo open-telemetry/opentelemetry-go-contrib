@@ -19,11 +19,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 )
 
 var now = time.Now()
@@ -34,16 +34,17 @@ func TestNewLogger(t *testing.T) {
 
 // embeddedLogger is a type alias so the embedded.Logger type doesn't conflict
 // with the Logger method of the recorder when it is embedded.
-type embeddedLogger = embedded.Logger // nolint:unused  // Used below.
+type embeddedLogger = embedded.Logger //nolint:unused  // Used below.
 
 type scope struct {
 	Name, Version, SchemaURL string
+	Attributes               attribute.Set
 }
 
-// recorder records all [log.Record]s it is ased to emit.
+// recorder records all [log.Record]s it is asked to emit.
 type recorder struct {
 	embedded.LoggerProvider
-	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
+	embeddedLogger //nolint:unused  // Used to embed embedded.Logger.
 
 	// Records are the records emitted.
 	Records []log.Record
@@ -60,9 +61,10 @@ func (r *recorder) Logger(name string, opts ...log.LoggerOption) log.Logger {
 	cfg := log.NewLoggerConfig(opts...)
 
 	r.Scope = scope{
-		Name:      name,
-		Version:   cfg.InstrumentationVersion(),
-		SchemaURL: cfg.SchemaURL(),
+		Name:       name,
+		Version:    cfg.InstrumentationVersion(),
+		SchemaURL:  cfg.SchemaURL(),
+		Attributes: cfg.InstrumentationAttributes(),
 	}
 	return r
 }
@@ -90,6 +92,9 @@ func (r *recorder) Results() []map[string]any {
 		}
 		if lvl := r.Severity(); lvl != 0 {
 			m[slog.LevelKey] = lvl - 9
+		}
+		if st := r.SeverityText(); st != "" {
+			m["severityText"] = st
 		}
 		if body := r.Body(); body.Kind() != log.KindEmpty {
 			m[slog.MessageKey] = value2Result(body)
@@ -226,7 +231,7 @@ func (h *wrapper) Handle(ctx context.Context, r slog.Record) error {
 func TestSLogHandler(t *testing.T) {
 	// Capture the PC of this line
 	pc, file, line, _ := runtime.Caller(0)
-	funcName, namespace := splitFuncName(runtime.FuncForPC(pc).Name())
+	funcName := runtime.FuncForPC(pc).Name()
 
 	cases := []testCase{
 		{
@@ -251,6 +256,7 @@ func TestSLogHandler(t *testing.T) {
 			checks: [][]check{{
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "INFO"),
 				hasAttr("any", "{data:1}"),
 				hasAttr("bool", true),
 				hasAttr("duration", int64(time.Minute)),
@@ -267,16 +273,18 @@ func TestSLogHandler(t *testing.T) {
 			name:        "multi-messages",
 			explanation: withSource("this test expects multiple independent messages"),
 			f: func(l *slog.Logger) {
-				l.Info("one")
-				l.Info("two")
+				l.Warn("one")
+				l.Debug("two")
 			},
 			checks: [][]check{{
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "WARN"),
 				hasAttr(slog.MessageKey, "one"),
 			}, {
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "DEBUG"),
 				hasAttr(slog.MessageKey, "two"),
 			}},
 		},
@@ -343,6 +351,7 @@ func TestSLogHandler(t *testing.T) {
 			checks: [][]check{{
 				hasKey(slog.TimeKey),
 				hasKey(slog.LevelKey),
+				hasAttr("severityText", "INFO"),
 				hasAttr(slog.MessageKey, "msg"),
 				missingKey("a"),
 				missingKey("c"),
@@ -408,9 +417,8 @@ func TestSLogHandler(t *testing.T) {
 				r.PC = pc
 			},
 			checks: [][]check{{
-				hasAttr(string(semconv.CodeFilepathKey), file),
-				hasAttr(string(semconv.CodeFunctionKey), funcName),
-				hasAttr(string(semconv.CodeNamespaceKey), namespace),
+				hasAttr(string(semconv.CodeFilePathKey), file),
+				hasAttr(string(semconv.CodeFunctionNameKey), funcName),
 				hasAttr(string(semconv.CodeLineNumberKey), int64(line)),
 			}},
 			options: []Option{WithSource(true)},
@@ -441,16 +449,15 @@ func TestSLogHandler(t *testing.T) {
 			}
 		})
 	}
+}
 
-	t.Run("slogtest.TestHandler", func(t *testing.T) {
-		r := new(recorder)
-		h := NewHandler("", WithLoggerProvider(r))
-
-		// TODO: use slogtest.Run when Go 1.21 is no longer supported.
-		err := slogtest.TestHandler(h, r.Results)
-		if err != nil {
-			t.Fatal(err)
-		}
+func TestSlogtest(t *testing.T) {
+	r := new(recorder)
+	slogtest.Run(t, func(*testing.T) slog.Handler {
+		r = new(recorder)
+		return NewHandler("", WithLoggerProvider(r))
+	}, func(*testing.T) map[string]any {
+		return r.Results()[0]
 	})
 }
 
@@ -482,13 +489,19 @@ func TestNewHandlerConfiguration(t *testing.T) {
 				WithVersion("ver"),
 				WithSchemaURL("url"),
 				WithSource(true),
+				WithAttributes(attribute.String("testattr", "testval")),
 			)
 		})
 		require.NotNil(t, h.logger)
 		require.IsType(t, &recorder{}, h.logger)
 
 		l := h.logger.(*recorder)
-		scope := scope{Name: "name", Version: "ver", SchemaURL: "url"}
+		scope := scope{
+			Name:       "name",
+			Version:    "ver",
+			SchemaURL:  "url",
+			Attributes: attribute.NewSet(attribute.String("testattr", "testval")),
+		}
 		assert.Equal(t, scope, l.Scope)
 	})
 }
@@ -499,197 +512,10 @@ func TestHandlerEnabled(t *testing.T) {
 
 	h := NewHandler("name", WithLoggerProvider(r))
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.False(t, h.Enabled(ctx, slog.LevelDebug), "level conversion: permissive")
 	assert.True(t, h.Enabled(ctx, slog.LevelInfo), "level conversion: restrictive")
 
 	ctx = context.WithValue(ctx, enableKey, true)
 	assert.True(t, h.Enabled(ctx, slog.LevelDebug), "context not passed")
-}
-
-func TestSplitFuncName(t *testing.T) {
-	testCases := []struct {
-		fullFuncName  string
-		wantFuncName  string
-		wantNamespace string
-	}{
-		{
-			fullFuncName:  "github.com/my/repo/pkg.foo",
-			wantFuncName:  "foo",
-			wantNamespace: "github.com/my/repo/pkg",
-		},
-		{
-			// anonymous function
-			fullFuncName:  "github.com/my/repo/pkg.foo.func5",
-			wantFuncName:  "func5",
-			wantNamespace: "github.com/my/repo/pkg.foo",
-		},
-		{
-			fullFuncName:  "net/http.Get",
-			wantFuncName:  "Get",
-			wantNamespace: "net/http",
-		},
-		{
-			fullFuncName:  "invalid",
-			wantFuncName:  "",
-			wantNamespace: "",
-		},
-		{
-			fullFuncName:  ".",
-			wantFuncName:  "",
-			wantNamespace: "",
-		},
-	}
-	for _, tc := range testCases {
-		t.Run(tc.fullFuncName, func(t *testing.T) {
-			gotFuncName, gotNamespace := splitFuncName(tc.fullFuncName)
-			assert.Equal(t, tc.wantFuncName, gotFuncName)
-			assert.Equal(t, tc.wantNamespace, gotNamespace)
-		})
-	}
-}
-
-func BenchmarkHandler(b *testing.B) {
-	var (
-		h   slog.Handler
-		err error
-	)
-
-	attrs10 := []slog.Attr{
-		slog.String("1", "1"),
-		slog.Int64("2", 2),
-		slog.Int("3", 3),
-		slog.Uint64("4", 4),
-		slog.Float64("5", 5.),
-		slog.Bool("6", true),
-		slog.Time("7", time.Now()),
-		slog.Duration("8", time.Second),
-		slog.Any("9", 9),
-		slog.Any("10", "10"),
-	}
-	attrs5 := attrs10[:5]
-	record := slog.NewRecord(time.Now(), slog.LevelInfo, "body", 0)
-	ctx := context.Background()
-
-	b.Run("Handle", func(b *testing.B) {
-		handlers := make([]*Handler, b.N)
-		for i := range handlers {
-			handlers[i] = NewHandler("")
-		}
-
-		b.ReportAllocs()
-		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
-			err = handlers[n].Handle(ctx, record)
-		}
-	})
-
-	b.Run("WithAttrs", func(b *testing.B) {
-		b.Run("5", func(b *testing.B) {
-			handlers := make([]*Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("")
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				h = handlers[n].WithAttrs(attrs5)
-			}
-		})
-		b.Run("10", func(b *testing.B) {
-			handlers := make([]*Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("")
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				h = handlers[n].WithAttrs(attrs10)
-			}
-		})
-	})
-
-	b.Run("WithGroup", func(b *testing.B) {
-		handlers := make([]*Handler, b.N)
-		for i := range handlers {
-			handlers[i] = NewHandler("")
-		}
-
-		b.ReportAllocs()
-		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
-			h = handlers[n].WithGroup("group")
-		}
-	})
-
-	b.Run("WithGroup.WithAttrs", func(b *testing.B) {
-		b.Run("5", func(b *testing.B) {
-			handlers := make([]*Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("")
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				h = handlers[n].WithGroup("group").WithAttrs(attrs5)
-			}
-		})
-		b.Run("10", func(b *testing.B) {
-			handlers := make([]*Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("")
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				h = handlers[n].WithGroup("group").WithAttrs(attrs10)
-			}
-		})
-	})
-
-	b.Run("(WithGroup.WithAttrs).Handle", func(b *testing.B) {
-		b.Run("5", func(b *testing.B) {
-			handlers := make([]slog.Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("").WithGroup("group").WithAttrs(attrs5)
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				err = handlers[n].Handle(ctx, record)
-			}
-		})
-		b.Run("10", func(b *testing.B) {
-			handlers := make([]slog.Handler, b.N)
-			for i := range handlers {
-				handlers[i] = NewHandler("").WithGroup("group").WithAttrs(attrs10)
-			}
-
-			b.ReportAllocs()
-			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
-				err = handlers[n].Handle(ctx, record)
-			}
-		})
-	})
-
-	b.Run("(WithSource).Handle", func(b *testing.B) {
-		handlers := make([]*Handler, b.N)
-		for i := range handlers {
-			handlers[i] = NewHandler("", WithSource(true))
-		}
-
-		b.ReportAllocs()
-		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
-			err = handlers[n].Handle(ctx, record)
-		}
-	})
-
-	_, _ = h, err
 }

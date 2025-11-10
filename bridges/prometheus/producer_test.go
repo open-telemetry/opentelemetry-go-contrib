@@ -4,14 +4,12 @@
 package prometheus // import "go.opentelemetry.io/contrib/bridges/prometheus"
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -230,6 +228,44 @@ func TestProduce(t *testing.T) {
 			}},
 		},
 		{
+			name: "histogram cumulative values to non-cumulative",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
+					Name: "test_histogram_metric",
+					Help: "A histogram metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+				metric.Observe(0.01)
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A histogram metric for testing",
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Count:        1,
+									Sum:          0.01,
+									Bounds:       []float64{0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10},
+									BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+									Attributes:   attribute.NewSet(attribute.String("foo", "bar")),
+									Exemplars:    []metricdata.Exemplar[float64]{},
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
 			name: "histogram with exemplar",
 			testFn: func(reg *prometheus.Registry) {
 				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
@@ -432,11 +468,11 @@ func TestProduce(t *testing.T) {
 			reg := prometheus.NewRegistry()
 			tt.testFn(reg)
 			p := NewMetricProducer(WithGatherer(reg))
-			output, err := p.Produce(context.Background())
+			output, err := p.Produce(t.Context())
 			if tt.wantErr == nil {
 				assert.NoError(t, err)
 			}
-			require.Equal(t, len(output), len(tt.expected))
+			require.Len(t, output, len(tt.expected))
 			for i := range output {
 				metricdatatest.AssertEqual(t, tt.expected[i], output[i], metricdatatest.IgnoreTimestamp())
 			}
@@ -558,7 +594,7 @@ func TestProduceForStartTime(t *testing.T) {
 			reg := prometheus.NewRegistry()
 			tt.testFn(reg)
 			p := NewMetricProducer(WithGatherer(reg))
-			output, err := p.Produce(context.Background())
+			output, err := p.Produce(t.Context())
 			assert.NoError(t, err)
 			assert.NotEmpty(t, output)
 			for _, sms := range output {

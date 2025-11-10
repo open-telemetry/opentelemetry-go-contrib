@@ -1,9 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build go1.18
-// +build go1.18
-
 package main
 
 import (
@@ -13,11 +10,12 @@ import (
 	"os/signal"
 	"time"
 
-	"go.opentelemetry.io/contrib/instrumentation/host"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+
+	"go.opentelemetry.io/contrib/instrumentation/host"
 )
 
 var res = resource.NewWithAttributes(

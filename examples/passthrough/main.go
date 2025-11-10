@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Passthrough exemplifies distributed context propagation.
 package main
 
 import (
@@ -10,12 +11,13 @@ import (
 	"net/http"
 	"time"
 
-	"go.opentelemetry.io/contrib/examples/passthrough/handler"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/examples/passthrough/handler"
 )
 
 const name = "go.opentelemetry.io/contrib/examples/passthrough"
@@ -31,7 +33,7 @@ func main() {
 	defer func() { _ = tp.Shutdown(ctx) }()
 
 	// make an initial http request
-	r, err := http.NewRequest("", "", nil)
+	r, err := http.NewRequest("", "", http.NoBody)
 	if err != nil {
 		panic(err)
 	}

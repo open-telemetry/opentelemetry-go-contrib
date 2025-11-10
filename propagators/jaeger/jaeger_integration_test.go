@@ -4,17 +4,15 @@
 package jaeger_test
 
 import (
-	"context"
 	"net/http"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	"github.com/google/go-cmp/cmp"
-
-	"go.opentelemetry.io/contrib/propagators/jaeger"
+	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/propagators/jaeger"
 )
 
 func TestExtractJaeger(t *testing.T) {
@@ -42,7 +40,7 @@ func TestExtractJaeger(t *testing.T) {
 					header.Set(k, v)
 				}
 
-				ctx := context.Background()
+				ctx := t.Context()
 				ctx = propagator.Extract(ctx, propagation.HeaderCarrier(header))
 				resSc := trace.SpanContextFromContext(ctx)
 				comparer := cmp.Comparer(func(a, b trace.SpanContext) bool {
@@ -81,7 +79,7 @@ func TestInjectJaeger(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				header := http.Header{}
 				ctx := trace.ContextWithSpanContext(
-					jaeger.WithDebug(context.Background(), tc.debug),
+					jaeger.WithDebug(t.Context(), tc.debug),
 					trace.NewSpanContext(tc.scc),
 				)
 				propagator.Inject(ctx, propagation.HeaderCarrier(header))

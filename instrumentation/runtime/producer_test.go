@@ -4,12 +4,10 @@
 package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -20,7 +18,7 @@ func TestNewProducer(t *testing.T) {
 	reader := metric.NewManualReader(metric.WithProducer(NewProducer()))
 	_ = metric.NewMeterProvider(metric.WithReader(reader))
 	rm := metricdata.ResourceMetrics{}
-	err := reader.Collect(context.Background(), &rm)
+	err := reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)

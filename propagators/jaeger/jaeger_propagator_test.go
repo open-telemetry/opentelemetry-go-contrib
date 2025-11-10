@@ -4,13 +4,11 @@
 package jaeger
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -160,9 +158,9 @@ func TestJaeger_Extract(t *testing.T) {
 
 	for _, test := range testData {
 		headerVal := strings.Join([]string{test.traceID, test.spanID, test.parentSpanID, test.flags}, separator)
-		ctx, sc, err := extract(context.Background(), headerVal)
+		ctx, sc, err := extract(t.Context(), headerVal)
 
-		info := []interface{}{
+		info := []any{
 			"trace ID: %q, span ID: %q, parent span ID: %q, sampled: %q, flags: %q",
 			test.traceID,
 			test.spanID,
@@ -177,4 +175,11 @@ func TestJaeger_Extract(t *testing.T) {
 		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
 		assert.Equal(t, test.debug, debugFromContext(ctx))
 	}
+}
+
+func TestJaeger_Fields(t *testing.T) {
+	j := &Jaeger{}
+	fields := j.Fields()
+	assert.Len(t, fields, 1)
+	assert.Contains(t, fields, jaegerHeader)
 }

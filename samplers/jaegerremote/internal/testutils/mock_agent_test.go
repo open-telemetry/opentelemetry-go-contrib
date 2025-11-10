@@ -21,11 +21,9 @@ package testutils
 import (
 	"testing"
 
+	jaeger_api_v2 "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	jaeger_api_v2 "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/proto-gen/jaeger-idl/proto/api_v2"
-	"go.opentelemetry.io/contrib/samplers/jaegerremote/internal/utils"
 )
 
 func TestMockAgentSamplingManager(t *testing.T) {
@@ -33,13 +31,13 @@ func TestMockAgentSamplingManager(t *testing.T) {
 	require.NoError(t, err)
 	defer mockAgent.Close()
 
-	err = utils.GetJSON("http://"+mockAgent.SamplingServerAddr()+"/", nil)
+	err = getJSON("http://"+mockAgent.SamplingServerAddr()+"/", nil)
 	require.Error(t, err, "no 'service' parameter")
-	err = utils.GetJSON("http://"+mockAgent.SamplingServerAddr()+"/?service=a&service=b", nil)
+	err = getJSON("http://"+mockAgent.SamplingServerAddr()+"/?service=a&service=b", nil)
 	require.Error(t, err, "Too many 'service' parameters")
 
 	var resp jaeger_api_v2.SamplingStrategyResponse
-	err = utils.GetJSON("http://"+mockAgent.SamplingServerAddr()+"/?service=something", &resp)
+	err = getJSON("http://"+mockAgent.SamplingServerAddr()+"/?service=something", &resp)
 	require.NoError(t, err)
 	assert.Equal(t, jaeger_api_v2.SamplingStrategyType_PROBABILISTIC, resp.StrategyType)
 
@@ -49,7 +47,7 @@ func TestMockAgentSamplingManager(t *testing.T) {
 			MaxTracesPerSecond: 123,
 		},
 	})
-	err = utils.GetJSON("http://"+mockAgent.SamplingServerAddr()+"/?service=service123", &resp)
+	err = getJSON("http://"+mockAgent.SamplingServerAddr()+"/?service=service123", &resp)
 	require.NoError(t, err)
 	assert.Equal(t, jaeger_api_v2.SamplingStrategyType_RATE_LIMITING, resp.StrategyType)
 	require.NotNil(t, resp.RateLimitingSampling)

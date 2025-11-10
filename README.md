@@ -4,6 +4,7 @@
 [![codecov.io](https://codecov.io/gh/open-telemetry/opentelemetry-go-contrib/coverage.svg?branch=main)](https://app.codecov.io/gh/open-telemetry/opentelemetry-go-contrib?branch=main)
 [![Docs](https://godoc.org/go.opentelemetry.io/contrib?status.svg)](https://pkg.go.dev/go.opentelemetry.io/contrib)
 [![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io/contrib)](https://goreportcard.com/report/go.opentelemetry.io/contrib)
+[![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/opentelemetry-go-contrib.svg)](https://issues.oss-fuzz.com/issues?q=project:opentelemetry-go-contrib)
 [![Slack](https://img.shields.io/badge/slack-@cncf/otel--go-brightgreen.svg?logo=slack)](https://cloud-native.slack.com/archives/C01NPAXACKT)
 
 Collection of 3rd-party packages for [OpenTelemetry-Go](https://github.com/open-telemetry/opentelemetry-go).
@@ -51,18 +52,18 @@ This project is tested on the following systems.
 
 | OS       | Go Version | Architecture |
 | -------- | ---------- | ------------ |
-| Ubuntu   | 1.23       | amd64        |
-| Ubuntu   | 1.22       | amd64        |
-| Ubuntu   | 1.23       | 386          |
-| Ubuntu   | 1.22       | 386          |
-| macOS 13 | 1.23       | amd64        |
-| macOS 13 | 1.22       | amd64        |
-| macOS    | 1.23       | arm64        |
-| macOS    | 1.22       | arm64        |
-| Windows  | 1.23       | amd64        |
-| Windows  | 1.22       | amd64        |
-| Windows  | 1.23       | 386          |
-| Windows  | 1.22       | 386          |
+| Ubuntu   | 1.25       | amd64        |
+| Ubuntu   | 1.24       | amd64        |
+| Ubuntu   | 1.25       | 386          |
+| Ubuntu   | 1.24       | 386          |
+| macOS 13 | 1.25       | amd64        |
+| macOS 13 | 1.24       | amd64        |
+| macOS    | 1.25       | arm64        |
+| macOS    | 1.24       | arm64        |
+| Windows  | 1.25       | amd64        |
+| Windows  | 1.24       | amd64        |
+| Windows  | 1.25       | 386          |
+| Windows  | 1.24       | 386          |
 
 While this project should work for other systems, no compatibility guarantees
 are made for those systems currently.

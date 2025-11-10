@@ -10,10 +10,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	"k8s.io/client-go/rest"
 )
 
 type MockDetectorUtils struct {
@@ -27,7 +27,7 @@ func (detectorUtils *MockDetectorUtils) fileExists(filename string) bool {
 }
 
 // Mock function for getConfigMap().
-func (detectorUtils *MockDetectorUtils) getConfigMap(_ context.Context, namespace string, name string) (map[string]string, error) {
+func (detectorUtils *MockDetectorUtils) getConfigMap(_ context.Context, namespace, name string) (map[string]string, error) {
 	args := detectorUtils.Called(namespace, name)
 	return args.Get(0).(map[string]string), args.Error(1)
 }
@@ -60,7 +60,7 @@ func TestEks(t *testing.T) {
 
 	// Call EKS Resource detector to detect resources
 	eksResourceDetector := resourceDetector{utils: detectorUtils}
-	resourceObj, err := eksResourceDetector.Detect(context.Background())
+	resourceObj, err := eksResourceDetector.Detect(t.Context())
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedResource, resourceObj, "Resource object returned is incorrect")
@@ -77,7 +77,17 @@ func TestNotEKS(t *testing.T) {
 	detectorUtils.On("fileExists", k8sTokenPath).Return(false)
 
 	detector := resourceDetector{utils: detectorUtils}
-	r, err := detector.Detect(context.Background())
+	r, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), r, "Resource object should be empty")
+	detectorUtils.AssertExpectations(t)
+}
+
+// Tests EKS resource detector not running K8S at all.
+func TestNotK8S(t *testing.T) {
+	detectorUtils := new(MockDetectorUtils)
+	detector := resourceDetector{utils: detectorUtils, err: rest.ErrNotInCluster}
+	r, err := detector.Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), r, "Resource object should be empty")
 	detectorUtils.AssertExpectations(t)

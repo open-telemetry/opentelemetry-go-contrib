@@ -1,0 +1,36 @@
+name: Markdown
+
+on:
+  repository_dispatch:
+  workflow_dispatch:
+  schedule:
+  # Everyday at 9:00 AM.
+  - cron: "0 9 * * *"
+
+# Declare default permissions as read only.
+permissions: read-all
+
+jobs:
+  lint-markdown:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write # required for creating issues from markdown lint results
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+
+    - name: Run linter
+      id: markdownlint
+      uses: docker://avtodev/markdown-lint:v1@sha256:6aeedc2f49138ce7a1cd0adffc1b1c0321b841dc2102408967d9301c031949ee
+      with:
+        config: .markdownlint.yaml
+        args: '**/*.md'
+        output: ./markdownlint.txt
+
+    - name: Create Issue From File
+      if: steps.markdownlint.outputs.exit_code != 0
+      uses: peter-evans/create-issue-from-file@fca9117c27cdc29c6c4db3b86c48e4115a786710 # v6
+      with:
+        title: Markdown Lint Report
+        content-filepath: ./markdownlint.txt
+        labels: report, bot-generated
