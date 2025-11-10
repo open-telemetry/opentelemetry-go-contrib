@@ -22,7 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Change `Version()` function in `otelhttp` package to a `const Version` string. (#8142)
+- Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
 - Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8035)
 
 ### Deprecated
