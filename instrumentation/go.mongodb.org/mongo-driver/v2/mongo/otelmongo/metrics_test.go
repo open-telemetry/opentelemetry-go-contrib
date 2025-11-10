@@ -18,6 +18,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 )
 
+const (
+	testAddr = "mongodb://localhost:27017/?connect=direct"
+)
+
 func TestMetricsOperationDuration(t *testing.T) {
 	reader := metric.NewManualReader()
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
@@ -27,14 +31,13 @@ func TestMetricsOperationDuration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
 	defer cancel()
 
-	addr := "mongodb://localhost:27017/?connect=direct"
 	opts := options.Client()
 	opts.Deployment = md //nolint:staticcheck
 	opts.Monitor = NewMonitor(
 		WithMeterProvider(provider),
 		WithCommandAttributeDisabled(false),
 	)
-	opts.ApplyURI(addr)
+	opts.ApplyURI(testAddr)
 
 	md.AddResponses([]bson.D{{{Key: "ok", Value: 1}}}...)
 	client, err := mongo.Connect(opts)
@@ -96,14 +99,13 @@ func TestMetricsOperationFailure(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
 	defer cancel()
 
-	addr := "mongodb://localhost:27017/?connect=direct"
 	opts := options.Client()
 	opts.Deployment = md //nolint:staticcheck
 	opts.Monitor = NewMonitor(
 		WithMeterProvider(provider),
 		WithCommandAttributeDisabled(true),
 	)
-	opts.ApplyURI(addr)
+	opts.ApplyURI(testAddr)
 
 	// Simulate an error response
 	md.AddResponses([]bson.D{{{Key: "ok", Value: 0}, {Key: "errmsg", Value: "test error"}}}...)
@@ -114,8 +116,8 @@ func TestMetricsOperationFailure(t *testing.T) {
 		require.NoError(t, err)
 	}()
 
-	// This operation will fail
-	_, _ = client.Database("test-database").Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+	_, err = client.Database("test-database").Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+	require.Error(t, err)
 
 	// Collect metrics
 	var rm metricdata.ResourceMetrics
