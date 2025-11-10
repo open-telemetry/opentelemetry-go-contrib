@@ -143,12 +143,12 @@ func WithFilter(f Filter) Option {
 	})
 }
 
-// Event represents message event types for WithMessageEvents.
+// Event represents message event types for [WithMessageEvents].
 type Event int
 
 // Different types of events that can be recorded, see WithMessageEvents.
 const (
-	UnspecifiedEvent Event = iota
+	unspecifiedEvent Event = iota
 	ReadEvents
 	WriteEvents
 )

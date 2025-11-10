@@ -123,9 +123,18 @@ func TestSpanNameFormatter(t *testing.T) {
 	}
 }
 
-func TestEventCoverage(t *testing.T) {
-	t.Helper()
-	_ = otelhttp.UnspecifiedEvent
-	_ = otelhttp.ReadEvents
-	_ = otelhttp.WriteEvents
+func TestEvent(t *testing.T) {
+	if otelhttp.ReadEvents != 1 {
+		t.Errorf("ReadEvents = %v, want 1", otelhttp.ReadEvents)
+	}
+	if otelhttp.WriteEvents != 2 {
+		t.Errorf("WriteEvents = %v, want 2", otelhttp.WriteEvents)
+	}
+
+	if got := otelhttp.WithMessageEvents(otelhttp.ReadEvents); got == nil {
+		t.Error("WithMessageEvents(ReadEvents) returned nil")
+	}
+	if got := otelhttp.WithMessageEvents(otelhttp.WriteEvents); got == nil {
+		t.Error("WithMessageEvents(WriteEvents) returned nil")
+	}
 }
