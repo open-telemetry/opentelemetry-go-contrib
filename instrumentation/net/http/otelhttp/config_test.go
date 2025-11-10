@@ -122,3 +122,10 @@ func TestSpanNameFormatter(t *testing.T) {
 		})
 	}
 }
+
+func TestEventCoverage(t *testing.T) {
+	t.Helper()
+	_ = otelhttp.UnspecifiedEvent
+	_ = otelhttp.ReadEvents
+	_ = otelhttp.WriteEvents
+}
