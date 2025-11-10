@@ -226,7 +226,7 @@ func (h *middleware) metricAttributesFromRequest(r *http.Request) []attribute.Ke
 // with HTTP route attribute.
 //
 // Deprecated: spans are automatically annotated with the route attribute.
-// To annotate metrics, use the `WithMetricAttributesFn` option.
+// To annotate metrics, use the [WithMetricAttributesFn] option.
 func WithRouteTag(route string, h http.Handler) http.Handler {
 	attr := semconv.NewHTTPServer(nil).Route(route)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
