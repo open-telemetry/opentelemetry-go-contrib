@@ -14,6 +14,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"runtime"
 	"strconv"
 	"strings"
@@ -494,6 +495,8 @@ func TestTemporaryFormFileRemove(t *testing.T) {
 	router := gin.New()
 	router.MaxMultipartMemory = 1
 
+	tempDir := t.TempDir()
+
 	// We register three middlewares here, with the otel one in the middle.
 	// When the response is returned, the post-handler execution order is:
 	// MiddlewareC -> otel -> MiddlewareA (reverse of registration order).
@@ -505,12 +508,14 @@ func TestTemporaryFormFileRemove(t *testing.T) {
 	// MiddlewareA
 	router.Use(func(c *gin.Context) {
 		c.Next()
+		_, err := c.FormFile("files")
+		require.NoError(t, err)
 		form, _ := c.MultipartForm()
 		files := form.File["files"]
 		require.Len(t, files, 1)
-		_, err := files[0].Open()
-		require.ErrorIs(t, err, fs.ErrNotExist)
-
+		_, err = fs.ReadDir(os.DirFS(tempDir), files[0].Filename)
+		require.Error(t, err)
+		require.True(t, errors.Is(err, fs.ErrNotExist))
 	})
 
 	router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
@@ -518,11 +523,14 @@ func TestTemporaryFormFileRemove(t *testing.T) {
 	// MiddlewareC
 	router.Use(func(c *gin.Context) {
 		c.Next()
+		_, err := c.FormFile("files")
+		require.NoError(t, err)
 		form, _ := c.MultipartForm()
 		files := form.File["files"]
 		require.Len(t, files, 1)
-		_, err := files[0].Open()
-		require.NoError(t, err)
+		_, err = fs.ReadDir(os.DirFS(tempDir), files[0].Filename)
+		require.Error(t, err)
+		require.True(t, errors.Is(err, fs.ErrNotExist))
 	})
 
 	var fileHeader *multipart.FileHeader
@@ -553,7 +561,12 @@ func TestTemporaryFormFileRemove(t *testing.T) {
 	assert.Len(t, sr.Ended(), 1)
 	require.Equal(t, http.StatusOK, w.Code)
 	_, err = fileHeader.Open()
-	require.ErrorIs(t, err, fs.ErrNotExist)
+	require.NoError(t, err)
+
+	// check TempDir is empty
+	entries, err := os.ReadDir(tempDir)
+	require.NoError(t, err)
+	require.Len(t, entries, 0)
 }
 
 func TestMetrics(t *testing.T) {
