@@ -1,6 +1,6 @@
 # OpenTelemetry-Go Contrib
 
-[![build_and_test](https://github.com/open-telemetry/opentelemetry-go-contrib/workflows/build_and_test/badge.svg)](https://github.com/open-telemetry/opentelemetry-go-contrib/actions?query=workflow%3Abuild_and_test+branch%3Amain)
+[![build\_and\_test](https://github.com/open-telemetry/opentelemetry-go-contrib/workflows/build_and_test/badge.svg)](https://github.com/open-telemetry/opentelemetry-go-contrib/actions?query=workflow%3Abuild_and_test+branch%3Amain)
 [![codecov.io](https://codecov.io/gh/open-telemetry/opentelemetry-go-contrib/coverage.svg?branch=main)](https://app.codecov.io/gh/open-telemetry/opentelemetry-go-contrib?branch=main)
 [![Docs](https://godoc.org/go.opentelemetry.io/contrib?status.svg)](https://pkg.go.dev/go.opentelemetry.io/contrib)
 [![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io/contrib)](https://goreportcard.com/report/go.opentelemetry.io/contrib)
@@ -9,65 +9,147 @@
 
 Collection of 3rd-party packages for [OpenTelemetry-Go](https://github.com/open-telemetry/opentelemetry-go).
 
+---
+
 ## Contents
 
-- [Examples](./examples/): Examples of OpenTelemetry libraries usage.
-- [Instrumentation](./instrumentation/): Packages providing OpenTelemetry instrumentation for 3rd-party libraries.
-- [Propagators](./propagators/): Packages providing OpenTelemetry context propagators for 3rd-party propagation formats.
-- [Detectors](./detectors/): Packages providing OpenTelemetry resource detectors for 3rd-party cloud computing environments.
-- [Exporters](./exporters/): Packages providing OpenTelemetry exporters for 3rd-party export formats.
-- [Samplers](./samplers/): Packages providing additional implementations of OpenTelemetry samplers.
-- [Bridges](./bridges/): Packages providing adapters for 3rd-party instrumentation frameworks.
-- [Processors](./processors/): Packages providing additional implementations of OpenTelemetry processors.
+* **[Examples](./examples/)** — Example applications and snippets demonstrating usage.
+* **[Instrumentation](./instrumentation/)** — Instrumentation packages for 3rd‑party libraries.
+* **[Propagators](./propagators/)** — Context propagation implementations for common formats.
+* **[Detectors](./detectors/)** — Resource detectors for cloud environments.
+* **[Exporters](./exporters/)** — Exporters for 3rd‑party telemetry backends.
+* **[Samplers](./samplers/)** — Additional sampler implementations.
+* **[Bridges](./bridges/)** — Adapters for other instrumentation frameworks.
+* **[Processors](./processors/)** — Extra processor implementations.
 
-## Project Status
+---
 
-This project contains both stable and unstable modules.
-Refer to the module for its version or our [versioning manifest](./versions.yaml).
+## Quickstart
 
-Project versioning information and stability guarantees can be found in the [versioning documentation](https://github.com/open-telemetry/opentelemetry-go/blob/a724cf884287e04785eaa91513d26a6ef9699288/VERSIONING.md).
+> These steps get a contributor setup quickly to run and test packages locally.
 
-Progress and status specific to this repository is tracked in our local [project boards](https://github.com/open-telemetry/opentelemetry-go-contrib/projects?query=is%3Aopen) and [milestones](https://github.com/open-telemetry/opentelemetry-go-contrib/milestones).
+1. **Install Go** (matching supported versions, see Compatibility below). Check with:
 
-### Compatibility
+   ```bash
+   go version
+   ```
 
-OpenTelemetry-Go Contrib ensures compatibility with the current supported
-versions of
-the [Go language](https://golang.org/doc/devel/release#policy):
+2. **Clone your fork** (recommended fork workflow for contributing):
 
-> Each major Go release is supported until there are two newer major releases.
-> For example, Go 1.5 was supported until the Go 1.7 release, and Go 1.6 was supported until the Go 1.8 release.
+   ```bash
+   git clone git@github.com:YOUR-USERNAME/opentelemetry-go-contrib.git
+   cd opentelemetry-go-contrib
+   git remote add upstream https://github.com/open-telemetry/opentelemetry-go-contrib.git
+   ```
 
-For versions of Go that are no longer supported upstream, opentelemetry-go-contrib will
-stop ensuring compatibility with these versions in the following manner:
+3. **Sync your main**:
 
-- A minor release of opentelemetry-go-contrib will be made to add support for the new
-  supported release of Go.
-- The following minor release of opentelemetry-go-contrib will remove compatibility
-  testing for the oldest (now archived upstream) version of Go. This, and
-  future, releases of opentelemetry-go-contrib may include features only supported by
-  the currently supported versions of Go.
+   ```bash
+   git checkout main
+   git fetch upstream
+   git pull --rebase upstream main
+   ```
 
-This project is tested on the following systems.
+4. **Run tests for a package** (recommended to run only affected packages locally):
 
-| OS       | Go Version | Architecture |
-| -------- | ---------- | ------------ |
-| Ubuntu   | 1.25       | amd64        |
-| Ubuntu   | 1.24       | amd64        |
-| Ubuntu   | 1.25       | 386          |
-| Ubuntu   | 1.24       | 386          |
-| macOS 13 | 1.25       | amd64        |
-| macOS 13 | 1.24       | amd64        |
-| macOS    | 1.25       | arm64        |
-| macOS    | 1.24       | arm64        |
-| Windows  | 1.25       | amd64        |
-| Windows  | 1.24       | amd64        |
-| Windows  | 1.25       | 386          |
-| Windows  | 1.24       | 386          |
+   ```bash
+   go test ./instrumentation/<package>/...
+   # or run all tests (can be slow):
+   go test ./...
+   ```
 
-While this project should work for other systems, no compatibility guarantees
-are made for those systems currently.
+5. **Create a branch, make changes, and open a PR** following `CONTRIBUTING.md`.
 
-## Contributing
+---
 
-For information on how to contribute, consult [the contributing guidelines](./CONTRIBUTING.md)
+## Running CI & Tests Locally
+
+This repository uses the GitHub Actions `build_and_test` workflow. To reproduce common checks locally:
+
+* Run unit tests:
+
+  ```bash
+  go test ./... -v
+  ```
+
+* Run package-specific tests when working in a subdirectory:
+
+  ```bash
+  cd instrumentation/<pkg>
+  go test ./...
+  ```
+
+* If a `Makefile` target exists (some packages may provide one), use it:
+
+  ```bash
+  make test
+  ```
+
+---
+
+## How to Contribute
+
+Please read the repository's **[CONTRIBUTING.md](./CONTRIBUTING.md)** before submitting a PR. A short checklist:
+
+1. Fork the repository and clone your fork.
+2. Sync `main` with upstream before starting work.
+3. Create a small, focused branch: `git checkout -b feat/<short-description>`.
+4. Run tests for the package you change and keep changes well-scoped.
+5. Write clear commit messages and a helpful PR description describing what, why, and how to test.
+6. Link issues (e.g. `closes #123`) when applicable.
+7. Be responsive to reviewer feedback and update your branch as requested.
+
+Maintainers may request a DCO/CLA or additional steps — see `CONTRIBUTING.md` for details.
+
+---
+
+## Compatibility
+
+OpenTelemetry-Go Contrib supports the Go language versions tested in CI. The project follows the Go release support policy: each major release is supported until two newer major releases exist.
+
+| OS      | Go Versions | Architectures |
+| ------- | ----------- | ------------- |
+| Ubuntu  | 1.24, 1.25  | amd64, 386    |
+| macOS   | 1.24, 1.25  | amd64, arm64  |
+| Windows | 1.24, 1.25  | amd64, 386    |
+
+---
+
+## Project Status & Governance
+
+This repository contains stable and unstable modules. Check the module's own version and the `versions.yaml` manifest for versioning details.
+
+* Project progress and planning: see the **[project boards](https://github.com/open-telemetry/opentelemetry-go-contrib/projects)** and **[milestones](https://github.com/open-telemetry/opentelemetry-go-contrib/milestones)**.
+* For versioning and stability guarantees, see the upstream OpenTelemetry-Go [`VERSIONING.md`](https://github.com/open-telemetry/opentelemetry-go/blob/main/VERSIONING.md).
+
+---
+
+## Finding Issues to Work On
+
+* Use the **Issues** tab and filter by labels like `good first issue`, `help wanted`, or `documentation`.
+* Start with documentation fixes or small test/bug fixes to learn the codebase and CI.
+
+---
+
+## Useful Links
+
+* Main repo: [https://github.com/open-telemetry/opentelemetry-go-contrib](https://github.com/open-telemetry/opentelemetry-go-contrib)
+* Upstream OpenTelemetry-Go: [https://github.com/open-telemetry/opentelemetry-go](https://github.com/open-telemetry/opentelemetry-go)
+* Docs: [https://pkg.go.dev/go.opentelemetry.io/contrib](https://pkg.go.dev/go.opentelemetry.io/contrib)
+* CI actions: [https://github.com/open-telemetry/opentelemetry-go-contrib/actions](https://github.com/open-telemetry/opentelemetry-go-contrib/actions)
+
+---
+
+## License
+
+This repository is licensed under the terms specified in the repository — see the `LICENSE` file for details.
+
+---
+
+If you'd like, I can also:
+
+* Produce a PR-ready commit message and branch name for this README change.
+* Create a small example `CONTRIBUTING.md` checklist or a `README_CONTRIBUTING.md` that highlights the most important points for first-time contributors.
+* Scan the repo issues now and list 3 beginner-friendly issues you can pick.
+
+Tell me which one you want next.
