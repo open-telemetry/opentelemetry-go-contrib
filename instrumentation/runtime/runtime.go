@@ -37,7 +37,8 @@ const (
 
 // Start initializes reporting of runtime metrics using the supplied config.
 // For goroutine scheduling metrics, additionally see [NewProducer].
-// Metrics emitted by [Start] includes:
+//
+// Metrics emitted by Start includes:
 //
 //	go.memory.used          By            Memory used by the Go runtime.
 //	go.memory.limit         By            Go runtime memory limit configured by the user, if a limit exists.
