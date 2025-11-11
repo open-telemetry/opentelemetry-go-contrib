@@ -108,7 +108,7 @@ jobs:
             arch: "386"
           - os: ubuntu-latest
             arch: amd64
-          - os: macos-13
+          - os: macos-15
             arch: amd64
           - os: macos-latest
             arch: arm64
