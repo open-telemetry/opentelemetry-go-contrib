@@ -82,7 +82,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		savedCtx := c.Request.Context()
 		defer func() {
 			if c.Request.MultipartForm != nil {
-				c.Request.Clone(savedCtx)
+				c.Request = c.Request.Clone(savedCtx)
 			} else {
 				c.Request = c.Request.WithContext(savedCtx)
 			}
