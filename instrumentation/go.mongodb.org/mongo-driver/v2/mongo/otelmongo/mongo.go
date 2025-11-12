@@ -77,7 +77,8 @@ func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEven
 	}
 
 	hostname, port := peerInfo(evt.ConnectionID)
-	attrs := []attribute.KeyValue{
+	attrs := attribute.NewSet(
+		semconv.DBSystemNameMongoDB,
 		// No need to add semconv.DBSystemMongoDB, it will be added by metrics recorder.
 		semconv.DBOperationName(evt.CommandName),
 		semconv.DBNamespace(evt.DatabaseName),
@@ -88,17 +89,16 @@ func (m *monitor) Succeeded(ctx context.Context, evt *event.CommandSucceededEven
 		// Succeeded processes an [go.mongodb.org/mongo-driver/v2/event.CommandSucceededEvent] for OTel,
 		// including collecting metrics. The status code metric is excluded since MongoDB server indicates
 		// a successful operation with {ok: 1}, which doesn't map to a traditional status code.
-	}
+	)
 	// TODO: db.query.text attribute is currently disabled by default.
 	// Because event does not provide the query text directly.
 	// command := m.extractCommand(evt)
 	// attrs = append(attrs, semconv.DBQueryText(sanitizeCommand(evt.Command)))
 
-	m.ClientOperationDuration.Record(
+	m.ClientOperationDuration.RecordSet(
 		ctx,
 		evt.Duration.Seconds(),
-		dbconv.SystemNameMongoDB,
-		attrs...,
+		attrs,
 	)
 }
 
@@ -109,10 +109,9 @@ func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
 	}
 
 	hostname, port := peerInfo(evt.ConnectionID)
-	attrs := []attribute.KeyValue{
-		// No need to add semconv.DBSystemMongoDB, it will be added by metrics recorder.
+	attrs := attribute.NewSet(
+		semconv.DBSystemNameMongoDB,
 		semconv.DBOperationName(evt.CommandName),
-		semconv.DBNamespace(evt.DatabaseName),
 		semconv.NetworkPeerAddress(hostname),
 		semconv.NetworkPeerPort(port),
 		semconv.NetworkTransportTCP,
@@ -120,17 +119,16 @@ func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
 		// Assert the error as [go.mongodb.org/mongo-driver/v2/x/mongo/driver.Error] and pull the code from there.
 		// ref. https://jira.mongodb.org/browse/GODRIVER-3690
 		semconv.ErrorType(evt.Failure),
-	}
+	)
 	// TODO: db.query.text attribute is currently disabled by default.
 	// Because event does not provide the query text directly.
 	// command := m.extractCommand(evt)
 	// attrs = append(attrs, semconv.DBQueryText(sanitizeCommand(evt.Command)))
 
-	m.ClientOperationDuration.Record(
+	m.ClientOperationDuration.RecordSet(
 		ctx,
 		evt.Duration.Seconds(),
-		dbconv.SystemNameMongoDB,
-		attrs...,
+		attrs,
 	)
 }
 
