@@ -32,7 +32,7 @@ func TestMetricsOperationDuration(t *testing.T) {
 	defer cancel()
 
 	opts := options.Client()
-	opts.Deployment = md //nolint:staticcheck
+	opts.Deployment = md //nolint:staticcheck // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
 	opts.Monitor = NewMonitor(
 		WithMeterProvider(provider),
 		WithCommandAttributeDisabled(false),
@@ -64,28 +64,29 @@ func TestMetricsOperationDuration(t *testing.T) {
 	// Find the operation duration metric
 	var foundDuration bool
 	for _, m := range scopeMetrics.Metrics {
-		if m.Name == "db.client.operation.duration" {
-			foundDuration = true
-			histogram, ok := m.Data.(metricdata.Histogram[float64])
-			assert.True(t, ok, "expected histogram data type")
-			assert.NotEmpty(t, histogram.DataPoints)
-
-			// Check that attributes are present
-			dp := histogram.DataPoints[0]
-			attrs := dp.Attributes.ToSlice()
-			hasDBSystem := false
-			hasOperation := false
-			for _, attr := range attrs {
-				if attr.Key == "db.system.name" && attr.Value.AsString() == "mongodb" {
-					hasDBSystem = true
-				}
-				if attr.Key == "db.operation.name" && attr.Value.AsString() == "insert" {
-					hasOperation = true
-				}
-			}
-			assert.True(t, hasDBSystem, "expected db.system.name attribute")
-			assert.True(t, hasOperation, "expected db.operation.name attribute")
+		if m.Name != "db.client.operation.duration" {
+			continue
 		}
+		foundDuration = true
+		histogram, ok := m.Data.(metricdata.Histogram[float64])
+		assert.True(t, ok, "expected histogram data type")
+		assert.NotEmpty(t, histogram.DataPoints)
+
+		// Check that attributes are present
+		dp := histogram.DataPoints[0]
+		attrs := dp.Attributes.ToSlice()
+		hasDBSystem := false
+		hasOperation := false
+		for _, attr := range attrs {
+			if attr.Key == "db.system.name" && attr.Value.AsString() == "mongodb" {
+				hasDBSystem = true
+			}
+			if attr.Key == "db.operation.name" && attr.Value.AsString() == "insert" {
+				hasOperation = true
+			}
+		}
+		assert.True(t, hasDBSystem, "expected db.system.name attribute")
+		assert.True(t, hasOperation, "expected db.operation.name attribute")
 	}
 	assert.True(t, foundDuration, "expected db.client.operation.duration metric")
 }
@@ -100,7 +101,7 @@ func TestMetricsOperationFailure(t *testing.T) {
 	defer cancel()
 
 	opts := options.Client()
-	opts.Deployment = md //nolint:staticcheck
+	opts.Deployment = md //nolint:staticcheck // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
 	opts.Monitor = NewMonitor(
 		WithMeterProvider(provider),
 		WithCommandAttributeDisabled(true),
