@@ -20,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add unmarshaling and validation for `OTLPHttpExporter`, `OTLPGrpcExporter`, `OTLPGrpcMetricExporter` and `OTLPHttpMetricExporter` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8112)
 - Add a `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7986)
 - Add unmarshaling and validation for `AttributeType`, `AttributeNameValue`, `SimpleSpanProcessor`, `SimpleLogRecordProcessor`, `ZipkinSpanExporter`, `NameStringValuePair`, `InstrumentType`, `ExperimentalPeerInstrumentationServiceMappingElem`, `ExporterDefaultHistogramAggregation`, `PullMetricReader` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8127)
+- Support `db.client.operation.duration` metric for `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7983)
 
 ### Changed
 
@@ -72,7 +73,6 @@ The next release will require at least [Go 1.24].
 - Change the faas.max_memory unit to be bytes instead of MB to comply with the semantic conventions in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#7745)
 - `Severity.Severity()` in `go.opentelemetry.io/contrib/processors/minsev` now returns `log.SeverityTrace1` for severities less than `minsev.SeverityTrace1` and `log.SeverityFatal4` for severities greater than `minsev.SeverityFatal4` instead of `log.SeverityUndefined`.
   All other conversions are the same. (#7748)
-- Support `db.client.operation.duration` metric for `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7983)
 
 ### Fixed
 
