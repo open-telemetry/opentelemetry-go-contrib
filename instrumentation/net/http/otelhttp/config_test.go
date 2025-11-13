@@ -124,17 +124,27 @@ func TestSpanNameFormatter(t *testing.T) {
 }
 
 func TestEvent(t *testing.T) {
-	if otelhttp.ReadEvents != 1 {
-		t.Errorf("ReadEvents = %v, want 1", otelhttp.ReadEvents)
-	}
-	if otelhttp.WriteEvents != 2 {
-		t.Errorf("WriteEvents = %v, want 2", otelhttp.WriteEvents)
-	}
+	t.Run("constant values", func(t *testing.T) {
+		assert.Equal(t, otelhttp.Event(1), otelhttp.ReadEvents, "ReadEvents should be 1")
+		assert.Equal(t, otelhttp.Event(2), otelhttp.WriteEvents, "WriteEvents should be 2")
+	})
 
-	if got := otelhttp.WithMessageEvents(otelhttp.ReadEvents); got == nil {
-		t.Error("WithMessageEvents(ReadEvents) returned nil")
-	}
-	if got := otelhttp.WithMessageEvents(otelhttp.WriteEvents); got == nil {
-		t.Error("WithMessageEvents(WriteEvents) returned nil")
-	}
+	t.Run("WithMessageEvents", func(t *testing.T) {
+		tests := []struct {
+			name   string
+			events []otelhttp.Event
+		}{
+			{name: "ReadEvents", events: []otelhttp.Event{otelhttp.ReadEvents}},
+			{name: "WriteEvents", events: []otelhttp.Event{otelhttp.WriteEvents}},
+			{name: "multiple events", events: []otelhttp.Event{otelhttp.ReadEvents, otelhttp.WriteEvents}},
+			{name: "no events", events: []otelhttp.Event{}},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				got := otelhttp.WithMessageEvents(tt.events...)
+				assert.NotNil(t, got, "WithMessageEvents(%v) should not return nil", tt.events)
+			})
+		}
+	})
 }
