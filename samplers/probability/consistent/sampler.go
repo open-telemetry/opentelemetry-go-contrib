@@ -100,7 +100,7 @@ func ProbabilityBased(fraction float64, opts ...ProbabilityBasedOption) sdktrace
 func (cs *consistentProbabilityBased) newR() uint8 {
 	cs.lock.Lock()
 	defer cs.lock.Unlock()
-	return uint8(bits.LeadingZeros64(uint64(cs.rnd.Int63())) - 1) //nolint:gosec  // 8-bit sample.
+	return uint8(bits.LeadingZeros64(uint64(cs.rnd.Int63())) - 1)
 }
 
 func (cs *consistentProbabilityBased) lowChoice() bool {
