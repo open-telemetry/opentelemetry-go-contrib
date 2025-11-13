@@ -272,7 +272,7 @@ func (*testServer) UnaryCall(ctx context.Context, in *testpb.SimpleRequest) (*te
 		}
 	}
 	if st != nil && st.Code != 0 {
-		return nil, status.Error(codes.Code(st.Code), st.Message) //nolint:gosec // Status code can't be negative.
+		return nil, status.Error(codes.Code(st.Code), st.Message)
 	}
 	pl, err := serverNewPayload(in.GetResponseType(), in.GetResponseSize())
 	if err != nil {
@@ -317,7 +317,7 @@ func (*testServer) StreamingInputCall(stream testpb.TestService_StreamingInputCa
 		n := len(in.GetPayload().GetBody())
 		// This could overflow, but given this is a test and the negative value
 		// should be detectable this should be good enough.
-		sum += int32(n) //nolint:gosec // ignore linter
+		sum += int32(n)
 	}
 }
 
@@ -343,7 +343,7 @@ func (*testServer) FullDuplexCall(stream testpb.TestService_FullDuplexCallServer
 		}
 		st := in.GetResponseStatus()
 		if st != nil && st.Code != 0 {
-			return status.Error(codes.Code(st.Code), st.Message) //nolint:gosec // Status code can't be negative.
+			return status.Error(codes.Code(st.Code), st.Message)
 		}
 
 		cs := in.GetResponseParameters()
