@@ -29,7 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.
   The route is already added automatically for spans.
   For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8117)
-- `DefaultClient` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/client.go` is deprecated.  
+- `DefaultClient` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.  
   Use a custom `*http.Client` with `otelhttp.NewTransport(http.DefaultTransport)` instead. (#8140)
 
 ### Removed
