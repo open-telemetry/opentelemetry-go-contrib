@@ -201,7 +201,7 @@ func parseNumber(key, input string, maximum uint8) (uint8, error) {
 		return maximum + 1, parseError(key, strconv.ErrRange)
 	}
 	// `value` is strictly less then the uint8 maximum. This cast is safe.
-	return uint8(value), nil //nolint:gosec // ignore linter
+	return uint8(value), nil
 }
 
 func parseError(key string, err error) error {
