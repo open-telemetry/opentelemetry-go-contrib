@@ -50,8 +50,8 @@ var enumValuesOTLPMetricDefaultHistogramAggregation = []any{
 type configOptions struct {
 	ctx                   context.Context
 	opentelemetryConfig   OpenTelemetryConfiguration
-	meterProviderOptions  []sdkmetric.Option
 	loggerProviderOptions []sdklog.LoggerProviderOption
+	meterProviderOptions  []sdkmetric.Option
 	tracerProviderOptions []sdktrace.TracerProviderOption
 }
 
@@ -153,6 +153,30 @@ func (e *errInvalid) Is(target error) bool {
 // newErrInvalid creates a new error indicating that an error occurred due to misconfiguration.
 func newErrInvalid(id string) error {
 	return &errInvalid{Identifier: id}
+}
+
+// unmarshalSamplerTypes handles always_on and always_off sampler unmarshaling.
+func unmarshalSamplerTypes(raw map[string]any, plain *Sampler) {
+	// always_on can be nil, must check and set here
+	if _, ok := raw["always_on"]; ok {
+		plain.AlwaysOn = AlwaysOnSampler{}
+	}
+	// always_off can be nil, must check and set here
+	if _, ok := raw["always_off"]; ok {
+		plain.AlwaysOff = AlwaysOffSampler{}
+	}
+}
+
+// unmarshalMetricProducer handles opencensus metric producer unmarshaling.
+func unmarshalMetricProducer(raw map[string]any, plain *MetricProducer) {
+	// opencensus can be nil, must check and set here
+	if v, ok := raw["opencensus"]; ok && v == nil {
+		delete(raw, "opencensus")
+		plain.Opencensus = OpenCensusMetricProducer{}
+	}
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
 }
 
 // validatePeriodicMetricReader handles validation for PeriodicMetricReader.
