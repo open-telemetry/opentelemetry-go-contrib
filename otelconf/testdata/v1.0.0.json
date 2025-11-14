@@ -515,21 +515,7 @@
                 "excluded": [
                     "process.command_args"
                 ]
-            },
-            "detectors": [
-                {
-                    "container": null
-                },
-                {
-                    "host": null
-                },
-                {
-                    "process": null
-                },
-                {
-                    "service": null
-                }
-            ]
+            }
         },
         "schema_url": "https://opentelemetry.io/schemas/1.16.0"
     },

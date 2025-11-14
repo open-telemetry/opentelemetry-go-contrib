@@ -281,8 +281,7 @@ func (j *BatchLogRecordProcessor) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
 		return err
 	}
-	err := validateBatchLogRecordProcessor((*BatchLogRecordProcessor)(&sh.Plain))
-	if err != nil {
+	if err := validateBatchLogRecordProcessor((*BatchLogRecordProcessor)(&sh.Plain)); err != nil {
 		return err
 	}
 	*j = BatchLogRecordProcessor(sh.Plain)
@@ -307,11 +306,119 @@ func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(sh.Exporter, &sh.Plain.Exporter); err != nil {
 		return err
 	}
-	err := validateBatchSpanProcessor((*BatchSpanProcessor)(&sh.Plain))
-	if err != nil {
+	if err := validateBatchSpanProcessor((*BatchSpanProcessor)(&sh.Plain)); err != nil {
 		return err
 	}
 	*j = BatchSpanProcessor(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
+	type Plain OpenTelemetryConfiguration
+	type shadow struct {
+		Plain
+		FileFormat                 json.RawMessage `json:"file_format"`
+		LoggerProvider             json.RawMessage `json:"logger_provider"`
+		MeterProvider              json.RawMessage `json:"meter_provider"`
+		TracerProvider             json.RawMessage `json:"tracer_provider"`
+		Propagator                 json.RawMessage `json:"propagator"`
+		Resource                   json.RawMessage `json:"resource"`
+		InstrumentationDevelopment json.RawMessage `json:"instrumentation/development"`
+		AttributeLimits            json.RawMessage `json:"attribute_limits"`
+		Disabled                   json.RawMessage `json:"disabled"`
+		LogLevel                   json.RawMessage `json:"log_level"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if len(sh.FileFormat) == 0 {
+		return newErrRequired(j, "file_format")
+	}
+
+	if err := json.Unmarshal(sh.FileFormat, &sh.Plain.FileFormat); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if sh.LoggerProvider != nil {
+		var l LoggerProviderJson
+		if err := json.Unmarshal(sh.LoggerProvider, &l); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.LoggerProvider = &l
+	}
+
+	if sh.MeterProvider != nil {
+		var m MeterProviderJson
+		if err := json.Unmarshal(sh.MeterProvider, &m); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.MeterProvider = &m
+	}
+
+	if sh.TracerProvider != nil {
+		var t TracerProviderJson
+		if err := json.Unmarshal(sh.TracerProvider, &t); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.TracerProvider = &t
+	}
+
+	if sh.Propagator != nil {
+		var p PropagatorJson
+		if err := json.Unmarshal(sh.Propagator, &p); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.Propagator = &p
+	}
+
+	if sh.Resource != nil {
+		var r ResourceJson
+		if err := json.Unmarshal(sh.Resource, &r); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.Resource = &r
+	}
+
+	if sh.InstrumentationDevelopment != nil {
+		var r InstrumentationJson
+		if err := json.Unmarshal(sh.InstrumentationDevelopment, &r); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.InstrumentationDevelopment = &r
+	}
+
+	if sh.AttributeLimits != nil {
+		var r AttributeLimits
+		if err := json.Unmarshal(sh.AttributeLimits, &r); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.AttributeLimits = &r
+	}
+
+	if sh.Disabled != nil {
+		if err := json.Unmarshal(sh.Disabled, &sh.Plain.Disabled); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+	} else {
+		// Configure if the SDK is disabled or not.
+		// If omitted or null, false is used.
+		sh.Plain.Disabled = ptr(false)
+	}
+
+	if sh.LogLevel != nil {
+		if err := json.Unmarshal(sh.LogLevel, &sh.Plain.LogLevel); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+	} else {
+		// Configure the log level of the internal logger used by the SDK.
+		// If omitted, info is used.
+		sh.Plain.LogLevel = ptr("info")
+	}
+
+	*j = OpenTelemetryConfiguration(sh.Plain)
 	return nil
 }
 
@@ -712,5 +819,37 @@ func (j *PullMetricReader) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*j = PullMetricReader(sh.Plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *Sampler) UnmarshalJSON(b []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	type Plain Sampler
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	unmarshalSamplerTypes(raw, (*Sampler)(&plain))
+	*j = Sampler(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *MetricProducer) UnmarshalJSON(b []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	type Plain MetricProducer
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+	unmarshalMetricProducer(raw, (*MetricProducer)(&plain))
+	*j = MetricProducer(plain)
 	return nil
 }

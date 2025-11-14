@@ -139,19 +139,14 @@ func TestMeterProviderOptions(t *testing.T) {
 	require.NoError(t, err)
 
 	res := resource.NewSchemaless(attribute.String("foo", "bar"))
-	// TODO: re-enable this once NewSDK is added
-	// sdk, err := NewSDK(
-	// 	WithOpenTelemetryConfiguration(cfg),
-	// 	WithMeterProviderOptions(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutmetricExporter))),
-	// 	WithMeterProviderOptions(sdkmetric.WithResource(res)),
-	// )
-	mp, shutdown, err := meterProvider(configOptions{
-		opentelemetryConfig:  cfg,
-		meterProviderOptions: []sdkmetric.Option{sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutmetricExporter))},
-	}, res)
+	sdk, err := NewSDK(
+		WithOpenTelemetryConfiguration(cfg),
+		WithMeterProviderOptions(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutmetricExporter))),
+		WithMeterProviderOptions(sdkmetric.WithResource(res)),
+	)
 	require.NoError(t, err)
 	defer func() {
-		assert.NoError(t, shutdown(t.Context()))
+		assert.NoError(t, sdk.Shutdown(t.Context()))
 		// The exporter, which we passed in as an extra option to NewSDK,
 		// should be wired up to the provider in addition to the
 		// configuration-based OTLP exporter.
@@ -161,11 +156,10 @@ func TestMeterProviderOptions(t *testing.T) {
 		// Options provided by WithMeterProviderOptions may be overridden
 		// by configuration, e.g. the resource is always defined via
 		// configuration.
-		// TODO: re-enable this once NewSDK is added
-		// assert.NotContains(t, buf.String(), "foo")
+		assert.NotContains(t, buf.String(), "foo")
 	}()
 
-	counter, _ := mp.Meter("test").Int64Counter("counter")
+	counter, _ := sdk.MeterProvider().Meter("test").Int64Counter("counter")
 	counter.Add(t.Context(), 1)
 }
 
