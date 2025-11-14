@@ -841,16 +841,15 @@ resource:
     # Configure resource detectors.
     # Resource detector names are dependent on the SDK language ecosystem. Please consult documentation for each respective language. 
     # If omitted or null, no resource detectors are enabled.
-    # TODO: implement resource detectors https://github.com/open-telemetry/opentelemetry-go-contrib/issues/7252
-    # detectors:
-    #   - # Enable the container resource detector, which populates container.* attributes.
-    #     container:
-    #   - # Enable the host resource detector, which populates host.* and os.* attributes.
-    #     host:
-    #   - # Enable the process resource detector, which populates process.* attributes.
-    #     process:
-    #   - # Enable the service detector, which populates service.name based on the OTEL_SERVICE_NAME environment variable and service.instance.id.
-    #     service:
+    detectors:
+      - # Enable the container resource detector, which populates container.* attributes.
+        container:
+      - # Enable the host resource detector, which populates host.* and os.* attributes.
+        host:
+      - # Enable the process resource detector, which populates process.* attributes.
+        process:
+      - # Enable the service detector, which populates service.name based on the OTEL_SERVICE_NAME environment variable and service.instance.id.
+        service:
   # Configure resource schema URL.
   # If omitted or null, no schema URL is used.
   schema_url: https://opentelemetry.io/schemas/1.16.0
