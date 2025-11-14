@@ -828,9 +828,12 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Excluded: []string{"process.command_args"},
 				Included: []string{"process.*"},
 			},
-			// TODO: implement resource detectors
-			// Detectors: []ExperimentalResourceDetector{}
-			// },
+			Detectors: []ExperimentalResourceDetector{
+				{Container: ExperimentalContainerResourceDetector{}},
+				{Host: ExperimentalHostResourceDetector{}},
+				{Process: ExperimentalProcessResourceDetector{}},
+				{Service: ExperimentalServiceResourceDetector{}},
+			},
 		},
 		SchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
 	},
