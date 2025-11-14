@@ -6,6 +6,7 @@ package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mong
 import (
 	"go.mongodb.org/mongo-driver/v2/event"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -14,8 +15,10 @@ const ScopeName = "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mo
 
 // config is used to configure the mongo tracer.
 type config struct {
+	MeterProvider  metric.MeterProvider
 	TracerProvider trace.TracerProvider
 
+	Meter  metric.Meter
 	Tracer trace.Tracer
 
 	CommandAttributeDisabled bool
@@ -26,6 +29,7 @@ type config struct {
 // newConfig returns a config with all Options set.
 func newConfig(opts ...Option) config {
 	cfg := config{
+		MeterProvider:            otel.GetMeterProvider(),
 		TracerProvider:           otel.GetTracerProvider(),
 		CommandAttributeDisabled: true,
 	}
@@ -43,6 +47,11 @@ func newConfig(opts ...Option) config {
 		opt.apply(&cfg)
 	}
 
+	cfg.Meter = cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version()),
+	)
+
 	cfg.Tracer = cfg.TracerProvider.Tracer(
 		ScopeName,
 		trace.WithInstrumentationVersion(Version()),
@@ -59,6 +68,16 @@ type optionFunc func(*config)
 
 func (o optionFunc) apply(c *config) {
 	o(c)
+}
+
+// WithMeterProvider specifies a [metric.MeterProvider] to use for creating a Meter.
+// If none is specified, the global MeterProvider is used.
+func WithMeterProvider(provider metric.MeterProvider) Option {
+	return optionFunc(func(cfg *config) {
+		if provider != nil {
+			cfg.MeterProvider = provider
+		}
+	})
 }
 
 // SpanNameFormatterFunc is a function that resolves the span name given an

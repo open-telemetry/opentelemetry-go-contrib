@@ -376,10 +376,7 @@ func TestPeerInfo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			evt := &event.CommandStartedEvent{
-				ConnectionID: tc.connectionID,
-			}
-			host, port := peerInfo(evt)
+			host, port := peerInfo(tc.connectionID)
 			assert.Equal(t, tc.expectedHost, host)
 			assert.Equal(t, tc.expectedPort, port)
 		})
