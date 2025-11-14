@@ -1216,7 +1216,8 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 	require.NotNil(t, reader)
 
 	t.Cleanup(func() {
-		require.NoError(t, reader.Shutdown(t.Context()))
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		require.NoError(t, reader.Shutdown(context.Background()))
 	})
 
 	rws, ok := reader.(readerWithServer)
@@ -1279,7 +1280,8 @@ func TestPrometheusReaderHostParsing(t *testing.T) {
 			require.NotNil(t, reader)
 
 			t.Cleanup(func() {
-				require.NoError(t, reader.Shutdown(t.Context()))
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				require.NoError(t, reader.Shutdown(context.Background()))
 			})
 
 			rws, ok := reader.(readerWithServer)
