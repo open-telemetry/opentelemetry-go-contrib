@@ -28,7 +28,7 @@ func (j *ConsoleExporter) UnmarshalJSON(b []byte) error {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *B3Propagator) UnmarshalJSON(b []byte) error {
-	type plain ConsoleExporter
+	type plain B3Propagator
 	var p plain
 	if err := json.Unmarshal(b, &p); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
@@ -44,7 +44,7 @@ func (j *B3Propagator) UnmarshalJSON(b []byte) error {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *B3MultiPropagator) UnmarshalJSON(b []byte) error {
-	type plain ConsoleExporter
+	type plain B3MultiPropagator
 	var p plain
 	if err := json.Unmarshal(b, &p); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
@@ -60,7 +60,7 @@ func (j *B3MultiPropagator) UnmarshalJSON(b []byte) error {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *BaggagePropagator) UnmarshalJSON(b []byte) error {
-	type plain ConsoleExporter
+	type plain BaggagePropagator
 	var p plain
 	if err := json.Unmarshal(b, &p); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
@@ -76,7 +76,7 @@ func (j *BaggagePropagator) UnmarshalJSON(b []byte) error {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *JaegerPropagator) UnmarshalJSON(b []byte) error {
-	type plain ConsoleExporter
+	type plain JaegerPropagator
 	var p plain
 	if err := json.Unmarshal(b, &p); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
@@ -92,7 +92,7 @@ func (j *JaegerPropagator) UnmarshalJSON(b []byte) error {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *OpenTracingPropagator) UnmarshalJSON(b []byte) error {
-	type plain ConsoleExporter
+	type plain OpenTracingPropagator
 	var p plain
 	if err := json.Unmarshal(b, &p); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
@@ -108,7 +108,7 @@ func (j *OpenTracingPropagator) UnmarshalJSON(b []byte) error {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *TraceContextPropagator) UnmarshalJSON(b []byte) error {
-	type plain ConsoleExporter
+	type plain TraceContextPropagator
 	var p plain
 	if err := json.Unmarshal(b, &p); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
