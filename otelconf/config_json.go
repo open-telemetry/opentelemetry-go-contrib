@@ -123,6 +123,56 @@ func (j *TraceContextPropagator) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
+	// Use a shadow struct with a RawMessage field to detect key presence.
+	type Plain ExperimentalResourceDetector
+	type shadow struct {
+		Plain
+		Container json.RawMessage `json:"container"`
+		Host      json.RawMessage `json:"host"`
+		Process   json.RawMessage `json:"process"`
+		Service   json.RawMessage `json:"service"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if sh.Container != nil {
+		var c ExperimentalContainerResourceDetector
+		if err := json.Unmarshal(sh.Container, &c); err != nil {
+			return err
+		}
+		sh.Plain.Container = c
+	}
+
+	if sh.Host != nil {
+		var c ExperimentalHostResourceDetector
+		if err := json.Unmarshal(sh.Host, &c); err != nil {
+			return err
+		}
+		sh.Plain.Host = c
+	}
+
+	if sh.Process != nil {
+		var c ExperimentalProcessResourceDetector
+		if err := json.Unmarshal(sh.Process, &c); err != nil {
+			return err
+		}
+		sh.Plain.Process = c
+	}
+
+	if sh.Service != nil {
+		var c ExperimentalServiceResourceDetector
+		if err := json.Unmarshal(sh.Service, &c); err != nil {
+			return err
+		}
+		sh.Plain.Service = c
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
 	// Use a shadow struct with a RawMessage field to detect key presence.
 	type Plain PushMetricExporter
