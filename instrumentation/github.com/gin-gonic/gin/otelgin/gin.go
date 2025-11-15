@@ -107,6 +107,20 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 		// pass the span through the request context
 		c.Request = c.Request.WithContext(ctx)
+		defer func() {
+			// as we have created new http.Request object we need to make sure that temporary files created to hold MultipartForm
+			// files are cleaned up. This is done by http.Server at the end of request lifecycle but Server does not
+			// have reference to our new Request instance therefore it is our responsibility to fix the mess we caused.
+			//
+			// This means that when we are on returning path from handler middlewares up in chain from this middleware
+			// can not access these temporary files anymore because we deleted them here.
+			if c.Request.MultipartForm != nil {
+				err := c.Request.MultipartForm.RemoveAll()
+				if err != nil {
+					otel.Handle(err)
+				}
+			}
+		}()
 
 		// serve the request to the next middleware
 		c.Next()
