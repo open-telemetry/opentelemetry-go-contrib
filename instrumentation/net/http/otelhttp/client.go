@@ -14,6 +14,10 @@ import (
 // DefaultClient is the default Client and is used by Get, Head, Post and PostForm.
 // Please be careful of initialization order - for example, if you change
 // the global propagator, the DefaultClient might still be using the old one.
+//
+// Deprecated: [DefaultClient] will be removed in a future release.
+// Create your own *http.Client with Transport = otelhttp.NewTransport(http.DefaultTransport)
+// instead of relying on this global variable.
 var DefaultClient = &http.Client{Transport: NewTransport(http.DefaultTransport)}
 
 // Get is a convenient replacement for http.Get that adds a span around the request.
