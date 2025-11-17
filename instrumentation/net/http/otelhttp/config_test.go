@@ -129,6 +129,15 @@ func TestEvent(t *testing.T) {
 		assert.Equal(t, otelhttp.WriteEvents, otelhttp.Event(2), "WriteEvents should be 2")
 	})
 
+	t.Run("unspecifiedEvent", func(t *testing.T) {
+		var unspecified otelhttp.Event // zero-value
+
+		assert.Equal(t, otelhttp.Event(0), unspecified, "unspecifiedEvent should be zero-value Event")
+
+		opt := otelhttp.WithMessageEvents(unspecified)
+		assert.NotNil(t, opt, "WithMessageEvents(unspecifiedEvent) should not return nil")
+	})
+
 	t.Run("WithMessageEvents", func(t *testing.T) {
 		tests := []struct {
 			name   string
