@@ -31,14 +31,15 @@ type Filter func(*stats.RPCTagInfo) bool
 
 // config is a group of options for this instrumentation.
 type config struct {
-	Filter            Filter
-	InterceptorFilter InterceptorFilter
-	Propagators       propagation.TextMapPropagator
-	TracerProvider    trace.TracerProvider
-	MeterProvider     metric.MeterProvider
-	SpanStartOptions  []trace.SpanStartOption
-	SpanAttributes    []attribute.KeyValue
-	MetricAttributes  []attribute.KeyValue
+	Filter             Filter
+	InterceptorFilter  InterceptorFilter
+	Propagators        propagation.TextMapPropagator
+	TracerProvider     trace.TracerProvider
+	MeterProvider      metric.MeterProvider
+	SpanStartOptions   []trace.SpanStartOption
+	SpanAttributes     []attribute.KeyValue
+	MetricAttributes   []attribute.KeyValue
+	MetricAttributesFn func(ctx context.Context) []attribute.KeyValue
 
 	PublicEndpoint   bool
 	PublicEndpointFn func(ctx context.Context, info *stats.RPCTagInfo) bool
@@ -244,4 +245,19 @@ func (o metricAttributesOption) apply(c *config) {
 // WithMetricAttributes returns an Option to add custom attributes to the metrics.
 func WithMetricAttributes(a ...attribute.KeyValue) Option {
 	return metricAttributesOption{a: a}
+}
+
+type metricAttributesFnOption struct {
+	fn func(ctx context.Context) []attribute.KeyValue
+}
+
+func (o metricAttributesFnOption) apply(c *config) {
+	if o.fn != nil {
+		c.MetricAttributesFn = o.fn
+	}
+}
+
+// WithMetricAttributesFn returns an Option to add custom attributes to the metrics.
+func WithMetricAttributesFn(fn func(ctx context.Context) []attribute.KeyValue) Option {
+	return metricAttributesFnOption{fn: fn}
 }
