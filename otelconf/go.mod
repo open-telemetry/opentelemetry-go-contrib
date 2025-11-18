@@ -25,7 +25,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.38.0
 	go.opentelemetry.io/proto/otlp v1.9.0
 	go.yaml.in/yaml/v3 v3.0.4
-	google.golang.org/grpc v1.76.0
+	google.golang.org/grpc v1.77.0
 )
 
 require (
@@ -40,7 +40,7 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
-	github.com/prometheus/common v0.67.2 // indirect
+	github.com/prometheus/common v0.67.3 // indirect
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.19.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
