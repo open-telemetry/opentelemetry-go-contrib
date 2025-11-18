@@ -223,11 +223,10 @@ func TestReader(t *testing.T) {
 				Pull: &PullMetricReader{
 					Exporter: PullMetricExporter{
 						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
-							Host:             ptr("localhost"),
-							Port:             ptr(0),
-							WithoutScopeInfo: ptr(true),
-							// WithoutUnits:      ptr(true),
-							// WithoutTypeSuffix: ptr(true),
+							Host:                ptr("localhost"),
+							Port:                ptr(0),
+							WithoutScopeInfo:    ptr(true),
+							TranslationStrategy: ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithoutSuffixes),
 							WithResourceConstantLabels: &IncludeExclude{
 								Included: []string{"include"},
 								Excluded: []string{"exclude"},
@@ -237,6 +236,26 @@ func TestReader(t *testing.T) {
 				},
 			},
 			wantReader: readerWithServer{promExporter, nil},
+		},
+		{
+			name: "pull/prometheus/invalid strategy",
+			reader: MetricReader{
+				Pull: &PullMetricReader{
+					Exporter: PullMetricExporter{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
+							Host:                ptr("localhost"),
+							Port:                ptr(0),
+							WithoutScopeInfo:    ptr(true),
+							TranslationStrategy: ptr(ExperimentalPrometheusMetricExporterTranslationStrategy("invalid-strategy")),
+							WithResourceConstantLabels: &IncludeExclude{
+								Included: []string{"include"},
+								Excluded: []string{"exclude"},
+							},
+						},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("translation strategy invalid"),
 		},
 		{
 			name: "periodic/otlp-grpc-exporter",
@@ -1351,22 +1370,20 @@ func TestPrometheusReaderOpts(t *testing.T) {
 		{
 			name: "all set",
 			cfg: ExperimentalPrometheusMetricExporter{
-				WithoutScopeInfo: ptr(true),
-				// WithoutTypeSuffix:          ptr(true),
-				// WithoutUnits:               ptr(true),
+				WithoutScopeInfo:           ptr(true),
+				TranslationStrategy:        ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithoutSuffixes),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
-			wantOptions: 2,
+			wantOptions: 3,
 		},
 		{
 			name: "all set false",
 			cfg: ExperimentalPrometheusMetricExporter{
-				WithoutScopeInfo: ptr(false),
-				// WithoutTypeSuffix:          ptr(false),
-				// WithoutUnits:               ptr(false),
+				WithoutScopeInfo:           ptr(false),
+				TranslationStrategy:        ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
-			wantOptions: 1,
+			wantOptions: 2,
 		},
 	}
 	for _, tt := range testCases {
@@ -1396,11 +1413,10 @@ func TestPrometheusIPv6(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			port := 0
 			cfg := ExperimentalPrometheusMetricExporter{
-				Host:             &tt.host,
-				Port:             &port,
-				WithoutScopeInfo: ptr(true),
-				// WithoutTypeSuffix:          ptr(true),
-				// WithoutUnits:               ptr(true),
+				Host:                       &tt.host,
+				Port:                       &port,
+				WithoutScopeInfo:           ptr(true),
+				TranslationStrategy:        ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes),
 				WithResourceConstantLabels: &IncludeExclude{},
 			}
 
