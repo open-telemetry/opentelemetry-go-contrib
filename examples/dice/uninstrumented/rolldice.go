@@ -37,8 +37,14 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if rolls > maxRolls {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("ERROR: rolls parameter exceeds maximum allowed value")
+		return
+	}
+
 	results, err := rolldice(rolls)
-	if err != nil || rolls > maxRolls {
+	if err != nil {
 		// Signals invalid input (<=0).
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("ERROR: %v", err)
@@ -54,9 +60,16 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	if len(results) == 1 {
-		json.NewEncoder(w).Encode(results[0])
+		writeJSON(w, results[0])
 	} else {
-		json.NewEncoder(w).Encode(results)
+		writeJSON(w, results)
+	}
+}
+
+func writeJSON(w http.ResponseWriter, v any) {
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("ERROR: %v", err)
 	}
 }
 

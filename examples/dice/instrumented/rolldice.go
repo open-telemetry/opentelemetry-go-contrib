@@ -59,7 +59,7 @@ func init() {
 
 	// Register the gauge callback.
 	_, err = meter.RegisterCallback(
-		func(ctx context.Context, o metric.Observer) error {
+		func(_ context.Context, o metric.Observer) error {
 			o.ObserveInt64(lastRollsGauge, lastRolls.Load())
 			return nil
 		},
@@ -96,8 +96,14 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if rolls > maxRolls {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.ErrorContext(r.Context(), "rolls parameter exceeds maximum allowed value")
+		return
+	}
+
 	results, err := rollDice(r.Context(), rolls)
-	if err != nil || rolls > maxRolls {
+	if err != nil {
 		// Signals invalid input (<=0).
 		w.WriteHeader(http.StatusInternalServerError)
 		logger.ErrorContext(r.Context(), err.Error())
@@ -107,15 +113,22 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 	if player == "" {
 		logger.DebugContext(r.Context(), "anonymous player rolled", "results", results)
 	} else {
-		logger.DebugContext(r.Context(), "player", player, "results", results)
+		logger.DebugContext(r.Context(), "player rolled dice", "player", player, "results", results)
 	}
 	logger.InfoContext(r.Context(), "Some player rolled a dice.")
 
 	w.Header().Set("Content-Type", "application/json")
 	if len(results) == 1 {
-		json.NewEncoder(w).Encode(results[0])
+		writeJSON(r.Context(), w, results[0])
 	} else {
-		json.NewEncoder(w).Encode(results)
+		writeJSON(r.Context(), w, results)
+	}
+}
+
+func writeJSON(ctx context.Context, w http.ResponseWriter, v any) {
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		logger.ErrorContext(ctx, "json encode failed", "error", err)
 	}
 }
 
@@ -131,7 +144,7 @@ func rollDice(ctx context.Context, rolls int) ([]int, error) {
 	}
 
 	results := make([]int, rolls)
-	for i := 0; i < rolls; i++ {
+	for i := range rolls {
 		results[i] = rollOnce(ctx)
 		outcomeHist.Record(ctx, int64(results[i]))
 	}
@@ -145,7 +158,7 @@ func rollDice(ctx context.Context, rolls int) ([]int, error) {
 
 // rollOnce is the inner function — returns a random number 1–6.
 func rollOnce(ctx context.Context) int {
-	ctx, span := tracer.Start(ctx, "rollOnce")
+	_, span := tracer.Start(ctx, "rollOnce")
 	defer span.End()
 
 	roll := 1 + rand.IntN(6) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
