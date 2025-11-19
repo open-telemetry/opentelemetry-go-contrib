@@ -71,7 +71,6 @@ func init() {
 }
 
 func handleRolldice(w http.ResponseWriter, r *http.Request) {
-	const maxRolls = 1000 // Arbitrary limit to prevent Slice memory allocation with excessive size value.
 
 	// Parse query parameters.
 	rollsParam := r.URL.Query().Get("rolls")
@@ -96,15 +95,8 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if rolls > maxRolls {
-		w.WriteHeader(http.StatusInternalServerError)
-		logger.ErrorContext(r.Context(), "rolls parameter exceeds maximum allowed value")
-		return
-	}
-
 	results, err := rollDice(r.Context(), rolls)
 	if err != nil {
-		// Signals invalid input (<=0).
 		w.WriteHeader(http.StatusInternalServerError)
 		logger.ErrorContext(r.Context(), err.Error())
 		return
@@ -132,10 +124,17 @@ func writeJSON(ctx context.Context, w http.ResponseWriter, v any) {
 	}
 }
 
-// rollDice is the outer function which Does the error handling.
 func rollDice(ctx context.Context, rolls int) ([]int, error) {
+	const maxRolls = 1000 // Arbitrary limit to prevent Slice memory allocation with excessive size value.
+
 	ctx, span := tracer.Start(ctx, "rollDice")
 	defer span.End()
+
+	if rolls > maxRolls {
+		err := errors.New("rolls parameter exceeds maximum allowed value")
+		span.RecordError(err)
+		return nil, err
+	}
 
 	if rolls <= 0 {
 		err := errors.New("rolls must be positive")
@@ -156,7 +155,7 @@ func rollDice(ctx context.Context, rolls int) ([]int, error) {
 	return results, nil
 }
 
-// rollOnce is the inner function — returns a random number 1–6.
+// rollOnce returns a random number between 1 and 6.
 func rollOnce(ctx context.Context) int {
 	_, span := tracer.Start(ctx, "rollOnce")
 	defer span.End()

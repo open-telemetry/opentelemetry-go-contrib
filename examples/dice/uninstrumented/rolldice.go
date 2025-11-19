@@ -13,8 +13,6 @@ import (
 )
 
 func handleRolldice(w http.ResponseWriter, r *http.Request) {
-	const maxRolls = 1000 // Arbitrary limit to prevent Slice memory allocation with excessive size value.
-
 	// Parse query parameters.
 	rollsParam := r.URL.Query().Get("rolls")
 	player := r.URL.Query().Get("player")
@@ -37,15 +35,8 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if rolls > maxRolls {
-		w.WriteHeader(http.StatusInternalServerError)
-		log.Printf("ERROR: rolls parameter exceeds maximum allowed value")
-		return
-	}
-
 	results, err := rolldice(rolls)
 	if err != nil {
-		// Signals invalid input (<=0).
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("ERROR: %v", err)
 		return
@@ -73,8 +64,13 @@ func writeJSON(w http.ResponseWriter, v any) {
 	}
 }
 
-// rolldice is the outer function which does the error handling.
 func rolldice(rolls int) ([]int, error) {
+	const maxRolls = 1000 // Arbitrary limit to prevent Slice memory allocation with excessive size value.
+
+	if rolls > maxRolls {
+		return nil, errors.New("rolls parameter exceeds maximum allowed value")
+	}
+
 	if rolls <= 0 {
 		return nil, errors.New("rolls must be positive")
 	}
@@ -84,13 +80,13 @@ func rolldice(rolls int) ([]int, error) {
 	}
 
 	results := make([]int, rolls)
-	for i := 0; i < rolls; i++ {
+	for i := range rolls {
 		results[i] = rollOnce()
 	}
 	return results, nil
 }
 
-// rollOnce is the inner function — returns a random number 1–6.
+// rollOnce returns a random number between 1 and 6.
 func rollOnce() int {
 	roll := 1 + rand.Intn(6) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
 	return roll
