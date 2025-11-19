@@ -144,6 +144,100 @@ func TestUnmarshalTextMapPropagator(t *testing.T) {
 	}
 }
 
+func TestUnmarshalSimpleLogRecordProcessor(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter LogRecordExporter
+	}{
+		{
+			name:         "valid with console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":{}}}`),
+			yamlConfig:   []byte("exporter:\n  console: {}"),
+			wantExporter: LogRecordExporter{Console: ConsoleExporter{}},
+		},
+		{
+			name:         "valid with null console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":null}}`),
+			yamlConfig:   []byte("exporter:\n  console:\n"),
+			wantExporter: LogRecordExporter{Console: ConsoleExporter{}},
+		},
+		{
+			name:       "missing required exporter field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&SimpleLogRecordProcessor{}, "exporter"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("exporter:\n  console: []"),
+			wantErrT:   newErrUnmarshal(&SimpleLogRecordProcessor{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := SimpleLogRecordProcessor{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
+
+			cl = SimpleLogRecordProcessor{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
+		})
+	}
+}
+
+func TestUnmarshalSimpleSpanProcessor(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter SpanExporter
+	}{
+		{
+			name:         "valid with null console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":null}}`),
+			yamlConfig:   []byte("exporter:\n  console:\n"),
+			wantExporter: SpanExporter{Console: ConsoleExporter{}},
+		},
+		{
+			name:         "valid with console exporter",
+			jsonConfig:   []byte(`{"exporter":{"console":{}}}`),
+			yamlConfig:   []byte("exporter:\n  console: {}"),
+			wantExporter: SpanExporter{Console: ConsoleExporter{}},
+		},
+		{
+			name:       "missing required exporter field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&SimpleSpanProcessor{}, "exporter"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("exporter:\n  console: []"),
+			wantErrT:   newErrUnmarshal(&SimpleSpanProcessor{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := SimpleSpanProcessor{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
+
+			cl = SimpleSpanProcessor{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
+		})
+	}
+}
+
 func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
 	for _, tt := range []struct {
 		name         string
@@ -933,6 +1027,435 @@ func TestUnmarshalOTLPGrpcMetricExporter(t *testing.T) {
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
 			assert.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantExporter, cl)
+		})
+	}
+}
+
+func TestUnmarshalZipkinSpanExporter(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter ZipkinSpanExporter
+	}{
+		{
+			name:         "valid with exporter",
+			jsonConfig:   []byte(`{"endpoint":"localhost:9000"}`),
+			yamlConfig:   []byte("endpoint: localhost:9000\n"),
+			wantExporter: ZipkinSpanExporter{Endpoint: ptr("localhost:9000")},
+		},
+		{
+			name:       "missing required endpoint field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&ZipkinSpanExporter{}, "endpoint"),
+		},
+		{
+			name:         "valid with zero timeout",
+			jsonConfig:   []byte(`{"endpoint":"localhost:9000", "timeout":0}`),
+			yamlConfig:   []byte("endpoint: localhost:9000\ntimeout: 0"),
+			wantExporter: ZipkinSpanExporter{Endpoint: ptr("localhost:9000"), Timeout: ptr(0)},
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("endpoint: localhost:9000\ntimeout: !!str str"),
+			wantErrT:   newErrUnmarshal(&ZipkinSpanExporter{}),
+		},
+		{
+			name:       "invalid timeout negative",
+			jsonConfig: []byte(`{"endpoint":"localhost:9000", "timeout":-1}`),
+			yamlConfig: []byte("endpoint: localhost:9000\ntimeout: -1"),
+			wantErrT:   newErrGreaterOrEqualZero("timeout"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := ZipkinSpanExporter{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
+
+			cl = ZipkinSpanExporter{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl)
+		})
+	}
+}
+
+func TestUnmarshalAttributeNameValueType(t *testing.T) {
+	for _, tt := range []struct {
+		name                   string
+		yamlConfig             []byte
+		jsonConfig             []byte
+		wantErrT               error
+		wantAttributeNameValue AttributeNameValue
+	}{
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("name: []\nvalue: true\ntype: bool\n"),
+			wantErrT:   newErrUnmarshal(&AttributeNameValue{}),
+		},
+		{
+			name:       "missing required name field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&AttributeNameValue{}, "name"),
+		},
+		{
+			name:       "missing required value field",
+			jsonConfig: []byte(`{"name":"test"}`),
+			yamlConfig: []byte("name: test"),
+			wantErrT:   newErrRequired(&AttributeNameValue{}, "value"),
+		},
+		{
+			name:       "valid string value",
+			jsonConfig: []byte(`{"name":"test", "value": "test-val", "type": "string"}`),
+			yamlConfig: []byte("name: test\nvalue: test-val\ntype: string\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: "test-val",
+				Type:  &AttributeType{Value: "string"},
+			},
+		},
+		{
+			name:       "valid string_array value",
+			jsonConfig: []byte(`{"name":"test", "value": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("name: test\nvalue: [test-val, test-val-2]\ntype: string_array\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: []any{"test-val", "test-val-2"},
+				Type:  &AttributeType{Value: "string_array"},
+			},
+		},
+		{
+			name:       "valid bool value",
+			jsonConfig: []byte(`{"name":"test", "value": true, "type": "bool"}`),
+			yamlConfig: []byte("name: test\nvalue: true\ntype: bool\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: true,
+				Type:  &AttributeType{Value: "bool"},
+			},
+		},
+		{
+			name:       "valid string_array value",
+			jsonConfig: []byte(`{"name":"test", "value": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("name: test\nvalue: [test-val, test-val-2]\ntype: string_array\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: []any{"test-val", "test-val-2"},
+				Type:  &AttributeType{Value: "string_array"},
+			},
+		},
+		{
+			name:       "valid int value",
+			jsonConfig: []byte(`{"name":"test", "value": 1, "type": "int"}`),
+			yamlConfig: []byte("name: test\nvalue: 1\ntype: int\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: int(1),
+				Type:  &AttributeType{Value: "int"},
+			},
+		},
+		{
+			name:       "valid int_array value",
+			jsonConfig: []byte(`{"name":"test", "value": [1, 2], "type": "int_array"}`),
+			yamlConfig: []byte("name: test\nvalue: [1, 2]\ntype: int_array\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: []any{1, 2},
+				Type:  &AttributeType{Value: "int_array"},
+			},
+		},
+		{
+			name:       "valid double value",
+			jsonConfig: []byte(`{"name":"test", "value": 1, "type": "double"}`),
+			yamlConfig: []byte("name: test\nvalue: 1\ntype: double\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: float64(1),
+				Type:  &AttributeType{Value: "double"},
+			},
+		},
+		{
+			name:       "valid double_array value",
+			jsonConfig: []byte(`{"name":"test", "value": [1, 2], "type": "double_array"}`),
+			yamlConfig: []byte("name: test\nvalue: [1.0, 2.0]\ntype: double_array\n"),
+			wantAttributeNameValue: AttributeNameValue{
+				Name:  "test",
+				Value: []any{float64(1), float64(2)},
+				Type:  &AttributeType{Value: "double_array"},
+			},
+		},
+		{
+			name:       "invalid type",
+			jsonConfig: []byte(`{"name":"test", "value": 1, "type": "float"}`),
+			yamlConfig: []byte("name: test\nvalue: 1\ntype: float\n"),
+			wantErrT:   newErrInvalid("unexpected value type"),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			val := AttributeNameValue{}
+			err := val.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantAttributeNameValue, val)
+
+			val = AttributeNameValue{}
+			err = yaml.Unmarshal(tt.yamlConfig, &val)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantAttributeNameValue, val)
+		})
+	}
+}
+
+func TestUnmarshalNameStringValuePairType(t *testing.T) {
+	for _, tt := range []struct {
+		name                    string
+		yamlConfig              []byte
+		jsonConfig              []byte
+		wantErrT                error
+		wantNameStringValuePair NameStringValuePair
+	}{
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("name: []\nvalue: true\ntype: bool\n"),
+			wantErrT:   newErrUnmarshal(&NameStringValuePair{}),
+		},
+		{
+			name:       "missing required name field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&NameStringValuePair{}, "name"),
+		},
+		{
+			name:       "missing required value field",
+			jsonConfig: []byte(`{"name":"test"}`),
+			yamlConfig: []byte("name: test"),
+			wantErrT:   newErrRequired(&NameStringValuePair{}, "value"),
+		},
+		{
+			name:       "invalid array name",
+			jsonConfig: []byte(`{"name":[], "value": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("name: []\nvalue: [test-val, test-val-2]\ntype: string_array\n"),
+			wantErrT:   newErrUnmarshal(&NameStringValuePair{}),
+		},
+		{
+			name:       "valid string value",
+			jsonConfig: []byte(`{"name":"test", "value": "test-val", "type": "string"}`),
+			yamlConfig: []byte("name: test\nvalue: test-val\ntype: string\n"),
+			wantNameStringValuePair: NameStringValuePair{
+				Name:  "test",
+				Value: ptr("test-val"),
+			},
+		},
+		{
+			name:       "invalid string_array value",
+			jsonConfig: []byte(`{"name":"test", "value": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("name: test\nvalue: [test-val, test-val-2]\ntype: string_array\n"),
+			wantErrT:   newErrUnmarshal(&NameStringValuePair{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			val := NameStringValuePair{}
+			err := val.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantNameStringValuePair, val)
+
+			val = NameStringValuePair{}
+			err = yaml.Unmarshal(tt.yamlConfig, &val)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantNameStringValuePair, val)
+		})
+	}
+}
+
+func TestUnmarshalInstrumentType(t *testing.T) {
+	var instrumentType InstrumentType
+	for _, tt := range []struct {
+		name               string
+		yamlConfig         []byte
+		jsonConfig         []byte
+		wantErrT           error
+		wantInstrumentType InstrumentType
+	}{
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("name: []\nvalue: true\ntype: bool\n"),
+			wantErrT:   newErrUnmarshal(&instrumentType),
+		},
+		{
+			name:       "invalid instrument type",
+			jsonConfig: []byte(`"test"`),
+			yamlConfig: []byte("test"),
+			wantErrT:   newErrInvalid(`invalid selector (expected one of []interface {}{"counter", "gauge", "histogram", "observable_counter", "observable_gauge", "observable_up_down_counter", "up_down_counter"}): "test""`),
+		},
+		{
+			name:               "valid instrument type",
+			jsonConfig:         []byte(`"counter"`),
+			yamlConfig:         []byte("counter"),
+			wantInstrumentType: InstrumentTypeCounter,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			val := InstrumentType("")
+			err := val.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantInstrumentType, val)
+
+			val = InstrumentType("")
+			err = yaml.Unmarshal(tt.yamlConfig, &val)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantInstrumentType, val)
+		})
+	}
+}
+
+func TestUnmarshalExperimentalPeerInstrumentationServiceMappingElemType(t *testing.T) {
+	for _, tt := range []struct {
+		name                                                  string
+		yamlConfig                                            []byte
+		jsonConfig                                            []byte
+		wantErrT                                              error
+		wantExperimentalPeerInstrumentationServiceMappingElem ExperimentalPeerInstrumentationServiceMappingElem
+	}{
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("peer: []\nservice: true"),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
+		},
+		{
+			name:       "missing required peer field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&ExperimentalPeerInstrumentationServiceMappingElem{}, "peer"),
+		},
+		{
+			name:       "missing required service field",
+			jsonConfig: []byte(`{"peer":"test"}`),
+			yamlConfig: []byte("peer: test"),
+			wantErrT:   newErrRequired(&ExperimentalPeerInstrumentationServiceMappingElem{}, "service"),
+		},
+		{
+			name:       "invalid string_array peer",
+			jsonConfig: []byte(`{"peer":[], "service": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("peer: []\nservice: [test-val, test-val-2]\ntype: string_array\n"),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
+		},
+		{
+			name:       "valid string service",
+			jsonConfig: []byte(`{"peer":"test", "service": "test-val"}`),
+			yamlConfig: []byte("peer: test\nservice: test-val"),
+			wantExperimentalPeerInstrumentationServiceMappingElem: ExperimentalPeerInstrumentationServiceMappingElem{
+				Peer:    "test",
+				Service: "test-val",
+			},
+		},
+		{
+			name:       "invalid string_array service",
+			jsonConfig: []byte(`{"peer":"test", "service": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("peer: test\nservice: [test-val, test-val-2]\ntype: string_array\n"),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			val := ExperimentalPeerInstrumentationServiceMappingElem{}
+			err := val.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExperimentalPeerInstrumentationServiceMappingElem, val)
+
+			val = ExperimentalPeerInstrumentationServiceMappingElem{}
+			err = yaml.Unmarshal(tt.yamlConfig, &val)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExperimentalPeerInstrumentationServiceMappingElem, val)
+		})
+	}
+}
+
+func TestUnmarshalExporterDefaultHistogramAggregation(t *testing.T) {
+	var exporterDefaultHistogramAggregation ExporterDefaultHistogramAggregation
+	for _, tt := range []struct {
+		name                                    string
+		yamlConfig                              []byte
+		jsonConfig                              []byte
+		wantErrT                                error
+		wantExporterDefaultHistogramAggregation ExporterDefaultHistogramAggregation
+	}{
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("name: []\nvalue: true\ntype: bool\n"),
+			wantErrT:   newErrUnmarshal(&exporterDefaultHistogramAggregation),
+		},
+		{
+			name:       "invalid histogram aggregation",
+			jsonConfig: []byte(`"test"`),
+			yamlConfig: []byte("test"),
+			wantErrT:   newErrInvalid(`invalid histogram aggregation (expected one of []interface {}{"explicit_bucket_histogram", "base2_exponential_bucket_histogram"}): "test""`),
+		},
+		{
+			name:                                    "valid histogram aggregation",
+			jsonConfig:                              []byte(`"base2_exponential_bucket_histogram"`),
+			yamlConfig:                              []byte("base2_exponential_bucket_histogram"),
+			wantExporterDefaultHistogramAggregation: ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			val := ExporterDefaultHistogramAggregation("")
+			err := val.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporterDefaultHistogramAggregation, val)
+
+			val = ExporterDefaultHistogramAggregation("")
+			err = yaml.Unmarshal(tt.yamlConfig, &val)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporterDefaultHistogramAggregation, val)
+		})
+	}
+}
+
+func TestUnmarshalPullMetricReader(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantExporter PullMetricExporter
+	}{
+		{
+			name:         "valid with proemtheus exporter",
+			jsonConfig:   []byte(`{"exporter":{"prometheus/development":{}}}`),
+			yamlConfig:   []byte("exporter:\n  prometheus/development: {}"),
+			wantExporter: PullMetricExporter{PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{}},
+		},
+		{
+			name:       "missing required exporter field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&PullMetricReader{}, "exporter"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("exporter:\n  prometheus/development: []"),
+			wantErrT:   newErrUnmarshal(&PullMetricReader{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := PullMetricReader{}
+			err := cl.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
+
+			cl = PullMetricReader{}
+			err = yaml.Unmarshal(tt.yamlConfig, &cl)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExporter, cl.Exporter)
 		})
 	}
 }
