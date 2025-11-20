@@ -13,7 +13,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -21,6 +20,8 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	testpb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
+
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
 // testLabelerServer is a test server that implements the test service.
@@ -29,17 +30,17 @@ type testLabelerServer struct {
 }
 
 // EmptyCall is a test method that returns an empty response.
-func (s *testLabelerServer) EmptyCall(ctx context.Context, req *testpb.Empty) (*testpb.Empty, error) {
+func (*testLabelerServer) EmptyCall(_ context.Context, _ *testpb.Empty) (*testpb.Empty, error) {
 	return &testpb.Empty{}, nil
 }
 
 // UnaryCall is a test method that returns a simple response.
-func (s *testLabelerServer) UnaryCall(ctx context.Context, req *testpb.SimpleRequest) (*testpb.SimpleResponse, error) {
+func (*testLabelerServer) UnaryCall(_ context.Context, _ *testpb.SimpleRequest) (*testpb.SimpleResponse, error) {
 	return &testpb.SimpleResponse{}, nil
 }
 
 // StreamingInputCall is a test method that implements a client-side streaming RPC.
-func (s *testLabelerServer) StreamingInputCall(stream testpb.TestService_StreamingInputCallServer) error {
+func (*testLabelerServer) StreamingInputCall(stream testpb.TestService_StreamingInputCallServer) error {
 	for {
 		_, err := stream.Recv()
 		if err != nil {
@@ -54,7 +55,7 @@ func (s *testLabelerServer) StreamingInputCall(stream testpb.TestService_Streami
 }
 
 // StreamingOutputCall is a test method that implements a server-side streaming RPC.
-func (s *testLabelerServer) StreamingOutputCall(req *testpb.StreamingOutputCallRequest, stream testpb.TestService_StreamingOutputCallServer) error {
+func (*testLabelerServer) StreamingOutputCall(req *testpb.StreamingOutputCallRequest, stream testpb.TestService_StreamingOutputCallServer) error {
 	for _, param := range req.ResponseParameters {
 		payload := &testpb.Payload{
 			Type: testpb.PayloadType_COMPRESSABLE,
@@ -140,7 +141,7 @@ func TestMetricAttributesFn_ServerSideStreaming(t *testing.T) {
 	var count int
 	for {
 		_, err := stream.Recv()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			break
 		}
 		require.NoError(t, err)
@@ -162,7 +163,11 @@ func TestMetricAttributesFn_ClientSide(t *testing.T) {
 	server := grpc.NewServer()
 	testpb.RegisterTestServiceServer(server, &testLabelerServer{})
 
-	go server.Serve(serverLis)
+	go func() {
+		if err := server.Serve(serverLis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			t.Errorf("server failed: %v", err)
+		}
+	}()
 	defer server.Stop()
 
 	reader := metric.NewManualReader()
@@ -208,7 +213,11 @@ func TestMetricAttributesFn_ClientSideStreaming(t *testing.T) {
 
 	server := grpc.NewServer()
 	testpb.RegisterTestServiceServer(server, &testLabelerServer{})
-	go server.Serve(serverLis)
+	go func() {
+		if err := server.Serve(serverLis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			t.Errorf("server failed: %v", err)
+		}
+	}()
 	defer server.Stop()
 
 	reader := metric.NewManualReader()
@@ -240,7 +249,7 @@ func TestMetricAttributesFn_ClientSideStreaming(t *testing.T) {
 	stream, err := client.StreamingInputCall(t.Context())
 	require.NoError(t, err)
 
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		err := stream.Send(&testpb.StreamingInputCallRequest{
 			Payload: &testpb.Payload{Body: []byte("hello")},
 		})
@@ -266,16 +275,15 @@ func TestMetricAttributesFn_ClientAndServerIndependent(t *testing.T) {
 	defer downstreamServer.Stop()
 
 	// Main server setup
-	lis, server := startTestServerWithOptions(t, mp, otelgrpc.WithMetricAttributesFn(func(ctx context.Context) []attribute.KeyValue {
+	lis, server := startTestServerWithOptions(t, mp, otelgrpc.WithMetricAttributesFn(func(_ context.Context) []attribute.KeyValue {
 		return []attribute.KeyValue{
 			attribute.String("origin", "test-origin"),
 			attribute.String("tier", "premium"),
 		}
-
 	}))
 	defer server.Stop()
 
-	metricFunc := func(ctx context.Context) []attribute.KeyValue {
+	metricFunc := func(_ context.Context) []attribute.KeyValue {
 		return []attribute.KeyValue{
 			attribute.String("client.version", "v1.1.1"),
 			attribute.String("client.env", "staging"),
@@ -332,7 +340,11 @@ func startTestServerWithOptions(t *testing.T, mp *metric.MeterProvider, opts ...
 	)
 	testpb.RegisterTestServiceServer(server, &testLabelerServer{})
 
-	go server.Serve(lis)
+	go func() {
+		if err := server.Serve(lis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			t.Errorf("server failed: %v", err)
+		}
+	}()
 	return lis, server
 }
 
@@ -395,7 +407,7 @@ func assertAllMetricsHaveLabels(t *testing.T, reader metric.Reader, direction in
 	require.NoError(t, err)
 
 	datapoints := collectDataPointsByMetric(rm, direction)
-	assert.NotZero(t, len(datapoints), "no metrics instrumented")
+	assert.NotEmpty(t, datapoints, "no metrics instrumented")
 
 	for _, dp := range datapoints {
 		for key, val := range expectedLabels {

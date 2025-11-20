@@ -6,11 +6,11 @@ package otelgrpc_test
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/otel/attribute"
 )
 
 func ExampleNewClientHandler() {
