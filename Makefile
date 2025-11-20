@@ -329,6 +329,7 @@ OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v1.0.0-rc.2
 genjsonschema-cleanup:
 	rm -Rf ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 
+GENERATED_CONFIG_EXPERIMENTAL=./otelconf/x/generated_config.go
 GENERATED_CONFIG=./otelconf/generated_config.go
 
 # Generate structs for configuration from opentelemetry-configuration schema
@@ -339,13 +340,13 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 		--capitalization ID \
 		--capitalization OTLP \
 		--struct-name-from-title \
-		--package otelconf \
+		--package x \
 		--only-models \
-		--output ${GENERATED_CONFIG} \
+		--output ${GENERATED_CONFIG_EXPERIMENTAL} \
 		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/schema/opentelemetry_configuration.json
 	@echo Modify jsonschema generated files.
-	sed -f ./otelconf/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
-	mv ${GENERATED_CONFIG}.tmp ${GENERATED_CONFIG}
+	sed -f ./otelconf/jsonschema_patch.sed ${GENERATED_CONFIG_EXPERIMENTAL} > ${GENERATED_CONFIG_EXPERIMENTAL}.tmp
+	mv ${GENERATED_CONFIG_EXPERIMENTAL}.tmp ${GENERATED_CONFIG}
 	$(MAKE) genjsonschema-cleanup
 
 .PHONY: codespell
