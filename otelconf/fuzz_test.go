@@ -23,7 +23,7 @@ func FuzzJSON(f *testing.F) {
 		t.Log("JSON:\n" + string(data))
 
 		var cfg OpenTelemetryConfiguration
-		err := json.Unmarshal(b, &cfg)
+		err := json.Unmarshal(data, &cfg)
 		if err != nil {
 			return
 		}
