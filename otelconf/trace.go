@@ -30,7 +30,7 @@ func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProv
 	}
 	provider, ok := cfg.opentelemetryConfig.TracerProvider.(*TracerProviderJson)
 	if !ok {
-		return noop.NewTracerProvider(), noopShutdown, newErrInvalid("invalid tracer provider")
+		return noop.NewTracerProvider(), noopShutdown, newErrInvalid("tracer_provider")
 	}
 
 	opts := append(cfg.tracerProviderOptions, sdktrace.WithResource(res))

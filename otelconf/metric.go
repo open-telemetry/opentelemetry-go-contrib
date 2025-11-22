@@ -18,6 +18,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/otlptranslator"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
@@ -403,18 +404,24 @@ func prometheusReader(ctx context.Context, prometheusConfig *ExperimentalPrometh
 	return readerWithServer{reader, &server}, nil
 }
 
+func validTranslationStrategy(strategy ExperimentalPrometheusMetricExporterTranslationStrategy) bool {
+	return strategy == ExperimentalPrometheusMetricExporterTranslationStrategyNoTranslation ||
+		strategy == ExperimentalPrometheusMetricExporterTranslationStrategyNoUTF8EscapingWithSuffixes ||
+		strategy == ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes ||
+		strategy == ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithoutSuffixes
+}
+
 func prometheusReaderOpts(prometheusConfig *ExperimentalPrometheusMetricExporter) ([]otelprom.Option, error) {
 	var opts []otelprom.Option
 	if prometheusConfig.WithoutScopeInfo != nil && *prometheusConfig.WithoutScopeInfo {
 		opts = append(opts, otelprom.WithoutScopeInfo())
 	}
-	// TODO: fix the following to use with translation strategy
-	// if prometheusConfig.WithoutTypeSuffix != nil && *prometheusConfig.WithoutTypeSuffix {
-	// 	opts = append(opts, otelprom.WithoutCounterSuffixes()) //nolint:staticcheck // WithouTypeSuffix is deprecated, but we still need it for backwards compatibility.
-	// }
-	// if prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
-	// 	opts = append(opts, otelprom.WithoutUnits()) //nolint:staticcheck // WithouTypeSuffix is deprecated, but we still need it for backwards compatibility.
-	// }
+	if prometheusConfig.TranslationStrategy != nil {
+		if !validTranslationStrategy(*prometheusConfig.TranslationStrategy) {
+			return nil, newErrInvalid("translation strategy invalid")
+		}
+		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.TranslationStrategyOption(*prometheusConfig.TranslationStrategy)))
+	}
 	if prometheusConfig.WithResourceConstantLabels != nil {
 		f, err := newIncludeExcludeFilter(prometheusConfig.WithResourceConstantLabels)
 		if err != nil {

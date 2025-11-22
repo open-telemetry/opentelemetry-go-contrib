@@ -12,11 +12,11 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log/global"
 
-	otelconf "go.opentelemetry.io/contrib/otelconf/v0.3.0"
+	"go.opentelemetry.io/contrib/otelconf"
 )
 
 func Example() {
-	b, err := os.ReadFile(filepath.Join("testdata", "v0.3.yaml"))
+	b, err := os.ReadFile(filepath.Join("testdata", "v1.0.0.yaml"))
 	if err != nil {
 		log.Fatal(err)
 	}
