@@ -96,7 +96,13 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 
 	results, err := rollDice(r.Context(), rolls)
 	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
+		msg := "Internal server error"
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"status":  "error",
+			"message": msg,
+		})
 		logger.ErrorContext(r.Context(), err.Error())
 		return
 	}
@@ -117,10 +123,20 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeJSON(ctx context.Context, w http.ResponseWriter, v any) {
-	if err := json.NewEncoder(w).Encode(v); err != nil {
+	data, err := json.Marshal(v)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"status":  "error",
+			"message": "Internal Server Error",
+		})
 		logger.ErrorContext(ctx, "json encode failed", "error", err)
+		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }
 
 func rollDice(ctx context.Context, rolls int) ([]int, error) {
@@ -149,7 +165,7 @@ func rollDice(ctx context.Context, rolls int) ([]int, error) {
 
 	rollsAttr := attribute.Int("rolls", rolls)
 	span.SetAttributes(rollsAttr)
-	rollCnt.Add(ctx, 1, metric.WithAttributes(rollsAttr))
+	rollCnt.Add(ctx, int64(rolls), metric.WithAttributes(rollsAttr))
 	lastRolls.Store(int64(rolls))
 	return results, nil
 }

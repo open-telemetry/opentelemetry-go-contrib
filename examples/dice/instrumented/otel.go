@@ -43,12 +43,16 @@ func setupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 		err = errors.Join(inErr, shutdown(ctx))
 	}
 
-	res, _ := resource.New(ctx,
+	res, resErr := resource.New(ctx,
 		resource.WithFromEnv(), // reads OTEL_SERVICE_NAME & OTEL_RESOURCE_ATTRIBUTES.
 		resource.WithProcess(),
 		resource.WithHost(),
 		resource.WithTelemetrySDK(),
 	)
+	if resErr != nil {
+		handleErr(resErr)
+		return shutdown, resErr
+	}
 
 	// Set up propagator.
 	prop := newPropagator()

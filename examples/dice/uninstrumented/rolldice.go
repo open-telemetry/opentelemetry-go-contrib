@@ -37,6 +37,7 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 
 	results, err := rolldice(rolls)
 	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
 		log.Printf("ERROR: %v", err)
 		return
@@ -49,7 +50,6 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("INFO: %s %s -> 200 OK", r.Method, r.URL.String())
 
-	w.Header().Set("Content-Type", "application/json")
 	if len(results) == 1 {
 		writeJSON(w, results[0])
 	} else {
@@ -58,10 +58,20 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 }
 
 func writeJSON(w http.ResponseWriter, v any) {
-	if err := json.NewEncoder(w).Encode(v); err != nil {
+	data, err := json.Marshal(v)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]string{
+			"status":  "error",
+			"message": "Internal Server Error",
+		})
 		log.Printf("ERROR: %v", err)
+		return
 	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
 }
 
 func rolldice(rolls int) ([]int, error) {
