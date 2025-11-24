@@ -828,7 +828,7 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Excluded: []string{"process.command_args"},
 				Included: []string{"process.*"},
 			},
-			// TODO: implement resource detectors
+			// TODO: implement resource detectors https://github.com/open-telemetry/opentelemetry-go-contrib/issues/7252
 			// Detectors: []ExperimentalResourceDetector{}
 			// },
 		},
