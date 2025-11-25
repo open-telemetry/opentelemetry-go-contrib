@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 )
 
@@ -20,6 +21,10 @@ type config struct {
 	// MeterProvider sets the metric.MeterProvider.  If nil, the global
 	// Provider will be used.
 	MeterProvider metric.MeterProvider
+
+	// Attributes sets the attributes collection which will be added
+	// to exported metrics.  If nil or empty, then will be ignored.
+	Attributes []attribute.KeyValue
 }
 
 // Option supports configuring optional settings for runtime metrics.
@@ -70,6 +75,21 @@ func (o metricProviderOption) apply(c *config) {
 	if o.MeterProvider != nil {
 		c.MeterProvider = o.MeterProvider
 	}
+}
+
+// WithAttributes sets the user-defined attributes for each runtime
+// metric, which will be reported.  If this option is not used, then
+// a default metric attributes will be used.
+func WithAttributes(attributes ...attribute.KeyValue) Option {
+	return attributesOption {attributes: attributes}
+}
+
+type attributesOption struct {
+	attributes []attribute.KeyValue
+}
+
+func (o attributesOption) apply(c *config) {
+	c.Attributes = o.attributes
 }
 
 // newConfig computes a config from the supplied Options.
