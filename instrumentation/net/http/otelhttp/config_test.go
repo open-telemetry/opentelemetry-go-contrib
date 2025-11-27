@@ -125,17 +125,25 @@ func TestSpanNameFormatter(t *testing.T) {
 
 func TestEvent(t *testing.T) {
 	t.Run("constant values", func(t *testing.T) {
-		assert.Equal(t, otelhttp.ReadEvents, otelhttp.Event(1), "ReadEvents should be 1")
-		assert.Equal(t, otelhttp.WriteEvents, otelhttp.Event(2), "WriteEvents should be 2")
+		assert.Equal(t, otelhttp.Event(1), otelhttp.ReadEvents, "ReadEvents should be 1")
+		assert.Equal(t, otelhttp.Event(2), otelhttp.WriteEvents, "WriteEvents should be 2")
 	})
 
 	t.Run("unspecifiedEvent", func(t *testing.T) {
 		var unspecified otelhttp.Event // zero-value
-
 		assert.Equal(t, otelhttp.Event(0), unspecified, "unspecifiedEvent should be zero-value Event")
 
+		// Validate that unspecifiedEvent is different from defined events
+		assert.NotEqual(t, otelhttp.ReadEvents, unspecified, "unspecifiedEvent should not equal ReadEvents")
+		assert.NotEqual(t, otelhttp.WriteEvents, unspecified, "unspecifiedEvent should not equal WriteEvents")
+
+		// Validate WithMessageEvents accepts unspecifiedEvent
 		opt := otelhttp.WithMessageEvents(unspecified)
 		assert.NotNil(t, opt, "WithMessageEvents(unspecifiedEvent) should not return nil")
+
+		// Additional validation: test behavior with unspecified events
+		optMultiple := otelhttp.WithMessageEvents(unspecified, otelhttp.ReadEvents)
+		assert.NotNil(t, optMultiple, "WithMessageEvents with unspecified and valid events should not return nil")
 	})
 
 	t.Run("WithMessageEvents", func(t *testing.T) {
@@ -147,6 +155,8 @@ func TestEvent(t *testing.T) {
 			{name: "WriteEvents", events: []otelhttp.Event{otelhttp.WriteEvents}},
 			{name: "multiple events", events: []otelhttp.Event{otelhttp.ReadEvents, otelhttp.WriteEvents}},
 			{name: "no events", events: []otelhttp.Event{}},
+			{name: "unspecified event only", events: []otelhttp.Event{otelhttp.Event(0)}},
+			{name: "mixed with unspecified", events: []otelhttp.Event{otelhttp.Event(0), otelhttp.ReadEvents}},
 		}
 
 		for _, tt := range tests {

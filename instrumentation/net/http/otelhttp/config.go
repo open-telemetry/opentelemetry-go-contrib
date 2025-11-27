@@ -148,7 +148,7 @@ type Event int
 
 // Different types of events that can be recorded, see WithMessageEvents.
 const (
-	unspecifiedEvent Event = iota
+	unspecifiedEvents Event = iota
 	ReadEvents
 	WriteEvents
 )
