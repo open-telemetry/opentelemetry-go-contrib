@@ -23,6 +23,8 @@ import (
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
 
+const envVarConfigFile = "OTEL_EXPERIMENTAL_CONFIG_FILE"
+
 // SDK is a struct that contains all the providers
 // configured via the configuration model.
 type SDK struct {
@@ -78,7 +80,7 @@ func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error
 // NewSDK creates SDK providers based on the configuration model. It checks the local environment and
 // uses the file set in the variable `OTEL_EXPERIMENTAL_CONFIG_FILE` to configure the SDK automatically.
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
-	filename, ok := os.LookupEnv("OTEL_EXPERIMENTAL_CONFIG_FILE")
+	filename, ok := os.LookupEnv(envVarConfigFile)
 	if ok {
 		opt, err := parseConfigFileFromEnvironment(filename)
 		if err != nil {
