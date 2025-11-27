@@ -10,9 +10,7 @@ import (
 	"log"
 	"os"
 
-	"go.opentelemetry.io/otel"
 	apilog "go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/global"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
@@ -89,14 +87,22 @@ func init() {
 		log.Fatal(err)
 	}
 
-	// Set the global providers.
-	otel.SetTracerProvider(s.TracerProvider())
-	otel.SetMeterProvider(s.MeterProvider())
-	global.SetLoggerProvider(s.LoggerProvider())
 	sdk = &s
 }
 
-// Shutdown calls the shutdown function of the global SDK instantiated if
+// Global returns the globally configured SDK only instantiated
+// through the use of the `OTEL_EXPERIMENTAL_CONFIG_FILE“ environment
+// variable.
+func Global() SDK {
+	if sdk != nil {
+		return *sdk
+	}
+	return noopSDK
+}
+
+// Shutdown calls the `Shutdown` function of the globally configured SDK only instantiated
+// through the use of the `OTEL_EXPERIMENTAL_CONFIG_FILE“ environment
+// variable.
 func Shutdown(ctx context.Context) {
 	if sdk == nil {
 		return
