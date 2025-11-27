@@ -7,7 +7,6 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 import (
 	"context"
 	"errors"
-	"log"
 	"os"
 
 	apilog "go.opentelemetry.io/otel/log"
@@ -60,60 +59,33 @@ var noopSDK = SDK{
 	shutdown:       func(context.Context) error { return nil },
 }
 
-var sdk *SDK
-
-// init checks the local environment and uses the file set in the variable
-// `OTEL_EXPERIMENTAL_CONFIG_FILE` to configure the SDK automatically.
-func init() {
-	// look for the env variable
-	filename, ok := os.LookupEnv("OTEL_EXPERIMENTAL_CONFIG_FILE")
-	if !ok {
-		return
-	}
+func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error) {
 	b, err := os.ReadFile(filename)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Parse a configuration file into an OpenTelemetryConfiguration model.
 	c, err := ParseYAML(b)
 	if err != nil {
-		log.Fatal(err)
+		return nil, err
 	}
 
 	// Create SDK components with the parsed configuration.
-	s, err := NewSDK(WithOpenTelemetryConfiguration(*c))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	sdk = &s
+	return WithOpenTelemetryConfiguration(*c), nil
 }
 
-// Global returns the globally configured SDK only instantiated
-// through the use of the `OTEL_EXPERIMENTAL_CONFIG_FILE“ environment
-// variable.
-func Global() SDK {
-	if sdk != nil {
-		return *sdk
-	}
-	return noopSDK
-}
-
-// Shutdown calls the `Shutdown` function of the globally configured SDK only instantiated
-// through the use of the `OTEL_EXPERIMENTAL_CONFIG_FILE“ environment
-// variable.
-func Shutdown(ctx context.Context) {
-	if sdk == nil {
-		return
-	}
-	if err := sdk.Shutdown(ctx); err != nil {
-		log.Fatal(err)
-	}
-}
-
-// NewSDK creates SDK providers based on the configuration model.
+// NewSDK creates SDK providers based on the configuration model. It checks the local environment and
+// uses the file set in the variable `OTEL_EXPERIMENTAL_CONFIG_FILE` to configure the SDK automatically.
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
+	filename, ok := os.LookupEnv("OTEL_EXPERIMENTAL_CONFIG_FILE")
+	if ok {
+		opt, err := parseConfigFileFromEnvironment(filename)
+		if err != nil {
+			return noopSDK, err
+		}
+		opts = append(opts, opt)
+	}
 	o := configOptions{
 		ctx: context.Background(),
 	}
