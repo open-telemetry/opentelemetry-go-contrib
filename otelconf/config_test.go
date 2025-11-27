@@ -450,6 +450,32 @@ func TestNewSDK(t *testing.T) {
 	}
 }
 
+func TestNewSDKWithEnvVar(t *testing.T) {
+	cfg := []ConfigurationOption{
+		WithContext(t.Context()),
+		WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+			TracerProvider: &ResourceJson{},
+		}),
+	}
+	// NewSDK without an env file set
+	_, err := NewSDK(cfg...)
+	require.Equal(t, newErrInvalid("tracer_provider"), err)
+	// test a non existent file
+	t.Setenv(envVarConfigFile, filepath.Join("testdata", "file_missing.yaml"))
+	_, err = NewSDK(cfg...)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "no such file or directory")
+	// test a file that causes a parse error
+	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))
+	_, err = NewSDK(cfg...)
+	require.Error(t, err)
+	require.ErrorIs(t, err, newErrRequired(&NameStringValuePair{}, "name"))
+	// test a valid file, error is returned from the SDK instantiation
+	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0.yaml"))
+	_, err = NewSDK(cfg...)
+	require.ErrorIs(t, err, newErrInvalid("otlp_file/development"))
+}
+
 var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 	Disabled:   ptr(false),
 	FileFormat: "1.0-rc.2",
