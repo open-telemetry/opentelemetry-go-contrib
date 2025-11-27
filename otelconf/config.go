@@ -9,7 +9,7 @@ import (
 	"errors"
 	"os"
 
-	apilog "go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
@@ -30,7 +30,7 @@ const envVarConfigFile = "OTEL_EXPERIMENTAL_CONFIG_FILE"
 type SDK struct {
 	meterProvider  metric.MeterProvider
 	tracerProvider trace.TracerProvider
-	loggerProvider apilog.LoggerProvider
+	loggerProvider log.LoggerProvider
 	shutdown       shutdownFunc
 }
 
@@ -44,8 +44,8 @@ func (s *SDK) MeterProvider() metric.MeterProvider {
 	return s.meterProvider
 }
 
-// LoggerProvider returns a configured apilog.LoggerProvider.
-func (s *SDK) LoggerProvider() apilog.LoggerProvider {
+// LoggerProvider returns a configured log.LoggerProvider.
+func (s *SDK) LoggerProvider() log.LoggerProvider {
 	return s.loggerProvider
 }
 
