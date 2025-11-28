@@ -860,7 +860,6 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				{Service: ExperimentalServiceResourceDetector{}},
 			},
 		},
-		SchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
 	},
 	TracerProvider: &TracerProviderJson{
 		TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
@@ -2355,26 +2354,47 @@ func TestUnmarshalPullMetricReader(t *testing.T) {
 }
 
 func TestUnmarshalResourceJson(t *testing.T) {
-	r := ResourceJson{}
-
-	err := yaml.Unmarshal([]byte("detection/development:\n  detectors:\n    - container:\n    - host:\n    - process:\n    - service:"), &r)
-	require.NoError(t, err)
-	require.Equal(t, ResourceJson{
-		DetectionDevelopment: &ExperimentalResourceDetection{
-			Detectors: []ExperimentalResourceDetector{
-				{
-					Container: ExperimentalContainerResourceDetector{},
-				},
-				{
-					Host: ExperimentalHostResourceDetector{},
-				},
-				{
-					Process: ExperimentalProcessResourceDetector{},
-				},
-				{
-					Service: ExperimentalServiceResourceDetector{},
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantResource ResourceJson
+	}{
+		{
+			name:       "valid with all detectors",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - container:\n    - host:\n    - process:\n    - service:"),
+			wantResource: ResourceJson{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{
+							Container: ExperimentalContainerResourceDetector{},
+						},
+						{
+							Host: ExperimentalHostResourceDetector{},
+						},
+						{
+							Process: ExperimentalProcessResourceDetector{},
+						},
+						{
+							Service: ExperimentalServiceResourceDetector{},
+						},
+					},
 				},
 			},
 		},
-	}, r)
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r := ResourceJson{}
+			err := json.Unmarshal(tt.jsonConfig, &r)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantResource, r)
+
+			r = ResourceJson{}
+			err = yaml.Unmarshal(tt.yamlConfig, &r)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantResource, r)
+		})
+	}
 }
