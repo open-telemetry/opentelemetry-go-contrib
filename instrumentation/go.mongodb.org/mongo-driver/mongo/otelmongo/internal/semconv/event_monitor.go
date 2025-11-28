@@ -14,14 +14,13 @@ import (
 	"go.mongodb.org/mongo-driver/event"
 	"go.opentelemetry.io/otel/attribute"
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.30.0"
 )
 
 // Constants for environment variable keys and versions.
 const (
-	semconvOptIn     = "OTEL_SEMCONV_STABILITY_OPT_IN"
-	semconvOptInDup  = "database/dup"
-	semconvOptIn1260 = "database"
+	semconvOptIn    = "OTEL_SEMCONV_STABILITY_OPT_IN"
+	semconvOptInDup = "database/dup"
 )
 
 // EventMonitor is responsible for monitoring events with a specified semantic
@@ -88,13 +87,7 @@ func (m EventMonitor) CommandStartedTraceAttrs(
 		)
 	}
 
-	// Check for the 1.26.0 opt-in
-	if hasOptIn(m.version, semconvOptIn1260) {
-		return commandStartedTraceAttrs(evt, opts...)
-	}
-
-	// Fallback to v1.21.0
-	return commandStartedTraceAttrsV1210(evt, opts...)
+	return commandStartedTraceAttrs(evt, opts...)
 }
 
 // peerInfo extracts the hostname and port from a CommandStartedEvent.
