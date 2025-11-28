@@ -5,38 +5,29 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import (
 	"context"
-	"fmt"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
-	"go.opentelemetry.io/contrib/detectors/autodetect"
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
 
-func toDetectorId(detectors []ExperimentalResourceDetector) []autodetect.ID {
-	ids := []autodetect.ID{}
+func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
+	opts := []resource.Option{}
 	for _, d := range detectors {
 		if d.Container != nil {
-			ids = append(ids, autodetect.IDContainer)
+			opts = append(opts, resource.WithContainer())
 		}
 		if d.Host != nil {
-			ids = append(ids, autodetect.IDHost, autodetect.IDHostID)
+			opts = append(opts, resource.WithHost(), resource.WithHostID())
 		}
 		if d.Process != nil {
-			ids = append(ids,
-				autodetect.IDProcessCommandArgs,
-				autodetect.IDProcessExecutableName,
-				autodetect.IDProcessExecutablePath,
-				autodetect.IDProcessOwner,
-				autodetect.IDProcessPID,
-				autodetect.IDProcessRuntimeDescription,
-				autodetect.IDProcessRuntimeName,
-				autodetect.IDProcessRuntimeVersion,
-			)
+			opts = append(opts, resource.WithProcess())
 		}
+		// TODO: implement service:
+		// Waiting on https://github.com/open-telemetry/opentelemetry-go/pull/7642
 	}
-	return ids
+	return opts
 }
 
 func newResource(res OpenTelemetryConfigurationResource) (*resource.Resource, error) {
@@ -54,23 +45,18 @@ func newResource(res OpenTelemetryConfigurationResource) (*resource.Resource, er
 		attrs = append(attrs, kv.FromNameValue(v.Name, v.Value))
 	}
 
-	var detectedResource *resource.Resource
+	var schema string
+	if r.SchemaUrl != nil {
+		schema = *r.SchemaUrl
+	}
+	opts := []resource.Option{
+		resource.WithAttributes(attrs...),
+		resource.WithSchemaURL(schema),
+	}
 
 	if r.DetectionDevelopment != nil {
-		detectors := toDetectorId(r.DetectionDevelopment.Detectors)
-		fmt.Println(detectors)
-		detector, err := autodetect.Detector(detectors...)
-		if err != nil {
-			return nil, err
-		}
-		detectedResource, err = detector.Detect(context.Background())
-		if err != nil {
-			return nil, err
-		}
+		opts = append(opts, resourceOpts(r.DetectionDevelopment.Detectors)...)
 	}
 
-	if r.SchemaUrl == nil {
-		return resource.Merge(resource.NewSchemaless(attrs...), detectedResource)
-	}
-	return resource.Merge(resource.NewWithAttributes(*r.SchemaUrl, attrs...), detectedResource)
+	return resource.New(context.Background(), opts...)
 }

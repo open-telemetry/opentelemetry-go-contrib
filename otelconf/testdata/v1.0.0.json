@@ -522,8 +522,7 @@
                 {"process": null},
                 {"service": null}
             ]
-        },
-        "schema_url": "https://opentelemetry.io/schemas/1.16.0"
+        }
     },
     "instrumentation/development": {
         "general": {

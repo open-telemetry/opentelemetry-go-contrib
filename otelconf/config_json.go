@@ -123,6 +123,70 @@ func (j *TraceContextPropagator) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalContainerResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalContainerResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = ExperimentalContainerResourceDetector{}
+	} else {
+		*j = ExperimentalContainerResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalHostResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalHostResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = ExperimentalHostResourceDetector{}
+	} else {
+		*j = ExperimentalHostResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalProcessResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalProcessResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = ExperimentalProcessResourceDetector{}
+	} else {
+		*j = ExperimentalProcessResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalServiceResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalServiceResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = ExperimentalServiceResourceDetector{}
+	} else {
+		*j = ExperimentalServiceResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	// Use a shadow struct with a RawMessage field to detect key presence.
 	type Plain ExperimentalResourceDetector
@@ -169,6 +233,7 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 		}
 		sh.Plain.Service = c
 	}
+	*j = ExperimentalResourceDetector(sh.Plain)
 	return nil
 }
 
