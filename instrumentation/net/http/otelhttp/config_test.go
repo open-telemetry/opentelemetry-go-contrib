@@ -125,8 +125,8 @@ func TestSpanNameFormatter(t *testing.T) {
 
 func TestEvent(t *testing.T) {
 	t.Run("constant values", func(t *testing.T) {
-		assert.Equal(t, otelhttp.Event(1), otelhttp.ReadEvents, "ReadEvents should be 1")
-		assert.Equal(t, otelhttp.Event(2), otelhttp.WriteEvents, "WriteEvents should be 2")
+		assert.Equal(t, otelhttp.ReadEvents, otelhttp.Event(1), "ReadEvents should be 1")
+        assert.Equal(t, otelhttp.WriteEvents, otelhttp.Event(2), "WriteEvents should be 2")
 	})
 
 	t.Run("unspecifiedEvent", func(t *testing.T) {
