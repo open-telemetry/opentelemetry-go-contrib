@@ -2354,3 +2354,28 @@ func TestUnmarshalPullMetricReader(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalResourceJson(t *testing.T) {
+	r := ResourceJson{}
+
+	err := yaml.Unmarshal([]byte("detection/development:\n  detectors:\n    - container:\n    - host:\n    - process:\n    - service:"), &r)
+	require.NoError(t, err)
+	require.Equal(t, ResourceJson{
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{
+					Container: ExperimentalContainerResourceDetector{},
+				},
+				{
+					Host: ExperimentalHostResourceDetector{},
+				},
+				{
+					Process: ExperimentalProcessResourceDetector{},
+				},
+				{
+					Service: ExperimentalServiceResourceDetector{},
+				},
+			},
+		},
+	}, r)
+}
