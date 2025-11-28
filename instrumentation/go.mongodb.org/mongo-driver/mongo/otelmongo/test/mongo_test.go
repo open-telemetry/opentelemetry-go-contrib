@@ -245,16 +245,6 @@ func TestDBCollectionAttribute(t *testing.T) {
 	}
 }
 
-func assertSemconv1170(mt *mtest.T, attrs []attribute.KeyValue) {
-	mt.Helper()
-
-	assert.Contains(mt, attrs, attribute.String("db.system", "mongodb"))
-	assert.Contains(mt, attrs, attribute.String("net.peer.name", "<mock_connection>"))
-	assert.Contains(mt, attrs, attribute.Int64("net.peer.port", int64(27017)))
-	assert.Contains(mt, attrs, attribute.String("net.transport", "ip_tcp"))
-	assert.Contains(mt, attrs, attribute.String("db.name", "test-database"))
-}
-
 func assertSemconv(mt *mtest.T, attrs []attribute.KeyValue) {
 	mt.Helper()
 
