@@ -450,6 +450,32 @@ func TestNewSDK(t *testing.T) {
 	}
 }
 
+func TestNewSDKWithEnvVar(t *testing.T) {
+	cfg := []ConfigurationOption{
+		WithContext(t.Context()),
+		WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+			TracerProvider: &ResourceJson{},
+		}),
+	}
+	// NewSDK without an env file set
+	_, err := NewSDK(cfg...)
+	require.Equal(t, newErrInvalid("tracer_provider"), err)
+	// test a non existent file
+	t.Setenv(envVarConfigFile, filepath.Join("testdata", "file_missing.yaml"))
+	_, err = NewSDK(cfg...)
+	require.Error(t, err)
+	require.ErrorContains(t, err, "no such file or directory")
+	// test a file that causes a parse error
+	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))
+	_, err = NewSDK(cfg...)
+	require.Error(t, err)
+	require.ErrorIs(t, err, newErrRequired(&NameStringValuePair{}, "name"))
+	// test a valid file, error is returned from the SDK instantiation
+	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0.yaml"))
+	_, err = NewSDK(cfg...)
+	require.ErrorIs(t, err, newErrInvalid("otlp_file/development"))
+}
+
 var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 	Disabled:   ptr(false),
 	FileFormat: "1.0-rc.2",
@@ -557,9 +583,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					ExportTimeout: ptr(30000),
 					Exporter: LogRecordExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							CertificateFile:       ptr("/app/cert.pem"),
-							ClientCertificateFile: ptr("/app/cert.pem"),
-							ClientKeyFile:         ptr("/app/cert.pem"),
+							CertificateFile:       ptr("testdata/ca.crt"),
+							ClientCertificateFile: ptr("testdata/client.crt"),
+							ClientKeyFile:         ptr("testdata/client.key"),
 							Compression:           ptr("gzip"),
 							Encoding:              ptr(OTLPHttpEncodingProtobuf),
 							Endpoint:              ptr("http://localhost:4318/v1/logs"),
@@ -579,9 +605,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							CertificateFile:       ptr("/app/cert.pem"),
-							ClientCertificateFile: ptr("/app/cert.pem"),
-							ClientKeyFile:         ptr("/app/cert.pem"),
+							CertificateFile:       ptr("testdata/ca.crt"),
+							ClientCertificateFile: ptr("testdata/client.crt"),
+							ClientKeyFile:         ptr("testdata/client.key"),
 							Compression:           ptr("gzip"),
 							Endpoint:              ptr("http://localhost:4317"),
 							Headers: []NameStringValuePair{
@@ -689,9 +715,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					},
 					Exporter: PushMetricExporter{
 						OTLPHttp: &OTLPHttpMetricExporter{
-							CertificateFile:             ptr("/app/cert.pem"),
-							ClientCertificateFile:       ptr("/app/cert.pem"),
-							ClientKeyFile:               ptr("/app/cert.pem"),
+							CertificateFile:             ptr("testdata/ca.crt"),
+							ClientCertificateFile:       ptr("testdata/client.crt"),
+							ClientKeyFile:               ptr("testdata/client.key"),
 							Compression:                 ptr("gzip"),
 							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
 							Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
@@ -712,9 +738,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPGrpc: &OTLPGrpcMetricExporter{
-							CertificateFile:             ptr("/app/cert.pem"),
-							ClientCertificateFile:       ptr("/app/cert.pem"),
-							ClientKeyFile:               ptr("/app/cert.pem"),
+							CertificateFile:             ptr("testdata/ca.crt"),
+							ClientCertificateFile:       ptr("testdata/client.crt"),
+							ClientKeyFile:               ptr("testdata/client.key"),
 							Compression:                 ptr("gzip"),
 							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
 							Endpoint:                    ptr("http://localhost:4317"),
@@ -828,11 +854,13 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Excluded: []string{"process.command_args"},
 				Included: []string{"process.*"},
 			},
-			// TODO: implement resource detectors https://github.com/open-telemetry/opentelemetry-go-contrib/issues/7252
-			// Detectors: []ExperimentalResourceDetector{}
-			// },
+			Detectors: []ExperimentalResourceDetector{
+				{Container: ExperimentalContainerResourceDetector{}},
+				{Host: ExperimentalHostResourceDetector{}},
+				{Process: ExperimentalProcessResourceDetector{}},
+				{Service: ExperimentalServiceResourceDetector{}},
+			},
 		},
-		SchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
 	},
 	TracerProvider: &TracerProviderJson{
 		TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
@@ -863,9 +891,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					ExportTimeout: ptr(30000),
 					Exporter: SpanExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							CertificateFile:       ptr("/app/cert.pem"),
-							ClientCertificateFile: ptr("/app/cert.pem"),
-							ClientKeyFile:         ptr("/app/cert.pem"),
+							CertificateFile:       ptr("testdata/ca.crt"),
+							ClientCertificateFile: ptr("testdata/client.crt"),
+							ClientKeyFile:         ptr("testdata/client.key"),
 							Compression:           ptr("gzip"),
 							Encoding:              ptr(OTLPHttpEncodingProtobuf),
 							Endpoint:              ptr("http://localhost:4318/v1/traces"),
@@ -885,9 +913,9 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							CertificateFile:       ptr("/app/cert.pem"),
-							ClientCertificateFile: ptr("/app/cert.pem"),
-							ClientKeyFile:         ptr("/app/cert.pem"),
+							CertificateFile:       ptr("testdata/ca.crt"),
+							ClientCertificateFile: ptr("testdata/client.crt"),
+							ClientKeyFile:         ptr("testdata/client.key"),
 							Compression:           ptr("gzip"),
 							Endpoint:              ptr("http://localhost:4317"),
 							Headers: []NameStringValuePair{
@@ -2322,6 +2350,52 @@ func TestUnmarshalPullMetricReader(t *testing.T) {
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
 			assert.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantExporter, cl.Exporter)
+		})
+	}
+}
+
+func TestUnmarshalResourceJson(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantResource ResourceJson
+	}{
+		{
+			name:       "valid with all detectors",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - container:\n    - host:\n    - process:\n    - service:"),
+			wantResource: ResourceJson{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{
+							Container: ExperimentalContainerResourceDetector{},
+						},
+						{
+							Host: ExperimentalHostResourceDetector{},
+						},
+						{
+							Process: ExperimentalProcessResourceDetector{},
+						},
+						{
+							Service: ExperimentalServiceResourceDetector{},
+						},
+					},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r := ResourceJson{}
+			err := json.Unmarshal(tt.jsonConfig, &r)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantResource, r)
+
+			r = ResourceJson{}
+			err = yaml.Unmarshal(tt.yamlConfig, &r)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantResource, r)
 		})
 	}
 }

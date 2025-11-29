@@ -17,9 +17,9 @@
                     "exporter": {
                         "otlp_http": {
                             "endpoint": "http://localhost:4318/v1/logs",
-                            "certificate_file": "/app/cert.pem",
-                            "client_key_file": "/app/cert.pem",
-                            "client_certificate_file": "/app/cert.pem",
+                            "certificate_file": "testdata/ca.crt",
+                            "client_key_file": "testdata/client.key",
+                            "client_certificate_file": "testdata/client.crt",
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -39,9 +39,9 @@
                     "exporter": {
                         "otlp_grpc": {
                             "endpoint": "http://localhost:4317",
-                            "certificate_file": "/app/cert.pem",
-                            "client_key_file": "/app/cert.pem",
-                            "client_certificate_file": "/app/cert.pem",
+                            "certificate_file": "testdata/ca.crt",
+                            "client_key_file": "testdata/client.key",
+                            "client_certificate_file": "testdata/client.crt",
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -144,9 +144,9 @@
                     "exporter": {
                         "otlp_http": {
                             "endpoint": "http://localhost:4318/v1/metrics",
-                            "certificate_file": "/app/cert.pem",
-                            "client_key_file": "/app/cert.pem",
-                            "client_certificate_file": "/app/cert.pem",
+                            "certificate_file": "testdata/ca.crt",
+                            "client_key_file": "testdata/client.key",
+                            "client_certificate_file": "testdata/client.crt",
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -183,9 +183,9 @@
                     "exporter": {
                         "otlp_grpc": {
                             "endpoint": "http://localhost:4317",
-                            "certificate_file": "/app/cert.pem",
-                            "client_key_file": "/app/cert.pem",
-                            "client_certificate_file": "/app/cert.pem",
+                            "certificate_file": "testdata/ca.crt",
+                            "client_key_file": "testdata/client.key",
+                            "client_certificate_file": "testdata/client.crt",
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -329,9 +329,9 @@
                     "exporter": {
                         "otlp_http": {
                             "endpoint": "http://localhost:4318/v1/traces",
-                            "certificate_file": "/app/cert.pem",
-                            "client_key_file": "/app/cert.pem",
-                            "client_certificate_file": "/app/cert.pem",
+                            "certificate_file": "testdata/ca.crt",
+                            "client_key_file": "testdata/client.key",
+                            "client_certificate_file": "testdata/client.crt",
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -351,9 +351,9 @@
                     "exporter": {
                         "otlp_grpc": {
                             "endpoint": "http://localhost:4317",
-                            "certificate_file": "/app/cert.pem",
-                            "client_key_file": "/app/cert.pem",
-                            "client_certificate_file": "/app/cert.pem",
+                            "certificate_file": "testdata/ca.crt",
+                            "client_key_file": "testdata/client.key",
+                            "client_certificate_file": "testdata/client.crt",
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -515,9 +515,14 @@
                 "excluded": [
                     "process.command_args"
                 ]
-            }
-        },
-        "schema_url": "https://opentelemetry.io/schemas/1.16.0"
+            },
+            "detectors": [
+                {"container": null},
+                {"host": null},
+                {"process": null},
+                {"service": null}
+            ]
+        }
     },
     "instrumentation/development": {
         "general": {
