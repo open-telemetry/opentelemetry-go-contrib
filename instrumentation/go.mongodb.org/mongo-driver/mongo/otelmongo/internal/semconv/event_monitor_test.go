@@ -28,11 +28,6 @@ func TestNewEventMonitor(t *testing.T) {
 			want:    "",
 		},
 		{
-			name:    "Version 1260",
-			version: semconvOptIn1260,
-			want:    "database",
-		},
-		{
 			name:    "Duplicate Version",
 			version: semconvOptInDup,
 			want:    "database/dup",
@@ -114,18 +109,12 @@ func TestCommandStartedTraceAttrs(t *testing.T) {
 			name:      "no version",
 			initAttrs: []attribute.KeyValue{},
 			version:   "",
-			want:      v1210,
+			want:      v1260,
 		},
 		{
 			name:      "unsupported version",
 			initAttrs: []attribute.KeyValue{},
 			version:   "database/foo",
-			want:      v1210,
-		},
-		{
-			name:      "database",
-			initAttrs: []attribute.KeyValue{},
-			version:   "database",
 			want:      v1260,
 		},
 		{
