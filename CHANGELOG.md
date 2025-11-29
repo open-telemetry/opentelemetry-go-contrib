@@ -27,6 +27,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8035)
 
+### Fixed
+
+- Fix issue in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` middleware where temporary files for multipart/form-data were not being removed. (#6609)
+
 ### Deprecated
 
 - `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.
