@@ -62,6 +62,7 @@ linters:
           allow:
             - go.opentelemetry.io/otel/semconv/v1.21.0 # still used by otelmongo
             - go.opentelemetry.io/otel/semconv/v1.37.0
+            - go.opentelemetry.io/otel/semconv/v1.38.0
     gocritic:
       disabled-checks:
         - appendAssign
