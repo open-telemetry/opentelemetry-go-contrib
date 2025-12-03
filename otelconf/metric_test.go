@@ -139,19 +139,14 @@ func TestMeterProviderOptions(t *testing.T) {
 	require.NoError(t, err)
 
 	res := resource.NewSchemaless(attribute.String("foo", "bar"))
-	// TODO: re-enable this once NewSDK is added
-	// sdk, err := NewSDK(
-	// 	WithOpenTelemetryConfiguration(cfg),
-	// 	WithMeterProviderOptions(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutmetricExporter))),
-	// 	WithMeterProviderOptions(sdkmetric.WithResource(res)),
-	// )
-	mp, shutdown, err := meterProvider(configOptions{
-		opentelemetryConfig:  cfg,
-		meterProviderOptions: []sdkmetric.Option{sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutmetricExporter))},
-	}, res)
+	sdk, err := NewSDK(
+		WithOpenTelemetryConfiguration(cfg),
+		WithMeterProviderOptions(sdkmetric.WithReader(sdkmetric.NewPeriodicReader(stdoutmetricExporter))),
+		WithMeterProviderOptions(sdkmetric.WithResource(res)),
+	)
 	require.NoError(t, err)
 	defer func() {
-		assert.NoError(t, shutdown(t.Context()))
+		assert.NoError(t, sdk.Shutdown(t.Context()))
 		// The exporter, which we passed in as an extra option to NewSDK,
 		// should be wired up to the provider in addition to the
 		// configuration-based OTLP exporter.
@@ -161,11 +156,10 @@ func TestMeterProviderOptions(t *testing.T) {
 		// Options provided by WithMeterProviderOptions may be overridden
 		// by configuration, e.g. the resource is always defined via
 		// configuration.
-		// TODO: re-enable this once NewSDK is added
-		// assert.NotContains(t, buf.String(), "foo")
+		assert.NotContains(t, buf.String(), "foo")
 	}()
 
-	counter, _ := mp.Meter("test").Int64Counter("counter")
+	counter, _ := sdk.MeterProvider().Meter("test").Int64Counter("counter")
 	counter.Add(t.Context(), 1)
 }
 
@@ -229,11 +223,10 @@ func TestReader(t *testing.T) {
 				Pull: &PullMetricReader{
 					Exporter: PullMetricExporter{
 						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
-							Host:             ptr("localhost"),
-							Port:             ptr(0),
-							WithoutScopeInfo: ptr(true),
-							// WithoutUnits:      ptr(true),
-							// WithoutTypeSuffix: ptr(true),
+							Host:                ptr("localhost"),
+							Port:                ptr(0),
+							WithoutScopeInfo:    ptr(true),
+							TranslationStrategy: ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithoutSuffixes),
 							WithResourceConstantLabels: &IncludeExclude{
 								Included: []string{"include"},
 								Excluded: []string{"exclude"},
@@ -243,6 +236,26 @@ func TestReader(t *testing.T) {
 				},
 			},
 			wantReader: readerWithServer{promExporter, nil},
+		},
+		{
+			name: "pull/prometheus/invalid strategy",
+			reader: MetricReader{
+				Pull: &PullMetricReader{
+					Exporter: PullMetricExporter{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
+							Host:                ptr("localhost"),
+							Port:                ptr(0),
+							WithoutScopeInfo:    ptr(true),
+							TranslationStrategy: ptr(ExperimentalPrometheusMetricExporterTranslationStrategy("invalid-strategy")),
+							WithResourceConstantLabels: &IncludeExclude{
+								Included: []string{"include"},
+								Excluded: []string{"exclude"},
+							},
+						},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("translation strategy invalid"),
 		},
 		{
 			name: "periodic/otlp-grpc-exporter",
@@ -1357,22 +1370,20 @@ func TestPrometheusReaderOpts(t *testing.T) {
 		{
 			name: "all set",
 			cfg: ExperimentalPrometheusMetricExporter{
-				WithoutScopeInfo: ptr(true),
-				// WithoutTypeSuffix:          ptr(true),
-				// WithoutUnits:               ptr(true),
+				WithoutScopeInfo:           ptr(true),
+				TranslationStrategy:        ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithoutSuffixes),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
-			wantOptions: 2,
+			wantOptions: 3,
 		},
 		{
 			name: "all set false",
 			cfg: ExperimentalPrometheusMetricExporter{
-				WithoutScopeInfo: ptr(false),
-				// WithoutTypeSuffix:          ptr(false),
-				// WithoutUnits:               ptr(false),
+				WithoutScopeInfo:           ptr(false),
+				TranslationStrategy:        ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
-			wantOptions: 1,
+			wantOptions: 2,
 		},
 	}
 	for _, tt := range testCases {
@@ -1402,11 +1413,10 @@ func TestPrometheusIPv6(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			port := 0
 			cfg := ExperimentalPrometheusMetricExporter{
-				Host:             &tt.host,
-				Port:             &port,
-				WithoutScopeInfo: ptr(true),
-				// WithoutTypeSuffix:          ptr(true),
-				// WithoutUnits:               ptr(true),
+				Host:                       &tt.host,
+				Port:                       &port,
+				WithoutScopeInfo:           ptr(true),
+				TranslationStrategy:        ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes),
 				WithResourceConstantLabels: &IncludeExclude{},
 			}
 

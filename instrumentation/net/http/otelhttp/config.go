@@ -144,11 +144,13 @@ func WithFilter(f Filter) Option {
 	})
 }
 
-type event int
+// Event represents message event types for [WithMessageEvents].
+type Event int
 
 // Different types of events that can be recorded, see WithMessageEvents.
 const (
-	ReadEvents event = iota
+	unspecifiedEvents Event = iota
+	ReadEvents
 	WriteEvents
 )
 
@@ -161,7 +163,7 @@ const (
 //     using the ReadBytesKey
 //   - WriteEvents: Record the number of bytes written after every http.ResponeWriter.Write
 //     using the WriteBytesKey
-func WithMessageEvents(events ...event) Option {
+func WithMessageEvents(events ...Event) Option {
 	return optionFunc(func(c *config) {
 		for _, e := range events {
 			switch e {

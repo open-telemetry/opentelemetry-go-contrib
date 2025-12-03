@@ -20,10 +20,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add unmarshaling and validation for `OTLPHttpExporter`, `OTLPGrpcExporter`, `OTLPGrpcMetricExporter` and `OTLPHttpMetricExporter` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8112)
 - Add a `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7986)
 - Add unmarshaling and validation for `AttributeType`, `AttributeNameValue`, `SimpleSpanProcessor`, `SimpleLogRecordProcessor`, `ZipkinSpanExporter`, `NameStringValuePair`, `InstrumentType`, `ExperimentalPeerInstrumentationServiceMappingElem`, `ExporterDefaultHistogramAggregation`, `PullMetricReader` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8127)
+- Updated `go.opentelemetry.io/contrib/otelconf` to include the [v1.0.0-rc2](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.2) release candidate of schema which includes backwards incompatible changes. (#8026)
+- Support `db.client.operation.duration` metric for `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7983)
 
 ### Changed
 
 - Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8035)
+- Export the `ReadEvents` and `WriteEvents` constants in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` so they can be used in `WithMessageEvents`. (#8153)
 
 ### Deprecated
 
@@ -32,8 +35,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.
   The route is already added automatically for spans.
   For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8117)
-- `DefaultClient` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.  
-  Use a custom `*http.Client` with `otelhttp.NewTransport(http.DefaultTransport)` instead. (#8140)
+- `DefaultClient`, `Get`, `Head`, `Post`, and `PostForm` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are deprecated.
+  Use a custom `*http.Client` with `otelhttp.NewTransport(http.DefaultTransport)` instead. (#8140, #8201)
 
 ### Removed
 
