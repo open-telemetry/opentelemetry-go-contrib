@@ -4,10 +4,20 @@
 package otelconf
 
 import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	lognoop "go.opentelemetry.io/otel/log/noop"
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	sdklog "go.opentelemetry.io/otel/sdk/log"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
 	"go.yaml.in/yaml/v3"
 )
 
@@ -339,6 +349,819 @@ func TestUnmarshalBatchLogRecordProcessor(t *testing.T) {
 	}
 }
 
+func TestNewSDK(t *testing.T) {
+	tests := []struct {
+		name               string
+		cfg                []ConfigurationOption
+		wantTracerProvider any
+		wantMeterProvider  any
+		wantLoggerProvider any
+		wantErr            error
+		wantShutdownErr    error
+	}{
+		{
+			name:               "no-configuration",
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+		},
+		{
+			name: "with-configuration",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					TracerProvider: &TracerProviderJson{},
+					MeterProvider:  &MeterProviderJson{},
+					LoggerProvider: &LoggerProviderJson{},
+				}),
+			},
+			wantTracerProvider: &sdktrace.TracerProvider{},
+			wantMeterProvider:  &sdkmetric.MeterProvider{},
+			wantLoggerProvider: &sdklog.LoggerProvider{},
+		},
+		{
+			name: "with-sdk-disabled",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					Disabled:       ptr(true),
+					TracerProvider: &TracerProviderJson{},
+					MeterProvider:  &MeterProviderJson{},
+					LoggerProvider: &LoggerProviderJson{},
+				}),
+			},
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+		},
+		{
+			name: "invalid resource",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					TracerProvider: &TracerProviderJson{},
+					MeterProvider:  &MeterProviderJson{},
+					LoggerProvider: &LoggerProviderJson{},
+					Resource:       &LoggerProviderJson{},
+				}),
+			},
+			wantErr:            newErrInvalid("resource"),
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+		},
+		{
+			name: "invalid logger provider",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					TracerProvider: &TracerProviderJson{},
+					MeterProvider:  &MeterProviderJson{},
+					LoggerProvider: &ResourceJson{},
+					Resource:       &ResourceJson{},
+				}),
+			},
+			wantErr:            newErrInvalid("logger_provider"),
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+		},
+		{
+			name: "invalid tracer provider",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					TracerProvider: &ResourceJson{},
+				}),
+			},
+			wantErr:            newErrInvalid("tracer_provider"),
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+		},
+	}
+	for _, tt := range tests {
+		sdk, err := NewSDK(tt.cfg...)
+		require.Equal(t, tt.wantErr, err)
+		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
+		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
+		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
+		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
+	}
+}
+
+var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
+	Disabled:   ptr(false),
+	FileFormat: "1.0-rc.2",
+	AttributeLimits: &AttributeLimits{
+		AttributeCountLimit:       ptr(128),
+		AttributeValueLengthLimit: ptr(4096),
+	},
+	InstrumentationDevelopment: &InstrumentationJson{
+		Cpp: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Dotnet: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Erlang: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		General: &ExperimentalGeneralInstrumentation{
+			Http: &ExperimentalHttpInstrumentation{
+				Client: &ExperimentalHttpInstrumentationClient{
+					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
+					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
+				},
+				Server: &ExperimentalHttpInstrumentationServer{
+					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
+					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
+				},
+			},
+			Peer: &ExperimentalPeerInstrumentation{
+				ServiceMapping: []ExperimentalPeerInstrumentationServiceMappingElem{
+					{Peer: "1.2.3.4", Service: "FooService"},
+					{Peer: "2.3.4.5", Service: "BarService"},
+				},
+			},
+		},
+		Go: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Java: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Js: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Php: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Python: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Ruby: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Rust: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Swift: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+	},
+	LogLevel: ptr("info"),
+	LoggerProvider: &LoggerProviderJson{
+		LoggerConfiguratorDevelopment: &ExperimentalLoggerConfigurator{
+			DefaultConfig: &ExperimentalLoggerConfig{
+				Disabled: ptr(true),
+			},
+			Loggers: []ExperimentalLoggerMatcherAndConfig{
+				{
+					Config: &ExperimentalLoggerConfig{
+						Disabled: ptr(false),
+					},
+					Name: ptr("io.opentelemetry.contrib.*"),
+				},
+			},
+		},
+		Limits: &LogRecordLimits{
+			AttributeCountLimit:       ptr(128),
+			AttributeValueLengthLimit: ptr(4096),
+		},
+		Processors: []LogRecordProcessor{
+			{
+				Batch: &BatchLogRecordProcessor{
+					ExportTimeout: ptr(30000),
+					Exporter: LogRecordExporter{
+						OTLPHttp: &OTLPHttpExporter{
+							CertificateFile:       ptr("/app/cert.pem"),
+							ClientCertificateFile: ptr("/app/cert.pem"),
+							ClientKeyFile:         ptr("/app/cert.pem"),
+							Compression:           ptr("gzip"),
+							Encoding:              ptr(OTLPHttpEncodingProtobuf),
+							Endpoint:              ptr("http://localhost:4318/v1/logs"),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
+							},
+							HeadersList: ptr("api-key=1234"),
+							Timeout:     ptr(10000),
+						},
+					},
+					MaxExportBatchSize: ptr(512),
+					MaxQueueSize:       ptr(2048),
+					ScheduleDelay:      ptr(5000),
+				},
+			},
+			{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLPGrpc: &OTLPGrpcExporter{
+							CertificateFile:       ptr("/app/cert.pem"),
+							ClientCertificateFile: ptr("/app/cert.pem"),
+							ClientKeyFile:         ptr("/app/cert.pem"),
+							Compression:           ptr("gzip"),
+							Endpoint:              ptr("http://localhost:4317"),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
+							},
+							HeadersList: ptr("api-key=1234"),
+							Timeout:     ptr(10000),
+							Insecure:    ptr(false),
+						},
+					},
+				},
+			},
+			{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("file:///var/log/logs.jsonl"),
+						},
+					},
+				},
+			},
+			{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("stdout"),
+						},
+					},
+				},
+			},
+			{
+				Simple: &SimpleLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						Console: ConsoleExporter{},
+					},
+				},
+			},
+		},
+	},
+	MeterProvider: &MeterProviderJson{
+		ExemplarFilter: ptr(ExemplarFilter("trace_based")),
+		MeterConfiguratorDevelopment: &ExperimentalMeterConfigurator{
+			DefaultConfig: &ExperimentalMeterConfig{
+				Disabled: ptr(true),
+			},
+			Meters: []ExperimentalMeterMatcherAndConfig{
+				{
+					Config: &ExperimentalMeterConfig{
+						Disabled: ptr(false),
+					},
+					Name: ptr("io.opentelemetry.contrib.*"),
+				},
+			},
+		},
+		Readers: []MetricReader{
+			{
+				Pull: &PullMetricReader{
+					Producers: []MetricProducer{
+						{
+							Opencensus: OpenCensusMetricProducer{},
+						},
+					},
+					CardinalityLimits: &CardinalityLimits{
+						Default:                 ptr(2000),
+						Counter:                 ptr(2000),
+						Gauge:                   ptr(2000),
+						Histogram:               ptr(2000),
+						ObservableCounter:       ptr(2000),
+						ObservableGauge:         ptr(2000),
+						ObservableUpDownCounter: ptr(2000),
+						UpDownCounter:           ptr(2000),
+					},
+					Exporter: PullMetricExporter{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
+							Host:                ptr("localhost"),
+							Port:                ptr(9464),
+							TranslationStrategy: ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes),
+							WithResourceConstantLabels: &IncludeExclude{
+								Excluded: []string{"service.attr1"},
+								Included: []string{"service*"},
+							},
+							WithoutScopeInfo: ptr(false),
+						},
+					},
+				},
+			},
+			{
+				Periodic: &PeriodicMetricReader{
+					Producers: []MetricProducer{
+						{
+							AdditionalProperties: map[string]any{
+								"prometheus": nil,
+							},
+						},
+					},
+					CardinalityLimits: &CardinalityLimits{
+						Default:                 ptr(2000),
+						Counter:                 ptr(2000),
+						Gauge:                   ptr(2000),
+						Histogram:               ptr(2000),
+						ObservableCounter:       ptr(2000),
+						ObservableGauge:         ptr(2000),
+						ObservableUpDownCounter: ptr(2000),
+						UpDownCounter:           ptr(2000),
+					},
+					Exporter: PushMetricExporter{
+						OTLPHttp: &OTLPHttpMetricExporter{
+							CertificateFile:             ptr("/app/cert.pem"),
+							ClientCertificateFile:       ptr("/app/cert.pem"),
+							ClientKeyFile:               ptr("/app/cert.pem"),
+							Compression:                 ptr("gzip"),
+							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+							Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
+							Encoding:                    ptr(OTLPHttpEncodingProtobuf),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
+							},
+							HeadersList:           ptr("api-key=1234"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
+							Timeout:               ptr(10000),
+						},
+					},
+					Interval: ptr(60000),
+					Timeout:  ptr(30000),
+				},
+			},
+			{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLPGrpc: &OTLPGrpcMetricExporter{
+							CertificateFile:             ptr("/app/cert.pem"),
+							ClientCertificateFile:       ptr("/app/cert.pem"),
+							ClientKeyFile:               ptr("/app/cert.pem"),
+							Compression:                 ptr("gzip"),
+							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+							Endpoint:                    ptr("http://localhost:4317"),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
+							},
+							HeadersList:           ptr("api-key=1234"),
+							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
+							Timeout:               ptr(10000),
+							Insecure:              ptr(false),
+						},
+					},
+				},
+			},
+			{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
+							OutputStream:                ptr("file:///var/log/metrics.jsonl"),
+							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+							TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
+						},
+					},
+				},
+			},
+			{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
+							OutputStream:                ptr("stdout"),
+							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+							TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
+						},
+					},
+				},
+			},
+			{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						Console: ConsoleExporter{},
+					},
+				},
+			},
+		},
+		Views: []View{
+			{
+				Selector: &ViewSelector{
+					InstrumentName: ptr("my-instrument"),
+					InstrumentType: ptr(InstrumentTypeHistogram),
+					MeterName:      ptr("my-meter"),
+					MeterSchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
+					MeterVersion:   ptr("1.0.0"),
+					Unit:           ptr("ms"),
+				},
+				Stream: &ViewStream{
+					Aggregation: &Aggregation{
+						ExplicitBucketHistogram: &ExplicitBucketHistogramAggregation{
+							Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+							RecordMinMax: ptr(true),
+						},
+					},
+					AggregationCardinalityLimit: ptr(2000),
+					AttributeKeys: &IncludeExclude{
+						Included: []string{"key1", "key2"},
+						Excluded: []string{"key3"},
+					},
+					Description: ptr("new_description"),
+					Name:        ptr("new_instrument_name"),
+				},
+			},
+		},
+	},
+	Propagator: &PropagatorJson{
+		Composite: []TextMapPropagator{
+			{
+				Tracecontext: TraceContextPropagator{},
+			},
+			{
+				Baggage: BaggagePropagator{},
+			},
+			{
+				B3: B3Propagator{},
+			},
+			{
+				B3Multi: B3MultiPropagator{},
+			},
+			{
+				Jaeger: JaegerPropagator{},
+			},
+			{
+				Ottrace: OpenTracingPropagator{},
+			},
+		},
+		CompositeList: ptr("tracecontext,baggage,b3,b3multi,jaeger,ottrace,xray"),
+	},
+	Resource: &ResourceJson{
+		Attributes: []AttributeNameValue{
+			{Name: "service.name", Value: "unknown_service"},
+			{Name: "string_key", Type: &AttributeType{Value: "string"}, Value: "value"},
+			{Name: "bool_key", Type: &AttributeType{Value: "bool"}, Value: true},
+			{Name: "int_key", Type: &AttributeType{Value: "int"}, Value: 1},
+			{Name: "double_key", Type: &AttributeType{Value: "double"}, Value: 1.1},
+			{Name: "string_array_key", Type: &AttributeType{Value: "string_array"}, Value: []any{"value1", "value2"}},
+			{Name: "bool_array_key", Type: &AttributeType{Value: "bool_array"}, Value: []any{true, false}},
+			{Name: "int_array_key", Type: &AttributeType{Value: "int_array"}, Value: []any{1, 2}},
+			{Name: "double_array_key", Type: &AttributeType{Value: "double_array"}, Value: []any{1.1, 2.2}},
+		},
+		AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Attributes: &IncludeExclude{
+				Excluded: []string{"process.command_args"},
+				Included: []string{"process.*"},
+			},
+			// TODO: implement resource detectors https://github.com/open-telemetry/opentelemetry-go-contrib/issues/7252
+			// Detectors: []ExperimentalResourceDetector{}
+			// },
+		},
+		SchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
+	},
+	TracerProvider: &TracerProviderJson{
+		TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
+			DefaultConfig: &ExperimentalTracerConfig{
+				Disabled: ptr(true),
+			},
+			Tracers: []ExperimentalTracerMatcherAndConfig{
+				{
+					Config: ptr(ExperimentalTracerConfig{
+						Disabled: ptr(false),
+					}),
+					Name: ptr("io.opentelemetry.contrib.*"),
+				},
+			},
+		},
+
+		Limits: &SpanLimits{
+			AttributeCountLimit:       ptr(128),
+			AttributeValueLengthLimit: ptr(4096),
+			EventCountLimit:           ptr(128),
+			EventAttributeCountLimit:  ptr(128),
+			LinkCountLimit:            ptr(128),
+			LinkAttributeCountLimit:   ptr(128),
+		},
+		Processors: []SpanProcessor{
+			{
+				Batch: &BatchSpanProcessor{
+					ExportTimeout: ptr(30000),
+					Exporter: SpanExporter{
+						OTLPHttp: &OTLPHttpExporter{
+							CertificateFile:       ptr("/app/cert.pem"),
+							ClientCertificateFile: ptr("/app/cert.pem"),
+							ClientKeyFile:         ptr("/app/cert.pem"),
+							Compression:           ptr("gzip"),
+							Encoding:              ptr(OTLPHttpEncodingProtobuf),
+							Endpoint:              ptr("http://localhost:4318/v1/traces"),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
+							},
+							HeadersList: ptr("api-key=1234"),
+							Timeout:     ptr(10000),
+						},
+					},
+					MaxExportBatchSize: ptr(512),
+					MaxQueueSize:       ptr(2048),
+					ScheduleDelay:      ptr(5000),
+				},
+			},
+			{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLPGrpc: &OTLPGrpcExporter{
+							CertificateFile:       ptr("/app/cert.pem"),
+							ClientCertificateFile: ptr("/app/cert.pem"),
+							ClientKeyFile:         ptr("/app/cert.pem"),
+							Compression:           ptr("gzip"),
+							Endpoint:              ptr("http://localhost:4317"),
+							Headers: []NameStringValuePair{
+								{Name: "api-key", Value: ptr("1234")},
+							},
+							HeadersList: ptr("api-key=1234"),
+							Timeout:     ptr(10000),
+							Insecure:    ptr(false),
+						},
+					},
+				},
+			},
+			{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("file:///var/log/traces.jsonl"),
+						},
+					},
+				},
+			},
+			{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("stdout"),
+						},
+					},
+				},
+			},
+			{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						Zipkin: &ZipkinSpanExporter{
+							Endpoint: ptr("http://localhost:9411/api/v2/spans"),
+							Timeout:  ptr(10000),
+						},
+					},
+				},
+			},
+			{
+				Simple: &SimpleSpanProcessor{
+					Exporter: SpanExporter{
+						Console: ConsoleExporter{},
+					},
+				},
+			},
+		},
+		Sampler: &Sampler{
+			ParentBased: &ParentBasedSampler{
+				LocalParentNotSampled: &Sampler{
+					AlwaysOff: AlwaysOffSampler{},
+				},
+				LocalParentSampled: &Sampler{
+					AlwaysOn: AlwaysOnSampler{},
+				},
+				RemoteParentNotSampled: &Sampler{
+					AlwaysOff: AlwaysOffSampler{},
+				},
+				RemoteParentSampled: &Sampler{
+					AlwaysOn: AlwaysOnSampler{},
+				},
+				Root: &Sampler{
+					TraceIDRatioBased: &TraceIDRatioBasedSampler{
+						Ratio: ptr(0.0001),
+					},
+				},
+			},
+		},
+	},
+}
+
+var v100OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
+	Disabled:   ptr(false),
+	FileFormat: "1.0",
+	LogLevel:   ptr("info"),
+	AttributeLimits: &AttributeLimits{
+		AttributeCountLimit:       ptr(128),
+		AttributeValueLengthLimit: ptr(4096),
+	},
+	Resource: &ResourceJson{
+		Attributes: []AttributeNameValue{
+			{Name: "service.name", Value: "unknown_service"},
+			{Name: "string_key", Type: &AttributeType{Value: "string"}, Value: "value"},
+			{Name: "bool_key", Type: &AttributeType{Value: "bool"}, Value: true},
+			{Name: "int_key", Type: &AttributeType{Value: "int"}, Value: 1},
+			{Name: "double_key", Type: &AttributeType{Value: "double"}, Value: 1.1},
+			{Name: "string_array_key", Type: &AttributeType{Value: "string_array"}, Value: []any{"value1", "value2"}},
+			{Name: "bool_array_key", Type: &AttributeType{Value: "bool_array"}, Value: []any{true, false}},
+			{Name: "int_array_key", Type: &AttributeType{Value: "int_array"}, Value: []any{1, 2}},
+			{Name: "double_array_key", Type: &AttributeType{Value: "double_array"}, Value: []any{1.1, 2.2}},
+			{Name: "string_value", Type: &AttributeType{Value: "string"}, Value: "value"},
+			{Name: "bool_value", Type: &AttributeType{Value: "bool"}, Value: true},
+			{Name: "int_value", Type: &AttributeType{Value: "int"}, Value: 1},
+			{Name: "float_value", Type: &AttributeType{Value: "double"}, Value: 1.1},
+			{Name: "hex_value", Type: &AttributeType{Value: "int"}, Value: int(48879)},
+			{Name: "quoted_string_value", Type: &AttributeType{Value: "string"}, Value: "value"},
+			{Name: "quoted_bool_value", Type: &AttributeType{Value: "string"}, Value: "true"},
+			{Name: "quoted_int_value", Type: &AttributeType{Value: "string"}, Value: "1"},
+			{Name: "quoted_float_value", Type: &AttributeType{Value: "string"}, Value: "1.1"},
+			{Name: "quoted_hex_value", Type: &AttributeType{Value: "string"}, Value: "0xbeef"},
+			{Name: "alternative_env_syntax", Type: &AttributeType{Value: "string"}, Value: "value"},
+			{Name: "invalid_map_value", Type: &AttributeType{Value: "string"}, Value: "value\nkey:value"},
+			{Name: "multiple_references_inject", Type: &AttributeType{Value: "string"}, Value: "foo value 1.1"},
+			{Name: "undefined_key", Type: &AttributeType{Value: "string"}, Value: nil},
+			{Name: "undefined_key_fallback", Type: &AttributeType{Value: "string"}, Value: "fallback"},
+			{Name: "env_var_in_key", Type: &AttributeType{Value: "string"}, Value: "value"},
+			{Name: "replace_me", Type: &AttributeType{Value: "string"}, Value: "${DO_NOT_REPLACE_ME}"},
+			{Name: "undefined_defaults_to_var", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE}"},
+			{Name: "escaped_does_not_substitute", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE}"},
+			{Name: "escaped_does_not_substitute_fallback", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE:-fallback}"},
+			{Name: "escaped_and_substituted_fallback", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE:-value}"},
+			{Name: "escaped_and_substituted", Type: &AttributeType{Value: "string"}, Value: "$value"},
+			{Name: "multiple_escaped_and_not_substituted", Type: &AttributeType{Value: "string"}, Value: "$${STRING_VALUE}"},
+			{Name: "undefined_key_with_escape_sequence_in_fallback", Type: &AttributeType{Value: "string"}, Value: "${UNDEFINED_KEY}"},
+			{Name: "value_with_escape", Type: &AttributeType{Value: "string"}, Value: "value$$"},
+			{Name: "escape_sequence", Type: &AttributeType{Value: "string"}, Value: "a $ b"},
+			{Name: "no_escape_sequence", Type: &AttributeType{Value: "string"}, Value: "a $ b"},
+		},
+		AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
+		// Detectors: &Detectors{
+		// 	Attributes: &DetectorsAttributes{
+		// 		Excluded: []string{"process.command_args"},
+		// 		Included: []string{"process.*"},
+		// 	},
+		// },
+		SchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
+	},
+}
+
+func TestParseFiles(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantErr  error
+		wantType *OpenTelemetryConfiguration
+	}{
+		{
+			name:     "invalid nil name",
+			input:    "v1.0.0_invalid_nil_name",
+			wantErr:  newErrRequired(&NameStringValuePair{}, "name"),
+			wantType: &OpenTelemetryConfiguration{},
+		},
+		{
+			name:     "invalid nil value",
+			input:    "v1.0.0_invalid_nil_value",
+			wantErr:  newErrRequired(&NameStringValuePair{}, "value"),
+			wantType: &OpenTelemetryConfiguration{},
+		},
+		{
+			name:     "valid v0.2 config",
+			input:    "v0.2",
+			wantErr:  newErrUnmarshal(&OpenTelemetryConfiguration{}),
+			wantType: &OpenTelemetryConfiguration{},
+		},
+		{
+			name:     "valid v0.3 config",
+			input:    "v0.3",
+			wantErr:  newErrUnmarshal(&TextMapPropagator{}),
+			wantType: &OpenTelemetryConfiguration{},
+		},
+		{
+			name:     "valid v1.0.0 config",
+			input:    "v1.0.0",
+			wantType: &v10OpenTelemetryConfig,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("yaml:"+tt.name, func(t *testing.T) {
+			b, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.yaml", tt.input)))
+			require.NoError(t, err)
+
+			got, err := ParseYAML(b)
+			require.ErrorIs(t, err, tt.wantErr)
+			if tt.wantErr == nil {
+				assert.Equal(t, tt.wantType, got)
+			}
+		})
+		t.Run("json: "+tt.name, func(t *testing.T) {
+			b, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.json", tt.input)))
+			require.NoError(t, err)
+
+			var got OpenTelemetryConfiguration
+			err = json.Unmarshal(b, &got)
+			require.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.wantType, &got)
+		})
+	}
+}
+
+func TestUnmarshalOpenTelemetryConfiguration(t *testing.T) {
+	tests := []struct {
+		name       string
+		jsonConfig []byte
+		yamlConfig []byte
+		wantErr    error
+		wantType   OpenTelemetryConfiguration
+	}{
+		{
+			name:       "valid defaults config",
+			jsonConfig: []byte(`{"file_format": "1.0"}`),
+			yamlConfig: []byte("file_format: 1.0"),
+			wantType: OpenTelemetryConfiguration{
+				Disabled:   ptr(false),
+				FileFormat: "1.0",
+				LogLevel:   ptr("info"),
+			},
+		},
+		{
+			name:       "invalid config missing required file_format",
+			jsonConfig: []byte(`{"disabled": false}`),
+			yamlConfig: []byte("disabled: false"),
+			wantErr:    newErrRequired(&OpenTelemetryConfiguration{}, "file_format"),
+		},
+		{
+			name:       "file_format invalid",
+			jsonConfig: []byte(`{"file_format":[], "disabled": false}`),
+			yamlConfig: []byte("file_format: []\ndisabled: false"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "invalid config",
+			jsonConfig: []byte(`{"file_format": "yaml", "disabled": "notabool"}`),
+			yamlConfig: []byte("file_format: []\ndisabled: notabool"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("disabled: []\nconsole: {}\nfile_format: str"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "resource invalid",
+			jsonConfig: []byte(`{"resource":[], "file_format": "1.0"}`),
+			yamlConfig: []byte("resource: []\nfile_format: 1.0"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "attribute_limits invalid",
+			jsonConfig: []byte(`{"attribute_limits":[], "file_format": "1.0"}`),
+			yamlConfig: []byte("attribute_limits: []\nfile_format: 1.0"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "instrumentation invalid",
+			jsonConfig: []byte(`{"instrumentation/development":[], "file_format": "1.0"}`),
+			yamlConfig: []byte("instrumentation/development: []\nfile_format: 1.0"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "log_level invalid",
+			jsonConfig: []byte(`{"log_level":[], "file_format": "1.0"}`),
+			yamlConfig: []byte("log_level: []\nfile_format: 1.0"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := OpenTelemetryConfiguration{}
+			err := got.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.wantType, got)
+
+			got = OpenTelemetryConfiguration{}
+			err = yaml.Unmarshal(tt.yamlConfig, &got)
+			assert.ErrorIs(t, err, tt.wantErr)
+			assert.Equal(t, tt.wantType, got)
+		})
+	}
+}
+
 func TestUnmarshalBatchSpanProcessor(t *testing.T) {
 	for _, tt := range []struct {
 		name         string
@@ -436,6 +1259,49 @@ func TestUnmarshalBatchSpanProcessor(t *testing.T) {
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
 			assert.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantExporter, cl.Exporter)
+		})
+	}
+}
+
+func TestParseYAMLWithEnvironmentVariables(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		wantErr  error
+		wantType any
+	}{
+		{
+			name:     "valid v1.0.0 config with env vars",
+			input:    "v1.0.0_env_var.yaml",
+			wantType: &v100OpenTelemetryConfigEnvParsing,
+		},
+	}
+
+	t.Setenv("OTEL_SDK_DISABLED", "false")
+	t.Setenv("OTEL_ATTRIBUTE_VALUE_LENGTH_LIMIT", "4096")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "http/protobuf")
+	t.Setenv("STRING_VALUE", "value")
+	t.Setenv("BOOL_VALUE", "true")
+	t.Setenv("INT_VALUE", "1")
+	t.Setenv("FLOAT_VALUE", "1.1")
+	t.Setenv("HEX_VALUE", "0xbeef")                       // A valid integer value (i.e. 3735928559) written in hexadecimal
+	t.Setenv("INVALID_MAP_VALUE", "value\\nkey:value")    // An invalid attempt to inject a map key into the YAML
+	t.Setenv("ENV_VAR_IN_KEY", "env_var_in_key")          // An env var in key
+	t.Setenv("DO_NOT_REPLACE_ME", "Never use this value") // An unused environment variable
+	t.Setenv("REPLACE_ME", "${DO_NOT_REPLACE_ME}")        // A valid replacement text, used verbatim, not replaced with "Never use this value"
+	t.Setenv("VALUE_WITH_ESCAPE", "value$$")              // A valid replacement text, used verbatim, not replaced with "Never use this value"
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
+			require.NoError(t, err)
+
+			got, err := ParseYAML(b)
+			if tt.wantErr != nil {
+				require.Equal(t, tt.wantErr.Error(), err.Error())
+			} else {
+				require.NoError(t, err)
+				assert.Equal(t, tt.wantType, got)
+			}
 		})
 	}
 }
