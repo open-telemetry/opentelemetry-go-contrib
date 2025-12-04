@@ -860,7 +860,7 @@ func TestTransportMetrics(t *testing.T) {
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
-		Version: Version(),
+		Version: Version,
 	}, sm.Scope)
 
 	require.Len(t, sm.Metrics, 2)
@@ -868,7 +868,7 @@ func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs at
 	want := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:    ScopeName,
-			Version: Version(),
+			Version: Version,
 		},
 		Metrics: []metricdata.Metrics{
 			{
