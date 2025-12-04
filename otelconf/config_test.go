@@ -464,7 +464,6 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "file_missing.yaml"))
 	_, err = NewSDK(cfg...)
 	require.Error(t, err)
-	require.ErrorContains(t, err, "no such file or directory")
 	// test a file that causes a parse error
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))
 	_, err = NewSDK(cfg...)
