@@ -79,6 +79,8 @@ func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error
 
 // NewSDK creates SDK providers based on the configuration model. It checks the local environment and
 // uses the file set in the variable `OTEL_EXPERIMENTAL_CONFIG_FILE` to configure the SDK automatically.
+// Any file defined by `OTEL_EXPERIMENTAL_CONFIG_FILE` will supersede all files passed with
+// [WithOpenTelemetryConfiguration].
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	filename, ok := os.LookupEnv(envVarConfigFile)
 	if ok {
