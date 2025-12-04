@@ -1708,7 +1708,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(t.Context(), &metricdata.ResourceMetrics{
+				assert.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{ //nolint:usetesting // required to avoid getting a canceled context.
 					Resource: res,
 					ScopeMetrics: []metricdata.ScopeMetrics{
 						{
