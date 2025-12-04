@@ -6,11 +6,16 @@
 package otelgin_test
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"html/template"
+	"io/fs"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -477,6 +482,91 @@ func TestWithGinFilter(t *testing.T) {
 		router.ServeHTTP(w, r)
 		assert.Len(t, sr.Ended(), 1)
 	})
+}
+
+func TestTemporaryFormFileRemove(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		// Windows sometimes refuses to remove a file that was just closed.
+		t.Skip("https://go.dev/issue/25965")
+	}
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	router := gin.New()
+	router.MaxMultipartMemory = 1
+
+	tempDir := t.TempDir()
+
+	// We register three middlewares here, with the otel one in the middle.
+	// When the response is returned, the post-handler execution order is:
+	// MiddlewareC -> otel -> MiddlewareA (reverse of registration order).
+	// In MiddlewareC, the multipart form file still exists, so opening it succeeds.
+	// However, by the time MiddlewareA runs, the otel middleware has already
+	// removed the temporary multipart files, so opening the file results in a
+	// "file does not exist" error.
+
+	// MiddlewareA
+	router.Use(func(c *gin.Context) {
+		c.Next()
+		_, err := c.FormFile("files")
+		require.NoError(t, err)
+		form, _ := c.MultipartForm()
+		files := form.File["files"]
+		require.Len(t, files, 1)
+		_, err = fs.ReadDir(os.DirFS(tempDir), files[0].Filename)
+		require.Error(t, err)
+		require.True(t, errors.Is(err, fs.ErrNotExist))
+	})
+
+	router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
+
+	// MiddlewareC
+	router.Use(func(c *gin.Context) {
+		c.Next()
+		_, err := c.FormFile("files")
+		require.NoError(t, err)
+		form, _ := c.MultipartForm()
+		files := form.File["files"]
+		require.Len(t, files, 1)
+		_, err = fs.ReadDir(os.DirFS(tempDir), files[0].Filename)
+		require.Error(t, err)
+		require.True(t, errors.Is(err, fs.ErrNotExist))
+	})
+
+	var fileHeader *multipart.FileHeader
+	router.POST("/upload", func(c *gin.Context) {
+		_, err := c.FormFile("files")
+		require.NoError(t, err)
+		fileHeader = c.Request.MultipartForm.File["files"][0]
+		_, err = fileHeader.Open()
+		require.NoError(t, err)
+		c.JSON(http.StatusOK, nil)
+	})
+
+	var body bytes.Buffer
+
+	mw := multipart.NewWriter(&body)
+	fw, err := mw.CreateFormFile("files", "file")
+	require.NoError(t, err)
+
+	_, err = fw.Write([]byte("hello world"))
+	require.NoError(t, err)
+	err = mw.Close()
+	require.NoError(t, err)
+	r := httptest.NewRequest("POST", "/upload", &body)
+	r.Header.Add("Content-Type", mw.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+	assert.Len(t, sr.Ended(), 1)
+	require.Equal(t, http.StatusOK, w.Code)
+	_, err = fileHeader.Open()
+	require.NoError(t, err)
+
+	// check TempDir is empty
+	entries, err := os.ReadDir(tempDir)
+	require.NoError(t, err)
+	require.Len(t, entries, 0)
 }
 
 func TestMetrics(t *testing.T) {
