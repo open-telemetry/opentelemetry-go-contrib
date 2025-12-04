@@ -14,12 +14,15 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/baggage"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	testpb "google.golang.org/grpc/interop/grpc_testing"
 	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/stats"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
@@ -155,6 +158,121 @@ func TestMetricAttributesFn_ServerSideStreaming(t *testing.T) {
 	})
 }
 
+// TestMetricAttributesFn_ServerSide_Baggage tests that baggage can be used on the server-side to populate context values for MetricAttributesFn.
+func TestMetricAttributesFn_ServerSide_Baggage(t *testing.T) {
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+	metricFunc := func(ctx context.Context) []attribute.KeyValue {
+		bag := baggage.FromContext(ctx)
+		if tier := bag.Member("tenant.tier"); tier.Value() != "" {
+			return []attribute.KeyValue{
+				attribute.String("tenant.tier", tier.Value()),
+			}
+		}
+		return []attribute.KeyValue{
+			attribute.String("tenant.tier", "NOT_FOUND"),
+		}
+	}
+
+	lis, server := startTestServerWithOptions(t, mp,
+		otelgrpc.WithMetricAttributesFn(metricFunc),
+		otelgrpc.WithPropagators(propagation.NewCompositeTextMapPropagator(
+			propagation.Baggage{},
+		)),
+	)
+	defer server.Stop()
+
+	conn, err := grpc.NewClient(
+		lis.Addr().String(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(otelgrpc.NewClientHandler(
+			otelgrpc.WithPropagators(propagation.NewCompositeTextMapPropagator(
+				propagation.Baggage{},
+			)),
+		)),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() { conn.Close() })
+
+	client := testpb.NewTestServiceClient(conn)
+
+	member, err := baggage.NewMember("tenant.tier", "premium")
+	require.NoError(t, err)
+	bag, err := baggage.New(member)
+	require.NoError(t, err)
+	ctx := baggage.ContextWithBaggage(t.Context(), bag)
+
+	_, err = client.EmptyCall(ctx, &testpb.Empty{})
+	require.NoError(t, err)
+
+	assertAllMetricsHaveLabels(t, reader, serverLabelingDirection, map[string]string{
+		"tenant.tier": "premium",
+	})
+}
+
+type enrichedServerHandler struct {
+	stats.Handler
+}
+
+type tenantTierKeyType struct{}
+
+var tenantTierKey tenantTierKeyType
+
+// TagRPC overrides the TagRPC method of the stats handler to add tenant tier to context.
+func (h *enrichedServerHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
+	ctx = context.WithValue(ctx, tenantTierKey, "premium")
+	return h.Handler.TagRPC(ctx, info)
+}
+
+// TestMetricAttributesFn_ServerSide_WithWrappedHandler tests that a wrapped stats handler
+// can populate context values for MetricAttributesFn.
+func TestMetricAttributesFn_ServerSide_WithWrappedHandler(t *testing.T) {
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+	metricFunc := func(ctx context.Context) []attribute.KeyValue {
+		if tier, ok := ctx.Value(tenantTierKey).(string); ok {
+			return []attribute.KeyValue{
+				attribute.String("tenant.tier", tier),
+			}
+		}
+		return []attribute.KeyValue{
+			attribute.String("tenant.tier", "NOT_FOUND"),
+		}
+	}
+
+	lis, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+
+	wrappedHandler := &enrichedServerHandler{
+		Handler: otelgrpc.NewServerHandler(
+			otelgrpc.WithMeterProvider(mp),
+			otelgrpc.WithMetricAttributesFn(metricFunc),
+		),
+	}
+
+	server := grpc.NewServer(
+		grpc.StatsHandler(wrappedHandler),
+	)
+	testpb.RegisterTestServiceServer(server, &testLabelerServer{})
+
+	go func() {
+		if err := server.Serve(lis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			t.Errorf("server failed: %v", err)
+		}
+	}()
+	defer server.Stop()
+
+	client := createTestClient(t, lis.Addr().String(), nil, nil)
+	_, err = client.EmptyCall(t.Context(), &testpb.Empty{})
+	require.NoError(t, err)
+
+	assertAllMetricsHaveLabels(t, reader, serverLabelingDirection, map[string]string{
+		"tenant.tier": "premium",
+	})
+}
+
 // TestMetricAttributesFn_ClientSide tests that labels are added to client-side metrics for unary RPCs.
 func TestMetricAttributesFn_ClientSide(t *testing.T) {
 	serverLis, err := net.Listen("tcp", "localhost:0")
@@ -265,6 +383,120 @@ func TestMetricAttributesFn_ClientSideStreaming(t *testing.T) {
 	})
 }
 
+// TestMetricAttributesFn_ClientSide_Baggage tests that baggage can be used on the client-side to populate context values for MetricAttributesFn.
+func TestMetricAttributesFn_ClientSide_Baggage(t *testing.T) {
+	serverLis, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+
+	server := grpc.NewServer()
+	testpb.RegisterTestServiceServer(server, &testLabelerServer{})
+
+	go func() {
+		if err := server.Serve(serverLis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			t.Errorf("server failed: %v", err)
+		}
+	}()
+	defer server.Stop()
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+	metricFunc := func(ctx context.Context) []attribute.KeyValue {
+		bag := baggage.FromContext(ctx)
+		if env := bag.Member("environment"); env.Value() != "" {
+			return []attribute.KeyValue{
+				attribute.String("environment", env.Value()),
+			}
+		}
+		return []attribute.KeyValue{
+			attribute.String("environment", "NOT_FOUND"),
+		}
+	}
+
+	client := createTestClient(t, serverLis.Addr().String(), mp, metricFunc)
+
+	member, err := baggage.NewMember("environment", "staging")
+	require.NoError(t, err)
+	bag, err := baggage.New(member)
+	require.NoError(t, err)
+	ctx := baggage.ContextWithBaggage(t.Context(), bag)
+
+	_, err = client.EmptyCall(ctx, &testpb.Empty{})
+	require.NoError(t, err)
+
+	assertAllMetricsHaveLabels(t, reader, clientLabelingDirection, map[string]string{
+		"environment": "staging",
+	})
+}
+
+type enrichedClientHandler struct {
+	stats.Handler
+}
+
+type rpcServiceKeyType struct{}
+
+var rpcServiceKey rpcServiceKeyType
+
+// TagRPC overrides the TagRPC method of the stats handler to add service name to context.
+func (h *enrichedClientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) context.Context {
+	ctx = context.WithValue(ctx, rpcServiceKey, "orders-service-wrapped")
+	return h.Handler.TagRPC(ctx, info)
+}
+
+// TestMetricAttributesFn_ClientSide_WithWrappedHandler tests that a wrapped client stats handler
+// can populate context values for MetricAttributesFn.
+func TestMetricAttributesFn_ClientSide_WithWrappedHandler(t *testing.T) {
+	serverLis, err := net.Listen("tcp", "localhost:0")
+	require.NoError(t, err)
+
+	server := grpc.NewServer()
+	testpb.RegisterTestServiceServer(server, &testLabelerServer{})
+
+	go func() {
+		if err := server.Serve(serverLis); err != nil && !errors.Is(err, grpc.ErrServerStopped) {
+			t.Errorf("server failed: %v", err)
+		}
+	}()
+	defer server.Stop()
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+
+	metricFunc := func(ctx context.Context) []attribute.KeyValue {
+		if svc, ok := ctx.Value(rpcServiceKey).(string); ok {
+			return []attribute.KeyValue{
+				attribute.String("rpc.service", svc),
+			}
+		}
+		return []attribute.KeyValue{
+			attribute.String("rpc.service", "NOT_FOUND"),
+		}
+	}
+
+	wrappedHandler := &enrichedClientHandler{
+		Handler: otelgrpc.NewClientHandler(
+			otelgrpc.WithMeterProvider(mp),
+			otelgrpc.WithMetricAttributesFn(metricFunc),
+		),
+	}
+
+	conn, err := grpc.NewClient(
+		serverLis.Addr().String(),
+		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithStatsHandler(wrappedHandler),
+	)
+	require.NoError(t, err)
+	t.Cleanup(func() { conn.Close() })
+
+	client := testpb.NewTestServiceClient(conn)
+	_, err = client.EmptyCall(t.Context(), &testpb.Empty{})
+	require.NoError(t, err)
+
+	assertAllMetricsHaveLabels(t, reader, clientLabelingDirection, map[string]string{
+		"rpc.service": "orders-service-wrapped",
+	})
+}
+
 // TestMetricAttributesFn_ClientAndServerIndependent tests that labels are separated between the client- and the server-side metrics.
 func TestMetricAttributesFn_ClientAndServerIndependent(t *testing.T) {
 	reader := metric.NewManualReader()
@@ -345,6 +577,7 @@ func startTestServerWithOptions(t *testing.T, mp *metric.MeterProvider, opts ...
 			t.Errorf("server failed: %v", err)
 		}
 	}()
+
 	return lis, server
 }
 
