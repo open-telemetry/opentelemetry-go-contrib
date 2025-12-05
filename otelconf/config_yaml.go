@@ -27,6 +27,33 @@ func hasYAMLMapKey(node *yaml.Node, key string) bool {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
+func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
+	type Plain ExperimentalResourceDetector
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// container can be nil, must check and set here
+	if hasYAMLMapKey(node, "container") && plain.Container == nil {
+		plain.Container = ExperimentalContainerResourceDetector{}
+	}
+	// host can be nil, must check and set here
+	if hasYAMLMapKey(node, "host") && plain.Host == nil {
+		plain.Host = ExperimentalHostResourceDetector{}
+	}
+	// process can be nil, must check and set here
+	if hasYAMLMapKey(node, "process") && plain.Process == nil {
+		plain.Process = ExperimentalProcessResourceDetector{}
+	}
+	// service can be nil, must check and set here
+	if hasYAMLMapKey(node, "service") && plain.Service == nil {
+		plain.Service = ExperimentalServiceResourceDetector{}
+	}
+	*j = ExperimentalResourceDetector(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	type Plain PushMetricExporter
 	var plain Plain

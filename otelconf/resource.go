@@ -4,11 +4,31 @@
 package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 import (
+	"context"
+
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
+
+func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
+	opts := []resource.Option{}
+	for _, d := range detectors {
+		if d.Container != nil {
+			opts = append(opts, resource.WithContainer())
+		}
+		if d.Host != nil {
+			opts = append(opts, resource.WithHost(), resource.WithHostID())
+		}
+		if d.Process != nil {
+			opts = append(opts, resource.WithProcess())
+		}
+		// TODO: implement service:
+		// Waiting on https://github.com/open-telemetry/opentelemetry-go/pull/7642
+	}
+	return opts
+}
 
 func newResource(res OpenTelemetryConfigurationResource) (*resource.Resource, error) {
 	if res == nil {
@@ -25,8 +45,18 @@ func newResource(res OpenTelemetryConfigurationResource) (*resource.Resource, er
 		attrs = append(attrs, kv.FromNameValue(v.Name, v.Value))
 	}
 
-	if r.SchemaUrl == nil {
-		return resource.NewSchemaless(attrs...), nil
+	var schema string
+	if r.SchemaUrl != nil {
+		schema = *r.SchemaUrl
 	}
-	return resource.NewWithAttributes(*r.SchemaUrl, attrs...), nil
+	opts := []resource.Option{
+		resource.WithAttributes(attrs...),
+		resource.WithSchemaURL(schema),
+	}
+
+	if r.DetectionDevelopment != nil {
+		opts = append(opts, resourceOpts(r.DetectionDevelopment.Detectors)...)
+	}
+
+	return resource.New(context.Background(), opts...)
 }
