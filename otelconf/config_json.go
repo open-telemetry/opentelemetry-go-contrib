@@ -205,7 +205,7 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	if sh.Container != nil {
 		var c ExperimentalContainerResourceDetector
 		if err := json.Unmarshal(sh.Container, &c); err != nil {
-			return err
+			return errors.Join(newErrUnmarshal(j), err)
 		}
 		sh.Plain.Container = c
 	}
@@ -213,7 +213,7 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	if sh.Host != nil {
 		var c ExperimentalHostResourceDetector
 		if err := json.Unmarshal(sh.Host, &c); err != nil {
-			return err
+			return errors.Join(newErrUnmarshal(j), err)
 		}
 		sh.Plain.Host = c
 	}
@@ -221,7 +221,7 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	if sh.Process != nil {
 		var c ExperimentalProcessResourceDetector
 		if err := json.Unmarshal(sh.Process, &c); err != nil {
-			return err
+			return errors.Join(newErrUnmarshal(j), err)
 		}
 		sh.Plain.Process = c
 	}
@@ -229,7 +229,7 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	if sh.Service != nil {
 		var c ExperimentalServiceResourceDetector
 		if err := json.Unmarshal(sh.Service, &c); err != nil {
-			return err
+			return errors.Join(newErrUnmarshal(j), err)
 		}
 		sh.Plain.Service = c
 	}
