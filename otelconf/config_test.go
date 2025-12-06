@@ -853,11 +853,13 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Excluded: []string{"process.command_args"},
 				Included: []string{"process.*"},
 			},
-			// TODO: implement resource detectors https://github.com/open-telemetry/opentelemetry-go-contrib/issues/7252
-			// Detectors: []ExperimentalResourceDetector{}
-			// },
+			Detectors: []ExperimentalResourceDetector{
+				{Container: ExperimentalContainerResourceDetector{}},
+				{Host: ExperimentalHostResourceDetector{}},
+				{Process: ExperimentalProcessResourceDetector{}},
+				{Service: ExperimentalServiceResourceDetector{}},
+			},
 		},
-		SchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
 	},
 	TracerProvider: &TracerProviderJson{
 		TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
@@ -2347,6 +2349,127 @@ func TestUnmarshalPullMetricReader(t *testing.T) {
 			err = yaml.Unmarshal(tt.yamlConfig, &cl)
 			assert.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantExporter, cl.Exporter)
+		})
+	}
+}
+
+func TestUnmarshalResourceJson(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		yamlConfig   []byte
+		jsonConfig   []byte
+		wantErrT     error
+		wantResource ResourceJson
+	}{
+		{
+			name:       "valid with all detectors",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - container:\n    - host:\n    - process:\n    - service:"),
+			wantResource: ResourceJson{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{
+							Container: ExperimentalContainerResourceDetector{},
+						},
+						{
+							Host: ExperimentalHostResourceDetector{},
+						},
+						{
+							Process: ExperimentalProcessResourceDetector{},
+						},
+						{
+							Service: ExperimentalServiceResourceDetector{},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:       "valid non-nil with all detectors",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
+			wantResource: ResourceJson{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{
+							Container: ExperimentalContainerResourceDetector{},
+						},
+						{
+							Host: ExperimentalHostResourceDetector{},
+						},
+						{
+							Process: ExperimentalProcessResourceDetector{},
+						},
+						{
+							Service: ExperimentalServiceResourceDetector{},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:       "invalid container detector",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": 1}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - container: 1"),
+			wantResource: ResourceJson{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{},
+					},
+				},
+			},
+			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
+		},
+		{
+			name:       "invalid host detector",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"host": 1}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - host: 1"),
+			wantResource: ResourceJson{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{},
+					},
+				},
+			},
+			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
+		},
+		{
+			name:       "invalid service detector",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"service": 1}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - service: 1"),
+			wantResource: ResourceJson{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{},
+					},
+				},
+			},
+			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
+		},
+		{
+			name:       "invalid process detector",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"process": 1}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - process: 1"),
+			wantResource: ResourceJson{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{},
+					},
+				},
+			},
+			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			r := ResourceJson{}
+			err := json.Unmarshal(tt.jsonConfig, &r)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantResource, r)
+
+			r = ResourceJson{}
+			err = yaml.Unmarshal(tt.yamlConfig, &r)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantResource, r)
 		})
 	}
 }
