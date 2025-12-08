@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - The deprecated `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
-  Use `WithPublicEndpointFn` instead. (#TBD)
+  Use `WithPublicEndpointFn` instead. (#8267)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
