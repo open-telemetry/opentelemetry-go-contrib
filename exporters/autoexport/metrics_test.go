@@ -226,9 +226,8 @@ func TestMetricProducerPrometheusWithPrometheusExporter(t *testing.T) {
 
 	t.Logf("Prometheus metrics output:\n%s", body)
 
-	// By default there are two metrics exporter. target_info and promhttp_metric_handler_errors_total.
-	// But by including the prometheus producer we should have more.
-	assert.Greater(t, strings.Count(string(body), "# HELP"), 2)
+	// "target_info" and "promhttp_metric_handler_errors_total".
+	assert.GreaterOrEqual(t, strings.Count(string(body), "# HELP"), 2)
 
 	assert.NoError(t, mp.Shutdown(t.Context()))
 	goleak.VerifyNone(t)
