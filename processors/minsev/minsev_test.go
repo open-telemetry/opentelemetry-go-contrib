@@ -45,10 +45,7 @@ type processor struct {
 }
 
 // Compile time assertion that processor implements log.Processor and log.FilterProcessor.
-var (
-	_ log.Processor       = (*processor)(nil)
-	_ log.FilterProcessor = (*processor)(nil)
-)
+var _ log.Processor = (*processor)(nil)
 
 func (p *processor) OnEmit(ctx context.Context, r *log.Record) error {
 	p.OnEmitCalls = append(p.OnEmitCalls, emitArgs{ctx, r})
@@ -233,12 +230,7 @@ func BenchmarkLogProcessor(b *testing.B) {
 	param := log.EnabledParameters{Severity: api.SeverityTrace}
 	ctx := b.Context()
 
-	type combo interface {
-		log.Processor
-		log.FilterProcessor
-	}
-
-	run := func(p combo) func(b *testing.B) {
+	run := func(p log.Processor) func(b *testing.B) {
 		return func(b *testing.B) {
 			var err error
 			var enabled bool
