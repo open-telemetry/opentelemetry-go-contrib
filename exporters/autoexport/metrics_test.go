@@ -213,14 +213,18 @@ func TestMetricProducerPrometheusWithPrometheusExporter(t *testing.T) {
 
 	rws, ok := r.(readerWithServer)
 	if !ok {
-		t.Errorf("expected readerWithServer but got %v", r)
+		t.Fatalf("expected readerWithServer but got %v", r)
 	}
+
+	t.Logf("Prometheus metrics server listening at http://%s/metrics", rws.addr)
 
 	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, resp.Body.Close()) }()
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
+
+	t.Logf("Prometheus metrics output:\n%s", body)
 
 	// By default there are two metrics exporter. target_info and promhttp_metric_handler_errors_total.
 	// But by including the prometheus producer we should have more.

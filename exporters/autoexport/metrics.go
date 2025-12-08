@@ -180,7 +180,14 @@ func init() {
 		}
 
 		mux := http.NewServeMux()
-		mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+		mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{
+			Registry: reg,
+			// FIXME: This should not be necessary, but without it, the Prometheus exporter
+			// fails to serve metrics with "500 internal server error" by default.
+			//
+			// See https://github.com/open-telemetry/opentelemetry-go/issues/7686
+			ErrorHandling: promhttp.ContinueOnError,
+		}))
 		server := http.Server{
 			// Timeouts are necessary to make a server resilient to attacks, but ListenAndServe doesn't set any.
 			// We use values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
