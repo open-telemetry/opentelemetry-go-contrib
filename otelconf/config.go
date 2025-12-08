@@ -7,6 +7,7 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 import (
 	"context"
 	"errors"
+	"os"
 
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
@@ -21,6 +22,8 @@ import (
 
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
+
+const envVarConfigFile = "OTEL_EXPERIMENTAL_CONFIG_FILE"
 
 // SDK is a struct that contains all the providers
 // configured via the configuration model.
@@ -58,8 +61,35 @@ var noopSDK = SDK{
 	shutdown:       func(context.Context) error { return nil },
 }
 
-// NewSDK creates SDK providers based on the configuration model.
+func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error) {
+	b, err := os.ReadFile(filename)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse a configuration file into an OpenTelemetryConfiguration model.
+	c, err := ParseYAML(b)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create SDK components with the parsed configuration.
+	return WithOpenTelemetryConfiguration(*c), nil
+}
+
+// NewSDK creates SDK providers based on the configuration model. It checks the local environment and
+// uses the file set in the variable `OTEL_EXPERIMENTAL_CONFIG_FILE` to configure the SDK automatically.
+// Any file defined by `OTEL_EXPERIMENTAL_CONFIG_FILE` will supersede all files passed with
+// [WithOpenTelemetryConfiguration].
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
+	filename, ok := os.LookupEnv(envVarConfigFile)
+	if ok {
+		opt, err := parseConfigFileFromEnvironment(filename)
+		if err != nil {
+			return noopSDK, err
+		}
+		opts = append(opts, opt)
+	}
 	o := configOptions{
 		ctx: context.Background(),
 	}

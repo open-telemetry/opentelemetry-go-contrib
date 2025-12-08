@@ -880,7 +880,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			}
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(t.Context(), []sdklog.Record{
+				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{ //nolint:usetesting // required to avoid getting a canceled context.
 					logFactory.NewRecord(),
 				}))
 			}, 10*time.Second, 1*time.Second)

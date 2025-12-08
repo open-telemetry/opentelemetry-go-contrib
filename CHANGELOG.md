@@ -22,11 +22,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add unmarshaling and validation for `AttributeType`, `AttributeNameValue`, `SimpleSpanProcessor`, `SimpleLogRecordProcessor`, `ZipkinSpanExporter`, `NameStringValuePair`, `InstrumentType`, `ExperimentalPeerInstrumentationServiceMappingElem`, `ExporterDefaultHistogramAggregation`, `PullMetricReader` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8127)
 - Updated `go.opentelemetry.io/contrib/otelconf` to include the [v1.0.0-rc2](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.2) release candidate of schema which includes backwards incompatible changes. (#8026)
 - Support `db.client.operation.duration` metric for `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7983)
+- Add support for `OTEL_EXPERIMENTAL_CONFIG_FILE` via the `NewSDK` function in `go.opentelemetry.io/contrib/otelconf` (#8106)
+- Add support for `container`, `host`, `process` resource detectors in `go.opentelemetry.io/contrib/otelconf` (#8180)
 
 ### Changed
 
 - Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8035)
 - Export the `ReadEvents` and `WriteEvents` constants in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` so they can be used in `WithMessageEvents`. (#8153)
+- Switched the default for `OTEL_SEMCONV_STABILITY_OPT_IN` to emit the v1.37.0 semantic conventions by default in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`.
+  Use the environment variable `OTEL_SEMCONV_STABILITY_OPT_IN` to configure duplication with old semantic conventions if needed (i.e. `OTEL_SEMCONV_STABILITY_OPT_IN="database/dup"`). (#8230)
 
 ### Deprecated
 
