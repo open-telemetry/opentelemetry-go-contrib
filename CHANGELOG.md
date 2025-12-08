@@ -8,22 +8,28 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.39.0/2.1.0/0.64.0/0.33.0/0.19.0/0.14.0/0.12.0/0.11.0] - 2025-12-08
+
 ### Added
 
 - `ParseYAML` in `go.opentelemetry.io/contrib/otelconf` now supports environment variables substitution in the format `${[env:]VAR_NAME[:-defaultvalue]}`. (#6215)
+- Add the `http.route` metric attribute to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7966)
+- Support `db.client.operation.duration` metric for `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7983)
+- Add a `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7986)
 - WithOnError option for otelecho middleware in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` to specify the behavior when an error occurs. (#8025)
+- Updated `go.opentelemetry.io/contrib/otelconf` to include the [v1.0.0-rc2](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.2) release candidate of schema which includes backwards incompatible changes. (#8026)
 - Introduce v1.0.0-rc.2 model in `go.opentelemetry.io/contrib/otelconf`. (#8031)
 - Add unmarshaling and validation for `CardinalityLimits` and `SpanLimits` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8043)
 - Add unmarshaling and validation for `BatchLogRecordProcessor`, `BatchSpanProcessor`, and `PeriodicMetricReader` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8049)
 - Add unmarshaling and validation for `TextMapPropagator` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8052)
 - Add `jaeger.sampler.type`/`jaeger.sampler.param` attributes for adaptive sampling support and option `WithAttributesDisabled` in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#8073)
-- Add unmarshaling and validation for `OTLPHttpExporter`, `OTLPGrpcExporter`, `OTLPGrpcMetricExporter` and `OTLPHttpMetricExporter` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8112)
-- Add a `WithSpanNameFormatter` option to `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7986)
-- Add unmarshaling and validation for `AttributeType`, `AttributeNameValue`, `SimpleSpanProcessor`, `SimpleLogRecordProcessor`, `ZipkinSpanExporter`, `NameStringValuePair`, `InstrumentType`, `ExperimentalPeerInstrumentationServiceMappingElem`, `ExporterDefaultHistogramAggregation`, `PullMetricReader` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8127)
-- Updated `go.opentelemetry.io/contrib/otelconf` to include the [v1.0.0-rc2](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.2) release candidate of schema which includes backwards incompatible changes. (#8026)
-- Support `db.client.operation.duration` metric for `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#7983)
 - Add support for `OTEL_EXPERIMENTAL_CONFIG_FILE` via the `NewSDK` function in `go.opentelemetry.io/contrib/otelconf` (#8106)
-- Add support for `container`, `host`, `process` resource detectors in `go.opentelemetry.io/contrib/otelconf` (#8180)
+- Add unmarshaling and validation for `OTLPHttpExporter`, `OTLPGrpcExporter`, `OTLPGrpcMetricExporter` and `OTLPHttpMetricExporter` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8112)
+- Add unmarshaling and validation for `AttributeType`, `AttributeNameValue`, `SimpleSpanProcessor`, `SimpleLogRecordProcessor`, `ZipkinSpanExporter`, `NameStringValuePair`, `InstrumentType`, `ExperimentalPeerInstrumentationServiceMappingElem`, `ExporterDefaultHistogramAggregation`, `PullMetricReader` to v1.0.0 model in `go.opentelemetry.io/contrib/otelconf`. (#8127)
+- Add support for `container`, `host`, `process` resource detectors in `go.opentelemetry.io/contrib/otelconf`. (#8180)
 
 ### Changed
 
@@ -34,11 +40,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.
-  Use `WithPublicEndpointFn` instead. (#8152)
 - `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.
   The route is already added automatically for spans.
   For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8117)
+- `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.
+  Use `WithPublicEndpointFn` instead. (#8152)
 - `DefaultClient`, `Get`, `Head`, `Post`, and `PostForm` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are deprecated.
   Use a custom `*http.Client` with `otelhttp.NewTransport(http.DefaultTransport)` instead. (#8140, #8201)
 
@@ -47,10 +53,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Drop support for [Go 1.23]. (#7831)
 - Remove deprecated `go.opentelemetry.io/contrib/detectors/aws/ec2` module, please use `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` instead. (#7841)
 - Remove the deprecated `Extract` and `Inject` functions from `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#7952)
-- Add the `http.route` metric attribute to `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#7966)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.38.0/2.0.0/0.63.0/0.32.0/0.18.0/0.13.0/0.11.0/0.10.0] - 2025-08-29
 
@@ -1550,7 +1552,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.38.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.39.0...HEAD
+[1.39.0/2.1.0/0.64.0/0.33.0/0.19.0/0.14.0/0.12.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.39.0
 [1.38.0/2.0.0/0.63.0/0.32.0/0.18.0/0.13.0/0.11.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.38.0
 [1.37.0/0.62.0/0.31.0/0.17.0/0.12.0/0.10.0/0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.37.0
 [1.36.0/0.61.0/0.30.0/0.16.0/0.11.0/0.9.0/0.8.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.36.0
