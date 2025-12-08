@@ -8,6 +8,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- The deprecated `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  The route is already added automatically for spans.
+  For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#TBD)
+  Use `WithPublicEndpointFn` instead. (#TBD)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
