@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - The deprecated `DefaultClient`, `Get`, `Head`, `Post`, and `PostForm` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
-  Use a custom `*http.Client` with `otelhttp.NewTransport(http.DefaultTransport)` instead. (#TBD)
+  Use a custom `*http.Client` with `otelhttp.NewTransport(http.DefaultTransport)` instead. (#8266)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
