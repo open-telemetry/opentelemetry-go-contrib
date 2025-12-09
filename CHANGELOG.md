@@ -36,7 +36,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
 - Improve performance by reducing allocations in the gRPC stats handler in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8035)
 - Export the `ReadEvents` and `WriteEvents` constants in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` so they can be used in `WithMessageEvents`. (#8153)
 - Switched the default for `OTEL_SEMCONV_STABILITY_OPT_IN` to emit the v1.37.0 semantic conventions by default in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`.
