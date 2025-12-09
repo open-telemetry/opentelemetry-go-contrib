@@ -317,7 +317,7 @@ func (*testServer) StreamingInputCall(stream testpb.TestService_StreamingInputCa
 		n := len(in.GetPayload().GetBody())
 		// This could overflow, but given this is a test and the negative value
 		// should be detectable this should be good enough.
-		sum += int32(n) //nolint:gosec // see comment above
+		sum += int32(n) //nolint:gosec // See comment above.
 	}
 }
 
