@@ -157,26 +157,20 @@ func TestTracerProviderOptions(t *testing.T) {
 	require.NoError(t, err)
 
 	res := resource.NewSchemaless(attribute.String("foo", "bar"))
-	// TODO: re-enable this once NewSDK is added
-	// sdk, err := NewSDK(
-	// 	WithOpenTelemetryConfiguration(cfg),
-	// 	WithTracerProviderOptions(sdktrace.WithSyncer(stdouttraceExporter)),
-	// 	WithTracerProviderOptions(sdktrace.WithResource(res)),
-	// )
-	tp, shutdown, err := tracerProvider(configOptions{
-		ctx:                   t.Context(),
-		opentelemetryConfig:   cfg,
-		tracerProviderOptions: []sdktrace.TracerProviderOption{sdktrace.WithSyncer(stdouttraceExporter)},
-	}, res)
+	sdk, err := NewSDK(
+		WithOpenTelemetryConfiguration(cfg),
+		WithTracerProviderOptions(sdktrace.WithSyncer(stdouttraceExporter)),
+		WithTracerProviderOptions(sdktrace.WithResource(res)),
+	)
 	require.NoError(t, err)
 	defer func() {
-		assert.NoError(t, shutdown(t.Context()))
+		assert.NoError(t, sdk.Shutdown(t.Context()))
 	}()
 
 	// The exporter, which we passed in as an extra option to NewSDK,
 	// should be wired up to the provider in addition to the
 	// configuration-based OTLP exporter.
-	tracer := tp.Tracer("test")
+	tracer := sdk.TracerProvider().Tracer("test")
 	_, span := tracer.Start(t.Context(), "span")
 	span.End()
 	assert.NotZero(t, buf)
@@ -184,8 +178,7 @@ func TestTracerProviderOptions(t *testing.T) {
 	// Options provided by WithMeterProviderOptions may be overridden
 	// by configuration, e.g. the resource is always defined via
 	// configuration.
-	// TODO: re-enable this once NewSDK is added
-	// assert.NotContains(t, buf.String(), "foo")
+	assert.NotContains(t, buf.String(), "foo")
 }
 
 func TestSpanProcessor(t *testing.T) {
@@ -1033,7 +1026,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			}
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.ExportSpans(t.Context(), input.Snapshots()))
+				assert.NoError(collect, exporter.ExportSpans(context.Background(), input.Snapshots())) //nolint:usetesting // required to avoid getting a canceled context.
 			}, 10*time.Second, 1*time.Second)
 		})
 	}

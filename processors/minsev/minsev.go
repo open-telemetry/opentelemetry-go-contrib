@@ -29,11 +29,11 @@ func NewLogProcessor(downstream log.Processor, severity Severitier) *LogProcesso
 	if severity == nil {
 		severity = SeverityInfo
 	}
-	p := &LogProcessor{Processor: downstream, sev: severity}
-	if fp, ok := downstream.(log.FilterProcessor); ok {
-		p.filter = fp
+	return &LogProcessor{
+		Processor: downstream,
+		sev:       severity,
+		wrapped:   downstream,
 	}
-	return p
 }
 
 // LogProcessor is an [log.Processor] implementation that wraps another
@@ -47,15 +47,12 @@ func NewLogProcessor(downstream log.Processor, severity Severitier) *LogProcesso
 type LogProcessor struct {
 	log.Processor
 
-	filter log.FilterProcessor
-	sev    Severitier
+	wrapped log.Processor
+	sev     Severitier
 }
 
 // Compile time assertion that LogProcessor implements log.Processor and log.FilterProcessor.
-var (
-	_ log.Processor       = (*LogProcessor)(nil)
-	_ log.FilterProcessor = (*LogProcessor)(nil)
-)
+var _ log.Processor = (*LogProcessor)(nil)
 
 // OnEmit passes ctx and r to the [log.Processor] that p wraps if the severity
 // of record is greater than or equal to p.Minimum. Otherwise, record is
@@ -72,9 +69,9 @@ func (p *LogProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 // returned.
 func (p *LogProcessor) Enabled(ctx context.Context, param log.EnabledParameters) bool {
 	sev := param.Severity
-	if p.filter != nil {
+	if p.wrapped != nil {
 		return sev >= p.sev.Severity() &&
-			p.filter.Enabled(ctx, param)
+			p.wrapped.Enabled(ctx, param)
 	}
 	return sev >= p.sev.Severity()
 }

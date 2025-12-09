@@ -713,33 +713,27 @@ func TestLoggerProviderOptions(t *testing.T) {
 	require.NoError(t, err)
 
 	res := resource.NewSchemaless(attribute.String("foo", "bar"))
-	// TODO: re-enable this once NewSDK is added
-	// sdk, err := NewSDK(
-	// 	WithOpenTelemetryConfiguration(cfg),
-	// 	WithLoggerProviderOptions(sdklog.WithProcessor(sdklog.NewSimpleProcessor(stdoutlogExporter))),
-	// 	WithLoggerProviderOptions(sdklog.WithResource(res)),
-	// )
-	lp, shutdown, err := loggerProvider(configOptions{
-		opentelemetryConfig:   cfg,
-		loggerProviderOptions: []sdklog.LoggerProviderOption{sdklog.WithProcessor(sdklog.NewSimpleProcessor(stdoutlogExporter))},
-	}, res)
+	sdk, err := NewSDK(
+		WithOpenTelemetryConfiguration(cfg),
+		WithLoggerProviderOptions(sdklog.WithProcessor(sdklog.NewSimpleProcessor(stdoutlogExporter))),
+		WithLoggerProviderOptions(sdklog.WithResource(res)),
+	)
 	require.NoError(t, err)
 	defer func() {
-		assert.NoError(t, shutdown(t.Context()))
+		assert.NoError(t, sdk.Shutdown(t.Context()))
 	}()
 
 	// The exporter, which we passed in as an extra option to NewSDK,
 	// should be wired up to the provider in addition to the
 	// configuration-based OTLP exporter.
-	logger := lp.Logger("test")
+	logger := sdk.LoggerProvider().Logger("test")
 	logger.Emit(t.Context(), log.Record{})
 	assert.NotZero(t, buf)
 	assert.Equal(t, 1, calls)
 	// Options provided by WithMeterProviderOptions may be overridden
 	// by configuration, e.g. the resource is always defined via
 	// configuration.
-	// TODO: re-enable this once NewSDK is added
-	// assert.NotContains(t, buf.String(), "foo")
+	assert.NotContains(t, buf.String(), "foo")
 }
 
 func Test_otlpGRPCLogExporter(t *testing.T) {
@@ -860,7 +854,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			}
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(t.Context(), []sdklog.Record{
+				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{ //nolint:usetesting // required to avoid getting a canceled context.
 					logFactory.NewRecord(),
 				}))
 			}, 10*time.Second, 1*time.Second)

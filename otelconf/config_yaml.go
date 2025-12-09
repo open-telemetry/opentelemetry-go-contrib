@@ -27,6 +27,33 @@ func hasYAMLMapKey(node *yaml.Node, key string) bool {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
+func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
+	type Plain ExperimentalResourceDetector
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// container can be nil, must check and set here
+	if hasYAMLMapKey(node, "container") && plain.Container == nil {
+		plain.Container = ExperimentalContainerResourceDetector{}
+	}
+	// host can be nil, must check and set here
+	if hasYAMLMapKey(node, "host") && plain.Host == nil {
+		plain.Host = ExperimentalHostResourceDetector{}
+	}
+	// process can be nil, must check and set here
+	if hasYAMLMapKey(node, "process") && plain.Process == nil {
+		plain.Process = ExperimentalProcessResourceDetector{}
+	}
+	// service can be nil, must check and set here
+	if hasYAMLMapKey(node, "service") && plain.Service == nil {
+		plain.Service = ExperimentalServiceResourceDetector{}
+	}
+	*j = ExperimentalResourceDetector(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	type Plain PushMetricExporter
 	var plain Plain
@@ -38,6 +65,74 @@ func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 		plain.Console = ConsoleExporter{}
 	}
 	*j = PushMetricExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "file_format") {
+		return newErrRequired(j, "file_format")
+	}
+	type Plain OpenTelemetryConfiguration
+	type shadow struct {
+		Plain
+		LogLevel                   *string              `yaml:"log_level,omitempty"`
+		AttributeLimits            *AttributeLimits     `yaml:"attribute_limits,omitempty"`
+		Disabled                   *bool                `yaml:"disabled,omitempty"`
+		FileFormat                 string               `yaml:"file_format"`
+		LoggerProvider             *LoggerProviderJson  `yaml:"logger_provider,omitempty"`
+		MeterProvider              *MeterProviderJson   `yaml:"meter_provider,omitempty"`
+		TracerProvider             *TracerProviderJson  `yaml:"tracer_provider,omitempty"`
+		Propagator                 *PropagatorJson      `yaml:"propagator,omitempty"`
+		Resource                   *ResourceJson        `yaml:"resource,omitempty"`
+		InstrumentationDevelopment *InstrumentationJson `yaml:"instrumentation/development"`
+	}
+	var sh shadow
+
+	if err := node.Decode(&sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if sh.AttributeLimits != nil {
+		sh.Plain.AttributeLimits = sh.AttributeLimits
+	}
+
+	sh.Plain.FileFormat = sh.FileFormat
+	if sh.Disabled != nil {
+		sh.Plain.Disabled = sh.Disabled
+	} else {
+		// Configure the log level of the internal logger used by the SDK.
+		// If omitted, info is used.
+		sh.Plain.Disabled = ptr(false)
+	}
+	if sh.LoggerProvider != nil {
+		sh.Plain.LoggerProvider = sh.LoggerProvider
+	}
+	if sh.MeterProvider != nil {
+		sh.Plain.MeterProvider = sh.MeterProvider
+	}
+	if sh.TracerProvider != nil {
+		sh.Plain.TracerProvider = sh.TracerProvider
+	}
+	if sh.Propagator != nil {
+		sh.Plain.Propagator = sh.Propagator
+	}
+	if sh.Resource != nil {
+		sh.Plain.Resource = sh.Resource
+	}
+	if sh.InstrumentationDevelopment != nil {
+		sh.Plain.InstrumentationDevelopment = sh.InstrumentationDevelopment
+	}
+
+	if sh.LogLevel != nil {
+		sh.Plain.LogLevel = sh.LogLevel
+	} else {
+		// Configure the log level of the internal logger used by the SDK.
+		// If omitted, info is used.
+		sh.Plain.LogLevel = ptr("info")
+	}
+
+	*j = OpenTelemetryConfiguration(sh.Plain)
 	return nil
 }
 
@@ -120,6 +215,38 @@ func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	*j = BatchLogRecordProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *Sampler) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	type Plain Sampler
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	unmarshalSamplerTypes(raw, (*Sampler)(&plain))
+	*j = Sampler(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *MetricProducer) UnmarshalYAML(node *yaml.Node) error {
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return err
+	}
+	type Plain MetricProducer
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+	unmarshalMetricProducer(raw, (*MetricProducer)(&plain))
+	*j = MetricProducer(plain)
 	return nil
 }
 
@@ -441,5 +568,16 @@ func (j *PullMetricReader) UnmarshalYAML(node *yaml.Node) error {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
 	*j = PullMetricReader(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *ExperimentalLanguageSpecificInstrumentation) UnmarshalYAML(unmarshal func(any) error) error {
+	var raw map[string]any
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	*j = raw
 	return nil
 }

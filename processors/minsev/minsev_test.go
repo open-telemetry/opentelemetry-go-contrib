@@ -45,10 +45,7 @@ type processor struct {
 }
 
 // Compile time assertion that processor implements log.Processor and log.FilterProcessor.
-var (
-	_ log.Processor       = (*processor)(nil)
-	_ log.FilterProcessor = (*processor)(nil)
-)
+var _ log.Processor = (*processor)(nil)
 
 func (p *processor) OnEmit(ctx context.Context, r *log.Record) error {
 	p.OnEmitCalls = append(p.OnEmitCalls, emitArgs{ctx, r})
@@ -168,26 +165,6 @@ func TestLogProcessorEnabled(t *testing.T) {
 			}
 		}
 	})
-
-	t.Run("NoFiltered", func(t *testing.T) {
-		wrapped := &processor{}
-
-		pruned := struct{ log.Processor }{wrapped} // Remove the Enabled method.
-		p := NewLogProcessor(pruned, SeverityInfo)
-		ctx := t.Context()
-		params := log.EnabledParameters{}
-
-		params.Severity = api.SeverityDebug
-		assert.False(t, p.Enabled(ctx, params))
-
-		params.Severity = api.SeverityInfo
-		assert.True(t, p.Enabled(ctx, params))
-
-		params.Severity = api.SeverityError
-		assert.True(t, p.Enabled(ctx, params))
-
-		assert.Empty(t, wrapped.EnabledCalls)
-	})
 }
 
 func TestLogProcessorForceFlushPassthrough(t *testing.T) {
@@ -233,12 +210,7 @@ func BenchmarkLogProcessor(b *testing.B) {
 	param := log.EnabledParameters{Severity: api.SeverityTrace}
 	ctx := b.Context()
 
-	type combo interface {
-		log.Processor
-		log.FilterProcessor
-	}
-
-	run := func(p combo) func(b *testing.B) {
+	run := func(p log.Processor) func(b *testing.B) {
 		return func(b *testing.B) {
 			var err error
 			var enabled bool
