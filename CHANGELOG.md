@@ -14,6 +14,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
+- The deprecated `DefaultClient`, `Get`, `Head`, `Post`, and `PostForm` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  Use a custom `*http.Client` with `otelhttp.NewTransport(http.DefaultTransport)` instead. (#8266)
 - The deprecated `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The route is already added automatically for spans.
   For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8268)
