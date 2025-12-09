@@ -19,7 +19,7 @@ func expFromFloat64(x float64) int {
 	// The biased exponent can only be expressed with 11 bits (size (i.e. 64) -
 	// significant (i.e 52) - sign (i.e. 1)). Meaning the int conversion below
 	// is guaranteed to be lossless.
-	return int(biased) - offsetExponentBias
+	return int(biased) - offsetExponentBias //nolint:gosec // see comment above
 }
 
 // expToFloat64 returns 2^x.
@@ -28,6 +28,7 @@ func expToFloat64(x int) float64 {
 	// biased form: an exponent value of 1023 represents the actual zero.
 	// Exponents range from -1022 to +1023 because exponents of -1023 (all 0s)
 	// and +1024 (all 1s) are reserved for special numbers.
+	// So the uint64 conversion below is guaranteed to be lossless.
 	const low, high = -1022, 1023
 	if x < low {
 		x = low
@@ -35,7 +36,7 @@ func expToFloat64(x int) float64 {
 	if x > high {
 		x = high
 	}
-	biased := uint64(offsetExponentBias + x)
+	biased := uint64(offsetExponentBias + x) //nolint:gosec // see comment above
 	return math.Float64frombits(biased << significandBits)
 }
 
@@ -70,5 +71,5 @@ func splitProb(p float64) (uint8, uint8, float64) {
 	highP := expToFloat64(-high)
 	lowProb := (highP - p) / (highP - lowP)
 
-	return uint8(low), uint8(high), lowProb
+	return uint8(low), uint8(high), lowProb //nolint:gosec // exponent can only range from -1022 to +1023.
 }
