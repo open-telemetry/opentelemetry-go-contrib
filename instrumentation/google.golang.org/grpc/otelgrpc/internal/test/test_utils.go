@@ -343,7 +343,7 @@ func (*testServer) FullDuplexCall(stream testpb.TestService_FullDuplexCallServer
 		}
 		st := in.GetResponseStatus()
 		if st != nil && st.Code != 0 {
-			return status.Error(codes.Code(st.Code), st.Message) //nolint:gosec // overflow handled by status code bounds in grpc_testing package.
+			return status.Error(codes.Code(st.Code), st.Message) //nolint:gosec // Overflow handled by status code bounds in grpc_testing package.
 		}
 
 		cs := in.GetResponseParameters()
