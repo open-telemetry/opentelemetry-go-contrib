@@ -174,7 +174,7 @@ func TestHandlerBasics(t *testing.T) {
 func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
-		Version: Version(),
+		Version: Version,
 	}, sm.Scope)
 
 	require.Len(t, sm.Metrics, 3)
@@ -182,7 +182,7 @@ func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribut
 	want := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:    ScopeName,
-			Version: Version(),
+			Version: Version,
 		},
 		Metrics: []metricdata.Metrics{
 			{
