@@ -128,6 +128,7 @@ func ExampleNewServerHandler_withMetricAttributesFn_baggage() {
 	_ = grpc.NewServer(grpc.StatsHandler(otelgrpc.NewServerHandler(
 		// Propagators are required to extract baggage from incoming request headers.
 		otelgrpc.WithPropagators(propagation.NewCompositeTextMapPropagator(
+			propagation.TraceContext{},
 			propagation.Baggage{},
 		)),
 		otelgrpc.WithMetricAttributesFn(func(ctx context.Context) []attribute.KeyValue {
