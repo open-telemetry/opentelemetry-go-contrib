@@ -4,10 +4,10 @@ go 1.24.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.41.0
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.53.4
-	github.com/aws/aws-sdk-go-v2/service/route53 v1.61.2
-	github.com/aws/aws-sdk-go-v2/service/sns v1.39.9
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.19
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.53.5
+	github.com/aws/aws-sdk-go-v2/service/route53 v1.62.0
+	github.com/aws/aws-sdk-go-v2/service/sns v1.39.10
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.42.20
 	github.com/aws/smithy-go v1.24.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.39.0
