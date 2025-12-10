@@ -200,8 +200,7 @@ func parseNumber(key, input string, maximum uint8) (uint8, error) {
 	if value > uint64(maximum) {
 		return maximum + 1, parseError(key, strconv.ErrRange)
 	}
-	// `value` is strictly less then the uint8 maximum. This cast is safe.
-	return uint8(value), nil
+	return uint8(value), nil //nolint:gosec // `value` is strictly less then the uint8 maximum. This cast is safe.
 }
 
 func parseError(key string, err error) error {
