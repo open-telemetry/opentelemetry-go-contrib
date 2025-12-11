@@ -16,6 +16,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The deprecated `DefaultClient`, `Get`, `Head`, `Post`, and `PostForm` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   Use a custom `*http.Client` with `otelhttp.NewTransport(http.DefaultTransport)` instead. (#8266)
+- The deprecated `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  Use `WithPublicEndpointFn` instead. (#8267)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

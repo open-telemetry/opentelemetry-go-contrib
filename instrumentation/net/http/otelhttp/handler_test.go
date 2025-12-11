@@ -495,51 +495,6 @@ func TestWithSpanNameFormatter(t *testing.T) {
 	}
 }
 
-func TestWithPublicEndpoint(t *testing.T) {
-	spanRecorder := tracetest.NewSpanRecorder()
-	provider := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(spanRecorder),
-	)
-	remoteSpan := trace.SpanContextConfig{
-		TraceID: trace.TraceID{0x01},
-		SpanID:  trace.SpanID{0x01},
-		Remote:  true,
-	}
-	prop := propagation.TraceContext{}
-	h := NewHandler(
-		http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
-			s := trace.SpanFromContext(r.Context())
-			sc := s.SpanContext()
-
-			// Should be with new root trace.
-			assert.True(t, sc.IsValid())
-			assert.False(t, sc.IsRemote())
-			assert.NotEqual(t, remoteSpan.TraceID, sc.TraceID())
-		}), "test_handler",
-		WithPublicEndpoint(),
-		WithPropagators(prop),
-		WithTracerProvider(provider),
-	)
-
-	r, err := http.NewRequest(http.MethodGet, "http://localhost/", http.NoBody)
-	require.NoError(t, err)
-
-	sc := trace.NewSpanContext(remoteSpan)
-	ctx := trace.ContextWithSpanContext(t.Context(), sc)
-	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
-
-	rr := httptest.NewRecorder()
-	h.ServeHTTP(rr, r)
-	assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
-
-	// Recorded span should be linked with an incoming span context.
-	assert.NoError(t, spanRecorder.ForceFlush(ctx))
-	done := spanRecorder.Ended()
-	require.Len(t, done, 1)
-	require.Len(t, done[0].Links(), 1, "should contain link")
-	require.True(t, sc.Equal(done[0].Links()[0].SpanContext), "should link incoming span context")
-}
-
 func TestWithPublicEndpointFn(t *testing.T) {
 	remoteSpan := trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0x01},
