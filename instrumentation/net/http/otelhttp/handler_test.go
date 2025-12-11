@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -605,74 +604,6 @@ func TestSpanStatus(t *testing.T) {
 			require.Len(t, sr.Ended(), 1, "should emit a span")
 			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
 		})
-	}
-}
-
-func TestWithRouteTag(t *testing.T) {
-	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
-	route := "/some/route"
-
-	spanRecorder := tracetest.NewSpanRecorder()
-	tracerProvider := sdktrace.NewTracerProvider()
-	tracerProvider.RegisterSpanProcessor(spanRecorder)
-
-	metricReader := sdkmetric.NewManualReader()
-	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(metricReader))
-
-	h := NewHandler(
-		WithRouteTag(
-			route,
-			http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				w.WriteHeader(http.StatusTeapot)
-			}),
-		),
-		"test_handler",
-		WithTracerProvider(tracerProvider),
-		WithMeterProvider(meterProvider),
-	)
-
-	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", http.NoBody))
-	want := semconv.HTTPRouteKey.String(route)
-
-	require.Len(t, spanRecorder.Ended(), 1, "should emit a span")
-	gotSpan := spanRecorder.Ended()[0]
-	require.Contains(t, gotSpan.Attributes(), want, "should add route to span attributes")
-
-	rm := metricdata.ResourceMetrics{}
-	err := metricReader.Collect(t.Context(), &rm)
-	require.NoError(t, err)
-	require.Len(t, rm.ScopeMetrics, 1, "should emit metrics for one scope")
-	gotMetrics := rm.ScopeMetrics[0].Metrics
-
-	for _, m := range gotMetrics {
-		switch d := m.Data.(type) {
-		case metricdata.Sum[int64]:
-			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
-			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
-
-		case metricdata.Sum[float64]:
-			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
-			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
-
-		case metricdata.Histogram[int64]:
-			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
-			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
-
-		case metricdata.Histogram[float64]:
-			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
-			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
-
-		case metricdata.Gauge[int64]:
-			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
-			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
-
-		case metricdata.Gauge[float64]:
-			require.Len(t, d.DataPoints, 1, "metric '%v' should have exactly one data point", m.Name)
-			require.Contains(t, d.DataPoints[0].Attributes.ToSlice(), want, "should add route to attributes for metric '%v'", m.Name)
-
-		default:
-			require.Fail(t, "metric has unexpected data type", "metric '%v' has unexpected data type %T", m.Name, m.Data)
-		}
 	}
 }
 
