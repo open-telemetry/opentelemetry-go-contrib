@@ -38,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/contrib/detectors/dynatrace`, a resource detector for hosts monitored by the Dynatrace OneAgent, ported from `processor/resourcedetectionprocessor/internal/dynatrace` in `opentelemetry-collector-contrib`. It reads the OneAgent host enrichment file `dt_host_metadata.properties` and sets the `dt.entity.host`, `host.name`, and `dt.smartscape.host` attributes. (#9491)
 - Add `aws.sns.topic.arn` from `TopicArn` to SNS `Publish` and `PublishBatch` spans in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9954)
 - Add the `aws.ecs.task.id` resource attribute, parsed from the task ARN, to `go.opentelemetry.io/contrib/detectors/aws/ecs`, matching the `ecs` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#10087)
+- Add the `db.operation.name` attribute to DynamoDB spans in the default attribute builder of `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#8295)
 
 ### Changed
 
