@@ -6,9 +6,13 @@ package otelhttptrace_test
 import (
 	"bytes"
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -16,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
@@ -570,4 +575,149 @@ func TestHTTPRequestWithExpect100Continue(t *testing.T) {
 		}
 	}
 	require.True(t, found)
+}
+
+func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	otel.SetTracerProvider(tp)
+	tr := tp.Tracer("httptrace/client")
+
+	shouldReturn := make(chan struct{})
+	reqsMade := atomic.Int32{}
+
+	// Mock http server
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			reqsNew := reqsMade.Add(1)
+
+			if reqsNew > 1 {
+				close(shouldReturn)
+			}
+
+			<-shouldReturn
+		}),
+	)
+	defer ts.Close()
+
+	client := ts.Client()
+
+	*client = http.Client{
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: 1,
+		},
+	}
+
+	wg := sync.WaitGroup{}
+
+	wg.Add(2)
+
+	go func() {
+		err := func(ctx context.Context) error {
+			req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
+
+			res, err := client.Do(req)
+			if err != nil {
+				return fmt.Errorf("perform request: %w", err)
+			}
+
+			io.Copy(io.Discard, res.Body)
+			_ = res.Body.Close()
+
+			return nil
+		}(t.Context())
+		require.NoError(t, err, "1st request should succeed")
+
+		wg.Done()
+	}()
+
+	go func() {
+		err := func(ctx context.Context) error {
+			ctx, span := tr.Start(ctx, "test")
+			defer span.End()
+			req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
+			_, req = otelhttptrace.W3C(ctx, req)
+
+			res, err := client.Do(req)
+			if err != nil {
+				return fmt.Errorf("perform request: %w", err)
+			}
+
+			io.Copy(io.Discard, res.Body)
+			_ = res.Body.Close()
+
+			return nil
+		}(t.Context())
+		require.NoError(t, err, "2nd request should succeed")
+
+		wg.Done()
+	}()
+
+	wg.Wait()
+
+	span, ok := getSpanFromRecorder(sr, "http.receive")
+	require.True(t, ok, "span should be present")
+
+	require.Contains(
+		t,
+		[]string{codes.Ok.String(), codes.Unset.String()},
+		span.Status().Code.String(),
+		"connection pooling error shouldn't affect the trace's status",
+	)
+}
+
+func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded_CloseIdle(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	otel.SetTracerProvider(tp)
+	tr := tp.Tracer("httptrace/client")
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Small but non-empty body so we get GotFirstResponseByte and then EOF.
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("hello"))
+	}))
+	defer ts.Close()
+
+	transport := http.Transport{}
+	defer transport.CloseIdleConnections()
+
+	client := ts.Client()
+
+	*client = http.Client{
+		Transport: &transport,
+	}
+
+	err := func(ctx context.Context) error {
+		ctx, span := tr.Start(ctx, "test")
+		defer span.End()
+		req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
+		_, req = otelhttptrace.W3C(ctx, req)
+
+		res, err := client.Do(req)
+		if err != nil {
+			return fmt.Errorf("perform request: %w", err)
+		}
+
+		// Exhausting the response body and closing it puts the connection into the idle pool
+		// Calling CloseIdleConnections prevents the current connection from being reused
+		transport.CloseIdleConnections()
+
+		io.Copy(io.Discard, res.Body)
+
+		res.Body.Close()
+
+		return nil
+	}(t.Context())
+	require.NoError(t, err, "request should succeed")
+
+	span, ok := getSpanFromRecorder(sr, "http.receive")
+	require.True(t, ok, "span should be present")
+
+	require.Contains(
+		t,
+		[]string{codes.Ok.String(), codes.Unset.String()},
+		span.Status().Code.String(),
+		"Transport#CloseIdleConnections shouldn't affect the trace's status",
+	)
 }
