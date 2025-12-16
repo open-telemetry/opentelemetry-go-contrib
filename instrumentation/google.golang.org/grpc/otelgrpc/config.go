@@ -195,17 +195,14 @@ func WithMetricAttributes(a ...attribute.KeyValue) Option {
 	})
 }
 
-type metricAttributesFnOption struct {
-	fn func(ctx context.Context) []attribute.KeyValue
-}
-
-func (o metricAttributesFnOption) apply(c *config) {
-	if o.fn != nil {
-		c.MetricAttributesFn = o.fn
-	}
-}
-
-// WithMetricAttributesFn returns an Option to add custom attributes to the metrics.
+// WithMetricAttributesFn returns an Option to add dynamic custom attributes to the handler's metrics.
+// The function is called once per RPC and the returned attributes are applied to all metrics recorded by this handler.
+//
+// The context parameter is the standard gRPC request context and provides access to request-scoped data.
 func WithMetricAttributesFn(fn func(ctx context.Context) []attribute.KeyValue) Option {
-	return metricAttributesFnOption{fn: fn}
+	return optionFunc(func(c *config) {
+		if fn != nil {
+			c.MetricAttributesFn = fn
+		}
+	})
 }
