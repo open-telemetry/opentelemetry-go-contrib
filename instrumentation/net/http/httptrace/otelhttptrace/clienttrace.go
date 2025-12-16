@@ -286,6 +286,32 @@ func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
 }
 
 func (ct *clientTracer) putIdleConn(err error) {
+	// this error is passed to the PutIdleConn callback when http.Transport's HTTP 1.1 connection pool is full
+	// It's not an error per se, but rather a control flow error used for connection pooling logic in net/http internals
+	// corresponds to errTooManyIdleHost in net/http/internal/transport.go
+	const poolReturnErr = "too many idle connections"
+	// The connection is already closed, typically due to an error, timeout, or cancellation.
+	// This error is not visible to the user of http.Client/Transport.
+	// corresponds to errConnBroken in net/http/internal/transport.go
+	const brokenConnErr = "connection is in bad state"
+	// The connection is forcibly closed by Transport#CloseIdleConnections
+	// corresponds to closeIdleErr in net/http/internal/transport.go
+	const closeIdleErr = "CloseIdleConnections was called"
+
+	if err == nil {
+		ct.end("http.receive", nil)
+		return
+	}
+
+	// non-nil err in this callback is one of the following net/http errors: errTooManyIdleHost, errBrokenConn, errCloseIdle
+	// All of those are internal. No reason to mark the span as error if we encounter them
+	// net/http doesn't export said errors, so we can only match against their strings
+	if strings.Contains(err.Error(), poolReturnErr) ||
+		strings.Contains(err.Error(), brokenConnErr) ||
+		strings.Contains(err.Error(), closeIdleErr) {
+		err = nil
+	}
+
 	ct.end("http.receive", err)
 }
 
