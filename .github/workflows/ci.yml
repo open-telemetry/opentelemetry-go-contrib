@@ -32,7 +32,7 @@ jobs:
         check-latest: true
         cache-dependency-path: "**/go.sum"
     - name: Tools cache
-      uses: actions/cache@v4
+      uses: actions/cache@v5
       env:
         cache-name: go-tools-cache
       with:
@@ -88,13 +88,13 @@ jobs:
         cp coverage.txt $TEST_RESULTS
         cp coverage.html $TEST_RESULTS
     - name: Upload coverage report
-      uses: codecov/codecov-action@v5.5.1
+      uses: codecov/codecov-action@v5.5.2
       with:
         fail_ci_if_error: true
         files: ./coverage.txt
         verbose: true
     - name: Store coverage test output
-      uses: actions/upload-artifact@v5
+      uses: actions/upload-artifact@v6
       with:
         name: opentelemetry-go-contrib-test-output
         path: ${{ env.TEST_RESULTS }}
