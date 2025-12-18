@@ -298,7 +298,7 @@ func (ct *clientTracer) dnsStart(info httptrace.DNSStartInfo) {
 }
 
 func (ct *clientTracer) dnsDone(info httptrace.DNSDoneInfo) {
-	var addrs []string
+	addrs := make([]string, 0, len(info.Addrs))
 	for _, netAddr := range info.Addrs {
 		addrs = append(addrs, netAddr.String())
 	}
