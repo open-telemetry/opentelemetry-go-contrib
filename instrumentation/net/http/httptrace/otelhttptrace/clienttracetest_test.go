@@ -612,8 +612,11 @@ func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded(t *testing.T) {
 
 	wg.Add(2)
 
+	mx := sync.Mutex{}
+	errors := make([]error, 0, 2)
+
 	go func() {
-		err := func(ctx context.Context) error {
+		err := func(_ context.Context) error {
 			req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
 
 			res, err := client.Do(req)
@@ -621,12 +624,16 @@ func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded(t *testing.T) {
 				return fmt.Errorf("perform request: %w", err)
 			}
 
-			io.Copy(io.Discard, res.Body)
+			_, _ = io.Copy(io.Discard, res.Body)
 			_ = res.Body.Close()
 
 			return nil
 		}(t.Context())
-		require.NoError(t, err, "1st request should succeed")
+		if err != nil {
+			mx.Lock()
+			errors = append(errors, fmt.Errorf("perform request 1: %w", err))
+			mx.Unlock()
+		}
 
 		wg.Done()
 	}()
@@ -643,17 +650,25 @@ func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded(t *testing.T) {
 				return fmt.Errorf("perform request: %w", err)
 			}
 
-			io.Copy(io.Discard, res.Body)
+			_, _ = io.Copy(io.Discard, res.Body)
 			_ = res.Body.Close()
 
 			return nil
 		}(t.Context())
-		require.NoError(t, err, "2nd request should succeed")
+		if err != nil {
+			mx.Lock()
+			errors = append(errors, fmt.Errorf("perform request 2: %w", err))
+			mx.Unlock()
+		}
 
 		wg.Done()
 	}()
 
 	wg.Wait()
+
+	if len(errors) > 0 {
+		require.Failf(t, "requests to the server should succeed", "errors: %v", errors)
+	}
 
 	span, ok := getSpanFromRecorder(sr, "http.receive")
 	require.True(t, ok, "span should be present")
@@ -672,7 +687,7 @@ func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded_CloseIdle(t *testing
 	otel.SetTracerProvider(tp)
 	tr := tp.Tracer("httptrace/client")
 
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// Small but non-empty body so we get GotFirstResponseByte and then EOF.
 		w.WriteHeader(200)
 		_, _ = w.Write([]byte("hello"))
@@ -703,9 +718,9 @@ func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded_CloseIdle(t *testing
 		// Calling CloseIdleConnections prevents the current connection from being reused
 		transport.CloseIdleConnections()
 
-		io.Copy(io.Discard, res.Body)
+		_, _ = io.Copy(io.Discard, res.Body)
 
-		res.Body.Close()
+		_ = res.Body.Close()
 
 		return nil
 	}(t.Context())
