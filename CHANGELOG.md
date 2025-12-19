@@ -462,6 +462,11 @@ The next release will require at least [Go 1.25].
 - `OperationAttr()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` is deprecated.
   Use `MethodAttr()` instead, as `rpc.service` has been merged into `rpc.method` in semantic conventions v1.39.0. (#8404)
 
+### Fixed
+
+- Fix HTTP/1.1 connection pooling internal errors incorrectly marking spans as errors in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`.
+  Internal connection pool errors (`errTooManyIdleHost`, `errConnBroken`, `errCloseIdle`) are now properly ignored and do not mark spans with error status.
+
 ### Removed
 
 - The deprecated `DefaultClient`, `Get`, `Head`, `Post`, and `PostForm` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.

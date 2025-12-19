@@ -24,16 +24,16 @@ const ScopeName = "go.opentelemetry.io/otel/instrumentation/httptrace"
 
 // this error is passed to the PutIdleConn callback when http.Transport's HTTP 1.1 connection pool is full
 // It's not an error per se, but rather a control flow error used for connection pooling logic in net/http internals
-// corresponds to errTooManyIdleHost in net/http/internal/transport.go
+// corresponds to errTooManyIdleHost in net/http/internal/transport.go .
 const poolReturnErr = "too many idle connections"
 
 // The connection is already closed, typically due to an error, timeout, or cancellation.
 // This error is not visible to the user of http.Client/Transport.
-// corresponds to errConnBroken in net/http/internal/transport.go
+// corresponds to errConnBroken in net/http/internal/transport.go .
 const brokenConnErr = "connection is in bad state"
 
 // The connection is forcibly closed by Transport#CloseIdleConnections
-// corresponds to closeIdleErr in net/http/internal/transport.go
+// corresponds to closeIdleErr in net/http/internal/transport.go .
 const closeIdleErr = "CloseIdleConnections was called"
 
 // HTTP attributes.
