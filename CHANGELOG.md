@@ -12,6 +12,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
 
+### Fixed
+
+- Fix HTTP/1.1 connection pooling internal errors incorrectly marking spans as errors in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`.
+  Internal connection pool errors (`errTooManyIdleHost`, `errConnBroken`, `errCloseIdle`) are now properly ignored and do not mark spans with error status.
+
 ### Removed
 
 - The deprecated `DefaultClient`, `Get`, `Head`, `Post`, and `PostForm` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
