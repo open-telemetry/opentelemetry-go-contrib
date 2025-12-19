@@ -722,7 +722,7 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
-			Version:   otelgrpc.Version(),
+			Version:   otelgrpc.Version,
 			SchemaURL: semconv.SchemaURL,
 		},
 		Metrics: []metricdata.Metrics{
@@ -1100,7 +1100,7 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
-			Version:   otelgrpc.Version(),
+			Version:   otelgrpc.Version,
 			SchemaURL: semconv.SchemaURL,
 		},
 		Metrics: []metricdata.Metrics{
