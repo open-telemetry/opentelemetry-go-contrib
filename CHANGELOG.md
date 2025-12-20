@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
 
+### Fixed
+
+- Fix panic when passing nil `TracerProvider` or `MeterProvider` to `WithTracerProvider` or `WithMeterProvider` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8323)
+
 ### Removed
 
 - The deprecated `DefaultClient`, `Get`, `Head`, `Post`, and `PostForm` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
