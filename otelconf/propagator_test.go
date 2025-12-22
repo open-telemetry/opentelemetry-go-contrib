@@ -4,28 +4,24 @@
 package otelconf
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel/propagation"
-
-	"go.opentelemetry.io/contrib/propagators/b3"
-	"go.opentelemetry.io/contrib/propagators/jaeger"
-	"go.opentelemetry.io/contrib/propagators/ot"
 )
 
 func TestPropagator(t *testing.T) {
 	tests := []struct {
 		name    string
 		cfg     OpenTelemetryConfigurationPropagator
-		want    propagation.TextMapPropagator
+		want    []string
 		wantErr bool
 		errMsg  string
 	}{
 		{
 			name:    "nil propagator config",
 			cfg:     nil,
-			want:    propagation.NewCompositeTextMapPropagator(),
+			want:    []string{},
 			wantErr: false,
 		},
 		{
@@ -37,7 +33,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    propagation.TraceContext{},
+			want:    []string{"traceparent", "tracestate"},
 			wantErr: false,
 		},
 		{
@@ -49,7 +45,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    propagation.Baggage{},
+			want:    []string{"baggage"},
 			wantErr: false,
 		},
 		{
@@ -61,7 +57,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    b3.New(),
+			want:    []string{"x-b3-traceid", "x-b3-spanid", "x-b3-sampled", "x-b3-flags"},
 			wantErr: false,
 		},
 		{
@@ -73,7 +69,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    b3.New(b3.WithInjectEncoding(b3.B3MultipleHeader)),
+			want:    []string{"x-b3-traceid", "x-b3-spanid", "x-b3-sampled", "x-b3-flags"},
 			wantErr: false,
 		},
 		{
@@ -85,7 +81,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    jaeger.Jaeger{},
+			want:    []string{"uber-trace-id"},
 			wantErr: false,
 		},
 		{
@@ -97,27 +93,9 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    ot.OT{},
+			want:    []string{"ot-tracer-traceid", "ot-tracer-spanid", "ot-tracer-sampled"},
 			wantErr: false,
 		},
-		// {
-		// 	name: "valid xray",
-		// 	cfg: configOptions{
-		// 		opentelemetryConfig: OpenTelemetryConfiguration{
-		// 			Propagator: &PropagatorJson{
-		// 				Composite: []TextMapPropagator{
-		// 					{
-		// 						AdditionalProperties: map[string]any{
-		// 							"xray": "",
-		// 						},
-		// 					},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// 	want:    xray.Propagator{},
-		// 	wantErr: false,
-		// },
 		{
 			name: "multiple propagators",
 			cfg: &PropagatorJson{
@@ -133,7 +111,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}, b3.New()),
+			want:    []string{"tracestate", "baggage", "x-b3-traceid", "x-b3-spanid", "x-b3-sampled", "x-b3-flags", "traceparent"},
 			wantErr: false,
 		},
 		{
@@ -143,53 +121,43 @@ func TestPropagator(t *testing.T) {
 					{},
 				},
 			},
-			want:    propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}),
+			want:    []string{"tracestate", "baggage", "traceparent"},
 			wantErr: false,
 		},
-		// {
-		// 	name: "empty propagator name",
-		// 	cfg: configOptions{
-		// 		opentelemetryConfig: OpenTelemetryConfiguration{
-		// 			Propagator: &Propagator{
-		// 				Composite: []TextMapPropagator{
-		// 					{ptr(""), ptr("tracecontext")},
-		// 			},
-		// 		},
-		// 	},
-		// 	want:    propagation.TraceContext{},
-		// 	wantErr: false,
-		// },
-		// {
-		// 	name: "nil propagator name",
-		// 	cfg: configOptions{
-		// 		opentelemetryConfig: OpenTelemetryConfiguration{
-		// 			Propagator: &Propagator{
-		// 				Composite: []TextMapPropagator{
-		// 					{nil, ptr("tracecontext")},
-		// 			},
-		// 		},
-		// 	},
-		// 	want:    nil,
-		// 	wantErr: true,
-		// },
-		// {
-		// 	name: "unsupported propagator",
-		// 	cfg: configOptions{
-		// 		opentelemetryConfig: OpenTelemetryConfiguration{
-		// 			Propagator: &Propagator{
-		// 				Composite: []TextMapPropagator{
-		// 					{
-		// 						AdditionalProperties: map[string]any {
-		// 							"unknown": map[string]string{},
-		// 						},
-		// 				},
-		// 			},
-		// 		},
-		// 	},
-		// 	want:    propagation.NewCompositeTextMapPropagator(),
-		// 	wantErr: true,
-		// 	errMsg:  "unknown propagator",
-		// },
+		{
+			name: "multiple propagators via composite_list",
+			cfg: &PropagatorJson{
+				CompositeList: ptr("tracecontext,baggage,b3"),
+			},
+			want:    []string{"tracestate", "baggage", "x-b3-traceid", "x-b3-spanid", "x-b3-sampled", "x-b3-flags", "traceparent"},
+			wantErr: false,
+		},
+		{
+			name: "valid xray",
+			cfg: &PropagatorJson{
+				CompositeList: ptr("xray"),
+			},
+			want:    []string{"X-Amzn-Trace-Id"},
+			wantErr: false,
+		},
+		{
+			name: "empty propagator name",
+			cfg: &PropagatorJson{
+				CompositeList: ptr(""),
+			},
+			want:    []string{},
+			wantErr: true,
+			errMsg:  "unknown propagator",
+		},
+		{
+			name: "unsupported propagator",
+			cfg: &PropagatorJson{
+				CompositeList: ptr("random-garbage,baggage,b3"),
+			},
+			want:    []string{},
+			wantErr: true,
+			errMsg:  "unknown propagator",
+		},
 	}
 
 	for _, tt := range tests {
@@ -201,7 +169,10 @@ func TestPropagator(t *testing.T) {
 				return
 			}
 			assert.NoError(t, err)
-			assert.Equal(t, tt.want, got)
+			slices.Sort(tt.want)
+			gotFields := got.Fields()
+			slices.Sort(gotFields)
+			assert.EqualValues(t, tt.want, gotFields)
 		})
 	}
 }
