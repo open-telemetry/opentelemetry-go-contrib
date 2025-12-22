@@ -4,7 +4,10 @@
 package otelconf // import "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 
 import (
+	"strings"
+
 	"go.opentelemetry.io/otel/propagation"
+	"golang.org/x/exp/maps"
 
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 )
@@ -20,38 +23,41 @@ func newPropagator(prop OpenTelemetryConfigurationPropagator) (propagation.TextM
 	}
 
 	n := len(p.Composite)
-	if n == 0 {
+	if n == 0 && p.CompositeList == nil {
 		return propagation.NewCompositeTextMapPropagator(), nil
 	}
 
-	var names []string
+	names := map[string]struct{}{}
 	for _, propagator := range p.Composite {
 		if propagator.B3 != nil {
-			names = append(names, "b3")
+			names["b3"] = struct{}{}
 		}
 		if propagator.B3Multi != nil {
-			names = append(names, "b3multi")
+			names["b3multi"] = struct{}{}
 		}
 		if propagator.Baggage != nil {
-			names = append(names, "baggage")
+			names["baggage"] = struct{}{}
 		}
 		if propagator.Jaeger != nil {
-			names = append(names, "jaeger")
+			names["jaeger"] = struct{}{}
 		}
 		if propagator.Ottrace != nil {
-			names = append(names, "ottrace")
+			names["ottrace"] = struct{}{}
 		}
 		if propagator.Tracecontext != nil {
-			names = append(names, "tracecontext")
+			names["tracecontext"] = struct{}{}
 		}
-
-		// TODO: support AdditionalProperties
 	}
+
+	if p.CompositeList != nil {
+		for _, v := range strings.Split(*p.CompositeList, ",") {
+			names[v] = struct{}{}
+		}
+	}
+
 	if len(names) == 0 {
 		return autoprop.NewTextMapPropagator(), nil
 	}
 
-	// TODO: handle composite list
-
-	return autoprop.TextMapPropagator(names...)
+	return autoprop.TextMapPropagator(maps.Keys(names)...)
 }
