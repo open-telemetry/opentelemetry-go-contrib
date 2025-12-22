@@ -15,7 +15,8 @@ func newResource(res *Resource) *resource.Resource {
 		return resource.Default()
 	}
 
-	var attrs []attribute.KeyValue
+	attrs := make([]attribute.KeyValue, 0, len(res.Attributes))
+
 	for _, v := range res.Attributes {
 		attrs = append(attrs, kv.FromNameValue(v.Name, v.Value))
 	}

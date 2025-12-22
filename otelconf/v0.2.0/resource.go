@@ -14,7 +14,7 @@ func newResource(res *Resource) (*resource.Resource, error) {
 	if res == nil || res.Attributes == nil {
 		return resource.Default(), nil
 	}
-	var attrs []attribute.KeyValue
+	attrs := make([]attribute.KeyValue, 0, len(res.Attributes))
 
 	for k, v := range res.Attributes {
 		attrs = append(attrs, kv.FromNameValue(k, v))
