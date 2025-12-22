@@ -172,7 +172,7 @@ func TestPropagator(t *testing.T) {
 			slices.Sort(tt.want)
 			gotFields := got.Fields()
 			slices.Sort(gotFields)
-			assert.EqualValues(t, tt.want, gotFields)
+			assert.Equal(t, tt.want, gotFields)
 		})
 	}
 }
