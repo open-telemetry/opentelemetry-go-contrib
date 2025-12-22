@@ -30,14 +30,14 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 		}
 
 	case *dynamodb.BatchGetItemInput:
-		var tableNames []string
+		tableNames := make([]string, 0, len(v.RequestItems))
 		for k := range v.RequestItems {
 			tableNames = append(tableNames, k)
 		}
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(tableNames...))
 
 	case *dynamodb.BatchWriteItemInput:
-		var tableNames []string
+		tableNames := make([]string, 0, len(v.RequestItems))
 		for k := range v.RequestItems {
 			tableNames = append(tableNames, k)
 		}
@@ -47,7 +47,7 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
 
 		if v.GlobalSecondaryIndexes != nil {
-			var idx []string
+			idx := make([]string, 0, len(v.GlobalSecondaryIndexes))
 			for _, gsi := range v.GlobalSecondaryIndexes {
 				i, _ := json.Marshal(gsi)
 				idx = append(idx, string(i))
@@ -56,7 +56,7 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 		}
 
 		if v.LocalSecondaryIndexes != nil {
-			var idx []string
+			idx := make([]string, 0, len(v.LocalSecondaryIndexes))
 			for _, lsi := range v.LocalSecondaryIndexes {
 				i, _ := json.Marshal(lsi)
 				idx = append(idx, string(i))
@@ -153,7 +153,7 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
 
 		if v.AttributeDefinitions != nil {
-			var def []string
+			def := make([]string, 0, len(v.AttributeDefinitions))
 			for _, ad := range v.AttributeDefinitions {
 				d, _ := json.Marshal(ad)
 				def = append(def, string(d))
@@ -162,7 +162,7 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 		}
 
 		if v.GlobalSecondaryIndexUpdates != nil {
-			var idx []string
+			idx := make([]string, 0, len(v.GlobalSecondaryIndexUpdates))
 			for _, gsiu := range v.GlobalSecondaryIndexUpdates {
 				i, _ := json.Marshal(gsiu)
 				idx = append(idx, string(i))

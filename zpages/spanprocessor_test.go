@@ -172,7 +172,7 @@ func createEndedSpans(tracer trace.Tracer, spanName string, numSpans int) {
 }
 
 func createActiveSpans(tracer trace.Tracer, spanName string, numSpans int) []trace.Span {
-	var spans []trace.Span
+	spans := make([]trace.Span, 0, numSpans)
 	for i := range numSpans {
 		_, span := tracer.Start(context.Background(), spanName)
 		span.SetStatus(codes.Code(i%3), "")
