@@ -12,7 +12,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Change `Version()` function to a `const Version` string in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#8330)
 
-
 ### Added
 
 - `WithMetricAttributesFn` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to define dynamic attributes on auto-instrumented metrics. (#8191)
