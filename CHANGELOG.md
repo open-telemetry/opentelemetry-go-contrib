@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
+- Add support for configuring propagators in `go.opentelemetry.io/contrib/otelconf`. (#8281)
 
 ### Removed
 
