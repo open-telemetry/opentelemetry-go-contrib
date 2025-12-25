@@ -12,7 +12,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
 
-
 ### Removed
 
 - The deprecated `DefaultClient`, `Get`, `Head`, `Post`, and `PostForm` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
@@ -52,7 +51,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Export the `ReadEvents` and `WriteEvents` constants in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` so they can be used in `WithMessageEvents`. (#8153)
 - Switched the default for `OTEL_SEMCONV_STABILITY_OPT_IN` to emit the v1.37.0 semantic conventions by default in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`.
   Use the environment variable `OTEL_SEMCONV_STABILITY_OPT_IN` to configure duplication with old semantic conventions if needed (i.e. `OTEL_SEMCONV_STABILITY_OPT_IN="database/dup"`). (#8230)
-- The `Version()` function in `go.opentelemetry.io/contrib/zpages` has been replaced by `const Version`. (#8325)
+- The `Version()` function in `go.opentelemetry.io/contrib/zpages` has been replaced by the `Version` constant. (#8325)
 
 ### Deprecated
 
