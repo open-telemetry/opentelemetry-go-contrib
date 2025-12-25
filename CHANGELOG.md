@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Added
+### Changed
 
 - Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
 - Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace` to a `const Version` string. (#8302)
