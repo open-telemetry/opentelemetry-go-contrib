@@ -125,7 +125,9 @@ func WithFilter(f Filter) Option {
 // creating a Tracer.
 func WithTracerProvider(tp trace.TracerProvider) Option {
 	return optionFunc(func(c *config) {
-		c.TracerProvider = tp
+		if tp != nil {
+			c.TracerProvider = tp
+		}
 	})
 }
 
@@ -133,7 +135,9 @@ func WithTracerProvider(tp trace.TracerProvider) Option {
 // creating a Meter. If this option is not provide the global MeterProvider will be used.
 func WithMeterProvider(mp metric.MeterProvider) Option {
 	return optionFunc(func(c *config) {
-		c.MeterProvider = mp
+		if mp != nil {
+			c.MeterProvider = mp
+		}
 	})
 }
 
