@@ -115,6 +115,9 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		// Make a new slice to avoid aliasing into the same attrs slice used by metrics.
 		spanAttributes := make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
 		spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
+		if h.SpanAttributesFn != nil {
+			spanAttributes = append(spanAttributes, h.SpanAttributesFn(ctx, info)...)
+		}
 		opts := []trace.SpanStartOption{
 			trace.WithSpanKind(trace.SpanKindServer),
 			trace.WithAttributes(spanAttributes...),
@@ -133,8 +136,13 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		)
 	}
 
+	metricAttrs := append(attrs, h.MetricAttributes...)
+	if h.MetricAttributesFn != nil {
+		metricAttrs = append(metricAttrs, h.MetricAttributesFn(ctx, info)...)
+	}
+
 	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.MetricAttributes...),
+		metricAttrs: metricAttrs,
 		record:      record,
 	}
 	gctx.metricAttrSet = attribute.NewSet(gctx.metricAttrs...)
@@ -227,6 +235,9 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		// Make a new slice to avoid aliasing into the same attrs slice used by metrics.
 		spanAttributes := make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
 		spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
+		if h.SpanAttributesFn != nil {
+			spanAttributes = append(spanAttributes, h.SpanAttributesFn(ctx, info)...)
+		}
 		ctx, _ = h.tracer.Start(
 			ctx,
 			name,
@@ -235,8 +246,13 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		)
 	}
 
+	metricAttrs := append(attrs, h.MetricAttributes...)
+	if h.MetricAttributesFn != nil {
+		metricAttrs = append(metricAttrs, h.MetricAttributesFn(ctx, info)...)
+	}
+
 	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.MetricAttributes...),
+		metricAttrs: metricAttrs,
 		record:      record,
 	}
 	gctx.metricAttrSet = attribute.NewSet(gctx.metricAttrs...)

@@ -29,16 +29,26 @@ type InterceptorFilter func(*InterceptorInfo) bool
 // A Filter must return true if the request should be instrumented.
 type Filter func(*stats.RPCTagInfo) bool
 
+// MetricAttributesFn is a function that extracts dynamic metric attributes from the context and RPC tag info.
+// It allows adding per-request metric attributes based on values injected into the context by interceptors or other middlewares.
+type MetricAttributesFn func(context.Context, *stats.RPCTagInfo) []attribute.KeyValue
+
+// SpanAttributesFn is a function that extracts dynamic span attributes from the context and RPC tag info.
+// It allows adding per-request span attributes based on values injected into the context by interceptors or other middlewares.
+type SpanAttributesFn func(context.Context, *stats.RPCTagInfo) []attribute.KeyValue
+
 // config is a group of options for this instrumentation.
 type config struct {
-	Filter            Filter
-	InterceptorFilter InterceptorFilter
-	Propagators       propagation.TextMapPropagator
-	TracerProvider    trace.TracerProvider
-	MeterProvider     metric.MeterProvider
-	SpanStartOptions  []trace.SpanStartOption
-	SpanAttributes    []attribute.KeyValue
-	MetricAttributes  []attribute.KeyValue
+	Filter             Filter
+	InterceptorFilter  InterceptorFilter
+	Propagators        propagation.TextMapPropagator
+	TracerProvider     trace.TracerProvider
+	MeterProvider      metric.MeterProvider
+	SpanStartOptions   []trace.SpanStartOption
+	SpanAttributes     []attribute.KeyValue
+	SpanAttributesFn   SpanAttributesFn
+	MetricAttributes   []attribute.KeyValue
+	MetricAttributesFn MetricAttributesFn
 
 	PublicEndpoint   bool
 	PublicEndpointFn func(ctx context.Context, info *stats.RPCTagInfo) bool
@@ -190,6 +200,24 @@ func WithMetricAttributes(a ...attribute.KeyValue) Option {
 	return optionFunc(func(c *config) {
 		if a != nil {
 			c.MetricAttributes = append(c.MetricAttributes, a...)
+		}
+	})
+}
+
+// WithMetricAttributesFn sets a function to provide dynamic metric attributes per request.
+func WithMetricAttributesFn(fn MetricAttributesFn) Option {
+	return optionFunc(func(c *config) {
+		if fn != nil {
+			c.MetricAttributesFn = fn
+		}
+	})
+}
+
+// WithSpanAttributesFn sets a function to provide dynamic span attributes per request.
+func WithSpanAttributesFn(fn SpanAttributesFn) Option {
+	return optionFunc(func(c *config) {
+		if fn != nil {
+			c.SpanAttributesFn = fn
 		}
 	})
 }
