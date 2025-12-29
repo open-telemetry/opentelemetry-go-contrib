@@ -6,6 +6,7 @@
 package provider // import "go.opentelemetry.io/contrib/otelconf/internal/provider"
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"regexp"
@@ -24,6 +25,103 @@ var (
 )
 
 func ReplaceEnvVars(input []byte) ([]byte, error) {
+	// parse input file into YAML parse tree
+	var tree yaml.Node
+
+	err := yaml.Unmarshal(input, &tree)
+	if err != nil {
+		return nil, err
+	}
+
+	if walkErr := walkTree(&tree); walkErr != nil {
+		return nil, fmt.Errorf("could not substitute environment variables: %w", walkErr)
+	}
+
+	// the result is the again serialized tree, removed a trailing newline
+	result, resultErr := yaml.Marshal(&tree)
+	result = bytes.TrimSuffix(result, []byte("\n"))
+
+	if resultErr != nil {
+		return nil, fmt.Errorf("could not reserialize YAML tree: %w", resultErr)
+	}
+
+	return result, nil
+}
+
+// walkTree recursively traverses the YAML parse tree and replaces environment variables in scalar nodes.
+func walkTree(node *yaml.Node) error {
+	if len(node.Content) == 0 &&
+		node.Kind == yaml.ScalarNode {
+
+		return handleValueNode(node)
+	}
+
+	for idx, child := range node.Content {
+		if child == nil {
+			continue
+		}
+
+		if node.Kind == yaml.MappingNode && idx%2 == 0 {
+			// jumping over keys
+			continue
+		}
+
+		err := walkTree(child)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// handleValueNode processes a scalar node by replacing environment variables in its value.
+func handleValueNode(node *yaml.Node) error {
+	replace, replaceErr := ReplaceValueEnvVars([]byte(node.Value))
+
+	if replaceErr != nil {
+		return replaceErr
+	}
+
+	node.Value = string(replace)
+
+	if node.Style != yaml.DoubleQuotedStyle &&
+		node.Style != yaml.SingleQuotedStyle {
+		// we had originally something like "${VALUE}", that is definitely to interpret as string
+		return retypeNode(node)
+	}
+
+	return nil
+}
+
+// retypeNode analyzes the node's value to determine its YAML type and sets the appropriate tag.
+func retypeNode(node *yaml.Node) error {
+	// some symbols directly imply a string
+	if strings.Contains(node.Value, ":") ||
+		strings.Contains(node.Value, "\n") {
+		node.Tag = "!!str"
+		return nil
+	}
+
+	// to save the effort to parse a YAML value, we let this to the library,
+	// just getting the resulting type of its parsing run
+	tmpDoc := append([]byte("key: "), []byte(node.Value)...)
+	var tmpNode yaml.Node
+
+	if tmpNodeErr := yaml.Unmarshal(tmpDoc, &tmpNode); tmpNodeErr != nil {
+		return fmt.Errorf("could not retype node: %w", tmpNodeErr)
+	}
+
+	if len(tmpNode.Content) != 1 || len(tmpNode.Content[0].Content) != 2 {
+		return fmt.Errorf("could not retype node: %w", fmt.Errorf("unexpected node structure"))
+	}
+
+	node.Tag = tmpNode.Content[0].Content[1].Tag
+
+	return nil
+}
+
+func ReplaceValueEnvVars(input []byte) ([]byte, error) {
 	// start by replacing all $$ that are not followed by a {
 
 	out := doubleDollarSignsRegexp.ReplaceAllFunc(input, func(s []byte) []byte {
