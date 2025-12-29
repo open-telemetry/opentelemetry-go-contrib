@@ -40,7 +40,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		ScopeName,
-		oteltrace.WithInstrumentationVersion(Version()),
+		oteltrace.WithInstrumentationVersion(Version),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -54,7 +54,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 	meter := cfg.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 	)
 
 	sc := semconv.NewHTTPServer(meter)
@@ -166,7 +166,7 @@ func HTML(c *gin.Context, code int, name string, obj any) {
 	if !ok {
 		tracer = otel.GetTracerProvider().Tracer(
 			ScopeName,
-			oteltrace.WithInstrumentationVersion(Version()),
+			oteltrace.WithInstrumentationVersion(Version),
 		)
 	}
 	savedContext := c.Request.Context()
