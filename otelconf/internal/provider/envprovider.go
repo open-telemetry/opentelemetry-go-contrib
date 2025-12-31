@@ -11,7 +11,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"time"
 
 	"go.yaml.in/yaml/v3"
 )
@@ -21,7 +20,7 @@ const validationPattern = `^[a-zA-Z_][a-zA-Z0-9_]*$`
 var (
 	validationRegexp        = regexp.MustCompile(validationPattern)
 	doubleDollarSignsRegexp = regexp.MustCompile(`\$\$([^{$])`)
-	envVarRegexp            = regexp.MustCompile(`([$]*)\{([a-zA-Z_][a-zA-Z0-9_]*-?[^}]*)\}`)
+	envVarRegexp            = regexp.MustCompile(`([$]+)\{([a-zA-Z_][a-zA-Z0-9_]*-?[^}]*)\}`)
 )
 
 func ReplaceEnvVars(input []byte) ([]byte, error) {
@@ -68,7 +67,7 @@ func walkTree(node *yaml.Node) error {
 
 		err := walkTree(child)
 		if err != nil {
-			return err
+			return fmt.Errorf("error on line %d:%d: %w", child.Line, child.Column, err)
 		}
 	}
 
@@ -85,19 +84,22 @@ func handleValueNode(node *yaml.Node) error {
 
 	node.Value = string(replace)
 
+	// only retype if not already marked as string styled
 	if node.Style != yaml.DoubleQuotedStyle &&
-		node.Style != yaml.SingleQuotedStyle {
-		// we had originally something like "${VALUE}", that is definitely to interpret as string
+		node.Style != yaml.SingleQuotedStyle &&
+		node.Style != yaml.FoldedStyle {
+
 		return retypeNode(node)
 	}
 
+	// we had originally something like "${VALUE}", that is (and has been) definitely to be interpreted as string
 	return nil
 }
 
 // retypeNode analyzes the node's value to determine its YAML type and sets the appropriate tag.
 func retypeNode(node *yaml.Node) error {
 	// some symbols directly imply a string
-	if strings.Contains(node.Value, ":") ||
+	if strings.Contains(node.Value, ": ") ||
 		strings.Contains(node.Value, "\n") {
 		node.Tag = "!!str"
 		return nil
@@ -116,14 +118,19 @@ func retypeNode(node *yaml.Node) error {
 		return fmt.Errorf("could not retype node: %w", fmt.Errorf("unexpected node structure"))
 	}
 
-	node.Tag = tmpNode.Content[0].Content[1].Tag
+	if tmpNode.Content[0].Content[1].Value != node.Value {
+		// the interpretation of the value has a different length, e.g., due to tags
+		node.Tag = "!!str"
+	} else {
+		// we got the same content, but now we have the corrected tag of the YAML parser
+		node.Tag = tmpNode.Content[0].Content[1].Tag
+	}
 
 	return nil
 }
 
 func ReplaceValueEnvVars(input []byte) ([]byte, error) {
-	// start by replacing all $$ that are not followed by a {
-
+	// start by replacing all $$ that are not followed by a $ or {
 	out := doubleDollarSignsRegexp.ReplaceAllFunc(input, func(s []byte) []byte {
 		return append([]byte("$"), doubleDollarSignsRegexp.FindSubmatch(s)[1]...)
 	})
@@ -152,7 +159,7 @@ func ReplaceValueEnvVars(input []byte) ([]byte, error) {
 				return fmt.Appendf(dollarSigns[0:(len(dollarSigns)/2)], "{%s}", match[2])
 			}
 			// expand the default value
-			data, err = ReplaceEnvVars(append(match[2], byte('}')))
+			data, err = ReplaceValueEnvVars(append(match[2], byte('}')))
 			if err != nil {
 				return data
 			}
@@ -184,9 +191,6 @@ func replaceEnvVar(in string) ([]byte, error) {
 	}
 
 	out := []byte(val)
-	if err := checkRawConfType(out); err != nil {
-		return nil, fmt.Errorf("invalid value type: %w", err)
-	}
 
 	return out, nil
 }
@@ -203,21 +207,4 @@ func parseEnvVar(in string) (string, defaultValue) {
 		return in[:i], defaultValue{data: in[i+len(sep):], valid: true}
 	}
 	return in, defaultValue{}
-}
-
-func checkRawConfType(val []byte) error {
-	var rawConf any
-	err := yaml.Unmarshal(val, &rawConf)
-	if err != nil {
-		return err
-	}
-
-	switch rawConf.(type) {
-	case int, int32, int64, float32, float64, bool, string, time.Time:
-		return nil
-	default:
-		return fmt.Errorf(
-			"unsupported type=%T for retrieved config,"+
-				" ensure that values are wrapped in quotes", rawConf)
-	}
 }

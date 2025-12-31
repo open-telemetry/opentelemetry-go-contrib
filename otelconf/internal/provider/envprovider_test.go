@@ -19,12 +19,6 @@ func TestInvalidEnvVarName(t *testing.T) {
 	require.ErrorContains(t, err, errors.New("invalid environment variable name: $%&(*&)").Error())
 }
 
-func TestCheckRawConfTypeNil(t *testing.T) {
-	err := checkRawConfType([]byte{})
-	require.Error(t, err)
-	require.ErrorContains(t, err, "unsupported type=<nil> for retrieved config")
-}
-
 func TestReplaceEnvVar(t *testing.T) {
 	tests := []struct {
 		name    string
@@ -174,16 +168,22 @@ config:
     escaped: ${NOT_REPLACED}`,
 		},
 		{
-			name:    "YAML injection causes error",
-			input:   "key: ${MALICIOUS_VAR}",
-			env:     map[string]string{"MALICIOUS_VAR": "value\\nkey2: injected"},
-			wantErr: true,
+			name:  "YAML injection causes no error, treats injected YAML as string",
+			input: "key: ${MALICIOUS_VAR}",
+			env:   map[string]string{"MALICIOUS_VAR": "value\\nkey2: injected"},
+			want:  "key: 'value\\nkey2: injected'",
 		},
 		{
-			name:    "error case - invalid YAML type",
-			input:   "key: ${INVALID_TYPE_VAR}",
-			env:     map[string]string{"INVALID_TYPE_VAR": "!!int NaN"},
-			wantErr: true,
+			name:  "correctly quoted YAML causes definitely no error",
+			input: "key: \"${MALICIOUS_VAR}\"",
+			env:   map[string]string{"MALICIOUS_VAR": "value\\nkey2: injected"},
+			want:  "key: \"value\\\\nkey2: injected\"",
+		},
+		{
+			name:  "invalid YAML type (injected YAML) is integrated as string",
+			input: "key: ${INVALID_TYPE_VAR}",
+			env:   map[string]string{"INVALID_TYPE_VAR": "!!int NaN"},
+			want:  "key: '!!int NaN'",
 		},
 		{
 			name:    "error case - invalid substitution syntax",
