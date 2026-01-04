@@ -60,25 +60,25 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	if metadata.VMId != nil {
-		attributes = append(attributes, semconv.HostID(*metadata.VMId))
+		attributes = append(attributes, semconv.HostIDKey.String(*metadata.VMId))
 	}
 	if metadata.Location != nil {
-		attributes = append(attributes, semconv.CloudRegion(*metadata.Location))
+		attributes = append(attributes, semconv.CloudRegionKey.String(*metadata.Location))
 	}
 	if metadata.ResourceId != nil {
-		attributes = append(attributes, semconv.CloudResourceID(*metadata.ResourceId))
+		attributes = append(attributes, semconv.CloudResourceIDKey.String(*metadata.ResourceId))
 	}
 	if metadata.Name != nil {
-		attributes = append(attributes, semconv.HostName(*metadata.Name))
+		attributes = append(attributes, semconv.HostNameKey.String(*metadata.Name))
 	}
 	if metadata.VMSize != nil {
-		attributes = append(attributes, semconv.HostType(*metadata.VMSize))
+		attributes = append(attributes, semconv.HostTypeKey.String(*metadata.VMSize))
 	}
 	if metadata.OsType != nil {
 		attributes = append(attributes, semconv.OSTypeKey.String(*metadata.OsType))
 	}
 	if metadata.Version != nil {
-		attributes = append(attributes, semconv.OSVersion(*metadata.Version))
+		attributes = append(attributes, semconv.OSVersionKey.String(*metadata.Version))
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
