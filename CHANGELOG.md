@@ -24,7 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- The `Version()` function in `go.opentelemetry.io/contrib/detectors/azure/azurevm` has been replaced by `const Version`. (#8346)
+- `go.opentelemetry.io/contrib/detectors/azure/azurevm` now uses semantic convention key constants with `.String()` method instead of helper functions for creating resource attributes. (#8346)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
