@@ -26,6 +26,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The route is already added automatically for spans.
   For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8268)
 
+### Changed
+
+- The `Version()` function in `go.opentelemetry.io/contrib/zpages` has been replaced by `const Version`. (#8325)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
