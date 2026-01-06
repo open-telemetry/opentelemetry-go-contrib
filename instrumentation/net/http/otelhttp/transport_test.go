@@ -1114,3 +1114,39 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 		})
 	}
 }
+
+func TestRequestBodyReuse(t *testing.T) {
+	var bodies []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+
+		defer r.Body.Close()
+		bodies = append(bodies, string(body))
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	transport := NewTransport(http.DefaultTransport)
+	client := http.Client{Transport: transport}
+
+	body := bytes.NewBuffer([]byte("hello"))
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL, body)
+	require.NoError(t, err)
+
+	for range 2 {
+		resp, err := client.Do(req)
+		assert.NoError(t, err, "failed to perform http req")
+
+		_, err = io.Copy(io.Discard, resp.Body)
+		require.NoError(t, err)
+
+		err = resp.Body.Close()
+		require.NoError(t, err)
+	}
+
+	require.Len(t, bodies, 2, "expected exactly 2 req bodies")
+	assert.Equal(t, bodies[0], bodies[1], "req bodies do not match")
+}
