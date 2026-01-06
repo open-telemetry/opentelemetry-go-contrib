@@ -110,6 +110,7 @@ func Start(opts ...Option) error {
 		return err
 	}
 
+	defaultMetricOpt := metric.WithAttributes(c.Attributes...)
 	otherMemoryOpt := metric.WithAttributeSet(
 		attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther)),
 	)
@@ -124,20 +125,20 @@ func Start(opts ...Option) error {
 			defer lock.Unlock()
 			collector.refresh()
 			stackMemory := collector.getInt(goHeapMemory)
-			o.ObserveInt64(memoryUsed.Inst(), stackMemory, stackMemoryOpt)
+			o.ObserveInt64(memoryUsed.Inst(), stackMemory, stackMemoryOpt, defaultMetricOpt)
 			totalMemory := collector.getInt(goTotalMemory) - collector.getInt(goMemoryReleased)
 			otherMemory := totalMemory - stackMemory
-			o.ObserveInt64(memoryUsed.Inst(), otherMemory, otherMemoryOpt)
+			o.ObserveInt64(memoryUsed.Inst(), otherMemory, otherMemoryOpt, defaultMetricOpt)
 			// Only observe the limit metric if a limit exists
 			if limit := collector.getInt(goMemoryLimit); limit != math.MaxInt64 {
-				o.ObserveInt64(memoryLimit.Inst(), limit)
+				o.ObserveInt64(memoryLimit.Inst(), limit, defaultMetricOpt)
 			}
-			o.ObserveInt64(memoryAllocated.Inst(), collector.getInt(goMemoryAllocated))
-			o.ObserveInt64(memoryAllocations.Inst(), collector.getInt(goMemoryAllocations))
-			o.ObserveInt64(memoryGCGoal.Inst(), collector.getInt(goMemoryGoal))
-			o.ObserveInt64(goroutineCount.Inst(), collector.getInt(goGoroutines))
-			o.ObserveInt64(processorLimit.Inst(), collector.getInt(goMaxProcs))
-			o.ObserveInt64(configGogc.Inst(), collector.getInt(goConfigGC))
+			o.ObserveInt64(memoryAllocated.Inst(), collector.getInt(goMemoryAllocated), defaultMetricOpt)
+			o.ObserveInt64(memoryAllocations.Inst(), collector.getInt(goMemoryAllocations), defaultMetricOpt)
+			o.ObserveInt64(memoryGCGoal.Inst(), collector.getInt(goMemoryGoal), defaultMetricOpt)
+			o.ObserveInt64(goroutineCount.Inst(), collector.getInt(goGoroutines), defaultMetricOpt)
+			o.ObserveInt64(processorLimit.Inst(), collector.getInt(goMaxProcs), defaultMetricOpt)
+			o.ObserveInt64(configGogc.Inst(), collector.getInt(goConfigGC), defaultMetricOpt)
 			return nil
 		},
 		memoryUsed.Inst(),
