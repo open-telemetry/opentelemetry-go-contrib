@@ -11,7 +11,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
-- Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/runtime` to a `const Version` string. (#8349)
 
 ### Removed
 
@@ -26,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - The `Version()` function in `go.opentelemetry.io/contrib/zpages` has been replaced by `const Version`. (#8325)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/runtime` has been replaced by `const Version` string. (#8349)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
