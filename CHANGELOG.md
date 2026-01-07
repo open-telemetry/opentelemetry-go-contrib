@@ -11,6 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
+- `WithMetricAttributesFn` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to define dynamic attributes on auto-instrumented metrics. (#8191)
+
+### Fixed
+
+- Fix panic when passing nil `TracerProvider` or `MeterProvider` to `WithTracerProvider` or `WithMeterProvider` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8323)
 
 ### Removed
 
@@ -21,6 +26,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The route is already added automatically for spans.
   For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8268)
+
+### Changed
+
+- The `Version()` function in `go.opentelemetry.io/contrib/zpages` has been replaced by `const Version`. (#8325)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
