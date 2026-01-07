@@ -1039,7 +1039,7 @@ The next release will require at least [Go 1.19].
 
 - Fix the Jaeger propagator rejecting trace IDs that are both shorter than 128 bits and not exactly 64 bits long (while not being 0).
   Also fix the propagator rejecting span IDs shorter than 64 bits.
-  This fixes compatibility with Jaeger clients encoding trace and span IDs as variable-length hex strings, [as required by the Jaeger propagation format](https://web.archive.org/web/20231204161445/https://www.jaegertracing.io/docs/1.37/client-libraries/#value). (#2731)
+  This fixes compatibility with Jaeger clients encoding trace and span IDs as variable-length hex strings, as required by the Jaeger propagation format. (#2731)
 
 ## [1.9.0/0.34.0/0.4.0] - 2022-08-02
 
