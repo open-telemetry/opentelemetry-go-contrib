@@ -118,7 +118,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(ctx) // According to RoundTripper spec, we shouldn't modify the origin request.
 
 	// GetBody is preferred over direct access to Body if the function is set.
-	// if resulting body is nil or is NoBody or err is not nil, we don't want to mutate the body as it
+	// if resulting body is nil or is NoBody or GetBody returns an error, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
 	var body io.ReadCloser
