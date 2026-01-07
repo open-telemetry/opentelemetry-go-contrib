@@ -122,14 +122,17 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
 	var body io.ReadCloser
-	var err error
 	if r.GetBody != nil {
-		body, err = r.GetBody()
+		b, err := r.GetBody()
+		if err == nil {
+			body = b
+		}
 	} else {
 		body = r.Body
 	}
+
 	bw := request.NewBodyWrapper(body, func(int64) {})
-	if err == nil && body != nil && body != http.NoBody {
+	if body != nil && body != http.NoBody {
 		r.Body = bw
 	}
 
