@@ -84,6 +84,8 @@ func defaultTransportFormatter(_ string, r *http.Request) string {
 // RoundTrip creates a Span and propagates its context via the provided request's headers
 // before handing the request to the configured base RoundTripper. The created span will
 // end when the response body is closed or when a read from the body returns io.EOF.
+// If GetBody returns an error, the error is reported via otel.Handle and the request
+// continues with the original Body.
 func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	requestStartTime := time.Now()
 	for _, f := range t.filters {
@@ -119,10 +121,10 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	r = r.Clone(ctx) // According to RoundTripper spec, we shouldn't modify the origin request.
 
 	// GetBody is preferred over direct access to Body if the function is set.
-	// if resulting body is nil or is NoBody or GetBody returns an error, we don't want to mutate the body as it
+	// If the resulting body is nil or is NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
-	var body io.ReadCloser
+	body := r.Body
 	if r.GetBody != nil {
 		b, err := r.GetBody()
 		if err != nil {
@@ -130,8 +132,6 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		} else {
 			body = b
 		}
-	} else {
-		body = r.Body
 	}
 
 	bw := request.NewBodyWrapper(body, func(int64) {})

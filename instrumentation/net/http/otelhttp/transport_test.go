@@ -1168,12 +1168,21 @@ func TestHandleErrorOnGetBodyError(t *testing.T) {
 		otel.SetErrorHandler(errHandler)
 	}()
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	var receivedBody string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+
+		receivedBody = string(b)
+
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer server.Close()
 
-	r, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL, http.NoBody)
+	body := "plain text body"
+
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL, strings.NewReader(body))
 	require.NoError(t, err)
 
 	getBodyErr := errors.New("GetBody error")
@@ -1190,5 +1199,6 @@ func TestHandleErrorOnGetBodyError(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, body, receivedBody, "should fallback to http.Request body on http.Request GetBody error")
 	assert.ErrorContains(t, testErrHandler.err, "http.Request GetBody returned an error: GetBody error")
 }
