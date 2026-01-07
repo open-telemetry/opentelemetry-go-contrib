@@ -5,6 +5,7 @@ package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptrace"
@@ -124,7 +125,9 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	var body io.ReadCloser
 	if r.GetBody != nil {
 		b, err := r.GetBody()
-		if err == nil {
+		if err != nil {
+			otel.Handle(fmt.Errorf("http.Request GetBody returned an error: %w", err))
+		} else {
 			body = b
 		}
 	} else {

@@ -20,6 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
@@ -1149,4 +1150,45 @@ func TestRequestBodyReuse(t *testing.T) {
 
 	require.Len(t, bodies, 2, "expected exactly 2 req bodies")
 	assert.Equal(t, bodies[0], bodies[1], "req bodies do not match")
+}
+
+type testErrHandler struct {
+	err error
+}
+
+func (h *testErrHandler) Handle(err error) { h.err = err }
+
+func TestHandleErrorOnGetBodyError(t *testing.T) {
+	errHandler := otel.GetErrorHandler()
+
+	testErrHandler := &testErrHandler{}
+
+	otel.SetErrorHandler(testErrHandler)
+	defer func() {
+		otel.SetErrorHandler(errHandler)
+	}()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL, http.NoBody)
+	require.NoError(t, err)
+
+	getBodyErr := errors.New("GetBody error")
+	r.GetBody = func() (io.ReadCloser, error) {
+		return nil, getBodyErr
+	}
+
+	transport := NewTransport(http.DefaultTransport)
+	client := http.Client{Transport: transport}
+
+	resp, err := client.Do(r)
+	require.NotNil(t, resp)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.ErrorContains(t, testErrHandler.err, "http.Request GetBody returned an error: GetBody error")
 }
