@@ -11,7 +11,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
+- `WithMetricAttributesFn` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to define dynamic attributes on auto-instrumented metrics. (#8191)
 - Add support for configuring propagators in `go.opentelemetry.io/contrib/otelconf`. (#8281)
+
+### Fixed
+
+- Fix panic when passing nil `TracerProvider` or `MeterProvider` to `WithTracerProvider` or `WithMeterProvider` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8323)
 
 ### Removed
 
@@ -1044,7 +1049,7 @@ The next release will require at least [Go 1.19].
 
 - Fix the Jaeger propagator rejecting trace IDs that are both shorter than 128 bits and not exactly 64 bits long (while not being 0).
   Also fix the propagator rejecting span IDs shorter than 64 bits.
-  This fixes compatibility with Jaeger clients encoding trace and span IDs as variable-length hex strings, [as required by the Jaeger propagation format](https://www.jaegertracing.io/docs/1.37/client-libraries/#value). (#2731)
+  This fixes compatibility with Jaeger clients encoding trace and span IDs as variable-length hex strings, as required by the Jaeger propagation format. (#2731)
 
 ## [1.9.0/0.34.0/0.4.0] - 2022-08-02
 
