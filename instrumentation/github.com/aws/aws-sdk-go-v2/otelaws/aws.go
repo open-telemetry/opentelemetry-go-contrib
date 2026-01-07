@@ -157,7 +157,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 
 	m := otelMiddlewares{
 		tracer: cfg.TracerProvider.Tracer(ScopeName,
-			trace.WithInstrumentationVersion(Version())),
+			trace.WithInstrumentationVersion(Version),
 		propagator:        cfg.TextMapPropagator,
 		attributeBuilders: cfg.AttributeBuilders,
 	}
