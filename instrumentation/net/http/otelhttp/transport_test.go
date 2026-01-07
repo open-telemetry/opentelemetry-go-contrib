@@ -1147,6 +1147,101 @@ func TestRequestBodyReuse(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	require.Len(t, bodies, 2, "expected exactly 2 req bodies")
-	assert.Equal(t, bodies[0], bodies[1], "req bodies do not match")
+	require.Len(t, bodies, 2, "should have recorded 2 request bodies")
+	assert.Equal(t, bodies[0], bodies[1], "request bodies should match")
+}
+
+func TestGetBodyError(t *testing.T) {
+	t.Run("request not made when GetBody returns error", func(t *testing.T) {
+		requestMade := false
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			requestMade = true
+			w.WriteHeader(http.StatusOK)
+		}))
+		defer server.Close()
+
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL, http.NoBody)
+		require.NoError(t, err)
+
+		getBodyErr := errors.New("GetBody error")
+		r.GetBody = func() (io.ReadCloser, error) {
+			return nil, getBodyErr
+		}
+
+		transport := NewTransport(http.DefaultTransport)
+		client := http.Client{Transport: transport}
+
+		resp, err := client.Do(r)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, getBodyErr)
+		assert.Nil(t, resp)
+		assert.False(t, requestMade, "request should not have been made to server")
+	})
+
+	t.Run("metrics collected when GetBody returns error", func(t *testing.T) {
+		ctx := t.Context()
+		reader := sdkmetric.NewManualReader()
+		provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+		defer func() {
+			err := provider.Shutdown(ctx)
+			assert.NoError(t, err)
+		}()
+
+		r, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://errors.com", http.NoBody)
+		require.NoError(t, err)
+
+		getBodyErr := errors.New("GetBody error")
+		r.GetBody = func() (io.ReadCloser, error) {
+			return nil, getBodyErr
+		}
+
+		transport := NewTransport(http.DefaultTransport, WithMeterProvider(provider))
+		client := http.Client{Transport: transport}
+
+		resp, err := client.Do(r)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, getBodyErr)
+		assert.Nil(t, resp)
+
+		var rm metricdata.ResourceMetrics
+		err = reader.Collect(ctx, &rm)
+		require.NoError(t, err)
+		assert.Len(t, rm.ScopeMetrics, 1)
+
+		var metricNames []string
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			metricNames = append(metricNames, m.Name)
+		}
+		assert.ElementsMatch(t, []string{"http.client.request.body.size", "http.client.request.duration"}, metricNames)
+	})
+
+	t.Run("span updated with error when GetBody returns error", func(t *testing.T) {
+		ctx := t.Context()
+		spanRecorder := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+		r, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://errors.com", http.NoBody)
+		require.NoError(t, err)
+
+		getBodyErr := errors.New("GetBody error")
+		r.GetBody = func() (io.ReadCloser, error) {
+			return nil, getBodyErr
+		}
+
+		transport := NewTransport(http.DefaultTransport, WithTracerProvider(provider))
+		client := http.Client{Transport: transport}
+
+		resp, err := client.Do(r)
+		require.Error(t, err)
+		assert.ErrorIs(t, err, getBodyErr)
+		assert.Nil(t, resp)
+
+		spans := spanRecorder.Ended()
+		require.Len(t, spans, 1, "should have exactly one span")
+
+		span := spans[0]
+		assert.False(t, span.EndTime().IsZero(), "span should be ended")
+		assert.Equal(t, codes.Error, span.Status().Code, "span should have error status code")
+		assert.Equal(t, getBodyErr.Error(), span.Status().Description, "span status should contain error message")
+	})
 }
