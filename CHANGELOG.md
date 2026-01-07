@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` has been replaced by `const Version`. (#8357)
+
 ### Added
 
 - Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
