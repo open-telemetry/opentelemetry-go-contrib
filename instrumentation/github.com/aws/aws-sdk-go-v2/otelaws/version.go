@@ -4,7 +4,4 @@
 package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 
 // Version is the current release version of the AWS SDKv2 instrumentation.
-func Version() string {
-	return "0.64.0"
-	// This string is updated by the pre_release.sh script during release
-}
+const Version = "0.64.0"
