@@ -31,6 +31,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `Version()` function in `go.opentelemetry.io/contrib/zpages` has been replaced by `const Version`. (#8325)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/host` has been replaced by `const Version`. (#8358)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` has been replaced by `const Version`. (#8357)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` has been replaced by `const Version`. (#8356)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` has been replaced by `const Version`. (#8360)
+- The `Version()` function in `go.opentelemetry.io/contrib/propagators/opencensus` has been replaced by `const Version`. (#8361)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -1049,7 +1053,7 @@ The next release will require at least [Go 1.19].
 
 - Fix the Jaeger propagator rejecting trace IDs that are both shorter than 128 bits and not exactly 64 bits long (while not being 0).
   Also fix the propagator rejecting span IDs shorter than 64 bits.
-  This fixes compatibility with Jaeger clients encoding trace and span IDs as variable-length hex strings, [as required by the Jaeger propagation format](https://www.jaegertracing.io/docs/1.37/client-libraries/#value). (#2731)
+  This fixes compatibility with Jaeger clients encoding trace and span IDs as variable-length hex strings, as required by the Jaeger propagation format. (#2731)
 
 ## [1.9.0/0.34.0/0.4.0] - 2022-08-02
 
