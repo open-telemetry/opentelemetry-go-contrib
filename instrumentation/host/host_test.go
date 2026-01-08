@@ -31,7 +31,7 @@ func TestHostMetrics(t *testing.T) {
 	want := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:    host.ScopeName,
-			Version: host.Version(),
+			Version: host.Version,
 		},
 		Metrics: []metricdata.Metrics{
 			{
