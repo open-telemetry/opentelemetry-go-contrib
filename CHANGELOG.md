@@ -10,7 +10,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
 - `WithMetricAttributesFn` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to define dynamic attributes on auto-instrumented metrics. (#8191)
 
 ### Fixed
@@ -29,6 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
 - The `Version()` function in `go.opentelemetry.io/contrib/zpages` has been replaced by `const Version`. (#8325)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/host` has been replaced by `const Version`. (#8358)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` has been replaced by `const Version`. (#8357)
