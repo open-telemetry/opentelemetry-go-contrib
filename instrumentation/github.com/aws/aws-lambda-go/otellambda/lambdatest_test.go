@@ -147,7 +147,7 @@ var (
 			attribute.Int("faas.max_memory", 128*miB)),
 		InstrumentationScope: instrumentation.Scope{
 			Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda",
-			Version: otellambda.Version(),
+			Version: otellambda.Version,
 		},
 	}
 )
@@ -342,7 +342,7 @@ var (
 			attribute.Int("faas.max_memory", 128*miB)),
 		InstrumentationScope: instrumentation.Scope{
 			Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda",
-			Version: otellambda.Version(),
+			Version: otellambda.Version,
 		},
 	}
 )
