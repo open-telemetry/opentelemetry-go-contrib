@@ -30,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - The `Version()` function in `go.opentelemetry.io/contrib/zpages` has been replaced by `const Version`. (#8325)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` has been replaced by `const Version`. (#8365)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
