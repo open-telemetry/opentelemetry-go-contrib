@@ -35,6 +35,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` has been replaced by `const Version`. (#8356)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` has been replaced by `const Version`. (#8360)
 - The `Version()` function in `go.opentelemetry.io/contrib/propagators/opencensus` has been replaced by `const Version`. (#8361)
+- The `Version()` function in `go.opentelemetry.io/contrib/samplers/probability/consistent` has been replaced by `const Version`. (#8366)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
