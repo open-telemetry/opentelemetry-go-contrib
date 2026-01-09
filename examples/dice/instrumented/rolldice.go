@@ -51,7 +51,7 @@ func init() {
 
 	lastRollsGauge, err = meter.Int64ObservableGauge(
 		"dice.last.rolls",
-		metric.WithDescription("The last rolls value observed"),
+		metric.WithDescription("The most recent rolled value"),
 	)
 	if err != nil {
 		panic(err)
