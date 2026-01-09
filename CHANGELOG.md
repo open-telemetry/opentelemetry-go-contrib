@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Fix panic when passing nil `TracerProvider` or `MeterProvider` to `WithTracerProvider` or `WithMeterProvider` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8323)
+- `Transport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` now supports reading request body multiple times for subsequent requests that reuse `http.Request`. (#8352)
 
 ### Removed
 
