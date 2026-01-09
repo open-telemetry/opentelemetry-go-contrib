@@ -37,7 +37,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		ScopeName,
-		oteltrace.WithInstrumentationVersion(Version()),
+		oteltrace.WithInstrumentationVersion(Version),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -54,7 +54,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 
 	meter := cfg.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 	)
 
 	semconvSrv := semconv.NewHTTPServer(meter)
