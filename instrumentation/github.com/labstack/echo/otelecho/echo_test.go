@@ -327,6 +327,7 @@ func TestWithEchoMetricAttributeFn(t *testing.T) {
 		WithMeterProvider(meterProvider),
 		WithEchoMetricAttributeFn(func(c echo.Context) []attribute.KeyValue {
 			return []attribute.KeyValue{
+				// avoid high cardinality metrics in production code
 				attribute.String("echo.param.id", c.Param("id")),
 				attribute.String("echo.path", c.Path()),
 			}
