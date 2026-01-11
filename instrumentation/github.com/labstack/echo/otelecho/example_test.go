@@ -112,7 +112,7 @@ func ExampleMiddleware_withMetrics() {
 		otelecho.WithMetricAttributeFn(func(r *http.Request) []attribute.KeyValue {
 			// Add custom attributes from HTTP request
 			return []attribute.KeyValue{
-				attribute.Bool("custom.has_request_body", r.ContentLength > 0),
+				attribute.Bool("custom.has_request_body", r.ContentLength != 0),
 				attribute.Bool("custom.has_content_type", r.Header.Get("Content-Type") != ""),
 			}
 		}),
@@ -120,7 +120,7 @@ func ExampleMiddleware_withMetrics() {
 			// Add custom attributes from Echo context
 			// If attributes are duplicated between this method and `WithMetricAttributeFn`, the attributes in this method will be used.
 			return []attribute.KeyValue{
-				attribute.Bool("custom.has_request_body", c.Request().ContentLength > 0),
+				attribute.Bool("custom.has_request_body", c.Request().ContentLength != 0),
 				attribute.Bool("custom.has_content_type", c.Request().Header.Get("Content-Type") != ""),
 			}
 		}),
