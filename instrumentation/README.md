@@ -66,13 +66,13 @@ Additionally the following guidelines for package composition need to be followe
 
 ### Recording Errors
 
-When an instrumented operation returns a non-nil `error` and the semantic conventions classify the outcome as an error:
+When an instrumented operation returns a non-nil `error` and the semantic conventions classify the outcome as an error, the instrumentation:
 
-1. The instrumentation MUST set the span status to `codes.Error` with a description of `err.Error()`.
+1. MUST set the span status to `codes.Error` with a description of `err.Error()`,
 
-2. The instrumentation SHOULD also set the `error.type` attribute, for example by using the `ErrorType` function from the `semconv` package.
+2. SHOULD also set the `error.type` attribute, for example by using the `ErrorType` function from the `semconv` package,
 
-3. Instrumentation SHOULD NOT use `span.RecordError(err)` for this purpose.
+3. SHOULD NOT use `span.RecordError(err)` for this purpose.
 
 For example:
 
