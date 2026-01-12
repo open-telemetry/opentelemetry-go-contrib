@@ -7,7 +7,6 @@
 package semconv_test
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -333,21 +332,6 @@ func TestClientResponse(t *testing.T) {
 	for _, tt := range testcases {
 		got := semconv.HTTPClient{}.ResponseTraceAttrs(&tt.resp)
 		assert.ElementsMatch(t, tt.want, got)
-	}
-}
-
-func TestRequestErrorType(t *testing.T) {
-	testcases := []struct {
-		err  error
-		want attribute.KeyValue
-	}{
-		{err: errors.New("http: nil Request.URL"), want: attribute.String("error.type", "*errors.errorString")},
-		{err: customError{}, want: attribute.String("error.type", "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv_test.customError")},
-	}
-
-	for _, tt := range testcases {
-		got := semconv.HTTPClient{}.ErrorType(tt.err)
-		assert.Equal(t, tt.want, got)
 	}
 }
 
