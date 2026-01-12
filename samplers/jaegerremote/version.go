@@ -3,6 +3,5 @@
 
 package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremote"
 
-
 // Version is the current release version of the Jaeger remote sampler.
 const Version = "0.33.0" 
