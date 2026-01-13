@@ -553,7 +553,7 @@ func TestMetrics(t *testing.T) {
 			require.Len(t, rm.ScopeMetrics, 1)
 			sm := rm.ScopeMetrics[0]
 			assert.Equal(t, otelgin.ScopeName, sm.Scope.Name)
-			assert.Equal(t, otelgin.Version(), sm.Scope.Version)
+			assert.Equal(t, otelgin.Version, sm.Scope.Version)
 
 			attrs := []attribute.KeyValue{
 				attribute.String("http.request.method", "GET"),
