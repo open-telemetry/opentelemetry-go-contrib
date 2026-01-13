@@ -31,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` has been replaced by `const Version`. (#8142)
 - The `Version()` function in `go.opentelemetry.io/contrib/zpages` has been replaced by `const Version`. (#8325)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/runtime` has been replaced by `const Version` string. (#8349)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/host` has been replaced by `const Version`. (#8358)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` has been replaced by `const Version`. (#8357)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` has been replaced by `const Version`. (#8356)
@@ -38,6 +39,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Version()` function in `go.opentelemetry.io/contrib/propagators/opencensus` has been replaced by `const Version`. (#8361)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` has been replaced by `const Version`. (#8365)
 - The `Version()` function in `go.opentelemetry.io/contrib/samplers/probability/consistent` has been replaced by `const Version`. (#8366)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace` has been replaced by `const Version`. (#8302)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` has been replaced by `const Version`. (#8370)
 
 <!-- Released section -->

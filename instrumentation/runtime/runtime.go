@@ -70,7 +70,7 @@ func Start(opts ...Option) error {
 	c := newConfig(opts...)
 	meter := c.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 	)
 	if x.DeprecatedRuntimeMetrics.Enabled() {
 		if err := deprecatedruntime.Start(meter, c.MinimumReadMemStatsInterval); err != nil {
