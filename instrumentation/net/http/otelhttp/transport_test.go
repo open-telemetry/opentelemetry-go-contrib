@@ -30,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -220,8 +221,8 @@ func (rc readCloser) Close() error {
 type span struct {
 	trace.Span
 
-	ended       bool
-	recordedErr error
+	ended      bool
+	attributes []attribute.KeyValue
 
 	statusCode codes.Code
 	statusDesc string
@@ -231,8 +232,8 @@ func (s *span) End(...trace.SpanEndOption) {
 	s.ended = true
 }
 
-func (s *span) RecordError(err error, _ ...trace.EventOption) {
-	s.recordedErr = err
+func (s *span) SetAttributes(kv ...attribute.KeyValue) {
+	s.attributes = append(s.attributes, kv...)
 }
 
 func (s *span) SetStatus(c codes.Code, d string) {
@@ -247,9 +248,9 @@ func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d strin
 	}
 
 	if err == nil {
-		assert.NoError(t, s.recordedErr, "recorded an error")
+		assert.Empty(t, s.attributes, "recorded an error")
 	} else {
-		assert.Equal(t, err, s.recordedErr)
+		assert.Contains(t, s.attributes, semconv.ErrorType(err), "error type attribute missing")
 	}
 
 	assert.Equal(t, c, s.statusCode, "status codes not equal")

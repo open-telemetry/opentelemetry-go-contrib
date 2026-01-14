@@ -63,3 +63,23 @@ Additionally the following guidelines for package composition need to be followe
 - All instrumentation packages MUST NOT provide an option to accept a `Tracer` or `Meter`.
 - All instrumentation packages MUST define a `ScopeName` constant with a value matching the instrumentation package and use it when creating a `Tracer` or `Meter`.
 - All instrumentation packages MUST define a `Version` function returning the version of the module containing the instrumentation and use it when creating a `Tracer` or `Meter`.
+
+### Recording Errors
+
+When an instrumented operation returns a non-nil `error` and the semantic conventions classify the outcome as an error, the instrumentation:
+
+1. MUST set the span status to `codes.Error` with a description of `err.Error()`,
+
+2. SHOULD also set the `error.type` attribute, for example by using the `ErrorType` function from the `semconv` package,
+
+3. SHOULD NOT use `span.RecordError(err)` for this purpose.
+
+For example:
+
+```go
+res, err := t.rt.RoundTrip(r)
+if err != nil {
+   span.SetAttributes(semconv.ErrorType(err))
+   span.SetStatus(codes.Error, err.Error())
+}
+```
