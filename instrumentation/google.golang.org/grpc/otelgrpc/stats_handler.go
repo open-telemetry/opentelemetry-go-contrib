@@ -52,12 +52,12 @@ func NewServerHandler(opts ...Option) stats.Handler {
 
 	h.tracer = c.TracerProvider.Tracer(
 		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
+		trace.WithInstrumentationVersion(Version),
 	)
 
 	meter := c.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 
@@ -181,12 +181,12 @@ func NewClientHandler(opts ...Option) stats.Handler {
 
 	h.tracer = c.TracerProvider.Tracer(
 		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
+		trace.WithInstrumentationVersion(Version),
 	)
 
 	meter := c.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 
