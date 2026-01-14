@@ -13,6 +13,7 @@ import (
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/propagation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -31,6 +32,7 @@ type SDK struct {
 	meterProvider  metric.MeterProvider
 	tracerProvider trace.TracerProvider
 	loggerProvider log.LoggerProvider
+	propagator     propagation.TextMapPropagator
 	shutdown       shutdownFunc
 }
 
@@ -49,6 +51,11 @@ func (s *SDK) LoggerProvider() log.LoggerProvider {
 	return s.loggerProvider
 }
 
+// Propagator returns a configured propagation.TextMapPropagator.
+func (s *SDK) Propagator() propagation.TextMapPropagator {
+	return s.propagator
+}
+
 // Shutdown calls shutdown on all configured providers.
 func (s *SDK) Shutdown(ctx context.Context) error {
 	return s.shutdown(ctx)
@@ -58,6 +65,7 @@ var noopSDK = SDK{
 	loggerProvider: nooplog.LoggerProvider{},
 	meterProvider:  noopmetric.MeterProvider{},
 	tracerProvider: nooptrace.TracerProvider{},
+	propagator:     propagation.NewCompositeTextMapPropagator(),
 	shutdown:       func(context.Context) error { return nil },
 }
 
@@ -105,6 +113,11 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, err
 	}
 
+	p, err := newPropagator(o.opentelemetryConfig.Propagator)
+	if err != nil {
+		return noopSDK, err
+	}
+
 	mp, mpShutdown, err := meterProvider(o, r)
 	if err != nil {
 		return noopSDK, err
@@ -124,6 +137,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		meterProvider:  mp,
 		tracerProvider: tp,
 		loggerProvider: lp,
+		propagator:     p,
 		shutdown: func(ctx context.Context) error {
 			return errors.Join(mpShutdown(ctx), tpShutdown(ctx), lpShutdown(ctx))
 		},

@@ -44,4 +44,6 @@ func Example() {
 	otel.SetTracerProvider(s.TracerProvider())
 	otel.SetMeterProvider(s.MeterProvider())
 	global.SetLoggerProvider(s.LoggerProvider())
+	// Set the global propagator.
+	otel.SetTextMapPropagator(s.Propagator())
 }
