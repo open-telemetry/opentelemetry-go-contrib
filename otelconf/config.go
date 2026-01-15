@@ -7,8 +7,13 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 import (
 	"context"
 	"errors"
+	"fmt"
+	stdlog "log"
 	"os"
+	"strings"
 
+	"github.com/go-logr/stdr"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
@@ -100,6 +105,10 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, nil
 	}
 
+	if err := setInternalLogger(o.opentelemetryConfig.LogLevel); err != nil {
+		return noopSDK, err
+	}
+
 	r, err := newResource(o.opentelemetryConfig.Resource)
 	if err != nil {
 		return noopSDK, err
@@ -183,6 +192,36 @@ func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) Configurat
 		c.tracerProviderOptions = append(c.tracerProviderOptions, opts...)
 		return c
 	})
+}
+
+// setInternalLogger configures the SDK's internal logger based on the log_level config.
+// Valid values are trace, debug, info, warn, error, fatal (with optional numeric suffix like debug2).
+//
+// Verbosity levels are based on the OTel SDK's internal logging:
+// https://github.com/open-telemetry/opentelemetry-go/blob/main/internal/global/internal_logging.go
+//   - Warn:  V(1)
+//   - Info:  V(4)
+//   - Debug: V(8)
+func setInternalLogger(logLevel *string) error {
+	if logLevel == nil {
+		return nil
+	}
+
+	level := strings.TrimRight(*logLevel, "0123456789")
+	switch level {
+	case "trace", "debug":
+		stdr.SetVerbosity(8)
+	case "info":
+		stdr.SetVerbosity(4)
+	case "warn":
+		stdr.SetVerbosity(1)
+	case "error", "fatal":
+		stdr.SetVerbosity(0)
+	default:
+		return fmt.Errorf("invalid log_level %q", *logLevel)
+	}
+	otel.SetLogger(stdr.New(stdlog.Default()))
+	return nil
 }
 
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
