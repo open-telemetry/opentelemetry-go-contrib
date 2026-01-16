@@ -10,21 +10,39 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// Labeler is used to allow instrumented HTTP handlers to add custom attributes to
-// the metrics recorded by the net/http instrumentation.
+// Deprecated: Labeler is deprecated and will be removed in a future release.
+// Use WithMetricAttributesFn instead to supply custom metric attributes.
+//
+// Migration example:
+//
+//	// Before:
+//	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+//		labeler, _ := otelhttp.LabelerFromContext(r.Context())
+//		labeler.Add(attribute.String("user.id", getUserID(r)))
+//	})
+//	handler = otelhttp.NewHandler(handler, "operation")
+//
+//	// After:
+//	handler := otelhttp.NewHandler(handler, "operation",
+//		otelhttp.WithMetricAttributesFn(func(r *http.Request) []attribute.KeyValue {
+//			return []attribute.KeyValue{
+//				attribute.String("user.id", getUserID(r)),
+//			}
+//		}),
+//	)
 type Labeler struct {
 	mu         sync.Mutex
 	attributes []attribute.KeyValue
 }
 
-// Add attributes to a Labeler.
+// Deprecated: Use WithMetricAttributesFn instead.
 func (l *Labeler) Add(ls ...attribute.KeyValue) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.attributes = append(l.attributes, ls...)
 }
 
-// Get returns a copy of the attributes added to the Labeler.
+// Deprecated: Use WithMetricAttributesFn instead.
 func (l *Labeler) Get() []attribute.KeyValue {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -37,18 +55,12 @@ type labelerContextKeyType int
 
 const labelerContextKey labelerContextKeyType = 0
 
-// ContextWithLabeler returns a new context with the provided Labeler instance.
-// Attributes added to the specified labeler will be injected into metrics
-// emitted by the instrumentation. Only one labeller can be injected into the
-// context. Injecting it multiple times will override the previous calls.
+// Deprecated: Use WithMetricAttributesFn instead.
 func ContextWithLabeler(parent context.Context, l *Labeler) context.Context {
 	return context.WithValue(parent, labelerContextKey, l)
 }
 
-// LabelerFromContext retrieves a Labeler instance from the provided context if
-// one is available.  If no Labeler was found in the provided context a new, empty
-// Labeler is returned and the second return value is false.  In this case it is
-// safe to use the Labeler but any attributes added to it will not be used.
+// Deprecated: Use WithMetricAttributesFn instead.
 func LabelerFromContext(ctx context.Context) (*Labeler, bool) {
 	l, ok := ctx.Value(labelerContextKey).(*Labeler)
 	if !ok {
