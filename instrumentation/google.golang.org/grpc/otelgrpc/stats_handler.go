@@ -52,12 +52,12 @@ func NewServerHandler(opts ...Option) stats.Handler {
 
 	h.tracer = c.TracerProvider.Tracer(
 		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
+		trace.WithInstrumentationVersion(Version),
 	)
 
 	meter := c.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 
@@ -137,6 +137,12 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		metricAttrs: append(attrs, h.MetricAttributes...),
 		record:      record,
 	}
+
+	if h.MetricAttributesFn != nil {
+		extraAttrs := h.MetricAttributesFn(ctx)
+		gctx.metricAttrs = append(gctx.metricAttrs, extraAttrs...)
+	}
+
 	gctx.metricAttrSet = attribute.NewSet(gctx.metricAttrs...)
 
 	return context.WithValue(ctx, gRPCContextKey{}, &gctx)
@@ -175,12 +181,12 @@ func NewClientHandler(opts ...Option) stats.Handler {
 
 	h.tracer = c.TracerProvider.Tracer(
 		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
+		trace.WithInstrumentationVersion(Version),
 	)
 
 	meter := c.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 
@@ -239,6 +245,12 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		metricAttrs: append(attrs, h.MetricAttributes...),
 		record:      record,
 	}
+
+	if h.MetricAttributesFn != nil {
+		extraAttrs := h.MetricAttributesFn(ctx)
+		gctx.metricAttrs = append(gctx.metricAttrs, extraAttrs...)
+	}
+
 	gctx.metricAttrSet = attribute.NewSet(gctx.metricAttrs...)
 
 	return inject(context.WithValue(ctx, gRPCContextKey{}, &gctx), h.Propagators)

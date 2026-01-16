@@ -20,6 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
@@ -29,6 +30,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -219,8 +221,8 @@ func (rc readCloser) Close() error {
 type span struct {
 	trace.Span
 
-	ended       bool
-	recordedErr error
+	ended      bool
+	attributes []attribute.KeyValue
 
 	statusCode codes.Code
 	statusDesc string
@@ -230,8 +232,8 @@ func (s *span) End(...trace.SpanEndOption) {
 	s.ended = true
 }
 
-func (s *span) RecordError(err error, _ ...trace.EventOption) {
-	s.recordedErr = err
+func (s *span) SetAttributes(kv ...attribute.KeyValue) {
+	s.attributes = append(s.attributes, kv...)
 }
 
 func (s *span) SetStatus(c codes.Code, d string) {
@@ -246,9 +248,9 @@ func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d strin
 	}
 
 	if err == nil {
-		assert.NoError(t, s.recordedErr, "recorded an error")
+		assert.Empty(t, s.attributes, "recorded an error")
 	} else {
-		assert.Equal(t, err, s.recordedErr)
+		assert.Contains(t, s.attributes, semconv.ErrorType(err), "error type attribute missing")
 	}
 
 	assert.Equal(t, c, s.statusCode, "status codes not equal")
@@ -1107,4 +1109,91 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestRequestBodyReuse(t *testing.T) {
+	var bodies []string
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+
+		defer r.Body.Close()
+		bodies = append(bodies, string(body))
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	transport := NewTransport(http.DefaultTransport)
+	client := http.Client{Transport: transport}
+
+	body := bytes.NewBuffer([]byte("hello"))
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL, body)
+	require.NoError(t, err)
+
+	for range 2 {
+		resp, err := client.Do(req)
+		assert.NoError(t, err, "failed to perform http req")
+
+		_, err = io.Copy(io.Discard, resp.Body)
+		require.NoError(t, err)
+
+		err = resp.Body.Close()
+		require.NoError(t, err)
+	}
+
+	require.Len(t, bodies, 2, "expected exactly 2 req bodies")
+	assert.Equal(t, bodies[0], bodies[1], "req bodies do not match")
+}
+
+type testErrHandler struct {
+	err error
+}
+
+func (h *testErrHandler) Handle(err error) { h.err = err }
+
+func TestHandleErrorOnGetBodyError(t *testing.T) {
+	errHandler := otel.GetErrorHandler()
+
+	testErrHandler := &testErrHandler{}
+
+	otel.SetErrorHandler(testErrHandler)
+	defer func() {
+		otel.SetErrorHandler(errHandler)
+	}()
+
+	var receivedBody string
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+
+		receivedBody = string(b)
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	body := "plain text body"
+
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL, strings.NewReader(body))
+	require.NoError(t, err)
+
+	getBodyErr := errors.New("GetBody error")
+	r.GetBody = func() (io.ReadCloser, error) {
+		return nil, getBodyErr
+	}
+
+	transport := NewTransport(http.DefaultTransport)
+	client := http.Client{Transport: transport}
+
+	resp, err := client.Do(r)
+	require.NotNil(t, resp)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, body, receivedBody, "should fallback to http.Request body on http.Request GetBody error")
+	assert.ErrorContains(t, testErrHandler.err, "http.Request GetBody returned an error: GetBody error")
 }

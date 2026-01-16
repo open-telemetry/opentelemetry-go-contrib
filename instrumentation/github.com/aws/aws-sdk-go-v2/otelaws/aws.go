@@ -72,7 +72,7 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		out, metadata, err = next.HandleInitialize(ctx, in)
 		span.SetAttributes(m.buildAttributes(ctx, in, out)...)
 		if err != nil {
-			span.RecordError(err)
+			span.SetAttributes(semconv.ErrorType(err))
 			span.SetStatus(codes.Error, err.Error())
 		}
 
@@ -157,7 +157,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 
 	m := otelMiddlewares{
 		tracer: cfg.TracerProvider.Tracer(ScopeName,
-			trace.WithInstrumentationVersion(Version())),
+			trace.WithInstrumentationVersion(Version)),
 		propagator:        cfg.TextMapPropagator,
 		attributeBuilders: cfg.AttributeBuilders,
 	}

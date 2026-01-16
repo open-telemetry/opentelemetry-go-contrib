@@ -106,7 +106,7 @@ func Start(opts ...Option) error {
 	h := &host{
 		meter: c.MeterProvider.Meter(
 			ScopeName,
-			metric.WithInstrumentationVersion(Version()),
+			metric.WithInstrumentationVersion(Version),
 		),
 		config: c,
 	}

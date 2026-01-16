@@ -165,6 +165,37 @@ func TestWithPublicEndpointFn(t *testing.T) {
 	}
 }
 
+func TestNilProviderOption(t *testing.T) {
+	// Passing a nil TracerProvider or MeterProvider should not panic and
+	// should use the global provider instead.
+	t.Run("nil TracerProvider", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			_ = NewClientHandler(WithTracerProvider(nil))
+		})
+		assert.NotPanics(t, func() {
+			_ = NewServerHandler(WithTracerProvider(nil))
+		})
+	})
+
+	t.Run("nil MeterProvider", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			_ = NewClientHandler(WithMeterProvider(nil))
+		})
+		assert.NotPanics(t, func() {
+			_ = NewServerHandler(WithMeterProvider(nil))
+		})
+	})
+
+	t.Run("both nil", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			_ = NewClientHandler(WithTracerProvider(nil), WithMeterProvider(nil))
+		})
+		assert.NotPanics(t, func() {
+			_ = NewServerHandler(WithTracerProvider(nil), WithMeterProvider(nil))
+		})
+	})
+}
+
 func TestNilInstruments(t *testing.T) {
 	mp := meterProvider{}
 	opts := []Option{WithMeterProvider(mp)}
