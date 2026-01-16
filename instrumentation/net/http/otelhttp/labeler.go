@@ -12,6 +12,7 @@ import (
 
 // Labeler is used to allow instrumented HTTP handlers to add custom attributes to
 // the metrics recorded by the net/http instrumentation.
+//
 // Deprecated: Labeler is deprecated and will be removed in a future release.
 // Use WithMetricAttributesFn instead to supply custom metric attributes.
 //
