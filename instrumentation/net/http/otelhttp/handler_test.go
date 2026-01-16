@@ -111,7 +111,7 @@ func TestHandlerBasics(t *testing.T) {
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 	h := NewHandler(
-		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
 			}
@@ -119,7 +119,7 @@ func TestHandlerBasics(t *testing.T) {
 		WithTracerProvider(provider),
 		WithMeterProvider(meterProvider),
 		WithPropagators(propagation.TraceContext{}),
-		WithMetricAttributesFn(func(r *http.Request) []attribute.KeyValue {
+		WithMetricAttributesFn(func(_ *http.Request) []attribute.KeyValue {
 			return []attribute.KeyValue{
 				attribute.String("test", "attribute"),
 			}
