@@ -7,6 +7,7 @@ package provider // import "go.opentelemetry.io/contrib/otelconf/internal/provid
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -36,6 +37,8 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 		return nil, fmt.Errorf("could not substitute environment variables: %w", walkErr)
 	}
 
+	_ = preserveYAMLLines(&tree, 0)
+
 	// the result is the again serialized tree, removed a trailing newline
 	result, resultErr := yaml.Marshal(&tree)
 	result = bytes.TrimSuffix(result, []byte("\n"))
@@ -51,7 +54,6 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 func walkTree(node *yaml.Node) error {
 	if len(node.Content) == 0 &&
 		node.Kind == yaml.ScalarNode {
-
 		return handleValueNode(node)
 	}
 
@@ -88,7 +90,6 @@ func handleValueNode(node *yaml.Node) error {
 	if node.Style != yaml.DoubleQuotedStyle &&
 		node.Style != yaml.SingleQuotedStyle &&
 		node.Style != yaml.FoldedStyle {
-
 		return retypeNode(node)
 	}
 
@@ -115,7 +116,7 @@ func retypeNode(node *yaml.Node) error {
 	}
 
 	if len(tmpNode.Content) != 1 || len(tmpNode.Content[0].Content) != 2 {
-		return fmt.Errorf("could not retype node: %w", fmt.Errorf("unexpected node structure"))
+		return fmt.Errorf("could not retype node: %w", errors.New("unexpected node structure"))
 	}
 
 	if tmpNode.Content[0].Content[1].Value != node.Value {
@@ -127,6 +128,46 @@ func retypeNode(node *yaml.Node) error {
 	}
 
 	return nil
+}
+
+func countLines(s string) int {
+	if s == "" {
+		return 0
+	}
+
+	return strings.Count(s, "\n") + 1
+}
+
+// preserveYAMLLines extends or inserts comments so that originally present newlines are replaced with comments.
+// This slight modification preserves the line numbers of the original file as good as possible for common variable
+// extension. However, when variables are extended to multiple lines, line numbers will shift upwards.
+func preserveYAMLLines(node *yaml.Node, lastLine int) int {
+	// Update Head comments to include possible newlines
+	if node.Kind == yaml.ScalarNode {
+		startLine := node.Line - countLines(node.HeadComment)
+
+		node.HeadComment = fmt.Sprintf("%s%s",
+			strings.Repeat("NL\n", max(0, startLine-lastLine-1)),
+			node.HeadComment)
+	}
+
+	// Determine the new last line
+	switch node.Kind {
+	case yaml.DocumentNode:
+		lastLine = countLines(node.HeadComment)
+
+	case yaml.ScalarNode:
+		lastLine = node.Line + max(0, countLines(node.Value)-1)
+	default:
+		lastLine = node.Line
+	}
+
+	// iterating over child nodes to find the last line of the (possible) compound element
+	for _, child := range node.Content {
+		lastLine = preserveYAMLLines(child, lastLine)
+	}
+
+	return lastLine + countLines(node.FootComment)
 }
 
 func ReplaceValueEnvVars(input []byte) ([]byte, error) {
