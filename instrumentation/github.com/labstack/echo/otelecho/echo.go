@@ -4,13 +4,14 @@
 package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 
 import (
+	"errors"
 	"net/http"
 	"slices"
 	"strings"
 	"time"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
@@ -60,7 +61,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 	semconvSrv := semconv.NewHTTPServer(meter)
 
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
-		return func(c echo.Context) error {
+		return func(c *echo.Context) error {
 			requestStartTime := time.Now()
 			if cfg.Skipper(c) {
 				return next(c)
@@ -99,11 +100,42 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 				cfg.OnError(c, err)
 			}
 
-			status := c.Response().Status
+			// Get the response to access Status and Size after the handler chain completes
+			resp, _ := echo.UnwrapResponse(c.Response())
+
+			// Determine status code
+			// In Echo v5, when there's an error, the HTTPErrorHandler hasn't written the response yet,
+			// so we need to determine the status from the error itself
+			var status int
+			var responseSize int64
+
+			if err != nil {
+				// Determine status from error
+				// First try errors.As for wrapped HTTPError
+				var he *echo.HTTPError
+				if errors.As(err, &he) {
+					status = he.Code
+				} else {
+					// Fallback to Internal Server Error
+					status = http.StatusInternalServerError
+				}
+			} else if resp != nil {
+				// No error, use the response status
+				status = resp.Status
+				responseSize = resp.Size
+			} else {
+				status = http.StatusOK
+			}
+
+			// Get response size if not already set
+			if responseSize == 0 && resp != nil {
+				responseSize = resp.Size
+			}
+
 			span.SetStatus(semconvSrv.Status(status))
 			span.SetAttributes(semconvSrv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 				StatusCode: status,
-				WriteBytes: c.Response().Size,
+				WriteBytes: responseSize,
 			})...)
 
 			// Record the server-side attributes.
@@ -120,7 +152,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 
 			semconvSrv.RecordMetrics(ctx, semconv.ServerMetricData{
 				ServerName:   serverName,
-				ResponseSize: c.Response().Size,
+				ResponseSize: responseSize,
 				MetricAttributes: semconv.MetricAttributes{
 					Req:                  request,
 					StatusCode:           status,
@@ -137,7 +169,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 	}
 }
 
-func spanNameFormatter(c echo.Context) string {
+func spanNameFormatter(c *echo.Context) string {
 	method, path := strings.ToUpper(c.Request().Method), c.Path()
 	if !slices.Contains([]string{
 		http.MethodGet, http.MethodHead,
