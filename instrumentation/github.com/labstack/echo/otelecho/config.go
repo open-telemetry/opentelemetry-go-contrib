@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+package otelecho // Package otelecho import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 
 import (
 	"net/http"
