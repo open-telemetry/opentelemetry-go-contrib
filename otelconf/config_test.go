@@ -447,7 +447,7 @@ func TestNewSDK(t *testing.T) {
 					LogLevel: ptr("invalid_level"),
 				}),
 			},
-			wantErr:            fmt.Errorf("invalid log_level %q", "invalid_level"),
+			wantErr:            newErrInvalid("log_level"),
 			wantTracerProvider: tracenoop.NewTracerProvider(),
 			wantMeterProvider:  metricnoop.NewMeterProvider(),
 			wantLoggerProvider: lognoop.NewLoggerProvider(),

@@ -7,7 +7,6 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 import (
 	"context"
 	"errors"
-	"fmt"
 	stdlog "log"
 	"os"
 	"strings"
@@ -218,7 +217,7 @@ func setInternalLogger(logLevel *string) error {
 	case "error", "fatal":
 		stdr.SetVerbosity(0)
 	default:
-		return fmt.Errorf("invalid log_level %q", *logLevel)
+		return newErrInvalid("log_level")
 	}
 	otel.SetLogger(stdr.New(stdlog.Default()))
 	return nil
