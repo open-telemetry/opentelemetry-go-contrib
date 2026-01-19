@@ -910,17 +910,27 @@ func TestCustomAttributesHandling(t *testing.T) {
 		clientRequestSize = "http.client.request.size"
 		clientDuration    = "http.client.duration"
 	)
+
 	ctx := t.Context()
 	reader := sdkmetric.NewManualReader()
 	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	defer func() {
-		err := provider.Shutdown(ctx)
-		if err != nil {
-			t.Errorf("Error shutting down provider: %v", err)
-		}
+		assert.NoError(t, provider.Shutdown(ctx))
 	}()
 
-	transport := NewTransport(http.DefaultTransport, WithMeterProvider(provider))
+	expectedAttributes := []attribute.KeyValue{
+		attribute.String("foo", "fooValue"),
+		attribute.String("bar", "barValue"),
+	}
+
+	transport := NewTransport(
+		http.DefaultTransport,
+		WithMeterProvider(provider),
+		WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue {
+			return expectedAttributes
+		}),
+	)
+
 	client := http.Client{Transport: transport}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -928,42 +938,26 @@ func TestCustomAttributesHandling(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	expectedAttributes := []attribute.KeyValue{
-		attribute.String("foo", "fooValue"),
-		attribute.String("bar", "barValue"),
-	}
-
 	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
-	labeler := &Labeler{}
-	labeler.Add(expectedAttributes...)
-	ctx = ContextWithLabeler(ctx, labeler)
-	r = r.WithContext(ctx)
 
-	// test bonus: intententionally ignoring response to confirm that
-	// http.client.response.size metric is not recorded
-	// by the Transport.RoundTrip logic
 	resp, err := client.Do(r)
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, resp.Body.Close()) }()
 
 	err = reader.Collect(ctx, &rm)
-	assert.NoError(t, err)
+	require.NoError(t, err)
 
-	// http.client.response.size is not recorded so the assert.Len
-	// above should be 2 instead of 3(test bonus)
+	assert.Len(t, rm.ScopeMetrics, 1)
 	assert.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+
 	for _, m := range rm.ScopeMetrics[0].Metrics {
 		switch m.Name {
 		case clientRequestSize:
-			d, ok := m.Data.(metricdata.Sum[int64])
-			assert.True(t, ok)
-			assert.Len(t, d.DataPoints, 1)
+			d := m.Data.(metricdata.Sum[int64])
 			containsAttributes(t, d.DataPoints[0].Attributes, expectedAttributes)
 		case clientDuration:
-			d, ok := m.Data.(metricdata.Histogram[float64])
-			assert.True(t, ok)
-			assert.Len(t, d.DataPoints, 1)
+			d := m.Data.(metricdata.Histogram[float64])
 			containsAttributes(t, d.DataPoints[0].Attributes, expectedAttributes)
 		}
 	}

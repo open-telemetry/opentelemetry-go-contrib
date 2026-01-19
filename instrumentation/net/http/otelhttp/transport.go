@@ -114,11 +114,6 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		ctx = httptrace.WithClientTrace(ctx, t.clientTrace(ctx))
 	}
 
-	labeler, found := LabelerFromContext(ctx)
-	if !found {
-		ctx = ContextWithLabeler(ctx, labeler)
-	}
-
 	r = r.Clone(ctx) // According to RoundTripper spec, we shouldn't modify the origin request.
 
 	// GetBody is preferred over direct access to Body if the function is set.
@@ -149,7 +144,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	defer func() {
 		metricAttributes := semconv.MetricAttributes{
 			Req:                  r,
-			AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
+			AdditionalAttributes: t.metricAttributesFromRequest(r),
 		}
 
 		if err == nil {

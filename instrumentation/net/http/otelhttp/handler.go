@@ -169,11 +169,6 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		},
 	})
 
-	labeler, found := LabelerFromContext(ctx)
-	if !found {
-		ctx = ContextWithLabeler(ctx, labeler)
-	}
-
 	r = r.WithContext(ctx)
 	next.ServeHTTP(w, r)
 
@@ -198,7 +193,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	metricAttributes := semconv.MetricAttributes{
 		Req:                  r,
 		StatusCode:           statusCode,
-		AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(r)...),
+		AdditionalAttributes: h.metricAttributesFromRequest(r),
 	}
 
 	h.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
