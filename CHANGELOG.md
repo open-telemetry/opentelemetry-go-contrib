@@ -28,6 +28,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The route is already added automatically for spans.
   For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8268)
+- In `instrumentation/net/http/otelhttp`, the attributes `ReadBytesKey`, `ReadErrorKey`, `WroteBytesKey` and 
+  `WriteErrorKey` 
+  are deprecated and will be removed in a future release. Use `semconv.HTTPRequestBodySizeKey`, `semconv.
+  ErrorMessageKey`, `semconv.HTTPResponseBodySizeKey` and `semconv.ErrorMessageKey` respectively.
 
 ### Changed
 
