@@ -9,7 +9,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
@@ -35,7 +35,7 @@ func main() {
 	r := echo.New()
 	r.Use(otelecho.Middleware("my-server"))
 
-	r.GET("/users/:id", func(c echo.Context) error {
+	r.GET("/users/:id", func(c *echo.Context) error {
 		id := c.Param("id")
 		name := getUser(c.Request().Context(), id)
 		return c.JSON(http.StatusOK, struct {
