@@ -465,6 +465,19 @@ func TestNewSDK(t *testing.T) {
 			wantLoggerProvider: lognoop.NewLoggerProvider(),
 			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
+		{
+			name: "invalid log_level",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: ptr("invalid_level"),
+				}),
+			},
+			wantErr:            fmt.Errorf("invalid log_level %q", "invalid_level"),
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+		},
 	}
 	for _, tt := range tests {
 		sdk, err := NewSDK(tt.cfg...)
@@ -474,6 +487,36 @@ func TestNewSDK(t *testing.T) {
 		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
 		assert.IsType(t, tt.wantPropagator, sdk.Propagator())
 		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
+	}
+}
+
+func TestSetInternalLogger(t *testing.T) {
+	tests := []struct {
+		name     string
+		logLevel *string
+		wantErr  bool
+	}{
+		{"nil", nil, false},
+		{"info", ptr("info"), false},
+		{"debug", ptr("debug"), false},
+		{"debug2", ptr("debug2"), false},
+		{"warn", ptr("warn"), false},
+		{"error", ptr("error"), false},
+		{"trace", ptr("trace"), false},
+		{"trace4", ptr("trace4"), false},
+		{"fatal", ptr("fatal"), false},
+		{"invalid", ptr("invalid"), true},
+		{"empty", ptr(""), true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := setInternalLogger(tt.logLevel)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
 	}
 }
 

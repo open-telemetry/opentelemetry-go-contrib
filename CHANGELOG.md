@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add support for `log_level` configuration to set the SDK's internal logger verbosity in `go.opentelemetry.io/contrib/otelconf`. (#8210)
 - `WithMetricAttributesFn` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to define dynamic attributes on auto-instrumented metrics. (#8191)
 - Add support for configuring propagators in `go.opentelemetry.io/contrib/otelconf`. (#8281)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8401)
