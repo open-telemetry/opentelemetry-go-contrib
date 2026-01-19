@@ -43,13 +43,11 @@ func ExampleNewHandler() {
 		return pp[1], err
 	}
 
-	// Context key for storing error status
-	type errorKey struct{}
-
 	var mux http.ServeMux
 	mux.Handle("/hello/", http.HandlerFunc(
 		func(w http.ResponseWriter, r *http.Request) {
 			ctx := r.Context()
+			labeler, _ := otelhttp.LabelerFromContext(ctx)
 
 			var name string
 			// Wrap another function in its own span
@@ -63,8 +61,7 @@ func ExampleNewHandler() {
 			}(ctx); err != nil {
 				log.Println("error figuring out name: ", err)
 				http.Error(w, err.Error(), http.StatusInternalServerError)
-				// Store error in context for metric attributes
-				*r = *r.WithContext(context.WithValue(r.Context(), errorKey{}, true))
+				labeler.Add(attribute.Bool("error", true))
 				return
 			}
 
@@ -72,14 +69,14 @@ func ExampleNewHandler() {
 			if err != nil {
 				log.Println("error reading body: ", err)
 				w.WriteHeader(http.StatusBadRequest)
-				*r = *r.WithContext(context.WithValue(r.Context(), errorKey{}, true))
+				labeler.Add(attribute.Bool("error", true))
 				return
 			}
 
 			n, err := io.WriteString(w, "Hello, "+name+"!\nYou sent me this:\n"+string(d))
 			if err != nil {
 				log.Printf("error writing reply after %d bytes: %s", n, err)
-				*r = *r.WithContext(context.WithValue(r.Context(), errorKey{}, true))
+				labeler.Add(attribute.Bool("error", true))
 			}
 		}),
 	)
@@ -87,15 +84,6 @@ func ExampleNewHandler() {
 	if err := http.ListenAndServe(":7777",
 		otelhttp.NewHandler(&mux, "server",
 			otelhttp.WithMessageEvents(otelhttp.ReadEvents, otelhttp.WriteEvents),
-			otelhttp.WithMetricAttributesFn(func(r *http.Request) []attribute.KeyValue {
-				// Add error attribute if present in context
-				if hasError, ok := r.Context().Value(errorKey{}).(bool); ok && hasError {
-					return []attribute.KeyValue{
-						attribute.Bool("error", true),
-					}
-				}
-				return nil
-			}),
 		),
 	); err != nil {
 		log.Fatal(err)
