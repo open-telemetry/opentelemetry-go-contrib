@@ -11,7 +11,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
@@ -31,7 +31,7 @@ func TestChildSpanFromGlobalTracer(t *testing.T) {
 
 	router := echo.New()
 	router.Use(otelecho.Middleware("foobar"))
-	router.GET("/user/:id", func(c echo.Context) error {
+	router.GET("/user/:id", func(c *echo.Context) error {
 		return c.NoContent(http.StatusOK)
 	})
 
@@ -49,7 +49,7 @@ func TestChildSpanFromCustomTracer(t *testing.T) {
 
 	router := echo.New()
 	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
-	router.GET("/user/:id", func(c echo.Context) error {
+	router.GET("/user/:id", func(c *echo.Context) error {
 		return c.NoContent(http.StatusOK)
 	})
 
@@ -67,7 +67,7 @@ func TestTrace200(t *testing.T) {
 
 	router := echo.New()
 	router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
-	router.GET("/user/:id", func(c echo.Context) error {
+	router.GET("/user/:id", func(c *echo.Context) error {
 		id := c.Param("id")
 		return c.String(http.StatusOK, id)
 	})
@@ -103,7 +103,7 @@ func TestError(t *testing.T) {
 	wantErr := errors.New("oh no")
 	// configure a handler that returns an error and 5xx status
 	// code
-	router.GET("/server_err", func(echo.Context) error {
+	router.GET("/server_err", func(*echo.Context) error {
 		return wantErr
 	})
 	r := httptest.NewRequest(http.MethodGet, "/server_err", http.NoBody)
@@ -131,14 +131,14 @@ func TestStatusError(t *testing.T) {
 		echoError  string
 		statusCode int
 		spanCode   codes.Code
-		handler    func(c echo.Context) error
+		handler    func(c *echo.Context) error
 	}{
 		{
 			name:       "StandardError",
 			echoError:  "oh no",
 			statusCode: http.StatusInternalServerError,
 			spanCode:   codes.Error,
-			handler: func(echo.Context) error {
+			handler: func(*echo.Context) error {
 				return errors.New("oh no")
 			},
 		},
@@ -147,7 +147,7 @@ func TestStatusError(t *testing.T) {
 			echoError:  "code=500, message=my error message",
 			statusCode: http.StatusInternalServerError,
 			spanCode:   codes.Error,
-			handler: func(echo.Context) error {
+			handler: func(*echo.Context) error {
 				return echo.NewHTTPError(http.StatusInternalServerError, "my error message")
 			},
 		},
@@ -156,7 +156,7 @@ func TestStatusError(t *testing.T) {
 			echoError:  "code=400, message=my error message",
 			statusCode: http.StatusBadRequest,
 			spanCode:   codes.Unset,
-			handler: func(echo.Context) error {
+			handler: func(*echo.Context) error {
 				return echo.NewHTTPError(http.StatusBadRequest, "my error message")
 			},
 		},
@@ -193,7 +193,7 @@ func TestErrorNotSwallowedByMiddleware(t *testing.T) {
 	r := httptest.NewRequest(http.MethodGet, "/err", http.NoBody)
 	w := httptest.NewRecorder()
 	c := e.NewContext(r, w)
-	h := otelecho.Middleware("foobar")(echo.HandlerFunc(func(echo.Context) error {
+	h := otelecho.Middleware("foobar")(echo.HandlerFunc(func(*echo.Context) error {
 		return assert.AnError
 	}))
 
@@ -242,7 +242,7 @@ func TestSpanNameFormatter(t *testing.T) {
 
 			router := echo.New()
 			router.Use(otelecho.Middleware("foobar", otelecho.WithTracerProvider(provider)))
-			router.Add(test.method, test.path, func(c echo.Context) error {
+			router.Add(test.method, test.path, func(c *echo.Context) error {
 				return c.NoContent(http.StatusOK)
 			})
 

@@ -8,7 +8,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v5"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
@@ -36,14 +36,14 @@ func ExampleMiddleware() {
 
 	// Use the otelecho middleware with options
 	e.Use(otelecho.Middleware("server",
-		otelecho.WithSkipper(func(c echo.Context) bool {
+		otelecho.WithSkipper(func(c *echo.Context) bool {
 			// Skip tracing for health check endpoints
 			return c.Path() == "/health"
 		}),
 	))
 
 	// Define a route with a handler that demonstrates tracing
-	e.POST("/hello/:name", func(c echo.Context) error {
+	e.POST("/hello/:name", func(c *echo.Context) error {
 		ctx := c.Request().Context()
 
 		// Get the current span from context
@@ -85,7 +85,7 @@ func ExampleMiddleware() {
 	})
 
 	// Add a health check endpoint that will be skipped by the tracer
-	e.GET("/health", func(c echo.Context) error {
+	e.GET("/health", func(c *echo.Context) error {
 		return c.String(http.StatusOK, "OK")
 	})
 
@@ -115,7 +115,7 @@ func ExampleMiddleware_withMetrics() {
 				attribute.Bool("custom.has_content_type", r.Header.Get("Content-Type") != ""),
 			}
 		}),
-		otelecho.WithEchoMetricAttributeFn(func(c echo.Context) []attribute.KeyValue {
+		otelecho.WithEchoMetricAttributeFn(func(c *echo.Context) []attribute.KeyValue {
 			// Add custom attributes from Echo context
 			// If attributes are duplicated between this method and `WithMetricAttributeFn`, the attributes in this method will be used.
 			return []attribute.KeyValue{
@@ -126,7 +126,7 @@ func ExampleMiddleware_withMetrics() {
 	))
 
 	// Define routes
-	e.GET("/api/users/:id", func(c echo.Context) error {
+	e.GET("/api/users/:id", func(c *echo.Context) error {
 		userID := c.Param("id")
 		return c.JSON(http.StatusOK, map[string]any{
 			"id":   userID,
@@ -134,7 +134,7 @@ func ExampleMiddleware_withMetrics() {
 		})
 	})
 
-	e.POST("/api/users", func(c echo.Context) error {
+	e.POST("/api/users", func(c *echo.Context) error {
 		var user struct {
 			Name  string `json:"name"`
 			Email string `json:"email"`

@@ -6,8 +6,8 @@ package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.c
 import (
 	"net/http"
 
-	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
+	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
@@ -31,14 +31,16 @@ type MetricAttributeFn func(*http.Request) []attribute.KeyValue
 
 // EchoMetricAttributeFn is used to extract additional attributes from the echo.Context
 // and return them as a slice of attribute.KeyValue.
-type EchoMetricAttributeFn func(echo.Context) []attribute.KeyValue
+type EchoMetricAttributeFn func(*echo.Context) []attribute.KeyValue
 
 // OnErrorFn is used to specify how errors are handled in the middleware.
-type OnErrorFn func(echo.Context, error)
+type OnErrorFn func(*echo.Context, error)
 
 // defaultOnError is the default function called when an error occurs during request processing.
-// Note: it makes the global error handler run twice.
-var defaultOnError = func(c echo.Context, err error) { c.Error(err) }
+// In Echo v5, errors are handled by the framework's HTTPErrorHandler automatically.
+var defaultOnError = func(_ *echo.Context, _ error) {
+	// In Echo v5, errors are propagated and handled by HTTPErrorHandler
+}
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -111,10 +113,8 @@ func WithEchoMetricAttributeFn(f EchoMetricAttributeFn) Option {
 
 // WithOnError specifies a function that is called when an error occurs during request processing.
 //
-// WARNING: If the passed function doesn't call `c.Error` and the global HTTPErrorHandler modifies the response,
-// the tracing span can contain invalid data.
-// If it calls `c.Error`, `HTTPErrorHandler` will be executed twice, but the span will have the actual response data.
-// To fix this, check the response commitment status with `c.Response().Committed` before modifying the response.
+// In Echo v5, errors are automatically handled by the HTTPErrorHandler after the middleware returns.
+// This callback allows you to perform additional actions when an error occurs.
 func WithOnError(f OnErrorFn) Option {
 	return optionFunc(func(cfg *config) {
 		if f != nil {
