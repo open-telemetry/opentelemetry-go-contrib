@@ -31,7 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - In `instrumentation/net/http/otelhttp`, the attributes `ReadBytesKey`, `ReadErrorKey`, `WroteBytesKey` and 
   `WriteErrorKey` 
   are deprecated and will be removed in a future release. Use `semconv.HTTPRequestBodySizeKey`, `semconv.
-  ErrorMessageKey`, `semconv.HTTPResponseBodySizeKey` and `semconv.ErrorMessageKey` respectively.
+  ErrorMessageKey`, `semconv.HTTPResponseBodySizeKey` and `semconv.ErrorMessageKey` respectively. (#8435)
 
 ### Changed
 
