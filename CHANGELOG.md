@@ -27,9 +27,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The route is already added automatically for spans.
   For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8268)
-- `instrumentation/net/http/otelhttp` The `Labeler` type and its associated functions
-  (`LabelerFromContext`, `ContextWithLabeler`, `Add`, `Get`) are deprecated and will be
-  removed in a future release. Use the `WithMetricAttributesFn` option. (#8409)
 
 ### Changed
 
@@ -50,6 +47,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#8386)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` hae been replaced by `const Version`. (#8340)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` has been replaced by `const Version`. (#8317)
+
+### Deprecated
+
+- The `Labeler` type and its associated functions (`LabelerFromContext`, `ContextWithLabeler`, `Add`, `Get`) are deprecated and will be removed in a future release in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Use the `WithMetricAttributesFn` option instead. (#8409)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

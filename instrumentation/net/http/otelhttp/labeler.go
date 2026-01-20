@@ -14,7 +14,7 @@ import (
 // the metrics recorded by the net/http instrumentation.
 //
 // Deprecated: Labeler is deprecated and will be removed in a future release.
-// Use WithMetricAttributesFn instead to supply custom metric attributes.
+// Use [WithMetricAttributesFn] instead to supply custom metric attributes.
 //
 // Migration example:
 //
@@ -40,7 +40,7 @@ type Labeler struct {
 
 // Add attributes to a Labeler.
 //
-// Deprecated: Use WithMetricAttributesFn instead.
+// Deprecated: Use [WithMetricAttributesFn] instead.
 func (l *Labeler) Add(ls ...attribute.KeyValue) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -49,7 +49,7 @@ func (l *Labeler) Add(ls ...attribute.KeyValue) {
 
 // Get returns a copy of the attributes added to the Labeler.
 //
-// Deprecated: Use WithMetricAttributesFn instead.
+// Deprecated: Use [WithMetricAttributesFn] instead.
 func (l *Labeler) Get() []attribute.KeyValue {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -67,7 +67,7 @@ const labelerContextKey labelerContextKeyType = 0
 // emitted by the instrumentation. Only one labeller can be injected into the
 // context. Injecting it multiple times will override the previous calls.
 //
-// Deprecated: Use WithMetricAttributesFn instead.
+// Deprecated: Use [WithMetricAttributesFn] instead.
 func ContextWithLabeler(parent context.Context, l *Labeler) context.Context {
 	return context.WithValue(parent, labelerContextKey, l)
 }
@@ -77,7 +77,7 @@ func ContextWithLabeler(parent context.Context, l *Labeler) context.Context {
 // Labeler is returned and the second return value is false.  In this case it is
 // safe to use the Labeler but any attributes added to it will not be used.
 //
-// Deprecated: Use WithMetricAttributesFn instead.
+// Deprecated: Use [WithMetricAttributesFn] instead.
 func LabelerFromContext(ctx context.Context) (*Labeler, bool) {
 	l, ok := ctx.Value(labelerContextKey).(*Labeler)
 	if !ok {
