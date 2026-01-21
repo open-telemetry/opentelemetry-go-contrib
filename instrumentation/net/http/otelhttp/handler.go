@@ -151,7 +151,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		writeRecordFunc = func(n int64) {
 			span.AddEvent("write", trace.WithAttributes(
 				WroteBytesKey.Int64(n),
-				semconv.HTTPResponseSize(int(n)),
+				semconv.HTTPResponseBodySize(int(n)),
 			),
 			)
 		}
