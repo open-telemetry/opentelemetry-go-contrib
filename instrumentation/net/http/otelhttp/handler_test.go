@@ -24,6 +24,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"go.opentelemetry.io/otel/semconv/v1.38.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -718,4 +719,59 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestSpanEmitsLegacyAndSemconvReadWriteAttributes(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sr),
+	)
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			b, err := io.ReadAll(r.Body)
+			require.NoError(t, err)
+
+			_, err = w.Write(b)
+			require.NoError(t, err)
+		}),
+		"test_handler",
+		WithTracerProvider(tp),
+		WithMessageEvents(ReadEvents, WriteEvents),
+	)
+
+	const payload = "Hello World"
+	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(payload))
+	rec := httptest.NewRecorder()
+
+	h.ServeHTTP(rec, req)
+
+	require.Len(t, sr.Ended(), 1)
+	span := sr.Ended()[0]
+
+	var readAttrs, writeAttrs []attribute.KeyValue
+
+	// Multiple "read" events are expected because request bodies are read as a stream.
+	// io.ReadAll may perform more than one read call before reaching EOF, which results
+	// in at least one event reporting the full payload size and possibly additional
+	// events with zero bytes read. This test asserts only that the correct size is
+	// observed, not the exact number of read events.
+	for _, e := range span.Events() {
+		switch e.Name {
+		case "read":
+			readAttrs = append(readAttrs, e.Attributes...)
+		case "write":
+			writeAttrs = append(writeAttrs, e.Attributes...)
+		}
+	}
+
+	require.NotEmpty(t, readAttrs)
+	require.NotEmpty(t, writeAttrs)
+
+	payloadSize := len(payload)
+	assert.Contains(t, readAttrs, ReadBytesKey.Int64(int64(payloadSize)))
+	assert.Contains(t, readAttrs, semconv.HTTPRequestBodySize(payloadSize))
+
+	assert.Contains(t, writeAttrs, WroteBytesKey.Int64(int64(payloadSize)))
+	assert.Contains(t, writeAttrs, semconv.HTTPResponseSize(payloadSize))
 }
