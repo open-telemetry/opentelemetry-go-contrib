@@ -68,7 +68,8 @@ linters:
       forbid:
         - pattern: '^trace\.Span\.RecordError$'
           pkg: '^go\.opentelemetry\.io/otel/trace$'
-          msg: "Span.RecordError is not allowed, Reference: https://github.com/open-telemetry/opentelemetry-specification/pull/4825"
+          msg: "Span.RecordError is not allowed, Reference: https://github.com/open-telemetry/opentelemetry-go-contrib/pull/8386"
+      exclude-godoc-examples: false
       analyze-types: true
     gocritic:
       disabled-checks:

@@ -121,7 +121,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		if len(c.Errors) > 0 {
 			span.SetStatus(codes.Error, c.Errors.String())
 			for _, err := range c.Errors {
-				span.RecordError(err.Err) //nolint:forbidigo // existing usage of Span.RecordError
+				span.RecordError(err.Err) //nolint:forbidigo // TODO: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/8441
 			}
 		}
 
