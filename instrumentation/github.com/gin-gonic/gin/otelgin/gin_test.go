@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
@@ -202,15 +203,9 @@ func TestError(t *testing.T) {
 	assert.Contains(t, attr, attribute.String("server.address", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.response.status_code", http.StatusInternalServerError))
 
-	// verify the error events
-	events := span.Events()
-	require.Len(t, events, 2)
-	assert.Equal(t, "exception", events[0].Name)
-	assert.Contains(t, events[0].Attributes, attribute.String("exception.type", "*errors.errorString"))
-	assert.Contains(t, events[0].Attributes, attribute.String("exception.message", "oh no one"))
-	assert.Equal(t, "exception", events[1].Name)
-	assert.Contains(t, events[1].Attributes, attribute.String("exception.type", "*errors.errorString"))
-	assert.Contains(t, events[1].Attributes, attribute.String("exception.message", "oh no two"))
+	// verify the error.type attribute is set (using first error)
+	firstErr := errors.New("oh no one")
+	assert.Contains(t, attr, semconv.ErrorType(firstErr))
 
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
@@ -261,8 +256,9 @@ func TestSpanStatus(t *testing.T) {
 
 		require.Len(t, sr.Ended(), 1)
 		assert.Equal(t, codes.Error, sr.Ended()[0].Status().Code)
-		require.Len(t, sr.Ended()[0].Events(), 1)
-		assert.Contains(t, sr.Ended()[0].Events()[0].Attributes, attribute.String("exception.message", "something went wrong"))
+		// verify the error.type attribute is set
+		err := errors.New("something went wrong")
+		assert.Contains(t, sr.Ended()[0].Attributes(), semconv.ErrorType(err))
 	})
 }
 
