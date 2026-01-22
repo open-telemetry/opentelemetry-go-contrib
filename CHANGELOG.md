@@ -47,7 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- The `samplers/probability/consistent` package are deprecated and will be removed in a future release in `go.opentelemetry.io/contrib/samplers/probability`. (#8447)
+- The `samplers/probability/consistent` package is deprecated and will be removed in a future release in `go.opentelemetry.io/contrib/samplers/probability`. (#8447)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
