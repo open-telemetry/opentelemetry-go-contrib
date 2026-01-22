@@ -2,6 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package consistent provides a consistent probability based sampler.
+//
+// Deprecated: This entire package is obsolete and based on a removed
+// experimental specification (opentelemetry-specification#4673).
+// It will be removed in a future release.
+// See open-telemetry/opentelemetry-go#7485 for the replacement.
 package consistent // import "go.opentelemetry.io/contrib/samplers/probability/consistent"
 
 import (
@@ -15,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+// Deprecated: This package is obsolete. Use [WithRandomSource] instead.
 type (
 	// ProbabilityBasedOption is an option to the
 	// ConssitentProbabilityBased sampler.
@@ -54,6 +60,8 @@ type (
 )
 
 // WithRandomSource sets the source of the randomness used by the Sampler.
+//
+// Deprecated: This package is obsolete. Use [WithRandomSource] instead.
 func WithRandomSource(source rand.Source) ProbabilityBasedOption {
 	return consistentProbabilityBasedRandomSource{source}
 }
@@ -73,6 +81,8 @@ func (s consistentProbabilityBasedRandomSource) apply(cfg *consistentProbability
 //
 // To respect the parent trace's `SampledFlag`, this sampler should be
 // used as the root delegate of a `Parent` sampler.
+//
+// Deprecated: This package is obsolete. Use [WithRandomSource] instead.
 func ProbabilityBased(fraction float64, opts ...ProbabilityBasedOption) sdktrace.Sampler {
 	cfg := consistentProbabilityBasedConfig{
 		source: rand.NewSource(rand.Int63()), //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
@@ -110,6 +120,8 @@ func (cs *consistentProbabilityBased) lowChoice() bool {
 }
 
 // ShouldSample implements "go.opentelemetry.io/otel/sdk/trace".Sampler.
+//
+// Deprecated: This package is obsolete. Use [WithRandomSource] instead.
 func (cs *consistentProbabilityBased) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 
@@ -158,6 +170,8 @@ func (cs *consistentProbabilityBased) ShouldSample(p sdktrace.SamplingParameters
 }
 
 // Description returns "ProbabilityBased{%g}" with the configured probability.
+//
+// Deprecated: This package is obsolete. Use [WithRandomSource] instead.
 func (cs *consistentProbabilityBased) Description() string {
 	var prob float64
 	if cs.lowLAC != pZeroValue {
