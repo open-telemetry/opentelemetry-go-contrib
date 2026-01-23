@@ -24,7 +24,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	"go.opentelemetry.io/otel/semconv/v1.38.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -769,9 +768,9 @@ func TestSpanEmitsLegacyAndSemconvReadWriteAttributes(t *testing.T) {
 	require.NotEmpty(t, writeAttrs)
 
 	payloadSize := len(payload)
-	assert.Contains(t, readAttrs, ReadBytesKey.Int64(int64(payloadSize)))
-	assert.Contains(t, readAttrs, semconv.HTTPRequestBodySize(payloadSize))
+	assert.Contains(t, readAttrs, attribute.Int("http.read_bytes", payloadSize))
+	assert.Contains(t, readAttrs, attribute.Int("http.request.body.size", payloadSize))
 
-	assert.Contains(t, writeAttrs, WroteBytesKey.Int64(int64(payloadSize)))
-	assert.Contains(t, writeAttrs, semconv.HTTPResponseSize(payloadSize))
+	assert.Contains(t, writeAttrs, attribute.Int("http.wrote_bytes", payloadSize))
+	assert.Contains(t, writeAttrs, attribute.Int("http.response.body.size", payloadSize))
 }
