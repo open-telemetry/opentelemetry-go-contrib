@@ -203,7 +203,6 @@ func TestError(t *testing.T) {
 	assert.Contains(t, attr, attribute.String("server.address", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.response.status_code", http.StatusInternalServerError))
 
-	// verify the error.type attribute is set (using first error)
 	firstErr := errors.New("oh no one")
 	assert.Contains(t, attr, semconv.ErrorType(firstErr))
 
@@ -256,7 +255,6 @@ func TestSpanStatus(t *testing.T) {
 
 		require.Len(t, sr.Ended(), 1)
 		assert.Equal(t, codes.Error, sr.Ended()[0].Status().Code)
-		// verify the error.type attribute is set
 		err := errors.New("something went wrong")
 		assert.Contains(t, sr.Ended()[0].Attributes(), semconv.ErrorType(err))
 	})
