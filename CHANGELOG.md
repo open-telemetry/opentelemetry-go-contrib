@@ -13,6 +13,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `WithMetricAttributesFn` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to define dynamic attributes on auto-instrumented metrics. (#8191)
 - Add support for configuring propagators in `go.opentelemetry.io/contrib/otelconf`. (#8281)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8401)
+- Added semantic convention attribute keys `HTTPRequestBodySizeKey`,
+  `HTTPResponseBodySizeKey`, and `ErrorMessageKey` as replacements for the
+  legacy `ReadBytesKey`, `WroteBytesKey`, `ReadErrorKey`, and `WriteErrorKey` in 
+  `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`,
+  which are now deprecated and will be removed in a future release. (#8435)
+
 
 ### Fixed
 
@@ -28,6 +34,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The deprecated `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The route is already added automatically for spans.
   For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8268)
+
+### Deprecated
+
+- In `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, the attributes `ReadBytesKey`, `ReadErrorKey`, 
+  `WroteBytesKey` and `WriteErrorKey` are deprecated and will be removed in a future release. (#8435)
+  Use `semconv.HTTPRequestBodySizeKey`, `semconv.ErrorMessageKey`, `semconv.HTTPResponseBodySizeKey` and 
+  `semconv.ErrorMessageKey` respectively. (#8435)
 
 ### Changed
 
