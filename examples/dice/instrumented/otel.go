@@ -44,7 +44,7 @@ func setupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 	}
 
 	res, resErr := resource.New(ctx,
-		resource.WithFromEnv(), // reads OTEL_SERVICE_NAME & OTEL_RESOURCE_ATTRIBUTES.
+		resource.WithFromEnv(), // Parses OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES.
 		resource.WithProcess(),
 		resource.WithHost(),
 		resource.WithTelemetrySDK(),
