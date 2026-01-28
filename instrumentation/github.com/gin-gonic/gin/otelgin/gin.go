@@ -40,7 +40,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		ScopeName,
-		oteltrace.WithInstrumentationVersion(Version()),
+		oteltrace.WithInstrumentationVersion(Version),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -54,7 +54,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 	meter := cfg.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 	)
 
 	sc := semconv.NewHTTPServer(meter)
@@ -121,7 +121,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		if len(c.Errors) > 0 {
 			span.SetStatus(codes.Error, c.Errors.String())
 			for _, err := range c.Errors {
-				span.RecordError(err.Err)
+				span.RecordError(err.Err) //nolint:forbidigo // TODO: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/8441
 			}
 		}
 
@@ -166,7 +166,7 @@ func HTML(c *gin.Context, code int, name string, obj any) {
 	if !ok {
 		tracer = otel.GetTracerProvider().Tracer(
 			ScopeName,
-			oteltrace.WithInstrumentationVersion(Version()),
+			oteltrace.WithInstrumentationVersion(Version),
 		)
 	}
 	savedContext := c.Request.Context()

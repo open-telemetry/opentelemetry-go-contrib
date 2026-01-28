@@ -11,6 +11,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - `WithMetricAttributesFn` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to define dynamic attributes on auto-instrumented metrics. (#8191)
+- Add support for configuring propagators in `go.opentelemetry.io/contrib/otelconf`. (#8281)
+- Add `const Version` in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8401)
+- Add `const Version` in `go.opentelemetry.io/contrib/otelconf`. (#8461)
 
 ### Fixed
 
@@ -29,14 +32,23 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Change `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to a `const Version` string. (#8142)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` has been replaced by `const Version`. (#8142)
 - The `Version()` function in `go.opentelemetry.io/contrib/zpages` has been replaced by `const Version`. (#8325)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/runtime` has been replaced by `const Version` string. (#8349)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/host` has been replaced by `const Version`. (#8358)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` has been replaced by `const Version`. (#8357)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` has been replaced by `const Version`. (#8356)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` has been replaced by `const Version`. (#8360)
 - The `Version()` function in `go.opentelemetry.io/contrib/propagators/opencensus` has been replaced by `const Version`. (#8361)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` has been replaced by `const Version`. (#8365)
 - The `Version()` function in `go.opentelemetry.io/contrib/samplers/probability/consistent` has been replaced by `const Version`. (#8366)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace` has been replaced by `const Version`. (#8302)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` has been replaced by `const Version`. (#8370)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` has been replaced by `const Version`. (#8341)
+- Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8386)
+- Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#8386)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` hae been replaced by `const Version`. (#8340)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` has been replaced by `const Version`. (#8317)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

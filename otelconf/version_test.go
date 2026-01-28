@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelecho_test
+package otelconf_test
 
 import (
 	"regexp"
@@ -9,7 +9,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+	"go.opentelemetry.io/contrib/otelconf"
 )
 
 // regex taken from https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
@@ -19,6 +19,6 @@ var versionRegex = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)
 	`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
 func TestVersionSemver(t *testing.T) {
-	v := otelecho.Version
+	v := otelconf.Version
 	assert.NotNil(t, versionRegex.FindStringSubmatch(v), "version is not semver: %s", v)
 }

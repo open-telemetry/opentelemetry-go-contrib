@@ -64,7 +64,6 @@ func ExampleMiddleware() {
 		if err != nil {
 			log.Println("error reading body: ", err)
 			// Record the error in the span and set its status
-			span.SetStatus(codes.Error, err.Error())
 			span.SetStatus(codes.Error, "failed to read request body")
 			return c.String(http.StatusBadRequest, "Bad request")
 		}
@@ -112,15 +111,16 @@ func ExampleMiddleware_withMetrics() {
 		otelecho.WithMetricAttributeFn(func(r *http.Request) []attribute.KeyValue {
 			// Add custom attributes from HTTP request
 			return []attribute.KeyValue{
-				attribute.String("client.ip", r.RemoteAddr),
-				attribute.String("user.agent", r.UserAgent()),
+				attribute.Bool("custom.has_request_body", r.ContentLength != 0),
+				attribute.Bool("custom.has_content_type", r.Header.Get("Content-Type") != ""),
 			}
 		}),
 		otelecho.WithEchoMetricAttributeFn(func(c echo.Context) []attribute.KeyValue {
 			// Add custom attributes from Echo context
+			// If attributes are duplicated between this method and `WithMetricAttributeFn`, the attributes in this method will be used.
 			return []attribute.KeyValue{
-				attribute.String("handler.path", c.Path()),
-				attribute.String("handler.method", c.Request().Method),
+				attribute.Bool("custom.has_request_body", c.Request().ContentLength != 0),
+				attribute.Bool("custom.has_content_type", c.Request().Header.Get("Content-Type") != ""),
 			}
 		}),
 	))

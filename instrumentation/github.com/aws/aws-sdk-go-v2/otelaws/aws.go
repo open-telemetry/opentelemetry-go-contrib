@@ -72,7 +72,7 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		out, metadata, err = next.HandleInitialize(ctx, in)
 		span.SetAttributes(m.buildAttributes(ctx, in, out)...)
 		if err != nil {
-			span.SetStatus(codes.Error, err.Error())
+			span.SetAttributes(semconv.ErrorType(err))
 			span.SetStatus(codes.Error, err.Error())
 		}
 
