@@ -84,8 +84,7 @@ func newPropagator() propagation.TextMapPropagator {
 }
 
 func newTracerProvider() (*trace.TracerProvider, error) {
-	traceExporter, err := stdouttrace.New(
-		stdouttrace.WithPrettyPrint())
+	traceExporter, err := stdouttrace.New(stdouttrace.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +98,7 @@ func newTracerProvider() (*trace.TracerProvider, error) {
 }
 
 func newMeterProvider() (*metric.MeterProvider, error) {
-	metricExporter, err := stdoutmetric.New()
+	metricExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}
@@ -113,7 +112,7 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 }
 
 func newLoggerProvider() (*log.LoggerProvider, error) {
-	logExporter, err := stdoutlog.New()
+	logExporter, err := stdoutlog.New(stdoutlog.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}
