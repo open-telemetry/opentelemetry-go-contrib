@@ -64,7 +64,7 @@ func ExampleMiddleware() {
 		if err != nil {
 			log.Println("error reading body: ", err)
 			// Record the error in the span and set its status
-			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 			span.SetStatus(codes.Error, "failed to read request body")
 			return c.String(http.StatusBadRequest, "Bad request")
 		}

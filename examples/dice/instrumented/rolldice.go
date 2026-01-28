@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/codes"
 
 	"go.opentelemetry.io/contrib/bridges/otelslog"
 )
@@ -147,13 +148,13 @@ func rollDice(ctx context.Context, rolls int) ([]int, error) {
 
 	if rolls > maxRolls {
 		err := errors.New("rolls parameter exceeds maximum allowed value")
-		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
 	if rolls <= 0 {
 		err := errors.New("rolls must be positive")
-		span.RecordError(err)
+		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 

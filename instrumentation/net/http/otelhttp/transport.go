@@ -181,7 +181,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		if errType := t.semconv.ErrorType(err); errType.Valid() {
 			span.SetAttributes(errType)
 		} else {
-			span.RecordError(err)
+			span.SetStatus(codes.Error, err.Error())
 		}
 
 		span.SetStatus(codes.Error, err.Error())
@@ -243,7 +243,7 @@ func (wb *wrappedBody) Write(p []byte) (int, error) {
 	// This will not panic given the guard in newWrappedBody.
 	n, err := wb.body.(io.Writer).Write(p)
 	if err != nil {
-		wb.span.RecordError(err)
+		wb.span.SetStatus(codes.Error, err.Error())
 		wb.span.SetStatus(codes.Error, err.Error())
 	}
 	return n, err
@@ -261,7 +261,7 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 		wb.recordBytesRead()
 		wb.span.End()
 	default:
-		wb.span.RecordError(err)
+		wb.span.SetStatus(codes.Error, err.Error())
 		wb.span.SetStatus(codes.Error, err.Error())
 	}
 	return n, err
