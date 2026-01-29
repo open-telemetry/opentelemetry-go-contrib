@@ -1,0 +1,28 @@
+# Copyright The OpenTelemetry Authors
+# SPDX-License-Identifier: Apache-2.0
+version: "3.7"
+services:
+  echo-client:
+    image: golang:alpine
+    networks:
+      - example
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "wget http://echo-server:8080/users/123 && cat 123"
+    depends_on:
+      - echo-server
+  echo-server:
+    build:
+      dockerfile: $PWD/Dockerfile
+      context: ../../../../../../
+    ports:
+      - "8080:80"
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/go/bin/server"
+    networks:
+      - example
+networks:
+  example:
