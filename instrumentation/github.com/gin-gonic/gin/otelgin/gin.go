@@ -15,9 +15,10 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
+	intsemconv "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
 )
 
 const (
@@ -57,7 +58,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		metric.WithInstrumentationVersion(Version),
 	)
 
-	sc := semconv.NewHTTPServer(meter)
+	sc := intsemconv.NewHTTPServer(meter)
 
 	return func(c *gin.Context) {
 		requestStartTime := time.Now()
@@ -85,7 +86,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 
-		requestTraceAttrOpts := semconv.RequestTraceAttrsOpts{
+		requestTraceAttrOpts := intsemconv.RequestTraceAttrsOpts{
 			// Gin's ClientIP method can detect the client's IP from various headers set by proxies, and it's configurable
 			HTTPClientIP: c.ClientIP(),
 		}
@@ -113,16 +114,15 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 		status := c.Writer.Status()
 		span.SetStatus(sc.Status(status))
-		span.SetAttributes(sc.ResponseTraceAttrs(semconv.ResponseTelemetry{
+		span.SetAttributes(sc.ResponseTraceAttrs(intsemconv.ResponseTelemetry{
 			StatusCode: status,
 			WriteBytes: int64(c.Writer.Size()),
 		})...)
 
 		if len(c.Errors) > 0 {
 			span.SetStatus(codes.Error, c.Errors.String())
-			for _, err := range c.Errors {
-				span.RecordError(err.Err) //nolint:forbidigo // TODO: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/8441
-			}
+			// Multiple errors are already captured in the status description via c.Errors.String()
+			span.SetAttributes(semconv.ErrorType(c.Errors[0].Err))
 		}
 
 		// Record the server-side attributes.
@@ -137,15 +137,15 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			additionalAttributes = append(additionalAttributes, cfg.GinMetricAttributeFn(c)...)
 		}
 
-		sc.RecordMetrics(ctx, semconv.ServerMetricData{
+		sc.RecordMetrics(ctx, intsemconv.ServerMetricData{
 			ServerName:   service,
 			ResponseSize: int64(c.Writer.Size()),
-			MetricAttributes: semconv.MetricAttributes{
+			MetricAttributes: intsemconv.MetricAttributes{
 				Req:                  c.Request,
 				StatusCode:           status,
 				AdditionalAttributes: additionalAttributes,
 			},
-			MetricData: semconv.MetricData{
+			MetricData: intsemconv.MetricData{
 				RequestSize: c.Request.ContentLength,
 				ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Millisecond),
 			},
