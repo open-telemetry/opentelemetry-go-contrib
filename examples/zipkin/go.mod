@@ -3,10 +3,10 @@ module go.opentelemetry.io/contrib/examples/zipkin
 go 1.24.0
 
 require (
-	go.opentelemetry.io/otel v1.39.0
-	go.opentelemetry.io/otel/exporters/zipkin v1.39.0
-	go.opentelemetry.io/otel/sdk v1.39.0
-	go.opentelemetry.io/otel/trace v1.39.0
+	go.opentelemetry.io/otel v1.39.1-0.20260130171517-3264bf171b1e
+	go.opentelemetry.io/otel/exporters/zipkin v1.39.1-0.20260130171517-3264bf171b1e
+	go.opentelemetry.io/otel/sdk v1.39.1-0.20260130171517-3264bf171b1e
+	go.opentelemetry.io/otel/trace v1.39.1-0.20260130171517-3264bf171b1e
 )
 
 require (
@@ -16,6 +16,6 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/openzipkin/zipkin-go v0.4.3 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.39.0 // indirect
+	go.opentelemetry.io/otel/metric v1.39.1-0.20260130171517-3264bf171b1e // indirect
 	golang.org/x/sys v0.40.0 // indirect
 )
