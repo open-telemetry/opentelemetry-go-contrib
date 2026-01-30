@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support for configuring propagators in `go.opentelemetry.io/contrib/otelconf`. (#8281)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8401)
 - Add `const Version` in `go.opentelemetry.io/contrib/otelconf`. (#8461)
+- Add `const Version` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#8477)
 
 ### Fixed
 
