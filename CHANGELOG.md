@@ -50,6 +50,60 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#8386)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` hae been replaced by `const Version`. (#8340)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` has been replaced by `const Version`. (#8317)
+- Upgrade `go.opentelemetry.io/otel/semconv` to `v1.39.0`, including updates across all instrumentation and detector modules. (#8404)
+  - The semantic conventions v1.39.0 release introduces breaking changes, including:
+    - `rpc` span and metric attributes have been renamed to align with naming guidelines:
+      - `rpc.system` → `rpc.system.name` (values: `grpc`, `grpc_web`, `connectrpc`, `thrift`, `dubbo`, etc.)
+      - `rpc.method` and `rpc.service` have been merged into a fully-qualified `rpc.method` attribute
+      - `rpc.client|server.duration` → `rpc.client|server.call.duration` (unit changed to seconds)
+      - `rpc.grpc.request.metadata`/`rpc.grpc.response.metadata` → `rpc.request.metadata`/`rpc.response.metadata`
+      - `rpc.grpc.status_code` → deprecated in favor of `rpc.response.status_code`
+      - `rpc.jsonrpc.request_id` → `jsonrpc.request.id`
+      - `rpc.jsonrpc.version` → `jsonrpc.protocol.version`
+    - `system` and `process` metrics:
+      - `*.linux.memory` metrics renamed to `*.memory.linux`
+      - `system.process.status` → `process.state`
+      - `system.paging.type` and `process.paging.fault_type` → `system.paging.fault.type`
+    - `peer.service` attribute has been deprecated in favor of `service.peer.name`
+
+    See [semantic-conventions v1.39.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.39.0) and [v1.38.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.38.0) for complete breaking change details.
+  - Updated modules include:
+    - `go.opentelemetry.io/contrib/bridges/otellogr`
+    - `go.opentelemetry.io/contrib/bridges/otellogrus`
+    - `go.opentelemetry.io/contrib/bridges/otelslog`
+    - `go.opentelemetry.io/contrib/bridges/otelzap`
+    - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
+      - Uses `service.peer.name` attribute (deprecated `peer.service`)
+    - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+    - `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`
+      - Merged `rpc.method` and `rpc.service` into fully-qualified `rpc.method` (e.g., `grpc.testing.TestService/EmptyCall`)
+      - `rpc.system` → `rpc.system.name` with updated values (e.g., `RPCSystemNameGRPC`)
+      - `rpc.grpc.status_code` → `rpc.response.status_code` (e.g., `RPCResponseStatusCode("OK")`)
+    - `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`
+      - Merged `rpc.method` and `rpc.service` attributes (service/operation → fully-qualified method)
+      - `rpc.system` → `rpc.system.name` with `AWSSystemVal`
+      - New `MethodAttr()` function for combined service/operation attribute
+    - `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`
+    - `go.opentelemetry.io/contrib/instrumentation/runtime`
+    - `go.opentelemetry.io/contrib/instrumentation/host`
+    - `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver` (both v1 and v2)
+    - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+    - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+    - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+    - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+    - `go.opentelemetry.io/contrib/detectors/gcp`
+    - `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`
+    - `go.opentelemetry.io/contrib/detectors/aws/ecs`
+    - `go.opentelemetry.io/contrib/detectors/aws/eks`
+    - `go.opentelemetry.io/contrib/detectors/azure/azurevm`
+    - `go.opentelemetry.io/contrib/otelconf`
+
+### Deprecated
+
+- `ServiceAttr()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` is deprecated.
+  Use `MethodAttr()` instead, as `rpc.service` has been merged into `rpc.method` in semantic conventions v1.39.0. (#8404)
+- `OperationAttr()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` is deprecated.
+  Use `MethodAttr()` instead, as `rpc.service` has been merged into `rpc.method` in semantic conventions v1.39.0. (#8404)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
