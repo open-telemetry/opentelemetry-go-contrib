@@ -33,7 +33,7 @@ func SystemAttr() attribute.KeyValue {
 	return semconv.RPCSystemNameKey.String(AWSSystemVal)
 }
 
-// MethodAttr returns the RPC method attribute for AWS service and operation.
+// MethodAttr returns the RPC method attribute for the AWS service and operation.
 func MethodAttr(service, operation string) attribute.KeyValue {
 	if service == "" {
 		return semconv.RPCMethod(operation)
@@ -46,7 +46,7 @@ func MethodAttr(service, operation string) attribute.KeyValue {
 
 // OperationAttr returns the AWS operation attribute.
 //
-// Deprecated: use MethodAttr instead.
+// Deprecated: use [MethodAttr] instead.
 func OperationAttr(operation string) attribute.KeyValue {
 	// rpc.service has been merged into rpc.method in semconv v1.39.0
 	return MethodAttr("", operation)
@@ -59,7 +59,7 @@ func RegionAttr(region string) attribute.KeyValue {
 
 // ServiceAttr returns the AWS service attribute.
 //
-// Deprecated: use MethodAttr instead.
+// Deprecated: use [MethodAttr] instead.
 func ServiceAttr(service string) attribute.KeyValue {
 	// rpc.service has been merged into rpc.method in semconv v1.39.0
 	return MethodAttr(service, "")
