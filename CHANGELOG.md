@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support for configuring propagators in `go.opentelemetry.io/contrib/otelconf`. (#8281)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8401)
 - Add `const Version` in `go.opentelemetry.io/contrib/otelconf`. (#8461)
-- Add environment carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#8300)
+- Add environment variables propagation carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#8442)
 
 ### Fixed
 
