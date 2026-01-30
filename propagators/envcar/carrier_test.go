@@ -5,6 +5,9 @@ package envcar_test
 
 import (
 	"os"
+	"os/exec"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -113,9 +116,8 @@ func TestInjectTraceContextEnvCarrier(t *testing.T) {
 			ctx := t.Context()
 			ctx = trace.ContextWithRemoteSpanContext(ctx, tc.sc)
 			c := envcar.Carrier{
-				SetEnvFunc: func(key, value string) error {
+				SetEnvFunc: func(key, value string) {
 					t.Setenv(key, value)
-					return nil
 				},
 			}
 
@@ -157,14 +159,85 @@ func TestCarrierSetUppercasesKey(t *testing.T) {
 	var gotKey string
 	var gotValue string
 	c := envcar.Carrier{
-		SetEnvFunc: func(key, value string) error {
+		SetEnvFunc: func(key, value string) {
 			gotKey = key
 			gotValue = value
-			return nil
 		},
 	}
 
 	c.Set("traceparent", "value")
 	assert.Equal(t, "TRACEPARENT", gotKey)
 	assert.Equal(t, "value", gotValue)
+}
+
+func TestConcurrentChildProcesses(t *testing.T) {
+	// Test that concurrent goroutines can each spawn child processes
+	// with their own unique trace context.
+	const numGoroutines = 10
+
+	type result struct {
+		index    int
+		expected string
+		actual   string
+		err      error
+	}
+
+	results := make(chan result, numGoroutines)
+	var wg sync.WaitGroup
+	baseCtx := t.Context()
+
+	for i := range numGoroutines {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			// Create a unique trace ID for this goroutine.
+			traceID := trace.TraceID{byte(i + 1)}
+			spanID := trace.SpanID{byte(i + 1)}
+			spanCtx := trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.FlagsSampled,
+			})
+			ctx := trace.ContextWithSpanContext(baseCtx, spanCtx)
+
+			// Each goroutine gets its own cmd with its own Env slice.
+			cmd := exec.Command("printenv", "TRACEPARENT")
+			cmd.Env = os.Environ()
+
+			// Each goroutine gets its own carrier that writes to its cmd.Env.
+			carrier := envcar.Carrier{
+				SetEnvFunc: func(key, value string) {
+					cmd.Env = append(cmd.Env, key+"="+value)
+				},
+			}
+
+			// Inject this goroutine's trace context.
+			prop := propagation.TraceContext{}
+			prop.Inject(ctx, carrier)
+
+			// Run the child process and capture output.
+			out, err := cmd.Output()
+
+			// Expected traceparent format for this goroutine's trace ID.
+			expected := "00-" + traceID.String() + "-" + spanID.String() + "-01"
+
+			results <- result{
+				index:    i,
+				expected: expected,
+				actual:   strings.TrimSpace(string(out)),
+				err:      err,
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(results)
+
+	// Verify each goroutine's child process received the correct trace context.
+	for r := range results {
+		require.NoError(t, r.err, "goroutine %d failed to run child process", r.index)
+		assert.Equal(t, r.expected, r.actual,
+			"goroutine %d: child process received wrong trace context", r.index)
+	}
 }

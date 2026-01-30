@@ -22,7 +22,10 @@ type Carrier struct {
 	// Usually, you want to set the environment variable for processes
 	// that are spawned by the current process.
 	// By default implementation, it does nothing.
-	SetEnvFunc func(key, value string) error
+	// Using os.Setenv here is discouraged as the environment should
+	// be immutable:
+	// https://opentelemetry.io/docs/specs/otel/context/env-carriers/#environment-variable-immutability
+	SetEnvFunc func(key, value string)
 }
 
 var _ propagation.TextMapCarrier = Carrier{}
@@ -42,7 +45,7 @@ func (e Carrier) Set(key, value string) {
 		return
 	}
 	k := strings.ToUpper(key)
-	_ = e.SetEnvFunc(k, value)
+	e.SetEnvFunc(k, value)
 }
 
 // Keys lists the keys stored in this carrier.

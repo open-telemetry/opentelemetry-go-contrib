@@ -41,35 +41,6 @@ func ExampleCarrier_extractFromParent() {
 }
 
 // This example is a go program where we have a trace and we'd like to inject it
-// in our current environment variables.
-func ExampleCarrier_injectWithSetenv() {
-	// Create a span context with a known trace ID.
-	traceID := trace.TraceID{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}
-	spanID := trace.SpanID{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
-	spanCtx := trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    traceID,
-		SpanID:     spanID,
-		TraceFlags: trace.FlagsSampled,
-	})
-	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
-
-	// Create a carrier that sets environment variables in the current process.
-	// This is useful when about to exec() or when child processes will
-	// inherit the current environment.
-	carrier := envcar.Carrier{
-		SetEnvFunc: os.Setenv,
-	}
-
-	// Inject trace context into the current process's environment.
-	prop := propagation.TraceContext{}
-	prop.Inject(ctx, carrier)
-
-	// The environment variable is now set in the current process.
-	fmt.Println(os.Getenv("TRACEPARENT"))
-	// Output: 00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01
-}
-
-// This example is a go program where we have a trace and we'd like to inject it
 // into a command we're going to run.
 func ExampleCarrier_childProcess() {
 	// Create a span context with a known trace ID.
@@ -89,9 +60,8 @@ func ExampleCarrier_childProcess() {
 	// Create a carrier that injects trace context into the child
 	// process's environment rather than the current process's.
 	carrier := envcar.Carrier{
-		SetEnvFunc: func(key, value string) error {
+		SetEnvFunc: func(key, value string) {
 			cmd.Env = append(cmd.Env, key+"="+value)
-			return nil
 		},
 	}
 
