@@ -140,7 +140,7 @@ func TestCarrierKeys(t *testing.T) {
 	assert.Contains(t, keys, "traceparent")
 }
 
-func TestCarrierSetNilFunc(t *testing.T) {
+func TestCarrierSetNilFunc(_ *testing.T) {
 	c := envcar.Carrier{} // SetEnvFunc is nil
 	c.Set("key", "value") // should not panic, just no-op
 }
@@ -155,13 +155,16 @@ func TestCarrierGetCaseInsensitive(t *testing.T) {
 
 func TestCarrierSetUppercasesKey(t *testing.T) {
 	var gotKey string
+	var gotValue string
 	c := envcar.Carrier{
 		SetEnvFunc: func(key, value string) error {
 			gotKey = key
+			gotValue = value
 			return nil
 		},
 	}
 
 	c.Set("traceparent", "value")
 	assert.Equal(t, "TRACEPARENT", gotKey)
+	assert.Equal(t, "value", gotValue)
 }

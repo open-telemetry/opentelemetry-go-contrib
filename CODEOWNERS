@@ -64,6 +64,7 @@ processors/minsev                                                       @open-te
 propagators/autoprop/                                                   @open-telemetry/go-approvers @MrAlias
 propagators/aws/                                                        @open-telemetry/go-approvers @akats7
 propagators/b3/                                                         @open-telemetry/go-approvers @pellared
+propagators/envcar                                                      @open-telemetry/go-approvers @Joibel
 propagators/jaeger/                                                     @open-telemetry/go-approvers @yurishkuro
 propagators/opencensus/                                                 @open-telemetry/go-approvers @dashpole
 propagators/ot/                                                         @open-telemetry/go-approvers @pellared
