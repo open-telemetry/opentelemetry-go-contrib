@@ -15,7 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8401)
 - Add `const Version` in `go.opentelemetry.io/contrib/otelconf`. (#8461)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#8477)
-- Add `const Version` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#8483)
+- Add `const Version` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#8485)
 
 ### Fixed
 
