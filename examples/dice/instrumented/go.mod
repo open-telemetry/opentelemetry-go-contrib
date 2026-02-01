@@ -26,8 +26,3 @@ require (
 	go.opentelemetry.io/otel/trace v1.39.0 // indirect
 	golang.org/x/sys v0.40.0 // indirect
 )
-
-replace (
-	go.opentelemetry.io/contrib/bridges/otelslog => ../../../bridges/otelslog
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../../instrumentation/net/http/otelhttp
-)

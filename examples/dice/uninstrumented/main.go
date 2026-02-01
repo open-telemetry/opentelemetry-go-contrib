@@ -27,8 +27,13 @@ func run() (err error) {
 	defer stop()
 
 	// Start HTTP server.
+	port := os.Getenv("APPLICATION_PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	srv := &http.Server{
-		Addr:         ":8080",
+		Addr:         ":" + port,
 		BaseContext:  func(net.Listener) context.Context { return ctx },
 		ReadTimeout:  time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -60,8 +65,6 @@ func newHTTPHandler() http.Handler {
 	mux := http.NewServeMux()
 
 	// Register handlers.
-	mux.HandleFunc("/rolldice/", rolldice)
-	mux.HandleFunc("/rolldice/{player}", rolldice)
-
+	mux.HandleFunc("/rolldice", handleRolldice)
 	return mux
 }
