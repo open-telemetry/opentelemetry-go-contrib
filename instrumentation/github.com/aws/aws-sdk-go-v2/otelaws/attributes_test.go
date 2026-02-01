@@ -11,7 +11,7 @@ import (
 	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
 func TestOperationAttr(t *testing.T) {
@@ -29,7 +29,7 @@ func TestRegionAttr(t *testing.T) {
 func TestServiceAttr(t *testing.T) {
 	service := "test-service"
 	attr := ServiceAttr(service)
-	assert.Equal(t, semconv.RPCService(service), attr)
+	assert.Equal(t, semconv.RPCMethod(service), attr)
 }
 
 func TestRequestIDAttr(t *testing.T) {
@@ -40,7 +40,7 @@ func TestRequestIDAttr(t *testing.T) {
 
 func TestSystemAttribute(t *testing.T) {
 	attr := SystemAttr()
-	assert.Equal(t, semconv.RPCSystemKey.String("aws-api"), attr)
+	assert.Equal(t, semconv.RPCSystemNameKey.String("aws-api"), attr)
 }
 
 func TestDefaultAttributeBuilderNotSupportedService(t *testing.T) {

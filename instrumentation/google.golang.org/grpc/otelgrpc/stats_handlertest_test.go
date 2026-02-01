@@ -15,8 +15,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/rpcconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	"go.opentelemetry.io/otel/semconv/v1.39.0/rpcconv"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
@@ -174,14 +174,14 @@ func assertServerSpan(t *testing.T, wantSpanCode otelcode.Code, wantSpanStatusDe
 	// validate grpc code span attribute
 	var codeAttr attribute.KeyValue
 	for _, a := range span.Attributes() {
-		if a.Key == semconv.RPCGRPCStatusCodeKey {
+		if a.Key == semconv.RPCResponseStatusCodeKey {
 			codeAttr = a
 			break
 		}
 	}
 
 	require.True(t, codeAttr.Valid(), "attributes contain gRPC status code")
-	assert.Equal(t, attribute.Int64Value(int64(wantGrpcCode)), codeAttr.Value)
+	assert.Equal(t, attribute.StringValue(wantGrpcCode.String()), codeAttr.Value)
 }
 
 func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code grpc_codes.Code) {
@@ -189,56 +189,17 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 		Scope: wantInstrumentationScope,
 		Metrics: []metricdata.Metrics{
 			{
-				Name:        rpcconv.ServerDuration{}.Name(),
-				Description: rpcconv.ServerDuration{}.Description(),
-				Unit:        rpcconv.ServerDuration{}.Unit(),
+				Name:        rpcconv.ServerCallDuration{}.Name(),
+				Description: rpcconv.ServerCallDuration{}.Description(),
+				Unit:        rpcconv.ServerCallDuration{}.Unit(),
 				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.RPCMethod(name),
-								semconv.RPCService(serviceName),
-								semconv.RPCSystemGRPC,
-								semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
-								testMetricAttr,
-							),
-						},
-					},
-				},
-			},
-			{
-				Name:        rpcconv.ServerRequestsPerRPC{}.Name(),
-				Description: rpcconv.ServerRequestsPerRPC{}.Description(),
-				Unit:        rpcconv.ServerRequestsPerRPC{}.Unit(),
-				Data: metricdata.Histogram[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod(name),
-								semconv.RPCService(serviceName),
-								semconv.RPCSystemGRPC,
-								semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
-								testMetricAttr,
-							),
-						},
-					},
-				},
-			},
-			{
-				Name:        rpcconv.ServerResponsesPerRPC{}.Name(),
-				Description: rpcconv.ServerResponsesPerRPC{}.Description(),
-				Unit:        rpcconv.ServerResponsesPerRPC{}.Unit(),
-				Data: metricdata.Histogram[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod(name),
-								semconv.RPCService(serviceName),
-								semconv.RPCSystemGRPC,
-								semconv.RPCGRPCStatusCodeKey.Int64(int64(code)),
+								semconv.RPCMethod(serviceName+"/"+name),
+								semconv.RPCSystemNameGRPC,
+								semconv.RPCResponseStatusCode(code.String()),
 								testMetricAttr,
 							),
 						},

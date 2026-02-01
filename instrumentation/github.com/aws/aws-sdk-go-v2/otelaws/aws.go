@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -57,9 +57,8 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 
 		attributes := []attribute.KeyValue{
 			SystemAttr(),
-			ServiceAttr(serviceID),
+			MethodAttr(serviceID, operation),
 			RegionAttr(region),
-			OperationAttr(operation),
 		}
 
 		ctx, span := m.tracer.Start(ctx, spanName(serviceID, operation),
