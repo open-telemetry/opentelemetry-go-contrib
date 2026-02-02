@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.40.0/2.2.0/0.65.0/0.34.0/0.20.0/0.15.0/0.13.0/0.12.0] - 2026-02-02
+
 ### Added
 
 - `WithMetricAttributesFn` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to define dynamic attributes on auto-instrumented metrics. (#8191)
@@ -23,35 +28,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix panic when passing nil `TracerProvider` or `MeterProvider` to `WithTracerProvider` or `WithMeterProvider` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8323)
 - `Transport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` now supports reading request body multiple times for subsequent requests that reuse `http.Request`. (#8352)
 
-### Removed
-
-- The deprecated `DefaultClient`, `Get`, `Head`, `Post`, and `PostForm` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
-  Use a custom `*http.Client` with `otelhttp.NewTransport(http.DefaultTransport)` instead. (#8266)
-- The deprecated `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
-  Use `WithPublicEndpointFn` instead. (#8267)
-- The deprecated `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
-  The route is already added automatically for spans.
-  For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8268)
-
 ### Changed
 
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` has been replaced by `const Version`. (#8142)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace` has been replaced by `const Version`. (#8302)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` has been replaced by `const Version`. (#8317)
 - The `Version()` function in `go.opentelemetry.io/contrib/zpages` has been replaced by `const Version`. (#8325)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` has been replaced by `const Version`. (#8340)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` has been replaced by `const Version`. (#8341)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/runtime` has been replaced by `const Version` string. (#8349)
-- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/host` has been replaced by `const Version`. (#8358)
-- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` has been replaced by `const Version`. (#8357)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` has been replaced by `const Version`. (#8356)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda` has been replaced by `const Version`. (#8357)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/host` has been replaced by `const Version`. (#8358)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` has been replaced by `const Version`. (#8360)
 - The `Version()` function in `go.opentelemetry.io/contrib/propagators/opencensus` has been replaced by `const Version`. (#8361)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho` has been replaced by `const Version`. (#8365)
 - The `Version()` function in `go.opentelemetry.io/contrib/samplers/probability/consistent` has been replaced by `const Version`. (#8366)
-- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace` has been replaced by `const Version`. (#8302)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` has been replaced by `const Version`. (#8370)
-- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` has been replaced by `const Version`. (#8341)
 - Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8386)
 - Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#8386)
-- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` hae been replaced by `const Version`. (#8340)
-- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` has been replaced by `const Version`. (#8317)
 - Upgrade `go.opentelemetry.io/otel/semconv` to `v1.39.0`, including updates across all instrumentation and detector modules. (#8404)
   - The semantic conventions v1.39.0 release introduces breaking changes, including:
     - `rpc` span and metric attributes have been renamed to align with naming guidelines:
@@ -107,8 +102,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `OperationAttr()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` is deprecated.
   Use `MethodAttr()` instead, as `rpc.service` has been merged into `rpc.method` in semantic conventions v1.39.0. (#8404)
 
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
+### Removed
+
+- The deprecated `DefaultClient`, `Get`, `Head`, `Post`, and `PostForm` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  Use a custom `*http.Client` with `otelhttp.NewTransport(http.DefaultTransport)` instead. (#8266)
+- The deprecated `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  Use `WithPublicEndpointFn` instead. (#8267)
+- The deprecated `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  The route is already added automatically for spans.
+  For metrics, the alternative is to use the `WithMetricAttributesFn` option. (#8268)
 
 ## [1.39.0/2.1.0/0.64.0/0.33.0/0.19.0/0.14.0/0.12.0/0.11.0] - 2025-12-08
 
@@ -1651,7 +1653,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.39.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.40.0...HEAD
+[1.40.0/2.2.0/0.65.0/0.34.0/0.20.0/0.15.0/0.13.0/0.12.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.40.0
 [1.39.0/2.1.0/0.64.0/0.33.0/0.19.0/0.14.0/0.12.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.39.0
 [1.38.0/2.0.0/0.63.0/0.32.0/0.18.0/0.13.0/0.11.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.38.0
 [1.37.0/0.62.0/0.31.0/0.17.0/0.12.0/0.10.0/0.9.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.37.0

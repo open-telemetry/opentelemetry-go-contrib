@@ -4,4 +4,4 @@
 package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 
 // Version is the current release version of the echo instrumentation.
-const Version = "0.64.0"
+const Version = "0.65.0"
