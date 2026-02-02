@@ -28,6 +28,7 @@ type Carrier struct {
 	SetEnvFunc func(key, value string)
 }
 
+// Compile time check that Carrier implements the TextMapCarrier.
 var _ propagation.TextMapCarrier = Carrier{}
 
 // Get returns the value associated with the passed key.
