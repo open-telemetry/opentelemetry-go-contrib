@@ -61,3 +61,13 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace go.opentelemetry.io/contrib/propagators/b3 => ../propagators/b3
+
+replace go.opentelemetry.io/contrib/propagators/aws => ../propagators/aws
+
+replace go.opentelemetry.io/contrib/propagators/autoprop => ../propagators/autoprop
+
+replace go.opentelemetry.io/contrib/propagators/ot => ../propagators/ot
+
+replace go.opentelemetry.io/contrib/propagators/jaeger => ../propagators/jaeger
