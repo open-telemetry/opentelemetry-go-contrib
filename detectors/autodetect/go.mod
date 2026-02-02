@@ -4,11 +4,11 @@ go 1.24.0
 
 require (
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.1.0
-	go.opentelemetry.io/contrib/detectors/aws/ecs v1.39.0
-	go.opentelemetry.io/contrib/detectors/aws/eks v1.39.0
+	go.opentelemetry.io/contrib/detectors/aws/ecs v1.40.0
+	go.opentelemetry.io/contrib/detectors/aws/eks v1.40.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.64.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.11.0
-	go.opentelemetry.io/contrib/detectors/gcp v1.39.0
+	go.opentelemetry.io/contrib/detectors/gcp v1.40.0
 	go.opentelemetry.io/otel v1.40.0
 	go.opentelemetry.io/otel/sdk v1.40.0
 )
