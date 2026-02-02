@@ -43,6 +43,46 @@ func TestSystemAttribute(t *testing.T) {
 	assert.Equal(t, semconv.RPCSystemNameKey.String("aws-api"), attr)
 }
 
+func TestMethodAttr(t *testing.T) {
+	tests := []struct {
+		name      string
+		service   string
+		operation string
+		want      attribute.KeyValue
+	}{
+		{
+			name:      "both service and operation",
+			service:   "DynamoDB",
+			operation: "GetItem",
+			want:      attribute.String("rpc.method", "DynamoDB/GetItem"),
+		},
+		{
+			name:      "service only",
+			service:   "Route 53",
+			operation: "",
+			want:      attribute.String("rpc.method", "Route 53"),
+		},
+		{
+			name:      "operation only",
+			service:   "",
+			operation: "DescribeInstances",
+			want:      attribute.String("rpc.method", "DescribeInstances"),
+		},
+		{
+			name:      "both empty",
+			service:   "",
+			operation: "",
+			want:      attribute.String("rpc.method", ""),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attr := MethodAttr(tt.service, tt.operation)
+			assert.Equal(t, tt.want, attr)
+		})
+	}
+}
+
 func TestDefaultAttributeBuilderNotSupportedService(t *testing.T) {
 	testCtx := awsMiddleware.SetServiceID(t.Context(), "not-implemented-service")
 
