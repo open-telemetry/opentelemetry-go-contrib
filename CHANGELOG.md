@@ -53,6 +53,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` hae been replaced by `const Version`. (#8340)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` has been replaced by `const Version`. (#8317)
 
+### Deprecated
+
+- The `samplers/probability/consistent` package is deprecated and will be removed in a future release in `go.opentelemetry.io/contrib/samplers/probability`. (#8447)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
