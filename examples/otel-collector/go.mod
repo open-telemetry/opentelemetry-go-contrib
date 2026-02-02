@@ -3,13 +3,13 @@ module go.opentelemetry.io/contrib/examples/otel-collector
 go 1.24.0
 
 require (
-	go.opentelemetry.io/otel v1.39.1-0.20260130171517-3264bf171b1e
+	go.opentelemetry.io/otel v1.40.0
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.39.1-0.20260130171517-3264bf171b1e
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.39.1-0.20260130171517-3264bf171b1e
-	go.opentelemetry.io/otel/metric v1.39.1-0.20260130171517-3264bf171b1e
+	go.opentelemetry.io/otel/metric v1.40.0
 	go.opentelemetry.io/otel/sdk v1.39.1-0.20260130171517-3264bf171b1e
 	go.opentelemetry.io/otel/sdk/metric v1.39.1-0.20260130171517-3264bf171b1e
-	go.opentelemetry.io/otel/trace v1.39.1-0.20260130171517-3264bf171b1e
+	go.opentelemetry.io/otel/trace v1.40.0
 	google.golang.org/grpc v1.78.0
 )
 
