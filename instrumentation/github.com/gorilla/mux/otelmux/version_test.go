@@ -19,6 +19,5 @@ var versionRegex = regexp.MustCompile(`^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)
 	`(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$`)
 
 func TestVersionSemver(t *testing.T) {
-	v := otelmux.Version()
-	assert.NotNil(t, versionRegex.FindStringSubmatch(v), "version is not semver: %s", v)
+	assert.NotNil(t, versionRegex.FindStringSubmatch(otelmux.Version), "version is not semver: %s", otelmux.Version)
 }
