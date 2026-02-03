@@ -28,31 +28,30 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 	// parse input file into YAML parse tree
 	var tree yaml.Node
 
-	err := yaml.Unmarshal(input, &tree)
-	if err != nil {
+	if err := yaml.Unmarshal(input, &tree); err != nil {
 		return nil, err
 	}
 
-	if walkErr := walkTree(&tree); walkErr != nil {
-		return nil, fmt.Errorf("could not substitute environment variables: %w", walkErr)
+	if err := walkTree(&tree); err != nil {
+		return nil, fmt.Errorf("could not substitute environment variables: %w", err)
 	}
 
 	_ = preserveYAMLLines(&tree, 0)
 
 	// the result is the again serialized tree, removed a trailing newline
-	result, resultErr := yaml.Marshal(&tree)
-	result = bytes.TrimSuffix(result, []byte("\n"))
-
-	if resultErr != nil {
-		return nil, fmt.Errorf("could not reserialize YAML tree: %w", resultErr)
+	result, err := yaml.Marshal(&tree)
+	if err != nil {
+		return nil, fmt.Errorf("could not reserialize YAML tree: %w", err)
 	}
+
+	result = bytes.TrimSuffix(result, []byte("\n"))
 
 	return result, nil
 }
 
 // walkTree recursively traverses the YAML parse tree and replaces environment variables in scalar nodes.
 func walkTree(node *yaml.Node) error {
-	if len(node.Content) == 0 &&
+	if len(node.Content) == 0 && // make sure to not run into strange situations
 		node.Kind == yaml.ScalarNode {
 		return handleValueNode(node)
 	}
