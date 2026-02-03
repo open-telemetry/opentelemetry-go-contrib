@@ -65,9 +65,10 @@ func TestRuntimeWithLimit(t *testing.T) {
 	// reset to default
 	defer debug.SetMemoryLimit(math.MaxInt64)
 
+	defaultAttribute := attribute.String("test.key", "value")
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
-	err := Start(WithMeterProvider(mp))
+	err := Start(WithMeterProvider(mp), WithAttributes(defaultAttribute))
 	assert.NoError(t, err)
 	rm := metricdata.ResourceMetrics{}
 	err = reader.Collect(t.Context(), &rm)
@@ -92,11 +93,13 @@ func TestRuntimeWithLimit(t *testing.T) {
 						{
 							Attributes: attribute.NewSet(
 								goconv.MemoryUsed{}.AttrMemoryType(goconv.MemoryTypeStack),
+								defaultAttribute,
 							),
 						},
 						{
 							Attributes: attribute.NewSet(
 								goconv.MemoryUsed{}.AttrMemoryType(goconv.MemoryTypeOther),
+								defaultAttribute,
 							),
 						},
 					},
@@ -109,7 +112,13 @@ func TestRuntimeWithLimit(t *testing.T) {
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
-					DataPoints:  []metricdata.DataPoint[int64]{{}},
+					DataPoints:  []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								defaultAttribute,
+							),
+						},
+					},
 				},
 			},
 			{
@@ -119,7 +128,13 @@ func TestRuntimeWithLimit(t *testing.T) {
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
-					DataPoints:  []metricdata.DataPoint[int64]{{}},
+					DataPoints:  []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								defaultAttribute,
+							),
+						},
+					},
 				},
 			},
 			{
@@ -129,7 +144,13 @@ func TestRuntimeWithLimit(t *testing.T) {
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: true,
-					DataPoints:  []metricdata.DataPoint[int64]{{}},
+					DataPoints:  []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								defaultAttribute,
+							),
+						},
+					},
 				},
 			},
 			{
@@ -139,7 +160,13 @@ func TestRuntimeWithLimit(t *testing.T) {
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
-					DataPoints:  []metricdata.DataPoint[int64]{{}},
+					DataPoints:  []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								defaultAttribute,
+							),
+						},
+					},
 				},
 			},
 			{
@@ -149,7 +176,13 @@ func TestRuntimeWithLimit(t *testing.T) {
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
-					DataPoints:  []metricdata.DataPoint[int64]{{}},
+					DataPoints:  []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								defaultAttribute,
+							),
+						},
+					},
 				},
 			},
 			{
@@ -159,7 +192,13 @@ func TestRuntimeWithLimit(t *testing.T) {
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
-					DataPoints:  []metricdata.DataPoint[int64]{{}},
+					DataPoints:  []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								defaultAttribute,
+							),
+						},
+					},
 				},
 			},
 			{
@@ -169,7 +208,13 @@ func TestRuntimeWithLimit(t *testing.T) {
 				Data: metricdata.Sum[int64]{
 					Temporality: metricdata.CumulativeTemporality,
 					IsMonotonic: false,
-					DataPoints:  []metricdata.DataPoint[int64]{{}},
+					DataPoints:  []metricdata.DataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(
+								defaultAttribute,
+							),
+						},
+					},
 				},
 			},
 		},
