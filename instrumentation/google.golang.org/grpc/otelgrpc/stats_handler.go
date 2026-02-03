@@ -238,9 +238,7 @@ func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 		h.duration.Inst(),
 		h.inSize,
 		h.outSize,
-		func(s *status.Status) (codes.Code, string) {
-			return codes.Error, s.Message()
-		},
+		clientStatus,
 	)
 }
 
@@ -353,4 +351,11 @@ func (c *config) handleRPC(
 	default:
 		return
 	}
+}
+
+func clientStatus(grpcStatus *status.Status) (codes.Code, string) {
+	if grpcStatus.Code() == grpc_codes.NotFound {
+		return codes.Unset, ""
+	}
+	return codes.Error, grpcStatus.Message()
 }

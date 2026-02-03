@@ -125,6 +125,28 @@ var serverChecks = []struct {
 	},
 }
 
+var clientChecks = []struct {
+	grpcCode                  grpc_codes.Code
+	wantSpanCode              otelcode.Code
+	wantSpanStatusDescription string
+}{
+	{
+		grpcCode:                  grpc_codes.OK,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.NotFound,
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
+	},
+	{
+		grpcCode:                  grpc_codes.Internal,
+		wantSpanCode:              otelcode.Error,
+		wantSpanStatusDescription: grpc_codes.Internal.String(),
+	},
+}
+
 func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 	for _, check := range serverChecks {
 		name := check.grpcCode.String()
@@ -166,7 +188,66 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 	}
 }
 
+func TestStatsHandlerHandleRPCClientErrors(t *testing.T) {
+	for _, check := range clientChecks {
+		name := check.grpcCode.String()
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+			sr := tracetest.NewSpanRecorder()
+			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+			mr := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(mr))
+
+			clientHandler := otelgrpc.NewClientHandler(
+				otelgrpc.WithTracerProvider(tp),
+				otelgrpc.WithMeterProvider(mp),
+				otelgrpc.WithMetricAttributes(testMetricAttr),
+			)
+
+			serviceName := "TestGrpcService"
+			methodName := serviceName + "/" + name
+			fullMethodName := "/" + methodName
+			ctx := clientHandler.TagRPC(t.Context(), &stats.RPCTagInfo{
+				FullMethodName: fullMethodName,
+			})
+
+			var grpcErr error
+			if check.grpcCode != grpc_codes.OK {
+				grpcErr = status.Error(check.grpcCode, check.grpcCode.String())
+			}
+			clientHandler.HandleRPC(ctx, &stats.End{
+				Error: grpcErr,
+			})
+
+			span, ok := getSpanFromRecorder(sr, methodName)
+			require.True(t, ok, "missing span %s", methodName)
+			assertClientSpan(t, check.wantSpanCode, check.wantSpanStatusDescription, check.grpcCode, span)
+
+			assertStatsHandlerClientMetrics(t, mr, serviceName, name, check.grpcCode)
+		})
+	}
+}
+
 func assertServerSpan(t *testing.T, wantSpanCode otelcode.Code, wantSpanStatusDescription string, wantGrpcCode grpc_codes.Code, span trace.ReadOnlySpan) {
+	// validate span status
+	assert.Equal(t, wantSpanCode, span.Status().Code)
+	assert.Equal(t, wantSpanStatusDescription, span.Status().Description)
+
+	// validate grpc code span attribute
+	var codeAttr attribute.KeyValue
+	for _, a := range span.Attributes() {
+		if a.Key == semconv.RPCResponseStatusCodeKey {
+			codeAttr = a
+			break
+		}
+	}
+
+	require.True(t, codeAttr.Valid(), "attributes contain gRPC status code")
+	assert.Equal(t, attribute.StringValue(wantGrpcCode.String()), codeAttr.Value)
+}
+
+func assertClientSpan(t *testing.T, wantSpanCode otelcode.Code, wantSpanStatusDescription string, wantGrpcCode grpc_codes.Code, span trace.ReadOnlySpan) {
 	// validate span status
 	assert.Equal(t, wantSpanCode, span.Status().Code)
 	assert.Equal(t, wantSpanStatusDescription, span.Status().Description)
@@ -192,6 +273,37 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 				Name:        rpcconv.ServerCallDuration{}.Name(),
 				Description: rpcconv.ServerCallDuration{}.Description(),
 				Unit:        rpcconv.ServerCallDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(
+								semconv.RPCMethod(serviceName+"/"+name),
+								semconv.RPCSystemNameGRPC,
+								semconv.RPCResponseStatusCode(code.String()),
+								testMetricAttr,
+							),
+						},
+					},
+				},
+			},
+		},
+	}
+	rm := metricdata.ResourceMetrics{}
+	err := reader.Collect(t.Context(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+}
+
+func assertStatsHandlerClientMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code grpc_codes.Code) {
+	want := metricdata.ScopeMetrics{
+		Scope: wantInstrumentationScope,
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        rpcconv.ClientCallDuration{}.Name(),
+				Description: rpcconv.ClientCallDuration{}.Description(),
+				Unit:        rpcconv.ClientCallDuration{}.Unit(),
 				Data: metricdata.Histogram[float64]{
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
