@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Removed the deprecated zipkin example in `go.opentelemetry.io/contrib/examples/zipkin`. (#8484)
+- Removed the deprecated zipkin example in `go.opentelemetry.io/contrib/examples/zipkin`. (#8501)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
