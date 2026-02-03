@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Enforce that `client_certificate_file` and `client_key_file` are provided together in `go.opentelemetry.io/contrib/otelconf`. (#8450)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -27,7 +31,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix panic when passing nil `TracerProvider` or `MeterProvider` to `WithTracerProvider` or `WithMeterProvider` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8323)
 - `Transport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` now supports reading request body multiple times for subsequent requests that reuse `http.Request`. (#8352)
-- Enforce that `client_certificate_file` and `client_key_file` are provided together in `go.opentelemetry.io/contrib/otelconf`. (#8450)
 
 ### Changed
 
