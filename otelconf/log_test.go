@@ -47,18 +47,6 @@ func TestLoggerProvider(t *testing.T) {
 			wantProvider: noop.NewLoggerProvider(),
 		},
 		{
-			name: "invalid-provider",
-			cfg: configOptions{
-				opentelemetryConfig: OpenTelemetryConfiguration{
-					LoggerProvider: &MeterProviderJson{
-						Readers: []MetricReader{},
-					},
-				},
-			},
-			wantProvider: noop.NewLoggerProvider(),
-			wantErr:      newErrInvalid("logger_provider"),
-		},
-		{
 			name: "error-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{

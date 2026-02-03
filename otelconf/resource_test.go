@@ -16,19 +16,13 @@ import (
 func TestNewResource(t *testing.T) {
 	tests := []struct {
 		name         string
-		config       OpenTelemetryConfigurationResource
+		config       *ResourceJson
 		wantResource *resource.Resource
 		wantErrT     error
 	}{
 		{
 			name:         "no-resource-configuration",
 			wantResource: resource.Default(),
-		},
-		{
-			name:         "invalid resource",
-			config:       "",
-			wantResource: nil,
-			wantErrT:     newErrInvalid("resource"),
 		},
 		{
 			name:         "resource-no-attributes",
