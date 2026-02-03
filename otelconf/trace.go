@@ -28,15 +28,11 @@ func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProv
 	if cfg.opentelemetryConfig.TracerProvider == nil {
 		return noop.NewTracerProvider(), noopShutdown, nil
 	}
-	provider, ok := cfg.opentelemetryConfig.TracerProvider.(*TracerProviderJson)
-	if !ok {
-		return noop.NewTracerProvider(), noopShutdown, newErrInvalid("tracer_provider")
-	}
 
 	opts := append(cfg.tracerProviderOptions, sdktrace.WithResource(res))
 
 	var errs []error
-	for _, processor := range provider.Processors {
+	for _, processor := range cfg.opentelemetryConfig.TracerProvider.Processors {
 		sp, err := spanProcessor(cfg.ctx, processor)
 		if err == nil {
 			opts = append(opts, sdktrace.WithSpanProcessor(sp))
@@ -44,7 +40,7 @@ func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProv
 			errs = append(errs, err)
 		}
 	}
-	if s, err := sampler(provider.Sampler); err == nil {
+	if s, err := sampler(cfg.opentelemetryConfig.TracerProvider.Sampler); err == nil {
 		opts = append(opts, sdktrace.WithSampler(s))
 	} else {
 		errs = append(errs, err)

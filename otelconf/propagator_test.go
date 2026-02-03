@@ -13,7 +13,7 @@ import (
 func TestPropagator(t *testing.T) {
 	tests := []struct {
 		name    string
-		cfg     OpenTelemetryConfigurationPropagator
+		cfg     *PropagatorJson
 		want    []string
 		wantErr bool
 		errMsg  string
