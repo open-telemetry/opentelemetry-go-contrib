@@ -27,7 +27,7 @@ func ExampleCarrier_extractFromParent() {
 
 	// Extract trace context that was propagated by the parent process.
 	prop := propagation.TraceContext{}
-	ctx := prop.Extract(context.Background(), carrier)
+	ctx := prop.Extract(context.Background(), &carrier)
 
 	// The context now contains the span context from the parent.
 	spanCtx := trace.SpanContextFromContext(ctx)
@@ -67,7 +67,7 @@ func ExampleCarrier_childProcess() {
 
 	// Inject trace context into the child's environment.
 	prop := propagation.TraceContext{}
-	prop.Inject(ctx, carrier)
+	prop.Inject(ctx, &carrier)
 
 	// The child process now has trace context in its environment,
 	// independent of the parent process's environment variables.

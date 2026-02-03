@@ -6,6 +6,7 @@ package envcar // import "go.opentelemetry.io/contrib/propagators/envcar"
 import (
 	"os"
 	"strings"
+	"sync"
 
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -26,39 +27,53 @@ type Carrier struct {
 	// be immutable:
 	// https://opentelemetry.io/docs/specs/otel/context/env-carriers/#environment-variable-immutability
 	SetEnvFunc func(key, value string)
+	values     map[string]string
+	once       sync.Once
 }
 
 // Compile time check that Carrier implements the TextMapCarrier.
-var _ propagation.TextMapCarrier = Carrier{}
+var _ propagation.TextMapCarrier = &Carrier{}
+
+// Fetch runs once on first access, and stores the environment in the
+// carrier by lower cased keys..
+func (c *Carrier) fetch() {
+	c.once.Do(func() {
+		environ := os.Environ()
+		c.values = make(map[string]string, len(environ))
+		for _, kv := range environ {
+			kvPair := strings.SplitN(kv, "=", 2)
+			if len(kvPair) < 1 {
+				continue
+			}
+			c.values[strings.ToLower(kvPair[0])] = kvPair[1]
+		}
+	})
+}
 
 // Get returns the value associated with the passed key.
-// The key is uppercased before being used to access the environment variable.
-func (Carrier) Get(key string) string {
-	k := strings.ToUpper(key)
-	return os.Getenv(k)
+func (c *Carrier) Get(key string) string {
+	c.fetch()
+	return c.values[strings.ToLower(key)]
 }
 
 // Set stores the key-value pair in the environment variable.
 // The key is uppercased before being used to set the environment variable.
 // If SetEnvFunc is not set, this method does nothing.
-func (e Carrier) Set(key, value string) {
-	if e.SetEnvFunc == nil {
+func (c *Carrier) Set(key, value string) {
+	if c.SetEnvFunc == nil {
 		return
 	}
 	k := strings.ToUpper(key)
-	e.SetEnvFunc(k, value)
+	c.SetEnvFunc(k, value)
 }
 
 // Keys lists the keys stored in this carrier.
 // This returns all the keys in the environment variables.
-func (Carrier) Keys() []string {
-	keys := make([]string, 0, len(os.Environ()))
-	for _, kv := range os.Environ() {
-		kvPair := strings.SplitN(kv, "=", 2)
-		if len(kvPair) < 1 {
-			continue
-		}
-		keys = append(keys, strings.ToLower(kvPair[0]))
+func (c *Carrier) Keys() []string {
+	c.fetch()
+	keys := make([]string, 0, len(c.values))
+	for key := range c.values {
+		keys = append(keys, key)
 	}
 	return keys
 }

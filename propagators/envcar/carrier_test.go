@@ -68,7 +68,7 @@ func TestExtractValidTraceContextEnvCarrier(t *testing.T) {
 			for k, v := range tc.envs {
 				t.Setenv(k, v)
 			}
-			ctx = prop.Extract(ctx, envcar.Carrier{})
+			ctx = prop.Extract(ctx, &envcar.Carrier{})
 			assert.Equal(t, tc.want, trace.SpanContextFromContext(ctx))
 		})
 	}
@@ -121,7 +121,7 @@ func TestInjectTraceContextEnvCarrier(t *testing.T) {
 				},
 			}
 
-			prop.Inject(ctx, c)
+			prop.Inject(ctx, &c)
 
 			for k, v := range tc.want {
 				if got := os.Getenv(k); got != v {
@@ -214,7 +214,7 @@ func TestConcurrentChildProcesses(t *testing.T) {
 
 			// Inject this goroutine's trace context.
 			prop := propagation.TraceContext{}
-			prop.Inject(ctx, carrier)
+			prop.Inject(ctx, &carrier)
 
 			// Run the child process and capture output.
 			out, err := cmd.Output()
