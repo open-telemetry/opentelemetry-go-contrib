@@ -400,71 +400,6 @@ func TestNewSDK(t *testing.T) {
 			wantLoggerProvider: lognoop.NewLoggerProvider(),
 			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
-		{
-			name: "invalid resource",
-			cfg: []ConfigurationOption{
-				WithContext(t.Context()),
-				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-					TracerProvider: &TracerProviderJson{},
-					MeterProvider:  &MeterProviderJson{},
-					LoggerProvider: &LoggerProviderJson{},
-					Resource:       &LoggerProviderJson{},
-				}),
-			},
-			wantErr:            newErrInvalid("resource"),
-			wantTracerProvider: tracenoop.NewTracerProvider(),
-			wantMeterProvider:  metricnoop.NewMeterProvider(),
-			wantLoggerProvider: lognoop.NewLoggerProvider(),
-			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
-		},
-		{
-			name: "invalid propagator",
-			cfg: []ConfigurationOption{
-				WithContext(t.Context()),
-				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-					TracerProvider: &TracerProviderJson{},
-					MeterProvider:  &MeterProviderJson{},
-					LoggerProvider: &LoggerProviderJson{},
-					Propagator:     &LoggerProviderJson{},
-				}),
-			},
-			wantErr:            newErrInvalid("propagator"),
-			wantTracerProvider: tracenoop.NewTracerProvider(),
-			wantMeterProvider:  metricnoop.NewMeterProvider(),
-			wantLoggerProvider: lognoop.NewLoggerProvider(),
-			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
-		},
-		{
-			name: "invalid logger provider",
-			cfg: []ConfigurationOption{
-				WithContext(t.Context()),
-				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-					TracerProvider: &TracerProviderJson{},
-					MeterProvider:  &MeterProviderJson{},
-					LoggerProvider: &ResourceJson{},
-					Resource:       &ResourceJson{},
-				}),
-			},
-			wantErr:            newErrInvalid("logger_provider"),
-			wantTracerProvider: tracenoop.NewTracerProvider(),
-			wantMeterProvider:  metricnoop.NewMeterProvider(),
-			wantLoggerProvider: lognoop.NewLoggerProvider(),
-			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
-		},
-		{
-			name: "invalid tracer provider",
-			cfg: []ConfigurationOption{
-				WithContext(t.Context()),
-				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-					TracerProvider: &ResourceJson{},
-				}),
-			},
-			wantErr:            newErrInvalid("tracer_provider"),
-			wantTracerProvider: tracenoop.NewTracerProvider(),
-			wantMeterProvider:  metricnoop.NewMeterProvider(),
-			wantLoggerProvider: lognoop.NewLoggerProvider(),
-			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
-		},
 	}
 	for _, tt := range tests {
 		sdk, err := NewSDK(tt.cfg...)
@@ -481,15 +416,12 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 	cfg := []ConfigurationOption{
 		WithContext(t.Context()),
 		WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-			TracerProvider: &ResourceJson{},
+			TracerProvider: nil,
 		}),
 	}
-	// NewSDK without an env file set
-	_, err := NewSDK(cfg...)
-	require.Equal(t, newErrInvalid("tracer_provider"), err)
 	// test a non existent file
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "file_missing.yaml"))
-	_, err = NewSDK(cfg...)
+	_, err := NewSDK(cfg...)
 	require.Error(t, err)
 	// test a file that causes a parse error
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))

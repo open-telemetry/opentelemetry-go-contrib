@@ -3,14 +3,14 @@ module go.opentelemetry.io/contrib/detectors/autodetect
 go 1.24.0
 
 require (
-	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.1.0
-	go.opentelemetry.io/contrib/detectors/aws/ecs v1.39.0
-	go.opentelemetry.io/contrib/detectors/aws/eks v1.39.0
-	go.opentelemetry.io/contrib/detectors/aws/lambda v0.64.0
-	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.11.0
-	go.opentelemetry.io/contrib/detectors/gcp v1.39.0
-	go.opentelemetry.io/otel v1.39.0
-	go.opentelemetry.io/otel/sdk v1.39.0
+	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.2.0
+	go.opentelemetry.io/contrib/detectors/aws/ecs v1.40.0
+	go.opentelemetry.io/contrib/detectors/aws/eks v1.40.0
+	go.opentelemetry.io/contrib/detectors/aws/lambda v0.65.0
+	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.12.0
+	go.opentelemetry.io/contrib/detectors/gcp v1.40.0
+	go.opentelemetry.io/otel v1.40.0
+	go.opentelemetry.io/otel/sdk v1.40.0
 )
 
 require (
@@ -60,8 +60,8 @@ require (
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.39.0 // indirect
-	go.opentelemetry.io/otel/trace v1.39.0 // indirect
+	go.opentelemetry.io/otel/metric v1.40.0 // indirect
+	go.opentelemetry.io/otel/trace v1.40.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.49.0 // indirect
@@ -77,7 +77,7 @@ require (
 	k8s.io/apimachinery v0.34.3 // indirect
 	k8s.io/client-go v0.34.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/kube-openapi v0.0.0-20251125145642-4e65d59e963e // indirect
+	k8s.io/kube-openapi v0.0.0-20260127142750-a19766b6e2d4 // indirect
 	k8s.io/utils v0.0.0-20260108192941-914a6e750570 // indirect
 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect

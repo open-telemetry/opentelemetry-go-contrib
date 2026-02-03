@@ -10,25 +10,19 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
 func TestNewResource(t *testing.T) {
 	tests := []struct {
 		name         string
-		config       OpenTelemetryConfigurationResource
+		config       *ResourceJson
 		wantResource *resource.Resource
 		wantErrT     error
 	}{
 		{
 			name:         "no-resource-configuration",
 			wantResource: resource.Default(),
-		},
-		{
-			name:         "invalid resource",
-			config:       "",
-			wantResource: nil,
-			wantErrT:     newErrInvalid("resource"),
 		},
 		{
 			name:         "resource-no-attributes",

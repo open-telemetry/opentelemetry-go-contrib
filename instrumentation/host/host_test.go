@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/processconv"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/systemconv"
+	"go.opentelemetry.io/otel/semconv/v1.39.0/processconv"
+	"go.opentelemetry.io/otel/semconv/v1.39.0/systemconv"
 
 	"go.opentelemetry.io/contrib/instrumentation/host"
 )
