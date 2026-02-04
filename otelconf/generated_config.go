@@ -31,14 +31,18 @@ type AlwaysOnSampler map[string]interface{}
 type AttributeLimits struct {
 	// AttributeCountLimit corresponds to the JSON schema field
 	// "attribute_count_limit".
-	AttributeCountLimit *int `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
+	AttributeCountLimit AttributeLimitsAttributeCountLimit `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
 
 	// AttributeValueLengthLimit corresponds to the JSON schema field
 	// "attribute_value_length_limit".
-	AttributeValueLengthLimit *int `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
+	AttributeValueLengthLimit AttributeLimitsAttributeValueLengthLimit `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
+
+type AttributeLimitsAttributeCountLimit *int
+
+type AttributeLimitsAttributeValueLengthLimit *int
 
 type AttributeNameValue struct {
 	// Name corresponds to the JSON schema field "name".
@@ -63,77 +67,115 @@ type BaggagePropagator map[string]interface{}
 
 type Base2ExponentialBucketHistogramAggregation struct {
 	// MaxScale corresponds to the JSON schema field "max_scale".
-	MaxScale *int `json:"max_scale,omitempty" yaml:"max_scale,omitempty" mapstructure:"max_scale,omitempty"`
+	MaxScale Base2ExponentialBucketHistogramAggregationMaxScale `json:"max_scale,omitempty" yaml:"max_scale,omitempty" mapstructure:"max_scale,omitempty"`
 
 	// MaxSize corresponds to the JSON schema field "max_size".
-	MaxSize *int `json:"max_size,omitempty" yaml:"max_size,omitempty" mapstructure:"max_size,omitempty"`
+	MaxSize Base2ExponentialBucketHistogramAggregationMaxSize `json:"max_size,omitempty" yaml:"max_size,omitempty" mapstructure:"max_size,omitempty"`
 
 	// RecordMinMax corresponds to the JSON schema field "record_min_max".
-	RecordMinMax *bool `json:"record_min_max,omitempty" yaml:"record_min_max,omitempty" mapstructure:"record_min_max,omitempty"`
+	RecordMinMax Base2ExponentialBucketHistogramAggregationRecordMinMax `json:"record_min_max,omitempty" yaml:"record_min_max,omitempty" mapstructure:"record_min_max,omitempty"`
 }
+
+type Base2ExponentialBucketHistogramAggregationMaxScale *int
+
+type Base2ExponentialBucketHistogramAggregationMaxSize *int
+
+type Base2ExponentialBucketHistogramAggregationRecordMinMax *bool
 
 type BatchLogRecordProcessor struct {
 	// ExportTimeout corresponds to the JSON schema field "export_timeout".
-	ExportTimeout *int `json:"export_timeout,omitempty" yaml:"export_timeout,omitempty" mapstructure:"export_timeout,omitempty"`
+	ExportTimeout BatchLogRecordProcessorExportTimeout `json:"export_timeout,omitempty" yaml:"export_timeout,omitempty" mapstructure:"export_timeout,omitempty"`
 
 	// Exporter corresponds to the JSON schema field "exporter".
 	Exporter LogRecordExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
 
 	// MaxExportBatchSize corresponds to the JSON schema field
 	// "max_export_batch_size".
-	MaxExportBatchSize *int `json:"max_export_batch_size,omitempty" yaml:"max_export_batch_size,omitempty" mapstructure:"max_export_batch_size,omitempty"`
+	MaxExportBatchSize BatchLogRecordProcessorMaxExportBatchSize `json:"max_export_batch_size,omitempty" yaml:"max_export_batch_size,omitempty" mapstructure:"max_export_batch_size,omitempty"`
 
 	// MaxQueueSize corresponds to the JSON schema field "max_queue_size".
-	MaxQueueSize *int `json:"max_queue_size,omitempty" yaml:"max_queue_size,omitempty" mapstructure:"max_queue_size,omitempty"`
+	MaxQueueSize BatchLogRecordProcessorMaxQueueSize `json:"max_queue_size,omitempty" yaml:"max_queue_size,omitempty" mapstructure:"max_queue_size,omitempty"`
 
 	// ScheduleDelay corresponds to the JSON schema field "schedule_delay".
-	ScheduleDelay *int `json:"schedule_delay,omitempty" yaml:"schedule_delay,omitempty" mapstructure:"schedule_delay,omitempty"`
+	ScheduleDelay BatchLogRecordProcessorScheduleDelay `json:"schedule_delay,omitempty" yaml:"schedule_delay,omitempty" mapstructure:"schedule_delay,omitempty"`
 }
+
+type BatchLogRecordProcessorExportTimeout *int
+
+type BatchLogRecordProcessorMaxExportBatchSize *int
+
+type BatchLogRecordProcessorMaxQueueSize *int
+
+type BatchLogRecordProcessorScheduleDelay *int
 
 type BatchSpanProcessor struct {
 	// ExportTimeout corresponds to the JSON schema field "export_timeout".
-	ExportTimeout *int `json:"export_timeout,omitempty" yaml:"export_timeout,omitempty" mapstructure:"export_timeout,omitempty"`
+	ExportTimeout BatchSpanProcessorExportTimeout `json:"export_timeout,omitempty" yaml:"export_timeout,omitempty" mapstructure:"export_timeout,omitempty"`
 
 	// Exporter corresponds to the JSON schema field "exporter".
 	Exporter SpanExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
 
 	// MaxExportBatchSize corresponds to the JSON schema field
 	// "max_export_batch_size".
-	MaxExportBatchSize *int `json:"max_export_batch_size,omitempty" yaml:"max_export_batch_size,omitempty" mapstructure:"max_export_batch_size,omitempty"`
+	MaxExportBatchSize BatchSpanProcessorMaxExportBatchSize `json:"max_export_batch_size,omitempty" yaml:"max_export_batch_size,omitempty" mapstructure:"max_export_batch_size,omitempty"`
 
 	// MaxQueueSize corresponds to the JSON schema field "max_queue_size".
-	MaxQueueSize *int `json:"max_queue_size,omitempty" yaml:"max_queue_size,omitempty" mapstructure:"max_queue_size,omitempty"`
+	MaxQueueSize BatchSpanProcessorMaxQueueSize `json:"max_queue_size,omitempty" yaml:"max_queue_size,omitempty" mapstructure:"max_queue_size,omitempty"`
 
 	// ScheduleDelay corresponds to the JSON schema field "schedule_delay".
-	ScheduleDelay *int `json:"schedule_delay,omitempty" yaml:"schedule_delay,omitempty" mapstructure:"schedule_delay,omitempty"`
+	ScheduleDelay BatchSpanProcessorScheduleDelay `json:"schedule_delay,omitempty" yaml:"schedule_delay,omitempty" mapstructure:"schedule_delay,omitempty"`
 }
+
+type BatchSpanProcessorExportTimeout *int
+
+type BatchSpanProcessorMaxExportBatchSize *int
+
+type BatchSpanProcessorMaxQueueSize *int
+
+type BatchSpanProcessorScheduleDelay *int
 
 type CardinalityLimits struct {
 	// Counter corresponds to the JSON schema field "counter".
-	Counter *int `json:"counter,omitempty" yaml:"counter,omitempty" mapstructure:"counter,omitempty"`
+	Counter CardinalityLimitsCounter `json:"counter,omitempty" yaml:"counter,omitempty" mapstructure:"counter,omitempty"`
 
 	// Default corresponds to the JSON schema field "default".
-	Default *int `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
+	Default CardinalityLimitsDefault `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
 	// Gauge corresponds to the JSON schema field "gauge".
-	Gauge *int `json:"gauge,omitempty" yaml:"gauge,omitempty" mapstructure:"gauge,omitempty"`
+	Gauge CardinalityLimitsGauge `json:"gauge,omitempty" yaml:"gauge,omitempty" mapstructure:"gauge,omitempty"`
 
 	// Histogram corresponds to the JSON schema field "histogram".
-	Histogram *int `json:"histogram,omitempty" yaml:"histogram,omitempty" mapstructure:"histogram,omitempty"`
+	Histogram CardinalityLimitsHistogram `json:"histogram,omitempty" yaml:"histogram,omitempty" mapstructure:"histogram,omitempty"`
 
 	// ObservableCounter corresponds to the JSON schema field "observable_counter".
-	ObservableCounter *int `json:"observable_counter,omitempty" yaml:"observable_counter,omitempty" mapstructure:"observable_counter,omitempty"`
+	ObservableCounter CardinalityLimitsObservableCounter `json:"observable_counter,omitempty" yaml:"observable_counter,omitempty" mapstructure:"observable_counter,omitempty"`
 
 	// ObservableGauge corresponds to the JSON schema field "observable_gauge".
-	ObservableGauge *int `json:"observable_gauge,omitempty" yaml:"observable_gauge,omitempty" mapstructure:"observable_gauge,omitempty"`
+	ObservableGauge CardinalityLimitsObservableGauge `json:"observable_gauge,omitempty" yaml:"observable_gauge,omitempty" mapstructure:"observable_gauge,omitempty"`
 
 	// ObservableUpDownCounter corresponds to the JSON schema field
 	// "observable_up_down_counter".
-	ObservableUpDownCounter *int `json:"observable_up_down_counter,omitempty" yaml:"observable_up_down_counter,omitempty" mapstructure:"observable_up_down_counter,omitempty"`
+	ObservableUpDownCounter CardinalityLimitsObservableUpDownCounter `json:"observable_up_down_counter,omitempty" yaml:"observable_up_down_counter,omitempty" mapstructure:"observable_up_down_counter,omitempty"`
 
 	// UpDownCounter corresponds to the JSON schema field "up_down_counter".
-	UpDownCounter *int `json:"up_down_counter,omitempty" yaml:"up_down_counter,omitempty" mapstructure:"up_down_counter,omitempty"`
+	UpDownCounter CardinalityLimitsUpDownCounter `json:"up_down_counter,omitempty" yaml:"up_down_counter,omitempty" mapstructure:"up_down_counter,omitempty"`
 }
+
+type CardinalityLimitsCounter *int
+
+type CardinalityLimitsDefault *int
+
+type CardinalityLimitsGauge *int
+
+type CardinalityLimitsHistogram *int
+
+type CardinalityLimitsObservableCounter *int
+
+type CardinalityLimitsObservableGauge *int
+
+type CardinalityLimitsObservableUpDownCounter *int
+
+type CardinalityLimitsUpDownCounter *int
 
 type ConsoleExporter map[string]interface{}
 
@@ -233,8 +275,10 @@ type ExperimentalMeterMatcherAndConfig struct {
 
 type ExperimentalOTLPFileExporter struct {
 	// OutputStream corresponds to the JSON schema field "output_stream".
-	OutputStream *string `json:"output_stream,omitempty" yaml:"output_stream,omitempty" mapstructure:"output_stream,omitempty"`
+	OutputStream ExperimentalOTLPFileExporterOutputStream `json:"output_stream,omitempty" yaml:"output_stream,omitempty" mapstructure:"output_stream,omitempty"`
 }
+
+type ExperimentalOTLPFileExporterOutputStream *string
 
 type ExperimentalOTLPFileMetricExporter struct {
 	// DefaultHistogramAggregation corresponds to the JSON schema field
@@ -242,12 +286,14 @@ type ExperimentalOTLPFileMetricExporter struct {
 	DefaultHistogramAggregation *ExporterDefaultHistogramAggregation `json:"default_histogram_aggregation,omitempty" yaml:"default_histogram_aggregation,omitempty" mapstructure:"default_histogram_aggregation,omitempty"`
 
 	// OutputStream corresponds to the JSON schema field "output_stream".
-	OutputStream *string `json:"output_stream,omitempty" yaml:"output_stream,omitempty" mapstructure:"output_stream,omitempty"`
+	OutputStream ExperimentalOTLPFileMetricExporterOutputStream `json:"output_stream,omitempty" yaml:"output_stream,omitempty" mapstructure:"output_stream,omitempty"`
 
 	// TemporalityPreference corresponds to the JSON schema field
 	// "temporality_preference".
 	TemporalityPreference *ExporterTemporalityPreference `json:"temporality_preference,omitempty" yaml:"temporality_preference,omitempty" mapstructure:"temporality_preference,omitempty"`
 }
+
+type ExperimentalOTLPFileMetricExporterOutputStream *string
 
 type ExperimentalPeerInstrumentation struct {
 	// ServiceMapping corresponds to the JSON schema field "service_mapping".
@@ -266,10 +312,10 @@ type ExperimentalProcessResourceDetector map[string]interface{}
 
 type ExperimentalPrometheusMetricExporter struct {
 	// Host corresponds to the JSON schema field "host".
-	Host *string `json:"host,omitempty" yaml:"host,omitempty" mapstructure:"host,omitempty"`
+	Host ExperimentalPrometheusMetricExporterHost `json:"host,omitempty" yaml:"host,omitempty" mapstructure:"host,omitempty"`
 
 	// Port corresponds to the JSON schema field "port".
-	Port *int `json:"port,omitempty" yaml:"port,omitempty" mapstructure:"port,omitempty"`
+	Port ExperimentalPrometheusMetricExporterPort `json:"port,omitempty" yaml:"port,omitempty" mapstructure:"port,omitempty"`
 
 	// TranslationStrategy corresponds to the JSON schema field
 	// "translation_strategy".
@@ -280,8 +326,12 @@ type ExperimentalPrometheusMetricExporter struct {
 	WithResourceConstantLabels *IncludeExclude `json:"with_resource_constant_labels,omitempty" yaml:"with_resource_constant_labels,omitempty" mapstructure:"with_resource_constant_labels,omitempty"`
 
 	// WithoutScopeInfo corresponds to the JSON schema field "without_scope_info".
-	WithoutScopeInfo *bool `json:"without_scope_info,omitempty" yaml:"without_scope_info,omitempty" mapstructure:"without_scope_info,omitempty"`
+	WithoutScopeInfo ExperimentalPrometheusMetricExporterWithoutScopeInfo `json:"without_scope_info,omitempty" yaml:"without_scope_info,omitempty" mapstructure:"without_scope_info,omitempty"`
 }
+
+type ExperimentalPrometheusMetricExporterHost *string
+
+type ExperimentalPrometheusMetricExporterPort *int
 
 type ExperimentalPrometheusMetricExporterTranslationStrategy string
 
@@ -289,6 +339,8 @@ const ExperimentalPrometheusMetricExporterTranslationStrategyNoTranslation Exper
 const ExperimentalPrometheusMetricExporterTranslationStrategyNoUTF8EscapingWithSuffixes ExperimentalPrometheusMetricExporterTranslationStrategy = "NoUTF8EscapingWithSuffixes"
 const ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes ExperimentalPrometheusMetricExporterTranslationStrategy = "UnderscoreEscapingWithSuffixes"
 const ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithoutSuffixes ExperimentalPrometheusMetricExporterTranslationStrategy = "UnderscoreEscapingWithoutSuffixes"
+
+type ExperimentalPrometheusMetricExporterWithoutScopeInfo *bool
 
 type ExperimentalResourceDetection struct {
 	// Attributes corresponds to the JSON schema field "attributes".
@@ -342,8 +394,10 @@ type ExplicitBucketHistogramAggregation struct {
 	Boundaries []float64 `json:"boundaries,omitempty" yaml:"boundaries,omitempty" mapstructure:"boundaries,omitempty"`
 
 	// RecordMinMax corresponds to the JSON schema field "record_min_max".
-	RecordMinMax *bool `json:"record_min_max,omitempty" yaml:"record_min_max,omitempty" mapstructure:"record_min_max,omitempty"`
+	RecordMinMax ExplicitBucketHistogramAggregationRecordMinMax `json:"record_min_max,omitempty" yaml:"record_min_max,omitempty" mapstructure:"record_min_max,omitempty"`
 }
+
+type ExplicitBucketHistogramAggregationRecordMinMax *bool
 
 type ExporterDefaultHistogramAggregation string
 
@@ -416,14 +470,18 @@ type JaegerPropagator map[string]interface{}
 
 type JaegerRemoteSampler struct {
 	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
+	Endpoint JaegerRemoteSamplerEndpoint `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
 
 	// InitialSampler corresponds to the JSON schema field "initial_sampler".
 	InitialSampler *Sampler `json:"initial_sampler,omitempty" yaml:"initial_sampler,omitempty" mapstructure:"initial_sampler,omitempty"`
 
 	// Interval corresponds to the JSON schema field "interval".
-	Interval *int `json:"interval,omitempty" yaml:"interval,omitempty" mapstructure:"interval,omitempty"`
+	Interval JaegerRemoteSamplerInterval `json:"interval,omitempty" yaml:"interval,omitempty" mapstructure:"interval,omitempty"`
 }
+
+type JaegerRemoteSamplerEndpoint *string
+
+type JaegerRemoteSamplerInterval *int
 
 type LastValueAggregation map[string]interface{}
 
@@ -447,12 +505,16 @@ type LogRecordExporter struct {
 type LogRecordLimits struct {
 	// AttributeCountLimit corresponds to the JSON schema field
 	// "attribute_count_limit".
-	AttributeCountLimit *int `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
+	AttributeCountLimit LogRecordLimitsAttributeCountLimit `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
 
 	// AttributeValueLengthLimit corresponds to the JSON schema field
 	// "attribute_value_length_limit".
-	AttributeValueLengthLimit *int `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
+	AttributeValueLengthLimit LogRecordLimitsAttributeValueLengthLimit `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
 }
+
+type LogRecordLimitsAttributeCountLimit *int
+
+type LogRecordLimitsAttributeValueLengthLimit *int
 
 type LogRecordProcessor struct {
 	// Batch corresponds to the JSON schema field "batch".
@@ -511,76 +573,110 @@ type NameStringValuePair struct {
 	Name string `json:"name" yaml:"name" mapstructure:"name"`
 
 	// Value corresponds to the JSON schema field "value".
-	Value *string `json:"value" yaml:"value" mapstructure:"value"`
+	Value NameStringValuePairValue `json:"value" yaml:"value" mapstructure:"value"`
 }
+
+type NameStringValuePairValue *string
 
 type OTLPGrpcExporter struct {
 	// CertificateFile corresponds to the JSON schema field "certificate_file".
-	CertificateFile *string `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
+	CertificateFile OTLPGrpcExporterCertificateFile `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
 
 	// ClientCertificateFile corresponds to the JSON schema field
 	// "client_certificate_file".
-	ClientCertificateFile *string `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
+	ClientCertificateFile OTLPGrpcExporterClientCertificateFile `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
 
 	// ClientKeyFile corresponds to the JSON schema field "client_key_file".
-	ClientKeyFile *string `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
+	ClientKeyFile OTLPGrpcExporterClientKeyFile `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
 
 	// Compression corresponds to the JSON schema field "compression".
-	Compression *string `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
+	Compression OTLPGrpcExporterCompression `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
 
 	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
+	Endpoint OTLPGrpcExporterEndpoint `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
 
 	// Headers corresponds to the JSON schema field "headers".
 	Headers []NameStringValuePair `json:"headers,omitempty" yaml:"headers,omitempty" mapstructure:"headers,omitempty"`
 
 	// HeadersList corresponds to the JSON schema field "headers_list".
-	HeadersList *string `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
+	HeadersList OTLPGrpcExporterHeadersList `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
 
 	// Insecure corresponds to the JSON schema field "insecure".
-	Insecure *bool `json:"insecure,omitempty" yaml:"insecure,omitempty" mapstructure:"insecure,omitempty"`
+	Insecure OTLPGrpcExporterInsecure `json:"insecure,omitempty" yaml:"insecure,omitempty" mapstructure:"insecure,omitempty"`
 
 	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+	Timeout OTLPGrpcExporterTimeout `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
 }
+
+type OTLPGrpcExporterCertificateFile *string
+
+type OTLPGrpcExporterClientCertificateFile *string
+
+type OTLPGrpcExporterClientKeyFile *string
+
+type OTLPGrpcExporterCompression *string
+
+type OTLPGrpcExporterEndpoint *string
+
+type OTLPGrpcExporterHeadersList *string
+
+type OTLPGrpcExporterInsecure *bool
+
+type OTLPGrpcExporterTimeout *int
 
 type OTLPGrpcMetricExporter struct {
 	// CertificateFile corresponds to the JSON schema field "certificate_file".
-	CertificateFile *string `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
+	CertificateFile OTLPGrpcMetricExporterCertificateFile `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
 
 	// ClientCertificateFile corresponds to the JSON schema field
 	// "client_certificate_file".
-	ClientCertificateFile *string `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
+	ClientCertificateFile OTLPGrpcMetricExporterClientCertificateFile `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
 
 	// ClientKeyFile corresponds to the JSON schema field "client_key_file".
-	ClientKeyFile *string `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
+	ClientKeyFile OTLPGrpcMetricExporterClientKeyFile `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
 
 	// Compression corresponds to the JSON schema field "compression".
-	Compression *string `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
+	Compression OTLPGrpcMetricExporterCompression `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
 
 	// DefaultHistogramAggregation corresponds to the JSON schema field
 	// "default_histogram_aggregation".
 	DefaultHistogramAggregation *ExporterDefaultHistogramAggregation `json:"default_histogram_aggregation,omitempty" yaml:"default_histogram_aggregation,omitempty" mapstructure:"default_histogram_aggregation,omitempty"`
 
 	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
+	Endpoint OTLPGrpcMetricExporterEndpoint `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
 
 	// Headers corresponds to the JSON schema field "headers".
 	Headers []NameStringValuePair `json:"headers,omitempty" yaml:"headers,omitempty" mapstructure:"headers,omitempty"`
 
 	// HeadersList corresponds to the JSON schema field "headers_list".
-	HeadersList *string `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
+	HeadersList OTLPGrpcMetricExporterHeadersList `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
 
 	// Insecure corresponds to the JSON schema field "insecure".
-	Insecure *bool `json:"insecure,omitempty" yaml:"insecure,omitempty" mapstructure:"insecure,omitempty"`
+	Insecure OTLPGrpcMetricExporterInsecure `json:"insecure,omitempty" yaml:"insecure,omitempty" mapstructure:"insecure,omitempty"`
 
 	// TemporalityPreference corresponds to the JSON schema field
 	// "temporality_preference".
 	TemporalityPreference *ExporterTemporalityPreference `json:"temporality_preference,omitempty" yaml:"temporality_preference,omitempty" mapstructure:"temporality_preference,omitempty"`
 
 	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+	Timeout OTLPGrpcMetricExporterTimeout `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
 }
+
+type OTLPGrpcMetricExporterCertificateFile *string
+
+type OTLPGrpcMetricExporterClientCertificateFile *string
+
+type OTLPGrpcMetricExporterClientKeyFile *string
+
+type OTLPGrpcMetricExporterCompression *string
+
+type OTLPGrpcMetricExporterEndpoint *string
+
+type OTLPGrpcMetricExporterHeadersList *string
+
+type OTLPGrpcMetricExporterInsecure *bool
+
+type OTLPGrpcMetricExporterTimeout *int
 
 type OTLPHttpEncoding string
 
@@ -589,47 +685,61 @@ const OTLPHttpEncodingProtobuf OTLPHttpEncoding = "protobuf"
 
 type OTLPHttpExporter struct {
 	// CertificateFile corresponds to the JSON schema field "certificate_file".
-	CertificateFile *string `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
+	CertificateFile OTLPHttpExporterCertificateFile `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
 
 	// ClientCertificateFile corresponds to the JSON schema field
 	// "client_certificate_file".
-	ClientCertificateFile *string `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
+	ClientCertificateFile OTLPHttpExporterClientCertificateFile `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
 
 	// ClientKeyFile corresponds to the JSON schema field "client_key_file".
-	ClientKeyFile *string `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
+	ClientKeyFile OTLPHttpExporterClientKeyFile `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
 
 	// Compression corresponds to the JSON schema field "compression".
-	Compression *string `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
+	Compression OTLPHttpExporterCompression `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
 
 	// Encoding corresponds to the JSON schema field "encoding".
 	Encoding *OTLPHttpEncoding `json:"encoding,omitempty" yaml:"encoding,omitempty" mapstructure:"encoding,omitempty"`
 
 	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
+	Endpoint OTLPHttpExporterEndpoint `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
 
 	// Headers corresponds to the JSON schema field "headers".
 	Headers []NameStringValuePair `json:"headers,omitempty" yaml:"headers,omitempty" mapstructure:"headers,omitempty"`
 
 	// HeadersList corresponds to the JSON schema field "headers_list".
-	HeadersList *string `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
+	HeadersList OTLPHttpExporterHeadersList `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
 
 	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+	Timeout OTLPHttpExporterTimeout `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
 }
+
+type OTLPHttpExporterCertificateFile *string
+
+type OTLPHttpExporterClientCertificateFile *string
+
+type OTLPHttpExporterClientKeyFile *string
+
+type OTLPHttpExporterCompression *string
+
+type OTLPHttpExporterEndpoint *string
+
+type OTLPHttpExporterHeadersList *string
+
+type OTLPHttpExporterTimeout *int
 
 type OTLPHttpMetricExporter struct {
 	// CertificateFile corresponds to the JSON schema field "certificate_file".
-	CertificateFile *string `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
+	CertificateFile OTLPHttpMetricExporterCertificateFile `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
 
 	// ClientCertificateFile corresponds to the JSON schema field
 	// "client_certificate_file".
-	ClientCertificateFile *string `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
+	ClientCertificateFile OTLPHttpMetricExporterClientCertificateFile `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
 
 	// ClientKeyFile corresponds to the JSON schema field "client_key_file".
-	ClientKeyFile *string `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
+	ClientKeyFile OTLPHttpMetricExporterClientKeyFile `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
 
 	// Compression corresponds to the JSON schema field "compression".
-	Compression *string `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
+	Compression OTLPHttpMetricExporterCompression `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
 
 	// DefaultHistogramAggregation corresponds to the JSON schema field
 	// "default_histogram_aggregation".
@@ -639,21 +749,35 @@ type OTLPHttpMetricExporter struct {
 	Encoding *OTLPHttpEncoding `json:"encoding,omitempty" yaml:"encoding,omitempty" mapstructure:"encoding,omitempty"`
 
 	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
+	Endpoint OTLPHttpMetricExporterEndpoint `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
 
 	// Headers corresponds to the JSON schema field "headers".
 	Headers []NameStringValuePair `json:"headers,omitempty" yaml:"headers,omitempty" mapstructure:"headers,omitempty"`
 
 	// HeadersList corresponds to the JSON schema field "headers_list".
-	HeadersList *string `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
+	HeadersList OTLPHttpMetricExporterHeadersList `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
 
 	// TemporalityPreference corresponds to the JSON schema field
 	// "temporality_preference".
 	TemporalityPreference *ExporterTemporalityPreference `json:"temporality_preference,omitempty" yaml:"temporality_preference,omitempty" mapstructure:"temporality_preference,omitempty"`
 
 	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+	Timeout OTLPHttpMetricExporterTimeout `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
 }
+
+type OTLPHttpMetricExporterCertificateFile *string
+
+type OTLPHttpMetricExporterClientCertificateFile *string
+
+type OTLPHttpMetricExporterClientKeyFile *string
+
+type OTLPHttpMetricExporterCompression *string
+
+type OTLPHttpMetricExporterEndpoint *string
+
+type OTLPHttpMetricExporterHeadersList *string
+
+type OTLPHttpMetricExporterTimeout *int
 
 type OpenCensusMetricProducer map[string]interface{}
 
@@ -662,47 +786,39 @@ type OpenTelemetryConfiguration struct {
 	AttributeLimits *AttributeLimits `json:"attribute_limits,omitempty" yaml:"attribute_limits,omitempty" mapstructure:"attribute_limits,omitempty"`
 
 	// Disabled corresponds to the JSON schema field "disabled".
-	Disabled *bool `json:"disabled,omitempty" yaml:"disabled,omitempty" mapstructure:"disabled,omitempty"`
+	Disabled OpenTelemetryConfigurationDisabled `json:"disabled,omitempty" yaml:"disabled,omitempty" mapstructure:"disabled,omitempty"`
 
 	// FileFormat corresponds to the JSON schema field "file_format".
 	FileFormat string `json:"file_format" yaml:"file_format" mapstructure:"file_format"`
 
 	// InstrumentationDevelopment corresponds to the JSON schema field
 	// "instrumentation/development".
-	InstrumentationDevelopment OpenTelemetryConfigurationInstrumentationDevelopment `json:"instrumentation/development,omitempty" yaml:"instrumentation/development,omitempty" mapstructure:"instrumentation/development,omitempty"`
+	InstrumentationDevelopment *InstrumentationJson `json:"instrumentation/development,omitempty" yaml:"instrumentation/development,omitempty" mapstructure:"instrumentation/development,omitempty"`
 
 	// LogLevel corresponds to the JSON schema field "log_level".
-	LogLevel *string `json:"log_level,omitempty" yaml:"log_level,omitempty" mapstructure:"log_level,omitempty"`
+	LogLevel OpenTelemetryConfigurationLogLevel `json:"log_level,omitempty" yaml:"log_level,omitempty" mapstructure:"log_level,omitempty"`
 
 	// LoggerProvider corresponds to the JSON schema field "logger_provider".
-	LoggerProvider OpenTelemetryConfigurationLoggerProvider `json:"logger_provider,omitempty" yaml:"logger_provider,omitempty" mapstructure:"logger_provider,omitempty"`
+	LoggerProvider *LoggerProviderJson `json:"logger_provider,omitempty" yaml:"logger_provider,omitempty" mapstructure:"logger_provider,omitempty"`
 
 	// MeterProvider corresponds to the JSON schema field "meter_provider".
-	MeterProvider OpenTelemetryConfigurationMeterProvider `json:"meter_provider,omitempty" yaml:"meter_provider,omitempty" mapstructure:"meter_provider,omitempty"`
+	MeterProvider *MeterProviderJson `json:"meter_provider,omitempty" yaml:"meter_provider,omitempty" mapstructure:"meter_provider,omitempty"`
 
 	// Propagator corresponds to the JSON schema field "propagator".
-	Propagator OpenTelemetryConfigurationPropagator `json:"propagator,omitempty" yaml:"propagator,omitempty" mapstructure:"propagator,omitempty"`
+	Propagator *PropagatorJson `json:"propagator,omitempty" yaml:"propagator,omitempty" mapstructure:"propagator,omitempty"`
 
 	// Resource corresponds to the JSON schema field "resource".
-	Resource OpenTelemetryConfigurationResource `json:"resource,omitempty" yaml:"resource,omitempty" mapstructure:"resource,omitempty"`
+	Resource *ResourceJson `json:"resource,omitempty" yaml:"resource,omitempty" mapstructure:"resource,omitempty"`
 
 	// TracerProvider corresponds to the JSON schema field "tracer_provider".
-	TracerProvider OpenTelemetryConfigurationTracerProvider `json:"tracer_provider,omitempty" yaml:"tracer_provider,omitempty" mapstructure:"tracer_provider,omitempty"`
+	TracerProvider *TracerProviderJson `json:"tracer_provider,omitempty" yaml:"tracer_provider,omitempty" mapstructure:"tracer_provider,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
-type OpenTelemetryConfigurationInstrumentationDevelopment interface{}
+type OpenTelemetryConfigurationDisabled *bool
 
-type OpenTelemetryConfigurationLoggerProvider interface{}
-
-type OpenTelemetryConfigurationMeterProvider interface{}
-
-type OpenTelemetryConfigurationPropagator interface{}
-
-type OpenTelemetryConfigurationResource interface{}
-
-type OpenTelemetryConfigurationTracerProvider interface{}
+type OpenTelemetryConfigurationLogLevel *string
 
 type OpenTracingPropagator map[string]interface{}
 
@@ -734,22 +850,28 @@ type PeriodicMetricReader struct {
 	Exporter PushMetricExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
 
 	// Interval corresponds to the JSON schema field "interval".
-	Interval *int `json:"interval,omitempty" yaml:"interval,omitempty" mapstructure:"interval,omitempty"`
+	Interval PeriodicMetricReaderInterval `json:"interval,omitempty" yaml:"interval,omitempty" mapstructure:"interval,omitempty"`
 
 	// Producers corresponds to the JSON schema field "producers".
 	Producers []MetricProducer `json:"producers,omitempty" yaml:"producers,omitempty" mapstructure:"producers,omitempty"`
 
 	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+	Timeout PeriodicMetricReaderTimeout `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
 }
+
+type PeriodicMetricReaderInterval *int
+
+type PeriodicMetricReaderTimeout *int
 
 type PropagatorJson struct {
 	// Composite corresponds to the JSON schema field "composite".
 	Composite []TextMapPropagator `json:"composite,omitempty" yaml:"composite,omitempty" mapstructure:"composite,omitempty"`
 
 	// CompositeList corresponds to the JSON schema field "composite_list".
-	CompositeList *string `json:"composite_list,omitempty" yaml:"composite_list,omitempty" mapstructure:"composite_list,omitempty"`
+	CompositeList PropagatorJsonCompositeList `json:"composite_list,omitempty" yaml:"composite_list,omitempty" mapstructure:"composite_list,omitempty"`
 }
+
+type PropagatorJsonCompositeList *string
 
 type PullMetricExporter struct {
 	// PrometheusDevelopment corresponds to the JSON schema field
@@ -792,15 +914,19 @@ type ResourceJson struct {
 	Attributes []AttributeNameValue `json:"attributes,omitempty" yaml:"attributes,omitempty" mapstructure:"attributes,omitempty"`
 
 	// AttributesList corresponds to the JSON schema field "attributes_list".
-	AttributesList *string `json:"attributes_list,omitempty" yaml:"attributes_list,omitempty" mapstructure:"attributes_list,omitempty"`
+	AttributesList ResourceJsonAttributesList `json:"attributes_list,omitempty" yaml:"attributes_list,omitempty" mapstructure:"attributes_list,omitempty"`
 
 	// DetectionDevelopment corresponds to the JSON schema field
 	// "detection/development".
 	DetectionDevelopment *ExperimentalResourceDetection `json:"detection/development,omitempty" yaml:"detection/development,omitempty" mapstructure:"detection/development,omitempty"`
 
 	// SchemaUrl corresponds to the JSON schema field "schema_url".
-	SchemaUrl *string `json:"schema_url,omitempty" yaml:"schema_url,omitempty" mapstructure:"schema_url,omitempty"`
+	SchemaUrl ResourceJsonSchemaUrl `json:"schema_url,omitempty" yaml:"schema_url,omitempty" mapstructure:"schema_url,omitempty"`
 }
+
+type ResourceJsonAttributesList *string
+
+type ResourceJsonSchemaUrl *string
 
 type Sampler struct {
 	// AlwaysOff corresponds to the JSON schema field "always_off".
@@ -854,26 +980,38 @@ type SpanExporter struct {
 type SpanLimits struct {
 	// AttributeCountLimit corresponds to the JSON schema field
 	// "attribute_count_limit".
-	AttributeCountLimit *int `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
+	AttributeCountLimit SpanLimitsAttributeCountLimit `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
 
 	// AttributeValueLengthLimit corresponds to the JSON schema field
 	// "attribute_value_length_limit".
-	AttributeValueLengthLimit *int `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
+	AttributeValueLengthLimit SpanLimitsAttributeValueLengthLimit `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
 
 	// EventAttributeCountLimit corresponds to the JSON schema field
 	// "event_attribute_count_limit".
-	EventAttributeCountLimit *int `json:"event_attribute_count_limit,omitempty" yaml:"event_attribute_count_limit,omitempty" mapstructure:"event_attribute_count_limit,omitempty"`
+	EventAttributeCountLimit SpanLimitsEventAttributeCountLimit `json:"event_attribute_count_limit,omitempty" yaml:"event_attribute_count_limit,omitempty" mapstructure:"event_attribute_count_limit,omitempty"`
 
 	// EventCountLimit corresponds to the JSON schema field "event_count_limit".
-	EventCountLimit *int `json:"event_count_limit,omitempty" yaml:"event_count_limit,omitempty" mapstructure:"event_count_limit,omitempty"`
+	EventCountLimit SpanLimitsEventCountLimit `json:"event_count_limit,omitempty" yaml:"event_count_limit,omitempty" mapstructure:"event_count_limit,omitempty"`
 
 	// LinkAttributeCountLimit corresponds to the JSON schema field
 	// "link_attribute_count_limit".
-	LinkAttributeCountLimit *int `json:"link_attribute_count_limit,omitempty" yaml:"link_attribute_count_limit,omitempty" mapstructure:"link_attribute_count_limit,omitempty"`
+	LinkAttributeCountLimit SpanLimitsLinkAttributeCountLimit `json:"link_attribute_count_limit,omitempty" yaml:"link_attribute_count_limit,omitempty" mapstructure:"link_attribute_count_limit,omitempty"`
 
 	// LinkCountLimit corresponds to the JSON schema field "link_count_limit".
-	LinkCountLimit *int `json:"link_count_limit,omitempty" yaml:"link_count_limit,omitempty" mapstructure:"link_count_limit,omitempty"`
+	LinkCountLimit SpanLimitsLinkCountLimit `json:"link_count_limit,omitempty" yaml:"link_count_limit,omitempty" mapstructure:"link_count_limit,omitempty"`
 }
+
+type SpanLimitsAttributeCountLimit *int
+
+type SpanLimitsAttributeValueLengthLimit *int
+
+type SpanLimitsEventAttributeCountLimit *int
+
+type SpanLimitsEventCountLimit *int
+
+type SpanLimitsLinkAttributeCountLimit *int
+
+type SpanLimitsLinkCountLimit *int
 
 type SpanProcessor struct {
 	// Batch corresponds to the JSON schema field "batch".
@@ -913,8 +1051,10 @@ type TraceContextPropagator map[string]interface{}
 
 type TraceIDRatioBasedSampler struct {
 	// Ratio corresponds to the JSON schema field "ratio".
-	Ratio *float64 `json:"ratio,omitempty" yaml:"ratio,omitempty" mapstructure:"ratio,omitempty"`
+	Ratio TraceIDRatioBasedSamplerRatio `json:"ratio,omitempty" yaml:"ratio,omitempty" mapstructure:"ratio,omitempty"`
 }
+
+type TraceIDRatioBasedSamplerRatio *float64
 
 type TracerProviderJson struct {
 	// Limits corresponds to the JSON schema field "limits".
@@ -941,23 +1081,33 @@ type View struct {
 
 type ViewSelector struct {
 	// InstrumentName corresponds to the JSON schema field "instrument_name".
-	InstrumentName *string `json:"instrument_name,omitempty" yaml:"instrument_name,omitempty" mapstructure:"instrument_name,omitempty"`
+	InstrumentName ViewSelectorInstrumentName `json:"instrument_name,omitempty" yaml:"instrument_name,omitempty" mapstructure:"instrument_name,omitempty"`
 
 	// InstrumentType corresponds to the JSON schema field "instrument_type".
 	InstrumentType *InstrumentType `json:"instrument_type,omitempty" yaml:"instrument_type,omitempty" mapstructure:"instrument_type,omitempty"`
 
 	// MeterName corresponds to the JSON schema field "meter_name".
-	MeterName *string `json:"meter_name,omitempty" yaml:"meter_name,omitempty" mapstructure:"meter_name,omitempty"`
+	MeterName ViewSelectorMeterName `json:"meter_name,omitempty" yaml:"meter_name,omitempty" mapstructure:"meter_name,omitempty"`
 
 	// MeterSchemaUrl corresponds to the JSON schema field "meter_schema_url".
-	MeterSchemaUrl *string `json:"meter_schema_url,omitempty" yaml:"meter_schema_url,omitempty" mapstructure:"meter_schema_url,omitempty"`
+	MeterSchemaUrl ViewSelectorMeterSchemaUrl `json:"meter_schema_url,omitempty" yaml:"meter_schema_url,omitempty" mapstructure:"meter_schema_url,omitempty"`
 
 	// MeterVersion corresponds to the JSON schema field "meter_version".
-	MeterVersion *string `json:"meter_version,omitempty" yaml:"meter_version,omitempty" mapstructure:"meter_version,omitempty"`
+	MeterVersion ViewSelectorMeterVersion `json:"meter_version,omitempty" yaml:"meter_version,omitempty" mapstructure:"meter_version,omitempty"`
 
 	// Unit corresponds to the JSON schema field "unit".
-	Unit *string `json:"unit,omitempty" yaml:"unit,omitempty" mapstructure:"unit,omitempty"`
+	Unit ViewSelectorUnit `json:"unit,omitempty" yaml:"unit,omitempty" mapstructure:"unit,omitempty"`
 }
+
+type ViewSelectorInstrumentName *string
+
+type ViewSelectorMeterName *string
+
+type ViewSelectorMeterSchemaUrl *string
+
+type ViewSelectorMeterVersion *string
+
+type ViewSelectorUnit *string
 
 type ViewStream struct {
 	// Aggregation corresponds to the JSON schema field "aggregation".
@@ -965,22 +1115,32 @@ type ViewStream struct {
 
 	// AggregationCardinalityLimit corresponds to the JSON schema field
 	// "aggregation_cardinality_limit".
-	AggregationCardinalityLimit *int `json:"aggregation_cardinality_limit,omitempty" yaml:"aggregation_cardinality_limit,omitempty" mapstructure:"aggregation_cardinality_limit,omitempty"`
+	AggregationCardinalityLimit ViewStreamAggregationCardinalityLimit `json:"aggregation_cardinality_limit,omitempty" yaml:"aggregation_cardinality_limit,omitempty" mapstructure:"aggregation_cardinality_limit,omitempty"`
 
 	// AttributeKeys corresponds to the JSON schema field "attribute_keys".
 	AttributeKeys *IncludeExclude `json:"attribute_keys,omitempty" yaml:"attribute_keys,omitempty" mapstructure:"attribute_keys,omitempty"`
 
 	// Description corresponds to the JSON schema field "description".
-	Description *string `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
+	Description ViewStreamDescription `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
 
 	// Name corresponds to the JSON schema field "name".
-	Name *string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
+	Name ViewStreamName `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
 }
+
+type ViewStreamAggregationCardinalityLimit *int
+
+type ViewStreamDescription *string
+
+type ViewStreamName *string
 
 type ZipkinSpanExporter struct {
 	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
+	Endpoint ZipkinSpanExporterEndpoint `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
 
 	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+	Timeout ZipkinSpanExporterTimeout `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
 }
+
+type ZipkinSpanExporterEndpoint *string
+
+type ZipkinSpanExporterTimeout *int
