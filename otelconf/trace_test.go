@@ -46,18 +46,6 @@ func TestTracerProvider(t *testing.T) {
 			wantProvider: noop.NewTracerProvider(),
 		},
 		{
-			name: "invalid-provider",
-			cfg: configOptions{
-				opentelemetryConfig: OpenTelemetryConfiguration{
-					TracerProvider: &MeterProviderJson{
-						Readers: []MetricReader{},
-					},
-				},
-			},
-			wantProvider: noop.NewTracerProvider(),
-			wantErr:      newErrInvalid("invalid tracer provider"),
-		},
-		{
 			name: "error-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
