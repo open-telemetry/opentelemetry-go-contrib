@@ -54,7 +54,7 @@ func TestMeterProvider(t *testing.T) {
 			name: "error-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					MeterProvider: &MeterProviderJson{
+					MeterProvider: &MeterProvider{
 						Readers: []MetricReader{
 							{
 								Periodic: &PeriodicMetricReader{},
@@ -71,7 +71,7 @@ func TestMeterProvider(t *testing.T) {
 			name: "multiple-errors-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					MeterProvider: &MeterProviderJson{
+					MeterProvider: &MeterProvider{
 						Readers: []MetricReader{
 							{
 								Periodic: &PeriodicMetricReader{},
@@ -80,7 +80,7 @@ func TestMeterProvider(t *testing.T) {
 							{
 								Periodic: &PeriodicMetricReader{
 									Exporter: PushMetricExporter{
-										Console:  ConsoleExporter{},
+										Console:  &ConsoleMetricExporter{},
 										OTLPGrpc: &OTLPGrpcMetricExporter{},
 									},
 								},
@@ -111,7 +111,7 @@ func TestMeterProviderOptions(t *testing.T) {
 	defer srv.Close()
 
 	cfg := OpenTelemetryConfiguration{
-		MeterProvider: &MeterProviderJson{
+		MeterProvider: &MeterProvider{
 			Readers: []MetricReader{{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
@@ -216,7 +216,7 @@ func TestReader(t *testing.T) {
 							Host:                ptr("localhost"),
 							Port:                ptr(0),
 							WithoutScopeInfo:    ptr(true),
-							TranslationStrategy: ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithoutSuffixes),
+							TranslationStrategy: ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithoutSuffixes),
 							WithResourceConstantLabels: &IncludeExclude{
 								Included: []string{"include"},
 								Excluded: []string{"exclude"},
@@ -236,7 +236,7 @@ func TestReader(t *testing.T) {
 							Host:                ptr("localhost"),
 							Port:                ptr(0),
 							WithoutScopeInfo:    ptr(true),
-							TranslationStrategy: ptr(ExperimentalPrometheusMetricExporterTranslationStrategy("invalid-strategy")),
+							TranslationStrategy: ptr(ExperimentalPrometheusTranslationStrategy("invalid-strategy")),
 							WithResourceConstantLabels: &IncludeExclude{
 								Included: []string{"include"},
 								Excluded: []string{"exclude"},
@@ -289,10 +289,12 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPGrpc: &OTLPGrpcMetricExporter{
-							Endpoint:        ptr("https://localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "ca.crt")),
+							Endpoint:    ptr("https://localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+							},
 						},
 					},
 				},
@@ -305,10 +307,12 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPGrpc: &OTLPGrpcMetricExporter{
-							Endpoint:        ptr("https://localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("https://localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								CaFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -321,11 +325,13 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPGrpc: &OTLPGrpcMetricExporter{
-							Endpoint:              ptr("localhost:4317"),
-							Compression:           ptr("gzip"),
-							Timeout:               ptr(1000),
-							ClientCertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
-							ClientKeyFile:         ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								KeyFile:  ptr(filepath.Join("testdata", "bad_cert.crt")),
+								CertFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -555,10 +561,12 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPHttp: &OTLPHttpMetricExporter{
-							Endpoint:        ptr("https://localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "ca.crt")),
+							Endpoint:    ptr("https://localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+							},
 						},
 					},
 				},
@@ -571,10 +579,12 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPHttp: &OTLPHttpMetricExporter{
-							Endpoint:        ptr("https://localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("https://localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								CaFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -587,11 +597,13 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPHttp: &OTLPHttpMetricExporter{
-							Endpoint:              ptr("localhost:4317"),
-							Compression:           ptr("gzip"),
-							Timeout:               ptr(1000),
-							ClientCertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
-							ClientKeyFile:         ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								KeyFile:  ptr(filepath.Join("testdata", "bad_cert.crt")),
+								CertFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -811,7 +823,7 @@ func TestReader(t *testing.T) {
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						Console: ConsoleExporter{},
+						Console: &ConsoleMetricExporter{},
 					},
 				},
 			},
@@ -824,7 +836,7 @@ func TestReader(t *testing.T) {
 					Interval: ptr(30_000),
 					Timeout:  ptr(5_000),
 					Exporter: PushMetricExporter{
-						Console: ConsoleExporter{},
+						Console: &ConsoleMetricExporter{},
 					},
 				},
 			},
@@ -883,13 +895,9 @@ func TestView(t *testing.T) {
 		wantResult      bool
 	}{
 		{
-			name:    "no selector",
-			wantErr: "view: no selector provided",
-		},
-		{
 			name: "selector/invalid_type",
 			view: View{
-				Selector: &ViewSelector{
+				Selector: ViewSelector{
 					InstrumentType: (*InstrumentType)(ptr("invalid_type")),
 				},
 			},
@@ -898,14 +906,14 @@ func TestView(t *testing.T) {
 		{
 			name: "selector/invalid_type",
 			view: View{
-				Selector: &ViewSelector{},
+				Selector: ViewSelector{},
 			},
 			wantErr: "view_selector: empty selector not supporter",
 		},
 		{
 			name: "all selectors match",
 			view: View{
-				Selector: &ViewSelector{
+				Selector: ViewSelector{
 					InstrumentName: ptr("test_name"),
 					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
@@ -930,7 +938,7 @@ func TestView(t *testing.T) {
 		{
 			name: "all selectors no match name",
 			view: View{
-				Selector: &ViewSelector{
+				Selector: ViewSelector{
 					InstrumentName: ptr("test_name"),
 					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
@@ -955,7 +963,7 @@ func TestView(t *testing.T) {
 		{
 			name: "all selectors no match unit",
 			view: View{
-				Selector: &ViewSelector{
+				Selector: ViewSelector{
 					InstrumentName: ptr("test_name"),
 					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
@@ -980,7 +988,7 @@ func TestView(t *testing.T) {
 		{
 			name: "all selectors no match kind",
 			view: View{
-				Selector: &ViewSelector{
+				Selector: ViewSelector{
 					InstrumentName: ptr("test_name"),
 					InstrumentType: (*InstrumentType)(ptr("histogram")),
 					Unit:           ptr("test_unit"),
@@ -1005,7 +1013,7 @@ func TestView(t *testing.T) {
 		{
 			name: "all selectors no match meter name",
 			view: View{
-				Selector: &ViewSelector{
+				Selector: ViewSelector{
 					InstrumentName: ptr("test_name"),
 					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
@@ -1030,7 +1038,7 @@ func TestView(t *testing.T) {
 		{
 			name: "all selectors no match meter version",
 			view: View{
-				Selector: &ViewSelector{
+				Selector: ViewSelector{
 					InstrumentName: ptr("test_name"),
 					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
@@ -1055,7 +1063,7 @@ func TestView(t *testing.T) {
 		{
 			name: "all selectors no match meter schema url",
 			view: View{
-				Selector: &ViewSelector{
+				Selector: ViewSelector{
 					InstrumentName: ptr("test_name"),
 					InstrumentType: ptr(InstrumentTypeCounter),
 					Unit:           ptr("test_unit"),
@@ -1080,11 +1088,11 @@ func TestView(t *testing.T) {
 		{
 			name: "with stream",
 			view: View{
-				Selector: &ViewSelector{
+				Selector: ViewSelector{
 					InstrumentName: ptr("test_name"),
 					Unit:           ptr("test_unit"),
 				},
-				Stream: &ViewStream{
+				Stream: ViewStream{
 					Name:          ptr("new_name"),
 					Description:   ptr("new_description"),
 					AttributeKeys: ptr(IncludeExclude{Included: []string{"foo", "bar"}}),
@@ -1361,7 +1369,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 			name: "all set",
 			cfg: ExperimentalPrometheusMetricExporter{
 				WithoutScopeInfo:           ptr(true),
-				TranslationStrategy:        ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithoutSuffixes),
+				TranslationStrategy:        ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithoutSuffixes),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
 			wantOptions: 3,
@@ -1370,7 +1378,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 			name: "all set false",
 			cfg: ExperimentalPrometheusMetricExporter{
 				WithoutScopeInfo:           ptr(false),
-				TranslationStrategy:        ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes),
+				TranslationStrategy:        ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
 			wantOptions: 2,
@@ -1406,7 +1414,7 @@ func TestPrometheusIPv6(t *testing.T) {
 				Host:                       &tt.host,
 				Port:                       &port,
 				WithoutScopeInfo:           ptr(true),
-				TranslationStrategy:        ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes),
+				TranslationStrategy:        ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes),
 				WithResourceConstantLabels: &IncludeExclude{},
 			}
 
@@ -1451,7 +1459,9 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				otlpConfig: &OTLPGrpcMetricExporter{
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
-					Insecure:    ptr(true),
+					Tls: &GrpcTls{
+						Insecure: ptr(true),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -1466,9 +1476,11 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			args: args{
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcMetricExporter{
-					Compression:     ptr("gzip"),
-					Timeout:         ptr(5000),
-					CertificateFile: ptr("testdata/server-certs/server.crt"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(5000),
+					Tls: &GrpcTls{
+						CaFile: ptr("testdata/server-certs/server.crt"),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -1489,11 +1501,13 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			args: args{
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcMetricExporter{
-					Compression:           ptr("gzip"),
-					Timeout:               ptr(5000),
-					CertificateFile:       ptr("testdata/server-certs/server.crt"),
-					ClientKeyFile:         ptr("testdata/client-certs/client.key"),
-					ClientCertificateFile: ptr("testdata/client-certs/client.crt"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(5000),
+					Tls: &GrpcTls{
+						CaFile:   ptr("testdata/server-certs/server.crt"),
+						KeyFile:  ptr("testdata/client-certs/client.key"),
+						CertFile: ptr("testdata/client-certs/client.crt"),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
