@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fixed `rpc.server.call.duration` being recorded 1000× too high. (#8509)
+- Change the `rpc.server.call.duration` metric value from milliseconds to seconds in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8509)
 - Enforce that `client_certificate_file` and `client_key_file` are provided together in `go.opentelemetry.io/contrib/otelconf`. (#8450)
 - Fixed broken CSS and JavaScript CDN URLs in `go.opentelemetry.io/contrib/zpages` by replacing the inaccessible code.getmdl.io CDN with cdnjs.cloudflare.com. (#8502)
 
