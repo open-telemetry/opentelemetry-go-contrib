@@ -128,7 +128,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 				},
 				MetricData: semconv.MetricData{
 					RequestSize: request.ContentLength,
-					ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Second),
+					ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Millisecond),
 				},
 			})
 
