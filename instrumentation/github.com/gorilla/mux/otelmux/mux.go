@@ -185,7 +185,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})...)
 
 	// Use floating point division here for higher precision (instead of Millisecond method).
-	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Millisecond)
+	elapsedTime := float64(time.Since(requestStartTime)) / float64(time.Second)
 
 	metricAttributes := semconv.MetricAttributes{
 		Req:                  r,

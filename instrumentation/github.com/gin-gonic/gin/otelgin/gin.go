@@ -147,7 +147,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			},
 			MetricData: semconv.MetricData{
 				RequestSize: c.Request.ContentLength,
-				ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Millisecond),
+				ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Second),
 			},
 		})
 	}

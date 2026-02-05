@@ -36,7 +36,7 @@ type ResponseTelemetry struct {
 	WriteError error
 }
 
-type HTTPServer struct{
+type HTTPServer struct {
 	requestBodySizeHistogram  httpconv.ServerRequestBodySize
 	responseBodySizeHistogram httpconv.ServerResponseBodySize
 	requestDurationHistogram  httpconv.ServerRequestDuration
@@ -251,19 +251,11 @@ type MetricData struct {
 	ElapsedTime float64
 }
 
-var (
-	metricAddOptionPool = &sync.Pool{
-		New: func() any {
-			return &[]metric.AddOption{}
-		},
-	}
-
-	metricRecordOptionPool = &sync.Pool{
-		New: func() any {
-			return &[]metric.RecordOption{}
-		},
-	}
-)
+var metricRecordOptionPool = &sync.Pool{
+	New: func() any {
+		return &[]metric.RecordOption{}
+	},
+}
 
 func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	attributes := n.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.Route, md.AdditionalAttributes)
@@ -272,7 +264,7 @@ func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	*recordOpts = append(*recordOpts, o)
 	n.requestBodySizeHistogram.Inst().Record(ctx, md.RequestSize, *recordOpts...)
 	n.responseBodySizeHistogram.Inst().Record(ctx, md.ResponseSize, *recordOpts...)
-	n.requestDurationHistogram.Inst().Record(ctx, md.ElapsedTime/1000.0, o)
+	n.requestDurationHistogram.Inst().Record(ctx, md.ElapsedTime, o)
 	*recordOpts = (*recordOpts)[:0]
 	metricRecordOptionPool.Put(recordOpts)
 }
@@ -373,8 +365,8 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 	}
 
 	if route != "" {
-        num++
-    }
+		num++
+	}
 
 	attributes := slices.Grow(additionalAttributes, num)
 	attributes = append(attributes,
@@ -397,7 +389,7 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 	}
 
 	if route != "" {
-        attributes = append(attributes, semconv.HTTPRoute(route))
-    }
+		attributes = append(attributes, semconv.HTTPRoute(route))
+	}
 	return attributes
 }
