@@ -247,20 +247,18 @@ func (o MetricOpts) AddOptions() metric.AddOption {
 	return o.addOptions
 }
 
-func (n HTTPClient) MetricOptions(ma MetricAttributes) map[string]MetricOpts {
+func (n HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
 	attributes := n.MetricAttributes(ma.Req, ma.StatusCode, ma.AdditionalAttributes)
 	set := metric.WithAttributeSet(attribute.NewSet(attributes...))
 
-	return map[string]MetricOpts{
-		"new": {
-			measurement: set,
-			addOptions:  set,
-		},
+	return MetricOpts{
+		measurement: set,
+		addOptions:  set,
 	}
 }
 
-func (n HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts map[string]MetricOpts) {
-	o := []metric.RecordOption{opts["new"].MeasurementOption()}
+func (n HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts MetricOpts) {
+	o := []metric.RecordOption{opts.MeasurementOption()}
 	n.requestBodySize.Inst().Record(ctx, md.RequestSize, o...)
 	n.requestDuration.Inst().Record(ctx, md.ElapsedTime, o...)
 }
