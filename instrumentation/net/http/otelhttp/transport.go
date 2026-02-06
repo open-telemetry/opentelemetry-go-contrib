@@ -198,6 +198,23 @@ func (t *Transport) metricAttributesFromRequest(r *http.Request) []attribute.Key
 	return attributeForRequest
 }
 
+// CloseIdleConnections closes any connections on its Transport which
+// were previously connected from previous requests but are now
+// sitting idle in a "keep-alive" state. It does not interrupt any
+// connections currently in use.
+//
+// If the base Transport does not have a CloseIdleConnections method
+// then this method does nothing.
+func (t *Transport) CloseIdleConnections() {
+	type closeIdler interface {
+		CloseIdleConnections()
+	}
+	if tr, ok := t.rt.(closeIdler); ok {
+		tr.CloseIdleConnections()
+	}
+}
+
+
 // newWrappedBody returns a new and appropriately scoped *wrappedBody as an
 // io.ReadCloser. If the passed body implements io.Writer, the returned value
 // will implement io.ReadWriteCloser.
