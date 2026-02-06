@@ -7,3 +7,5 @@ file:///var/log/logs.jsonl
 file:///var/log/metrics.jsonl
 file:///var/log/traces.jsonl
 file:///path/to/file.jsonl
+https://raw.githubusercontent.com/open-telemetry/opentelemetry.io/main/content/en/registry
+https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/$%7BOPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION%7D
