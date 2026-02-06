@@ -36,7 +36,7 @@ type ResponseTelemetry struct {
 	WriteError error
 }
 
-type HTTPServer struct{
+type HTTPServer struct {
 	requestBodySizeHistogram  httpconv.ServerRequestBodySize
 	responseBodySizeHistogram httpconv.ServerResponseBodySize
 	requestDurationHistogram  httpconv.ServerRequestDuration
@@ -373,8 +373,8 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 	}
 
 	if route != "" {
-        num++
-    }
+		num++
+	}
 
 	attributes := slices.Grow(additionalAttributes, num)
 	attributes = append(attributes,
@@ -397,7 +397,7 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 	}
 
 	if route != "" {
-        attributes = append(attributes, semconv.HTTPRoute(route))
-    }
+		attributes = append(attributes, semconv.HTTPRoute(route))
+	}
 	return attributes
 }
