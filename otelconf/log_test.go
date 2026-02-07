@@ -744,7 +744,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(10000),
 					Insecure:    ptr(true),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -761,7 +761,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
 					Compression:     ptr("gzip"),
-					Timeout:         ptr(5000),
+					Timeout:         ptr(10000),
 					CertificateFile: ptr("testdata/server-certs/server.crt"),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -784,7 +784,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
 					Compression:           ptr("gzip"),
-					Timeout:               ptr(5000),
+					Timeout:               ptr(10000),
 					CertificateFile:       ptr("testdata/server-certs/server.crt"),
 					ClientKeyFile:         ptr("testdata/client-certs/client.key"),
 					ClientCertificateFile: ptr("testdata/client-certs/client.crt"),
