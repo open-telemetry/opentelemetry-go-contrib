@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Read `cloud.account.id` from symlink created by the OTel Lambda Extension in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#8526)
 - `WithSpanKind` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to override the default span kind. (#8506)
 
 ### Fixed
