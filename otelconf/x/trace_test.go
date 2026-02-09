@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf
+package x
 
 import (
 	"bytes"
@@ -734,7 +734,9 @@ func TestSpanProcessor(t *testing.T) {
 			name: "simple/otlp_file",
 			processor: SpanProcessor{
 				Simple: &SimpleSpanProcessor{
-					Exporter: SpanExporter{},
+					Exporter: SpanExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{},
+					},
 				},
 			},
 			wantErrT: newErrInvalid("otlp_file/development"),
