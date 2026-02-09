@@ -359,7 +359,7 @@ func TestSpanProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+								CaFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
 							},
 						},
 					},
@@ -377,7 +377,7 @@ func TestSpanProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								CaFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+								CaFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 							},
 						},
 					},
@@ -395,8 +395,8 @@ func TestSpanProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								KeyFile:  ptr(filepath.Join("testdata", "bad_cert.crt")),
-								CertFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+								KeyFile:  ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								CertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 							},
 						},
 					},
@@ -518,7 +518,7 @@ func TestSpanProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+								CaFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
 							},
 						},
 					},
@@ -536,7 +536,7 @@ func TestSpanProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								CaFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+								CaFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 							},
 						},
 					},
@@ -554,8 +554,8 @@ func TestSpanProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								KeyFile:  ptr(filepath.Join("testdata", "bad_cert.crt")),
-								CertFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+								KeyFile:  ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								CertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 							},
 						},
 					},
@@ -936,7 +936,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Tls: &GrpcTls{
-						CaFile: ptr("testdata/server-certs/server.crt"),
+						CaFile: ptr("../testdata/server-certs/server.crt"),
 					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -945,7 +945,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				tlsCreds, err := credentials.NewServerTLSFromFile("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				tlsCreds, err := credentials.NewServerTLSFromFile("../testdata/server-certs/server.crt", "../testdata/server-certs/server.key")
 				if err != nil {
 					return nil, err
 				}
@@ -961,9 +961,9 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Tls: &GrpcTls{
-						CaFile:   ptr("testdata/server-certs/server.crt"),
-						KeyFile:  ptr("testdata/client-certs/client.key"),
-						CertFile: ptr("testdata/client-certs/client.crt"),
+						CaFile:   ptr("../testdata/server-certs/server.crt"),
+						KeyFile:  ptr("../testdata/client-certs/client.key"),
+						CertFile: ptr("../testdata/client-certs/client.crt"),
 					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -972,11 +972,11 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				cert, err := tls.LoadX509KeyPair("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				cert, err := tls.LoadX509KeyPair("../testdata/server-certs/server.crt", "../testdata/server-certs/server.key")
 				if err != nil {
 					return nil, err
 				}
-				caCert, err := os.ReadFile("testdata/ca.crt")
+				caCert, err := os.ReadFile("../testdata/ca.crt")
 				if err != nil {
 					return nil, err
 				}
