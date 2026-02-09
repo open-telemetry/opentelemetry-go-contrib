@@ -326,7 +326,7 @@ OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelemetry-configuration
 genjsonschema-cleanup:
 	rm -Rf ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 
-GENERATED_CONFIG=./otelconf/generated_config.go
+GENERATED_CONFIG=./otelconf/x/generated_config.go
 
 # Generate structs for configuration from opentelemetry-configuration schema
 genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
@@ -336,7 +336,7 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 		--capitalization ID \
 		--capitalization OTLP \
 		--struct-name-from-title \
-		--package otelconf \
+		--package x \
 		--only-models \
 		--output ${GENERATED_CONFIG} \
 		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/opentelemetry_configuration.json
