@@ -15,7 +15,7 @@ import (
 )
 
 func FuzzJSON(f *testing.F) {
-	b, err := os.ReadFile(filepath.Join("testdata", "v1.0.0.json"))
+	b, err := os.ReadFile(filepath.Join("..", "testdata", "v1.0.0.json"))
 	require.NoError(f, err)
 	f.Add(b)
 
@@ -40,7 +40,7 @@ func FuzzJSON(f *testing.F) {
 }
 
 func FuzzYAML(f *testing.F) {
-	b, err := os.ReadFile(filepath.Join("testdata", "v1.0.0.yaml"))
+	b, err := os.ReadFile(filepath.Join("..", "testdata", "v1.0.0.yaml"))
 	require.NoError(f, err)
 	f.Add(b)
 
