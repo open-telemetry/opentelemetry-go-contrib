@@ -184,9 +184,10 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	statusCode := rww.StatusCode()
 	bytesWritten := rww.BytesWritten()
 	span.SetStatus(h.semconv.Status(statusCode))
+	bytesRead := bw.BytesRead()
 	span.SetAttributes(h.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: statusCode,
-		ReadBytes:  bw.BytesRead(),
+		ReadBytes:  bytesRead,
 		ReadError:  bw.Error(),
 		WriteBytes: bytesWritten,
 		WriteError: rww.Error(),
@@ -201,7 +202,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(r)...),
 		},
 		MetricData: semconv.MetricData{
-			RequestSize:     bw.BytesRead(),
+			RequestSize:     bytesRead,
 			RequestDuration: time.Since(requestStartTime),
 		},
 	})
