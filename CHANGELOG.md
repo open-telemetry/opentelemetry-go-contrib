@@ -25,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Updated the configuration schema used in `go.opentelemetry.io/contrib/otelconf` to [rc.3](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.3). (#8505)
+- Moved experimental types from `go.opentelemetry.io/contrib/otelconf` to `go.opentelemetry.io/contrib/otelconf/x`. (#8529)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
