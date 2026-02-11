@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - `WithSpanKind` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to override the default span kind. (#8506)
+- Add `const Version` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8543)
 
 ### Fixed
 
