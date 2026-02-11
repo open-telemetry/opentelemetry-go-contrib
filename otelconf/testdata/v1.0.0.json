@@ -17,9 +17,11 @@
                     "exporter": {
                         "otlp_http": {
                             "endpoint": "http://localhost:4318/v1/logs",
-                            "certificate_file": "testdata/ca.crt",
-                            "client_key_file": "testdata/client.key",
-                            "client_certificate_file": "testdata/client.crt",
+                            "tls": {
+                                "ca_file": "testdata/ca.crt",
+                                "key_file": "testdata/client.key",
+                                "cert_file": "testdata/client.crt"
+                            },
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -39,9 +41,12 @@
                     "exporter": {
                         "otlp_grpc": {
                             "endpoint": "http://localhost:4317",
-                            "certificate_file": "testdata/ca.crt",
-                            "client_key_file": "testdata/client.key",
-                            "client_certificate_file": "testdata/client.crt",
+                            "tls": {
+                                "ca_file": "testdata/ca.crt",
+                                "key_file": "testdata/client.key",
+                                "cert_file": "testdata/client.crt",
+                                "insecure": false
+                            },
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -50,8 +55,7 @@
                             ],
                             "headers_list": "api-key=1234",
                             "compression": "gzip",
-                            "timeout": 10000,
-                            "insecure": false
+                            "timeout": 10000
                         }
                     }
                 }
@@ -117,7 +121,7 @@
                                     "service.attr1"
                                 ]
                             },
-                            "translation_strategy": "UnderscoreEscapingWithSuffixes"
+                            "translation_strategy": "underscore_escaping_with_suffixes"
                         }
                     },
                     "producers": [
@@ -144,9 +148,11 @@
                     "exporter": {
                         "otlp_http": {
                             "endpoint": "http://localhost:4318/v1/metrics",
-                            "certificate_file": "testdata/ca.crt",
-                            "client_key_file": "testdata/client.key",
-                            "client_certificate_file": "testdata/client.crt",
+                            "tls": {
+                                "ca_file": "testdata/ca.crt",
+                                "key_file": "testdata/client.key",
+                                "cert_file": "testdata/client.crt"
+                            },
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -183,9 +189,12 @@
                     "exporter": {
                         "otlp_grpc": {
                             "endpoint": "http://localhost:4317",
-                            "certificate_file": "testdata/ca.crt",
-                            "client_key_file": "testdata/client.key",
-                            "client_certificate_file": "testdata/client.crt",
+                            "tls": {
+                                "ca_file": "testdata/ca.crt",
+                                "key_file": "testdata/client.key",
+                                "cert_file": "testdata/client.crt",
+                                "insecure": false
+                            },
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -195,7 +204,6 @@
                             "headers_list": "api-key=1234",
                             "compression": "gzip",
                             "timeout": 10000,
-                            "insecure": false,
                             "temporality_preference": "delta",
                             "default_histogram_aggregation": "base2_exponential_bucket_histogram"
                         }
@@ -329,9 +337,11 @@
                     "exporter": {
                         "otlp_http": {
                             "endpoint": "http://localhost:4318/v1/traces",
-                            "certificate_file": "testdata/ca.crt",
-                            "client_key_file": "testdata/client.key",
-                            "client_certificate_file": "testdata/client.crt",
+                            "tls": {
+                                "ca_file": "testdata/ca.crt",
+                                "key_file": "testdata/client.key",
+                                "cert_file": "testdata/client.crt"
+                            },
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -351,9 +361,12 @@
                     "exporter": {
                         "otlp_grpc": {
                             "endpoint": "http://localhost:4317",
-                            "certificate_file": "testdata/ca.crt",
-                            "client_key_file": "testdata/client.key",
-                            "client_certificate_file": "testdata/client.crt",
+                            "tls": {
+                                "ca_file": "testdata/ca.crt",
+                                "key_file": "testdata/client.key",
+                                "cert_file": "testdata/client.crt",
+                                "insecure": false
+                            },
                             "headers": [
                                 {
                                     "name": "api-key",
@@ -362,8 +375,7 @@
                             ],
                             "headers_list": "api-key=1234",
                             "compression": "gzip",
-                            "timeout": 10000,
-                            "insecure": false
+                            "timeout": 10000
                         }
                     }
                 }
@@ -382,16 +394,6 @@
                     "exporter": {
                         "otlp_file/development": {
                             "output_stream": "stdout"
-                        }
-                    }
-                }
-            },
-            {
-                "batch": {
-                    "exporter": {
-                        "zipkin": {
-                            "endpoint": "http://localhost:9411/api/v2/spans",
-                            "timeout": 10000
                         }
                     }
                 }
