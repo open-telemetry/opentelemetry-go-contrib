@@ -4,4 +4,4 @@
 package azurevm // import "go.opentelemetry.io/contrib/detectors/azure/azurevm"
 
 // Version is the current release version of the Azure VM resource detector.
-const Version = "v0.12.0"
+const Version = "0.12.0"
