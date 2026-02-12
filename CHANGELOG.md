@@ -14,7 +14,7 @@ The next release will require at least [Go 1.25].
 ### Added
 
 - `WithSpanKind` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to override the default span kind. (#8506)
-- Support testing of [Go 1.26]. (TBD)
+- Support testing of [Go 1.26]. (#8549)
 
 ### Fixed
 
