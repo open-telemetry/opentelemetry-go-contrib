@@ -8,10 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release is the last to support [Go 1.24].
+The next release will require at least [Go 1.25].
+
 ### Added
 
 - `WithSpanKind` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to override the default span kind. (#8506)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8544)
+- Support testing of [Go 1.26]. (#8549)
 - Add `const Version` in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. (#8553)
 
 ### Fixed
@@ -1749,6 +1753,7 @@ First official tagged release of `contrib` repository.
 
 <!-- Released section ended -->
 
+[Go 1.26]: https://go.dev/doc/go1.26
 [Go 1.25]: https://go.dev/doc/go1.25
 [Go 1.24]: https://go.dev/doc/go1.24
 [Go 1.23]: https://go.dev/doc/go1.23
