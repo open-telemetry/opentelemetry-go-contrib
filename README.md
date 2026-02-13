@@ -52,16 +52,22 @@ This project is tested on the following systems.
 
 | OS       | Go Version | Architecture |
 | -------- | ---------- | ------------ |
+| Ubuntu   | 1.26       | amd64        |
 | Ubuntu   | 1.25       | amd64        |
 | Ubuntu   | 1.24       | amd64        |
+| Ubuntu   | 1.26       | 386          |
 | Ubuntu   | 1.25       | 386          |
 | Ubuntu   | 1.24       | 386          |
+| macOS    | 1.26       | amd64        |
 | macOS    | 1.25       | amd64        |
 | macOS    | 1.24       | amd64        |
+| macOS    | 1.26       | arm64        |
 | macOS    | 1.25       | arm64        |
 | macOS    | 1.24       | arm64        |
+| Windows  | 1.26       | amd64        |
 | Windows  | 1.25       | amd64        |
 | Windows  | 1.24       | amd64        |
+| Windows  | 1.26       | 386          |
 | Windows  | 1.25       | 386          |
 | Windows  | 1.24       | 386          |
 

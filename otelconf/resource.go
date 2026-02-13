@@ -30,14 +30,9 @@ func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 	return opts
 }
 
-func newResource(res OpenTelemetryConfigurationResource) (*resource.Resource, error) {
-	if res == nil {
+func newResource(r *Resource) (*resource.Resource, error) {
+	if r == nil {
 		return resource.Default(), nil
-	}
-
-	r, ok := res.(*ResourceJson)
-	if !ok {
-		return nil, newErrInvalid("resource")
 	}
 
 	attrs := make([]attribute.KeyValue, 0, len(r.Attributes))

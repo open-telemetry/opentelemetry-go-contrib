@@ -26,14 +26,10 @@ func loggerProvider(cfg configOptions, res *resource.Resource) (log.LoggerProvid
 	if cfg.opentelemetryConfig.LoggerProvider == nil {
 		return noop.NewLoggerProvider(), noopShutdown, nil
 	}
-	provider, ok := cfg.opentelemetryConfig.LoggerProvider.(*LoggerProviderJson)
-	if !ok {
-		return noop.NewLoggerProvider(), noopShutdown, newErrInvalid("logger_provider")
-	}
 	opts := append(cfg.loggerProviderOptions, sdklog.WithResource(res))
 
 	var errs []error
-	for _, processor := range provider.Processors {
+	for _, processor := range cfg.opentelemetryConfig.LoggerProvider.Processors {
 		sp, err := logProcessor(cfg.ctx, processor)
 		if err == nil {
 			opts = append(opts, sdklog.WithProcessor(sp))
@@ -172,11 +168,13 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sdk
 		opts = append(opts, otlploghttp.WithHeaders(headersConfig))
 	}
 
-	tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
-	if err != nil {
-		return nil, errors.Join(newErrInvalid("tls configuration"), err)
+	if otlpConfig.Tls != nil {
+		tlsConfig, err := tls.CreateConfig(otlpConfig.Tls.CaFile, otlpConfig.Tls.CertFile, otlpConfig.Tls.KeyFile)
+		if err != nil {
+			return nil, errors.Join(newErrInvalid("tls configuration"), err)
+		}
+		opts = append(opts, otlploghttp.WithTLSClientConfig(tlsConfig))
 	}
-	opts = append(opts, otlploghttp.WithTLSClientConfig(tlsConfig))
 
 	return otlploghttp.New(ctx, opts...)
 }
@@ -199,7 +197,7 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLPGrpcExporter) (sdk
 		} else {
 			opts = append(opts, otlploggrpc.WithEndpoint(*otlpConfig.Endpoint))
 		}
-		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Insecure != nil && *otlpConfig.Insecure) {
+		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Tls != nil && otlpConfig.Tls.Insecure != nil && *otlpConfig.Tls.Insecure) {
 			opts = append(opts, otlploggrpc.WithInsecure())
 		}
 	}
@@ -224,8 +222,8 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLPGrpcExporter) (sdk
 		opts = append(opts, otlploggrpc.WithHeaders(headersConfig))
 	}
 
-	if otlpConfig.CertificateFile != nil || otlpConfig.ClientCertificateFile != nil || otlpConfig.ClientKeyFile != nil {
-		tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
+	if otlpConfig.Tls != nil && (otlpConfig.Tls.CaFile != nil || otlpConfig.Tls.CertFile != nil || otlpConfig.Tls.KeyFile != nil) {
+		tlsConfig, err := tls.CreateConfig(otlpConfig.Tls.CaFile, otlpConfig.Tls.CertFile, otlpConfig.Tls.KeyFile)
 		if err != nil {
 			return nil, errors.Join(newErrInvalid("tls configuration"), err)
 		}

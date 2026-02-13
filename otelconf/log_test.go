@@ -47,22 +47,10 @@ func TestLoggerProvider(t *testing.T) {
 			wantProvider: noop.NewLoggerProvider(),
 		},
 		{
-			name: "invalid-provider",
-			cfg: configOptions{
-				opentelemetryConfig: OpenTelemetryConfiguration{
-					LoggerProvider: &MeterProviderJson{
-						Readers: []MetricReader{},
-					},
-				},
-			},
-			wantProvider: noop.NewLoggerProvider(),
-			wantErr:      newErrInvalid("logger_provider"),
-		},
-		{
 			name: "error-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					LoggerProvider: &LoggerProviderJson{
+					LoggerProvider: &LoggerProvider{
 						Processors: []LogRecordProcessor{
 							{
 								Simple: &SimpleLogRecordProcessor{},
@@ -266,10 +254,12 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "ca.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+							},
 						},
 					},
 				},
@@ -282,10 +272,12 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								CaFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -314,11 +306,13 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							Endpoint:              ptr("localhost:4317"),
-							Compression:           ptr("gzip"),
-							Timeout:               ptr(1000),
-							ClientCertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
-							ClientKeyFile:         ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								KeyFile:  ptr(filepath.Join("testdata", "bad_cert.crt")),
+								CertFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -419,10 +413,12 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "ca.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+							},
 						},
 					},
 				},
@@ -435,10 +431,12 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								CaFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -451,11 +449,13 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:              ptr("localhost:4317"),
-							Compression:           ptr("gzip"),
-							Timeout:               ptr(1000),
-							ClientCertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
-							ClientKeyFile:         ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								KeyFile:  ptr(filepath.Join("testdata", "bad_cert.crt")),
+								CertFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -695,7 +695,7 @@ func TestLoggerProviderOptions(t *testing.T) {
 	defer srv.Close()
 
 	cfg := OpenTelemetryConfiguration{
-		LoggerProvider: &LoggerProviderJson{
+		LoggerProvider: &LoggerProvider{
 			Processors: []LogRecordProcessor{{
 				Simple: &SimpleLogRecordProcessor{
 					Exporter: LogRecordExporter{
@@ -757,7 +757,9 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				otlpConfig: &OTLPGrpcExporter{
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
-					Insecure:    ptr(true),
+					Tls: &GrpcTls{
+						Insecure: ptr(true),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -772,9 +774,11 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			args: args{
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
-					Compression:     ptr("gzip"),
-					Timeout:         ptr(5000),
-					CertificateFile: ptr("testdata/server-certs/server.crt"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(5000),
+					Tls: &GrpcTls{
+						CaFile: ptr("testdata/server-certs/server.crt"),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -795,11 +799,13 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			args: args{
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
-					Compression:           ptr("gzip"),
-					Timeout:               ptr(5000),
-					CertificateFile:       ptr("testdata/server-certs/server.crt"),
-					ClientKeyFile:         ptr("testdata/client-certs/client.key"),
-					ClientCertificateFile: ptr("testdata/client-certs/client.crt"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(5000),
+					Tls: &GrpcTls{
+						CaFile:   ptr("testdata/server-certs/server.crt"),
+						KeyFile:  ptr("testdata/client-certs/client.key"),
+						CertFile: ptr("testdata/client-certs/client.crt"),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},

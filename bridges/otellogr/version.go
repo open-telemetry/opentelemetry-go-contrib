@@ -4,4 +4,4 @@
 package otellogr // import "go.opentelemetry.io/contrib/bridges/otellogr"
 
 // Version is the current release version of the otellogr bridge.
-const Version = "0.14.0"
+const Version = "0.15.0"
