@@ -17,6 +17,7 @@ The next release will require at least [Go 1.25].
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8544)
 - Support testing of [Go 1.26]. (#8549)
 - Add `const Version` in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. (#8553)
+- Add `const Version` in `go.opentelemetry.io/contrib/propagators/autoprop`. (#8488)
 
 ### Fixed
 
@@ -46,7 +47,6 @@ The next release will require at least [Go 1.25].
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#8477)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#8485)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#8480)
-- Add `const Version` in `go.opentelemetry.io/contrib/propagators/autoprop`. (#8488)
 
 ### Fixed
 
