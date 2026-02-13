@@ -16,7 +16,7 @@ import (
 func TestNewResource(t *testing.T) {
 	tests := []struct {
 		name         string
-		config       *ResourceJson
+		config       *Resource
 		wantResource *resource.Resource
 		wantErrT     error
 	}{
@@ -26,19 +26,19 @@ func TestNewResource(t *testing.T) {
 		},
 		{
 			name:         "resource-no-attributes",
-			config:       &ResourceJson{},
+			config:       &Resource{},
 			wantResource: resource.NewSchemaless(),
 		},
 		{
 			name: "resource-with-schema",
-			config: &ResourceJson{
+			config: &Resource{
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
 			wantResource: resource.NewWithAttributes(semconv.SchemaURL),
 		},
 		{
 			name: "resource-with-attributes",
-			config: &ResourceJson{
+			config: &Resource{
 				Attributes: []AttributeNameValue{
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
@@ -49,7 +49,7 @@ func TestNewResource(t *testing.T) {
 		},
 		{
 			name: "resource-with-attributes-and-schema",
-			config: &ResourceJson{
+			config: &Resource{
 				Attributes: []AttributeNameValue{
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
@@ -61,7 +61,7 @@ func TestNewResource(t *testing.T) {
 		},
 		{
 			name: "resource-with-additional-attributes-and-schema",
-			config: &ResourceJson{
+			config: &Resource{
 				Attributes: []AttributeNameValue{
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 					{Name: "attr-bool", Value: true},

@@ -30,7 +30,7 @@ func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 	return opts
 }
 
-func newResource(r *ResourceJson) (*resource.Resource, error) {
+func newResource(r *Resource) (*resource.Resource, error) {
 	if r == nil {
 		return resource.Default(), nil
 	}
