@@ -4,4 +4,4 @@
 package autoprop // import "go.opentelemetry.io/contrib/propagators/autoprop"
 
 // Version is the current release version of the autoprop module.
-const Version = "0.64.0"
+const Version = "0.65.0"
