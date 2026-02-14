@@ -351,7 +351,7 @@ func TestSpecExamples(t *testing.T) {
 		},
 		{ // 17
 			yamlInput:  "key: ${UNDEFINED_KEY:-${STRING_VALUE}}",
-			yamlOutput: `key: ${STRING_VALUE}`, // added missing key:
+			yamlOutput: `key: ${STRING_VALUE}`,
 			tagURI:     "tag:yaml.org,2002:str",
 			notes:      `Undefined env var results in substitution of default value ${STRING_VALUE}, and is not substituted recursively`,
 		},
@@ -382,13 +382,13 @@ func TestSpecExamples(t *testing.T) {
 		},
 		{ // 22
 			yamlInput:  "key: $${STRING_VALUE:-fallback}",
-			yamlOutput: `key: ${STRING_VALUE:-fallback}`, // added missing key:
+			yamlOutput: `key: ${STRING_VALUE:-fallback}`,
 			tagURI:     "tag:yaml.org,2002:str",
 			notes:      `$$ escape sequence is replaced with $, {STRING_VALUE:-fallback} does not match substitution syntax`,
 		},
 		{ // 23
 			yamlInput:  "key: $${STRING_VALUE:-${STRING_VALUE}}",
-			yamlOutput: `key: ${STRING_VALUE:-value}`, // added missing key:
+			yamlOutput: `key: ${STRING_VALUE:-value}`,
 			tagURI:     "tag:yaml.org,2002:str",
 			notes:      `$$ escape sequence is replaced with $, leaving {STRING_VALUE:-${STRING_VALUE}}, ${STRING_VALUE} is replaced with value`,
 		},
@@ -400,15 +400,15 @@ func TestSpecExamples(t *testing.T) {
 			// 2. encounter $$ and substitute with $
 			// 3. then reading {UNDEFINED_KEY
 			// 4. encounter }, that will conclude the env substitution, thus we have ${UNDEFINED_KEY:-${UNDEFINED_KEY}
-			//    that is perfectly valid and will result int ${UNDEFINED_KEY
+			//    that is perfectly valid and will result in ${UNDEFINED_KEY
 			// 5. encounter an unrelated }, that is just printed
-			yamlOutput: `key: ${UNDEFINED_KEY}`, // added missing key:
+			yamlOutput: `key: ${UNDEFINED_KEY}`,
 			tagURI:     "tag:yaml.org,2002:str",
 			notes:      `$$ escape sequence is replaced with $, leaving ${UNDEFINED_KEY:- before and ${UNDEFINED_KEY}} after which do not match substitution syntax`,
 		},
 		{ // 25
 			yamlInput:  "key: ${VALUE_WITH_ESCAPE}",
-			yamlOutput: `key: value$$`, // added missing key:
+			yamlOutput: `key: value$$`,
 			tagURI:     "tag:yaml.org,2002:str",
 			notes:      `Value of env var VALUE_WITH_ESCAPE is value$$, which is substituted without escaping`,
 		},
