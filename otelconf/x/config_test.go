@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf
+package x
 
 import (
 	"encoding/json"
@@ -416,16 +416,16 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 		}),
 	}
 	// test a non existent file
-	t.Setenv(envVarConfigFile, filepath.Join("testdata", "file_missing.yaml"))
+	t.Setenv(envVarConfigFile, filepath.Join("..", "testdata", "file_missing.yaml"))
 	_, err := NewSDK(cfg...)
 	require.Error(t, err)
 	// test a file that causes a parse error
-	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))
+	t.Setenv(envVarConfigFile, filepath.Join("..", "testdata", "v1.0.0_invalid_nil_name.yaml"))
 	_, err = NewSDK(cfg...)
 	require.Error(t, err)
 	require.ErrorIs(t, err, newErrRequired(&NameStringValuePair{}, "name"))
 	// test a valid file, error is returned from the SDK instantiation
-	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0.yaml"))
+	t.Setenv(envVarConfigFile, filepath.Join("..", "testdata", "v1.0.0.yaml"))
 	_, err = NewSDK(cfg...)
 	require.ErrorIs(t, err, newErrInvalid("otlp_file/development"))
 }
@@ -437,9 +437,96 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 		AttributeCountLimit:       ptr(128),
 		AttributeValueLengthLimit: ptr(4096),
 	},
-
+	InstrumentationDevelopment: &ExperimentalInstrumentation{
+		Cpp: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Dotnet: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Erlang: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		General: &ExperimentalGeneralInstrumentation{
+			Http: &ExperimentalHttpInstrumentation{
+				Client: &ExperimentalHttpClientInstrumentation{
+					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
+					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
+				},
+				Server: &ExperimentalHttpServerInstrumentation{
+					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
+					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
+				},
+			},
+			Peer: &ExperimentalPeerInstrumentation{
+				ServiceMapping: []ExperimentalPeerServiceMapping{
+					{Peer: "1.2.3.4", Service: "FooService"},
+					{Peer: "2.3.4.5", Service: "BarService"},
+				},
+			},
+		},
+		Go: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Java: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Js: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Php: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Python: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Ruby: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Rust: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+		Swift: ExperimentalLanguageSpecificInstrumentation{
+			"example": map[string]any{
+				"property": "value",
+			},
+		},
+	},
 	LogLevel: ptr(SeverityNumberInfo),
 	LoggerProvider: &LoggerProvider{
+		LoggerConfiguratorDevelopment: &ExperimentalLoggerConfigurator{
+			DefaultConfig: &ExperimentalLoggerConfig{
+				Disabled: ptr(true),
+			},
+			Loggers: []ExperimentalLoggerMatcherAndConfig{
+				{
+					Config: ExperimentalLoggerConfig{
+						Disabled: ptr(false),
+					},
+					Name: "io.opentelemetry.contrib.*",
+				},
+			},
+		},
 		Limits: &LogRecordLimits{
 			AttributeCountLimit:       ptr(128),
 			AttributeValueLengthLimit: ptr(4096),
@@ -493,12 +580,20 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 			{
 				Batch: &BatchLogRecordProcessor{
-					Exporter: LogRecordExporter{},
+					Exporter: LogRecordExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("file:///var/log/logs.jsonl"),
+						},
+					},
 				},
 			},
 			{
 				Batch: &BatchLogRecordProcessor{
-					Exporter: LogRecordExporter{},
+					Exporter: LogRecordExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("stdout"),
+						},
+					},
 				},
 			},
 			{
@@ -512,6 +607,19 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 	},
 	MeterProvider: &MeterProvider{
 		ExemplarFilter: ptr(ExemplarFilter("trace_based")),
+		MeterConfiguratorDevelopment: &ExperimentalMeterConfigurator{
+			DefaultConfig: &ExperimentalMeterConfig{
+				Disabled: ptr(true),
+			},
+			Meters: []ExperimentalMeterMatcherAndConfig{
+				{
+					Config: ExperimentalMeterConfig{
+						Disabled: ptr(false),
+					},
+					Name: "io.opentelemetry.contrib.*",
+				},
+			},
+		},
 		Readers: []MetricReader{
 			{
 				Pull: &PullMetricReader{
@@ -530,7 +638,18 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 						ObservableUpDownCounter: ptr(2000),
 						UpDownCounter:           ptr(2000),
 					},
-					Exporter: PullMetricExporter{},
+					Exporter: PullMetricExporter{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
+							Host:                ptr("localhost"),
+							Port:                ptr(9464),
+							TranslationStrategy: ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes),
+							WithResourceConstantLabels: &IncludeExclude{
+								Excluded: []string{"service.attr1"},
+								Included: []string{"service*"},
+							},
+							WithoutScopeInfo: ptr(false),
+						},
+					},
 				},
 			},
 			{
@@ -600,12 +719,24 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 			{
 				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{},
+					Exporter: PushMetricExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
+							OutputStream:                ptr("file:///var/log/metrics.jsonl"),
+							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+							TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
+						},
+					},
 				},
 			},
 			{
 				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{},
+					Exporter: PushMetricExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
+							OutputStream:                ptr("stdout"),
+							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+							TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
+						},
+					},
 				},
 			},
 			{
@@ -680,8 +811,34 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 			{Name: "double_array_key", Type: ptr(AttributeTypeDoubleArray), Value: []any{1.1, 2.2}},
 		},
 		AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Attributes: &IncludeExclude{
+				Excluded: []string{"process.command_args"},
+				Included: []string{"process.*"},
+			},
+			Detectors: []ExperimentalResourceDetector{
+				{Container: ExperimentalContainerResourceDetector{}},
+				{Host: ExperimentalHostResourceDetector{}},
+				{Process: ExperimentalProcessResourceDetector{}},
+				{Service: ExperimentalServiceResourceDetector{}},
+			},
+		},
 	},
 	TracerProvider: &TracerProvider{
+		TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
+			DefaultConfig: &ExperimentalTracerConfig{
+				Disabled: ptr(true),
+			},
+			Tracers: []ExperimentalTracerMatcherAndConfig{
+				{
+					Config: ExperimentalTracerConfig{
+						Disabled: ptr(false),
+					},
+					Name: "io.opentelemetry.contrib.*",
+				},
+			},
+		},
+
 		Limits: &SpanLimits{
 			AttributeCountLimit:       ptr(128),
 			AttributeValueLengthLimit: ptr(4096),
@@ -739,12 +896,20 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 			{
 				Batch: &BatchSpanProcessor{
-					Exporter: SpanExporter{},
+					Exporter: SpanExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("file:///var/log/traces.jsonl"),
+						},
+					},
 				},
 			},
 			{
 				Batch: &BatchSpanProcessor{
-					Exporter: SpanExporter{},
+					Exporter: SpanExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+							OutputStream: ptr("stdout"),
+						},
+					},
 				},
 			},
 			{
@@ -877,7 +1042,7 @@ func TestParseFiles(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run("yaml:"+tt.name, func(t *testing.T) {
-			b, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.yaml", tt.input)))
+			b, err := os.ReadFile(filepath.Join("..", "testdata", fmt.Sprintf("%s.yaml", tt.input)))
 			require.NoError(t, err)
 
 			got, err := ParseYAML(b)
@@ -887,7 +1052,7 @@ func TestParseFiles(t *testing.T) {
 			}
 		})
 		t.Run("json: "+tt.name, func(t *testing.T) {
-			b, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.json", tt.input)))
+			b, err := os.ReadFile(filepath.Join("..", "testdata", fmt.Sprintf("%s.json", tt.input)))
 			require.NoError(t, err)
 
 			var got OpenTelemetryConfiguration
@@ -950,6 +1115,12 @@ func TestUnmarshalOpenTelemetryConfiguration(t *testing.T) {
 			name:       "attribute_limits invalid",
 			jsonConfig: []byte(`{"attribute_limits":[], "file_format": "1.0"}`),
 			yamlConfig: []byte("attribute_limits: []\nfile_format: 1.0"),
+			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
+		},
+		{
+			name:       "instrumentation invalid",
+			jsonConfig: []byte(`{"instrumentation/development":[], "file_format": "1.0"}`),
+			yamlConfig: []byte("instrumentation/development: []\nfile_format: 1.0"),
 			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
 		},
 		{
@@ -1105,7 +1276,7 @@ func TestParseYAMLWithEnvironmentVariables(t *testing.T) {
 	t.Setenv("VALUE_WITH_ESCAPE", "value$$")              // A valid replacement text, used verbatim, not replaced with "Never use this value"
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			b, err := os.ReadFile(filepath.Join("testdata", tt.input))
+			b, err := os.ReadFile(filepath.Join("..", "testdata", tt.input))
 			require.NoError(t, err)
 
 			got, err := ParseYAML(b)
@@ -1941,6 +2112,68 @@ func TestUnmarshalInstrumentType(t *testing.T) {
 	}
 }
 
+func TestUnmarshalExperimentalPeerServiceMappingType(t *testing.T) {
+	for _, tt := range []struct {
+		name                               string
+		yamlConfig                         []byte
+		jsonConfig                         []byte
+		wantErrT                           error
+		wantExperimentalPeerServiceMapping ExperimentalPeerServiceMapping
+	}{
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("peer: []\nservice: true"),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerServiceMapping{}),
+		},
+		{
+			name:       "missing required peer field",
+			jsonConfig: []byte(`{}`),
+			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&ExperimentalPeerServiceMapping{}, "peer"),
+		},
+		{
+			name:       "missing required service field",
+			jsonConfig: []byte(`{"peer":"test"}`),
+			yamlConfig: []byte("peer: test"),
+			wantErrT:   newErrRequired(&ExperimentalPeerServiceMapping{}, "service"),
+		},
+		{
+			name:       "invalid string_array peer",
+			jsonConfig: []byte(`{"peer":[], "service": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("peer: []\nservice: [test-val, test-val-2]\ntype: string_array\n"),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerServiceMapping{}),
+		},
+		{
+			name:       "valid string service",
+			jsonConfig: []byte(`{"peer":"test", "service": "test-val"}`),
+			yamlConfig: []byte("peer: test\nservice: test-val"),
+			wantExperimentalPeerServiceMapping: ExperimentalPeerServiceMapping{
+				Peer:    "test",
+				Service: "test-val",
+			},
+		},
+		{
+			name:       "invalid string_array service",
+			jsonConfig: []byte(`{"peer":"test", "service": ["test-val", "test-val-2"], "type": "string_array"}`),
+			yamlConfig: []byte("peer: test\nservice: [test-val, test-val-2]\ntype: string_array\n"),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerServiceMapping{}),
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			val := ExperimentalPeerServiceMapping{}
+			err := val.UnmarshalJSON(tt.jsonConfig)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExperimentalPeerServiceMapping, val)
+
+			val = ExperimentalPeerServiceMapping{}
+			err = yaml.Unmarshal(tt.yamlConfig, &val)
+			assert.ErrorIs(t, err, tt.wantErrT)
+			assert.Equal(t, tt.wantExperimentalPeerServiceMapping, val)
+		})
+	}
+}
+
 func TestUnmarshalExporterDefaultHistogramAggregation(t *testing.T) {
 	var exporterDefaultHistogramAggregation ExporterDefaultHistogramAggregation
 	for _, tt := range []struct {
@@ -1995,13 +2228,19 @@ func TestUnmarshalPullMetricReader(t *testing.T) {
 			name:         "valid with proemtheus exporter",
 			jsonConfig:   []byte(`{"exporter":{"prometheus/development":{}}}`),
 			yamlConfig:   []byte("exporter:\n  prometheus/development: {}"),
-			wantExporter: PullMetricExporter{},
+			wantExporter: PullMetricExporter{PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{}},
 		},
 		{
 			name:       "missing required exporter field",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
 			wantErrT:   newErrRequired(&PullMetricReader{}, "exporter"),
+		},
+		{
+			name:       "invalid data",
+			jsonConfig: []byte(`{:2000}`),
+			yamlConfig: []byte("exporter:\n  prometheus/development: []"),
+			wantErrT:   newErrUnmarshal(&PullMetricReader{}),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2027,16 +2266,102 @@ func TestUnmarshalResourceJson(t *testing.T) {
 		wantResource Resource
 	}{
 		{
-			name:         "valid with all detectors",
-			jsonConfig:   []byte(`{"detection/development": {"detectors": [{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
-			yamlConfig:   []byte("detection/development:\n  detectors:\n    - container:\n    - host:\n    - process:\n    - service:"),
-			wantResource: Resource{},
+			name:       "valid with all detectors",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - container:\n    - host:\n    - process:\n    - service:"),
+			wantResource: Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{
+							Container: ExperimentalContainerResourceDetector{},
+						},
+						{
+							Host: ExperimentalHostResourceDetector{},
+						},
+						{
+							Process: ExperimentalProcessResourceDetector{},
+						},
+						{
+							Service: ExperimentalServiceResourceDetector{},
+						},
+					},
+				},
+			},
 		},
 		{
-			name:         "valid non-nil with all detectors",
-			jsonConfig:   []byte(`{"detection/development": {"detectors": [{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
-			yamlConfig:   []byte("detection/development:\n  detectors:\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
-			wantResource: Resource{},
+			name:       "valid non-nil with all detectors",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
+			wantResource: Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{
+							Container: ExperimentalContainerResourceDetector{},
+						},
+						{
+							Host: ExperimentalHostResourceDetector{},
+						},
+						{
+							Process: ExperimentalProcessResourceDetector{},
+						},
+						{
+							Service: ExperimentalServiceResourceDetector{},
+						},
+					},
+				},
+			},
+		},
+		{
+			name:       "invalid container detector",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": 1}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - container: 1"),
+			wantResource: Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{},
+					},
+				},
+			},
+			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
+		},
+		{
+			name:       "invalid host detector",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"host": 1}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - host: 1"),
+			wantResource: Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{},
+					},
+				},
+			},
+			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
+		},
+		{
+			name:       "invalid service detector",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"service": 1}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - service: 1"),
+			wantResource: Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{},
+					},
+				},
+			},
+			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
+		},
+		{
+			name:       "invalid process detector",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"process": 1}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - process: 1"),
+			wantResource: Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{},
+					},
+				},
+			},
+			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {

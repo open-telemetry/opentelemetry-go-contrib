@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf // import "go.opentelemetry.io/contrib/otelconf"
+package x // import "go.opentelemetry.io/contrib/otelconf/x"
 
 import (
 	"context"
@@ -9,14 +9,21 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
+	"strconv"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/prometheus/otlptranslator"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -89,6 +96,9 @@ func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error)
 }
 
 func pullReader(ctx context.Context, exporter PullMetricExporter) (sdkmetric.Reader, error) {
+	if exporter.PrometheusDevelopment != nil {
+		return prometheusReader(ctx, exporter.PrometheusDevelopment)
+	}
 	return nil, newErrInvalid("no valid metric exporter")
 }
 
@@ -130,6 +140,10 @@ func periodicExporter(ctx context.Context, exporter PushMetricExporter, opts ...
 		exportFunc = func() (sdkmetric.Reader, error) {
 			return sdkmetric.NewPeriodicReader(exp, opts...), nil
 		}
+	}
+	if exporter.OTLPFileDevelopment != nil {
+		// TODO: implement file exporter https://github.com/open-telemetry/opentelemetry-go/issues/5408
+		return nil, newErrInvalid("otlp_file/development")
 	}
 
 	if exportersConfigured > 1 {
@@ -326,6 +340,94 @@ func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
 		_, ok := included[kv.Key]
 		return ok
 	}, nil
+}
+
+func prometheusReader(ctx context.Context, prometheusConfig *ExperimentalPrometheusMetricExporter) (sdkmetric.Reader, error) {
+	if prometheusConfig.Host == nil {
+		return nil, newErrInvalid("host must be specified")
+	}
+	if prometheusConfig.Port == nil {
+		return nil, newErrInvalid("port must be specified")
+	}
+
+	opts, err := prometheusReaderOpts(prometheusConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	reg := prometheus.NewRegistry()
+	opts = append(opts, otelprom.WithRegisterer(reg))
+
+	reader, err := otelprom.New(opts...)
+	if err != nil {
+		return nil, fmt.Errorf("error creating otel prometheus exporter: %w", err)
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
+	server := http.Server{
+		// Timeouts are necessary to make a server resilient to attacks.
+		// We use values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		Handler:      mux,
+	}
+
+	// Remove surrounding "[]" from the host definition to allow users to define the host as "[::1]" or "::1".
+	host := *prometheusConfig.Host
+	if len(host) > 2 && host[0] == '[' && host[len(host)-1] == ']' {
+		host = host[1 : len(host)-1]
+	}
+
+	addr := net.JoinHostPort(host, strconv.Itoa(*prometheusConfig.Port))
+	lis, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, errors.Join(
+			fmt.Errorf("binding address %s for Prometheus exporter: %w", addr, err),
+			reader.Shutdown(ctx),
+		)
+	}
+
+	// Only for testing reasons, add the address to the http Server, will not be used.
+	server.Addr = lis.Addr().String()
+
+	go func() {
+		if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
+		}
+	}()
+
+	return readerWithServer{reader, &server}, nil
+}
+
+func validTranslationStrategy(strategy ExperimentalPrometheusTranslationStrategy) bool {
+	return strategy == ExperimentalPrometheusTranslationStrategyNoTranslation ||
+		strategy == ExperimentalPrometheusTranslationStrategyNoUtf8EscapingWithSuffixes ||
+		strategy == ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes ||
+		strategy == ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithoutSuffixes
+}
+
+func prometheusReaderOpts(prometheusConfig *ExperimentalPrometheusMetricExporter) ([]otelprom.Option, error) {
+	var opts []otelprom.Option
+	if prometheusConfig.WithoutScopeInfo != nil && *prometheusConfig.WithoutScopeInfo {
+		opts = append(opts, otelprom.WithoutScopeInfo())
+	}
+	if prometheusConfig.TranslationStrategy != nil {
+		if !validTranslationStrategy(*prometheusConfig.TranslationStrategy) {
+			return nil, newErrInvalid("translation strategy invalid")
+		}
+		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.TranslationStrategyOption(*prometheusConfig.TranslationStrategy)))
+	}
+	if prometheusConfig.WithResourceConstantLabels != nil {
+		f, err := newIncludeExcludeFilter(prometheusConfig.WithResourceConstantLabels)
+		if err != nil {
+			return nil, err
+		}
+		opts = append(opts, otelprom.WithResourceAsConstantLabels(f))
+	}
+
+	return opts, nil
 }
 
 type readerWithServer struct {

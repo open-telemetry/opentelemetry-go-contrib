@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf // import "go.opentelemetry.io/contrib/otelconf"
+package x // import "go.opentelemetry.io/contrib/otelconf/x"
 
 import (
 	"encoding/json"
@@ -119,6 +119,121 @@ func (j *TraceContextPropagator) UnmarshalJSON(b []byte) error {
 	} else {
 		*j = TraceContextPropagator(p)
 	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalContainerResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalContainerResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = ExperimentalContainerResourceDetector{}
+	} else {
+		*j = ExperimentalContainerResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalHostResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalHostResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = ExperimentalHostResourceDetector{}
+	} else {
+		*j = ExperimentalHostResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalProcessResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalProcessResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = ExperimentalProcessResourceDetector{}
+	} else {
+		*j = ExperimentalProcessResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalServiceResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalServiceResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// If key is present (even if empty object), ensure non-nil value.
+	if p == nil {
+		*j = ExperimentalServiceResourceDetector{}
+	} else {
+		*j = ExperimentalServiceResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
+	// Use a shadow struct with a RawMessage field to detect key presence.
+	type Plain ExperimentalResourceDetector
+	type shadow struct {
+		Plain
+		Container json.RawMessage `json:"container"`
+		Host      json.RawMessage `json:"host"`
+		Process   json.RawMessage `json:"process"`
+		Service   json.RawMessage `json:"service"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if sh.Container != nil {
+		var c ExperimentalContainerResourceDetector
+		if err := json.Unmarshal(sh.Container, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.Container = c
+	}
+
+	if sh.Host != nil {
+		var c ExperimentalHostResourceDetector
+		if err := json.Unmarshal(sh.Host, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.Host = c
+	}
+
+	if sh.Process != nil {
+		var c ExperimentalProcessResourceDetector
+		if err := json.Unmarshal(sh.Process, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.Process = c
+	}
+
+	if sh.Service != nil {
+		var c ExperimentalServiceResourceDetector
+		if err := json.Unmarshal(sh.Service, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.Service = c
+	}
+	*j = ExperimentalResourceDetector(sh.Plain)
 	return nil
 }
 
@@ -318,15 +433,16 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	type Plain OpenTelemetryConfiguration
 	type shadow struct {
 		Plain
-		FileFormat      json.RawMessage `json:"file_format"`
-		LoggerProvider  json.RawMessage `json:"logger_provider"`
-		MeterProvider   json.RawMessage `json:"meter_provider"`
-		TracerProvider  json.RawMessage `json:"tracer_provider"`
-		Propagator      json.RawMessage `json:"propagator"`
-		Resource        json.RawMessage `json:"resource"`
-		AttributeLimits json.RawMessage `json:"attribute_limits"`
-		Disabled        json.RawMessage `json:"disabled"`
-		LogLevel        json.RawMessage `json:"log_level"`
+		FileFormat                 json.RawMessage `json:"file_format"`
+		LoggerProvider             json.RawMessage `json:"logger_provider"`
+		MeterProvider              json.RawMessage `json:"meter_provider"`
+		TracerProvider             json.RawMessage `json:"tracer_provider"`
+		Propagator                 json.RawMessage `json:"propagator"`
+		Resource                   json.RawMessage `json:"resource"`
+		InstrumentationDevelopment json.RawMessage `json:"instrumentation/development"`
+		AttributeLimits            json.RawMessage `json:"attribute_limits"`
+		Disabled                   json.RawMessage `json:"disabled"`
+		LogLevel                   json.RawMessage `json:"log_level"`
 	}
 	var sh shadow
 	if err := json.Unmarshal(b, &sh); err != nil {
@@ -379,6 +495,14 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 			return errors.Join(newErrUnmarshal(j), err)
 		}
 		sh.Plain.Resource = &r
+	}
+
+	if sh.InstrumentationDevelopment != nil {
+		var r ExperimentalInstrumentation
+		if err := json.Unmarshal(sh.InstrumentationDevelopment, &r); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		sh.Plain.InstrumentationDevelopment = &r
 	}
 
 	if sh.AttributeLimits != nil {
@@ -719,6 +843,35 @@ func (j *InstrumentType) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*j = InstrumentType(v)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalPeerServiceMapping) UnmarshalJSON(b []byte) error {
+	type Plain ExperimentalPeerServiceMapping
+	type shadow struct {
+		Plain
+		Peer    json.RawMessage `json:"peer"`
+		Service json.RawMessage `json:"service"`
+	}
+	var sh shadow
+	if err := json.Unmarshal(b, &sh); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Peer == nil {
+		return newErrRequired(j, "peer")
+	}
+	if err := json.Unmarshal(sh.Peer, &sh.Plain.Peer); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if sh.Service == nil {
+		return newErrRequired(j, "service")
+	}
+	if err := json.Unmarshal(sh.Service, &sh.Plain.Service); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	*j = ExperimentalPeerServiceMapping(sh.Plain)
 	return nil
 }
 
