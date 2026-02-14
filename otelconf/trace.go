@@ -254,6 +254,9 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sd
 		opts = append(opts, otlptracehttp.WithEndpoint(u.Host))
 
 		if u.Scheme == "http" {
+			if hasHTTPExporterTLSConfig(otlpConfig.Tls) {
+				return nil, errors.Join(newErrInvalid("tls configuration"), errors.New("tls configuration requires an https endpoint"))
+			}
 			opts = append(opts, otlptracehttp.WithInsecure())
 		}
 		if u.Path != "" {

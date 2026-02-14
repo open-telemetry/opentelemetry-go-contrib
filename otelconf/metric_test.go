@@ -556,6 +556,24 @@ func TestReader(t *testing.T) {
 			wantReader: sdkmetric.NewPeriodicReader(otlpHTTPExporter),
 		},
 		{
+			name: "periodic/otlp-http-exporter-http-scheme-with-tls-config",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLPHttp: &OTLPHttpMetricExporter{
+							Endpoint:    ptr("http://localhost:4318"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+							},
+						},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("tls configuration"),
+		},
+		{
 			name: "periodic/otlp-http-good-ca-certificate",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{

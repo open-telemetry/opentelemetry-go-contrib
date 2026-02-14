@@ -280,6 +280,10 @@ func ptr[T any](v T) *T {
 	return &v
 }
 
+func hasHTTPExporterTLSConfig(tls *HttpTls) bool {
+	return tls != nil && (tls.CaFile != nil || tls.CertFile != nil || tls.KeyFile != nil)
+}
+
 // createHeadersConfig combines the two header config fields. Headers take precedence over headersList.
 func createHeadersConfig(headers []NameStringValuePair, headersList *string) (map[string]string, error) {
 	result := make(map[string]string)

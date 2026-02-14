@@ -426,6 +426,24 @@ func TestLogProcessor(t *testing.T) {
 			wantProcessor: sdklog.NewBatchProcessor(otlpHTTPExporter),
 		},
 		{
+			name: "batch/otlp-http-exporter-http-scheme-with-tls-config",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					Exporter: LogRecordExporter{
+						OTLPHttp: &OTLPHttpExporter{
+							Endpoint:    ptr("http://localhost:4318"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+							},
+						},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("tls configuration"),
+		},
+		{
 			name: "batch/otlp-http-bad-ca-certificate",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{

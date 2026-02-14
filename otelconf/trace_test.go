@@ -527,6 +527,24 @@ func TestSpanProcessor(t *testing.T) {
 			wantProcessor: sdktrace.NewBatchSpanProcessor(otlpHTTPExporter),
 		},
 		{
+			name: "batch/otlp-http-exporter-http-scheme-with-tls-config",
+			processor: SpanProcessor{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLPHttp: &OTLPHttpExporter{
+							Endpoint:    ptr("http://localhost:4318"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+							},
+						},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("tls configuration"),
+		},
+		{
 			name: "batch/otlp-http-bad-ca-certificate",
 			processor: SpanProcessor{
 				Batch: &BatchSpanProcessor{

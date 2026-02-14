@@ -141,6 +141,9 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sdk
 		opts = append(opts, otlploghttp.WithEndpoint(u.Host))
 
 		if u.Scheme == "http" {
+			if hasHTTPExporterTLSConfig(otlpConfig.Tls) {
+				return nil, errors.Join(newErrInvalid("tls configuration"), errors.New("tls configuration requires an https endpoint"))
+			}
 			opts = append(opts, otlploghttp.WithInsecure())
 		}
 		if u.Path != "" {
