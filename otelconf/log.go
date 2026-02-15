@@ -139,6 +139,9 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sdk
 			return nil, errors.Join(newErrInvalid("endpoint parsing failed"), err)
 		}
 		opts = append(opts, otlploghttp.WithEndpoint(u.Host))
+		if err := validateHTTPExporterTLSScheme(u.Scheme, otlpConfig.Tls); err != nil {
+			return nil, err
+		}
 
 		if u.Scheme == "http" {
 			opts = append(opts, otlploghttp.WithInsecure())
