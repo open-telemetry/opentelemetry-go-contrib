@@ -163,6 +163,10 @@ The next release will require at least [Go 1.25].
 - Switched the default for `OTEL_SEMCONV_STABILITY_OPT_IN` to emit the v1.37.0 semantic conventions by default in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`.
   Use the environment variable `OTEL_SEMCONV_STABILITY_OPT_IN` to configure duplication with old semantic conventions if needed (i.e. `OTEL_SEMCONV_STABILITY_OPT_IN="database/dup"`). (#8230)
 
+### Fixed
+
+- Fix issue in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` middleware where temporary files for multipart/form-data were not being removed. (#6609)
+
 ### Deprecated
 
 - `WithRouteTag` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated.

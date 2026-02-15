@@ -81,7 +81,11 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Set(tracerKey, tracer)
 		savedCtx := c.Request.Context()
 		defer func() {
-			c.Request = c.Request.WithContext(savedCtx)
+			if c.Request.MultipartForm != nil {
+				c.Request = c.Request.Clone(savedCtx)
+			} else {
+				c.Request = c.Request.WithContext(savedCtx)
+			}
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 
