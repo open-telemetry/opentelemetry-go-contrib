@@ -615,7 +615,7 @@ func TestReader(t *testing.T) {
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPHttp: &OTLPHttpMetricExporter{
-							Endpoint:    ptr("localhost:4317"),
+							Endpoint:    ptr("https://localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{

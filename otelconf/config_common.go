@@ -284,6 +284,16 @@ func hasHTTPExporterTLSConfig(tls *HttpTls) bool {
 	return tls != nil && (tls.CaFile != nil || tls.CertFile != nil || tls.KeyFile != nil)
 }
 
+func validateHTTPExporterTLSScheme(endpointScheme string, tls *HttpTls) error {
+	if !hasHTTPExporterTLSConfig(tls) {
+		return nil
+	}
+	if endpointScheme != "https" {
+		return errors.Join(newErrInvalid("tls configuration"), errors.New("tls configuration requires an https endpoint"))
+	}
+	return nil
+}
+
 // createHeadersConfig combines the two header config fields. Headers take precedence over headersList.
 func createHeadersConfig(headers []NameStringValuePair, headersList *string) (map[string]string, error) {
 	result := make(map[string]string)

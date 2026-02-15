@@ -514,7 +514,7 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:    ptr("localhost:4317"),
+							Endpoint:    ptr("https://localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
@@ -550,7 +550,7 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:    ptr("localhost:4317"),
+							Endpoint:    ptr("https://localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
@@ -568,7 +568,7 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:    ptr("localhost:4317"),
+							Endpoint:    ptr("https://localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
