@@ -29,7 +29,7 @@
     },
     {
       "matchPackageNames": ["go.opentelemetry.io/otel/**"],
-      "enabled": false
+      "allowedVersions": "/^v\\d+\\.\\d+\\.\\d+$/"
     }
   ]
 }
