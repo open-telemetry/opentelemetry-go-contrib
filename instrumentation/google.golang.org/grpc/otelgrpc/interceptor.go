@@ -44,14 +44,19 @@ func serverAddrAttrs(hostport string) []attribute.KeyValue {
 // code of Unset and an empty message.
 func serverStatus(grpcStatus *status.Status) (codes.Code, string) {
 	switch grpcStatus.Code() {
-	case grpc_codes.Unknown,
-		grpc_codes.DeadlineExceeded,
-		grpc_codes.Unimplemented,
-		grpc_codes.Internal,
-		grpc_codes.Unavailable,
-		grpc_codes.DataLoss:
-		return codes.Error, grpcStatus.Message()
-	default:
+	case grpc_codes.OK,
+		grpc_codes.Canceled,
+		grpc_codes.InvalidArgument,
+		grpc_codes.NotFound,
+		grpc_codes.AlreadyExists,
+		grpc_codes.PermissionDenied,
+		grpc_codes.ResourceExhausted,
+		grpc_codes.FailedPrecondition,
+		grpc_codes.Aborted,
+		grpc_codes.OutOfRange,
+		grpc_codes.Unauthenticated:
 		return codes.Unset, ""
+	default:
+		return codes.Error, grpcStatus.Message()
 	}
 }

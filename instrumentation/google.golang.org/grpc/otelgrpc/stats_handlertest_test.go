@@ -141,6 +141,12 @@ var serverChecks = []struct {
 		wantSpanStatusDescription: "",
 		wantRPCResponseStatusCode: "UNAUTHENTICATED",
 	},
+	{
+		grpcCode:                  grpc_codes.Code(9999),
+		wantSpanCode:              otelcode.Error,
+		wantSpanStatusDescription: "Code(9999)",
+		wantRPCResponseStatusCode: "CODE(9999)",
+	},
 }
 
 func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
