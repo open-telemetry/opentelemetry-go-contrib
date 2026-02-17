@@ -49,7 +49,7 @@ func TestTracerProvider(t *testing.T) {
 			name: "error-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					TracerProvider: &TracerProviderJson{
+					TracerProvider: &TracerProvider{
 						Processors: []SpanProcessor{
 							{
 								Batch:  &BatchSpanProcessor{},
@@ -66,7 +66,7 @@ func TestTracerProvider(t *testing.T) {
 			name: "multiple-errors-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					TracerProvider: &TracerProviderJson{
+					TracerProvider: &TracerProvider{
 						Processors: []SpanProcessor{
 							{
 								Batch:  &BatchSpanProcessor{},
@@ -91,7 +91,7 @@ func TestTracerProvider(t *testing.T) {
 			name: "invalid-sampler-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					TracerProvider: &TracerProviderJson{
+					TracerProvider: &TracerProvider{
 						Processors: []SpanProcessor{
 							{
 								Simple: &SimpleSpanProcessor{
@@ -127,7 +127,7 @@ func TestTracerProviderOptions(t *testing.T) {
 	defer srv.Close()
 
 	cfg := OpenTelemetryConfiguration{
-		TracerProvider: &TracerProviderJson{
+		TracerProvider: &TracerProvider{
 			Processors: []SpanProcessor{{
 				Simple: &SimpleSpanProcessor{
 					Exporter: SpanExporter{
@@ -355,10 +355,12 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "ca.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+							},
 						},
 					},
 				},
@@ -371,10 +373,12 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								CaFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -387,11 +391,13 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							Endpoint:              ptr("localhost:4317"),
-							Compression:           ptr("gzip"),
-							Timeout:               ptr(1000),
-							ClientCertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
-							ClientKeyFile:         ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								KeyFile:  ptr(filepath.Join("testdata", "bad_cert.crt")),
+								CertFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -508,10 +514,12 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "ca.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+							},
 						},
 					},
 				},
@@ -524,10 +532,12 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								CaFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -540,11 +550,13 @@ func TestSpanProcessor(t *testing.T) {
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:              ptr("localhost:4317"),
-							Compression:           ptr("gzip"),
-							Timeout:               ptr(1000),
-							ClientCertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
-							ClientKeyFile:         ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								KeyFile:  ptr(filepath.Join("testdata", "bad_cert.crt")),
+								CertFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							},
 						},
 					},
 				},
@@ -730,17 +742,6 @@ func TestSpanProcessor(t *testing.T) {
 			wantErrT: newErrInvalid("otlp_file/development"),
 		},
 		{
-			name: "simple/zipkin",
-			processor: SpanProcessor{
-				Simple: &SimpleSpanProcessor{
-					Exporter: SpanExporter{
-						Zipkin: &ZipkinSpanExporter{},
-					},
-				},
-			},
-			wantErrT: newErrInvalid("zipkin"),
-		},
-		{
 			name: "simple/multiple",
 			processor: SpanProcessor{
 				Simple: &SimpleSpanProcessor{
@@ -915,7 +916,9 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				otlpConfig: &OTLPGrpcExporter{
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
-					Insecure:    ptr(true),
+					Tls: &GrpcTls{
+						Insecure: ptr(true),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -930,9 +933,11 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			args: args{
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
-					Compression:     ptr("gzip"),
-					Timeout:         ptr(5000),
-					CertificateFile: ptr("testdata/server-certs/server.crt"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(5000),
+					Tls: &GrpcTls{
+						CaFile: ptr("testdata/server-certs/server.crt"),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -953,11 +958,13 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			args: args{
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
-					Compression:           ptr("gzip"),
-					Timeout:               ptr(5000),
-					CertificateFile:       ptr("testdata/server-certs/server.crt"),
-					ClientKeyFile:         ptr("testdata/client-certs/client.key"),
-					ClientCertificateFile: ptr("testdata/client-certs/client.crt"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(5000),
+					Tls: &GrpcTls{
+						CaFile:   ptr("testdata/server-certs/server.crt"),
+						KeyFile:  ptr("testdata/client-certs/client.key"),
+						CertFile: ptr("testdata/client-certs/client.crt"),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
