@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/otelconf
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/prometheus/client_golang v1.23.2
@@ -56,8 +56,8 @@ require (
 	golang.org/x/net v0.50.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260209200024-4cfbd4190f57 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260209200024-4cfbd4190f57 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260217200457-a2cb2272a1e9 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260217200457-a2cb2272a1e9 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
