@@ -190,7 +190,7 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 	}
 }
 
-func assertServerSpan(t *testing.T, wantSpanCode otelcode.Code, wantSpanStatusDescription string, wantGrpcCode string, span trace.ReadOnlySpan) {
+func assertServerSpan(t *testing.T, wantSpanCode otelcode.Code, wantSpanStatusDescription, wantGrpcCode string, span trace.ReadOnlySpan) {
 	// validate span status
 	assert.Equal(t, wantSpanCode, span.Status().Code)
 	assert.Equal(t, wantSpanStatusDescription, span.Status().Description)
@@ -208,7 +208,7 @@ func assertServerSpan(t *testing.T, wantSpanCode otelcode.Code, wantSpanStatusDe
 	assert.Equal(t, attribute.StringValue(wantGrpcCode), codeAttr.Value)
 }
 
-func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code string) {
+func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, serviceName, name, code string) {
 	want := metricdata.ScopeMetrics{
 		Scope: wantInstrumentationScope,
 		Metrics: []metricdata.Metrics{
