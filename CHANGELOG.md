@@ -25,6 +25,10 @@ The next release will require at least [Go 1.25].
 - Enforce that `client_certificate_file` and `client_key_file` are provided together in `go.opentelemetry.io/contrib/otelconf`. (#8450)
 - Fixed broken CSS and JavaScript CDN URLs in `go.opentelemetry.io/contrib/zpages` by replacing the inaccessible code.getmdl.io CDN with cdnjs.cloudflare.com. (#8502)
 
+### Removed
+
+- Removed the deprecated zipkin exporter example in `go.opentelemetry.io/contrib/examples/zipkin`. (#8501)
+
 ### Changed
 
 - Reduce allocations in the generated HTTP `internal/semconv` packages. (#8511)
@@ -35,13 +39,6 @@ The next release will require at least [Go 1.25].
   - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
-
-### Removed
-
-- Removed the deprecated zipkin exporter example in `go.opentelemetry.io/contrib/examples/zipkin`. (#8501)
-
-### Changed
-
 - Updated the configuration schema used in `go.opentelemetry.io/contrib/otelconf` to [rc.3](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.3). (#8505)
 
 <!-- Released section -->
