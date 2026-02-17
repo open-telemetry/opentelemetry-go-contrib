@@ -17,6 +17,8 @@ The next release will require at least [Go 1.25].
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8544)
 - Support testing of [Go 1.26]. (#8549)
 - Add `const Version` in `go.opentelemetry.io/contrib/detectors/autodetect`. (#8555)
+- Add `const Version` in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. (#8553)
+- Add `const Version` in `go.opentelemetry.io/contrib/processors/baggagecopy`. (#8557)
 
 ### Fixed
 
