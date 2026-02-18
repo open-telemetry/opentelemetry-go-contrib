@@ -16,7 +16,6 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -1439,32 +1438,21 @@ func TestPrometheusIPv6(t *testing.T) {
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// TODO (#7446): Fix the flakiness on Windows.
-		t.Skip("Test is flaky on Windows.")
-	}
-	type args struct {
-		ctx        context.Context
-		otlpConfig *OTLPGrpcMetricExporter
-	}
 	tests := []struct {
 		name           string
-		args           args
+		config         *OTLPGrpcMetricExporter
 		grpcServerOpts func() ([]grpc.ServerOption, error)
 	}{
 		{
 			name: "no TLS config",
-			args: args{
-				ctx: t.Context(),
-				otlpConfig: &OTLPGrpcMetricExporter{
-					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
-					Tls: &GrpcTls{
-						Insecure: ptr(true),
-					},
-					Headers: []NameStringValuePair{
-						{Name: "test", Value: ptr("test1")},
-					},
+			config: &OTLPGrpcMetricExporter{
+				Compression: ptr("gzip"),
+				Timeout:     ptr(5000),
+				Tls: &GrpcTls{
+					Insecure: ptr(true),
+				},
+				Headers: []NameStringValuePair{
+					{Name: "test", Value: ptr("test1")},
 				},
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
@@ -1473,17 +1461,14 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 		},
 		{
 			name: "with TLS config",
-			args: args{
-				ctx: t.Context(),
-				otlpConfig: &OTLPGrpcMetricExporter{
-					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
-					Tls: &GrpcTls{
-						CaFile: ptr("testdata/server-certs/server.crt"),
-					},
-					Headers: []NameStringValuePair{
-						{Name: "test", Value: ptr("test1")},
-					},
+			config: &OTLPGrpcMetricExporter{
+				Compression: ptr("gzip"),
+				Timeout:     ptr(5000),
+				Tls: &GrpcTls{
+					CaFile: ptr("testdata/server-certs/server.crt"),
+				},
+				Headers: []NameStringValuePair{
+					{Name: "test", Value: ptr("test1")},
 				},
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
@@ -1498,19 +1483,16 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 		},
 		{
 			name: "with TLS config and client key",
-			args: args{
-				ctx: t.Context(),
-				otlpConfig: &OTLPGrpcMetricExporter{
-					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
-					Tls: &GrpcTls{
-						CaFile:   ptr("testdata/server-certs/server.crt"),
-						KeyFile:  ptr("testdata/client-certs/client.key"),
-						CertFile: ptr("testdata/client-certs/client.crt"),
-					},
-					Headers: []NameStringValuePair{
-						{Name: "test", Value: ptr("test1")},
-					},
+			config: &OTLPGrpcMetricExporter{
+				Compression: ptr("gzip"),
+				Timeout:     ptr(5000),
+				Tls: &GrpcTls{
+					CaFile:   ptr("testdata/server-certs/server.crt"),
+					KeyFile:  ptr("testdata/client-certs/client.key"),
+					CertFile: ptr("testdata/client-certs/client.crt"),
+				},
+				Headers: []NameStringValuePair{
+					{Name: "test", Value: ptr("test1")},
 				},
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
@@ -1547,14 +1529,14 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			// So we have to manually form the endpoint as "localhost:<port>".
 			_, port, err := net.SplitHostPort(n.Addr().String())
 			require.NoError(t, err)
-			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
+			tt.config.Endpoint = ptr("localhost:" + port)
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
 
 			startGRPCMetricCollector(t, n, serverOpts)
 
-			exporter, err := otlpGRPCMetricExporter(tt.args.ctx, tt.args.otlpConfig)
+			exporter, err := otlpGRPCMetricExporter(t.Context(), tt.config)
 			require.NoError(t, err)
 
 			res, err := resource.New(t.Context())
