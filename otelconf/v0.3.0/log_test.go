@@ -854,7 +854,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 
 			startGRPCLogsCollector(t, n, serverOpts)
 
-			exporter, err := otlpGRPCLogExporter(t.Context(), tt.config)
+			exporter, err := otlpGRPCLogExporter(context.Background(), tt.config) //nolint:usetesting // required to avoid getting a canceled context.
 			require.NoError(t, err)
 
 			logFactory := sdklogtest.RecordFactory{

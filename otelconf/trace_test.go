@@ -998,7 +998,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 
 			startGRPCTraceCollector(t, n, serverOpts)
 
-			exporter, err := otlpGRPCSpanExporter(t.Context(), tt.config)
+			exporter, err := otlpGRPCSpanExporter(context.Background(), tt.config) //nolint:usetesting // required to avoid getting a canceled context.
 			require.NoError(t, err)
 
 			input := tracetest.SpanStubs{

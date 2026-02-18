@@ -1683,7 +1683,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 
 			startGRPCMetricCollector(t, n, serverOpts)
 
-			exporter, err := otlpGRPCMetricExporter(t.Context(), tt.config)
+			exporter, err := otlpGRPCMetricExporter(context.Background(), tt.config) //nolint:usetesting // required to avoid getting a canceled context.
 			require.NoError(t, err)
 
 			res, err := resource.New(t.Context())
