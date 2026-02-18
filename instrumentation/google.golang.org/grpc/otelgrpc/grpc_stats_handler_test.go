@@ -176,7 +176,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/EmptyCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCResponseStatusCode("OK"),
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 		testSpanAttr,
@@ -208,7 +208,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/UnaryCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCResponseStatusCode("OK"),
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 		testSpanAttr,
@@ -268,7 +268,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/StreamingInputCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCResponseStatusCode("OK"),
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 		testSpanAttr,
@@ -327,7 +327,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/StreamingOutputCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCResponseStatusCode("OK"),
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 		testSpanAttr,
@@ -413,7 +413,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/FullDuplexCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCResponseStatusCode("OK"),
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 		testSpanAttr,
@@ -451,7 +451,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/EmptyCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCResponseStatusCode("OK"),
 		semconv.ServerAddress("127.0.0.1"),
 		port,
 		testSpanAttr,
@@ -485,7 +485,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/UnaryCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCResponseStatusCode("OK"),
 		semconv.ServerAddress("127.0.0.1"),
 		port,
 		testSpanAttr,
@@ -547,7 +547,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/StreamingInputCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCResponseStatusCode("OK"),
 		semconv.ServerAddress("127.0.0.1"),
 		port,
 		testSpanAttr,
@@ -608,7 +608,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/StreamingOutputCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCResponseStatusCode("OK"),
 		semconv.ServerAddress("127.0.0.1"),
 		port,
 		testSpanAttr,
@@ -696,7 +696,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/FullDuplexCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCResponseStatusCode("OK"),
 		semconv.ServerAddress("127.0.0.1"),
 		port,
 		testSpanAttr,
@@ -725,35 +725,35 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
+								semconv.RPCResponseStatusCode("OK"),
 								semconv.RPCMethod("grpc.testing.TestService/EmptyCall"),
 								semconv.RPCSystemNameGRPC,
 								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
+								semconv.RPCResponseStatusCode("OK"),
 								semconv.RPCMethod("grpc.testing.TestService/UnaryCall"),
 								semconv.RPCSystemNameGRPC,
 								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
+								semconv.RPCResponseStatusCode("OK"),
 								semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"),
 								semconv.RPCSystemNameGRPC,
 								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
+								semconv.RPCResponseStatusCode("OK"),
 								semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"),
 								semconv.RPCSystemNameGRPC,
 								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
+								semconv.RPCResponseStatusCode("OK"),
 								semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"),
 								semconv.RPCSystemNameGRPC,
 								testMetricAttr),
@@ -928,35 +928,35 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
 							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
+								semconv.RPCResponseStatusCode("OK"),
 								semconv.RPCMethod("grpc.testing.TestService/EmptyCall"),
 								semconv.RPCSystemNameGRPC,
 								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
+								semconv.RPCResponseStatusCode("OK"),
 								semconv.RPCMethod("grpc.testing.TestService/UnaryCall"),
 								semconv.RPCSystemNameGRPC,
 								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
+								semconv.RPCResponseStatusCode("OK"),
 								semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"),
 								semconv.RPCSystemNameGRPC,
 								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
+								semconv.RPCResponseStatusCode("OK"),
 								semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"),
 								semconv.RPCSystemNameGRPC,
 								testMetricAttr),
 						},
 						{
 							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
+								semconv.RPCResponseStatusCode("OK"),
 								semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"),
 								semconv.RPCSystemNameGRPC,
 								testMetricAttr),

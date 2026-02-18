@@ -24,6 +24,49 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 )
 
+// grpcCodeToString mirrors the production grpcCodeString function, converting
+// gRPC status codes to SCREAMING_SNAKE_CASE as required by the OTel RPC spec.
+func grpcCodeToString(c grpc_codes.Code) string {
+	switch c {
+	case grpc_codes.OK:
+		return "OK"
+	case grpc_codes.Canceled:
+		return "CANCELLED"
+	case grpc_codes.Unknown:
+		return "UNKNOWN"
+	case grpc_codes.InvalidArgument:
+		return "INVALID_ARGUMENT"
+	case grpc_codes.DeadlineExceeded:
+		return "DEADLINE_EXCEEDED"
+	case grpc_codes.NotFound:
+		return "NOT_FOUND"
+	case grpc_codes.AlreadyExists:
+		return "ALREADY_EXISTS"
+	case grpc_codes.PermissionDenied:
+		return "PERMISSION_DENIED"
+	case grpc_codes.ResourceExhausted:
+		return "RESOURCE_EXHAUSTED"
+	case grpc_codes.FailedPrecondition:
+		return "FAILED_PRECONDITION"
+	case grpc_codes.Aborted:
+		return "ABORTED"
+	case grpc_codes.OutOfRange:
+		return "OUT_OF_RANGE"
+	case grpc_codes.Unimplemented:
+		return "UNIMPLEMENTED"
+	case grpc_codes.Internal:
+		return "INTERNAL"
+	case grpc_codes.Unavailable:
+		return "UNAVAILABLE"
+	case grpc_codes.DataLoss:
+		return "DATA_LOSS"
+	case grpc_codes.Unauthenticated:
+		return "UNAUTHENTICATED"
+	default:
+		return c.String()
+	}
+}
+
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
 	for _, s := range sr.Ended() {
 		if s.Name() == name {
@@ -181,7 +224,7 @@ func assertServerSpan(t *testing.T, wantSpanCode otelcode.Code, wantSpanStatusDe
 	}
 
 	require.True(t, codeAttr.Valid(), "attributes contain gRPC status code")
-	assert.Equal(t, attribute.StringValue(wantGrpcCode.String()), codeAttr.Value)
+	assert.Equal(t, attribute.StringValue(grpcCodeToString(wantGrpcCode)), codeAttr.Value)
 }
 
 func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, serviceName, name string, code grpc_codes.Code) {
@@ -199,7 +242,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 							Attributes: attribute.NewSet(
 								semconv.RPCMethod(serviceName+"/"+name),
 								semconv.RPCSystemNameGRPC,
-								semconv.RPCResponseStatusCode(code.String()),
+								semconv.RPCResponseStatusCode(grpcCodeToString(code)),
 								testMetricAttr,
 							),
 						},

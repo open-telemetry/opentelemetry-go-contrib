@@ -22,6 +22,7 @@ The next release will require at least [Go 1.25].
 
 ### Fixed
 
+- Fix `rpc.response.status_code` attribute in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to use SCREAMING_SNAKE_CASE (e.g. `DEADLINE_EXCEEDED`) as required by the OpenTelemetry RPC semantic conventions, instead of PascalCase (e.g. `DeadlineExceeded`). (#8543)
 - Change the `rpc.server.call.duration` metric value from milliseconds to seconds in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8509)
 - Enforce that `client_certificate_file` and `client_key_file` are provided together in `go.opentelemetry.io/contrib/otelconf`. (#8450)
 - Fixed broken CSS and JavaScript CDN URLs in `go.opentelemetry.io/contrib/zpages` by replacing the inaccessible code.getmdl.io CDN with cdnjs.cloudflare.com. (#8502)

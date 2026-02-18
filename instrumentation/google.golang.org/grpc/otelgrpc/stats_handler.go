@@ -252,6 +252,49 @@ func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 	)
 }
 
+// grpcCodeString converts a gRPC status code to its SCREAMING_SNAKE_CASE string
+// representation as required by the OpenTelemetry RPC semantic conventions.
+func grpcCodeString(c grpc_codes.Code) string {
+	switch c {
+	case grpc_codes.OK:
+		return "OK"
+	case grpc_codes.Canceled:
+		return "CANCELLED"
+	case grpc_codes.Unknown:
+		return "UNKNOWN"
+	case grpc_codes.InvalidArgument:
+		return "INVALID_ARGUMENT"
+	case grpc_codes.DeadlineExceeded:
+		return "DEADLINE_EXCEEDED"
+	case grpc_codes.NotFound:
+		return "NOT_FOUND"
+	case grpc_codes.AlreadyExists:
+		return "ALREADY_EXISTS"
+	case grpc_codes.PermissionDenied:
+		return "PERMISSION_DENIED"
+	case grpc_codes.ResourceExhausted:
+		return "RESOURCE_EXHAUSTED"
+	case grpc_codes.FailedPrecondition:
+		return "FAILED_PRECONDITION"
+	case grpc_codes.Aborted:
+		return "ABORTED"
+	case grpc_codes.OutOfRange:
+		return "OUT_OF_RANGE"
+	case grpc_codes.Unimplemented:
+		return "UNIMPLEMENTED"
+	case grpc_codes.Internal:
+		return "INTERNAL"
+	case grpc_codes.Unavailable:
+		return "UNAVAILABLE"
+	case grpc_codes.DataLoss:
+		return "DATA_LOSS"
+	case grpc_codes.Unauthenticated:
+		return "UNAUTHENTICATED"
+	default:
+		return c.String()
+	}
+}
+
 // TagConn can attach some information to the given context.
 func (*clientHandler) TagConn(ctx context.Context, _ *stats.ConnTagInfo) context.Context {
 	return ctx
@@ -328,9 +371,9 @@ func (c *config) handleRPC(
 		var s *status.Status
 		if rs.Error != nil {
 			s, _ = status.FromError(rs.Error)
-			rpcStatusAttr = semconv.RPCResponseStatusCode(s.Code().String())
+			rpcStatusAttr = semconv.RPCResponseStatusCode(grpcCodeString(s.Code()))
 		} else {
-			rpcStatusAttr = semconv.RPCResponseStatusCode(grpc_codes.OK.String())
+			rpcStatusAttr = semconv.RPCResponseStatusCode(grpcCodeString(grpc_codes.OK))
 		}
 		if span.IsRecording() {
 			if s != nil {
