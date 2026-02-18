@@ -842,7 +842,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			}
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{ //nolint:usetesting // required to avoid getting a canceled context.
+				assert.NoError(collect, exporter.Export(t.Context(), []sdklog.Record{
 					logFactory.NewRecord(),
 				}))
 			}, 10*time.Second, 1*time.Second)
@@ -872,7 +872,7 @@ func startGRPCLogsCollector(t *testing.T, listener net.Listener, serverOptions [
 	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.GracefulStop()
+		srv.Stop()
 		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			assert.NoError(t, err)
 		}

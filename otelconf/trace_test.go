@@ -1036,7 +1036,7 @@ func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions 
 	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.GracefulStop()
+		srv.Stop()
 		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			assert.NoError(t, err)
 		}
