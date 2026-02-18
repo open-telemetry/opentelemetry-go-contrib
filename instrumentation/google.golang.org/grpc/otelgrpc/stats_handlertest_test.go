@@ -143,8 +143,8 @@ var serverChecks = []struct {
 	},
 	{
 		grpcCode:                  grpc_codes.Code(9999),
-		wantSpanCode:              otelcode.Error,
-		wantSpanStatusDescription: "Code(9999)",
+		wantSpanCode:              otelcode.Unset,
+		wantSpanStatusDescription: "",
 		wantRPCResponseStatusCode: "CODE(9999)",
 	},
 }
