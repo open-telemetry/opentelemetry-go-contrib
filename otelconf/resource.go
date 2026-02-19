@@ -19,7 +19,7 @@ func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 			opts = append(opts, resource.WithContainer())
 		}
 		if d.Host != nil {
-			opts = append(opts, resource.WithHost(), resource.WithHostID())
+			opts = append(opts, resource.WithHost())
 		}
 		if d.Process != nil {
 			opts = append(opts, resource.WithProcess())
