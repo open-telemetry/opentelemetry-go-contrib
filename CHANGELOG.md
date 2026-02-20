@@ -29,6 +29,7 @@ The next release will require at least [Go 1.25].
 ### Removed
 
 - Removed the deprecated zipkin exporter example in `go.opentelemetry.io/contrib/examples/zipkin`. (#8501)
+- Host ID resource detector has been removed when configuring the `host` resource detector in `go.opentelemetry.io/contrib/otelconf`. (#8581)
 
 ### Changed
 
