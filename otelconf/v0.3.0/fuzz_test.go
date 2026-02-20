@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
@@ -76,12 +77,7 @@ func FuzzYAMLWithEnvVars(f *testing.F) {
 		// Helper function to check if environment variable value is valid.
 		isValidEnvValue := func(value string) bool {
 			// Environment variable values cannot contain null bytes.
-			for _, b := range []byte(value) {
-				if b == 0 {
-					return false
-				}
-			}
-			return true
+			return !slices.Contains([]byte(value), 0)
 		}
 
 		// Set environment variables used in the test YAML with fuzzed values.

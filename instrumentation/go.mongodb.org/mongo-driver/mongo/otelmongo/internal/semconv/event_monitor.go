@@ -65,7 +65,7 @@ func WithCommandAttributeDisabled(disabled bool) AttributeOption {
 // hasOptIn returns true if the comma-separated version string contains the
 // exact optIn value.
 func hasOptIn(version, optIn string) bool {
-	for _, v := range strings.Split(version, ",") {
+	for v := range strings.SplitSeq(version, ",") {
 		if strings.TrimSpace(v) == optIn {
 			return true
 		}

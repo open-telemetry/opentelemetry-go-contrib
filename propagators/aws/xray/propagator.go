@@ -107,11 +107,11 @@ func extract(headerVal string) (trace.SpanContext, error) {
 			part = strings.TrimSpace(headerVal[pos:])
 			pos = len(headerVal)
 		}
-		equalsIndex := strings.Index(part, kvDelimiter)
-		if equalsIndex < 0 {
+		_, after, ok := strings.Cut(part, kvDelimiter)
+		if !ok {
 			return empty, errInvalidTraceHeader
 		}
-		value := part[equalsIndex+1:]
+		value := after
 		switch {
 		case strings.HasPrefix(part, traceIDKey):
 			scc.TraceID, err = parseTraceID(value)

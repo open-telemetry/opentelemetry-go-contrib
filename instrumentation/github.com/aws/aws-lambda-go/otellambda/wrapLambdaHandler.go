@@ -30,7 +30,7 @@ func validateArguments(handler reflect.Type) (bool, error) {
 	if handler.NumIn() > 2 {
 		return false, fmt.Errorf("handlers may not take more than two arguments, but handler takes %d", handler.NumIn())
 	} else if handler.NumIn() > 0 {
-		contextType := reflect.TypeOf((*context.Context)(nil)).Elem()
+		contextType := reflect.TypeFor[context.Context]()
 		argumentType := handler.In(0)
 		handlerTakesContext = argumentType.Implements(contextType)
 		if handler.NumIn() > 1 && !handlerTakesContext {
@@ -44,7 +44,7 @@ func validateArguments(handler reflect.Type) (bool, error) {
 // Ensure handler returns 0-2 values, with an error
 // as its first value if any exist.
 func validateReturns(handler reflect.Type) error {
-	errorType := reflect.TypeOf((*error)(nil)).Elem()
+	errorType := reflect.TypeFor[error]()
 
 	switch n := handler.NumOut(); {
 	case n > 2:
