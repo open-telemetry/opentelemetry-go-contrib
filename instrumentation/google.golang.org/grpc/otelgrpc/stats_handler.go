@@ -5,6 +5,7 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 
 import (
 	"context"
+	"strconv"
 	"sync/atomic"
 	"time"
 
@@ -328,9 +329,9 @@ func (c *config) handleRPC(
 		var s *status.Status
 		if rs.Error != nil {
 			s, _ = status.FromError(rs.Error)
-			rpcStatusAttr = semconv.RPCResponseStatusCode(s.Code().String())
+			rpcStatusAttr = semconv.RPCResponseStatusCode(canonicalString(s.Code()))
 		} else {
-			rpcStatusAttr = semconv.RPCResponseStatusCode(grpc_codes.OK.String())
+			rpcStatusAttr = semconv.RPCResponseStatusCode(canonicalString(grpc_codes.OK))
 		}
 		if span.IsRecording() {
 			if s != nil {
@@ -360,5 +361,46 @@ func (c *config) handleRPC(
 		duration.Record(ctx, elapsedTime, recordOpts...)
 	default:
 		return
+	}
+}
+
+func canonicalString(code grpc_codes.Code) string {
+	switch code {
+	case grpc_codes.OK:
+		return "OK"
+	case grpc_codes.Canceled:
+		return "CANCELLED"
+	case grpc_codes.Unknown:
+		return "UNKNOWN"
+	case grpc_codes.InvalidArgument:
+		return "INVALID_ARGUMENT"
+	case grpc_codes.DeadlineExceeded:
+		return "DEADLINE_EXCEEDED"
+	case grpc_codes.NotFound:
+		return "NOT_FOUND"
+	case grpc_codes.AlreadyExists:
+		return "ALREADY_EXISTS"
+	case grpc_codes.PermissionDenied:
+		return "PERMISSION_DENIED"
+	case grpc_codes.ResourceExhausted:
+		return "RESOURCE_EXHAUSTED"
+	case grpc_codes.FailedPrecondition:
+		return "FAILED_PRECONDITION"
+	case grpc_codes.Aborted:
+		return "ABORTED"
+	case grpc_codes.OutOfRange:
+		return "OUT_OF_RANGE"
+	case grpc_codes.Unimplemented:
+		return "UNIMPLEMENTED"
+	case grpc_codes.Internal:
+		return "INTERNAL"
+	case grpc_codes.Unavailable:
+		return "UNAVAILABLE"
+	case grpc_codes.DataLoss:
+		return "DATA_LOSS"
+	case grpc_codes.Unauthenticated:
+		return "UNAUTHENTICATED"
+	default:
+		return "CODE(" + strconv.FormatInt(int64(code), 10) + ")"
 	}
 }
