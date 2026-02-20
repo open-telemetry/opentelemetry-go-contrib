@@ -183,8 +183,8 @@ func (eksDetectorUtils) getContainerID() (string, error) {
 	}
 
 	// Retrieve containerID from file
-	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
-	for _, str := range splitData {
+	splitData := strings.SplitSeq(strings.TrimSpace(string(fileData)), "\n")
+	for str := range splitData {
 		if containerIDRegex.MatchString(str) {
 			return str[len(str)-containerIDLength:], nil
 		}

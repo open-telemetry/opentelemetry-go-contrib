@@ -28,7 +28,7 @@ type (
 )
 
 func parsePR(s string) (p, r string) {
-	for _, kvf := range strings.Split(s, ";") {
+	for kvf := range strings.SplitSeq(s, ";") {
 		kv := strings.SplitN(kvf, ":", 2)
 		switch kv[0] {
 		case "p":

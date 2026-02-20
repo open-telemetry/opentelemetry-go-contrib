@@ -8,6 +8,7 @@ package xrayconfig
 
 import (
 	"sort"
+	"strings"
 
 	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -72,11 +73,11 @@ func (s *SpansStorage) GetResourceSpans() []*tracepb.ResourceSpans {
 
 func resourceString(res *resourcepb.Resource) string {
 	sAttrs := sortedAttributes(res.GetAttributes())
-	rstr := ""
-	for _, attr := range sAttrs {
-		rstr += attr.String()
+	strs := make([]string, len(sAttrs))
+	for i, attr := range sAttrs {
+		strs[i] = attr.String()
 	}
-	return rstr
+	return strings.Join(strs, "")
 }
 
 func sortedAttributes(attrs []*commonpb.KeyValue) []*commonpb.KeyValue {

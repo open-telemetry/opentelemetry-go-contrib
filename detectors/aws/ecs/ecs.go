@@ -260,8 +260,8 @@ func (ecsDetectorUtils) getContainerName() (string, error) {
 }
 
 func getCgroupContainerID(fileData []byte) string {
-	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
-	for _, str := range splitData {
+	splitData := strings.SplitSeq(strings.TrimSpace(string(fileData)), "\n")
+	for str := range splitData {
 		if ecsCgroupPathPattern.MatchString(str) {
 			return str[len(str)-containerIDLength:]
 		}
