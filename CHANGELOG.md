@@ -33,6 +33,7 @@ The next release will require at least [Go 1.25].
 ### Changed
 
 - Updated the configuration schema used in `go.opentelemetry.io/contrib/otelconf` to [rc.3](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.3). (#8505)
+- Moved experimental types from `go.opentelemetry.io/contrib/otelconf` to `go.opentelemetry.io/contrib/otelconf/x`. (#8529)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
