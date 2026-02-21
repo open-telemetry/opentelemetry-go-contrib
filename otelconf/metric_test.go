@@ -1608,14 +1608,13 @@ func startGRPCMetricCollector(t *testing.T, listener net.Listener, serverOptions
 
 	// Wait for the gRPC server to start accepting connections
 	// to avoid race-related test flakiness.
-	require.Eventually(t, func() bool {
+	assert.EventuallyWithT(t, func(collect *assert.CollectT) {
 		conn, err := net.DialTimeout("tcp", listener.Addr().String(), 100*time.Millisecond)
-		if err == nil {
-			_ = conn.Close()
-			return true
+		if !assert.NoError(collect, err, "failed to dial gRPC server") {
+			return
 		}
-		return false
-	}, 5*time.Second, 50*time.Millisecond)
+		_ = conn.Close()
+	}, 10*time.Second, 1*time.Second)
 
 	t.Cleanup(func() {
 		srv.GracefulStop()
