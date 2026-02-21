@@ -1753,6 +1753,16 @@ func startGRPCMetricCollector(t *testing.T, listener net.Listener, serverOptions
 	errCh := make(chan error, 1)
 	go func() { errCh <- srv.Serve(listener) }()
 
+	// Wait for the gRPC server to start accepting connections
+	// to avoid race-related test flakiness.
+	assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+		conn, err := net.DialTimeout("tcp", listener.Addr().String(), 100*time.Millisecond)
+		if !assert.NoError(collect, err, "failed to dial gRPC server") {
+			return
+		}
+		_ = conn.Close()
+	}, 10*time.Second, 1*time.Second)
+
 	t.Cleanup(func() {
 		srv.GracefulStop()
 		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
