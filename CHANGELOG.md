@@ -26,6 +26,10 @@ The next release will require at least [Go 1.25].
 - Enforce that `client_certificate_file` and `client_key_file` are provided together in `go.opentelemetry.io/contrib/otelconf`. (#8450)
 - Fixed broken CSS and JavaScript CDN URLs in `go.opentelemetry.io/contrib/zpages` by replacing the inaccessible code.getmdl.io CDN with cdnjs.cloudflare.com. (#8502)
 
+### Changed
+
+- Refactored field conversion in `go.opentelemetry.io/contrib/bridges/otellogrus` to use `kvBuffer` abstraction for improved code organization. (#fdffe010e)
+
 ### Removed
 
 - Removed the deprecated zipkin exporter example in `go.opentelemetry.io/contrib/examples/zipkin`. (#8501)
