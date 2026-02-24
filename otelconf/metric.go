@@ -9,7 +9,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net/http"
 	"net/url"
 	"os"
 	"time"
@@ -88,7 +87,7 @@ func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error)
 	return nil, newErrInvalid("no valid metric reader")
 }
 
-func pullReader(ctx context.Context, exporter PullMetricExporter) (sdkmetric.Reader, error) {
+func pullReader(_ context.Context, _ PullMetricExporter) (sdkmetric.Reader, error) {
 	return nil, newErrInvalid("no valid metric exporter")
 }
 
@@ -326,18 +325,6 @@ func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
 		_, ok := included[kv.Key]
 		return ok
 	}, nil
-}
-
-type readerWithServer struct {
-	sdkmetric.Reader
-	server *http.Server
-}
-
-func (rws readerWithServer) Shutdown(ctx context.Context) error {
-	return errors.Join(
-		rws.Reader.Shutdown(ctx),
-		rws.server.Shutdown(ctx),
-	)
 }
 
 func view(v View) (sdkmetric.View, error) {
