@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"net"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -1067,4 +1069,64 @@ func (*grpcTraceCollector) Export(
 	_ *v1.ExportTraceServiceRequest,
 ) (*v1.ExportTraceServiceResponse, error) {
 	return &v1.ExportTraceServiceResponse{}, nil
+}
+
+func TestOTLPExporterTracesEndpointEnvOverride(t *testing.T) {
+	var httpsCalled atomic.Bool
+	httpsServer := httptest.NewTLSServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		httpsCalled.Store(true)
+	}))
+	defer httpsServer.Close()
+
+	var httpCalled atomic.Bool
+	httpServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		httpCalled.Store(true)
+	}))
+	defer httpServer.Close()
+	t.Setenv("OTEL_EXPORTER_OTLP_TRACES_ENDPOINT", httpServer.URL)
+
+	tempdir := t.TempDir()
+	caFile := filepath.Join(tempdir, "ca.crt")
+	err := os.WriteFile(
+		caFile,
+		pem.EncodeToMemory(&pem.Block{
+			Type:  "CERTIFICATE",
+			Bytes: httpsServer.Certificate().Raw,
+		}),
+		0644,
+	)
+	require.NoError(t, err)
+
+	cfg := OpenTelemetryConfiguration{
+		TracerProvider: &TracerProvider{
+			Processors: []SpanProcessor{{
+				Batch: &BatchSpanProcessor{
+					Exporter: SpanExporter{
+						OTLPHttp: &OTLPHttpExporter{
+							Endpoint: ptr(httpsServer.URL + "/foo"),
+							Tls: &HttpTls{
+								CaFile: ptr(caFile),
+							},
+						},
+					},
+				},
+			}},
+		},
+	}
+
+	sdk, err := NewSDK(
+		WithOpenTelemetryConfiguration(cfg),
+	)
+	require.NoError(t, err)
+	defer func() {
+		assert.NoError(t, sdk.Shutdown(t.Context()))
+	}()
+
+	tracer := sdk.TracerProvider().Tracer("test")
+	_, span := tracer.Start(t.Context(), "span")
+	span.End()
+
+	assert.EventuallyWithT(t, func(c *assert.CollectT) {
+		assert.True(c, httpsCalled.Load() || httpCalled.Load(), "One of the endpoints should be called")
+	}, 10*time.Second, time.Millisecond*100)
 }
