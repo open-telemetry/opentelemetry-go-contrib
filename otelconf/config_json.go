@@ -251,11 +251,11 @@ func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
 	}
 
 	if sh.Console != nil {
-		var c ConsoleExporter
+		var c ConsoleMetricExporter
 		if err := json.Unmarshal(sh.Console, &c); err != nil {
 			return err
 		}
-		sh.Plain.Console = c
+		sh.Plain.Console = &c
 	}
 	*j = PushMetricExporter(sh.Plain)
 	return nil
@@ -458,7 +458,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	}
 
 	if sh.LoggerProvider != nil {
-		var l LoggerProviderJson
+		var l LoggerProvider
 		if err := json.Unmarshal(sh.LoggerProvider, &l); err != nil {
 			return errors.Join(newErrUnmarshal(j), err)
 		}
@@ -466,7 +466,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	}
 
 	if sh.MeterProvider != nil {
-		var m MeterProviderJson
+		var m MeterProvider
 		if err := json.Unmarshal(sh.MeterProvider, &m); err != nil {
 			return errors.Join(newErrUnmarshal(j), err)
 		}
@@ -474,7 +474,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	}
 
 	if sh.TracerProvider != nil {
-		var t TracerProviderJson
+		var t TracerProvider
 		if err := json.Unmarshal(sh.TracerProvider, &t); err != nil {
 			return errors.Join(newErrUnmarshal(j), err)
 		}
@@ -482,7 +482,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	}
 
 	if sh.Propagator != nil {
-		var p PropagatorJson
+		var p Propagator
 		if err := json.Unmarshal(sh.Propagator, &p); err != nil {
 			return errors.Join(newErrUnmarshal(j), err)
 		}
@@ -490,7 +490,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	}
 
 	if sh.Resource != nil {
-		var r ResourceJson
+		var r Resource
 		if err := json.Unmarshal(sh.Resource, &r); err != nil {
 			return errors.Join(newErrUnmarshal(j), err)
 		}
@@ -498,7 +498,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	}
 
 	if sh.InstrumentationDevelopment != nil {
-		var r InstrumentationJson
+		var r ExperimentalInstrumentation
 		if err := json.Unmarshal(sh.InstrumentationDevelopment, &r); err != nil {
 			return errors.Join(newErrUnmarshal(j), err)
 		}
@@ -530,7 +530,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	} else {
 		// Configure the log level of the internal logger used by the SDK.
 		// If omitted, info is used.
-		sh.Plain.LogLevel = ptr("info")
+		sh.Plain.LogLevel = ptr(SeverityNumberInfo)
 	}
 
 	*j = OpenTelemetryConfiguration(sh.Plain)
@@ -689,21 +689,19 @@ func (j *OTLPGrpcExporter) UnmarshalJSON(b []byte) error {
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *AttributeType) UnmarshalJSON(b []byte) error {
-	var v struct {
-		Value any
-	}
-	if err := json.Unmarshal(b, &v.Value); err != nil {
+	var v string
+	if err := json.Unmarshal(b, &v); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
 	var ok bool
 	for _, expected := range enumValuesAttributeType {
-		if reflect.DeepEqual(v.Value, expected) {
+		if reflect.DeepEqual(v, expected) {
 			ok = true
 			break
 		}
 	}
 	if !ok {
-		return newErrInvalid(fmt.Sprintf("unexpected value type %#v, expected one of %#v)", v.Value, enumValuesAttributeType))
+		return newErrInvalid(fmt.Sprintf("unexpected value type %#v, expected one of %#v)", v, enumValuesAttributeType))
 	}
 	*j = AttributeType(v)
 	return nil
@@ -735,14 +733,14 @@ func (j *AttributeNameValue) UnmarshalJSON(b []byte) error {
 	}
 
 	// json unmarshaller defaults to unmarshalling to float for int values
-	if sh.Type != nil && sh.Type.Value == "int" {
+	if sh.Type != nil && *sh.Type == AttributeTypeInt {
 		val, ok := sh.Plain.Value.(float64)
 		if ok {
 			sh.Plain.Value = int(val)
 		}
 	}
 
-	if sh.Type != nil && sh.Type.Value == "int_array" {
+	if sh.Type != nil && *sh.Type == AttributeTypeIntArray {
 		m, ok := sh.Plain.Value.([]any)
 		if ok {
 			var vals []any
@@ -807,31 +805,6 @@ func (j *SimpleSpanProcessor) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *ZipkinSpanExporter) UnmarshalJSON(b []byte) error {
-	type Plain ZipkinSpanExporter
-	type shadow struct {
-		Plain
-		Endpoint json.RawMessage `json:"endpoint"`
-	}
-	var sh shadow
-	if err := json.Unmarshal(b, &sh); err != nil {
-		return errors.Join(newErrUnmarshal(j), err)
-	}
-	if sh.Endpoint == nil {
-		return newErrRequired(j, "endpoint")
-	}
-
-	if err := json.Unmarshal(sh.Endpoint, &sh.Plain.Endpoint); err != nil {
-		return err
-	}
-	if sh.Timeout != nil && 0 > *sh.Timeout {
-		return newErrGreaterOrEqualZero("timeout")
-	}
-	*j = ZipkinSpanExporter(sh.Plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
 func (j *NameStringValuePair) UnmarshalJSON(b []byte) error {
 	type Plain NameStringValuePair
 	type shadow struct {
@@ -874,8 +847,8 @@ func (j *InstrumentType) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-func (j *ExperimentalPeerInstrumentationServiceMappingElem) UnmarshalJSON(b []byte) error {
-	type Plain ExperimentalPeerInstrumentationServiceMappingElem
+func (j *ExperimentalPeerServiceMapping) UnmarshalJSON(b []byte) error {
+	type Plain ExperimentalPeerServiceMapping
 	type shadow struct {
 		Plain
 		Peer    json.RawMessage `json:"peer"`
@@ -898,7 +871,7 @@ func (j *ExperimentalPeerInstrumentationServiceMappingElem) UnmarshalJSON(b []by
 		return errors.Join(newErrUnmarshal(j), err)
 	}
 
-	*j = ExperimentalPeerInstrumentationServiceMappingElem(sh.Plain)
+	*j = ExperimentalPeerServiceMapping(sh.Plain)
 	return nil
 }
 
