@@ -20,6 +20,7 @@ The next release will require at least [Go 1.25].
 - Add `const Version` in `go.opentelemetry.io/contrib/processors/baggagecopy`. (#8557)
 - Add `const Version` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#8510)
 - Add `const Version` in `go.opentelemetry.io/contrib/propagators/autoprop`. (#8488)
+- Add `const Version` in `go.opentelemetry.io/contrib/processors/minsev`. (#8590)
 
 ### Fixed
 
