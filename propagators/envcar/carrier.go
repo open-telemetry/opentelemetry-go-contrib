@@ -18,14 +18,15 @@ import (
 // and need to be accessed by different processes or services.
 // The keys are uppercased to avoid case sensitivity issues across different
 // operating systems and environments.
+//
+// If you do not set SetEnvFunc, [Carrier.Set] will do nothing.
+// Using [os.Setenv] here is discouraged as the environment should
+// be immutable:
+// https://opentelemetry.io/docs/specs/otel/context/env-carriers/#environment-variable-immutability
 type Carrier struct {
 	// SetEnvFunc is the function that sets the environment variable.
 	// Usually, you want to set the environment variables for processes
 	// that are spawned by the current process.
-	// If you do not set this function, `Set` will do nothing.
-	// Using [os.Setenv] here is discouraged as the environment should
-	// be immutable:
-	// https://opentelemetry.io/docs/specs/otel/context/env-carriers/#environment-variable-immutability
 	SetEnvFunc func(key, value string)
 	values     map[string]string
 	once       sync.Once
@@ -48,6 +49,9 @@ func (c *Carrier) fetch() {
 }
 
 // Get returns the value associated with the passed key.
+// The first call to [Carrier.Get] or [Carrier.Keys] for a
+// given Carrier will read and store the values from the
+// environment and all future reads will be from that store.
 func (c *Carrier) Get(key string) string {
 	c.fetch()
 	return c.values[strings.ToLower(key)]
@@ -66,6 +70,9 @@ func (c *Carrier) Set(key, value string) {
 
 // Keys lists the keys stored in this carrier.
 // This returns all the keys in the environment variables.
+// The first call to [Carrier.Get] or [Carrier.Keys] for a
+// given Carrier will read and store the values from the
+// environment and all future reads will be from that store.
 func (c *Carrier) Keys() []string {
 	c.fetch()
 	keys := make([]string, 0, len(c.values))
