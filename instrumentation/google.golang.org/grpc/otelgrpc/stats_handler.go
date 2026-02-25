@@ -46,6 +46,10 @@ type serverHandler struct {
 // NewServerHandler creates a stats.Handler for a gRPC server.
 func NewServerHandler(opts ...Option) stats.Handler {
 	c := newConfig(opts)
+	if c.SpanKind == trace.SpanKindUnspecified {
+		c.SpanKind = trace.SpanKindServer
+	}
+
 	h := &serverHandler{config: c}
 
 	h.tracer = c.TracerProvider.Tracer(
@@ -104,7 +108,7 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		spanAttributes := make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
 		spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
 		opts := []trace.SpanStartOption{
-			trace.WithSpanKind(trace.SpanKindServer),
+			trace.WithSpanKind(h.SpanKind),
 			trace.WithAttributes(spanAttributes...),
 		}
 		if h.PublicEndpoint || (h.PublicEndpointFn != nil && h.PublicEndpointFn(ctx, info)) {
@@ -161,6 +165,10 @@ type clientHandler struct {
 // NewClientHandler creates a stats.Handler for a gRPC client.
 func NewClientHandler(opts ...Option) stats.Handler {
 	c := newConfig(opts)
+	if c.SpanKind == trace.SpanKindUnspecified {
+		c.SpanKind = trace.SpanKindClient
+	}
+
 	h := &clientHandler{config: c}
 
 	h.tracer = c.TracerProvider.Tracer(
@@ -210,7 +218,7 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		ctx, _ = h.tracer.Start(
 			ctx,
 			name,
-			trace.WithSpanKind(trace.SpanKindClient),
+			trace.WithSpanKind(h.SpanKind),
 			trace.WithAttributes(spanAttributes...),
 		)
 	}
@@ -347,7 +355,7 @@ func (c *config) handleRPC(
 
 		// Use floating point division here for higher precision (instead of Millisecond method).
 		// Measure right before calling Record() to capture as much elapsed time as possible.
-		elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Millisecond)
+		elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Second)
 
 		duration.Record(ctx, elapsedTime, recordOpts...)
 	default:

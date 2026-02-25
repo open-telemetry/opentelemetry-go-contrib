@@ -3,24 +3,50 @@
 package otelconf
 
 type Aggregation struct {
-	// Base2ExponentialBucketHistogram corresponds to the JSON schema field
-	// "base2_exponential_bucket_histogram".
+	// Configures the stream to collect data for the exponential histogram metric
+	// point, which uses a base-2 exponential formula to determine bucket boundaries
+	// and an integer scale parameter to control resolution. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#base2-exponential-bucket-histogram-aggregation
+	// for details.
+	// If omitted, ignore.
+	//
 	Base2ExponentialBucketHistogram *Base2ExponentialBucketHistogramAggregation `json:"base2_exponential_bucket_histogram,omitempty" yaml:"base2_exponential_bucket_histogram,omitempty" mapstructure:"base2_exponential_bucket_histogram,omitempty"`
 
-	// Default corresponds to the JSON schema field "default".
+	// Configures the stream to use the instrument kind to select an aggregation and
+	// advisory parameters to influence aggregation configuration parameters. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#default-aggregation
+	// for details.
+	// If omitted, ignore.
+	//
 	Default DefaultAggregation `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
-	// Drop corresponds to the JSON schema field "drop".
+	// Configures the stream to ignore/drop all instrument measurements. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#drop-aggregation
+	// for details.
+	// If omitted, ignore.
+	//
 	Drop DropAggregation `json:"drop,omitempty" yaml:"drop,omitempty" mapstructure:"drop,omitempty"`
 
-	// ExplicitBucketHistogram corresponds to the JSON schema field
-	// "explicit_bucket_histogram".
+	// Configures the stream to collect data for the histogram metric point using a
+	// set of explicit boundary values for histogram bucketing. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#explicit-bucket-histogram-aggregation
+	// for details
+	// If omitted, ignore.
+	//
 	ExplicitBucketHistogram *ExplicitBucketHistogramAggregation `json:"explicit_bucket_histogram,omitempty" yaml:"explicit_bucket_histogram,omitempty" mapstructure:"explicit_bucket_histogram,omitempty"`
 
-	// LastValue corresponds to the JSON schema field "last_value".
+	// Configures the stream to collect data using the last measurement. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#last-value-aggregation
+	// for details.
+	// If omitted, ignore.
+	//
 	LastValue LastValueAggregation `json:"last_value,omitempty" yaml:"last_value,omitempty" mapstructure:"last_value,omitempty"`
 
-	// Sum corresponds to the JSON schema field "sum".
+	// Configures the stream to collect the arithmetic sum of measurement values. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#sum-aggregation
+	// for details.
+	// If omitted, ignore.
+	//
 	Sum SumAggregation `json:"sum,omitempty" yaml:"sum,omitempty" mapstructure:"sum,omitempty"`
 }
 
@@ -29,31 +55,66 @@ type AlwaysOffSampler map[string]interface{}
 type AlwaysOnSampler map[string]interface{}
 
 type AttributeLimits struct {
-	// AttributeCountLimit corresponds to the JSON schema field
-	// "attribute_count_limit".
-	AttributeCountLimit *int `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
+	// Configure max attribute count.
+	// Value must be non-negative.
+	// If omitted or null, 128 is used.
+	//
+	AttributeCountLimit AttributeLimitsAttributeCountLimit `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
 
-	// AttributeValueLengthLimit corresponds to the JSON schema field
-	// "attribute_value_length_limit".
-	AttributeValueLengthLimit *int `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
-
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	// Configure max attribute value size.
+	// Value must be non-negative.
+	// If omitted or null, there is no limit.
+	//
+	AttributeValueLengthLimit AttributeLimitsAttributeValueLengthLimit `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
 }
 
+// Configure max attribute count.
+// Value must be non-negative.
+// If omitted or null, 128 is used.
+type AttributeLimitsAttributeCountLimit *int
+
+// Configure max attribute value size.
+// Value must be non-negative.
+// If omitted or null, there is no limit.
+type AttributeLimitsAttributeValueLengthLimit *int
+
 type AttributeNameValue struct {
-	// Name corresponds to the JSON schema field "name".
+	// The attribute name.
+	// Property is required and must be non-null.
+	//
 	Name string `json:"name" yaml:"name" mapstructure:"name"`
 
-	// Type corresponds to the JSON schema field "type".
+	// The attribute type.
+	// Values include:
+	// * bool: Boolean attribute value.
+	// * bool_array: Boolean array attribute value.
+	// * double: Double attribute value.
+	// * double_array: Double array attribute value.
+	// * int: Integer attribute value.
+	// * int_array: Integer array attribute value.
+	// * string: String attribute value.
+	// * string_array: String array attribute value.
+	// If omitted, string is used.
+	//
 	Type *AttributeType `json:"type,omitempty" yaml:"type,omitempty" mapstructure:"type,omitempty"`
 
-	// Value corresponds to the JSON schema field "value".
+	// The attribute value.
+	// The type of value must match .type.
+	// Property is required and must be non-null.
+	//
 	Value interface{} `json:"value" yaml:"value" mapstructure:"value"`
 }
 
-type AttributeType struct {
-	Value interface{}
-}
+type AttributeType string
+
+const AttributeTypeBool AttributeType = "bool"
+const AttributeTypeBoolArray AttributeType = "bool_array"
+const AttributeTypeDouble AttributeType = "double"
+const AttributeTypeDoubleArray AttributeType = "double_array"
+const AttributeTypeInt AttributeType = "int"
+const AttributeTypeIntArray AttributeType = "int_array"
+const AttributeTypeString AttributeType = "string"
+const AttributeTypeStringArray AttributeType = "string_array"
 
 type B3MultiPropagator map[string]interface{}
 
@@ -62,82 +123,235 @@ type B3Propagator map[string]interface{}
 type BaggagePropagator map[string]interface{}
 
 type Base2ExponentialBucketHistogramAggregation struct {
-	// MaxScale corresponds to the JSON schema field "max_scale".
-	MaxScale *int `json:"max_scale,omitempty" yaml:"max_scale,omitempty" mapstructure:"max_scale,omitempty"`
+	// Configure the max scale factor.
+	// If omitted or null, 20 is used.
+	//
+	MaxScale Base2ExponentialBucketHistogramAggregationMaxScale `json:"max_scale,omitempty" yaml:"max_scale,omitempty" mapstructure:"max_scale,omitempty"`
 
-	// MaxSize corresponds to the JSON schema field "max_size".
-	MaxSize *int `json:"max_size,omitempty" yaml:"max_size,omitempty" mapstructure:"max_size,omitempty"`
+	// Configure the maximum number of buckets in each of the positive and negative
+	// ranges, not counting the special zero bucket.
+	// If omitted or null, 160 is used.
+	//
+	MaxSize Base2ExponentialBucketHistogramAggregationMaxSize `json:"max_size,omitempty" yaml:"max_size,omitempty" mapstructure:"max_size,omitempty"`
 
-	// RecordMinMax corresponds to the JSON schema field "record_min_max".
-	RecordMinMax *bool `json:"record_min_max,omitempty" yaml:"record_min_max,omitempty" mapstructure:"record_min_max,omitempty"`
+	// Configure whether or not to record min and max.
+	// If omitted or null, true is used.
+	//
+	RecordMinMax Base2ExponentialBucketHistogramAggregationRecordMinMax `json:"record_min_max,omitempty" yaml:"record_min_max,omitempty" mapstructure:"record_min_max,omitempty"`
 }
+
+// Configure the max scale factor.
+// If omitted or null, 20 is used.
+type Base2ExponentialBucketHistogramAggregationMaxScale *int
+
+// Configure the maximum number of buckets in each of the positive and negative
+// ranges, not counting the special zero bucket.
+// If omitted or null, 160 is used.
+type Base2ExponentialBucketHistogramAggregationMaxSize *int
+
+// Configure whether or not to record min and max.
+// If omitted or null, true is used.
+type Base2ExponentialBucketHistogramAggregationRecordMinMax *bool
 
 type BatchLogRecordProcessor struct {
-	// ExportTimeout corresponds to the JSON schema field "export_timeout".
-	ExportTimeout *int `json:"export_timeout,omitempty" yaml:"export_timeout,omitempty" mapstructure:"export_timeout,omitempty"`
+	// Configure maximum allowed time (in milliseconds) to export data.
+	// Value must be non-negative. A value of 0 indicates no limit (infinity).
+	// If omitted or null, 30000 is used.
+	//
+	ExportTimeout BatchLogRecordProcessorExportTimeout `json:"export_timeout,omitempty" yaml:"export_timeout,omitempty" mapstructure:"export_timeout,omitempty"`
 
-	// Exporter corresponds to the JSON schema field "exporter".
+	// Configure exporter.
+	// Property is required and must be non-null.
+	//
 	Exporter LogRecordExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
 
-	// MaxExportBatchSize corresponds to the JSON schema field
-	// "max_export_batch_size".
-	MaxExportBatchSize *int `json:"max_export_batch_size,omitempty" yaml:"max_export_batch_size,omitempty" mapstructure:"max_export_batch_size,omitempty"`
+	// Configure maximum batch size. Value must be positive.
+	// If omitted or null, 512 is used.
+	//
+	MaxExportBatchSize BatchLogRecordProcessorMaxExportBatchSize `json:"max_export_batch_size,omitempty" yaml:"max_export_batch_size,omitempty" mapstructure:"max_export_batch_size,omitempty"`
 
-	// MaxQueueSize corresponds to the JSON schema field "max_queue_size".
-	MaxQueueSize *int `json:"max_queue_size,omitempty" yaml:"max_queue_size,omitempty" mapstructure:"max_queue_size,omitempty"`
+	// Configure maximum queue size. Value must be positive.
+	// If omitted or null, 2048 is used.
+	//
+	MaxQueueSize BatchLogRecordProcessorMaxQueueSize `json:"max_queue_size,omitempty" yaml:"max_queue_size,omitempty" mapstructure:"max_queue_size,omitempty"`
 
-	// ScheduleDelay corresponds to the JSON schema field "schedule_delay".
-	ScheduleDelay *int `json:"schedule_delay,omitempty" yaml:"schedule_delay,omitempty" mapstructure:"schedule_delay,omitempty"`
+	// Configure delay interval (in milliseconds) between two consecutive exports.
+	// Value must be non-negative.
+	// If omitted or null, 1000 is used.
+	//
+	ScheduleDelay BatchLogRecordProcessorScheduleDelay `json:"schedule_delay,omitempty" yaml:"schedule_delay,omitempty" mapstructure:"schedule_delay,omitempty"`
 }
+
+// Configure maximum allowed time (in milliseconds) to export data.
+// Value must be non-negative. A value of 0 indicates no limit (infinity).
+// If omitted or null, 30000 is used.
+type BatchLogRecordProcessorExportTimeout *int
+
+// Configure maximum batch size. Value must be positive.
+// If omitted or null, 512 is used.
+type BatchLogRecordProcessorMaxExportBatchSize *int
+
+// Configure maximum queue size. Value must be positive.
+// If omitted or null, 2048 is used.
+type BatchLogRecordProcessorMaxQueueSize *int
+
+// Configure delay interval (in milliseconds) between two consecutive exports.
+// Value must be non-negative.
+// If omitted or null, 1000 is used.
+type BatchLogRecordProcessorScheduleDelay *int
 
 type BatchSpanProcessor struct {
-	// ExportTimeout corresponds to the JSON schema field "export_timeout".
-	ExportTimeout *int `json:"export_timeout,omitempty" yaml:"export_timeout,omitempty" mapstructure:"export_timeout,omitempty"`
+	// Configure maximum allowed time (in milliseconds) to export data.
+	// Value must be non-negative. A value of 0 indicates no limit (infinity).
+	// If omitted or null, 30000 is used.
+	//
+	ExportTimeout BatchSpanProcessorExportTimeout `json:"export_timeout,omitempty" yaml:"export_timeout,omitempty" mapstructure:"export_timeout,omitempty"`
 
-	// Exporter corresponds to the JSON schema field "exporter".
+	// Configure exporter.
+	// Property is required and must be non-null.
+	//
 	Exporter SpanExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
 
-	// MaxExportBatchSize corresponds to the JSON schema field
-	// "max_export_batch_size".
-	MaxExportBatchSize *int `json:"max_export_batch_size,omitempty" yaml:"max_export_batch_size,omitempty" mapstructure:"max_export_batch_size,omitempty"`
+	// Configure maximum batch size. Value must be positive.
+	// If omitted or null, 512 is used.
+	//
+	MaxExportBatchSize BatchSpanProcessorMaxExportBatchSize `json:"max_export_batch_size,omitempty" yaml:"max_export_batch_size,omitempty" mapstructure:"max_export_batch_size,omitempty"`
 
-	// MaxQueueSize corresponds to the JSON schema field "max_queue_size".
-	MaxQueueSize *int `json:"max_queue_size,omitempty" yaml:"max_queue_size,omitempty" mapstructure:"max_queue_size,omitempty"`
+	// Configure maximum queue size. Value must be positive.
+	// If omitted or null, 2048 is used.
+	//
+	MaxQueueSize BatchSpanProcessorMaxQueueSize `json:"max_queue_size,omitempty" yaml:"max_queue_size,omitempty" mapstructure:"max_queue_size,omitempty"`
 
-	// ScheduleDelay corresponds to the JSON schema field "schedule_delay".
-	ScheduleDelay *int `json:"schedule_delay,omitempty" yaml:"schedule_delay,omitempty" mapstructure:"schedule_delay,omitempty"`
+	// Configure delay interval (in milliseconds) between two consecutive exports.
+	// Value must be non-negative.
+	// If omitted or null, 5000 is used.
+	//
+	ScheduleDelay BatchSpanProcessorScheduleDelay `json:"schedule_delay,omitempty" yaml:"schedule_delay,omitempty" mapstructure:"schedule_delay,omitempty"`
 }
+
+// Configure maximum allowed time (in milliseconds) to export data.
+// Value must be non-negative. A value of 0 indicates no limit (infinity).
+// If omitted or null, 30000 is used.
+type BatchSpanProcessorExportTimeout *int
+
+// Configure maximum batch size. Value must be positive.
+// If omitted or null, 512 is used.
+type BatchSpanProcessorMaxExportBatchSize *int
+
+// Configure maximum queue size. Value must be positive.
+// If omitted or null, 2048 is used.
+type BatchSpanProcessorMaxQueueSize *int
+
+// Configure delay interval (in milliseconds) between two consecutive exports.
+// Value must be non-negative.
+// If omitted or null, 5000 is used.
+type BatchSpanProcessorScheduleDelay *int
 
 type CardinalityLimits struct {
-	// Counter corresponds to the JSON schema field "counter".
-	Counter *int `json:"counter,omitempty" yaml:"counter,omitempty" mapstructure:"counter,omitempty"`
+	// Configure default cardinality limit for counter instruments.
+	// If omitted or null, the value from .default is used.
+	//
+	Counter CardinalityLimitsCounter `json:"counter,omitempty" yaml:"counter,omitempty" mapstructure:"counter,omitempty"`
 
-	// Default corresponds to the JSON schema field "default".
-	Default *int `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
+	// Configure default cardinality limit for all instrument types.
+	// Instrument-specific cardinality limits take priority.
+	// If omitted or null, 2000 is used.
+	//
+	Default CardinalityLimitsDefault `json:"default,omitempty" yaml:"default,omitempty" mapstructure:"default,omitempty"`
 
-	// Gauge corresponds to the JSON schema field "gauge".
-	Gauge *int `json:"gauge,omitempty" yaml:"gauge,omitempty" mapstructure:"gauge,omitempty"`
+	// Configure default cardinality limit for gauge instruments.
+	// If omitted or null, the value from .default is used.
+	//
+	Gauge CardinalityLimitsGauge `json:"gauge,omitempty" yaml:"gauge,omitempty" mapstructure:"gauge,omitempty"`
 
-	// Histogram corresponds to the JSON schema field "histogram".
-	Histogram *int `json:"histogram,omitempty" yaml:"histogram,omitempty" mapstructure:"histogram,omitempty"`
+	// Configure default cardinality limit for histogram instruments.
+	// If omitted or null, the value from .default is used.
+	//
+	Histogram CardinalityLimitsHistogram `json:"histogram,omitempty" yaml:"histogram,omitempty" mapstructure:"histogram,omitempty"`
 
-	// ObservableCounter corresponds to the JSON schema field "observable_counter".
-	ObservableCounter *int `json:"observable_counter,omitempty" yaml:"observable_counter,omitempty" mapstructure:"observable_counter,omitempty"`
+	// Configure default cardinality limit for observable_counter instruments.
+	// If omitted or null, the value from .default is used.
+	//
+	ObservableCounter CardinalityLimitsObservableCounter `json:"observable_counter,omitempty" yaml:"observable_counter,omitempty" mapstructure:"observable_counter,omitempty"`
 
-	// ObservableGauge corresponds to the JSON schema field "observable_gauge".
-	ObservableGauge *int `json:"observable_gauge,omitempty" yaml:"observable_gauge,omitempty" mapstructure:"observable_gauge,omitempty"`
+	// Configure default cardinality limit for observable_gauge instruments.
+	// If omitted or null, the value from .default is used.
+	//
+	ObservableGauge CardinalityLimitsObservableGauge `json:"observable_gauge,omitempty" yaml:"observable_gauge,omitempty" mapstructure:"observable_gauge,omitempty"`
 
-	// ObservableUpDownCounter corresponds to the JSON schema field
-	// "observable_up_down_counter".
-	ObservableUpDownCounter *int `json:"observable_up_down_counter,omitempty" yaml:"observable_up_down_counter,omitempty" mapstructure:"observable_up_down_counter,omitempty"`
+	// Configure default cardinality limit for observable_up_down_counter instruments.
+	// If omitted or null, the value from .default is used.
+	//
+	ObservableUpDownCounter CardinalityLimitsObservableUpDownCounter `json:"observable_up_down_counter,omitempty" yaml:"observable_up_down_counter,omitempty" mapstructure:"observable_up_down_counter,omitempty"`
 
-	// UpDownCounter corresponds to the JSON schema field "up_down_counter".
-	UpDownCounter *int `json:"up_down_counter,omitempty" yaml:"up_down_counter,omitempty" mapstructure:"up_down_counter,omitempty"`
+	// Configure default cardinality limit for up_down_counter instruments.
+	// If omitted or null, the value from .default is used.
+	//
+	UpDownCounter CardinalityLimitsUpDownCounter `json:"up_down_counter,omitempty" yaml:"up_down_counter,omitempty" mapstructure:"up_down_counter,omitempty"`
 }
+
+// Configure default cardinality limit for counter instruments.
+// If omitted or null, the value from .default is used.
+type CardinalityLimitsCounter *int
+
+// Configure default cardinality limit for all instrument types.
+// Instrument-specific cardinality limits take priority.
+// If omitted or null, 2000 is used.
+type CardinalityLimitsDefault *int
+
+// Configure default cardinality limit for gauge instruments.
+// If omitted or null, the value from .default is used.
+type CardinalityLimitsGauge *int
+
+// Configure default cardinality limit for histogram instruments.
+// If omitted or null, the value from .default is used.
+type CardinalityLimitsHistogram *int
+
+// Configure default cardinality limit for observable_counter instruments.
+// If omitted or null, the value from .default is used.
+type CardinalityLimitsObservableCounter *int
+
+// Configure default cardinality limit for observable_gauge instruments.
+// If omitted or null, the value from .default is used.
+type CardinalityLimitsObservableGauge *int
+
+// Configure default cardinality limit for observable_up_down_counter instruments.
+// If omitted or null, the value from .default is used.
+type CardinalityLimitsObservableUpDownCounter *int
+
+// Configure default cardinality limit for up_down_counter instruments.
+// If omitted or null, the value from .default is used.
+type CardinalityLimitsUpDownCounter *int
 
 type ConsoleExporter map[string]interface{}
 
+type ConsoleMetricExporter struct {
+	// Configure default histogram aggregation.
+	// Values include:
+	// * base2_exponential_bucket_histogram: Use base2 exponential histogram as the
+	// default aggregation for histogram instruments.
+	// * explicit_bucket_histogram: Use explicit bucket histogram as the default
+	// aggregation for histogram instruments.
+	// If omitted, explicit_bucket_histogram is used.
+	//
+	DefaultHistogramAggregation *ExporterDefaultHistogramAggregation `json:"default_histogram_aggregation,omitempty" yaml:"default_histogram_aggregation,omitempty" mapstructure:"default_histogram_aggregation,omitempty"`
+
+	// Configure temporality preference.
+	// Values include:
+	// * cumulative: Use cumulative aggregation temporality for all instrument types.
+	// * delta: Use delta aggregation for all instrument types except up down counter
+	// and asynchronous up down counter.
+	// * low_memory: Use delta aggregation temporality for counter and histogram
+	// instrument types. Use cumulative aggregation temporality for all other
+	// instrument types.
+	// If omitted, cumulative is used.
+	//
+	TemporalityPreference *ExporterTemporalityPreference `json:"temporality_preference,omitempty" yaml:"temporality_preference,omitempty" mapstructure:"temporality_preference,omitempty"`
+}
+
 type DefaultAggregation map[string]interface{}
+
+type Distribution map[string]map[string]interface{}
 
 type DropAggregation map[string]interface{}
 
@@ -147,168 +361,640 @@ const ExemplarFilterAlwaysOff ExemplarFilter = "always_off"
 const ExemplarFilterAlwaysOn ExemplarFilter = "always_on"
 const ExemplarFilterTraceBased ExemplarFilter = "trace_based"
 
+type ExperimentalComposableAlwaysOffSampler map[string]interface{}
+
+type ExperimentalComposableAlwaysOnSampler map[string]interface{}
+
+type ExperimentalComposableParentThresholdSampler struct {
+	// Sampler to use when there is no parent.
+	// Property is required and must be non-null.
+	//
+	Root ExperimentalComposableSampler `json:"root" yaml:"root" mapstructure:"root"`
+}
+
+type ExperimentalComposableProbabilitySampler struct {
+	// Configure ratio.
+	// If omitted or null, 1.0 is used.
+	//
+	Ratio ExperimentalComposableProbabilitySamplerRatio `json:"ratio,omitempty" yaml:"ratio,omitempty" mapstructure:"ratio,omitempty"`
+}
+
+// Configure ratio.
+// If omitted or null, 1.0 is used.
+type ExperimentalComposableProbabilitySamplerRatio *float64
+
+type ExperimentalComposableRuleBasedSampler struct {
+	// The rules for the sampler, matched in order. If no rules match, the span is not
+	// sampled.
+	// If omitted or null, no span is sampled.
+	//
+	Rules *ExperimentalComposableRuleBasedSamplerRules `json:"rules,omitempty" yaml:"rules,omitempty" mapstructure:"rules,omitempty"`
+}
+
+// A rule for ExperimentalComposableRuleBasedSampler. A rule can have multiple
+// match conditions - the sampler will be applied if all match.
+// If no conditions are specified, the rule matches all spans that reach it.
+type ExperimentalComposableRuleBasedSamplerRule struct {
+	// Patterns to match against a single attribute. Non-string attributes are matched
+	// using their string representation:
+	// for example, a pattern of "4*" would match any http.response.status_code in
+	// 400-499. For array attributes, if any
+	// item matches, it is considered a match.
+	// If omitted, ignore.
+	//
+	AttributePatterns *ExperimentalComposableRuleBasedSamplerRuleAttributePatterns `json:"attribute_patterns,omitempty" yaml:"attribute_patterns,omitempty" mapstructure:"attribute_patterns,omitempty"`
+
+	// Values to match against a single attribute. Non-string attributes are matched
+	// using their string representation:
+	// for example, a value of "404" would match the http.response.status_code 404.
+	// For array attributes, if any
+	// item matches, it is considered a match.
+	// If omitted, ignore.
+	//
+	AttributeValues *ExperimentalComposableRuleBasedSamplerRuleAttributeValues `json:"attribute_values,omitempty" yaml:"attribute_values,omitempty" mapstructure:"attribute_values,omitempty"`
+
+	// The parent span types to match.
+	// Values include:
+	// * local: local, a local parent.
+	// * none: none, no parent, i.e., the trace root.
+	// * remote: remote, a remote parent.
+	// If omitted, ignore.
+	//
+	Parent []ExperimentalSpanParent `json:"parent,omitempty" yaml:"parent,omitempty" mapstructure:"parent,omitempty"`
+
+	// The sampler to use for matching spans.
+	// Property is required and must be non-null.
+	//
+	Sampler ExperimentalComposableSampler `json:"sampler" yaml:"sampler" mapstructure:"sampler"`
+
+	// The span kinds to match. If the span's kind matches any of these, it matches.
+	// Values include:
+	// * client: client, a client span.
+	// * consumer: consumer, a consumer span.
+	// * internal: internal, an internal span.
+	// * producer: producer, a producer span.
+	// * server: server, a server span.
+	// If omitted, ignore.
+	//
+	SpanKinds []SpanKind `json:"span_kinds,omitempty" yaml:"span_kinds,omitempty" mapstructure:"span_kinds,omitempty"`
+}
+
+type ExperimentalComposableRuleBasedSamplerRuleAttributePatterns struct {
+	// Configure list of value patterns to exclude. Applies after .included (i.e.
+	// excluded has higher priority than included).
+	// Values are evaluated to match as follows:
+	//  * If the value exactly matches.
+	//  * If the value matches the wildcard pattern, where '?' matches any single
+	// character and '*' matches any number of characters including none.
+	// If omitted, .included attributes are included.
+	//
+	Excluded []string `json:"excluded,omitempty" yaml:"excluded,omitempty" mapstructure:"excluded,omitempty"`
+
+	// Configure list of value patterns to include.
+	// Values are evaluated to match as follows:
+	//  * If the value exactly matches.
+	//  * If the value matches the wildcard pattern, where '?' matches any single
+	// character and '*' matches any number of characters including none.
+	// If omitted, all values are included.
+	//
+	Included []string `json:"included,omitempty" yaml:"included,omitempty" mapstructure:"included,omitempty"`
+
+	// The attribute key to match against.
+	// Property is required and must be non-null.
+	//
+	Key string `json:"key" yaml:"key" mapstructure:"key"`
+}
+
+type ExperimentalComposableRuleBasedSamplerRuleAttributeValues struct {
+	// The attribute key to match against.
+	// Property is required and must be non-null.
+	//
+	Key string `json:"key" yaml:"key" mapstructure:"key"`
+
+	// The attribute values to match against. If the attribute's value matches any of
+	// these, it matches.
+	// Property is required and must be non-null.
+	//
+	Values []string `json:"values" yaml:"values" mapstructure:"values"`
+}
+
+// The rules for the sampler, matched in order. If no rules match, the span is not
+// sampled.
+// If omitted or null, no span is sampled.
+type ExperimentalComposableRuleBasedSamplerRules []ExperimentalComposableRuleBasedSamplerRule
+
+type ExperimentalComposableSampler struct {
+	// Configure sampler to be always_off.
+	// If omitted, ignore.
+	//
+	AlwaysOff ExperimentalComposableAlwaysOffSampler `json:"always_off,omitempty" yaml:"always_off,omitempty" mapstructure:"always_off,omitempty"`
+
+	// Configure sampler to be always_on.
+	// If omitted, ignore.
+	//
+	AlwaysOn ExperimentalComposableAlwaysOnSampler `json:"always_on,omitempty" yaml:"always_on,omitempty" mapstructure:"always_on,omitempty"`
+
+	// Configure sampler to be parent_threshold.
+	// If omitted, ignore.
+	//
+	ParentThreshold *ExperimentalComposableParentThresholdSampler `json:"parent_threshold,omitempty" yaml:"parent_threshold,omitempty" mapstructure:"parent_threshold,omitempty"`
+
+	// Configure sampler to be probability.
+	// If omitted, ignore.
+	//
+	Probability *ExperimentalComposableProbabilitySampler `json:"probability,omitempty" yaml:"probability,omitempty" mapstructure:"probability,omitempty"`
+
+	// Configure sampler to be rule_based.
+	// If omitted, ignore.
+	//
+	RuleBased *ExperimentalComposableRuleBasedSampler `json:"rule_based,omitempty" yaml:"rule_based,omitempty" mapstructure:"rule_based,omitempty"`
+
+	AdditionalProperties interface{} `mapstructure:",remain"`
+}
+
 type ExperimentalContainerResourceDetector map[string]interface{}
 
 type ExperimentalGeneralInstrumentation struct {
-	// Http corresponds to the JSON schema field "http".
+	// Configure instrumentations following the http semantic conventions.
+	// See http semantic conventions:
+	// https://opentelemetry.io/docs/specs/semconv/http/
+	// If omitted, defaults as described in ExperimentalHttpInstrumentation are used.
+	//
 	Http *ExperimentalHttpInstrumentation `json:"http,omitempty" yaml:"http,omitempty" mapstructure:"http,omitempty"`
 
-	// Peer corresponds to the JSON schema field "peer".
+	// Configure instrumentations following the peer semantic conventions.
+	// See peer semantic conventions:
+	// https://opentelemetry.io/docs/specs/semconv/attributes-registry/peer/
+	// If omitted, defaults as described in ExperimentalPeerInstrumentation are used.
+	//
 	Peer *ExperimentalPeerInstrumentation `json:"peer,omitempty" yaml:"peer,omitempty" mapstructure:"peer,omitempty"`
 }
 
 type ExperimentalHostResourceDetector map[string]interface{}
 
+type ExperimentalHttpClientInstrumentation struct {
+	// Configure headers to capture for outbound http requests.
+	// If omitted, no outbound request headers are captured.
+	//
+	RequestCapturedHeaders []string `json:"request_captured_headers,omitempty" yaml:"request_captured_headers,omitempty" mapstructure:"request_captured_headers,omitempty"`
+
+	// Configure headers to capture for inbound http responses.
+	// If omitted, no inbound response headers are captured.
+	//
+	ResponseCapturedHeaders []string `json:"response_captured_headers,omitempty" yaml:"response_captured_headers,omitempty" mapstructure:"response_captured_headers,omitempty"`
+}
+
 type ExperimentalHttpInstrumentation struct {
-	// Client corresponds to the JSON schema field "client".
-	Client *ExperimentalHttpInstrumentationClient `json:"client,omitempty" yaml:"client,omitempty" mapstructure:"client,omitempty"`
+	// Configure instrumentations following the http client semantic conventions.
+	// If omitted, defaults as described in ExperimentalHttpClientInstrumentation are
+	// used.
+	//
+	Client *ExperimentalHttpClientInstrumentation `json:"client,omitempty" yaml:"client,omitempty" mapstructure:"client,omitempty"`
 
-	// Server corresponds to the JSON schema field "server".
-	Server *ExperimentalHttpInstrumentationServer `json:"server,omitempty" yaml:"server,omitempty" mapstructure:"server,omitempty"`
+	// Configure instrumentations following the http server semantic conventions.
+	// If omitted, defaults as described in ExperimentalHttpServerInstrumentation are
+	// used.
+	//
+	Server *ExperimentalHttpServerInstrumentation `json:"server,omitempty" yaml:"server,omitempty" mapstructure:"server,omitempty"`
 }
 
-type ExperimentalHttpInstrumentationClient struct {
-	// RequestCapturedHeaders corresponds to the JSON schema field
-	// "request_captured_headers".
+type ExperimentalHttpServerInstrumentation struct {
+	// Configure headers to capture for inbound http requests.
+	// If omitted, no request headers are captured.
+	//
 	RequestCapturedHeaders []string `json:"request_captured_headers,omitempty" yaml:"request_captured_headers,omitempty" mapstructure:"request_captured_headers,omitempty"`
 
-	// ResponseCapturedHeaders corresponds to the JSON schema field
-	// "response_captured_headers".
+	// Configure headers to capture for outbound http responses.
+	// If omitted, no response headers are captures.
+	//
 	ResponseCapturedHeaders []string `json:"response_captured_headers,omitempty" yaml:"response_captured_headers,omitempty" mapstructure:"response_captured_headers,omitempty"`
 }
 
-type ExperimentalHttpInstrumentationServer struct {
-	// RequestCapturedHeaders corresponds to the JSON schema field
-	// "request_captured_headers".
-	RequestCapturedHeaders []string `json:"request_captured_headers,omitempty" yaml:"request_captured_headers,omitempty" mapstructure:"request_captured_headers,omitempty"`
+type ExperimentalInstrumentation struct {
+	// Configure C++ language-specific instrumentation libraries.
+	// If omitted, instrumentation defaults are used.
+	//
+	Cpp ExperimentalLanguageSpecificInstrumentation `json:"cpp,omitempty" yaml:"cpp,omitempty" mapstructure:"cpp,omitempty"`
 
-	// ResponseCapturedHeaders corresponds to the JSON schema field
-	// "response_captured_headers".
-	ResponseCapturedHeaders []string `json:"response_captured_headers,omitempty" yaml:"response_captured_headers,omitempty" mapstructure:"response_captured_headers,omitempty"`
+	// Configure .NET language-specific instrumentation libraries.
+	// Each entry's key identifies a particular instrumentation library. The
+	// corresponding value configures it.
+	// If omitted, instrumentation defaults are used.
+	//
+	Dotnet ExperimentalLanguageSpecificInstrumentation `json:"dotnet,omitempty" yaml:"dotnet,omitempty" mapstructure:"dotnet,omitempty"`
+
+	// Configure Erlang language-specific instrumentation libraries.
+	// Each entry's key identifies a particular instrumentation library. The
+	// corresponding value configures it.
+	// If omitted, instrumentation defaults are used.
+	//
+	Erlang ExperimentalLanguageSpecificInstrumentation `json:"erlang,omitempty" yaml:"erlang,omitempty" mapstructure:"erlang,omitempty"`
+
+	// Configure general SemConv options that may apply to multiple languages and
+	// instrumentations.
+	// Instrumenation may merge general config options with the language specific
+	// configuration at .instrumentation.<language>.
+	// If omitted, default values as described in ExperimentalGeneralInstrumentation
+	// are used.
+	//
+	General *ExperimentalGeneralInstrumentation `json:"general,omitempty" yaml:"general,omitempty" mapstructure:"general,omitempty"`
+
+	// Configure Go language-specific instrumentation libraries.
+	// Each entry's key identifies a particular instrumentation library. The
+	// corresponding value configures it.
+	// If omitted, instrumentation defaults are used.
+	//
+	Go ExperimentalLanguageSpecificInstrumentation `json:"go,omitempty" yaml:"go,omitempty" mapstructure:"go,omitempty"`
+
+	// Configure Java language-specific instrumentation libraries.
+	// Each entry's key identifies a particular instrumentation library. The
+	// corresponding value configures it.
+	// If omitted, instrumentation defaults are used.
+	//
+	Java ExperimentalLanguageSpecificInstrumentation `json:"java,omitempty" yaml:"java,omitempty" mapstructure:"java,omitempty"`
+
+	// Configure JavaScript language-specific instrumentation libraries.
+	// Each entry's key identifies a particular instrumentation library. The
+	// corresponding value configures it.
+	// If omitted, instrumentation defaults are used.
+	//
+	Js ExperimentalLanguageSpecificInstrumentation `json:"js,omitempty" yaml:"js,omitempty" mapstructure:"js,omitempty"`
+
+	// Configure PHP language-specific instrumentation libraries.
+	// Each entry's key identifies a particular instrumentation library. The
+	// corresponding value configures it.
+	// If omitted, instrumentation defaults are used.
+	//
+	Php ExperimentalLanguageSpecificInstrumentation `json:"php,omitempty" yaml:"php,omitempty" mapstructure:"php,omitempty"`
+
+	// Configure Python language-specific instrumentation libraries.
+	// Each entry's key identifies a particular instrumentation library. The
+	// corresponding value configures it.
+	// If omitted, instrumentation defaults are used.
+	//
+	Python ExperimentalLanguageSpecificInstrumentation `json:"python,omitempty" yaml:"python,omitempty" mapstructure:"python,omitempty"`
+
+	// Configure Ruby language-specific instrumentation libraries.
+	// Each entry's key identifies a particular instrumentation library. The
+	// corresponding value configures it.
+	// If omitted, instrumentation defaults are used.
+	//
+	Ruby ExperimentalLanguageSpecificInstrumentation `json:"ruby,omitempty" yaml:"ruby,omitempty" mapstructure:"ruby,omitempty"`
+
+	// Configure Rust language-specific instrumentation libraries.
+	// Each entry's key identifies a particular instrumentation library. The
+	// corresponding value configures it.
+	// If omitted, instrumentation defaults are used.
+	//
+	Rust ExperimentalLanguageSpecificInstrumentation `json:"rust,omitempty" yaml:"rust,omitempty" mapstructure:"rust,omitempty"`
+
+	// Configure Swift language-specific instrumentation libraries.
+	// Each entry's key identifies a particular instrumentation library. The
+	// corresponding value configures it.
+	// If omitted, instrumentation defaults are used.
+	//
+	Swift ExperimentalLanguageSpecificInstrumentation `json:"swift,omitempty" yaml:"swift,omitempty" mapstructure:"swift,omitempty"`
 }
 
-type ExperimentalLanguageSpecificInstrumentation map[string]interface{}
+type ExperimentalJaegerRemoteSampler struct {
+	// Configure the endpoint of the jaeger remote sampling service.
+	// Property is required and must be non-null.
+	//
+	Endpoint string `json:"endpoint" yaml:"endpoint" mapstructure:"endpoint"`
+
+	// Configure the initial sampler used before first configuration is fetched.
+	// Property is required and must be non-null.
+	//
+	InitialSampler Sampler `json:"initial_sampler" yaml:"initial_sampler" mapstructure:"initial_sampler"`
+
+	// Configure the polling interval (in milliseconds) to fetch from the remote
+	// sampling service.
+	// If omitted or null, 60000 is used.
+	//
+	Interval ExperimentalJaegerRemoteSamplerInterval `json:"interval,omitempty" yaml:"interval,omitempty" mapstructure:"interval,omitempty"`
+}
+
+// Configure the polling interval (in milliseconds) to fetch from the remote
+// sampling service.
+// If omitted or null, 60000 is used.
+type ExperimentalJaegerRemoteSamplerInterval *int
+
+type ExperimentalLanguageSpecificInstrumentation map[string]map[string]interface{}
 
 type ExperimentalLoggerConfig struct {
-	// Disabled corresponds to the JSON schema field "disabled".
-	Disabled *bool `json:"disabled,omitempty" yaml:"disabled,omitempty" mapstructure:"disabled,omitempty"`
+	// Configure if the logger is enabled or not.
+	// If omitted or null, false is used.
+	//
+	Disabled ExperimentalLoggerConfigDisabled `json:"disabled,omitempty" yaml:"disabled,omitempty" mapstructure:"disabled,omitempty"`
+
+	// Configure severity filtering.
+	// Log records with an non-zero (i.e. unspecified) severity number which is less
+	// than minimum_severity are not processed.
+	// Values include:
+	// * debug: debug, severity number 5.
+	// * debug2: debug2, severity number 6.
+	// * debug3: debug3, severity number 7.
+	// * debug4: debug4, severity number 8.
+	// * error: error, severity number 17.
+	// * error2: error2, severity number 18.
+	// * error3: error3, severity number 19.
+	// * error4: error4, severity number 20.
+	// * fatal: fatal, severity number 21.
+	// * fatal2: fatal2, severity number 22.
+	// * fatal3: fatal3, severity number 23.
+	// * fatal4: fatal4, severity number 24.
+	// * info: info, severity number 9.
+	// * info2: info2, severity number 10.
+	// * info3: info3, severity number 11.
+	// * info4: info4, severity number 12.
+	// * trace: trace, severity number 1.
+	// * trace2: trace2, severity number 2.
+	// * trace3: trace3, severity number 3.
+	// * trace4: trace4, severity number 4.
+	// * warn: warn, severity number 13.
+	// * warn2: warn2, severity number 14.
+	// * warn3: warn3, severity number 15.
+	// * warn4: warn4, severity number 16.
+	// If omitted, severity filtering is not applied.
+	//
+	MinimumSeverity *SeverityNumber `json:"minimum_severity,omitempty" yaml:"minimum_severity,omitempty" mapstructure:"minimum_severity,omitempty"`
+
+	// Configure trace based filtering.
+	// If true, log records associated with unsampled trace contexts traces are not
+	// processed. If false, or if a log record is not associated with a trace context,
+	// trace based filtering is not applied.
+	// If omitted or null, trace based filtering is not applied.
+	//
+	TraceBased ExperimentalLoggerConfigTraceBased `json:"trace_based,omitempty" yaml:"trace_based,omitempty" mapstructure:"trace_based,omitempty"`
 }
 
+// Configure if the logger is enabled or not.
+// If omitted or null, false is used.
+type ExperimentalLoggerConfigDisabled *bool
+
+// Configure trace based filtering.
+// If true, log records associated with unsampled trace contexts traces are not
+// processed. If false, or if a log record is not associated with a trace context,
+// trace based filtering is not applied.
+// If omitted or null, trace based filtering is not applied.
+type ExperimentalLoggerConfigTraceBased *bool
+
 type ExperimentalLoggerConfigurator struct {
-	// DefaultConfig corresponds to the JSON schema field "default_config".
+	// Configure the default logger config used there is no matching entry in
+	// .logger_configurator/development.loggers.
+	// If omitted, unmatched .loggers use default values as described in
+	// ExperimentalLoggerConfig.
+	//
 	DefaultConfig *ExperimentalLoggerConfig `json:"default_config,omitempty" yaml:"default_config,omitempty" mapstructure:"default_config,omitempty"`
 
-	// Loggers corresponds to the JSON schema field "loggers".
+	// Configure loggers.
+	// If omitted, all loggers use .default_config.
+	//
 	Loggers []ExperimentalLoggerMatcherAndConfig `json:"loggers,omitempty" yaml:"loggers,omitempty" mapstructure:"loggers,omitempty"`
 }
 
 type ExperimentalLoggerMatcherAndConfig struct {
-	// Config corresponds to the JSON schema field "config".
-	Config *ExperimentalLoggerConfig `json:"config,omitempty" yaml:"config,omitempty" mapstructure:"config,omitempty"`
+	// The logger config.
+	// Property is required and must be non-null.
+	//
+	Config ExperimentalLoggerConfig `json:"config" yaml:"config" mapstructure:"config"`
 
-	// Name corresponds to the JSON schema field "name".
-	Name *string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
+	// Configure logger names to match, evaluated as follows:
+	//
+	//  * If the logger name exactly matches.
+	//  * If the logger name matches the wildcard pattern, where '?' matches any
+	// single character and '*' matches any number of characters including none.
+	// Property is required and must be non-null.
+	//
+	Name string `json:"name" yaml:"name" mapstructure:"name"`
 }
 
 type ExperimentalMeterConfig struct {
-	// Disabled corresponds to the JSON schema field "disabled".
+	// Configure if the meter is enabled or not.
+	// If omitted, false is used.
+	//
 	Disabled *bool `json:"disabled,omitempty" yaml:"disabled,omitempty" mapstructure:"disabled,omitempty"`
 }
 
 type ExperimentalMeterConfigurator struct {
-	// DefaultConfig corresponds to the JSON schema field "default_config".
+	// Configure the default meter config used there is no matching entry in
+	// .meter_configurator/development.meters.
+	// If omitted, unmatched .meters use default values as described in
+	// ExperimentalMeterConfig.
+	//
 	DefaultConfig *ExperimentalMeterConfig `json:"default_config,omitempty" yaml:"default_config,omitempty" mapstructure:"default_config,omitempty"`
 
-	// Meters corresponds to the JSON schema field "meters".
+	// Configure meters.
+	// If omitted, all meters used .default_config.
+	//
 	Meters []ExperimentalMeterMatcherAndConfig `json:"meters,omitempty" yaml:"meters,omitempty" mapstructure:"meters,omitempty"`
 }
 
 type ExperimentalMeterMatcherAndConfig struct {
-	// Config corresponds to the JSON schema field "config".
-	Config *ExperimentalMeterConfig `json:"config,omitempty" yaml:"config,omitempty" mapstructure:"config,omitempty"`
+	// The meter config.
+	// Property is required and must be non-null.
+	//
+	Config ExperimentalMeterConfig `json:"config" yaml:"config" mapstructure:"config"`
 
-	// Name corresponds to the JSON schema field "name".
-	Name *string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
+	// Configure meter names to match, evaluated as follows:
+	//
+	//  * If the meter name exactly matches.
+	//  * If the meter name matches the wildcard pattern, where '?' matches any single
+	// character and '*' matches any number of characters including none.
+	// Property is required and must be non-null.
+	//
+	Name string `json:"name" yaml:"name" mapstructure:"name"`
 }
 
 type ExperimentalOTLPFileExporter struct {
-	// OutputStream corresponds to the JSON schema field "output_stream".
-	OutputStream *string `json:"output_stream,omitempty" yaml:"output_stream,omitempty" mapstructure:"output_stream,omitempty"`
+	// Configure output stream.
+	// Values include stdout, or scheme+destination. For example:
+	// file:///path/to/file.jsonl.
+	// If omitted or null, stdout is used.
+	//
+	OutputStream ExperimentalOTLPFileExporterOutputStream `json:"output_stream,omitempty" yaml:"output_stream,omitempty" mapstructure:"output_stream,omitempty"`
 }
 
+// Configure output stream.
+// Values include stdout, or scheme+destination. For example:
+// file:///path/to/file.jsonl.
+// If omitted or null, stdout is used.
+type ExperimentalOTLPFileExporterOutputStream *string
+
 type ExperimentalOTLPFileMetricExporter struct {
-	// DefaultHistogramAggregation corresponds to the JSON schema field
-	// "default_histogram_aggregation".
+	// Configure default histogram aggregation.
+	// Values include:
+	// * base2_exponential_bucket_histogram: Use base2 exponential histogram as the
+	// default aggregation for histogram instruments.
+	// * explicit_bucket_histogram: Use explicit bucket histogram as the default
+	// aggregation for histogram instruments.
+	// If omitted, explicit_bucket_histogram is used.
+	//
 	DefaultHistogramAggregation *ExporterDefaultHistogramAggregation `json:"default_histogram_aggregation,omitempty" yaml:"default_histogram_aggregation,omitempty" mapstructure:"default_histogram_aggregation,omitempty"`
 
-	// OutputStream corresponds to the JSON schema field "output_stream".
-	OutputStream *string `json:"output_stream,omitempty" yaml:"output_stream,omitempty" mapstructure:"output_stream,omitempty"`
+	// Configure output stream.
+	// Values include stdout, or scheme+destination. For example:
+	// file:///path/to/file.jsonl.
+	// If omitted or null, stdout is used.
+	//
+	OutputStream ExperimentalOTLPFileMetricExporterOutputStream `json:"output_stream,omitempty" yaml:"output_stream,omitempty" mapstructure:"output_stream,omitempty"`
 
-	// TemporalityPreference corresponds to the JSON schema field
-	// "temporality_preference".
+	// Configure temporality preference.
+	// Values include:
+	// * cumulative: Use cumulative aggregation temporality for all instrument types.
+	// * delta: Use delta aggregation for all instrument types except up down counter
+	// and asynchronous up down counter.
+	// * low_memory: Use delta aggregation temporality for counter and histogram
+	// instrument types. Use cumulative aggregation temporality for all other
+	// instrument types.
+	// If omitted, cumulative is used.
+	//
 	TemporalityPreference *ExporterTemporalityPreference `json:"temporality_preference,omitempty" yaml:"temporality_preference,omitempty" mapstructure:"temporality_preference,omitempty"`
 }
 
+// Configure output stream.
+// Values include stdout, or scheme+destination. For example:
+// file:///path/to/file.jsonl.
+// If omitted or null, stdout is used.
+type ExperimentalOTLPFileMetricExporterOutputStream *string
+
 type ExperimentalPeerInstrumentation struct {
-	// ServiceMapping corresponds to the JSON schema field "service_mapping".
-	ServiceMapping []ExperimentalPeerInstrumentationServiceMappingElem `json:"service_mapping,omitempty" yaml:"service_mapping,omitempty" mapstructure:"service_mapping,omitempty"`
+	// Configure the service mapping for instrumentations following peer.service
+	// semantic conventions.
+	// See peer.service semantic conventions:
+	// https://opentelemetry.io/docs/specs/semconv/general/attributes/#general-remote-service-attributes
+	// If omitted, no peer service mappings are used.
+	//
+	ServiceMapping []ExperimentalPeerServiceMapping `json:"service_mapping,omitempty" yaml:"service_mapping,omitempty" mapstructure:"service_mapping,omitempty"`
 }
 
-type ExperimentalPeerInstrumentationServiceMappingElem struct {
-	// Peer corresponds to the JSON schema field "peer".
+type ExperimentalPeerServiceMapping struct {
+	// The IP address to map.
+	// Property is required and must be non-null.
+	//
 	Peer string `json:"peer" yaml:"peer" mapstructure:"peer"`
 
-	// Service corresponds to the JSON schema field "service".
+	// The logical name corresponding to the IP address of .peer.
+	// Property is required and must be non-null.
+	//
 	Service string `json:"service" yaml:"service" mapstructure:"service"`
 }
+
+type ExperimentalProbabilitySampler struct {
+	// Configure ratio.
+	// If omitted or null, 1.0 is used.
+	//
+	Ratio ExperimentalProbabilitySamplerRatio `json:"ratio,omitempty" yaml:"ratio,omitempty" mapstructure:"ratio,omitempty"`
+}
+
+// Configure ratio.
+// If omitted or null, 1.0 is used.
+type ExperimentalProbabilitySamplerRatio *float64
 
 type ExperimentalProcessResourceDetector map[string]interface{}
 
 type ExperimentalPrometheusMetricExporter struct {
-	// Host corresponds to the JSON schema field "host".
-	Host *string `json:"host,omitempty" yaml:"host,omitempty" mapstructure:"host,omitempty"`
+	// Configure host.
+	// If omitted or null, localhost is used.
+	//
+	Host ExperimentalPrometheusMetricExporterHost `json:"host,omitempty" yaml:"host,omitempty" mapstructure:"host,omitempty"`
 
-	// Port corresponds to the JSON schema field "port".
-	Port *int `json:"port,omitempty" yaml:"port,omitempty" mapstructure:"port,omitempty"`
+	// Configure port.
+	// If omitted or null, 9464 is used.
+	//
+	Port ExperimentalPrometheusMetricExporterPort `json:"port,omitempty" yaml:"port,omitempty" mapstructure:"port,omitempty"`
 
-	// TranslationStrategy corresponds to the JSON schema field
-	// "translation_strategy".
-	TranslationStrategy *ExperimentalPrometheusMetricExporterTranslationStrategy `json:"translation_strategy,omitempty" yaml:"translation_strategy,omitempty" mapstructure:"translation_strategy,omitempty"`
+	// Configure how metric names are translated to Prometheus metric names.
+	// Values include:
+	// * no_translation: Special character escaping is disabled. Type and unit
+	// suffixes are disabled. Metric names are unaltered.
+	// * no_utf8_escaping_with_suffixes: Special character escaping is disabled. Type
+	// and unit suffixes are enabled.
+	// * underscore_escaping_with_suffixes: Special character escaping is enabled.
+	// Type and unit suffixes are enabled.
+	// * underscore_escaping_without_suffixes: Special character escaping is enabled.
+	// Type and unit suffixes are disabled. This represents classic Prometheus metric
+	// name compatibility.
+	// If omitted, underscore_escaping_with_suffixes is used.
+	//
+	TranslationStrategy *ExperimentalPrometheusTranslationStrategy `json:"translation_strategy,omitempty" yaml:"translation_strategy,omitempty" mapstructure:"translation_strategy,omitempty"`
 
-	// WithResourceConstantLabels corresponds to the JSON schema field
-	// "with_resource_constant_labels".
+	// Configure Prometheus Exporter to add resource attributes as metrics attributes,
+	// where the resource attribute keys match the patterns.
+	// If omitted, no resource attributes are added.
+	//
 	WithResourceConstantLabels *IncludeExclude `json:"with_resource_constant_labels,omitempty" yaml:"with_resource_constant_labels,omitempty" mapstructure:"with_resource_constant_labels,omitempty"`
 
-	// WithoutScopeInfo corresponds to the JSON schema field "without_scope_info".
-	WithoutScopeInfo *bool `json:"without_scope_info,omitempty" yaml:"without_scope_info,omitempty" mapstructure:"without_scope_info,omitempty"`
+	// Configure Prometheus Exporter to produce metrics without a scope info metric.
+	// If omitted or null, false is used.
+	//
+	WithoutScopeInfo ExperimentalPrometheusMetricExporterWithoutScopeInfo `json:"without_scope_info,omitempty" yaml:"without_scope_info,omitempty" mapstructure:"without_scope_info,omitempty"`
+
+	// Configure Prometheus Exporter to produce metrics without a target info metric
+	// for the resource.
+	// If omitted or null, false is used.
+	//
+	WithoutTargetInfo ExperimentalPrometheusMetricExporterWithoutTargetInfo `json:"without_target_info,omitempty" yaml:"without_target_info,omitempty" mapstructure:"without_target_info,omitempty"`
 }
 
-type ExperimentalPrometheusMetricExporterTranslationStrategy string
+// Configure host.
+// If omitted or null, localhost is used.
+type ExperimentalPrometheusMetricExporterHost *string
 
-const ExperimentalPrometheusMetricExporterTranslationStrategyNoTranslation ExperimentalPrometheusMetricExporterTranslationStrategy = "NoTranslation"
-const ExperimentalPrometheusMetricExporterTranslationStrategyNoUTF8EscapingWithSuffixes ExperimentalPrometheusMetricExporterTranslationStrategy = "NoUTF8EscapingWithSuffixes"
-const ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes ExperimentalPrometheusMetricExporterTranslationStrategy = "UnderscoreEscapingWithSuffixes"
-const ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithoutSuffixes ExperimentalPrometheusMetricExporterTranslationStrategy = "UnderscoreEscapingWithoutSuffixes"
+// Configure port.
+// If omitted or null, 9464 is used.
+type ExperimentalPrometheusMetricExporterPort *int
+
+// Configure Prometheus Exporter to produce metrics without a scope info metric.
+// If omitted or null, false is used.
+type ExperimentalPrometheusMetricExporterWithoutScopeInfo *bool
+
+// Configure Prometheus Exporter to produce metrics without a target info metric
+// for the resource.
+// If omitted or null, false is used.
+type ExperimentalPrometheusMetricExporterWithoutTargetInfo *bool
+
+type ExperimentalPrometheusTranslationStrategy string
+
+const ExperimentalPrometheusTranslationStrategyNoTranslation ExperimentalPrometheusTranslationStrategy = "no_translation"
+const ExperimentalPrometheusTranslationStrategyNoUtf8EscapingWithSuffixes ExperimentalPrometheusTranslationStrategy = "no_utf8_escaping_with_suffixes"
+const ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes ExperimentalPrometheusTranslationStrategy = "underscore_escaping_with_suffixes"
+const ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithoutSuffixes ExperimentalPrometheusTranslationStrategy = "underscore_escaping_without_suffixes"
 
 type ExperimentalResourceDetection struct {
-	// Attributes corresponds to the JSON schema field "attributes".
+	// Configure attributes provided by resource detectors.
+	// If omitted, all attributes from resource detectors are added.
+	//
 	Attributes *IncludeExclude `json:"attributes,omitempty" yaml:"attributes,omitempty" mapstructure:"attributes,omitempty"`
 
-	// Detectors corresponds to the JSON schema field "detectors".
+	// Configure resource detectors.
+	// Resource detector names are dependent on the SDK language ecosystem. Please
+	// consult documentation for each respective language.
+	// If omitted, no resource detectors are enabled.
+	//
 	Detectors []ExperimentalResourceDetector `json:"detectors,omitempty" yaml:"detectors,omitempty" mapstructure:"detectors,omitempty"`
 }
 
 type ExperimentalResourceDetector struct {
-	// Container corresponds to the JSON schema field "container".
+	// Enable the container resource detector, which populates container.* attributes.
+	// If omitted, ignore.
+	//
 	Container ExperimentalContainerResourceDetector `json:"container,omitempty" yaml:"container,omitempty" mapstructure:"container,omitempty"`
 
-	// Host corresponds to the JSON schema field "host".
+	// Enable the host resource detector, which populates host.* and os.* attributes.
+	// If omitted, ignore.
+	//
 	Host ExperimentalHostResourceDetector `json:"host,omitempty" yaml:"host,omitempty" mapstructure:"host,omitempty"`
 
-	// Process corresponds to the JSON schema field "process".
+	// Enable the process resource detector, which populates process.* attributes.
+	// If omitted, ignore.
+	//
 	Process ExperimentalProcessResourceDetector `json:"process,omitempty" yaml:"process,omitempty" mapstructure:"process,omitempty"`
 
-	// Service corresponds to the JSON schema field "service".
+	// Enable the service detector, which populates service.name based on the
+	// OTEL_SERVICE_NAME environment variable and service.instance.id.
+	// If omitted, ignore.
+	//
 	Service ExperimentalServiceResourceDetector `json:"service,omitempty" yaml:"service,omitempty" mapstructure:"service,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
@@ -316,34 +1002,65 @@ type ExperimentalResourceDetector struct {
 
 type ExperimentalServiceResourceDetector map[string]interface{}
 
+type ExperimentalSpanParent string
+
+const ExperimentalSpanParentLocal ExperimentalSpanParent = "local"
+const ExperimentalSpanParentNone ExperimentalSpanParent = "none"
+const ExperimentalSpanParentRemote ExperimentalSpanParent = "remote"
+
 type ExperimentalTracerConfig struct {
-	// Disabled corresponds to the JSON schema field "disabled".
+	// Configure if the tracer is enabled or not.
+	// If omitted, false is used.
+	//
 	Disabled *bool `json:"disabled,omitempty" yaml:"disabled,omitempty" mapstructure:"disabled,omitempty"`
 }
 
 type ExperimentalTracerConfigurator struct {
-	// DefaultConfig corresponds to the JSON schema field "default_config".
+	// Configure the default tracer config used there is no matching entry in
+	// .tracer_configurator/development.tracers.
+	// If omitted, unmatched .tracers use default values as described in
+	// ExperimentalTracerConfig.
+	//
 	DefaultConfig *ExperimentalTracerConfig `json:"default_config,omitempty" yaml:"default_config,omitempty" mapstructure:"default_config,omitempty"`
 
-	// Tracers corresponds to the JSON schema field "tracers".
+	// Configure tracers.
+	// If omitted, all tracers use .default_config.
+	//
 	Tracers []ExperimentalTracerMatcherAndConfig `json:"tracers,omitempty" yaml:"tracers,omitempty" mapstructure:"tracers,omitempty"`
 }
 
 type ExperimentalTracerMatcherAndConfig struct {
-	// Config corresponds to the JSON schema field "config".
-	Config *ExperimentalTracerConfig `json:"config,omitempty" yaml:"config,omitempty" mapstructure:"config,omitempty"`
+	// The tracer config.
+	// Property is required and must be non-null.
+	//
+	Config ExperimentalTracerConfig `json:"config" yaml:"config" mapstructure:"config"`
 
-	// Name corresponds to the JSON schema field "name".
-	Name *string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
+	// Configure tracer names to match, evaluated as follows:
+	//
+	//  * If the tracer name exactly matches.
+	//  * If the tracer name matches the wildcard pattern, where '?' matches any
+	// single character and '*' matches any number of characters including none.
+	// Property is required and must be non-null.
+	//
+	Name string `json:"name" yaml:"name" mapstructure:"name"`
 }
 
 type ExplicitBucketHistogramAggregation struct {
-	// Boundaries corresponds to the JSON schema field "boundaries".
+	// Configure bucket boundaries.
+	// If omitted, [0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500,
+	// 10000] is used.
+	//
 	Boundaries []float64 `json:"boundaries,omitempty" yaml:"boundaries,omitempty" mapstructure:"boundaries,omitempty"`
 
-	// RecordMinMax corresponds to the JSON schema field "record_min_max".
-	RecordMinMax *bool `json:"record_min_max,omitempty" yaml:"record_min_max,omitempty" mapstructure:"record_min_max,omitempty"`
+	// Configure record min and max.
+	// If omitted or null, true is used.
+	//
+	RecordMinMax ExplicitBucketHistogramAggregationRecordMinMax `json:"record_min_max,omitempty" yaml:"record_min_max,omitempty" mapstructure:"record_min_max,omitempty"`
 }
+
+// Configure record min and max.
+// If omitted or null, true is used.
+type ExplicitBucketHistogramAggregationRecordMinMax *bool
 
 type ExporterDefaultHistogramAggregation string
 
@@ -356,11 +1073,119 @@ const ExporterTemporalityPreferenceCumulative ExporterTemporalityPreference = "c
 const ExporterTemporalityPreferenceDelta ExporterTemporalityPreference = "delta"
 const ExporterTemporalityPreferenceLowMemory ExporterTemporalityPreference = "low_memory"
 
+type GrpcTls struct {
+	// Configure certificate used to verify a server's TLS credentials.
+	// Absolute path to certificate file in PEM format.
+	// If omitted or null, system default certificate verification is used for secure
+	// connections.
+	//
+	CaFile GrpcTlsCaFile `json:"ca_file,omitempty" yaml:"ca_file,omitempty" mapstructure:"ca_file,omitempty"`
+
+	// Configure mTLS client certificate.
+	// Absolute path to client certificate file in PEM format. If set, .client_key
+	// must also be set.
+	// If omitted or null, mTLS is not used.
+	//
+	CertFile GrpcTlsCertFile `json:"cert_file,omitempty" yaml:"cert_file,omitempty" mapstructure:"cert_file,omitempty"`
+
+	// Configure client transport security for the exporter's connection.
+	// Only applicable when .endpoint is provided without http or https scheme.
+	// Implementations may choose to ignore .insecure.
+	// If omitted or null, false is used.
+	//
+	Insecure GrpcTlsInsecure `json:"insecure,omitempty" yaml:"insecure,omitempty" mapstructure:"insecure,omitempty"`
+
+	// Configure mTLS private client key.
+	// Absolute path to client key file in PEM format. If set, .client_certificate
+	// must also be set.
+	// If omitted or null, mTLS is not used.
+	//
+	KeyFile GrpcTlsKeyFile `json:"key_file,omitempty" yaml:"key_file,omitempty" mapstructure:"key_file,omitempty"`
+}
+
+// Configure certificate used to verify a server's TLS credentials.
+// Absolute path to certificate file in PEM format.
+// If omitted or null, system default certificate verification is used for secure
+// connections.
+type GrpcTlsCaFile *string
+
+// Configure mTLS client certificate.
+// Absolute path to client certificate file in PEM format. If set, .client_key must
+// also be set.
+// If omitted or null, mTLS is not used.
+type GrpcTlsCertFile *string
+
+// Configure client transport security for the exporter's connection.
+// Only applicable when .endpoint is provided without http or https scheme.
+// Implementations may choose to ignore .insecure.
+// If omitted or null, false is used.
+type GrpcTlsInsecure *bool
+
+// Configure mTLS private client key.
+// Absolute path to client key file in PEM format. If set, .client_certificate must
+// also be set.
+// If omitted or null, mTLS is not used.
+type GrpcTlsKeyFile *string
+
+type HttpTls struct {
+	// Configure certificate used to verify a server's TLS credentials.
+	// Absolute path to certificate file in PEM format.
+	// If omitted or null, system default certificate verification is used for secure
+	// connections.
+	//
+	CaFile HttpTlsCaFile `json:"ca_file,omitempty" yaml:"ca_file,omitempty" mapstructure:"ca_file,omitempty"`
+
+	// Configure mTLS client certificate.
+	// Absolute path to client certificate file in PEM format. If set, .client_key
+	// must also be set.
+	// If omitted or null, mTLS is not used.
+	//
+	CertFile HttpTlsCertFile `json:"cert_file,omitempty" yaml:"cert_file,omitempty" mapstructure:"cert_file,omitempty"`
+
+	// Configure mTLS private client key.
+	// Absolute path to client key file in PEM format. If set, .client_certificate
+	// must also be set.
+	// If omitted or null, mTLS is not used.
+	//
+	KeyFile HttpTlsKeyFile `json:"key_file,omitempty" yaml:"key_file,omitempty" mapstructure:"key_file,omitempty"`
+}
+
+// Configure certificate used to verify a server's TLS credentials.
+// Absolute path to certificate file in PEM format.
+// If omitted or null, system default certificate verification is used for secure
+// connections.
+type HttpTlsCaFile *string
+
+// Configure mTLS client certificate.
+// Absolute path to client certificate file in PEM format. If set, .client_key must
+// also be set.
+// If omitted or null, mTLS is not used.
+type HttpTlsCertFile *string
+
+// Configure mTLS private client key.
+// Absolute path to client key file in PEM format. If set, .client_certificate must
+// also be set.
+// If omitted or null, mTLS is not used.
+type HttpTlsKeyFile *string
+
 type IncludeExclude struct {
-	// Excluded corresponds to the JSON schema field "excluded".
+	// Configure list of value patterns to exclude. Applies after .included (i.e.
+	// excluded has higher priority than included).
+	// Values are evaluated to match as follows:
+	//  * If the value exactly matches.
+	//  * If the value matches the wildcard pattern, where '?' matches any single
+	// character and '*' matches any number of characters including none.
+	// If omitted, .included attributes are included.
+	//
 	Excluded []string `json:"excluded,omitempty" yaml:"excluded,omitempty" mapstructure:"excluded,omitempty"`
 
-	// Included corresponds to the JSON schema field "included".
+	// Configure list of value patterns to include.
+	// Values are evaluated to match as follows:
+	//  * If the value exactly matches.
+	//  * If the value matches the wildcard pattern, where '?' matches any single
+	// character and '*' matches any number of characters including none.
+	// If omitted, all values are included.
+	//
 	Included []string `json:"included,omitempty" yaml:"included,omitempty" mapstructure:"included,omitempty"`
 }
 
@@ -374,213 +1199,314 @@ const InstrumentTypeObservableGauge InstrumentType = "observable_gauge"
 const InstrumentTypeObservableUpDownCounter InstrumentType = "observable_up_down_counter"
 const InstrumentTypeUpDownCounter InstrumentType = "up_down_counter"
 
-type InstrumentationJson struct {
-	// Cpp corresponds to the JSON schema field "cpp".
-	Cpp ExperimentalLanguageSpecificInstrumentation `json:"cpp,omitempty" yaml:"cpp,omitempty" mapstructure:"cpp,omitempty"`
-
-	// Dotnet corresponds to the JSON schema field "dotnet".
-	Dotnet ExperimentalLanguageSpecificInstrumentation `json:"dotnet,omitempty" yaml:"dotnet,omitempty" mapstructure:"dotnet,omitempty"`
-
-	// Erlang corresponds to the JSON schema field "erlang".
-	Erlang ExperimentalLanguageSpecificInstrumentation `json:"erlang,omitempty" yaml:"erlang,omitempty" mapstructure:"erlang,omitempty"`
-
-	// General corresponds to the JSON schema field "general".
-	General *ExperimentalGeneralInstrumentation `json:"general,omitempty" yaml:"general,omitempty" mapstructure:"general,omitempty"`
-
-	// Go corresponds to the JSON schema field "go".
-	Go ExperimentalLanguageSpecificInstrumentation `json:"go,omitempty" yaml:"go,omitempty" mapstructure:"go,omitempty"`
-
-	// Java corresponds to the JSON schema field "java".
-	Java ExperimentalLanguageSpecificInstrumentation `json:"java,omitempty" yaml:"java,omitempty" mapstructure:"java,omitempty"`
-
-	// Js corresponds to the JSON schema field "js".
-	Js ExperimentalLanguageSpecificInstrumentation `json:"js,omitempty" yaml:"js,omitempty" mapstructure:"js,omitempty"`
-
-	// Php corresponds to the JSON schema field "php".
-	Php ExperimentalLanguageSpecificInstrumentation `json:"php,omitempty" yaml:"php,omitempty" mapstructure:"php,omitempty"`
-
-	// Python corresponds to the JSON schema field "python".
-	Python ExperimentalLanguageSpecificInstrumentation `json:"python,omitempty" yaml:"python,omitempty" mapstructure:"python,omitempty"`
-
-	// Ruby corresponds to the JSON schema field "ruby".
-	Ruby ExperimentalLanguageSpecificInstrumentation `json:"ruby,omitempty" yaml:"ruby,omitempty" mapstructure:"ruby,omitempty"`
-
-	// Rust corresponds to the JSON schema field "rust".
-	Rust ExperimentalLanguageSpecificInstrumentation `json:"rust,omitempty" yaml:"rust,omitempty" mapstructure:"rust,omitempty"`
-
-	// Swift corresponds to the JSON schema field "swift".
-	Swift ExperimentalLanguageSpecificInstrumentation `json:"swift,omitempty" yaml:"swift,omitempty" mapstructure:"swift,omitempty"`
-}
-
 type JaegerPropagator map[string]interface{}
-
-type JaegerRemoteSampler struct {
-	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
-
-	// InitialSampler corresponds to the JSON schema field "initial_sampler".
-	InitialSampler *Sampler `json:"initial_sampler,omitempty" yaml:"initial_sampler,omitempty" mapstructure:"initial_sampler,omitempty"`
-
-	// Interval corresponds to the JSON schema field "interval".
-	Interval *int `json:"interval,omitempty" yaml:"interval,omitempty" mapstructure:"interval,omitempty"`
-}
 
 type LastValueAggregation map[string]interface{}
 
 type LogRecordExporter struct {
-	// Console corresponds to the JSON schema field "console".
+	// Configure exporter to be console.
+	// If omitted, ignore.
+	//
 	Console ConsoleExporter `json:"console,omitempty" yaml:"console,omitempty" mapstructure:"console,omitempty"`
 
-	// OTLPFileDevelopment corresponds to the JSON schema field
-	// "otlp_file/development".
+	// Configure exporter to be OTLP with file transport.
+	// If omitted, ignore.
+	//
 	OTLPFileDevelopment *ExperimentalOTLPFileExporter `json:"otlp_file/development,omitempty" yaml:"otlp_file/development,omitempty" mapstructure:"otlp_file/development,omitempty"`
 
-	// OTLPGrpc corresponds to the JSON schema field "otlp_grpc".
+	// Configure exporter to be OTLP with gRPC transport.
+	// If omitted, ignore.
+	//
 	OTLPGrpc *OTLPGrpcExporter `json:"otlp_grpc,omitempty" yaml:"otlp_grpc,omitempty" mapstructure:"otlp_grpc,omitempty"`
 
-	// OTLPHttp corresponds to the JSON schema field "otlp_http".
+	// Configure exporter to be OTLP with HTTP transport.
+	// If omitted, ignore.
+	//
 	OTLPHttp *OTLPHttpExporter `json:"otlp_http,omitempty" yaml:"otlp_http,omitempty" mapstructure:"otlp_http,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type LogRecordLimits struct {
-	// AttributeCountLimit corresponds to the JSON schema field
-	// "attribute_count_limit".
-	AttributeCountLimit *int `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
+	// Configure max attribute count. Overrides
+	// .attribute_limits.attribute_count_limit.
+	// Value must be non-negative.
+	// If omitted or null, 128 is used.
+	//
+	AttributeCountLimit LogRecordLimitsAttributeCountLimit `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
 
-	// AttributeValueLengthLimit corresponds to the JSON schema field
-	// "attribute_value_length_limit".
-	AttributeValueLengthLimit *int `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
+	// Configure max attribute value size. Overrides
+	// .attribute_limits.attribute_value_length_limit.
+	// Value must be non-negative.
+	// If omitted or null, there is no limit.
+	//
+	AttributeValueLengthLimit LogRecordLimitsAttributeValueLengthLimit `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
 }
 
+// Configure max attribute count. Overrides
+// .attribute_limits.attribute_count_limit.
+// Value must be non-negative.
+// If omitted or null, 128 is used.
+type LogRecordLimitsAttributeCountLimit *int
+
+// Configure max attribute value size. Overrides
+// .attribute_limits.attribute_value_length_limit.
+// Value must be non-negative.
+// If omitted or null, there is no limit.
+type LogRecordLimitsAttributeValueLengthLimit *int
+
 type LogRecordProcessor struct {
-	// Batch corresponds to the JSON schema field "batch".
+	// Configure a batch log record processor.
+	// If omitted, ignore.
+	//
 	Batch *BatchLogRecordProcessor `json:"batch,omitempty" yaml:"batch,omitempty" mapstructure:"batch,omitempty"`
 
-	// Simple corresponds to the JSON schema field "simple".
+	// Configure a simple log record processor.
+	// If omitted, ignore.
+	//
 	Simple *SimpleLogRecordProcessor `json:"simple,omitempty" yaml:"simple,omitempty" mapstructure:"simple,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
-type LoggerProviderJson struct {
-	// Limits corresponds to the JSON schema field "limits".
+type LoggerProvider struct {
+	// Configure log record limits. See also attribute_limits.
+	// If omitted, default values as described in LogRecordLimits are used.
+	//
 	Limits *LogRecordLimits `json:"limits,omitempty" yaml:"limits,omitempty" mapstructure:"limits,omitempty"`
 
-	// LoggerConfiguratorDevelopment corresponds to the JSON schema field
-	// "logger_configurator/development".
+	// Configure loggers.
+	// If omitted, all loggers use default values as described in
+	// ExperimentalLoggerConfig.
+	//
 	LoggerConfiguratorDevelopment *ExperimentalLoggerConfigurator `json:"logger_configurator/development,omitempty" yaml:"logger_configurator/development,omitempty" mapstructure:"logger_configurator/development,omitempty"`
 
-	// Processors corresponds to the JSON schema field "processors".
+	// Configure log record processors.
+	// Property is required and must be non-null.
+	//
 	Processors []LogRecordProcessor `json:"processors" yaml:"processors" mapstructure:"processors"`
 }
 
-type MeterProviderJson struct {
-	// ExemplarFilter corresponds to the JSON schema field "exemplar_filter".
+type MeterProvider struct {
+	// Configure the exemplar filter.
+	// Values include:
+	// * always_off: ExemplarFilter which makes no measurements eligible for being an
+	// Exemplar.
+	// * always_on: ExemplarFilter which makes all measurements eligible for being an
+	// Exemplar.
+	// * trace_based: ExemplarFilter which makes measurements recorded in the context
+	// of a sampled parent span eligible for being an Exemplar.
+	// If omitted, trace_based is used.
+	//
 	ExemplarFilter *ExemplarFilter `json:"exemplar_filter,omitempty" yaml:"exemplar_filter,omitempty" mapstructure:"exemplar_filter,omitempty"`
 
-	// MeterConfiguratorDevelopment corresponds to the JSON schema field
-	// "meter_configurator/development".
+	// Configure meters.
+	// If omitted, all meters use default values as described in
+	// ExperimentalMeterConfig.
+	//
 	MeterConfiguratorDevelopment *ExperimentalMeterConfigurator `json:"meter_configurator/development,omitempty" yaml:"meter_configurator/development,omitempty" mapstructure:"meter_configurator/development,omitempty"`
 
-	// Readers corresponds to the JSON schema field "readers".
+	// Configure metric readers.
+	// Property is required and must be non-null.
+	//
 	Readers []MetricReader `json:"readers" yaml:"readers" mapstructure:"readers"`
 
-	// Views corresponds to the JSON schema field "views".
+	// Configure views.
+	// Each view has a selector which determines the instrument(s) it applies to, and
+	// a configuration for the resulting stream(s).
+	// If omitted, no views are registered.
+	//
 	Views []View `json:"views,omitempty" yaml:"views,omitempty" mapstructure:"views,omitempty"`
 }
 
 type MetricProducer struct {
-	// Opencensus corresponds to the JSON schema field "opencensus".
+	// Configure metric producer to be opencensus.
+	// If omitted, ignore.
+	//
 	Opencensus OpenCensusMetricProducer `json:"opencensus,omitempty" yaml:"opencensus,omitempty" mapstructure:"opencensus,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type MetricReader struct {
-	// Periodic corresponds to the JSON schema field "periodic".
+	// Configure a periodic metric reader.
+	// If omitted, ignore.
+	//
 	Periodic *PeriodicMetricReader `json:"periodic,omitempty" yaml:"periodic,omitempty" mapstructure:"periodic,omitempty"`
 
-	// Pull corresponds to the JSON schema field "pull".
+	// Configure a pull based metric reader.
+	// If omitted, ignore.
+	//
 	Pull *PullMetricReader `json:"pull,omitempty" yaml:"pull,omitempty" mapstructure:"pull,omitempty"`
 }
 
 type NameStringValuePair struct {
-	// Name corresponds to the JSON schema field "name".
+	// The name of the pair.
+	// Property is required and must be non-null.
+	//
 	Name string `json:"name" yaml:"name" mapstructure:"name"`
 
-	// Value corresponds to the JSON schema field "value".
-	Value *string `json:"value" yaml:"value" mapstructure:"value"`
+	// The value of the pair.
+	// Property must be present, but if null the behavior is dependent on usage
+	// context.
+	//
+	Value NameStringValuePairValue `json:"value" yaml:"value" mapstructure:"value"`
 }
+
+// The value of the pair.
+// Property must be present, but if null the behavior is dependent on usage
+// context.
+type NameStringValuePairValue *string
 
 type OTLPGrpcExporter struct {
-	// CertificateFile corresponds to the JSON schema field "certificate_file".
-	CertificateFile *string `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
+	// Configure compression.
+	// Known values include: gzip, none. Implementations may support other compression
+	// algorithms.
+	// If omitted or null, none is used.
+	//
+	Compression OTLPGrpcExporterCompression `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
 
-	// ClientCertificateFile corresponds to the JSON schema field
-	// "client_certificate_file".
-	ClientCertificateFile *string `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
+	// Configure endpoint.
+	// If omitted or null, http://localhost:4317 is used.
+	//
+	Endpoint OTLPGrpcExporterEndpoint `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
 
-	// ClientKeyFile corresponds to the JSON schema field "client_key_file".
-	ClientKeyFile *string `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
-
-	// Compression corresponds to the JSON schema field "compression".
-	Compression *string `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
-
-	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
-
-	// Headers corresponds to the JSON schema field "headers".
+	// Configure headers. Entries have higher priority than entries from
+	// .headers_list.
+	// If an entry's .value is null, the entry is ignored.
+	// If omitted, no headers are added.
+	//
 	Headers []NameStringValuePair `json:"headers,omitempty" yaml:"headers,omitempty" mapstructure:"headers,omitempty"`
 
-	// HeadersList corresponds to the JSON schema field "headers_list".
-	HeadersList *string `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
+	// Configure headers. Entries have lower priority than entries from .headers.
+	// The value is a list of comma separated key-value pairs matching the format of
+	// OTEL_EXPORTER_OTLP_HEADERS. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#configuration-options
+	// for details.
+	// If omitted or null, no headers are added.
+	//
+	HeadersList OTLPGrpcExporterHeadersList `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
 
-	// Insecure corresponds to the JSON schema field "insecure".
-	Insecure *bool `json:"insecure,omitempty" yaml:"insecure,omitempty" mapstructure:"insecure,omitempty"`
+	// Configure max time (in milliseconds) to wait for each export.
+	// Value must be non-negative. A value of 0 indicates no limit (infinity).
+	// If omitted or null, 10000 is used.
+	//
+	Timeout OTLPGrpcExporterTimeout `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
 
-	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+	// Configure TLS settings for the exporter.
+	// If omitted, system default TLS settings are used.
+	//
+	Tls *GrpcTls `json:"tls,omitempty" yaml:"tls,omitempty" mapstructure:"tls,omitempty"`
 }
+
+// Configure compression.
+// Known values include: gzip, none. Implementations may support other compression
+// algorithms.
+// If omitted or null, none is used.
+type OTLPGrpcExporterCompression *string
+
+// Configure endpoint.
+// If omitted or null, http://localhost:4317 is used.
+type OTLPGrpcExporterEndpoint *string
+
+// Configure headers. Entries have lower priority than entries from .headers.
+// The value is a list of comma separated key-value pairs matching the format of
+// OTEL_EXPORTER_OTLP_HEADERS. See
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#configuration-options
+// for details.
+// If omitted or null, no headers are added.
+type OTLPGrpcExporterHeadersList *string
+
+// Configure max time (in milliseconds) to wait for each export.
+// Value must be non-negative. A value of 0 indicates no limit (infinity).
+// If omitted or null, 10000 is used.
+type OTLPGrpcExporterTimeout *int
 
 type OTLPGrpcMetricExporter struct {
-	// CertificateFile corresponds to the JSON schema field "certificate_file".
-	CertificateFile *string `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
+	// Configure compression.
+	// Known values include: gzip, none. Implementations may support other compression
+	// algorithms.
+	// If omitted or null, none is used.
+	//
+	Compression OTLPGrpcMetricExporterCompression `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
 
-	// ClientCertificateFile corresponds to the JSON schema field
-	// "client_certificate_file".
-	ClientCertificateFile *string `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
-
-	// ClientKeyFile corresponds to the JSON schema field "client_key_file".
-	ClientKeyFile *string `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
-
-	// Compression corresponds to the JSON schema field "compression".
-	Compression *string `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
-
-	// DefaultHistogramAggregation corresponds to the JSON schema field
-	// "default_histogram_aggregation".
+	// Configure default histogram aggregation.
+	// Values include:
+	// * base2_exponential_bucket_histogram: Use base2 exponential histogram as the
+	// default aggregation for histogram instruments.
+	// * explicit_bucket_histogram: Use explicit bucket histogram as the default
+	// aggregation for histogram instruments.
+	// If omitted, explicit_bucket_histogram is used.
+	//
 	DefaultHistogramAggregation *ExporterDefaultHistogramAggregation `json:"default_histogram_aggregation,omitempty" yaml:"default_histogram_aggregation,omitempty" mapstructure:"default_histogram_aggregation,omitempty"`
 
-	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
+	// Configure endpoint.
+	// If omitted or null, http://localhost:4317 is used.
+	//
+	Endpoint OTLPGrpcMetricExporterEndpoint `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
 
-	// Headers corresponds to the JSON schema field "headers".
+	// Configure headers. Entries have higher priority than entries from
+	// .headers_list.
+	// If an entry's .value is null, the entry is ignored.
+	// If omitted, no headers are added.
+	//
 	Headers []NameStringValuePair `json:"headers,omitempty" yaml:"headers,omitempty" mapstructure:"headers,omitempty"`
 
-	// HeadersList corresponds to the JSON schema field "headers_list".
-	HeadersList *string `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
+	// Configure headers. Entries have lower priority than entries from .headers.
+	// The value is a list of comma separated key-value pairs matching the format of
+	// OTEL_EXPORTER_OTLP_HEADERS. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#configuration-options
+	// for details.
+	// If omitted or null, no headers are added.
+	//
+	HeadersList OTLPGrpcMetricExporterHeadersList `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
 
-	// Insecure corresponds to the JSON schema field "insecure".
-	Insecure *bool `json:"insecure,omitempty" yaml:"insecure,omitempty" mapstructure:"insecure,omitempty"`
-
-	// TemporalityPreference corresponds to the JSON schema field
-	// "temporality_preference".
+	// Configure temporality preference.
+	// Values include:
+	// * cumulative: Use cumulative aggregation temporality for all instrument types.
+	// * delta: Use delta aggregation for all instrument types except up down counter
+	// and asynchronous up down counter.
+	// * low_memory: Use delta aggregation temporality for counter and histogram
+	// instrument types. Use cumulative aggregation temporality for all other
+	// instrument types.
+	// If omitted, cumulative is used.
+	//
 	TemporalityPreference *ExporterTemporalityPreference `json:"temporality_preference,omitempty" yaml:"temporality_preference,omitempty" mapstructure:"temporality_preference,omitempty"`
 
-	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+	// Configure max time (in milliseconds) to wait for each export.
+	// Value must be non-negative. A value of 0 indicates no limit (infinity).
+	// If omitted or null, 10000 is used.
+	//
+	Timeout OTLPGrpcMetricExporterTimeout `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+
+	// Configure TLS settings for the exporter.
+	// If omitted, system default TLS settings are used.
+	//
+	Tls *GrpcTls `json:"tls,omitempty" yaml:"tls,omitempty" mapstructure:"tls,omitempty"`
 }
+
+// Configure compression.
+// Known values include: gzip, none. Implementations may support other compression
+// algorithms.
+// If omitted or null, none is used.
+type OTLPGrpcMetricExporterCompression *string
+
+// Configure endpoint.
+// If omitted or null, http://localhost:4317 is used.
+type OTLPGrpcMetricExporterEndpoint *string
+
+// Configure headers. Entries have lower priority than entries from .headers.
+// The value is a list of comma separated key-value pairs matching the format of
+// OTEL_EXPORTER_OTLP_HEADERS. See
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#configuration-options
+// for details.
+// If omitted or null, no headers are added.
+type OTLPGrpcMetricExporterHeadersList *string
+
+// Configure max time (in milliseconds) to wait for each export.
+// Value must be non-negative. A value of 0 indicates no limit (infinity).
+// If omitted or null, 10000 is used.
+type OTLPGrpcMetricExporterTimeout *int
 
 type OTLPHttpEncoding string
 
@@ -588,298 +1514,669 @@ const OTLPHttpEncodingJson OTLPHttpEncoding = "json"
 const OTLPHttpEncodingProtobuf OTLPHttpEncoding = "protobuf"
 
 type OTLPHttpExporter struct {
-	// CertificateFile corresponds to the JSON schema field "certificate_file".
-	CertificateFile *string `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
+	// Configure compression.
+	// Known values include: gzip, none. Implementations may support other compression
+	// algorithms.
+	// If omitted or null, none is used.
+	//
+	Compression OTLPHttpExporterCompression `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
 
-	// ClientCertificateFile corresponds to the JSON schema field
-	// "client_certificate_file".
-	ClientCertificateFile *string `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
-
-	// ClientKeyFile corresponds to the JSON schema field "client_key_file".
-	ClientKeyFile *string `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
-
-	// Compression corresponds to the JSON schema field "compression".
-	Compression *string `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
-
-	// Encoding corresponds to the JSON schema field "encoding".
+	// Configure the encoding used for messages.
+	// Implementations may not support json.
+	// Values include:
+	// * json: Protobuf JSON encoding.
+	// * protobuf: Protobuf binary encoding.
+	// If omitted, protobuf is used.
+	//
 	Encoding *OTLPHttpEncoding `json:"encoding,omitempty" yaml:"encoding,omitempty" mapstructure:"encoding,omitempty"`
 
-	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
+	// Configure endpoint, including the signal specific path.
+	// If omitted or null, the http://localhost:4318/v1/{signal} (where signal is
+	// 'traces', 'logs', or 'metrics') is used.
+	//
+	Endpoint OTLPHttpExporterEndpoint `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
 
-	// Headers corresponds to the JSON schema field "headers".
+	// Configure headers. Entries have higher priority than entries from
+	// .headers_list.
+	// If an entry's .value is null, the entry is ignored.
+	// If omitted, no headers are added.
+	//
 	Headers []NameStringValuePair `json:"headers,omitempty" yaml:"headers,omitempty" mapstructure:"headers,omitempty"`
 
-	// HeadersList corresponds to the JSON schema field "headers_list".
-	HeadersList *string `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
+	// Configure headers. Entries have lower priority than entries from .headers.
+	// The value is a list of comma separated key-value pairs matching the format of
+	// OTEL_EXPORTER_OTLP_HEADERS. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#configuration-options
+	// for details.
+	// If omitted or null, no headers are added.
+	//
+	HeadersList OTLPHttpExporterHeadersList `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
 
-	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+	// Configure max time (in milliseconds) to wait for each export.
+	// Value must be non-negative. A value of 0 indicates no limit (infinity).
+	// If omitted or null, 10000 is used.
+	//
+	Timeout OTLPHttpExporterTimeout `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+
+	// Configure TLS settings for the exporter.
+	// If omitted, system default TLS settings are used.
+	//
+	Tls *HttpTls `json:"tls,omitempty" yaml:"tls,omitempty" mapstructure:"tls,omitempty"`
 }
+
+// Configure compression.
+// Known values include: gzip, none. Implementations may support other compression
+// algorithms.
+// If omitted or null, none is used.
+type OTLPHttpExporterCompression *string
+
+// Configure endpoint, including the signal specific path.
+// If omitted or null, the http://localhost:4318/v1/{signal} (where signal is
+// 'traces', 'logs', or 'metrics') is used.
+type OTLPHttpExporterEndpoint *string
+
+// Configure headers. Entries have lower priority than entries from .headers.
+// The value is a list of comma separated key-value pairs matching the format of
+// OTEL_EXPORTER_OTLP_HEADERS. See
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#configuration-options
+// for details.
+// If omitted or null, no headers are added.
+type OTLPHttpExporterHeadersList *string
+
+// Configure max time (in milliseconds) to wait for each export.
+// Value must be non-negative. A value of 0 indicates no limit (infinity).
+// If omitted or null, 10000 is used.
+type OTLPHttpExporterTimeout *int
 
 type OTLPHttpMetricExporter struct {
-	// CertificateFile corresponds to the JSON schema field "certificate_file".
-	CertificateFile *string `json:"certificate_file,omitempty" yaml:"certificate_file,omitempty" mapstructure:"certificate_file,omitempty"`
+	// Configure compression.
+	// Known values include: gzip, none. Implementations may support other compression
+	// algorithms.
+	// If omitted or null, none is used.
+	//
+	Compression OTLPHttpMetricExporterCompression `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
 
-	// ClientCertificateFile corresponds to the JSON schema field
-	// "client_certificate_file".
-	ClientCertificateFile *string `json:"client_certificate_file,omitempty" yaml:"client_certificate_file,omitempty" mapstructure:"client_certificate_file,omitempty"`
-
-	// ClientKeyFile corresponds to the JSON schema field "client_key_file".
-	ClientKeyFile *string `json:"client_key_file,omitempty" yaml:"client_key_file,omitempty" mapstructure:"client_key_file,omitempty"`
-
-	// Compression corresponds to the JSON schema field "compression".
-	Compression *string `json:"compression,omitempty" yaml:"compression,omitempty" mapstructure:"compression,omitempty"`
-
-	// DefaultHistogramAggregation corresponds to the JSON schema field
-	// "default_histogram_aggregation".
+	// Configure default histogram aggregation.
+	// Values include:
+	// * base2_exponential_bucket_histogram: Use base2 exponential histogram as the
+	// default aggregation for histogram instruments.
+	// * explicit_bucket_histogram: Use explicit bucket histogram as the default
+	// aggregation for histogram instruments.
+	// If omitted, explicit_bucket_histogram is used.
+	//
 	DefaultHistogramAggregation *ExporterDefaultHistogramAggregation `json:"default_histogram_aggregation,omitempty" yaml:"default_histogram_aggregation,omitempty" mapstructure:"default_histogram_aggregation,omitempty"`
 
-	// Encoding corresponds to the JSON schema field "encoding".
+	// Configure the encoding used for messages.
+	// Implementations may not support json.
+	// Values include:
+	// * json: Protobuf JSON encoding.
+	// * protobuf: Protobuf binary encoding.
+	// If omitted, protobuf is used.
+	//
 	Encoding *OTLPHttpEncoding `json:"encoding,omitempty" yaml:"encoding,omitempty" mapstructure:"encoding,omitempty"`
 
-	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
+	// Configure endpoint.
+	// If omitted or null, http://localhost:4318/v1/metrics is used.
+	//
+	Endpoint OTLPHttpMetricExporterEndpoint `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
 
-	// Headers corresponds to the JSON schema field "headers".
+	// Configure headers. Entries have higher priority than entries from
+	// .headers_list.
+	// If an entry's .value is null, the entry is ignored.
+	// If omitted, no headers are added.
+	//
 	Headers []NameStringValuePair `json:"headers,omitempty" yaml:"headers,omitempty" mapstructure:"headers,omitempty"`
 
-	// HeadersList corresponds to the JSON schema field "headers_list".
-	HeadersList *string `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
+	// Configure headers. Entries have lower priority than entries from .headers.
+	// The value is a list of comma separated key-value pairs matching the format of
+	// OTEL_EXPORTER_OTLP_HEADERS. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#configuration-options
+	// for details.
+	// If omitted or null, no headers are added.
+	//
+	HeadersList OTLPHttpMetricExporterHeadersList `json:"headers_list,omitempty" yaml:"headers_list,omitempty" mapstructure:"headers_list,omitempty"`
 
-	// TemporalityPreference corresponds to the JSON schema field
-	// "temporality_preference".
+	// Configure temporality preference.
+	// Values include:
+	// * cumulative: Use cumulative aggregation temporality for all instrument types.
+	// * delta: Use delta aggregation for all instrument types except up down counter
+	// and asynchronous up down counter.
+	// * low_memory: Use delta aggregation temporality for counter and histogram
+	// instrument types. Use cumulative aggregation temporality for all other
+	// instrument types.
+	// If omitted, cumulative is used.
+	//
 	TemporalityPreference *ExporterTemporalityPreference `json:"temporality_preference,omitempty" yaml:"temporality_preference,omitempty" mapstructure:"temporality_preference,omitempty"`
 
-	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+	// Configure max time (in milliseconds) to wait for each export.
+	// Value must be non-negative. A value of 0 indicates no limit (infinity).
+	// If omitted or null, 10000 is used.
+	//
+	Timeout OTLPHttpMetricExporterTimeout `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+
+	// Configure TLS settings for the exporter.
+	// If omitted, system default TLS settings are used.
+	//
+	Tls *HttpTls `json:"tls,omitempty" yaml:"tls,omitempty" mapstructure:"tls,omitempty"`
 }
+
+// Configure compression.
+// Known values include: gzip, none. Implementations may support other compression
+// algorithms.
+// If omitted or null, none is used.
+type OTLPHttpMetricExporterCompression *string
+
+// Configure endpoint.
+// If omitted or null, http://localhost:4318/v1/metrics is used.
+type OTLPHttpMetricExporterEndpoint *string
+
+// Configure headers. Entries have lower priority than entries from .headers.
+// The value is a list of comma separated key-value pairs matching the format of
+// OTEL_EXPORTER_OTLP_HEADERS. See
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/protocol/exporter.md#configuration-options
+// for details.
+// If omitted or null, no headers are added.
+type OTLPHttpMetricExporterHeadersList *string
+
+// Configure max time (in milliseconds) to wait for each export.
+// Value must be non-negative. A value of 0 indicates no limit (infinity).
+// If omitted or null, 10000 is used.
+type OTLPHttpMetricExporterTimeout *int
 
 type OpenCensusMetricProducer map[string]interface{}
 
 type OpenTelemetryConfiguration struct {
-	// AttributeLimits corresponds to the JSON schema field "attribute_limits".
+	// Configure general attribute limits. See also tracer_provider.limits,
+	// logger_provider.limits.
+	// If omitted, default values as described in AttributeLimits are used.
+	//
 	AttributeLimits *AttributeLimits `json:"attribute_limits,omitempty" yaml:"attribute_limits,omitempty" mapstructure:"attribute_limits,omitempty"`
 
-	// Disabled corresponds to the JSON schema field "disabled".
-	Disabled *bool `json:"disabled,omitempty" yaml:"disabled,omitempty" mapstructure:"disabled,omitempty"`
+	// Configure if the SDK is disabled or not.
+	// If omitted or null, false is used.
+	//
+	Disabled OpenTelemetryConfigurationDisabled `json:"disabled,omitempty" yaml:"disabled,omitempty" mapstructure:"disabled,omitempty"`
 
-	// FileFormat corresponds to the JSON schema field "file_format".
+	// Defines configuration parameters specific to a particular OpenTelemetry
+	// distribution or vendor.
+	// This section provides a standardized location for distribution-specific
+	// settings
+	// that are not part of the OpenTelemetry configuration model.
+	// It allows vendors to expose their own extensions and general configuration
+	// options.
+	// If omitted, distribution defaults are used.
+	//
+	Distribution Distribution `json:"distribution,omitempty" yaml:"distribution,omitempty" mapstructure:"distribution,omitempty"`
+
+	// The file format version.
+	// Represented as a string including the semver major, minor version numbers (and
+	// optionally the meta tag). For example: "0.4", "1.0-rc.2", "1.0" (after stable
+	// release).
+	// See
+	// https://github.com/open-telemetry/opentelemetry-configuration/blob/main/VERSIONING.md
+	// for more details.
+	// The yaml format is documented at
+	// https://github.com/open-telemetry/opentelemetry-configuration/tree/main/schema
+	// Property is required and must be non-null.
+	//
 	FileFormat string `json:"file_format" yaml:"file_format" mapstructure:"file_format"`
 
-	// InstrumentationDevelopment corresponds to the JSON schema field
-	// "instrumentation/development".
-	InstrumentationDevelopment OpenTelemetryConfigurationInstrumentationDevelopment `json:"instrumentation/development,omitempty" yaml:"instrumentation/development,omitempty" mapstructure:"instrumentation/development,omitempty"`
+	// Configure instrumentation.
+	// If omitted, instrumentation defaults are used.
+	//
+	InstrumentationDevelopment *ExperimentalInstrumentation `json:"instrumentation/development,omitempty" yaml:"instrumentation/development,omitempty" mapstructure:"instrumentation/development,omitempty"`
 
-	// LogLevel corresponds to the JSON schema field "log_level".
-	LogLevel *string `json:"log_level,omitempty" yaml:"log_level,omitempty" mapstructure:"log_level,omitempty"`
+	// Configure the log level of the internal logger used by the SDK.
+	// Values include:
+	// * debug: debug, severity number 5.
+	// * debug2: debug2, severity number 6.
+	// * debug3: debug3, severity number 7.
+	// * debug4: debug4, severity number 8.
+	// * error: error, severity number 17.
+	// * error2: error2, severity number 18.
+	// * error3: error3, severity number 19.
+	// * error4: error4, severity number 20.
+	// * fatal: fatal, severity number 21.
+	// * fatal2: fatal2, severity number 22.
+	// * fatal3: fatal3, severity number 23.
+	// * fatal4: fatal4, severity number 24.
+	// * info: info, severity number 9.
+	// * info2: info2, severity number 10.
+	// * info3: info3, severity number 11.
+	// * info4: info4, severity number 12.
+	// * trace: trace, severity number 1.
+	// * trace2: trace2, severity number 2.
+	// * trace3: trace3, severity number 3.
+	// * trace4: trace4, severity number 4.
+	// * warn: warn, severity number 13.
+	// * warn2: warn2, severity number 14.
+	// * warn3: warn3, severity number 15.
+	// * warn4: warn4, severity number 16.
+	// If omitted, INFO is used.
+	//
+	LogLevel *SeverityNumber `json:"log_level,omitempty" yaml:"log_level,omitempty" mapstructure:"log_level,omitempty"`
 
-	// LoggerProvider corresponds to the JSON schema field "logger_provider".
-	LoggerProvider OpenTelemetryConfigurationLoggerProvider `json:"logger_provider,omitempty" yaml:"logger_provider,omitempty" mapstructure:"logger_provider,omitempty"`
+	// Configure logger provider.
+	// If omitted, a noop logger provider is used.
+	//
+	LoggerProvider *LoggerProvider `json:"logger_provider,omitempty" yaml:"logger_provider,omitempty" mapstructure:"logger_provider,omitempty"`
 
-	// MeterProvider corresponds to the JSON schema field "meter_provider".
-	MeterProvider OpenTelemetryConfigurationMeterProvider `json:"meter_provider,omitempty" yaml:"meter_provider,omitempty" mapstructure:"meter_provider,omitempty"`
+	// Configure meter provider.
+	// If omitted, a noop meter provider is used.
+	//
+	MeterProvider *MeterProvider `json:"meter_provider,omitempty" yaml:"meter_provider,omitempty" mapstructure:"meter_provider,omitempty"`
 
-	// Propagator corresponds to the JSON schema field "propagator".
-	Propagator OpenTelemetryConfigurationPropagator `json:"propagator,omitempty" yaml:"propagator,omitempty" mapstructure:"propagator,omitempty"`
+	// Configure text map context propagators.
+	// If omitted, a noop propagator is used.
+	//
+	Propagator *Propagator `json:"propagator,omitempty" yaml:"propagator,omitempty" mapstructure:"propagator,omitempty"`
 
-	// Resource corresponds to the JSON schema field "resource".
-	Resource OpenTelemetryConfigurationResource `json:"resource,omitempty" yaml:"resource,omitempty" mapstructure:"resource,omitempty"`
+	// Configure resource for all signals.
+	// If omitted, the default resource is used.
+	//
+	Resource *Resource `json:"resource,omitempty" yaml:"resource,omitempty" mapstructure:"resource,omitempty"`
 
-	// TracerProvider corresponds to the JSON schema field "tracer_provider".
-	TracerProvider OpenTelemetryConfigurationTracerProvider `json:"tracer_provider,omitempty" yaml:"tracer_provider,omitempty" mapstructure:"tracer_provider,omitempty"`
+	// Configure tracer provider.
+	// If omitted, a noop tracer provider is used.
+	//
+	TracerProvider *TracerProvider `json:"tracer_provider,omitempty" yaml:"tracer_provider,omitempty" mapstructure:"tracer_provider,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
-type OpenTelemetryConfigurationInstrumentationDevelopment interface{}
-
-type OpenTelemetryConfigurationLoggerProvider interface{}
-
-type OpenTelemetryConfigurationMeterProvider interface{}
-
-type OpenTelemetryConfigurationPropagator interface{}
-
-type OpenTelemetryConfigurationResource interface{}
-
-type OpenTelemetryConfigurationTracerProvider interface{}
+// Configure if the SDK is disabled or not.
+// If omitted or null, false is used.
+type OpenTelemetryConfigurationDisabled *bool
 
 type OpenTracingPropagator map[string]interface{}
 
 type ParentBasedSampler struct {
-	// LocalParentNotSampled corresponds to the JSON schema field
-	// "local_parent_not_sampled".
+	// Configure local_parent_not_sampled sampler.
+	// If omitted, always_off is used.
+	//
 	LocalParentNotSampled *Sampler `json:"local_parent_not_sampled,omitempty" yaml:"local_parent_not_sampled,omitempty" mapstructure:"local_parent_not_sampled,omitempty"`
 
-	// LocalParentSampled corresponds to the JSON schema field "local_parent_sampled".
+	// Configure local_parent_sampled sampler.
+	// If omitted, always_on is used.
+	//
 	LocalParentSampled *Sampler `json:"local_parent_sampled,omitempty" yaml:"local_parent_sampled,omitempty" mapstructure:"local_parent_sampled,omitempty"`
 
-	// RemoteParentNotSampled corresponds to the JSON schema field
-	// "remote_parent_not_sampled".
+	// Configure remote_parent_not_sampled sampler.
+	// If omitted, always_off is used.
+	//
 	RemoteParentNotSampled *Sampler `json:"remote_parent_not_sampled,omitempty" yaml:"remote_parent_not_sampled,omitempty" mapstructure:"remote_parent_not_sampled,omitempty"`
 
-	// RemoteParentSampled corresponds to the JSON schema field
-	// "remote_parent_sampled".
+	// Configure remote_parent_sampled sampler.
+	// If omitted, always_on is used.
+	//
 	RemoteParentSampled *Sampler `json:"remote_parent_sampled,omitempty" yaml:"remote_parent_sampled,omitempty" mapstructure:"remote_parent_sampled,omitempty"`
 
-	// Root corresponds to the JSON schema field "root".
+	// Configure root sampler.
+	// If omitted, always_on is used.
+	//
 	Root *Sampler `json:"root,omitempty" yaml:"root,omitempty" mapstructure:"root,omitempty"`
 }
 
 type PeriodicMetricReader struct {
-	// CardinalityLimits corresponds to the JSON schema field "cardinality_limits".
+	// Configure cardinality limits.
+	// If omitted, default values as described in CardinalityLimits are used.
+	//
 	CardinalityLimits *CardinalityLimits `json:"cardinality_limits,omitempty" yaml:"cardinality_limits,omitempty" mapstructure:"cardinality_limits,omitempty"`
 
-	// Exporter corresponds to the JSON schema field "exporter".
+	// Configure exporter.
+	// Property is required and must be non-null.
+	//
 	Exporter PushMetricExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
 
-	// Interval corresponds to the JSON schema field "interval".
-	Interval *int `json:"interval,omitempty" yaml:"interval,omitempty" mapstructure:"interval,omitempty"`
+	// Configure delay interval (in milliseconds) between start of two consecutive
+	// exports.
+	// Value must be non-negative.
+	// If omitted or null, 60000 is used.
+	//
+	Interval PeriodicMetricReaderInterval `json:"interval,omitempty" yaml:"interval,omitempty" mapstructure:"interval,omitempty"`
 
-	// Producers corresponds to the JSON schema field "producers".
+	// Configure metric producers.
+	// If omitted, no metric producers are added.
+	//
 	Producers []MetricProducer `json:"producers,omitempty" yaml:"producers,omitempty" mapstructure:"producers,omitempty"`
 
-	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
+	// Configure maximum allowed time (in milliseconds) to export data.
+	// Value must be non-negative. A value of 0 indicates no limit (infinity).
+	// If omitted or null, 30000 is used.
+	//
+	Timeout PeriodicMetricReaderTimeout `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
 }
 
-type PropagatorJson struct {
-	// Composite corresponds to the JSON schema field "composite".
+// Configure delay interval (in milliseconds) between start of two consecutive
+// exports.
+// Value must be non-negative.
+// If omitted or null, 60000 is used.
+type PeriodicMetricReaderInterval *int
+
+// Configure maximum allowed time (in milliseconds) to export data.
+// Value must be non-negative. A value of 0 indicates no limit (infinity).
+// If omitted or null, 30000 is used.
+type PeriodicMetricReaderTimeout *int
+
+type Propagator struct {
+	// Configure the propagators in the composite text map propagator. Entries from
+	// .composite_list are appended to the list here with duplicates filtered out.
+	// Built-in propagator keys include: tracecontext, baggage, b3, b3multi, jaeger,
+	// ottrace. Known third party keys include: xray.
+	// If omitted, and .composite_list is omitted or null, a noop propagator is used.
+	//
 	Composite []TextMapPropagator `json:"composite,omitempty" yaml:"composite,omitempty" mapstructure:"composite,omitempty"`
 
-	// CompositeList corresponds to the JSON schema field "composite_list".
-	CompositeList *string `json:"composite_list,omitempty" yaml:"composite_list,omitempty" mapstructure:"composite_list,omitempty"`
+	// Configure the propagators in the composite text map propagator. Entries are
+	// appended to .composite with duplicates filtered out.
+	// The value is a comma separated list of propagator identifiers matching the
+	// format of OTEL_PROPAGATORS. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/configuration/sdk-environment-variables.md#general-sdk-configuration
+	// for details.
+	// Built-in propagator identifiers include: tracecontext, baggage, b3, b3multi,
+	// jaeger, ottrace. Known third party identifiers include: xray.
+	// If omitted or null, and .composite is omitted or null, a noop propagator is
+	// used.
+	//
+	CompositeList PropagatorCompositeList `json:"composite_list,omitempty" yaml:"composite_list,omitempty" mapstructure:"composite_list,omitempty"`
 }
 
+// Configure the propagators in the composite text map propagator. Entries are
+// appended to .composite with duplicates filtered out.
+// The value is a comma separated list of propagator identifiers matching the
+// format of OTEL_PROPAGATORS. See
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/configuration/sdk-environment-variables.md#general-sdk-configuration
+// for details.
+// Built-in propagator identifiers include: tracecontext, baggage, b3, b3multi,
+// jaeger, ottrace. Known third party identifiers include: xray.
+// If omitted or null, and .composite is omitted or null, a noop propagator is
+// used.
+type PropagatorCompositeList *string
+
 type PullMetricExporter struct {
-	// PrometheusDevelopment corresponds to the JSON schema field
-	// "prometheus/development".
+	// Configure exporter to be prometheus.
+	// If omitted, ignore.
+	//
 	PrometheusDevelopment *ExperimentalPrometheusMetricExporter `json:"prometheus/development,omitempty" yaml:"prometheus/development,omitempty" mapstructure:"prometheus/development,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
 type PullMetricReader struct {
-	// CardinalityLimits corresponds to the JSON schema field "cardinality_limits".
+	// Configure cardinality limits.
+	// If omitted, default values as described in CardinalityLimits are used.
+	//
 	CardinalityLimits *CardinalityLimits `json:"cardinality_limits,omitempty" yaml:"cardinality_limits,omitempty" mapstructure:"cardinality_limits,omitempty"`
 
-	// Exporter corresponds to the JSON schema field "exporter".
+	// Configure exporter.
+	// Property is required and must be non-null.
+	//
 	Exporter PullMetricExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
 
-	// Producers corresponds to the JSON schema field "producers".
+	// Configure metric producers.
+	// If omitted, no metric producers are added.
+	//
 	Producers []MetricProducer `json:"producers,omitempty" yaml:"producers,omitempty" mapstructure:"producers,omitempty"`
 }
 
 type PushMetricExporter struct {
-	// Console corresponds to the JSON schema field "console".
-	Console ConsoleExporter `json:"console,omitempty" yaml:"console,omitempty" mapstructure:"console,omitempty"`
+	// Configure exporter to be console.
+	// If omitted, ignore.
+	//
+	Console *ConsoleMetricExporter `json:"console,omitempty" yaml:"console,omitempty" mapstructure:"console,omitempty"`
 
-	// OTLPFileDevelopment corresponds to the JSON schema field
-	// "otlp_file/development".
+	// Configure exporter to be OTLP with file transport.
+	// If omitted, ignore.
+	//
 	OTLPFileDevelopment *ExperimentalOTLPFileMetricExporter `json:"otlp_file/development,omitempty" yaml:"otlp_file/development,omitempty" mapstructure:"otlp_file/development,omitempty"`
 
-	// OTLPGrpc corresponds to the JSON schema field "otlp_grpc".
+	// Configure exporter to be OTLP with gRPC transport.
+	// If omitted, ignore.
+	//
 	OTLPGrpc *OTLPGrpcMetricExporter `json:"otlp_grpc,omitempty" yaml:"otlp_grpc,omitempty" mapstructure:"otlp_grpc,omitempty"`
 
-	// OTLPHttp corresponds to the JSON schema field "otlp_http".
+	// Configure exporter to be OTLP with HTTP transport.
+	// If omitted, ignore.
+	//
 	OTLPHttp *OTLPHttpMetricExporter `json:"otlp_http,omitempty" yaml:"otlp_http,omitempty" mapstructure:"otlp_http,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
-type ResourceJson struct {
-	// Attributes corresponds to the JSON schema field "attributes".
+type Resource struct {
+	// Configure resource attributes. Entries have higher priority than entries from
+	// .resource.attributes_list.
+	// If omitted, no resource attributes are added.
+	//
 	Attributes []AttributeNameValue `json:"attributes,omitempty" yaml:"attributes,omitempty" mapstructure:"attributes,omitempty"`
 
-	// AttributesList corresponds to the JSON schema field "attributes_list".
-	AttributesList *string `json:"attributes_list,omitempty" yaml:"attributes_list,omitempty" mapstructure:"attributes_list,omitempty"`
+	// Configure resource attributes. Entries have lower priority than entries from
+	// .resource.attributes.
+	// The value is a list of comma separated key-value pairs matching the format of
+	// OTEL_RESOURCE_ATTRIBUTES. See
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/configuration/sdk-environment-variables.md#general-sdk-configuration
+	// for details.
+	// If omitted or null, no resource attributes are added.
+	//
+	AttributesList ResourceAttributesList `json:"attributes_list,omitempty" yaml:"attributes_list,omitempty" mapstructure:"attributes_list,omitempty"`
 
-	// DetectionDevelopment corresponds to the JSON schema field
-	// "detection/development".
+	// Configure resource detection.
+	// If omitted, resource detection is disabled.
+	//
 	DetectionDevelopment *ExperimentalResourceDetection `json:"detection/development,omitempty" yaml:"detection/development,omitempty" mapstructure:"detection/development,omitempty"`
 
-	// SchemaUrl corresponds to the JSON schema field "schema_url".
-	SchemaUrl *string `json:"schema_url,omitempty" yaml:"schema_url,omitempty" mapstructure:"schema_url,omitempty"`
+	// Configure resource schema URL.
+	// If omitted or null, no schema URL is used.
+	//
+	SchemaUrl ResourceSchemaUrl `json:"schema_url,omitempty" yaml:"schema_url,omitempty" mapstructure:"schema_url,omitempty"`
 }
 
+// Configure resource attributes. Entries have lower priority than entries from
+// .resource.attributes.
+// The value is a list of comma separated key-value pairs matching the format of
+// OTEL_RESOURCE_ATTRIBUTES. See
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/configuration/sdk-environment-variables.md#general-sdk-configuration
+// for details.
+// If omitted or null, no resource attributes are added.
+type ResourceAttributesList *string
+
+// Configure resource schema URL.
+// If omitted or null, no schema URL is used.
+type ResourceSchemaUrl *string
+
 type Sampler struct {
-	// AlwaysOff corresponds to the JSON schema field "always_off".
+	// Configure sampler to be always_off.
+	// If omitted, ignore.
+	//
 	AlwaysOff AlwaysOffSampler `json:"always_off,omitempty" yaml:"always_off,omitempty" mapstructure:"always_off,omitempty"`
 
-	// AlwaysOn corresponds to the JSON schema field "always_on".
+	// Configure sampler to be always_on.
+	// If omitted, ignore.
+	//
 	AlwaysOn AlwaysOnSampler `json:"always_on,omitempty" yaml:"always_on,omitempty" mapstructure:"always_on,omitempty"`
 
-	// JaegerRemote corresponds to the JSON schema field "jaeger_remote".
-	JaegerRemote *JaegerRemoteSampler `json:"jaeger_remote,omitempty" yaml:"jaeger_remote,omitempty" mapstructure:"jaeger_remote,omitempty"`
+	// Configure sampler to be composite.
+	// If omitted, ignore.
+	//
+	CompositeDevelopment *ExperimentalComposableSampler `json:"composite/development,omitempty" yaml:"composite/development,omitempty" mapstructure:"composite/development,omitempty"`
 
-	// ParentBased corresponds to the JSON schema field "parent_based".
+	// Configure sampler to be jaeger_remote.
+	// If omitted, ignore.
+	//
+	JaegerRemoteDevelopment *ExperimentalJaegerRemoteSampler `json:"jaeger_remote/development,omitempty" yaml:"jaeger_remote/development,omitempty" mapstructure:"jaeger_remote/development,omitempty"`
+
+	// Configure sampler to be parent_based.
+	// If omitted, ignore.
+	//
 	ParentBased *ParentBasedSampler `json:"parent_based,omitempty" yaml:"parent_based,omitempty" mapstructure:"parent_based,omitempty"`
 
-	// TraceIDRatioBased corresponds to the JSON schema field "trace_id_ratio_based".
+	// Configure sampler to be probability.
+	// If omitted, ignore.
+	//
+	ProbabilityDevelopment *ExperimentalProbabilitySampler `json:"probability/development,omitempty" yaml:"probability/development,omitempty" mapstructure:"probability/development,omitempty"`
+
+	// Configure sampler to be trace_id_ratio_based.
+	// If omitted, ignore.
+	//
 	TraceIDRatioBased *TraceIDRatioBasedSampler `json:"trace_id_ratio_based,omitempty" yaml:"trace_id_ratio_based,omitempty" mapstructure:"trace_id_ratio_based,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
+type SeverityNumber string
+
+const SeverityNumberDebug SeverityNumber = "debug"
+const SeverityNumberDebug2 SeverityNumber = "debug2"
+const SeverityNumberDebug3 SeverityNumber = "debug3"
+const SeverityNumberDebug4 SeverityNumber = "debug4"
+const SeverityNumberError SeverityNumber = "error"
+const SeverityNumberError2 SeverityNumber = "error2"
+const SeverityNumberError3 SeverityNumber = "error3"
+const SeverityNumberError4 SeverityNumber = "error4"
+const SeverityNumberFatal SeverityNumber = "fatal"
+const SeverityNumberFatal2 SeverityNumber = "fatal2"
+const SeverityNumberFatal3 SeverityNumber = "fatal3"
+const SeverityNumberFatal4 SeverityNumber = "fatal4"
+const SeverityNumberInfo SeverityNumber = "info"
+const SeverityNumberInfo2 SeverityNumber = "info2"
+const SeverityNumberInfo3 SeverityNumber = "info3"
+const SeverityNumberInfo4 SeverityNumber = "info4"
+const SeverityNumberTrace SeverityNumber = "trace"
+const SeverityNumberTrace2 SeverityNumber = "trace2"
+const SeverityNumberTrace3 SeverityNumber = "trace3"
+const SeverityNumberTrace4 SeverityNumber = "trace4"
+const SeverityNumberWarn SeverityNumber = "warn"
+const SeverityNumberWarn2 SeverityNumber = "warn2"
+const SeverityNumberWarn3 SeverityNumber = "warn3"
+const SeverityNumberWarn4 SeverityNumber = "warn4"
+
 type SimpleLogRecordProcessor struct {
-	// Exporter corresponds to the JSON schema field "exporter".
+	// Configure exporter.
+	// Property is required and must be non-null.
+	//
 	Exporter LogRecordExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
 }
 
 type SimpleSpanProcessor struct {
-	// Exporter corresponds to the JSON schema field "exporter".
+	// Configure exporter.
+	// Property is required and must be non-null.
+	//
 	Exporter SpanExporter `json:"exporter" yaml:"exporter" mapstructure:"exporter"`
 }
 
 type SpanExporter struct {
-	// Console corresponds to the JSON schema field "console".
+	// Configure exporter to be console.
+	// If omitted, ignore.
+	//
 	Console ConsoleExporter `json:"console,omitempty" yaml:"console,omitempty" mapstructure:"console,omitempty"`
 
-	// OTLPFileDevelopment corresponds to the JSON schema field
-	// "otlp_file/development".
+	// Configure exporter to be OTLP with file transport.
+	// If omitted, ignore.
+	//
 	OTLPFileDevelopment *ExperimentalOTLPFileExporter `json:"otlp_file/development,omitempty" yaml:"otlp_file/development,omitempty" mapstructure:"otlp_file/development,omitempty"`
 
-	// OTLPGrpc corresponds to the JSON schema field "otlp_grpc".
+	// Configure exporter to be OTLP with gRPC transport.
+	// If omitted, ignore.
+	//
 	OTLPGrpc *OTLPGrpcExporter `json:"otlp_grpc,omitempty" yaml:"otlp_grpc,omitempty" mapstructure:"otlp_grpc,omitempty"`
 
-	// OTLPHttp corresponds to the JSON schema field "otlp_http".
+	// Configure exporter to be OTLP with HTTP transport.
+	// If omitted, ignore.
+	//
 	OTLPHttp *OTLPHttpExporter `json:"otlp_http,omitempty" yaml:"otlp_http,omitempty" mapstructure:"otlp_http,omitempty"`
-
-	// Zipkin corresponds to the JSON schema field "zipkin".
-	Zipkin *ZipkinSpanExporter `json:"zipkin,omitempty" yaml:"zipkin,omitempty" mapstructure:"zipkin,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
 
+type SpanKind string
+
+const SpanKindClient SpanKind = "client"
+const SpanKindConsumer SpanKind = "consumer"
+const SpanKindInternal SpanKind = "internal"
+const SpanKindProducer SpanKind = "producer"
+const SpanKindServer SpanKind = "server"
+
 type SpanLimits struct {
-	// AttributeCountLimit corresponds to the JSON schema field
-	// "attribute_count_limit".
-	AttributeCountLimit *int `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
+	// Configure max attribute count. Overrides
+	// .attribute_limits.attribute_count_limit.
+	// Value must be non-negative.
+	// If omitted or null, 128 is used.
+	//
+	AttributeCountLimit SpanLimitsAttributeCountLimit `json:"attribute_count_limit,omitempty" yaml:"attribute_count_limit,omitempty" mapstructure:"attribute_count_limit,omitempty"`
 
-	// AttributeValueLengthLimit corresponds to the JSON schema field
-	// "attribute_value_length_limit".
-	AttributeValueLengthLimit *int `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
+	// Configure max attribute value size. Overrides
+	// .attribute_limits.attribute_value_length_limit.
+	// Value must be non-negative.
+	// If omitted or null, there is no limit.
+	//
+	AttributeValueLengthLimit SpanLimitsAttributeValueLengthLimit `json:"attribute_value_length_limit,omitempty" yaml:"attribute_value_length_limit,omitempty" mapstructure:"attribute_value_length_limit,omitempty"`
 
-	// EventAttributeCountLimit corresponds to the JSON schema field
-	// "event_attribute_count_limit".
-	EventAttributeCountLimit *int `json:"event_attribute_count_limit,omitempty" yaml:"event_attribute_count_limit,omitempty" mapstructure:"event_attribute_count_limit,omitempty"`
+	// Configure max attributes per span event.
+	// Value must be non-negative.
+	// If omitted or null, 128 is used.
+	//
+	EventAttributeCountLimit SpanLimitsEventAttributeCountLimit `json:"event_attribute_count_limit,omitempty" yaml:"event_attribute_count_limit,omitempty" mapstructure:"event_attribute_count_limit,omitempty"`
 
-	// EventCountLimit corresponds to the JSON schema field "event_count_limit".
-	EventCountLimit *int `json:"event_count_limit,omitempty" yaml:"event_count_limit,omitempty" mapstructure:"event_count_limit,omitempty"`
+	// Configure max span event count.
+	// Value must be non-negative.
+	// If omitted or null, 128 is used.
+	//
+	EventCountLimit SpanLimitsEventCountLimit `json:"event_count_limit,omitempty" yaml:"event_count_limit,omitempty" mapstructure:"event_count_limit,omitempty"`
 
-	// LinkAttributeCountLimit corresponds to the JSON schema field
-	// "link_attribute_count_limit".
-	LinkAttributeCountLimit *int `json:"link_attribute_count_limit,omitempty" yaml:"link_attribute_count_limit,omitempty" mapstructure:"link_attribute_count_limit,omitempty"`
+	// Configure max attributes per span link.
+	// Value must be non-negative.
+	// If omitted or null, 128 is used.
+	//
+	LinkAttributeCountLimit SpanLimitsLinkAttributeCountLimit `json:"link_attribute_count_limit,omitempty" yaml:"link_attribute_count_limit,omitempty" mapstructure:"link_attribute_count_limit,omitempty"`
 
-	// LinkCountLimit corresponds to the JSON schema field "link_count_limit".
-	LinkCountLimit *int `json:"link_count_limit,omitempty" yaml:"link_count_limit,omitempty" mapstructure:"link_count_limit,omitempty"`
+	// Configure max span link count.
+	// Value must be non-negative.
+	// If omitted or null, 128 is used.
+	//
+	LinkCountLimit SpanLimitsLinkCountLimit `json:"link_count_limit,omitempty" yaml:"link_count_limit,omitempty" mapstructure:"link_count_limit,omitempty"`
 }
 
+// Configure max attribute count. Overrides
+// .attribute_limits.attribute_count_limit.
+// Value must be non-negative.
+// If omitted or null, 128 is used.
+type SpanLimitsAttributeCountLimit *int
+
+// Configure max attribute value size. Overrides
+// .attribute_limits.attribute_value_length_limit.
+// Value must be non-negative.
+// If omitted or null, there is no limit.
+type SpanLimitsAttributeValueLengthLimit *int
+
+// Configure max attributes per span event.
+// Value must be non-negative.
+// If omitted or null, 128 is used.
+type SpanLimitsEventAttributeCountLimit *int
+
+// Configure max span event count.
+// Value must be non-negative.
+// If omitted or null, 128 is used.
+type SpanLimitsEventCountLimit *int
+
+// Configure max attributes per span link.
+// Value must be non-negative.
+// If omitted or null, 128 is used.
+type SpanLimitsLinkAttributeCountLimit *int
+
+// Configure max span link count.
+// Value must be non-negative.
+// If omitted or null, 128 is used.
+type SpanLimitsLinkCountLimit *int
+
 type SpanProcessor struct {
-	// Batch corresponds to the JSON schema field "batch".
+	// Configure a batch span processor.
+	// If omitted, ignore.
+	//
 	Batch *BatchSpanProcessor `json:"batch,omitempty" yaml:"batch,omitempty" mapstructure:"batch,omitempty"`
 
-	// Simple corresponds to the JSON schema field "simple".
+	// Configure a simple span processor.
+	// If omitted, ignore.
+	//
 	Simple *SimpleSpanProcessor `json:"simple,omitempty" yaml:"simple,omitempty" mapstructure:"simple,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
@@ -888,22 +2185,34 @@ type SpanProcessor struct {
 type SumAggregation map[string]interface{}
 
 type TextMapPropagator struct {
-	// B3 corresponds to the JSON schema field "b3".
+	// Include the zipkin b3 propagator.
+	// If omitted, ignore.
+	//
 	B3 B3Propagator `json:"b3,omitempty" yaml:"b3,omitempty" mapstructure:"b3,omitempty"`
 
-	// B3Multi corresponds to the JSON schema field "b3multi".
+	// Include the zipkin b3 multi propagator.
+	// If omitted, ignore.
+	//
 	B3Multi B3MultiPropagator `json:"b3multi,omitempty" yaml:"b3multi,omitempty" mapstructure:"b3multi,omitempty"`
 
-	// Baggage corresponds to the JSON schema field "baggage".
+	// Include the w3c baggage propagator.
+	// If omitted, ignore.
+	//
 	Baggage BaggagePropagator `json:"baggage,omitempty" yaml:"baggage,omitempty" mapstructure:"baggage,omitempty"`
 
-	// Jaeger corresponds to the JSON schema field "jaeger".
+	// Include the jaeger propagator.
+	// If omitted, ignore.
+	//
 	Jaeger JaegerPropagator `json:"jaeger,omitempty" yaml:"jaeger,omitempty" mapstructure:"jaeger,omitempty"`
 
-	// Ottrace corresponds to the JSON schema field "ottrace".
+	// Include the opentracing propagator.
+	// If omitted, ignore.
+	//
 	Ottrace OpenTracingPropagator `json:"ottrace,omitempty" yaml:"ottrace,omitempty" mapstructure:"ottrace,omitempty"`
 
-	// Tracecontext corresponds to the JSON schema field "tracecontext".
+	// Include the w3c trace context propagator.
+	// If omitted, ignore.
+	//
 	Tracecontext TraceContextPropagator `json:"tracecontext,omitempty" yaml:"tracecontext,omitempty" mapstructure:"tracecontext,omitempty"`
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
@@ -912,75 +2221,148 @@ type TextMapPropagator struct {
 type TraceContextPropagator map[string]interface{}
 
 type TraceIDRatioBasedSampler struct {
-	// Ratio corresponds to the JSON schema field "ratio".
-	Ratio *float64 `json:"ratio,omitempty" yaml:"ratio,omitempty" mapstructure:"ratio,omitempty"`
+	// Configure trace_id_ratio.
+	// If omitted or null, 1.0 is used.
+	//
+	Ratio TraceIDRatioBasedSamplerRatio `json:"ratio,omitempty" yaml:"ratio,omitempty" mapstructure:"ratio,omitempty"`
 }
 
-type TracerProviderJson struct {
-	// Limits corresponds to the JSON schema field "limits".
+// Configure trace_id_ratio.
+// If omitted or null, 1.0 is used.
+type TraceIDRatioBasedSamplerRatio *float64
+
+type TracerProvider struct {
+	// Configure span limits. See also attribute_limits.
+	// If omitted, default values as described in SpanLimits are used.
+	//
 	Limits *SpanLimits `json:"limits,omitempty" yaml:"limits,omitempty" mapstructure:"limits,omitempty"`
 
-	// Processors corresponds to the JSON schema field "processors".
+	// Configure span processors.
+	// Property is required and must be non-null.
+	//
 	Processors []SpanProcessor `json:"processors" yaml:"processors" mapstructure:"processors"`
 
-	// Sampler corresponds to the JSON schema field "sampler".
+	// Configure the sampler.
+	// If omitted, parent based sampler with a root of always_on is used.
+	//
 	Sampler *Sampler `json:"sampler,omitempty" yaml:"sampler,omitempty" mapstructure:"sampler,omitempty"`
 
-	// TracerConfiguratorDevelopment corresponds to the JSON schema field
-	// "tracer_configurator/development".
+	// Configure tracers.
+	// If omitted, all tracers use default values as described in
+	// ExperimentalTracerConfig.
+	//
 	TracerConfiguratorDevelopment *ExperimentalTracerConfigurator `json:"tracer_configurator/development,omitempty" yaml:"tracer_configurator/development,omitempty" mapstructure:"tracer_configurator/development,omitempty"`
 }
 
 type View struct {
-	// Selector corresponds to the JSON schema field "selector".
-	Selector *ViewSelector `json:"selector,omitempty" yaml:"selector,omitempty" mapstructure:"selector,omitempty"`
+	// Configure view selector.
+	// Selection criteria is additive as described in
+	// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/metrics/sdk.md#instrument-selection-criteria.
+	// Property is required and must be non-null.
+	//
+	Selector ViewSelector `json:"selector" yaml:"selector" mapstructure:"selector"`
 
-	// Stream corresponds to the JSON schema field "stream".
-	Stream *ViewStream `json:"stream,omitempty" yaml:"stream,omitempty" mapstructure:"stream,omitempty"`
+	// Configure view stream.
+	// Property is required and must be non-null.
+	//
+	Stream ViewStream `json:"stream" yaml:"stream" mapstructure:"stream"`
 }
 
 type ViewSelector struct {
-	// InstrumentName corresponds to the JSON schema field "instrument_name".
-	InstrumentName *string `json:"instrument_name,omitempty" yaml:"instrument_name,omitempty" mapstructure:"instrument_name,omitempty"`
+	// Configure instrument name selection criteria.
+	// If omitted or null, all instrument names match.
+	//
+	InstrumentName ViewSelectorInstrumentName `json:"instrument_name,omitempty" yaml:"instrument_name,omitempty" mapstructure:"instrument_name,omitempty"`
 
-	// InstrumentType corresponds to the JSON schema field "instrument_type".
+	// Configure instrument type selection criteria.
+	// Values include:
+	// * counter: Synchronous counter instruments.
+	// * gauge: Synchronous gauge instruments.
+	// * histogram: Synchronous histogram instruments.
+	// * observable_counter: Asynchronous counter instruments.
+	// * observable_gauge: Asynchronous gauge instruments.
+	// * observable_up_down_counter: Asynchronous up down counter instruments.
+	// * up_down_counter: Synchronous up down counter instruments.
+	// If omitted, all instrument types match.
+	//
 	InstrumentType *InstrumentType `json:"instrument_type,omitempty" yaml:"instrument_type,omitempty" mapstructure:"instrument_type,omitempty"`
 
-	// MeterName corresponds to the JSON schema field "meter_name".
-	MeterName *string `json:"meter_name,omitempty" yaml:"meter_name,omitempty" mapstructure:"meter_name,omitempty"`
+	// Configure meter name selection criteria.
+	// If omitted or null, all meter names match.
+	//
+	MeterName ViewSelectorMeterName `json:"meter_name,omitempty" yaml:"meter_name,omitempty" mapstructure:"meter_name,omitempty"`
 
-	// MeterSchemaUrl corresponds to the JSON schema field "meter_schema_url".
-	MeterSchemaUrl *string `json:"meter_schema_url,omitempty" yaml:"meter_schema_url,omitempty" mapstructure:"meter_schema_url,omitempty"`
+	// Configure meter schema url selection criteria.
+	// If omitted or null, all meter schema URLs match.
+	//
+	MeterSchemaUrl ViewSelectorMeterSchemaUrl `json:"meter_schema_url,omitempty" yaml:"meter_schema_url,omitempty" mapstructure:"meter_schema_url,omitempty"`
 
-	// MeterVersion corresponds to the JSON schema field "meter_version".
-	MeterVersion *string `json:"meter_version,omitempty" yaml:"meter_version,omitempty" mapstructure:"meter_version,omitempty"`
+	// Configure meter version selection criteria.
+	// If omitted or null, all meter versions match.
+	//
+	MeterVersion ViewSelectorMeterVersion `json:"meter_version,omitempty" yaml:"meter_version,omitempty" mapstructure:"meter_version,omitempty"`
 
-	// Unit corresponds to the JSON schema field "unit".
-	Unit *string `json:"unit,omitempty" yaml:"unit,omitempty" mapstructure:"unit,omitempty"`
+	// Configure the instrument unit selection criteria.
+	// If omitted or null, all instrument units match.
+	//
+	Unit ViewSelectorUnit `json:"unit,omitempty" yaml:"unit,omitempty" mapstructure:"unit,omitempty"`
 }
+
+// Configure instrument name selection criteria.
+// If omitted or null, all instrument names match.
+type ViewSelectorInstrumentName *string
+
+// Configure meter name selection criteria.
+// If omitted or null, all meter names match.
+type ViewSelectorMeterName *string
+
+// Configure meter schema url selection criteria.
+// If omitted or null, all meter schema URLs match.
+type ViewSelectorMeterSchemaUrl *string
+
+// Configure meter version selection criteria.
+// If omitted or null, all meter versions match.
+type ViewSelectorMeterVersion *string
+
+// Configure the instrument unit selection criteria.
+// If omitted or null, all instrument units match.
+type ViewSelectorUnit *string
 
 type ViewStream struct {
-	// Aggregation corresponds to the JSON schema field "aggregation".
+	// Configure aggregation of the resulting stream(s).
+	// If omitted, default is used.
+	//
 	Aggregation *Aggregation `json:"aggregation,omitempty" yaml:"aggregation,omitempty" mapstructure:"aggregation,omitempty"`
 
-	// AggregationCardinalityLimit corresponds to the JSON schema field
-	// "aggregation_cardinality_limit".
-	AggregationCardinalityLimit *int `json:"aggregation_cardinality_limit,omitempty" yaml:"aggregation_cardinality_limit,omitempty" mapstructure:"aggregation_cardinality_limit,omitempty"`
+	// Configure the aggregation cardinality limit.
+	// If omitted or null, the metric reader's default cardinality limit is used.
+	//
+	AggregationCardinalityLimit ViewStreamAggregationCardinalityLimit `json:"aggregation_cardinality_limit,omitempty" yaml:"aggregation_cardinality_limit,omitempty" mapstructure:"aggregation_cardinality_limit,omitempty"`
 
-	// AttributeKeys corresponds to the JSON schema field "attribute_keys".
+	// Configure attribute keys retained in the resulting stream(s).
+	// If omitted, all attribute keys are retained.
+	//
 	AttributeKeys *IncludeExclude `json:"attribute_keys,omitempty" yaml:"attribute_keys,omitempty" mapstructure:"attribute_keys,omitempty"`
 
-	// Description corresponds to the JSON schema field "description".
-	Description *string `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
+	// Configure metric description of the resulting stream(s).
+	// If omitted or null, the instrument's origin description is used.
+	//
+	Description ViewStreamDescription `json:"description,omitempty" yaml:"description,omitempty" mapstructure:"description,omitempty"`
 
-	// Name corresponds to the JSON schema field "name".
-	Name *string `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
+	// Configure metric name of the resulting stream(s).
+	// If omitted or null, the instrument's original name is used.
+	//
+	Name ViewStreamName `json:"name,omitempty" yaml:"name,omitempty" mapstructure:"name,omitempty"`
 }
 
-type ZipkinSpanExporter struct {
-	// Endpoint corresponds to the JSON schema field "endpoint".
-	Endpoint *string `json:"endpoint,omitempty" yaml:"endpoint,omitempty" mapstructure:"endpoint,omitempty"`
+// Configure the aggregation cardinality limit.
+// If omitted or null, the metric reader's default cardinality limit is used.
+type ViewStreamAggregationCardinalityLimit *int
 
-	// Timeout corresponds to the JSON schema field "timeout".
-	Timeout *int `json:"timeout,omitempty" yaml:"timeout,omitempty" mapstructure:"timeout,omitempty"`
-}
+// Configure metric description of the resulting stream(s).
+// If omitted or null, the instrument's origin description is used.
+type ViewStreamDescription *string
+
+// Configure metric name of the resulting stream(s).
+// If omitted or null, the instrument's original name is used.
+type ViewStreamName *string
