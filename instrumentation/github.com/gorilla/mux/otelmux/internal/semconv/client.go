@@ -258,9 +258,15 @@ func (n HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
 }
 
 func (n HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts MetricOpts) {
-	o := []metric.RecordOption{opts.MeasurementOption()}
-	n.requestBodySize.Inst().Record(ctx, md.RequestSize, o...)
-	n.requestDuration.Inst().Record(ctx, md.ElapsedTime/1000, o...)
+	recordOpts := metricRecordOptionPool.Get().(*[]metric.RecordOption)
+	defer func() {
+		*recordOpts = (*recordOpts)[:0]
+		metricRecordOptionPool.Put(recordOpts)
+	}()
+	*recordOpts = append(*recordOpts, opts.MeasurementOption())
+
+	n.requestBodySize.Inst().Record(ctx, md.RequestSize, *recordOpts...)
+	n.requestDuration.Inst().Record(ctx, md.ElapsedTime/1000, *recordOpts...)
 }
 
 // TraceAttributes returns attributes for httptrace.
