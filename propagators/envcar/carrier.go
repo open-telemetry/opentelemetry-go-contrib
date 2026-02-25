@@ -19,11 +19,11 @@ import (
 // The keys are uppercased to avoid case sensitivity issues across different
 // operating systems and environments.
 type Carrier struct {
-	// SetEnvFunc is a function that sets the environment variable.
-	// Usually, you want to set the environment variable for processes
+	// SetEnvFunc is the function that sets the environment variable.
+	// Usually, you want to set the environment variables for processes
 	// that are spawned by the current process.
-	// By default implementation, it does nothing.
-	// Using os.Setenv here is discouraged as the environment should
+	// If you do not set this function, `Set` will do nothing.
+	// Using [os.Setenv] here is discouraged as the environment should
 	// be immutable:
 	// https://opentelemetry.io/docs/specs/otel/context/env-carriers/#environment-variable-immutability
 	SetEnvFunc func(key, value string)
@@ -42,9 +42,6 @@ func (c *Carrier) fetch() {
 		c.values = make(map[string]string, len(environ))
 		for _, kv := range environ {
 			kvPair := strings.SplitN(kv, "=", 2)
-			if len(kvPair) < 1 {
-				continue
-			}
 			c.values[strings.ToLower(kvPair[0])] = kvPair[1]
 		}
 	})

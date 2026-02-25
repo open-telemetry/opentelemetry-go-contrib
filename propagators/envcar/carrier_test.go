@@ -176,10 +176,10 @@ func TestConcurrentChildProcesses(t *testing.T) {
 	const numGoroutines = 10
 
 	type result struct {
-		index    int
-		expected string
-		actual   string
-		err      error
+		index int
+		want  string
+		got   string
+		err   error
 	}
 
 	results := make(chan result, numGoroutines)
@@ -223,10 +223,10 @@ func TestConcurrentChildProcesses(t *testing.T) {
 			expected := "00-" + traceID.String() + "-" + spanID.String() + "-01"
 
 			results <- result{
-				index:    i,
-				expected: expected,
-				actual:   strings.TrimSpace(string(out)),
-				err:      err,
+				index: i,
+				want:  expected,
+				got:   strings.TrimSpace(string(out)),
+				err:   err,
 			}
 		}()
 	}
@@ -237,7 +237,7 @@ func TestConcurrentChildProcesses(t *testing.T) {
 	// Verify each goroutine's child process received the correct trace context.
 	for r := range results {
 		require.NoError(t, r.err, "goroutine %d failed to run child process", r.index)
-		assert.Equal(t, r.expected, r.actual,
+		assert.Equal(t, r.want, r.got,
 			"goroutine %d: child process received wrong trace context", r.index)
 	}
 }
