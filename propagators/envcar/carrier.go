@@ -54,7 +54,7 @@ func (c *Carrier) fetch() {
 // environment and all future reads will be from that store.
 func (c *Carrier) Get(key string) string {
 	c.fetch()
-	return c.values[strings.ToLower(key)]
+	return c.values[strings.ToUpper(key)]
 }
 
 // Set stores the key-value pair in the environment variable.
