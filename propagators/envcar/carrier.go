@@ -36,7 +36,7 @@ type Carrier struct {
 var _ propagation.TextMapCarrier = (*Carrier)(nil)
 
 // fetch runs once on first access, and stores the environment in the
-// carrier by lower cased keys.
+// carrier.
 func (c *Carrier) fetch() {
 	c.once.Do(func() {
 		environ := os.Environ()
