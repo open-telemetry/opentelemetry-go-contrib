@@ -43,7 +43,7 @@ func (c *Carrier) fetch() {
 		c.values = make(map[string]string, len(environ))
 		for _, kv := range environ {
 			kvPair := strings.SplitN(kv, "=", 2)
-			c.values[strings.ToLower(kvPair[0])] = kvPair[1]
+			c.values[kvPair[0]] = kvPair[1]
 		}
 	})
 }
