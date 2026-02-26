@@ -33,7 +33,7 @@ type Carrier struct {
 }
 
 // Compile time check that Carrier implements the TextMapCarrier.
-var _ propagation.TextMapCarrier = &Carrier{}
+var _ propagation.TextMapCarrier = (*Carrier)(nil)
 
 // Fetch runs once on first access, and stores the environment in the
 // carrier by lower cased keys..
