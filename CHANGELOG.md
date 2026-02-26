@@ -20,6 +20,11 @@ The next release will require at least [Go 1.25].
 - Add `const Version` in `go.opentelemetry.io/contrib/processors/baggagecopy`. (#8557)
 - Add `const Version` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#8510)
 - Add `const Version` in `go.opentelemetry.io/contrib/propagators/autoprop`. (#8488)
+- Added semantic convention attribute keys `HTTPRequestBodySizeKey`,
+    `HTTPResponseBodySizeKey`, and `ErrorMessageKey` as replacements for the
+    legacy `ReadBytesKey`, `WroteBytesKey`, `ReadErrorKey`, and `WriteErrorKey` in
+    `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`,
+    which are now deprecated and will be removed in a future release. (#8435)
 
 ### Fixed
 
@@ -49,11 +54,6 @@ The next release will require at least [Go 1.25].
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otellogr`. (#8477)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#8485)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otelslog`. (#8480)
-- Added semantic convention attribute keys `HTTPRequestBodySizeKey`,
-  `HTTPResponseBodySizeKey`, and `ErrorMessageKey` as replacements for the
-  legacy `ReadBytesKey`, `WroteBytesKey`, `ReadErrorKey`, and `WriteErrorKey` in 
-  `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`,
-  which are now deprecated and will be removed in a future release. (#8435)
 
 ### Fixed
 
