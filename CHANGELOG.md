@@ -13,6 +13,7 @@ The next release will require at least [Go 1.25].
 
 ### Added
 
+- Read `cloud.account.id` from symlink created by the OTel Lambda Extension in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#8526)
 - `WithSpanKind` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to override the default span kind. (#8506)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8544)
 - Support testing of [Go 1.26]. (#8549)
