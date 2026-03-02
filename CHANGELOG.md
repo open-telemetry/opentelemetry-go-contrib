@@ -38,6 +38,10 @@ The next release will require at least [Go 1.25].
 
 - Updated the configuration schema used in `go.opentelemetry.io/contrib/otelconf` to [rc.3](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.3). (#8505)
 
+### Deprecated
+
+- `WithMetricAttributesFn` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated and will be removed in a future release. Use `Labeler` instead. (#8587)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
