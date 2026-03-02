@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
-## [1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.13.0] - 2026-02-02
+## [1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.13.0] - 2026-03-02
 
 This release is the last to support [Go 1.24].
 The next release will require at least [Go 1.25].
