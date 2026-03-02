@@ -5,7 +5,7 @@ go 1.24.0
 replace go.opentelemetry.io/contrib/instrumentation/host => ../
 
 require (
-	go.opentelemetry.io/contrib/instrumentation/host v0.65.0
+	go.opentelemetry.io/contrib/instrumentation/host v0.66.0
 	go.opentelemetry.io/otel v1.41.0
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.41.0
 	go.opentelemetry.io/otel/sdk v1.41.0
