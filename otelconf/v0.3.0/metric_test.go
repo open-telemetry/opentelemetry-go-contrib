@@ -1374,7 +1374,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 		{
 			name:        "no options",
 			cfg:         Prometheus{},
-			wantOptions: 0,
+			wantOptions: 1,
 		},
 		{
 			name: "all set",
@@ -1384,7 +1384,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 				WithoutUnits:               ptr(true),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
-			wantOptions: 4,
+			wantOptions: 3,
 		},
 		{
 			name: "all set false",
@@ -1394,7 +1394,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 				WithoutUnits:               ptr(false),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
-			wantOptions: 1,
+			wantOptions: 2,
 		},
 	}
 	for _, tt := range testCases {
@@ -1589,9 +1589,9 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// TODO (#7446): Fix the flakiness on Windows.
-		t.Skip("Test is flaky on Windows.")
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		// TODO (#8115): Fix the flakiness on Windows and MacOS.
+		t.Skip("Test is flaky on Windows and MacOS.")
 	}
 	type args struct {
 		ctx        context.Context

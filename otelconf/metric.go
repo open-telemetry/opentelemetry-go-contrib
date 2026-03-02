@@ -206,12 +206,13 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPHttpMetricExpor
 			return nil, newErrInvalid(fmt.Sprintf("unsupported temporality preference %q", *otlpConfig.TemporalityPreference))
 		}
 	}
-
-	tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
-	if err != nil {
-		return nil, errors.Join(newErrInvalid("tls configuration"), err)
+	if otlpConfig.Tls != nil {
+		tlsConfig, err := tls.CreateConfig(otlpConfig.Tls.CaFile, otlpConfig.Tls.CertFile, otlpConfig.Tls.KeyFile)
+		if err != nil {
+			return nil, errors.Join(newErrInvalid("tls configuration"), err)
+		}
+		opts = append(opts, otlpmetrichttp.WithTLSClientConfig(tlsConfig))
 	}
-	opts = append(opts, otlpmetrichttp.WithTLSClientConfig(tlsConfig))
 
 	return otlpmetrichttp.New(ctx, opts...)
 }
@@ -234,7 +235,7 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPGrpcMetricExpor
 		} else {
 			opts = append(opts, otlpmetricgrpc.WithEndpoint(*otlpConfig.Endpoint))
 		}
-		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Insecure != nil && *otlpConfig.Insecure) {
+		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Tls != nil && otlpConfig.Tls.Insecure != nil && *otlpConfig.Tls.Insecure) {
 			opts = append(opts, otlpmetricgrpc.WithInsecure())
 		}
 	}
@@ -272,8 +273,8 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPGrpcMetricExpor
 		}
 	}
 
-	if otlpConfig.CertificateFile != nil || otlpConfig.ClientCertificateFile != nil || otlpConfig.ClientKeyFile != nil {
-		tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
+	if otlpConfig.Tls != nil && (otlpConfig.Tls.CaFile != nil || otlpConfig.Tls.CertFile != nil || otlpConfig.Tls.KeyFile != nil) {
+		tlsConfig, err := tls.CreateConfig(otlpConfig.Tls.CaFile, otlpConfig.Tls.CertFile, otlpConfig.Tls.KeyFile)
 		if err != nil {
 			return nil, errors.Join(newErrInvalid("tls configuration"), err)
 		}
@@ -400,11 +401,11 @@ func prometheusReader(ctx context.Context, prometheusConfig *ExperimentalPrometh
 	return readerWithServer{reader, &server}, nil
 }
 
-func validTranslationStrategy(strategy ExperimentalPrometheusMetricExporterTranslationStrategy) bool {
-	return strategy == ExperimentalPrometheusMetricExporterTranslationStrategyNoTranslation ||
-		strategy == ExperimentalPrometheusMetricExporterTranslationStrategyNoUTF8EscapingWithSuffixes ||
-		strategy == ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes ||
-		strategy == ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithoutSuffixes
+func validTranslationStrategy(strategy ExperimentalPrometheusTranslationStrategy) bool {
+	return strategy == ExperimentalPrometheusTranslationStrategyNoTranslation ||
+		strategy == ExperimentalPrometheusTranslationStrategyNoUtf8EscapingWithSuffixes ||
+		strategy == ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes ||
+		strategy == ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithoutSuffixes
 }
 
 func prometheusReaderOpts(prometheusConfig *ExperimentalPrometheusMetricExporter) ([]otelprom.Option, error) {
@@ -442,11 +443,7 @@ func (rws readerWithServer) Shutdown(ctx context.Context) error {
 }
 
 func view(v View) (sdkmetric.View, error) {
-	if v.Selector == nil {
-		return nil, errors.New("view: no selector provided")
-	}
-
-	inst, err := instrument(*v.Selector)
+	inst, err := instrument(v.Selector)
 	if err != nil {
 		return nil, err
 	}
@@ -480,11 +477,7 @@ func instrument(vs ViewSelector) (sdkmetric.Instrument, error) {
 	return inst, nil
 }
 
-func stream(vs *ViewStream) (sdkmetric.Stream, error) {
-	if vs == nil {
-		return sdkmetric.Stream{}, nil
-	}
-
+func stream(vs ViewStream) (sdkmetric.Stream, error) {
 	f, err := newIncludeExcludeFilter(vs.AttributeKeys)
 	if err != nil {
 		return sdkmetric.Stream{}, err
