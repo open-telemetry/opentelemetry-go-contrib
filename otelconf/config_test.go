@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	lognoop "go.opentelemetry.io/otel/log/noop"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/propagation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -25,10 +26,6 @@ func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
 	cl := PushMetricExporter{}
 	err := cl.UnmarshalJSON([]byte(`{:2000}`))
 	assert.ErrorIs(t, err, newErrUnmarshal(&PushMetricExporter{}))
-
-	cl = PushMetricExporter{}
-	err = cl.UnmarshalJSON([]byte(`{"console":2000}`))
-	assert.ErrorIs(t, err, newErrUnmarshal(&ConsoleExporter{}))
 
 	cl = PushMetricExporter{}
 	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)
@@ -356,6 +353,7 @@ func TestNewSDK(t *testing.T) {
 		wantTracerProvider any
 		wantMeterProvider  any
 		wantLoggerProvider any
+		wantPropagator     any
 		wantErr            error
 		wantShutdownErr    error
 	}{
@@ -364,20 +362,23 @@ func TestNewSDK(t *testing.T) {
 			wantTracerProvider: tracenoop.NewTracerProvider(),
 			wantMeterProvider:  metricnoop.NewMeterProvider(),
 			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
 		{
 			name: "with-configuration",
 			cfg: []ConfigurationOption{
 				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-					TracerProvider: &TracerProviderJson{},
-					MeterProvider:  &MeterProviderJson{},
-					LoggerProvider: &LoggerProviderJson{},
+					TracerProvider: &TracerProvider{},
+					MeterProvider:  &MeterProvider{},
+					LoggerProvider: &LoggerProvider{},
+					Propagator:     &Propagator{},
 				}),
 			},
 			wantTracerProvider: &sdktrace.TracerProvider{},
 			wantMeterProvider:  &sdkmetric.MeterProvider{},
 			wantLoggerProvider: &sdklog.LoggerProvider{},
+			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
 		{
 			name: "with-sdk-disabled",
@@ -385,59 +386,15 @@ func TestNewSDK(t *testing.T) {
 				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
 					Disabled:       ptr(true),
-					TracerProvider: &TracerProviderJson{},
-					MeterProvider:  &MeterProviderJson{},
-					LoggerProvider: &LoggerProviderJson{},
+					TracerProvider: &TracerProvider{},
+					MeterProvider:  &MeterProvider{},
+					LoggerProvider: &LoggerProvider{},
 				}),
 			},
 			wantTracerProvider: tracenoop.NewTracerProvider(),
 			wantMeterProvider:  metricnoop.NewMeterProvider(),
 			wantLoggerProvider: lognoop.NewLoggerProvider(),
-		},
-		{
-			name: "invalid resource",
-			cfg: []ConfigurationOption{
-				WithContext(t.Context()),
-				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-					TracerProvider: &TracerProviderJson{},
-					MeterProvider:  &MeterProviderJson{},
-					LoggerProvider: &LoggerProviderJson{},
-					Resource:       &LoggerProviderJson{},
-				}),
-			},
-			wantErr:            newErrInvalid("resource"),
-			wantTracerProvider: tracenoop.NewTracerProvider(),
-			wantMeterProvider:  metricnoop.NewMeterProvider(),
-			wantLoggerProvider: lognoop.NewLoggerProvider(),
-		},
-		{
-			name: "invalid logger provider",
-			cfg: []ConfigurationOption{
-				WithContext(t.Context()),
-				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-					TracerProvider: &TracerProviderJson{},
-					MeterProvider:  &MeterProviderJson{},
-					LoggerProvider: &ResourceJson{},
-					Resource:       &ResourceJson{},
-				}),
-			},
-			wantErr:            newErrInvalid("logger_provider"),
-			wantTracerProvider: tracenoop.NewTracerProvider(),
-			wantMeterProvider:  metricnoop.NewMeterProvider(),
-			wantLoggerProvider: lognoop.NewLoggerProvider(),
-		},
-		{
-			name: "invalid tracer provider",
-			cfg: []ConfigurationOption{
-				WithContext(t.Context()),
-				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-					TracerProvider: &ResourceJson{},
-				}),
-			},
-			wantErr:            newErrInvalid("tracer_provider"),
-			wantTracerProvider: tracenoop.NewTracerProvider(),
-			wantMeterProvider:  metricnoop.NewMeterProvider(),
-			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
 	}
 	for _, tt := range tests {
@@ -446,6 +403,7 @@ func TestNewSDK(t *testing.T) {
 		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
 		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
 		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
+		assert.IsType(t, tt.wantPropagator, sdk.Propagator())
 		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
 	}
 }
@@ -454,15 +412,12 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 	cfg := []ConfigurationOption{
 		WithContext(t.Context()),
 		WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-			TracerProvider: &ResourceJson{},
+			TracerProvider: nil,
 		}),
 	}
-	// NewSDK without an env file set
-	_, err := NewSDK(cfg...)
-	require.Equal(t, newErrInvalid("tracer_provider"), err)
 	// test a non existent file
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "file_missing.yaml"))
-	_, err = NewSDK(cfg...)
+	_, err := NewSDK(cfg...)
 	require.Error(t, err)
 	// test a file that causes a parse error
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))
@@ -482,7 +437,7 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 		AttributeCountLimit:       ptr(128),
 		AttributeValueLengthLimit: ptr(4096),
 	},
-	InstrumentationDevelopment: &InstrumentationJson{
+	InstrumentationDevelopment: &ExperimentalInstrumentation{
 		Cpp: ExperimentalLanguageSpecificInstrumentation{
 			"example": map[string]any{
 				"property": "value",
@@ -500,17 +455,17 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 		},
 		General: &ExperimentalGeneralInstrumentation{
 			Http: &ExperimentalHttpInstrumentation{
-				Client: &ExperimentalHttpInstrumentationClient{
+				Client: &ExperimentalHttpClientInstrumentation{
 					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
 					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
 				},
-				Server: &ExperimentalHttpInstrumentationServer{
+				Server: &ExperimentalHttpServerInstrumentation{
 					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
 					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
 				},
 			},
 			Peer: &ExperimentalPeerInstrumentation{
-				ServiceMapping: []ExperimentalPeerInstrumentationServiceMappingElem{
+				ServiceMapping: []ExperimentalPeerServiceMapping{
 					{Peer: "1.2.3.4", Service: "FooService"},
 					{Peer: "2.3.4.5", Service: "BarService"},
 				},
@@ -557,18 +512,18 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 		},
 	},
-	LogLevel: ptr("info"),
-	LoggerProvider: &LoggerProviderJson{
+	LogLevel: ptr(SeverityNumberInfo),
+	LoggerProvider: &LoggerProvider{
 		LoggerConfiguratorDevelopment: &ExperimentalLoggerConfigurator{
 			DefaultConfig: &ExperimentalLoggerConfig{
 				Disabled: ptr(true),
 			},
 			Loggers: []ExperimentalLoggerMatcherAndConfig{
 				{
-					Config: &ExperimentalLoggerConfig{
+					Config: ExperimentalLoggerConfig{
 						Disabled: ptr(false),
 					},
-					Name: ptr("io.opentelemetry.contrib.*"),
+					Name: "io.opentelemetry.contrib.*",
 				},
 			},
 		},
@@ -582,12 +537,14 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					ExportTimeout: ptr(30000),
 					Exporter: LogRecordExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							CertificateFile:       ptr("testdata/ca.crt"),
-							ClientCertificateFile: ptr("testdata/client.crt"),
-							ClientKeyFile:         ptr("testdata/client.key"),
-							Compression:           ptr("gzip"),
-							Encoding:              ptr(OTLPHttpEncodingProtobuf),
-							Endpoint:              ptr("http://localhost:4318/v1/logs"),
+							Tls: &HttpTls{
+								CaFile:   ptr("testdata/ca.crt"),
+								CertFile: ptr("testdata/client.crt"),
+								KeyFile:  ptr("testdata/client.key"),
+							},
+							Compression: ptr("gzip"),
+							Encoding:    ptr(OTLPHttpEncodingProtobuf),
+							Endpoint:    ptr("http://localhost:4318/v1/logs"),
 							Headers: []NameStringValuePair{
 								{Name: "api-key", Value: ptr("1234")},
 							},
@@ -604,17 +561,19 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							CertificateFile:       ptr("testdata/ca.crt"),
-							ClientCertificateFile: ptr("testdata/client.crt"),
-							ClientKeyFile:         ptr("testdata/client.key"),
-							Compression:           ptr("gzip"),
-							Endpoint:              ptr("http://localhost:4317"),
+							Tls: &GrpcTls{
+								CaFile:   ptr("testdata/ca.crt"),
+								CertFile: ptr("testdata/client.crt"),
+								KeyFile:  ptr("testdata/client.key"),
+								Insecure: ptr(false),
+							},
+							Compression: ptr("gzip"),
+							Endpoint:    ptr("http://localhost:4317"),
 							Headers: []NameStringValuePair{
 								{Name: "api-key", Value: ptr("1234")},
 							},
 							HeadersList: ptr("api-key=1234"),
 							Timeout:     ptr(10000),
-							Insecure:    ptr(false),
 						},
 					},
 				},
@@ -646,7 +605,7 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 		},
 	},
-	MeterProvider: &MeterProviderJson{
+	MeterProvider: &MeterProvider{
 		ExemplarFilter: ptr(ExemplarFilter("trace_based")),
 		MeterConfiguratorDevelopment: &ExperimentalMeterConfigurator{
 			DefaultConfig: &ExperimentalMeterConfig{
@@ -654,10 +613,10 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 			Meters: []ExperimentalMeterMatcherAndConfig{
 				{
-					Config: &ExperimentalMeterConfig{
+					Config: ExperimentalMeterConfig{
 						Disabled: ptr(false),
 					},
-					Name: ptr("io.opentelemetry.contrib.*"),
+					Name: "io.opentelemetry.contrib.*",
 				},
 			},
 		},
@@ -683,7 +642,7 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
 							Host:                ptr("localhost"),
 							Port:                ptr(9464),
-							TranslationStrategy: ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes),
+							TranslationStrategy: ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes),
 							WithResourceConstantLabels: &IncludeExclude{
 								Excluded: []string{"service.attr1"},
 								Included: []string{"service*"},
@@ -714,9 +673,11 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					},
 					Exporter: PushMetricExporter{
 						OTLPHttp: &OTLPHttpMetricExporter{
-							CertificateFile:             ptr("testdata/ca.crt"),
-							ClientCertificateFile:       ptr("testdata/client.crt"),
-							ClientKeyFile:               ptr("testdata/client.key"),
+							Tls: &HttpTls{
+								CaFile:   ptr("testdata/ca.crt"),
+								CertFile: ptr("testdata/client.crt"),
+								KeyFile:  ptr("testdata/client.key"),
+							},
 							Compression:                 ptr("gzip"),
 							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
 							Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
@@ -737,9 +698,12 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
 						OTLPGrpc: &OTLPGrpcMetricExporter{
-							CertificateFile:             ptr("testdata/ca.crt"),
-							ClientCertificateFile:       ptr("testdata/client.crt"),
-							ClientKeyFile:               ptr("testdata/client.key"),
+							Tls: &GrpcTls{
+								CaFile:   ptr("testdata/ca.crt"),
+								CertFile: ptr("testdata/client.crt"),
+								KeyFile:  ptr("testdata/client.key"),
+								Insecure: ptr(false),
+							},
 							Compression:                 ptr("gzip"),
 							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
 							Endpoint:                    ptr("http://localhost:4317"),
@@ -749,7 +713,6 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 							HeadersList:           ptr("api-key=1234"),
 							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
 							Timeout:               ptr(10000),
-							Insecure:              ptr(false),
 						},
 					},
 				},
@@ -779,14 +742,14 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 			{
 				Periodic: &PeriodicMetricReader{
 					Exporter: PushMetricExporter{
-						Console: ConsoleExporter{},
+						Console: &ConsoleMetricExporter{},
 					},
 				},
 			},
 		},
 		Views: []View{
 			{
-				Selector: &ViewSelector{
+				Selector: ViewSelector{
 					InstrumentName: ptr("my-instrument"),
 					InstrumentType: ptr(InstrumentTypeHistogram),
 					MeterName:      ptr("my-meter"),
@@ -794,7 +757,7 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					MeterVersion:   ptr("1.0.0"),
 					Unit:           ptr("ms"),
 				},
-				Stream: &ViewStream{
+				Stream: ViewStream{
 					Aggregation: &Aggregation{
 						ExplicitBucketHistogram: &ExplicitBucketHistogramAggregation{
 							Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
@@ -812,7 +775,7 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 		},
 	},
-	Propagator: &PropagatorJson{
+	Propagator: &Propagator{
 		Composite: []TextMapPropagator{
 			{
 				Tracecontext: TraceContextPropagator{},
@@ -835,17 +798,17 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 		},
 		CompositeList: ptr("tracecontext,baggage,b3,b3multi,jaeger,ottrace,xray"),
 	},
-	Resource: &ResourceJson{
+	Resource: &Resource{
 		Attributes: []AttributeNameValue{
 			{Name: "service.name", Value: "unknown_service"},
-			{Name: "string_key", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "bool_key", Type: &AttributeType{Value: "bool"}, Value: true},
-			{Name: "int_key", Type: &AttributeType{Value: "int"}, Value: 1},
-			{Name: "double_key", Type: &AttributeType{Value: "double"}, Value: 1.1},
-			{Name: "string_array_key", Type: &AttributeType{Value: "string_array"}, Value: []any{"value1", "value2"}},
-			{Name: "bool_array_key", Type: &AttributeType{Value: "bool_array"}, Value: []any{true, false}},
-			{Name: "int_array_key", Type: &AttributeType{Value: "int_array"}, Value: []any{1, 2}},
-			{Name: "double_array_key", Type: &AttributeType{Value: "double_array"}, Value: []any{1.1, 2.2}},
+			{Name: "string_key", Type: ptr(AttributeTypeString), Value: "value"},
+			{Name: "bool_key", Type: ptr(AttributeTypeBool), Value: true},
+			{Name: "int_key", Type: ptr(AttributeTypeInt), Value: 1},
+			{Name: "double_key", Type: ptr(AttributeTypeDouble), Value: 1.1},
+			{Name: "string_array_key", Type: ptr(AttributeTypeStringArray), Value: []any{"value1", "value2"}},
+			{Name: "bool_array_key", Type: ptr(AttributeTypeBoolArray), Value: []any{true, false}},
+			{Name: "int_array_key", Type: ptr(AttributeTypeIntArray), Value: []any{1, 2}},
+			{Name: "double_array_key", Type: ptr(AttributeTypeDoubleArray), Value: []any{1.1, 2.2}},
 		},
 		AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
 		DetectionDevelopment: &ExperimentalResourceDetection{
@@ -861,17 +824,17 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 			},
 		},
 	},
-	TracerProvider: &TracerProviderJson{
+	TracerProvider: &TracerProvider{
 		TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
 			DefaultConfig: &ExperimentalTracerConfig{
 				Disabled: ptr(true),
 			},
 			Tracers: []ExperimentalTracerMatcherAndConfig{
 				{
-					Config: ptr(ExperimentalTracerConfig{
+					Config: ExperimentalTracerConfig{
 						Disabled: ptr(false),
-					}),
-					Name: ptr("io.opentelemetry.contrib.*"),
+					},
+					Name: "io.opentelemetry.contrib.*",
 				},
 			},
 		},
@@ -890,12 +853,14 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					ExportTimeout: ptr(30000),
 					Exporter: SpanExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							CertificateFile:       ptr("testdata/ca.crt"),
-							ClientCertificateFile: ptr("testdata/client.crt"),
-							ClientKeyFile:         ptr("testdata/client.key"),
-							Compression:           ptr("gzip"),
-							Encoding:              ptr(OTLPHttpEncodingProtobuf),
-							Endpoint:              ptr("http://localhost:4318/v1/traces"),
+							Tls: &HttpTls{
+								CaFile:   ptr("testdata/ca.crt"),
+								CertFile: ptr("testdata/client.crt"),
+								KeyFile:  ptr("testdata/client.key"),
+							},
+							Compression: ptr("gzip"),
+							Encoding:    ptr(OTLPHttpEncodingProtobuf),
+							Endpoint:    ptr("http://localhost:4318/v1/traces"),
 							Headers: []NameStringValuePair{
 								{Name: "api-key", Value: ptr("1234")},
 							},
@@ -912,17 +877,19 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Batch: &BatchSpanProcessor{
 					Exporter: SpanExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							CertificateFile:       ptr("testdata/ca.crt"),
-							ClientCertificateFile: ptr("testdata/client.crt"),
-							ClientKeyFile:         ptr("testdata/client.key"),
-							Compression:           ptr("gzip"),
-							Endpoint:              ptr("http://localhost:4317"),
+							Tls: &GrpcTls{
+								CaFile:   ptr("testdata/ca.crt"),
+								CertFile: ptr("testdata/client.crt"),
+								KeyFile:  ptr("testdata/client.key"),
+								Insecure: ptr(false),
+							},
+							Compression: ptr("gzip"),
+							Endpoint:    ptr("http://localhost:4317"),
 							Headers: []NameStringValuePair{
 								{Name: "api-key", Value: ptr("1234")},
 							},
 							HeadersList: ptr("api-key=1234"),
 							Timeout:     ptr(10000),
-							Insecure:    ptr(false),
 						},
 					},
 				},
@@ -941,16 +908,6 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 					Exporter: SpanExporter{
 						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
 							OutputStream: ptr("stdout"),
-						},
-					},
-				},
-			},
-			{
-				Batch: &BatchSpanProcessor{
-					Exporter: SpanExporter{
-						Zipkin: &ZipkinSpanExporter{
-							Endpoint: ptr("http://localhost:9411/api/v2/spans"),
-							Timeout:  ptr(10000),
 						},
 					},
 				},
@@ -990,49 +947,49 @@ var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
 var v100OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 	Disabled:   ptr(false),
 	FileFormat: "1.0",
-	LogLevel:   ptr("info"),
+	LogLevel:   ptr(SeverityNumberInfo),
 	AttributeLimits: &AttributeLimits{
 		AttributeCountLimit:       ptr(128),
 		AttributeValueLengthLimit: ptr(4096),
 	},
-	Resource: &ResourceJson{
+	Resource: &Resource{
 		Attributes: []AttributeNameValue{
 			{Name: "service.name", Value: "unknown_service"},
-			{Name: "string_key", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "bool_key", Type: &AttributeType{Value: "bool"}, Value: true},
-			{Name: "int_key", Type: &AttributeType{Value: "int"}, Value: 1},
-			{Name: "double_key", Type: &AttributeType{Value: "double"}, Value: 1.1},
-			{Name: "string_array_key", Type: &AttributeType{Value: "string_array"}, Value: []any{"value1", "value2"}},
-			{Name: "bool_array_key", Type: &AttributeType{Value: "bool_array"}, Value: []any{true, false}},
-			{Name: "int_array_key", Type: &AttributeType{Value: "int_array"}, Value: []any{1, 2}},
-			{Name: "double_array_key", Type: &AttributeType{Value: "double_array"}, Value: []any{1.1, 2.2}},
-			{Name: "string_value", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "bool_value", Type: &AttributeType{Value: "bool"}, Value: true},
-			{Name: "int_value", Type: &AttributeType{Value: "int"}, Value: 1},
-			{Name: "float_value", Type: &AttributeType{Value: "double"}, Value: 1.1},
-			{Name: "hex_value", Type: &AttributeType{Value: "int"}, Value: int(48879)},
-			{Name: "quoted_string_value", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "quoted_bool_value", Type: &AttributeType{Value: "string"}, Value: "true"},
-			{Name: "quoted_int_value", Type: &AttributeType{Value: "string"}, Value: "1"},
-			{Name: "quoted_float_value", Type: &AttributeType{Value: "string"}, Value: "1.1"},
-			{Name: "quoted_hex_value", Type: &AttributeType{Value: "string"}, Value: "0xbeef"},
-			{Name: "alternative_env_syntax", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "invalid_map_value", Type: &AttributeType{Value: "string"}, Value: "value\nkey:value"},
-			{Name: "multiple_references_inject", Type: &AttributeType{Value: "string"}, Value: "foo value 1.1"},
-			{Name: "undefined_key", Type: &AttributeType{Value: "string"}, Value: nil},
-			{Name: "undefined_key_fallback", Type: &AttributeType{Value: "string"}, Value: "fallback"},
-			{Name: "env_var_in_key", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "replace_me", Type: &AttributeType{Value: "string"}, Value: "${DO_NOT_REPLACE_ME}"},
-			{Name: "undefined_defaults_to_var", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE}"},
-			{Name: "escaped_does_not_substitute", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE}"},
-			{Name: "escaped_does_not_substitute_fallback", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE:-fallback}"},
-			{Name: "escaped_and_substituted_fallback", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE:-value}"},
-			{Name: "escaped_and_substituted", Type: &AttributeType{Value: "string"}, Value: "$value"},
-			{Name: "multiple_escaped_and_not_substituted", Type: &AttributeType{Value: "string"}, Value: "$${STRING_VALUE}"},
-			{Name: "undefined_key_with_escape_sequence_in_fallback", Type: &AttributeType{Value: "string"}, Value: "${UNDEFINED_KEY}"},
-			{Name: "value_with_escape", Type: &AttributeType{Value: "string"}, Value: "value$$"},
-			{Name: "escape_sequence", Type: &AttributeType{Value: "string"}, Value: "a $ b"},
-			{Name: "no_escape_sequence", Type: &AttributeType{Value: "string"}, Value: "a $ b"},
+			{Name: "string_key", Type: ptr(AttributeTypeString), Value: "value"},
+			{Name: "bool_key", Type: ptr(AttributeTypeBool), Value: true},
+			{Name: "int_key", Type: ptr(AttributeTypeInt), Value: 1},
+			{Name: "double_key", Type: ptr(AttributeTypeDouble), Value: 1.1},
+			{Name: "string_array_key", Type: ptr(AttributeTypeStringArray), Value: []any{"value1", "value2"}},
+			{Name: "bool_array_key", Type: ptr(AttributeTypeBoolArray), Value: []any{true, false}},
+			{Name: "int_array_key", Type: ptr(AttributeTypeIntArray), Value: []any{1, 2}},
+			{Name: "double_array_key", Type: ptr(AttributeTypeDoubleArray), Value: []any{1.1, 2.2}},
+			{Name: "string_value", Type: ptr(AttributeTypeString), Value: "value"},
+			{Name: "bool_value", Type: ptr(AttributeTypeBool), Value: true},
+			{Name: "int_value", Type: ptr(AttributeTypeInt), Value: 1},
+			{Name: "float_value", Type: ptr(AttributeTypeDouble), Value: 1.1},
+			{Name: "hex_value", Type: ptr(AttributeTypeInt), Value: int(48879)},
+			{Name: "quoted_string_value", Type: ptr(AttributeTypeString), Value: "value"},
+			{Name: "quoted_bool_value", Type: ptr(AttributeTypeString), Value: "true"},
+			{Name: "quoted_int_value", Type: ptr(AttributeTypeString), Value: "1"},
+			{Name: "quoted_float_value", Type: ptr(AttributeTypeString), Value: "1.1"},
+			{Name: "quoted_hex_value", Type: ptr(AttributeTypeString), Value: "0xbeef"},
+			{Name: "alternative_env_syntax", Type: ptr(AttributeTypeString), Value: "value"},
+			{Name: "invalid_map_value", Type: ptr(AttributeTypeString), Value: "value\nkey:value"},
+			{Name: "multiple_references_inject", Type: ptr(AttributeTypeString), Value: "foo value 1.1"},
+			{Name: "undefined_key", Type: ptr(AttributeTypeString), Value: nil},
+			{Name: "undefined_key_fallback", Type: ptr(AttributeTypeString), Value: "fallback"},
+			{Name: "env_var_in_key", Type: ptr(AttributeTypeString), Value: "value"},
+			{Name: "replace_me", Type: ptr(AttributeTypeString), Value: "${DO_NOT_REPLACE_ME}"},
+			{Name: "undefined_defaults_to_var", Type: ptr(AttributeTypeString), Value: "${STRING_VALUE}"},
+			{Name: "escaped_does_not_substitute", Type: ptr(AttributeTypeString), Value: "${STRING_VALUE}"},
+			{Name: "escaped_does_not_substitute_fallback", Type: ptr(AttributeTypeString), Value: "${STRING_VALUE:-fallback}"},
+			{Name: "escaped_and_substituted_fallback", Type: ptr(AttributeTypeString), Value: "${STRING_VALUE:-value}"},
+			{Name: "escaped_and_substituted", Type: ptr(AttributeTypeString), Value: "$value"},
+			{Name: "multiple_escaped_and_not_substituted", Type: ptr(AttributeTypeString), Value: "$${STRING_VALUE}"},
+			{Name: "undefined_key_with_escape_sequence_in_fallback", Type: ptr(AttributeTypeString), Value: "${UNDEFINED_KEY}"},
+			{Name: "value_with_escape", Type: ptr(AttributeTypeString), Value: "value$$"},
+			{Name: "escape_sequence", Type: ptr(AttributeTypeString), Value: "a $ b"},
+			{Name: "no_escape_sequence", Type: ptr(AttributeTypeString), Value: "a $ b"},
 		},
 		AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
 		// Detectors: &Detectors{
@@ -1121,7 +1078,7 @@ func TestUnmarshalOpenTelemetryConfiguration(t *testing.T) {
 			wantType: OpenTelemetryConfiguration{
 				Disabled:   ptr(false),
 				FileFormat: "1.0",
-				LogLevel:   ptr("info"),
+				LogLevel:   ptr(SeverityNumberInfo),
 			},
 		},
 		{
@@ -1345,31 +1302,31 @@ func TestUnmarshalPeriodicMetricReader(t *testing.T) {
 			name:         "valid with null console exporter",
 			jsonConfig:   []byte(`{"exporter":{"console":null}}`),
 			yamlConfig:   []byte("exporter:\n  console:\n"),
-			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
+			wantExporter: PushMetricExporter{Console: &ConsoleMetricExporter{}},
 		},
 		{
 			name:         "valid with console exporter",
 			jsonConfig:   []byte(`{"exporter":{"console":{}}}`),
 			yamlConfig:   []byte("exporter:\n  console: {}"),
-			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
+			wantExporter: PushMetricExporter{Console: &ConsoleMetricExporter{}},
 		},
 		{
 			name:         "valid with all fields positive",
 			jsonConfig:   []byte(`{"exporter":{"console":{}},"timeout":5000,"interval":1000}`),
 			yamlConfig:   []byte("exporter:\n  console: {}\ntimeout: 5000\ninterval: 1000"),
-			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
+			wantExporter: PushMetricExporter{Console: &ConsoleMetricExporter{}},
 		},
 		{
 			name:         "valid with zero timeout",
 			jsonConfig:   []byte(`{"exporter":{"console":{}},"timeout":0}`),
 			yamlConfig:   []byte("exporter:\n  console: {}\ntimeout: 0"),
-			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
+			wantExporter: PushMetricExporter{Console: &ConsoleMetricExporter{}},
 		},
 		{
 			name:         "valid with zero interval",
 			jsonConfig:   []byte(`{"exporter":{"console":{}},"interval":0}`),
 			yamlConfig:   []byte("exporter:\n  console: {}\ninterval: 0"),
-			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
+			wantExporter: PushMetricExporter{Console: &ConsoleMetricExporter{}},
 		},
 		{
 			name:       "missing required exporter field",
@@ -1924,59 +1881,6 @@ func TestUnmarshalOTLPGrpcMetricExporter(t *testing.T) {
 	}
 }
 
-func TestUnmarshalZipkinSpanExporter(t *testing.T) {
-	for _, tt := range []struct {
-		name         string
-		yamlConfig   []byte
-		jsonConfig   []byte
-		wantErrT     error
-		wantExporter ZipkinSpanExporter
-	}{
-		{
-			name:         "valid with exporter",
-			jsonConfig:   []byte(`{"endpoint":"localhost:9000"}`),
-			yamlConfig:   []byte("endpoint: localhost:9000\n"),
-			wantExporter: ZipkinSpanExporter{Endpoint: ptr("localhost:9000")},
-		},
-		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&ZipkinSpanExporter{}, "endpoint"),
-		},
-		{
-			name:         "valid with zero timeout",
-			jsonConfig:   []byte(`{"endpoint":"localhost:9000", "timeout":0}`),
-			yamlConfig:   []byte("endpoint: localhost:9000\ntimeout: 0"),
-			wantExporter: ZipkinSpanExporter{Endpoint: ptr("localhost:9000"), Timeout: ptr(0)},
-		},
-		{
-			name:       "invalid data",
-			jsonConfig: []byte(`{:2000}`),
-			yamlConfig: []byte("endpoint: localhost:9000\ntimeout: !!str str"),
-			wantErrT:   newErrUnmarshal(&ZipkinSpanExporter{}),
-		},
-		{
-			name:       "invalid timeout negative",
-			jsonConfig: []byte(`{"endpoint":"localhost:9000", "timeout":-1}`),
-			yamlConfig: []byte("endpoint: localhost:9000\ntimeout: -1"),
-			wantErrT:   newErrGreaterOrEqualZero("timeout"),
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			cl := ZipkinSpanExporter{}
-			err := cl.UnmarshalJSON(tt.jsonConfig)
-			assert.ErrorIs(t, err, tt.wantErrT)
-			assert.Equal(t, tt.wantExporter, cl)
-
-			cl = ZipkinSpanExporter{}
-			err = yaml.Unmarshal(tt.yamlConfig, &cl)
-			assert.ErrorIs(t, err, tt.wantErrT)
-			assert.Equal(t, tt.wantExporter, cl)
-		})
-	}
-}
-
 func TestUnmarshalAttributeNameValueType(t *testing.T) {
 	for _, tt := range []struct {
 		name                   string
@@ -2010,7 +1914,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: "test-val",
-				Type:  &AttributeType{Value: "string"},
+				Type:  ptr(AttributeTypeString),
 			},
 		},
 		{
@@ -2020,7 +1924,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: []any{"test-val", "test-val-2"},
-				Type:  &AttributeType{Value: "string_array"},
+				Type:  ptr(AttributeTypeStringArray),
 			},
 		},
 		{
@@ -2030,7 +1934,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: true,
-				Type:  &AttributeType{Value: "bool"},
+				Type:  ptr(AttributeTypeBool),
 			},
 		},
 		{
@@ -2040,7 +1944,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: []any{"test-val", "test-val-2"},
-				Type:  &AttributeType{Value: "string_array"},
+				Type:  ptr(AttributeTypeStringArray),
 			},
 		},
 		{
@@ -2050,7 +1954,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: int(1),
-				Type:  &AttributeType{Value: "int"},
+				Type:  ptr(AttributeTypeInt),
 			},
 		},
 		{
@@ -2060,7 +1964,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: []any{1, 2},
-				Type:  &AttributeType{Value: "int_array"},
+				Type:  ptr(AttributeTypeIntArray),
 			},
 		},
 		{
@@ -2070,7 +1974,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: float64(1),
-				Type:  &AttributeType{Value: "double"},
+				Type:  ptr(AttributeTypeDouble),
 			},
 		},
 		{
@@ -2080,7 +1984,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: []any{float64(1), float64(2)},
-				Type:  &AttributeType{Value: "double_array"},
+				Type:  ptr(AttributeTypeDoubleArray),
 			},
 		},
 		{
@@ -2208,43 +2112,43 @@ func TestUnmarshalInstrumentType(t *testing.T) {
 	}
 }
 
-func TestUnmarshalExperimentalPeerInstrumentationServiceMappingElemType(t *testing.T) {
+func TestUnmarshalExperimentalPeerServiceMappingType(t *testing.T) {
 	for _, tt := range []struct {
-		name                                                  string
-		yamlConfig                                            []byte
-		jsonConfig                                            []byte
-		wantErrT                                              error
-		wantExperimentalPeerInstrumentationServiceMappingElem ExperimentalPeerInstrumentationServiceMappingElem
+		name                               string
+		yamlConfig                         []byte
+		jsonConfig                         []byte
+		wantErrT                           error
+		wantExperimentalPeerServiceMapping ExperimentalPeerServiceMapping
 	}{
 		{
 			name:       "invalid data",
 			jsonConfig: []byte(`{:2000}`),
 			yamlConfig: []byte("peer: []\nservice: true"),
-			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerServiceMapping{}),
 		},
 		{
 			name:       "missing required peer field",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&ExperimentalPeerInstrumentationServiceMappingElem{}, "peer"),
+			wantErrT:   newErrRequired(&ExperimentalPeerServiceMapping{}, "peer"),
 		},
 		{
 			name:       "missing required service field",
 			jsonConfig: []byte(`{"peer":"test"}`),
 			yamlConfig: []byte("peer: test"),
-			wantErrT:   newErrRequired(&ExperimentalPeerInstrumentationServiceMappingElem{}, "service"),
+			wantErrT:   newErrRequired(&ExperimentalPeerServiceMapping{}, "service"),
 		},
 		{
 			name:       "invalid string_array peer",
 			jsonConfig: []byte(`{"peer":[], "service": ["test-val", "test-val-2"], "type": "string_array"}`),
 			yamlConfig: []byte("peer: []\nservice: [test-val, test-val-2]\ntype: string_array\n"),
-			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerServiceMapping{}),
 		},
 		{
 			name:       "valid string service",
 			jsonConfig: []byte(`{"peer":"test", "service": "test-val"}`),
 			yamlConfig: []byte("peer: test\nservice: test-val"),
-			wantExperimentalPeerInstrumentationServiceMappingElem: ExperimentalPeerInstrumentationServiceMappingElem{
+			wantExperimentalPeerServiceMapping: ExperimentalPeerServiceMapping{
 				Peer:    "test",
 				Service: "test-val",
 			},
@@ -2253,19 +2157,19 @@ func TestUnmarshalExperimentalPeerInstrumentationServiceMappingElemType(t *testi
 			name:       "invalid string_array service",
 			jsonConfig: []byte(`{"peer":"test", "service": ["test-val", "test-val-2"], "type": "string_array"}`),
 			yamlConfig: []byte("peer: test\nservice: [test-val, test-val-2]\ntype: string_array\n"),
-			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
+			wantErrT:   newErrUnmarshal(&ExperimentalPeerServiceMapping{}),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			val := ExperimentalPeerInstrumentationServiceMappingElem{}
+			val := ExperimentalPeerServiceMapping{}
 			err := val.UnmarshalJSON(tt.jsonConfig)
 			assert.ErrorIs(t, err, tt.wantErrT)
-			assert.Equal(t, tt.wantExperimentalPeerInstrumentationServiceMappingElem, val)
+			assert.Equal(t, tt.wantExperimentalPeerServiceMapping, val)
 
-			val = ExperimentalPeerInstrumentationServiceMappingElem{}
+			val = ExperimentalPeerServiceMapping{}
 			err = yaml.Unmarshal(tt.yamlConfig, &val)
 			assert.ErrorIs(t, err, tt.wantErrT)
-			assert.Equal(t, tt.wantExperimentalPeerInstrumentationServiceMappingElem, val)
+			assert.Equal(t, tt.wantExperimentalPeerServiceMapping, val)
 		})
 	}
 }
@@ -2359,13 +2263,13 @@ func TestUnmarshalResourceJson(t *testing.T) {
 		yamlConfig   []byte
 		jsonConfig   []byte
 		wantErrT     error
-		wantResource ResourceJson
+		wantResource Resource
 	}{
 		{
 			name:       "valid with all detectors",
 			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
 			yamlConfig: []byte("detection/development:\n  detectors:\n    - container:\n    - host:\n    - process:\n    - service:"),
-			wantResource: ResourceJson{
+			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
 						{
@@ -2388,7 +2292,7 @@ func TestUnmarshalResourceJson(t *testing.T) {
 			name:       "valid non-nil with all detectors",
 			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
 			yamlConfig: []byte("detection/development:\n  detectors:\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
-			wantResource: ResourceJson{
+			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
 						{
@@ -2411,7 +2315,7 @@ func TestUnmarshalResourceJson(t *testing.T) {
 			name:       "invalid container detector",
 			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": 1}]}}`),
 			yamlConfig: []byte("detection/development:\n  detectors:\n    - container: 1"),
-			wantResource: ResourceJson{
+			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
 						{},
@@ -2424,7 +2328,7 @@ func TestUnmarshalResourceJson(t *testing.T) {
 			name:       "invalid host detector",
 			jsonConfig: []byte(`{"detection/development": {"detectors": [{"host": 1}]}}`),
 			yamlConfig: []byte("detection/development:\n  detectors:\n    - host: 1"),
-			wantResource: ResourceJson{
+			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
 						{},
@@ -2437,7 +2341,7 @@ func TestUnmarshalResourceJson(t *testing.T) {
 			name:       "invalid service detector",
 			jsonConfig: []byte(`{"detection/development": {"detectors": [{"service": 1}]}}`),
 			yamlConfig: []byte("detection/development:\n  detectors:\n    - service: 1"),
-			wantResource: ResourceJson{
+			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
 						{},
@@ -2450,7 +2354,7 @@ func TestUnmarshalResourceJson(t *testing.T) {
 			name:       "invalid process detector",
 			jsonConfig: []byte(`{"detection/development": {"detectors": [{"process": 1}]}}`),
 			yamlConfig: []byte("detection/development:\n  detectors:\n    - process: 1"),
-			wantResource: ResourceJson{
+			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
 						{},
@@ -2461,12 +2365,12 @@ func TestUnmarshalResourceJson(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			r := ResourceJson{}
+			r := Resource{}
 			err := json.Unmarshal(tt.jsonConfig, &r)
 			assert.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantResource, r)
 
-			r = ResourceJson{}
+			r = Resource{}
 			err = yaml.Unmarshal(tt.yamlConfig, &r)
 			assert.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantResource, r)

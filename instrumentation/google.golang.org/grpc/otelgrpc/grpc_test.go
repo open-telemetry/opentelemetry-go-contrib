@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	pb "google.golang.org/grpc/interop/grpc_testing"
@@ -25,7 +25,7 @@ import (
 var wantInstrumentationScope = instrumentation.Scope{
 	Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
 	SchemaURL: semconv.SchemaURL,
-	Version:   otelgrpc.Version(),
+	Version:   otelgrpc.Version,
 }
 
 // newGrpcTest creates a grpc server, starts it, and returns the client, closes everything down during test cleanup.

@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/event"
 	"go.opentelemetry.io/otel/attribute"
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
 // Constants for environment variable keys and versions.

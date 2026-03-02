@@ -5,4 +5,4 @@ package consistent // import "go.opentelemetry.io/contrib/samplers/probability/c
 
 // Version is the current release version of the consistent probability
 // sampler.
-const Version = "0.33.0"
+const Version = "0.34.0"
