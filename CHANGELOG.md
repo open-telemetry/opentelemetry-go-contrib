@@ -18,6 +18,10 @@ The next release will require at least [Go 1.25].
 - Support testing of [Go 1.26]. (#8549)
 - Add `const Version` in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. (#8553)
 - Add `const Version` in `go.opentelemetry.io/contrib/processors/baggagecopy`. (#8557)
+- Add `const Version` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#8510)
+- Add `const Version` in `go.opentelemetry.io/contrib/propagators/autoprop`. (#8488)
+- Add `const Version` in `go.opentelemetry.io/contrib/processors/minsev`. (#8590)
+- Add `const Version` in `go.opentelemetry.io/contrib/exporters/autoexport`. (#8611)
 
 ### Fixed
 
@@ -25,6 +29,7 @@ The next release will require at least [Go 1.25].
 - Change the `rpc.response.status_code` attribute to the canonical `UPPER_SNAKE_CASE` format in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8565)
 - Enforce that `client_certificate_file` and `client_key_file` are provided together in `go.opentelemetry.io/contrib/otelconf`. (#8450)
 - Fixed broken CSS and JavaScript CDN URLs in `go.opentelemetry.io/contrib/zpages` by replacing the inaccessible code.getmdl.io CDN with cdnjs.cloudflare.com. (#8502)
+- Use Prometheus translation strategy instead of deprecated funcs in `go.opentelemetry.io/contrib/otelconf`. (#8595)
 
 ### Removed
 
@@ -33,6 +38,10 @@ The next release will require at least [Go 1.25].
 ### Changed
 
 - Updated the configuration schema used in `go.opentelemetry.io/contrib/otelconf` to [rc.3](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.3). (#8505)
+
+### Deprecated
+
+- `WithMetricAttributesFn` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated and will be removed in a future release. Use `Labeler` instead. (#8587)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
