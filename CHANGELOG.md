@@ -47,7 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- `WithMetricAttributesFn` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated and will be removed in a future release. Use `Labeler` instead. (#8586)
+- `WithMetricAttributesFn` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated and will be removed in a future release. Use `Labeler` instead. (#8587)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
