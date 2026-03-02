@@ -16,6 +16,7 @@ The next release will require at least [Go 1.25].
 - `WithSpanKind` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to override the default span kind. (#8506)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8544)
 - Support testing of [Go 1.26]. (#8549)
+- Add `const Version` in `go.opentelemetry.io/contrib/detectors/autodetect`. (#8555)
 - Add `const Version` in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. (#8553)
 - Add `const Version` in `go.opentelemetry.io/contrib/processors/baggagecopy`. (#8557)
 - Add `const Version` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#8510)
@@ -37,6 +38,14 @@ The next release will require at least [Go 1.25].
 
 ### Changed
 
+- Reduce allocations in the generated HTTP `internal/semconv` packages. (#8511)
+  Updated modules include:
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`
+  - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
+  - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 - Updated the configuration schema used in `go.opentelemetry.io/contrib/otelconf` to [rc.3](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.3). (#8505)
 
 ### Deprecated
