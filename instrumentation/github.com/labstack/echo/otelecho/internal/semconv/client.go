@@ -266,7 +266,7 @@ func (n HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts Metri
 	*recordOpts = append(*recordOpts, opts.MeasurementOption())
 
 	n.requestBodySize.Inst().Record(ctx, md.RequestSize, *recordOpts...)
-	n.requestDuration.Inst().Record(ctx, md.ElapsedTime/1000, *recordOpts...)
+	n.requestDuration.Inst().Record(ctx, durationToSeconds(md.RequestDuration), *recordOpts...)
 }
 
 // TraceAttributes returns attributes for httptrace.

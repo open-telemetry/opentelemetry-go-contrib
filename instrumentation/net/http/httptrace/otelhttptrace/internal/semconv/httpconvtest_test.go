@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -208,8 +209,8 @@ func TestNewServerRecordMetrics(t *testing.T) {
 					},
 				},
 				MetricData: semconv.MetricData{
-					RequestSize: 100,
-					ElapsedTime: 300,
+					RequestSize:     100,
+					RequestDuration: 300 * time.Millisecond,
 				},
 			})
 
@@ -418,8 +419,8 @@ func TestNewClientRecordMetrics(t *testing.T) {
 			assert.NoError(t, err)
 
 			client.RecordMetrics(t.Context(), semconv.MetricData{
-				RequestSize: 100,
-				ElapsedTime: 300,
+				RequestSize:     100,
+				RequestDuration: 300 * time.Millisecond,
 			}, client.MetricOptions(semconv.MetricAttributes{
 				Req:        req,
 				StatusCode: 301,
