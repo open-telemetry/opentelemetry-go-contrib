@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
 ## [1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.14.0] - 2026-02-02
 
 This release is the last to support [Go 1.24].
@@ -53,9 +56,6 @@ The next release will require at least [Go 1.25].
 ### Deprecated
 
 - `WithMetricAttributesFn` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated and will be removed in a future release. Use `Labeler` instead. (#8587)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.40.0/2.2.0/0.65.0/0.34.0/0.20.0/0.15.0/0.13.0/0.12.0] - 2026-02-02
 
