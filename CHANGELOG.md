@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
-## [1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.14.0] - 2026-02-02
+## [1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.13.0] - 2026-02-02
 
 This release is the last to support [Go 1.24].
 The next release will require at least [Go 1.25].
@@ -1700,7 +1700,7 @@ First official tagged release of `contrib` repository.
 - Update Go Runtime package to use batch observer (#44)
 
 [Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.41.0...HEAD
-[1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.14.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.41.0
+[1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.13.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.41.0
 [1.40.0/2.2.0/0.65.0/0.34.0/0.20.0/0.15.0/0.13.0/0.12.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.40.0
 [1.39.0/2.1.0/0.64.0/0.33.0/0.19.0/0.14.0/0.12.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.39.0
 [1.38.0/2.0.0/0.63.0/0.32.0/0.18.0/0.13.0/0.11.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.38.0

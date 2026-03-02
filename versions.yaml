@@ -72,7 +72,7 @@ module-sets:
       - go.opentelemetry.io/contrib/processors/baggagecopy
       - go.opentelemetry.io/contrib/processors/minsev
   experimental-detectors:
-    version: v0.14.0
+    version: v0.13.0
     modules:
       - go.opentelemetry.io/contrib/detectors/autodetect
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
