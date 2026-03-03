@@ -138,8 +138,7 @@ func TestCarrierKeys(t *testing.T) {
 	c := envcar.Carrier{}
 	keys := c.Keys()
 
-	// Keys returns lowercased keys
-	assert.Contains(t, keys, "traceparent")
+	assert.Contains(t, keys, "TRACEPARENT")
 }
 
 func TestCarrierSetNilFunc(_ *testing.T) {
