@@ -125,7 +125,7 @@ jobs:
         files: ./coverage.txt
         verbose: true
     - name: Store coverage test output
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: opentelemetry-go-contrib-test-output
         path: ${{ env.TEST_RESULTS }}
