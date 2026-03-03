@@ -4,4 +4,4 @@
 package minsev // import "go.opentelemetry.io/contrib/processors/minsev"
 
 // Version is the current release version of the minsev processor.
-const Version = "0.13.0"
+const Version = "0.14.0"

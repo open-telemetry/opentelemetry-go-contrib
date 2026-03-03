@@ -1,15 +1,15 @@
 module go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/stretchr/testify v1.11.1
 	go.mongodb.org/mongo-driver/v2 v2.5.0
-	go.opentelemetry.io/otel v1.40.0
-	go.opentelemetry.io/otel/metric v1.40.0
-	go.opentelemetry.io/otel/sdk v1.40.0
-	go.opentelemetry.io/otel/sdk/metric v1.40.0
-	go.opentelemetry.io/otel/trace v1.40.0
+	go.opentelemetry.io/otel v1.41.0
+	go.opentelemetry.io/otel/metric v1.41.0
+	go.opentelemetry.io/otel/sdk v1.41.0
+	go.opentelemetry.io/otel/sdk/metric v1.41.0
+	go.opentelemetry.io/otel/trace v1.41.0
 )
 
 require (
