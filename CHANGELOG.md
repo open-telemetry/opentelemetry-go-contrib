@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Host resource detector in `go.opentelemetry.io/contrib/otelconf` now includes `os.` attributes. (#8578)
+
 ### Removed
 
 - Drop support for [Go 1.24]. (#8628)
@@ -32,7 +36,6 @@ The next release will require at least [Go 1.25].
 - Add `const Version` in `go.opentelemetry.io/contrib/propagators/autoprop`. (#8488)
 - Add `const Version` in `go.opentelemetry.io/contrib/processors/minsev`. (#8590)
 - Add `const Version` in `go.opentelemetry.io/contrib/exporters/autoexport`. (#8612)
-- Host resource detector in `go.opentelemetry.io/contrib/otelconf` now includes `os.` attributes. (#8578)
 
 ### Fixed
 
