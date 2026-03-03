@@ -4,6 +4,8 @@
 syntax = "proto3";
 package api;
 
+option go_package = "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/example/api";
+
 service HelloService {
   rpc SayHello (HelloRequest) returns (HelloResponse);
 
