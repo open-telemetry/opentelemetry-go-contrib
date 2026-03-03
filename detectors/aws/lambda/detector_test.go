@@ -43,6 +43,6 @@ func TestReturnsIfNoEnvVars(t *testing.T) {
 	detector := resourceDetector{}
 	res, err := detector.Detect(t.Context())
 
-	assert.Equal(t, errNotOnLambda, err)
+	assert.NoError(t, err)
 	assert.Empty(t, res.Attributes())
 }
