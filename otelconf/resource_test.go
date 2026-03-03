@@ -81,3 +81,81 @@ func TestNewResource(t *testing.T) {
 		})
 	}
 }
+
+func TestResourceOptsWitDetectors(t *testing.T) {
+	tests := []struct {
+		name                 string
+		detectors            []ExperimentalResourceDetector
+		wantHostAttributes   bool
+		wantOSAttributes     bool
+		wantHostIDAttribute  bool
+		wantProcessAttribute bool
+	}{
+		{
+			name:      "no-detectors",
+			detectors: []ExperimentalResourceDetector{},
+		},
+		{
+			name: "host-detector-enabled",
+			detectors: []ExperimentalResourceDetector{
+				{Host: ExperimentalHostResourceDetector{}},
+			},
+			wantHostAttributes:  true,
+			wantOSAttributes:    true,
+			wantHostIDAttribute: true,
+		},
+		{
+			name: "process-detector-only",
+			detectors: []ExperimentalResourceDetector{
+				{Process: ExperimentalProcessResourceDetector{}},
+			},
+			wantProcessAttribute: true,
+		},
+		{
+			name: "all-detectors",
+			detectors: []ExperimentalResourceDetector{
+				{Container: ExperimentalContainerResourceDetector{}},
+				{Host: ExperimentalHostResourceDetector{}},
+				{Process: ExperimentalProcessResourceDetector{}},
+			},
+			wantHostAttributes:   true,
+			wantOSAttributes:     true,
+			wantHostIDAttribute:  true,
+			wantProcessAttribute: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: tt.detectors,
+				},
+			}
+			got, err := newResource(config)
+			require.NoError(t, err)
+			require.NotNil(t, got)
+
+			attrs := got.Attributes()
+			attrMap := make(map[attribute.Key]attribute.Value)
+			for _, attr := range attrs {
+				attrMap[attr.Key] = attr.Value
+			}
+
+			// Check for host.name attribute
+			_, ok := attrMap[semconv.HostNameKey]
+			require.Equal(t, tt.wantHostAttributes, ok)
+
+			// Check for os.type attribute (from WithOS())
+			_, ok = attrMap[semconv.OSTypeKey]
+			require.Equal(t, tt.wantOSAttributes, ok)
+
+			// Check for host.id attribute
+			_, ok = attrMap[semconv.HostIDKey]
+			require.Equal(t, tt.wantHostIDAttribute, ok)
+
+			// Check for process.pid attribute
+			_, ok = attrMap[semconv.ProcessPIDKey]
+			require.Equal(t, tt.wantProcessAttribute, ok)
+		})
+	}
+}
