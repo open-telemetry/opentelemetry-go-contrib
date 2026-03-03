@@ -17,6 +17,9 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/aws/aws-sdk-go-v2/service/sqs"
+	"github.com/aws/aws-sdk-go-v2/service/sqs/types"
 )
 
 const (
@@ -52,6 +55,13 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error,
 	) {
 		serviceID := v2Middleware.GetServiceID(ctx)
+		if serviceID == "SQS" {
+			// Handle SQS message attributes for trace propagation directly
+			if _, ok := m.propagator.(*SQSMessageAttributePropagator); ok {
+				m.injectSQSTraceContext(ctx, in.Parameters)
+			}
+		}
+
 		operation := v2Middleware.GetOperationName(ctx)
 		region := v2Middleware.GetRegion(ctx)
 
@@ -130,6 +140,18 @@ func (m otelMiddlewares) buildAttributes(ctx context.Context, in middleware.Init
 	return attributes
 }
 
+func (m otelMiddlewares) injectSQSTraceContext(ctx context.Context, input interface{}) {
+	switch v := input.(type) {
+	case *sqs.SendMessageInput:
+		if v.MessageAttributes == nil {
+			v.MessageAttributes = make(map[string]types.MessageAttributeValue)
+		}
+		sqsCarrier := &SQSMessageAttributeCarrier{Attributes: v.MessageAttributes}
+		m.propagator.Inject(ctx, sqsCarrier)
+	default:
+	}
+}
+
 func spanName(serviceID, operation string) string {
 	spanName := serviceID
 	if operation != "" {
@@ -161,4 +183,14 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 		attributeBuilders: cfg.AttributeBuilders,
 	}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddlewareAfter, m.deserializeMiddleware)
+}
+
+// ExtractSQSTraceContext extracts trace context from SQS message attributes
+// and returns a new context with the extracted trace information.
+func ExtractSQSTraceContext(ctx context.Context, messageAttributes map[string]types.MessageAttributeValue) context.Context {
+	propagator := otel.GetTextMapPropagator()
+	carrier := &SQSMessageAttributeCarrier{
+		Attributes: messageAttributes,
+	}
+	return propagator.Extract(ctx, carrier)
 }
