@@ -62,7 +62,7 @@ func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	}
 	// console can be nil, must check and set here
 	if hasYAMLMapKey(node, "console") && plain.Console == nil {
-		plain.Console = ConsoleExporter{}
+		plain.Console = &ConsoleMetricExporter{}
 	}
 	*j = PushMetricExporter(plain)
 	return nil
@@ -76,16 +76,16 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	type Plain OpenTelemetryConfiguration
 	type shadow struct {
 		Plain
-		LogLevel                   *string              `yaml:"log_level,omitempty"`
-		AttributeLimits            *AttributeLimits     `yaml:"attribute_limits,omitempty"`
-		Disabled                   *bool                `yaml:"disabled,omitempty"`
-		FileFormat                 string               `yaml:"file_format"`
-		LoggerProvider             *LoggerProviderJson  `yaml:"logger_provider,omitempty"`
-		MeterProvider              *MeterProviderJson   `yaml:"meter_provider,omitempty"`
-		TracerProvider             *TracerProviderJson  `yaml:"tracer_provider,omitempty"`
-		Propagator                 *PropagatorJson      `yaml:"propagator,omitempty"`
-		Resource                   *ResourceJson        `yaml:"resource,omitempty"`
-		InstrumentationDevelopment *InstrumentationJson `yaml:"instrumentation/development"`
+		LogLevel                   *SeverityNumber              `yaml:"log_level,omitempty"`
+		AttributeLimits            *AttributeLimits             `yaml:"attribute_limits,omitempty"`
+		Disabled                   *bool                        `yaml:"disabled,omitempty"`
+		FileFormat                 string                       `yaml:"file_format"`
+		LoggerProvider             *LoggerProvider              `yaml:"logger_provider,omitempty"`
+		MeterProvider              *MeterProvider               `yaml:"meter_provider,omitempty"`
+		TracerProvider             *TracerProvider              `yaml:"tracer_provider,omitempty"`
+		Propagator                 *Propagator                  `yaml:"propagator,omitempty"`
+		Resource                   *Resource                    `yaml:"resource,omitempty"`
+		InstrumentationDevelopment *ExperimentalInstrumentation `yaml:"instrumentation/development"`
 	}
 	var sh shadow
 
@@ -129,7 +129,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	} else {
 		// Configure the log level of the internal logger used by the SDK.
 		// If omitted, info is used.
-		sh.Plain.LogLevel = ptr("info")
+		sh.Plain.LogLevel = ptr(SeverityNumberInfo)
 	}
 
 	*j = OpenTelemetryConfiguration(sh.Plain)
@@ -382,21 +382,19 @@ func (j *OTLPGrpcExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *AttributeType) UnmarshalYAML(node *yaml.Node) error {
-	var v struct {
-		Value any
-	}
-	if err := node.Decode(&v.Value); err != nil {
+	var v string
+	if err := node.Decode(&v); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
 	var ok bool
 	for _, expected := range enumValuesAttributeType {
-		if reflect.DeepEqual(v.Value, expected) {
+		if reflect.DeepEqual(v, expected) {
 			ok = true
 			break
 		}
 	}
 	if !ok {
-		return newErrInvalid(fmt.Sprintf("unexpected value type %#v, expected one of %#v)", v.Value, enumValuesAttributeType))
+		return newErrInvalid(fmt.Sprintf("unexpected value type %#v, expected one of %#v)", v, enumValuesAttributeType))
 	}
 	*j = AttributeType(v)
 	return nil
@@ -417,14 +415,14 @@ func (j *AttributeNameValue) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	// yaml unmarshaller defaults to unmarshalling to int
-	if plain.Type != nil && plain.Type.Value == "double" {
+	if plain.Type != nil && *plain.Type == AttributeTypeDouble {
 		val, ok := plain.Value.(int)
 		if ok {
 			plain.Value = float64(val)
 		}
 	}
 
-	if plain.Type != nil && plain.Type.Value == "double_array" {
+	if plain.Type != nil && *plain.Type == AttributeTypeDoubleArray {
 		m, ok := plain.Value.([]any)
 		if ok {
 			var vals []any
@@ -473,23 +471,6 @@ func (j *SimpleSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
-func (j *ZipkinSpanExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
-	type Plain ZipkinSpanExporter
-	var plain Plain
-	if err := node.Decode(&plain); err != nil {
-		return errors.Join(newErrUnmarshal(j), err)
-	}
-	if plain.Timeout != nil && 0 > *plain.Timeout {
-		return newErrGreaterOrEqualZero("timeout")
-	}
-	*j = ZipkinSpanExporter(plain)
-	return nil
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *NameStringValuePair) UnmarshalYAML(node *yaml.Node) error {
 	if !hasYAMLMapKey(node, "name") {
 		return newErrRequired(j, "name")
@@ -524,7 +505,7 @@ func (j *InstrumentType) UnmarshalYAML(node *yaml.Node) error {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
-func (j *ExperimentalPeerInstrumentationServiceMappingElem) UnmarshalYAML(node *yaml.Node) error {
+func (j *ExperimentalPeerServiceMapping) UnmarshalYAML(node *yaml.Node) error {
 	if !hasYAMLMapKey(node, "peer") {
 		return newErrRequired(j, "peer")
 	}
@@ -532,13 +513,13 @@ func (j *ExperimentalPeerInstrumentationServiceMappingElem) UnmarshalYAML(node *
 		return newErrRequired(j, "service")
 	}
 
-	type Plain ExperimentalPeerInstrumentationServiceMappingElem
+	type Plain ExperimentalPeerServiceMapping
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
 
-	*j = ExperimentalPeerInstrumentationServiceMappingElem(plain)
+	*j = ExperimentalPeerServiceMapping(plain)
 	return nil
 }
 
@@ -568,16 +549,5 @@ func (j *PullMetricReader) UnmarshalYAML(node *yaml.Node) error {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
 	*j = PullMetricReader(plain)
-	return nil
-}
-
-// UnmarshalYAML implements yaml.Unmarshaler.
-func (j *ExperimentalLanguageSpecificInstrumentation) UnmarshalYAML(unmarshal func(any) error) error {
-	var raw map[string]any
-	if err := unmarshal(&raw); err != nil {
-		return err
-	}
-
-	*j = raw
 	return nil
 }

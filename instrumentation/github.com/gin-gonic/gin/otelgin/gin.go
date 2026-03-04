@@ -121,7 +121,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		if len(c.Errors) > 0 {
 			span.SetStatus(codes.Error, c.Errors.String())
 			for _, err := range c.Errors {
-				span.RecordError(err.Err)
+				span.RecordError(err.Err) //nolint:forbidigo // TODO: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/8441
 			}
 		}
 
@@ -146,8 +146,8 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 				AdditionalAttributes: additionalAttributes,
 			},
 			MetricData: semconv.MetricData{
-				RequestSize: c.Request.ContentLength,
-				ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Millisecond),
+				RequestSize:     c.Request.ContentLength,
+				RequestDuration: time.Since(requestStartTime),
 			},
 		})
 	}

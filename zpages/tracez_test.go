@@ -42,7 +42,7 @@ func TestTracezHandler_ServeHTTP(t *testing.T) {
 	completedSpan.End()
 
 	_, errorSpan := tracer.Start(ctx, "error-span")
-	errorSpan.RecordError(context.DeadlineExceeded)
+	errorSpan.RecordError(context.DeadlineExceeded) //nolint:forbidigo // existing usage of Span.RecordError
 	errorSpan.End()
 
 	_, querySpan := tracer.Start(ctx, "query-span")
