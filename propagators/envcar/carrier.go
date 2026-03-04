@@ -14,24 +14,23 @@ import (
 // upperWithUnderscores converts a string so that A-Z and 0-9 and _ are kept
 // as-is, a-z is uppercased, and all other characters are replaced with _.
 func upperWithUnderscores(s string) string {
-	var b strings.Builder
-	b.Grow(len(s))
+	b := make([]byte, 0, len(s))
 	for _, r := range s {
 		switch {
 		case r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_':
-			b.WriteByte(byte(r))
+			b = append(b, byte(r))
 		case r >= 'a' && r <= 'z':
-			b.WriteByte(byte(r - 'a' + 'A'))
+			b = append(b, byte(r+'A'-'a'))
 		default:
-			b.WriteByte('_')
+			b = append(b, '_')
 		}
 	}
-	return b.String()
+	return string(b)
 }
 
 // Carrier is a TextMapCarrier that uses the environment variables as a
-// storage medium for propagated key-value pairs. The keys are uppercased
-// before being used to access the environment variables.
+// storage medium for propagated key-value pairs. The keys are normalised by
+// upperWithUnderscores before being used to access the environment variables.
 // This is useful for propagating values that are set in the environment
 // and need to be accessed by different processes or services.
 // The keys are uppercased to avoid case sensitivity issues across different
@@ -76,7 +75,8 @@ func (c *Carrier) Get(key string) string {
 }
 
 // Set stores the key-value pair in the environment variable.
-// The key is uppercased before being used to set the environment variable.
+// The key is normalized by upperWithUnderscored before being
+// used to set the environment variable.
 // If SetEnvFunc is not set, this method does nothing.
 func (c *Carrier) Set(key, value string) {
 	if c.SetEnvFunc == nil {
@@ -91,6 +91,8 @@ func (c *Carrier) Set(key, value string) {
 // The first call to [Carrier.Get] or [Carrier.Keys] for a
 // given Carrier will read and store the values from the
 // environment and all future reads will be from that store.
+// Keys are returned as is, without any normalization, but
+// this behavior is subject to change.
 func (c *Carrier) Keys() []string {
 	c.fetch()
 	keys := make([]string, 0, len(c.values))
