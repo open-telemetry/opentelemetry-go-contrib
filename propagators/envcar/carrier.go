@@ -29,8 +29,8 @@ func upperWithUnderscores(s string) string {
 }
 
 // Carrier is a TextMapCarrier that uses the environment variables as a
-// storage medium for propagated key-value pairs. The keys are normalised by
-// upperWithUnderscores before being used to access the environment variables.
+// storage medium for propagated key-value pairs. The keys are normalised
+// before being used to access the environment variables.
 // This is useful for propagating values that are set in the environment
 // and need to be accessed by different processes or services.
 // The keys are uppercased to avoid case sensitivity issues across different
@@ -65,7 +65,7 @@ func (c *Carrier) fetch() {
 	})
 }
 
-// Get returns the value associated with the passed key.
+// Get returns the value associated with the normalized passed key.
 // The first call to [Carrier.Get] or [Carrier.Keys] for a
 // given Carrier will read and store the values from the
 // environment and all future reads will be from that store.
@@ -75,8 +75,8 @@ func (c *Carrier) Get(key string) string {
 }
 
 // Set stores the key-value pair in the environment variable.
-// The key is normalized by upperWithUnderscored before being
-// used to set the environment variable.
+// The key is normalized before being used to set the
+// environment variable.
 // If SetEnvFunc is not set, this method does nothing.
 func (c *Carrier) Set(key, value string) {
 	if c.SetEnvFunc == nil {
