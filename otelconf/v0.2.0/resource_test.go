@@ -10,18 +10,19 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 func TestNewResource(t *testing.T) {
+	schemaURL := resource.Default().SchemaURL()
+
 	res, err := resource.Merge(resource.Default(),
-		resource.NewWithAttributes(semconv.SchemaURL,
-			semconv.ServiceName("service-a"),
+		resource.NewWithAttributes(schemaURL,
+			attribute.String("service.name", "service-a"),
 		))
 	require.NoError(t, err)
 	resWithAttrs, err := resource.Merge(resource.Default(),
-		resource.NewWithAttributes(semconv.SchemaURL,
-			semconv.ServiceName("service-a"),
+		resource.NewWithAttributes(schemaURL,
+			attribute.String("service.name", "service-a"),
 			attribute.Bool("attr-bool", true),
 		))
 	require.NoError(t, err)
@@ -57,7 +58,7 @@ func TestNewResource(t *testing.T) {
 				Attributes: Attributes{
 					"service.name": "service-a",
 				},
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: ptr(schemaURL),
 			},
 			wantResource: res,
 		},
@@ -68,7 +69,7 @@ func TestNewResource(t *testing.T) {
 					"service.name": "service-a",
 					"attr-bool":    true,
 				},
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: ptr(schemaURL),
 			},
 			wantResource: resWithAttrs,
 		},
