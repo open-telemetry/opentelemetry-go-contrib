@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Make `Body` / `GetBody()` behavior consistent with stdlib in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+- Make `Body` handling in `Transport` consistent with stdlib in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8618)
 
 ### Removed
 
