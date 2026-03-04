@@ -151,10 +151,10 @@ func TestCarrierGetCaseInsensitive(t *testing.T) {
 
 	c := envcar.Carrier{}
 	assert.Equal(t, "myvalue", c.Get("traceparent"))
-	assert.Equal(t, "myvalue", c.Get("traceparent"))
+	assert.Equal(t, "myvalue", c.Get("TRACEPARENT"))
 }
 
-func TestCarrierSetUppercasesKey(t *testing.T) {
+func TestCarrierSetUppercasesUnderscoresKey(t *testing.T) {
 	var gotKey string
 	var gotValue string
 	c := envcar.Carrier{
@@ -167,6 +167,14 @@ func TestCarrierSetUppercasesKey(t *testing.T) {
 	c.Set("traceparent", "value")
 	assert.Equal(t, "TRACEPARENT", gotKey)
 	assert.Equal(t, "value", gotValue)
+
+	c.Set("key with spaces", "value with spaces")
+	assert.Equal(t, "KEY_WITH_SPACES", gotKey)
+	assert.Equal(t, "value with spaces", gotValue)
+
+	c.Set("Mój Bagaż", "🧳")
+	assert.Equal(t, "M_J_BAGA_", gotKey)
+	assert.Equal(t, "🧳", gotValue)
 }
 
 func TestConcurrentChildProcesses(t *testing.T) {
