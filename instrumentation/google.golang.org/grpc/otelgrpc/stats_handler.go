@@ -243,9 +243,7 @@ func (*config) handleRPC(
 	switch rs := rs.(type) {
 	case *stats.Begin:
 	case *stats.InPayload:
-		_ = rs
 	case *stats.OutPayload:
-		_ = rs
 	case *stats.OutTrailer:
 	case *stats.OutHeader:
 		if span.IsRecording() {
