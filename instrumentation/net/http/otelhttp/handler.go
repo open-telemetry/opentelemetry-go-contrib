@@ -5,6 +5,7 @@ package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http
 
 import (
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/felixge/httpsnoop"
@@ -27,6 +28,7 @@ type middleware struct {
 	spanStartOptions   []trace.SpanStartOption
 	readEvent          bool
 	writeEvent         bool
+	routeAttribute     bool
 	filters            []Filter
 	spanNameFormatter  func(string, *http.Request) string
 	publicEndpointFn   func(*http.Request) bool
@@ -74,6 +76,7 @@ func (h *middleware) configure(c *config) {
 	h.spanStartOptions = c.SpanStartOptions
 	h.readEvent = c.ReadEvent
 	h.writeEvent = c.WriteEvent
+	h.routeAttribute = c.RouteAttribute
 	h.filters = c.Filters
 	h.spanNameFormatter = c.SpanNameFormatter
 	h.publicEndpointFn = c.PublicEndpointFn
@@ -199,6 +202,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		MetricAttributes: semconv.MetricAttributes{
 			Req:                  r,
 			StatusCode:           statusCode,
+			Route:                h.routeFromRequest(r),
 			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(r)...),
 		},
 		MetricData: semconv.MetricData{
@@ -214,4 +218,14 @@ func (h *middleware) metricAttributesFromRequest(r *http.Request) []attribute.Ke
 		attributeForRequest = h.metricAttributesFn(r)
 	}
 	return attributeForRequest
+}
+
+func (h *middleware) routeFromRequest(r *http.Request) string {
+	if !h.routeAttribute || r.Pattern == "" {
+		return ""
+	}
+	if idx := strings.IndexByte(r.Pattern, '/'); idx >= 0 {
+		return r.Pattern[idx:]
+	}
+	return ""
 }

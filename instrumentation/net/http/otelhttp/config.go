@@ -29,6 +29,7 @@ type config struct {
 	PublicEndpointFn  func(*http.Request) bool
 	ReadEvent         bool
 	WriteEvent        bool
+	RouteAttribute    bool
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
 	ClientTrace       func(context.Context) *httptrace.ClientTrace
@@ -161,6 +162,13 @@ func WithMessageEvents(events ...Event) Option {
 				c.WriteEvent = true
 			}
 		}
+	})
+}
+
+// WithMetricRouteAttribute returns an [Option] that enables recording the HTTP route path as a metric attribute.
+func WithMetricRouteAttribute() Option {
+	return optionFunc(func(c *config) {
+		c.RouteAttribute = true
 	})
 }
 

@@ -10,6 +10,11 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
@@ -166,4 +171,29 @@ func TestEvent(t *testing.T) {
 			})
 		}
 	})
+}
+
+func TestMetricRouteAttribute(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", http.NoBody)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /test", func(http.ResponseWriter, *http.Request) {})
+
+	metricReader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(metricReader))
+
+	otelhttp.NewHandler(mux, "",
+		otelhttp.WithMetricRouteAttribute(),
+		otelhttp.WithMeterProvider(meterProvider),
+	).ServeHTTP(rec, req)
+
+	rm := metricdata.ResourceMetrics{}
+	err := metricReader.Collect(t.Context(), &rm)
+	require.NoError(t, err)
+
+	require.Len(t, rm.ScopeMetrics, 1)
+	metricdatatest.AssertHasAttributes(t, rm.ScopeMetrics[0],
+		attribute.String("http.route", "/test"),
+	)
 }
