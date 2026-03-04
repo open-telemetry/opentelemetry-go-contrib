@@ -227,7 +227,7 @@ func (*clientHandler) HandleConn(context.Context, stats.ConnStats) {
 	// no-op
 }
 
-func (c *config) handleRPC(
+func (*config) handleRPC(
 	ctx context.Context,
 	rs stats.RPCStats,
 	duration metric.Float64Histogram,
