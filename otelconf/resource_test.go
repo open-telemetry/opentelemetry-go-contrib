@@ -136,26 +136,15 @@ func TestResourceOptsWitDetectors(t *testing.T) {
 			require.NotNil(t, got)
 
 			attrs := got.Attributes()
-			attrMap := make(map[attribute.Key]attribute.Value)
+			attrSet := make(map[attribute.Key]bool)
 			for _, attr := range attrs {
-				attrMap[attr.Key] = attr.Value
+				attrSet[attr.Key] = true
 			}
 
-			// Check for host.name attribute
-			_, ok := attrMap[semconv.HostNameKey]
-			require.Equal(t, tt.wantHostAttributes, ok)
-
-			// Check for os.type attribute (from WithOS())
-			_, ok = attrMap[semconv.OSTypeKey]
-			require.Equal(t, tt.wantOSAttributes, ok)
-
-			// Check for host.id attribute
-			_, ok = attrMap[semconv.HostIDKey]
-			require.Equal(t, tt.wantHostIDAttribute, ok)
-
-			// Check for process.pid attribute
-			_, ok = attrMap[semconv.ProcessPIDKey]
-			require.Equal(t, tt.wantProcessAttribute, ok)
+			assert.Equal(t, tt.wantHostAttributes, attrSet[semconv.HostNameKey], "should have host.name attribute")
+			assert.Equal(t, tt.wantOSAttributes, attrSet[semconv.OSTypeKey], "should have os.type attribute (from WithOS()")
+			assert.Equal(t, tt.wantHostIDAttribute, attrSet[semconv.HostIDKey], "should have host.id attribute")
+			assert.Equal(t, tt.wantProcessAttribute, attrSet[semconv.ProcessPIDKey], "should have process.pid attribute")
 		})
 	}
 }
