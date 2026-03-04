@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add environment variables propagation carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#8442)
 
+### Fixed
+
+- Make `Body` handling in `Transport` consistent with stdlib in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8618)
+
 ### Removed
 
 - Drop support for [Go 1.24]. (#8628)
