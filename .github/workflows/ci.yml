@@ -125,7 +125,7 @@ jobs:
         files: ./coverage.txt
         verbose: true
     - name: Store coverage test output
-      uses: actions/upload-artifact@v6
+      uses: actions/upload-artifact@v7
       with:
         name: opentelemetry-go-contrib-test-output
         path: ${{ env.TEST_RESULTS }}
@@ -133,7 +133,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["1.26.0", "1.25.0", "1.24.0"]
+        go-version: ["1.26.0", "1.25.0"]
         platform:
           - os: ubuntu-latest
             arch: "386"
