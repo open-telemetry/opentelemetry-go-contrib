@@ -8,7 +8,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-### Changed
+### Fixed
 
 - Ignore informational response status codes (`100-199`) when storing the HTTP status code in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6913)
 
