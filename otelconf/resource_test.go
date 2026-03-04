@@ -82,7 +82,7 @@ func TestNewResource(t *testing.T) {
 	}
 }
 
-func TestResourceOptsWitDetectors(t *testing.T) {
+func TestResourceOptsWithDetectors(t *testing.T) {
 	tests := []struct {
 		name                 string
 		detectors            []ExperimentalResourceDetector
