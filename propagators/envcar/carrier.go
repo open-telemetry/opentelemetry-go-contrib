@@ -19,9 +19,9 @@ func upperWithUnderscores(s string) string {
 	for _, r := range s {
 		switch {
 		case r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_':
-			b.WriteRune(r)
+			b.WriteByte(byte(r))
 		case r >= 'a' && r <= 'z':
-			b.WriteRune(r - 'a' + 'A')
+			b.WriteByte(byte(r - 'a' + 'A'))
 		default:
 			b.WriteByte('_')
 		}
