@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
-
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -51,7 +50,7 @@ func TestBucket(t *testing.T) {
 		assert.Equal(t, i, bkt.len())
 		spans := bkt.spans()
 		assert.Len(t, spans, i)
-		for j := 0; j < i; j++ {
+		for j := range i {
 			assert.Equal(t, time.Unix(int64(j+1), 0), spans[j].EndTime())
 		}
 	}
@@ -62,7 +61,7 @@ func TestBucket(t *testing.T) {
 		spans := bkt.spans()
 		assert.Len(t, spans, defaultBucketCapacity)
 		// First spans will have newer times, and will replace older timestamps.
-		for j := 0; j < i-defaultBucketCapacity; j++ {
+		for j := range i - defaultBucketCapacity {
 			assert.Equal(t, time.Unix(int64(j+defaultBucketCapacity+1), 0), spans[j].EndTime())
 		}
 		for j := i - defaultBucketCapacity; j < defaultBucketCapacity; j++ {
@@ -75,7 +74,7 @@ func TestBucketAddSample(t *testing.T) {
 	bkt := newBucket(defaultBucketCapacity)
 	assert.Equal(t, 0, bkt.len())
 
-	for i := 0; i < 1000; i++ {
+	for i := range 1000 {
 		bkt.add(&testSpan{endTime: time.Unix(1, int64(i*1000))})
 		assert.Equal(t, 1, bkt.len())
 		spans := bkt.spans()

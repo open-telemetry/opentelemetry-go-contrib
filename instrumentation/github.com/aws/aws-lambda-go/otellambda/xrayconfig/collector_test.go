@@ -44,12 +44,10 @@ func (s *SpansStorage) AddSpans(request *collectortracepb.ExportTraceServiceRequ
 				}
 			}
 			s.spanCount += len(rs.ScopeSpans[0].Spans)
-		} else {
-			if len(rs.ScopeSpans) > 0 {
-				newSpans := rs.ScopeSpans[0].GetSpans()
-				existingRs.ScopeSpans[0].Spans = append(existingRs.ScopeSpans[0].Spans, newSpans...)
-				s.spanCount += len(newSpans)
-			}
+		} else if len(rs.ScopeSpans) > 0 {
+			newSpans := rs.ScopeSpans[0].GetSpans()
+			existingRs.ScopeSpans[0].Spans = append(existingRs.ScopeSpans[0].Spans, newSpans...)
+			s.spanCount += len(newSpans)
 		}
 	}
 }
@@ -76,13 +74,13 @@ func resourceString(res *resourcepb.Resource) string {
 	sAttrs := sortedAttributes(res.GetAttributes())
 	rstr := ""
 	for _, attr := range sAttrs {
-		rstr = rstr + attr.String()
+		rstr += attr.String()
 	}
 	return rstr
 }
 
 func sortedAttributes(attrs []*commonpb.KeyValue) []*commonpb.KeyValue {
-	sort.Slice(attrs[:], func(i, j int) bool {
+	sort.Slice(attrs, func(i, j int) bool {
 		return attrs[i].Key < attrs[j].Key
 	})
 	return attrs

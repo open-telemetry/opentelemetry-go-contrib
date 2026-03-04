@@ -23,7 +23,7 @@ To run the uninstrumented example, execute:
 
 ### Running the Instrumented Example
 
-The instrumented example is exactly the same application, which includes OpenTelemetry instrumentation. 
+The instrumented example is exactly the same application, which includes OpenTelemetry instrumentation.
 
 To run the instrumented example, execute:
 

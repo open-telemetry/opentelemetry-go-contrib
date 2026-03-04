@@ -49,6 +49,7 @@ func main() {
 	lambda.Start(otellambda.InstrumentHandler(HandleRequest, xrayconfig.WithRecommendedOptions()...))
 }
 ```
+
 ## Recommended AWS Lambda Instrumentation Options
 
 | Instrumentation Option | Recommended Value | Exported As |
@@ -58,13 +59,11 @@ func main() {
 | `WithEventToCarrier` | Function which reads X-Ray TraceID from Lambda environment and inserts it into a `propagtation.TextMapCarrier` | Individually exported as `WithEventToCarrier()`, also included in `WithRecommendedOptions()`
 | `WithPropagator` | An `xray.propagator` | Individually exported as `WithPropagator()`, also included in `WithRecommendedOptions()`
 
-
 ## Useful links
 
 - For more information on OpenTelemetry, visit: <https://opentelemetry.io/>
 - For more about OpenTelemetry Go: <https://github.com/open-telemetry/opentelemetry-go>
 - For help or feedback on this project, join us in [GitHub Discussions][discussions-url]
-
 
 ## License
 

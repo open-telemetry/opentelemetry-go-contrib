@@ -1,13 +1,13 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package opencensus provides an OpenCensus trace context propagator.
 package opencensus // import "go.opentelemetry.io/contrib/propagators/opencensus"
 
 import (
 	"context"
 
 	ocpropagation "go.opencensus.io/trace/propagation"
-
 	"go.opentelemetry.io/otel/bridge/opencensus"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -29,7 +29,7 @@ type Binary struct{}
 var _ propagation.TextMapPropagator = Binary{}
 
 // Inject injects context into the TextMapCarrier.
-func (b Binary) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
+func (Binary) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	binaryContext := ctx.Value(binaryKey)
 	if state, ok := binaryContext.(string); binaryContext != nil && ok {
 		carrier.Set(binaryHeader, state)
@@ -57,7 +57,7 @@ func (b Binary) Extract(ctx context.Context, carrier propagation.TextMapCarrier)
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 
-func (b Binary) extract(carrier propagation.TextMapCarrier) trace.SpanContext {
+func (Binary) extract(carrier propagation.TextMapCarrier) trace.SpanContext {
 	h := carrier.Get(binaryHeader)
 	if h == "" {
 		return trace.SpanContext{}
@@ -70,6 +70,6 @@ func (b Binary) extract(carrier propagation.TextMapCarrier) trace.SpanContext {
 }
 
 // Fields returns the fields that this propagator modifies.
-func (b Binary) Fields() []string {
+func (Binary) Fields() []string {
 	return []string{binaryHeader}
 }

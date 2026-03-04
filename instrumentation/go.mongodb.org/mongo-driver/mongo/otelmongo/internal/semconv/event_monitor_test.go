@@ -11,10 +11,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/event"
-
 	"go.opentelemetry.io/otel/attribute"
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
-	semconv1260 "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
 func TestNewEventMonitor(t *testing.T) {
@@ -27,11 +26,6 @@ func TestNewEventMonitor(t *testing.T) {
 			name:    "Default Version",
 			version: "",
 			want:    "",
-		},
-		{
-			name:    "Version 1260",
-			version: semconvOptIn1260,
-			want:    "database",
 		},
 		{
 			name:    "Duplicate Version",
@@ -95,7 +89,7 @@ func TestCommandStartedTraceAttrs(t *testing.T) {
 	}
 
 	v1260 := []attribute.KeyValue{
-		semconv1260.DBSystemMongoDB,
+		semconv.DBSystemNameMongoDB,
 		{Key: "db.operation.name", Value: attribute.StringValue(opName)},
 		{Key: "db.namespace", Value: attribute.StringValue(dbNamespace)},
 		{Key: "db.query.text", Value: attribute.StringValue(stmt)},
@@ -115,24 +109,24 @@ func TestCommandStartedTraceAttrs(t *testing.T) {
 			name:      "no version",
 			initAttrs: []attribute.KeyValue{},
 			version:   "",
-			want:      v1210,
+			want:      v1260,
 		},
 		{
 			name:      "unsupported version",
 			initAttrs: []attribute.KeyValue{},
 			version:   "database/foo",
-			want:      v1210,
-		},
-		{
-			name:      "database",
-			initAttrs: []attribute.KeyValue{},
-			version:   "database",
 			want:      v1260,
 		},
 		{
 			name:      "database/dup",
 			initAttrs: []attribute.KeyValue{},
 			version:   "database/dup",
+			want:      append(v1210, v1260...),
+		},
+		{
+			name:      "mixed categories",
+			initAttrs: []attribute.KeyValue{},
+			version:   "database/dup,http",
 			want:      append(v1210, v1260...),
 		},
 	}

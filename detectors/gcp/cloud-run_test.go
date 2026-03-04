@@ -4,12 +4,10 @@
 package gcp
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
@@ -59,7 +57,7 @@ func (c *client) ProjectID() (string, error) {
 var _ metadataClient = (*client)(nil)
 
 func TestCloudRunDetectorNotOnGCE(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 	c := NewCloudRun()
 	setupForTest(c, nil, notOnGCE, getenv(nil))
 
@@ -69,7 +67,7 @@ func TestCloudRunDetectorNotOnGCE(t *testing.T) {
 }
 
 func TestCloudRunDetectorExpectSuccess(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	metadata := map[string]string{
 		"project/project-id": "foo",
@@ -104,7 +102,7 @@ func TestCloudRunDetectorExpectSuccess(t *testing.T) {
 }
 
 func TestCloudRunDetectorExpectFail(t *testing.T) {
-	ctx := context.Background()
+	ctx := t.Context()
 
 	tests := []struct {
 		name     string

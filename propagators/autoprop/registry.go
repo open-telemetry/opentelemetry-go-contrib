@@ -9,11 +9,12 @@ import (
 	"strings"
 	"sync"
 
+	"go.opentelemetry.io/otel/propagation"
+
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/contrib/propagators/ot"
-	"go.opentelemetry.io/otel/propagation"
 )
 
 // none is the special "propagator" name that means no propagator shall be

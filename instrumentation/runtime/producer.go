@@ -34,6 +34,10 @@ type Producer struct {
 var _ metric.Producer = (*Producer)(nil)
 
 // NewProducer creates a Producer which provides precomputed histogram metrics from the go runtime.
+//
+// Metrics emitted by NewProducer include:
+//
+//	go.schedule.duration    s             The time goroutines have spent in the scheduler in a runnable state before actually running.
 func NewProducer(opts ...ProducerOption) *Producer {
 	c := newProducerConfig(opts...)
 	return &Producer{
@@ -56,7 +60,7 @@ func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 		{
 			Scope: instrumentation.Scope{
 				Name:    ScopeName,
-				Version: Version(),
+				Version: Version,
 			},
 			Metrics: []metricdata.Metrics{
 				{

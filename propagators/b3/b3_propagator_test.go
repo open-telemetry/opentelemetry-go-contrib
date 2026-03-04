@@ -4,11 +4,9 @@
 package b3
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -177,14 +175,14 @@ func TestExtractMultiple(t *testing.T) {
 
 	for _, test := range tests {
 		ctx, actual, err := extractMultiple(
-			context.Background(),
+			t.Context(),
 			test.traceID,
 			test.spanID,
 			test.parentSpanID,
 			test.sampled,
 			test.flags,
 		)
-		info := []interface{}{
+		info := []any{
 			"trace ID: %q, span ID: %q, parent span ID: %q, sampled: %q, flags: %q",
 			test.traceID,
 			test.spanID,
@@ -280,7 +278,7 @@ func TestExtractSingle(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		ctx, actual, err := extractSingle(context.Background(), test.header)
+		ctx, actual, err := extractSingle(t.Context(), test.header)
 		if !assert.Equal(t, test.err, err, "header: %s", test.header) {
 			continue
 		}
@@ -309,8 +307,8 @@ func TestB3EncodingOperations(t *testing.T) {
 	// supported by everything.
 	assert.True(t, B3Unspecified.supports(B3Unspecified))
 	for _, e := range encodings[:len(encodings)-1] {
-		assert.False(t, B3Unspecified.supports(e), e)
-		assert.True(t, e.supports(B3Unspecified), e)
+		assert.False(t, B3Unspecified.supports(e), "%+v", e)
+		assert.True(t, e.supports(B3Unspecified), "%+v", e)
 	}
 
 	// Skip the special case for B3Unspecified.

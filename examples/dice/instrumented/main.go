@@ -1,6 +1,8 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Instrumented provides an example rolldice service that is instrumented with
+// OpenTelemetry.
 package main
 
 import (
@@ -22,7 +24,7 @@ func main() {
 	}
 }
 
-func run() (err error) {
+func run() error {
 	// Handle SIGINT (CTRL+C) gracefully.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer stop()
@@ -30,7 +32,7 @@ func run() (err error) {
 	// Set up OpenTelemetry.
 	otelShutdown, err := setupOTelSDK(ctx)
 	if err != nil {
-		return
+		return err
 	}
 	// Handle shutdown properly so nothing leaks.
 	defer func() {
@@ -40,7 +42,7 @@ func run() (err error) {
 	// Start HTTP server.
 	srv := &http.Server{
 		Addr:         ":8080",
-		BaseContext:  func(_ net.Listener) context.Context { return ctx },
+		BaseContext:  func(net.Listener) context.Context { return ctx },
 		ReadTimeout:  time.Second,
 		WriteTimeout: 10 * time.Second,
 		Handler:      newHTTPHandler(),
@@ -54,7 +56,7 @@ func run() (err error) {
 	select {
 	case err = <-srvErr:
 		// Error when starting HTTP server.
-		return
+		return err
 	case <-ctx.Done():
 		// Wait for first CTRL+C.
 		// Stop receiving signal notifications as soon as possible.
@@ -63,23 +65,15 @@ func run() (err error) {
 
 	// When Shutdown is called, ListenAndServe immediately returns ErrServerClosed.
 	err = srv.Shutdown(context.Background())
-	return
+	return err
 }
 
 func newHTTPHandler() http.Handler {
 	mux := http.NewServeMux()
 
-	// handleFunc is a replacement for mux.HandleFunc
-	// which enriches the handler's HTTP instrumentation with the pattern as the http.route.
-	handleFunc := func(pattern string, handlerFunc func(http.ResponseWriter, *http.Request)) {
-		// Configure the "http.route" for the HTTP instrumentation.
-		handler := otelhttp.WithRouteTag(pattern, http.HandlerFunc(handlerFunc))
-		mux.Handle(pattern, handler)
-	}
-
 	// Register handlers.
-	handleFunc("/rolldice/", rolldice)
-	handleFunc("/rolldice/{player}", rolldice)
+	mux.Handle("/rolldice", http.HandlerFunc(rolldice))
+	mux.Handle("/rolldice/{player}", http.HandlerFunc(rolldice))
 
 	// Add HTTP instrumentation for the whole server.
 	handler := otelhttp.NewHandler(mux, "/")

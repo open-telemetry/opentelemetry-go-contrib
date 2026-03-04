@@ -16,6 +16,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Package testutils provides testing utilities for the jaegerremote sampler
+// package.
 package testutils // import "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/testutils"
 
 import (
@@ -24,6 +26,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 )
+
+// MockAgent is a mock representation of Jaeger Agent.
+// It has an HTTP endpoint for sampling strategies.
+type MockAgent struct {
+	samplingMgr *samplingManager
+	samplingSrv *httptest.Server
+}
 
 // StartMockAgent runs a mock representation of jaeger-agent.
 // This function returns a started server.
@@ -45,20 +54,13 @@ func (s *MockAgent) Close() {
 	s.samplingSrv.Close()
 }
 
-// MockAgent is a mock representation of Jaeger Agent.
-// It has an HTTP endpoint for sampling strategies.
-type MockAgent struct {
-	samplingMgr *samplingManager
-	samplingSrv *httptest.Server
-}
-
 // SamplingServerAddr returns the host:port of HTTP server exposing sampling strategy endpoint.
 func (s *MockAgent) SamplingServerAddr() string {
 	return s.samplingSrv.Listener.Addr().String()
 }
 
 // AddSamplingStrategy registers a sampling strategy for a service.
-func (s *MockAgent) AddSamplingStrategy(service string, strategy interface{}) {
+func (s *MockAgent) AddSamplingStrategy(service string, strategy any) {
 	s.samplingMgr.AddSamplingStrategy(service, strategy)
 }
 

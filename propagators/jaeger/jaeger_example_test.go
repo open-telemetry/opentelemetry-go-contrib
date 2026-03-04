@@ -4,8 +4,9 @@
 package jaeger_test
 
 import (
-	"go.opentelemetry.io/contrib/propagators/jaeger"
 	"go.opentelemetry.io/otel"
+
+	"go.opentelemetry.io/contrib/propagators/jaeger"
 )
 
 func ExampleJaeger() {

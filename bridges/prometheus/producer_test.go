@@ -4,14 +4,12 @@
 package prometheus // import "go.opentelemetry.io/contrib/bridges/prometheus"
 
 import (
-	"context"
 	"testing"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -470,11 +468,11 @@ func TestProduce(t *testing.T) {
 			reg := prometheus.NewRegistry()
 			tt.testFn(reg)
 			p := NewMetricProducer(WithGatherer(reg))
-			output, err := p.Produce(context.Background())
+			output, err := p.Produce(t.Context())
 			if tt.wantErr == nil {
 				assert.NoError(t, err)
 			}
-			require.Equal(t, len(output), len(tt.expected))
+			require.Len(t, output, len(tt.expected))
 			for i := range output {
 				metricdatatest.AssertEqual(t, tt.expected[i], output[i], metricdatatest.IgnoreTimestamp())
 			}
@@ -596,7 +594,7 @@ func TestProduceForStartTime(t *testing.T) {
 			reg := prometheus.NewRegistry()
 			tt.testFn(reg)
 			p := NewMetricProducer(WithGatherer(reg))
-			output, err := p.Produce(context.Background())
+			output, err := p.Produce(t.Context())
 			assert.NoError(t, err)
 			assert.NotEmpty(t, output)
 			for _, sms := range output {

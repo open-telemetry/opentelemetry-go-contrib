@@ -4,20 +4,19 @@
 package otelrestful_test
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/stretchr/testify/assert"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
-	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
+	b3prop "go.opentelemetry.io/contrib/propagators/b3"
 )
 
 const tracerName = "go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
@@ -34,7 +33,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 	container := restful.NewContainer()
 	container.Add(ws)
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	container.ServeHTTP(w, r)
@@ -47,10 +46,10 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	provider := noop.NewTracerProvider()
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
 		TraceID: oteltrace.TraceID{0x01},
 		SpanID:  oteltrace.SpanID{0x01},
@@ -59,7 +58,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	ctx, _ = provider.Tracer(tracerName).Start(ctx, "test")
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
-	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+	handlerFunc := func(req *restful.Request, _ *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
 		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())
@@ -79,10 +78,10 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	provider := noop.NewTracerProvider()
 	b3 := b3prop.New()
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := oteltrace.NewSpanContext(oteltrace.SpanContextConfig{
 		TraceID: oteltrace.TraceID{0x01},
 		SpanID:  oteltrace.SpanID{0x01},
@@ -91,7 +90,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 	ctx, _ = provider.Tracer(tracerName).Start(ctx, "test")
 	b3.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
-	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+	handlerFunc := func(req *restful.Request, _ *restful.Response) {
 		span := oteltrace.SpanFromContext(req.Request.Context())
 		assert.Equal(t, sc.TraceID(), span.SpanContext().TraceID())
 		assert.Equal(t, sc.SpanID(), span.SpanContext().SpanID())

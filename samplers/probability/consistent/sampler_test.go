@@ -4,7 +4,6 @@
 package consistent
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"strings"
@@ -12,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -39,7 +37,7 @@ func parsePR(s string) (p, r string) {
 			r = kv[1]
 		}
 	}
-	return
+	return p, r
 }
 
 func (eh *testErrorHandler) Handle(err error) {
@@ -170,7 +168,7 @@ func TestSamplerBehavior(t *testing.T) {
 					}
 
 					parentCtx := trace.ContextWithSpanContext(
-						context.Background(),
+						t.Context(),
 						trace.NewSpanContext(sccfg),
 					)
 
@@ -179,7 +177,7 @@ func TestSamplerBehavior(t *testing.T) {
 					hasRValue := testState.hasRValue()
 
 					const repeats = 10
-					for i := 0; i < repeats; i++ {
+					for range repeats {
 						result := sampler.ShouldSample(
 							sdktrace.SamplingParameters{
 								ParentContext: parentCtx,

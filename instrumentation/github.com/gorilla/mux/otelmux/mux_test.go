@@ -5,7 +5,6 @@ package otelmux
 
 import (
 	"bufio"
-	"context"
 	"io"
 	"net"
 	"net/http"
@@ -15,7 +14,6 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -41,8 +39,8 @@ func TestPassthroughSpanFromGlobalTracer(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
-	r = r.WithContext(trace.ContextWithRemoteSpanContext(context.Background(), sc))
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+	r = r.WithContext(trace.ContextWithRemoteSpanContext(t.Context(), sc))
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -57,10 +55,10 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	prop := propagation.TraceContext{}
 	otel.SetTextMapPropagator(prop)
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc)
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	var called bool
@@ -80,10 +78,10 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 func TestPropagationWithCustomPropagators(t *testing.T) {
 	prop := propagation.TraceContext{}
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	var called bool
@@ -117,21 +115,21 @@ func (rw *testResponseWriter) WriteHeader(statusCode int) {
 }
 
 // implement Hijacker.
-func (rw *testResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+func (*testResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	return nil, nil, nil
 }
 
 // implement Pusher.
-func (rw *testResponseWriter) Push(target string, opts *http.PushOptions) error {
+func (*testResponseWriter) Push(string, *http.PushOptions) error {
 	return nil
 }
 
 // implement Flusher.
-func (rw *testResponseWriter) Flush() {
+func (*testResponseWriter) Flush() {
 }
 
 // implement io.ReaderFrom.
-func (rw *testResponseWriter) ReadFrom(r io.Reader) (n int64, err error) {
+func (*testResponseWriter) ReadFrom(io.Reader) (int64, error) {
 	return 0, nil
 }
 
@@ -139,7 +137,7 @@ func TestResponseWriterInterfaces(t *testing.T) {
 	// make sure the recordingResponseWriter preserves interfaces implemented by the wrapped writer
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar"))
-	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/user/{id}", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		assert.Implements(t, (*http.Hijacker)(nil), w)
 		assert.Implements(t, (*http.Pusher)(nil), w)
 		assert.Implements(t, (*http.Flusher)(nil), w)
@@ -147,7 +145,7 @@ func TestResponseWriterInterfaces(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
 	w := &testResponseWriter{
 		writer: httptest.NewRecorder(),
 	}
@@ -176,14 +174,14 @@ func TestFilter(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	r := httptest.NewRequest("GET", "/health", nil)
-	ctx := trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	r := httptest.NewRequest(http.MethodGet, "/health", http.NoBody)
+	ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 
-	r = httptest.NewRequest("GET", "/test", nil)
-	ctx = trace.ContextWithRemoteSpanContext(context.Background(), sc)
+	r = httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	ctx = trace.ContextWithRemoteSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 	w = httptest.NewRecorder()
 	router.ServeHTTP(w, r)
@@ -217,7 +215,7 @@ func TestPassthroughSpanFromGlobalTracerWithBody(t *testing.T) {
 
 	r := httptest.NewRequest(http.MethodPost, "/user", strings.NewReader(`{"name":"John Doe","age":30}`))
 	r.Header.Set("Content-Type", "application/json")
-	r = r.WithContext(trace.ContextWithRemoteSpanContext(context.Background(), sc))
+	r = r.WithContext(trace.ContextWithRemoteSpanContext(t.Context(), sc))
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -234,7 +232,7 @@ func TestHeaderAlreadyWrittenWhenFlushing(t *testing.T) {
 	router := mux.NewRouter()
 	router.Use(Middleware("foobar"))
 
-	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, _ *http.Request) {
 		called = true
 
 		w.WriteHeader(http.StatusBadRequest)
@@ -242,8 +240,8 @@ func TestHeaderAlreadyWrittenWhenFlushing(t *testing.T) {
 		f.Flush()
 	})
 
-	r := httptest.NewRequest("GET", "/user/123", nil)
-	r = r.WithContext(trace.ContextWithRemoteSpanContext(context.Background(), sc))
+	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+	r = r.WithContext(trace.ContextWithRemoteSpanContext(t.Context(), sc))
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)

@@ -6,14 +6,16 @@ propagation format. Since the client and server use the same propagation
 format, the ParentSpanID from the server spans should match the SpanID from
 the client spans, and both should share the same TraceID.
 
-### Usage
+## Usage
 
 First, start the opentelemetry server:
+
 ```bash
 go run opentelemetry_server/server.go
 ```
 
 In another shell, start the OpenCensus client:
+
 ```bash
 go run opencensus_client/client.go
 ```

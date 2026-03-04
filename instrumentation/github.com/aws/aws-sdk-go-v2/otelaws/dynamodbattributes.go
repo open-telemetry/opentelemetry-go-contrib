@@ -9,21 +9,13 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/smithy-go/middleware"
-
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.21.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
-// DynamoDBAttributeSetter sets DynamoDB specific attributes depending on the DynamoDB operation being performed.
-//
-// Deprecated: Use DynamoDBAttributeBuilder instead. This will be removed in a future release.
-func DynamoDBAttributeSetter(ctx context.Context, in middleware.InitializeInput) []attribute.KeyValue {
-	return DynamoDBAttributeBuilder(ctx, in, middleware.InitializeOutput{})
-}
-
 // DynamoDBAttributeBuilder sets DynamoDB specific attributes depending on the DynamoDB operation being performed.
-func DynamoDBAttributeBuilder(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue {
-	dynamodbAttributes := []attribute.KeyValue{semconv.DBSystemDynamoDB}
+func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ middleware.InitializeOutput) []attribute.KeyValue {
+	dynamodbAttributes := []attribute.KeyValue{semconv.DBSystemNameAWSDynamoDB}
 
 	switch v := in.Parameters.(type) {
 	case *dynamodb.GetItemInput:
@@ -38,14 +30,14 @@ func DynamoDBAttributeBuilder(ctx context.Context, in middleware.InitializeInput
 		}
 
 	case *dynamodb.BatchGetItemInput:
-		var tableNames []string
+		tableNames := make([]string, 0, len(v.RequestItems))
 		for k := range v.RequestItems {
 			tableNames = append(tableNames, k)
 		}
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(tableNames...))
 
 	case *dynamodb.BatchWriteItemInput:
-		var tableNames []string
+		tableNames := make([]string, 0, len(v.RequestItems))
 		for k := range v.RequestItems {
 			tableNames = append(tableNames, k)
 		}
@@ -55,7 +47,7 @@ func DynamoDBAttributeBuilder(ctx context.Context, in middleware.InitializeInput
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
 
 		if v.GlobalSecondaryIndexes != nil {
-			var idx []string
+			idx := make([]string, 0, len(v.GlobalSecondaryIndexes))
 			for _, gsi := range v.GlobalSecondaryIndexes {
 				i, _ := json.Marshal(gsi)
 				idx = append(idx, string(i))
@@ -64,7 +56,7 @@ func DynamoDBAttributeBuilder(ctx context.Context, in middleware.InitializeInput
 		}
 
 		if v.LocalSecondaryIndexes != nil {
-			var idx []string
+			idx := make([]string, 0, len(v.LocalSecondaryIndexes))
 			for _, lsi := range v.LocalSecondaryIndexes {
 				i, _ := json.Marshal(lsi)
 				idx = append(idx, string(i))
@@ -161,7 +153,7 @@ func DynamoDBAttributeBuilder(ctx context.Context, in middleware.InitializeInput
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
 
 		if v.AttributeDefinitions != nil {
-			var def []string
+			def := make([]string, 0, len(v.AttributeDefinitions))
 			for _, ad := range v.AttributeDefinitions {
 				d, _ := json.Marshal(ad)
 				def = append(def, string(d))
@@ -170,7 +162,7 @@ func DynamoDBAttributeBuilder(ctx context.Context, in middleware.InitializeInput
 		}
 
 		if v.GlobalSecondaryIndexUpdates != nil {
-			var idx []string
+			idx := make([]string, 0, len(v.GlobalSecondaryIndexUpdates))
 			for _, gsiu := range v.GlobalSecondaryIndexUpdates {
 				i, _ := json.Marshal(gsiu)
 				idx = append(idx, string(i))

@@ -5,10 +5,10 @@ package otellogr_test
 
 import (
 	"github.com/go-logr/logr"
-
-	"go.opentelemetry.io/contrib/bridges/otellogr"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/noop"
+
+	"go.opentelemetry.io/contrib/bridges/otellogr"
 )
 
 func Example() {

@@ -11,7 +11,7 @@
 //
 //   - Time is set as the Timestamp.
 //   - Message is set as the Body using a [log.StringValue].
-//   - Level is transformed and set as the Severity. The SeverityText is not
+//   - Level is transformed and set as the Severity. The SeverityText is also
 //     set.
 //   - PC is dropped.
 //   - Attr are transformed and set as the Attributes.
@@ -51,9 +51,10 @@ import (
 	"runtime"
 	"slices"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
 )
 
 // NewLogger returns a new [slog.Logger] backed by a new [Handler]. See
@@ -63,10 +64,11 @@ func NewLogger(name string, options ...Option) *slog.Logger {
 }
 
 type config struct {
-	provider  log.LoggerProvider
-	version   string
-	schemaURL string
-	source    bool
+	provider   log.LoggerProvider
+	version    string
+	schemaURL  string
+	attributes []attribute.KeyValue
+	source     bool
 }
 
 func newConfig(options []Option) config {
@@ -89,6 +91,9 @@ func (c config) logger(name string) log.Logger {
 	}
 	if c.schemaURL != "" {
 		opts = append(opts, log.WithSchemaURL(c.schemaURL))
+	}
+	if c.attributes != nil {
+		opts = append(opts, log.WithInstrumentationAttributes(c.attributes...))
 	}
 	return c.provider.Logger(name, opts...)
 }
@@ -122,6 +127,15 @@ func WithSchemaURL(schemaURL string) Option {
 	})
 }
 
+// WithAttributes returns an [Option] that configures the instrumentation scope
+// attributes of the [log.Logger] used by a [Handler].
+func WithAttributes(attributes ...attribute.KeyValue) Option {
+	return optFunc(func(c config) config {
+		c.attributes = attributes
+		return c
+	})
+}
+
 // WithLoggerProvider returns an [Option] that configures [log.LoggerProvider]
 // used by a [Handler] to create its [log.Logger].
 //
@@ -147,7 +161,7 @@ func WithSource(source bool) Option {
 // OpenTelemetry. See package documentation for how conversions are made.
 type Handler struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
-	noCmp [0]func() //nolint: unused  // This is indeed used.
+	noCmp [0]func() //nolint:unused  // This is indeed used.
 
 	attrs  *kvBuffer
 	group  *group
@@ -188,13 +202,14 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
 	record.SetSeverity(log.Severity(r.Level + sevOffset))
+	record.SetSeverityText(r.Level.String())
 
 	if h.source {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
 		f, _ := fs.Next()
 		record.AddAttributes(
-			log.String(string(semconv.CodeFilepathKey), f.File),
-			log.String(string(semconv.CodeFunctionKey), f.Function),
+			log.String(string(semconv.CodeFilePathKey), f.File),
+			log.String(string(semconv.CodeFunctionNameKey), f.Function),
 			log.Int(string(semconv.CodeLineNumberKey), f.Line),
 		)
 	}
@@ -225,7 +240,7 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 	return record
 }
 
-// Enable returns true if the Handler is enabled to log for the provided
+// Enabled returns true if the Handler is enabled to log for the provided
 // context and Level. Otherwise, false is returned if it is not enabled.
 func (h *Handler) Enabled(ctx context.Context, l slog.Level) bool {
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
@@ -346,7 +361,7 @@ func (g *group) KeyValue(kvs ...log.KeyValue) log.KeyValue {
 // Clone returns a copy of g.
 func (g *group) Clone() *group {
 	if g == nil {
-		return g
+		return nil
 	}
 	g2 := *g
 	g2.attrs = g2.attrs.Clone()
@@ -456,7 +471,7 @@ func convert(v slog.Value) log.Value {
 		if u > maxInt64 {
 			return log.Float64Value(float64(u))
 		}
-		return log.Int64Value(int64(u)) // nolint:gosec  // Overflow checked above.
+		return log.Int64Value(int64(u))
 	case slog.KindGroup:
 		g := v.Group()
 		buf := newKVBuffer(len(g))

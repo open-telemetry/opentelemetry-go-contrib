@@ -1,0 +1,137 @@
+name: Issue Labeler
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+
+jobs:
+  label-issue:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: issue-${{ github.event.issue.number }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Apply Area and Namespace Labels
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v8.0.0
+        with:
+          github-token: ${{ github.token }}
+          script: |
+            const { owner, repo } = context.repo;
+            const issueNumber = context.payload.issue?.number;
+            if (!issueNumber) return core.setFailed('No issue number in payload');
+
+            const { data: issue } = await github.rest.issues.get({ owner, repo, issue_number: issueNumber });
+            const currentLabels = (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);
+            const currentLower = currentLabels.map(s => s.toLowerCase());
+
+            core.startGroup('Diagnostics');
+            core.info(`Issue #${issue.number}`);
+            core.info(`Current labels: ${currentLabels.join(', ') || '(none)'}`);
+            core.endGroup();
+
+            // Gate: only proceed if bug/enhancement label is present
+            if (!currentLower.includes('bug') && !currentLower.includes('enhancement')) {
+              core.info('Gate not met (requires "bug" or "enhancement"); skipping.');
+              return;
+            }
+
+            const body = issue.body || '';
+            core.startGroup('Body preview');
+            core.info(`Length: ${body.length}`);
+            core.info(`First 400 chars: ${body.slice(0, 400).replace(/\r?\n/g, '\\n')}`);
+            core.endGroup();
+
+            // Extract the Component value from Issue Forms ("### Component" section)
+            function getByHeading(text, title) {
+              const esc = title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+              const re = new RegExp(
+                `(?:^|\\r?\\n)#{2,}\\s*${esc}\\s*\\r?\\n+([\\s\\S]*?)(?=\\r?\\n#{2,}\\s|\\r?\\n<!--|$)`,
+                'i'
+              );
+              const m = text.match(re);
+              if (!m) return '';
+              const lines = m[1].split(/\r?\n/).map(s => s.trim());
+              for (const ln of lines) {
+                if (!ln) continue;
+                const cleaned = ln.replace(/^>+\s*/, '').replace(/^[-*]\s*/, '');
+                if (/^no response$/i.test(cleaned)) continue;
+                if (/^```/.test(cleaned)) continue; // skip code fences
+                return cleaned;
+              }
+              return '';
+            }
+
+            // Try "### Component" first; fall back to inline "Component: X" or "otel_component: X"
+            let component = getByHeading(body, 'Component');
+            if (!component) {
+              let m = body.match(/(?:^|\r?\n)\s*(?:component|otel[_\s-]*component)\s*[:\-–]\s*(.+)/i);
+              if (m) component = m[1].trim();
+            }
+
+            core.info(`Extracted component: "${component || '(empty)'}"`);
+            if (!component) {
+              return core.setFailed('Gate met, but component not found. Ensure the form has a "Component" field with a value.');
+            }
+
+            const sanitize = s => s.toLowerCase().replace(/\s+/g, ':').replace(/:+$/,'').trim();
+
+            let area = '';
+            let ns = '';
+            let m;
+
+            if ((m = component.match(/^detector\s*[:\-–]\s*(.+)$/i))) {
+              area = 'area: detector';
+              ns = `detector: ${sanitize(m[1])}`;
+            } else if ((m = component.match(/^instrumentation\s*[:\-–]\s*(.+)$/i))) {
+              area = 'area: instrumentation';
+              ns = `instrumentation: ${sanitize(m[1])}`;
+            } else if ((m = component.match(/^propagator\s*[:\-–]\s*(.+)$/i))) {
+              area = 'area: propagators';
+              ns = `propagator: ${sanitize(m[1])}`;
+            } else if ((m = component.match(/^sampler\s*[:\-–]\s*(.+)$/i))) {
+              area = 'area: sampler';
+              ns = `sampler: ${sanitize(m[1])}`;
+            } else if (/^autoexporter$/i.test(component.trim())) {
+              area = 'area: exporter';
+              ns = 'exporter: autoexport';
+            } else if (/^zpages$/i.test(component.trim())) {
+              area = 'area: zpages';
+              ns = 'zpages';
+            } else if (/^config$/i.test(component.trim())) {
+              area = 'area: file-config';
+              ns = '';
+            }
+
+            core.info(`Computed area: "${area || '(none)'}", namespace: "${ns || '(none)'}"`);
+
+            const toAdd = [area, ns].filter(Boolean).filter(l => !currentLower.includes(l.toLowerCase()));
+            core.info(`Labels to add: ${toAdd.join(', ') || '(none)'}`);
+
+            if (!toAdd.length) {
+              return core.setFailed('Gate met but no labels computed (unrecognized component) or labels already present.');
+            }
+
+            // Ensure labels exist; fail if missing (so we get an explicit error)
+            const existing = await github.paginate(github.rest.issues.listLabelsForRepo, { owner, repo, per_page: 100 });
+            const existingSet = new Set(existing.map(l => l.name.toLowerCase()));
+            const missing = toAdd.filter(l => !existingSet.has(l.toLowerCase()));
+            if (missing.length) {
+              return core.setFailed(`Required labels do not exist in the repository: ${missing.join(', ')}. Create them and re-run.`);
+            }
+
+            // Add labels
+            await github.rest.issues.addLabels({ owner, repo, issue_number: issue.number, labels: toAdd });
+
+            // Verify
+            const updated = await github.rest.issues.get({ owner, repo, issue_number: issue.number });
+            const updatedSet = new Set(updated.data.labels.map(l => l.name.toLowerCase()));
+            const stillMissing = toAdd.filter(l => !updatedSet.has(l.toLowerCase()));
+            if (stillMissing.length) {
+              core.setFailed(`Attempted to add labels but they are missing after update: ${stillMissing.join(', ')}`);
+            } else {
+              core.info(`Labels added successfully: ${toAdd.join(', ')}`);
+            }

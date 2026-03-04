@@ -1,0 +1,109 @@
+name: 'Feature request'
+description: Suggest an idea to include in this project
+title: '[Feature]: '
+labels: ['enhancement']
+body:
+  - type: dropdown
+    id: otel_component
+    attributes:
+      label: Component
+      description: Which OpenTelemetry component are you requesting a feature for?
+      options:
+        - AutoExporter
+        - Config
+        - 'Detector: AWS EC2'
+        - 'Detector: AWS ECS'
+        - 'Detector: AWS EKS'
+        - 'Detector: AWS Lambda'
+        - 'Detector: GCP'
+        - 'Instrumentation: host'
+        - 'Instrumentation: otelaws'
+        - 'Instrumentation: otelecho'
+        - 'Instrumentation: otelgin'
+        - 'Instrumentation: otelgrpc'
+        - 'Instrumentation: otelhttp'
+        - 'Instrumentation: otelhttptrace'
+        - 'Instrumentation: otellambda'
+        - 'Instrumentation: otelmacaron'
+        - 'Instrumentation: otelmongo'
+        - 'Instrumentation: otelmux'
+        - 'Instrumentation: otelrestful'
+        - 'Instrumentation: runtime'
+        - 'Propagator: Autoprop'
+        - 'Propagator: AWS'
+        - 'Propagator: AWS X-Ray'
+        - 'Propagator: B3'
+        - 'Propagator: Jaeger'
+        - 'Propagator: OpenCensus'
+        - 'Propagator: OT'
+        - 'Sampler: AWS X-Ray'
+        - 'Sampler: JaegerRemote'
+        - 'Sampler: probability:consistent'
+        - zPages
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem_statement
+    attributes:
+      label: Problem Statement
+      description: >-
+        Clearly describe the problem this feature would address.
+      placeholder: >
+        A clear and concise description of what the problem is.
+        Ex. I'm always frustrated when [...]
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: Describe what you want to happen.
+      placeholder: A clear and concise description of your proposed solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: >-
+        List any alternative solutions or features you have considered.
+      placeholder: Describe any alternative solutions or approaches.
+    validations:
+      required: false
+
+  - type: textarea
+    id: prior_art
+    attributes:
+      label: Prior Art
+      description: >-
+        Provide similar and existing solutions from other projects to give
+        context to possible solutions.
+      placeholder: >
+        A concise list of similar implementations from other projects.
+    validations:
+      required: false
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: >-
+        Add any other context, details, or screenshots about the feature
+        request here.
+      placeholder: >
+        Include links, images, or relevant details that support your request.
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: >-
+        <sub>**Tip**:
+        [React](https://github.blog/news-insights/product-news/add-reactions-to-pull-requests-issues-and-comments/)
+        with 👍 to help prioritize this issue. Please use comments to provide
+        useful context, avoiding `+1` or `me too`, to help us triage it. Learn
+        more
+        [here](https://opentelemetry.io/community/end-user/issue-participation/).</sub>

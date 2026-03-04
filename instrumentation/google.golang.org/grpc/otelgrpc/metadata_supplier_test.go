@@ -14,7 +14,7 @@ func TestMetadataSupplier(t *testing.T) {
 	md := metadata.New(map[string]string{
 		"k1": "v1",
 	})
-	ms := &metadataSupplier{&md}
+	ms := metadataSupplier{md}
 
 	v1 := ms.Get("k1")
 	assert.Equal(t, "v1", v1)
@@ -25,4 +25,8 @@ func TestMetadataSupplier(t *testing.T) {
 	v2 := ms.Get("k2")
 	assert.Equal(t, "v1", v1)
 	assert.Equal(t, "v2", v2)
+
+	wantKeys := []string{"k1", "k2"}
+	keys := ms.Keys()
+	assert.ElementsMatch(t, wantKeys, keys)
 }

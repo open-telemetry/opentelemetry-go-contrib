@@ -290,29 +290,35 @@ tracer_provider:
     event_attribute_count_limit: 128
     # Configure max attributes per span link.
     link_attribute_count_limit: 128
-  # Configure the sampler.
+  # If omitted, parent based sampler with a root of always_on is used.
   sampler:
     # Configure sampler to be parent_based.
     parent_based:
       # Configure root sampler.
+      # If omitted or null, always_on is used.
       root:
         # Configure sampler to be trace_id_ratio_based.
         trace_id_ratio_based:
           # Configure trace_id_ratio.
+          # If omitted or null, 1.0 is used.
           ratio: 0.0001
       # Configure remote_parent_sampled sampler.
+      # If omitted or null, always_on is used.
       remote_parent_sampled:
         # Configure sampler to be always_on.
         always_on: {}
       # Configure remote_parent_not_sampled sampler.
+      # If omitted or null, always_off is used.
       remote_parent_not_sampled:
         # Configure sampler to be always_off.
         always_off: {}
       # Configure local_parent_sampled sampler.
+      # If omitted or null, always_on is used.
       local_parent_sampled:
         # Configure sampler to be always_on.
         always_on: {}
       # Configure local_parent_not_sampled sampler.
+      # If omitted or null, always_off is used.
       local_parent_not_sampled:
         # Configure sampler to be always_off.
         always_off: {}

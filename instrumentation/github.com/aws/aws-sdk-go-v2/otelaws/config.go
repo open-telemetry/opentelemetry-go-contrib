@@ -4,11 +4,6 @@
 package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 
 import (
-	"context"
-
-	"github.com/aws/smithy-go/middleware"
-
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -50,19 +45,6 @@ func WithTextMapPropagator(propagator propagation.TextMapPropagator) Option {
 			cfg.TextMapPropagator = propagator
 		}
 	})
-}
-
-// WithAttributeSetter specifies an attribute setter function for setting service specific attributes.
-// If none is specified, the service will be determined by the DefaultAttributeBuilder function and the corresponding attributes will be included.
-func WithAttributeSetter(attributesetters ...AttributeSetter) Option {
-	var attributeBuilders []AttributeBuilder
-	for _, setter := range attributesetters {
-		attributeBuilders = append(attributeBuilders, func(ctx context.Context, in middleware.InitializeInput, out middleware.InitializeOutput) []attribute.KeyValue {
-			return setter(ctx, in)
-		})
-	}
-
-	return WithAttributeBuilder(attributeBuilders...)
 }
 
 // WithAttributeBuilder specifies an attribute setter function for setting service specific attributes.

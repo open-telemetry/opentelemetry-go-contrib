@@ -2,37 +2,6 @@
 
 Code contained in this directory contains instrumentation for 3rd-party Go packages and some packages from the standard library.
 
-## New Instrumentation
-
-**Do not submit pull requests for new instrumentation without reading the following.**
-
-This project is dedicated to promoting the development of quality instrumentation using OpenTelemetry.
-To achieve this goal, we recognize that the instrumentation needs to be written using the best practices of OpenTelemetry, but also by developers that understand the package they are instrumenting.
-Additionally, the produced instrumentation needs to be maintained and evolved.
-
-The size of the OpenTelemetry Go developer community is not large enough to support an ever growing amount of instrumentation.
-Therefore, to reach our goal, we have the following recommendations for where instrumentation packages should live.
-
-1. Native to the instrumented package
-2. A dedicated public repository
-3. Here in the opentelemetry-go-contrib repository
-
-If possible, OpenTelemetry instrumentation should be included in the instrumented package.
-This will ensure the instrumentation reaches all package users, and is continuously maintained by developers that understand the package.
-
-If instrumentation cannot be directly included in the package it is instrumenting, it should be hosted in a dedicated public repository owned by its maintainer(s).
-This will appropriately assign maintenance responsibilities for the instrumentation and ensure these maintainers have the needed privilege to maintain the code.
-
-The last place instrumentation should be hosted is here in this repository.
-Maintaining instrumentation here hampers the development of OpenTelemetry for Go and therefore should be avoided.
-When instrumentation cannot be included in a target package and there is good reason to not host it in a separate and dedicated repository an [instrumentation request](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/new/choose) should be filed.
-The instrumentation request needs to be accepted before any pull requests for the instrumentation can be considered for merging.
-
-Regardless of where instrumentation is hosted, it needs to be discoverable.
-The [OpenTelemetry registry](https://opentelemetry.io/registry/)
-exists to ensure that instrumentation is discoverable.
-You can find out how to add instrumentation to the registry [here](https://github.com/open-telemetry/opentelemetry.io#adding-a-project-to-the-opentelemetry-registry).
-
 ## Instrumentation Packages
 
 The [OpenTelemetry registry](https://opentelemetry.io/registry/) is the best place to discover instrumentation packages.
@@ -44,10 +13,11 @@ The following instrumentation packages are provided for popular Go packages and 
 | :---------------------: | :-----: | :----: |
 | [github.com/aws/aws-sdk-go-v2](./github.com/aws/aws-sdk-go-v2/otelaws)|  | ✓ |
 | [github.com/emicklei/go-restful](./github.com/emicklei/go-restful/otelrestful) |  | ✓ |
-| [github.com/gin-gonic/gin](./github.com/gin-gonic/gin/otelgin) |  | ✓ |
-| [github.com/gorilla/mux](./github.com/gorilla/mux/otelmux) |  | ✓ |
-| [github.com/labstack/echo](./github.com/labstack/echo/otelecho) |  | ✓ |
+| [github.com/gin-gonic/gin](./github.com/gin-gonic/gin/otelgin) | ✓ | ✓ |
+| [github.com/gorilla/mux](./github.com/gorilla/mux/otelmux) | ✓ | ✓ |
+| [github.com/labstack/echo](./github.com/labstack/echo/otelecho) | ✓ | ✓ |
 | [go.mongodb.org/mongo-driver](./go.mongodb.org/mongo-driver/mongo/otelmongo) |  | ✓ |
+| [go.mongodb.org/mongo-driver/v2](./go.mongodb.org/mongo-driver/v2/mongo/otelmongo) |  | ✓ |
 | [google.golang.org/grpc](./google.golang.org/grpc/otelgrpc) | ✓ | ✓ |
 | [host](./host) | ✓ |  |
 | [net/http](./net/http/otelhttp) | ✓ | ✓ |
@@ -93,3 +63,23 @@ Additionally the following guidelines for package composition need to be followe
 - All instrumentation packages MUST NOT provide an option to accept a `Tracer` or `Meter`.
 - All instrumentation packages MUST define a `ScopeName` constant with a value matching the instrumentation package and use it when creating a `Tracer` or `Meter`.
 - All instrumentation packages MUST define a `Version` function returning the version of the module containing the instrumentation and use it when creating a `Tracer` or `Meter`.
+
+### Recording Errors
+
+When an instrumented operation returns a non-nil `error` and the semantic conventions classify the outcome as an error, the instrumentation:
+
+1. MUST set the span status to `codes.Error` with a description of `err.Error()`,
+
+2. SHOULD also set the `error.type` attribute, for example by using the `ErrorType` function from the `semconv` package,
+
+3. SHOULD NOT use `span.RecordError(err)` for this purpose.
+
+For example:
+
+```go
+res, err := t.rt.RoundTrip(r)
+if err != nil {
+   span.SetAttributes(semconv.ErrorType(err))
+   span.SetStatus(codes.Error, err.Error())
+}
+```

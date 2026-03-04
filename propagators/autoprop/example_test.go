@@ -8,10 +8,11 @@ import (
 	"os"
 	"sort"
 
-	"go.opentelemetry.io/contrib/propagators/autoprop"
-	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
+
+	"go.opentelemetry.io/contrib/propagators/autoprop"
+	"go.opentelemetry.io/contrib/propagators/b3"
 )
 
 func ExampleNewTextMapPropagator() {

@@ -7,9 +7,10 @@ package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.co
 
 import (
 	"net/http"
+	"slices"
+	"strings"
 
 	"github.com/gin-gonic/gin"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
@@ -17,29 +18,54 @@ import (
 )
 
 type config struct {
-	TracerProvider    oteltrace.TracerProvider
-	Propagators       propagation.TextMapPropagator
-	Filters           []Filter
-	GinFilters        []GinFilter
-	SpanNameFormatter SpanNameFormatter
-	MeterProvider     metric.MeterProvider
-	MetricAttributeFn MetricAttributeFn
+	TracerProvider       oteltrace.TracerProvider
+	Propagators          propagation.TextMapPropagator
+	SpanStartOptions     []oteltrace.SpanStartOption
+	Filters              []Filter
+	GinFilters           []GinFilter
+	SpanNameFormatter    SpanNameFormatter
+	MeterProvider        metric.MeterProvider
+	MetricAttributeFn    MetricAttributeFn
+	GinMetricAttributeFn GinMetricAttributeFn
+}
+
+// defaultSpanNameFormatter is the default span name formatter.
+var defaultSpanNameFormatter SpanNameFormatter = func(c *gin.Context) string {
+	method := strings.ToUpper(c.Request.Method)
+	if !slices.Contains([]string{
+		http.MethodGet, http.MethodHead,
+		http.MethodPost, http.MethodPut,
+		http.MethodPatch, http.MethodDelete,
+		http.MethodConnect, http.MethodOptions,
+		http.MethodTrace,
+	}, method) {
+		method = "HTTP"
+	}
+
+	if path := c.FullPath(); path != "" {
+		return method + " " + path
+	}
+
+	return method
 }
 
 // Filter is a predicate used to determine whether a given http.request should
 // be traced. A Filter must return true if the request should be traced.
 type Filter func(*http.Request) bool
 
-// Adding new Filter parameter (*gin.Context)
-// gin.Context has FullPath() method, which returns a matched route full path.
+// GinFilter filters an [net/http.Request] based on content of a [gin.Context].
 type GinFilter func(*gin.Context) bool
 
-// SpanNameFormatter is used to set span name by http.request.
-type SpanNameFormatter func(r *http.Request) string
+// SpanNameFormatter is used by `WithSpanNameFormatter` to customize the request's span name.
+type SpanNameFormatter func(*gin.Context) string
 
 // MetricAttributeFn is used to extract additional attributes from the http.Request
 // and return them as a slice of attribute.KeyValue.
 type MetricAttributeFn func(*http.Request) []attribute.KeyValue
+
+// GinMetricAttributeFn is used to extract additional attributes from the gin.Context
+// and return them as a slice of attribute.KeyValue.
+type GinMetricAttributeFn func(*gin.Context) []attribute.KeyValue
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -60,6 +86,14 @@ func WithPropagators(propagators propagation.TextMapPropagator) Option {
 		if propagators != nil {
 			cfg.Propagators = propagators
 		}
+	})
+}
+
+// WithSpanStartOptions configures an additional set of
+// trace.SpanStartOptions, which are applied to each new span.
+func WithSpanStartOptions(opts ...oteltrace.SpanStartOption) Option {
+	return optionFunc(func(c *config) {
+		c.SpanStartOptions = append(c.SpanStartOptions, opts...)
 	})
 }
 
@@ -94,7 +128,7 @@ func WithGinFilter(f ...GinFilter) Option {
 
 // WithSpanNameFormatter takes a function that will be called on every
 // request and the returned string will become the Span Name.
-func WithSpanNameFormatter(f func(r *http.Request) string) Option {
+func WithSpanNameFormatter(f SpanNameFormatter) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
 	})
@@ -110,8 +144,20 @@ func WithMeterProvider(mp metric.MeterProvider) Option {
 
 // WithMetricAttributeFn specifies a function that extracts additional attributes from the http.Request
 // and returns them as a slice of attribute.KeyValue.
+//
+// If attributes are duplicated between this method and `WithGinMetricAttributeFn`, the attributes in this method will be overridden.
 func WithMetricAttributeFn(f MetricAttributeFn) Option {
 	return optionFunc(func(c *config) {
 		c.MetricAttributeFn = f
+	})
+}
+
+// WithGinMetricAttributeFn specifies a function that extracts additional attributes from the gin.Context
+// and returns them as a slice of attribute.KeyValue.
+//
+// If attributes are duplicated between this method and `WithMetricAttributeFn`, the attributes in this method will be used.
+func WithGinMetricAttributeFn(f GinMetricAttributeFn) Option {
+	return optionFunc(func(c *config) {
+		c.GinMetricAttributeFn = f
 	})
 }

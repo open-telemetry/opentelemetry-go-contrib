@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -119,7 +119,7 @@ func TestOT_Extract(t *testing.T) {
 	for _, test := range testData {
 		sc, err := extract(test.traceID, test.spanID, test.sampled)
 
-		info := []interface{}{
+		info := []any{
 			"trace ID: %q, span ID: %q, sampled: %q",
 			test.traceID,
 			test.spanID,
@@ -131,5 +131,28 @@ func TestOT_Extract(t *testing.T) {
 		}
 
 		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
+	}
+}
+
+func TestOT_Fields(t *testing.T) {
+	propagator := OT{}
+
+	want := []string{traceIDHeader, spanIDHeader, sampledHeader}
+
+	got := propagator.Fields()
+
+	assert.Equal(t, want, got)
+
+	// Cross-check with Inject() behavior
+	ctx := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{1},
+		SpanID:  trace.SpanID{1},
+	})
+
+	carrier := propagation.MapCarrier{}
+	propagator.Inject(trace.ContextWithSpanContext(t.Context(), ctx), carrier)
+
+	for _, field := range got {
+		assert.Contains(t, carrier, field, "Each field returned by Fields() should be set by Inject()")
 	}
 }
