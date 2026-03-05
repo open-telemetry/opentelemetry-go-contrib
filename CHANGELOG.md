@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add environment variables propagation carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#8442)
+
 ### Changed
 
 - Upgrade `go.opentelemetry.io/otel/semconv` to `v1.40.0`, including updates across instrumentation and detector modules. (#8631)
