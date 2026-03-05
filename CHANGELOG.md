@@ -21,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - `rpc.message` span events and their message attributes are no longer emitted in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` (including when `WithMessageEvents` is configured).
 
   See [semantic-conventions v1.40.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.40.0) for complete details.
+- The `NewSDK` function in `go.opentelemetry.io/contrib/otelconf` supports `OTEL_CONFIG_FILE` instead of `OTEL_EXPERIMENTAL_CONFIG_FILE` (#8639)
 
 ### Fixed
 
