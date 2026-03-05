@@ -32,7 +32,7 @@ func TestMetricsOperationDuration(t *testing.T) {
 	defer cancel()
 
 	opts := options.Client()
-	opts.Deployment = md
+	opts.Deployment = md //nolint:staticcheck  // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
 	opts.Monitor = NewMonitor(
 		WithMeterProvider(provider),
 		WithCommandAttributeDisabled(false),
@@ -101,7 +101,7 @@ func TestMetricsOperationFailure(t *testing.T) {
 	defer cancel()
 
 	opts := options.Client()
-	opts.Deployment = md
+	opts.Deployment = md //nolint:staticcheck  // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
 	opts.Monitor = NewMonitor(
 		WithMeterProvider(provider),
 		WithCommandAttributeDisabled(true),
