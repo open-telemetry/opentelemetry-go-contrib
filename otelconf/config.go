@@ -24,7 +24,10 @@ import (
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
 
-const envVarConfigFile = "OTEL_EXPERIMENTAL_CONFIG_FILE"
+const (
+	envVarConfigFileDeprecated = "OTEL_EXPERIMENTAL_CONFIG_FILE"
+	envVarConfigFile           = "OTEL_CONFIG_FILE"
+)
 
 // SDK is a struct that contains all the providers
 // configured via the configuration model.
@@ -61,13 +64,16 @@ func (s *SDK) Shutdown(ctx context.Context) error {
 	return s.shutdown(ctx)
 }
 
-var noopSDK = SDK{
-	loggerProvider: nooplog.LoggerProvider{},
-	meterProvider:  noopmetric.MeterProvider{},
-	tracerProvider: nooptrace.TracerProvider{},
-	propagator:     propagation.NewCompositeTextMapPropagator(),
-	shutdown:       func(context.Context) error { return nil },
-}
+var (
+	noopSDK = SDK{
+		loggerProvider: nooplog.LoggerProvider{},
+		meterProvider:  noopmetric.MeterProvider{},
+		tracerProvider: nooptrace.TracerProvider{},
+		propagator:     propagation.NewCompositeTextMapPropagator(),
+		shutdown:       func(context.Context) error { return nil },
+	}
+	errDeprecatedEnvVarUsed = errors.New("OTEL_EXPERIMENTAL_CONFIG_FILE is no longer supported, use OTEL_CONFIG_FILE instead")
+)
 
 func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error) {
 	b, err := os.ReadFile(filename)
@@ -86,10 +92,15 @@ func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error
 }
 
 // NewSDK creates SDK providers based on the configuration model. It checks the local environment and
-// uses the file set in the variable `OTEL_EXPERIMENTAL_CONFIG_FILE` to configure the SDK automatically.
-// Any file defined by `OTEL_EXPERIMENTAL_CONFIG_FILE` will supersede all files passed with
+// uses the file set in the variable `OTEL_CONFIG_FILE` to configure the SDK automatically.
+// Any file defined by `OTEL_CONFIG_FILE` will supersede all files passed with
 // [WithOpenTelemetryConfiguration].
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
+	_, ok := os.LookupEnv(envVarConfigFileDeprecated)
+	if ok {
+		return noopSDK, errDeprecatedEnvVarUsed
+
+	}
 	filename, ok := os.LookupEnv(envVarConfigFile)
 	if ok {
 		opt, err := parseConfigFileFromEnvironment(filename)
