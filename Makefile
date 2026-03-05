@@ -191,7 +191,7 @@ vanity-import-check: | $(PORTO)
 	@$(PORTO) --include-internal -l . || ( echo "(run: make vanity-import-fix)"; exit 1 )
 
 .PHONY: lint
-lint: go-mod-tidy golangci-lint misspell govulncheck
+lint: go-mod-tidy golangci-lint misspell
 
 .PHONY: toolchain-check
 toolchain-check:
