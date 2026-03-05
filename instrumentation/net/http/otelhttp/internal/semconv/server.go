@@ -15,12 +15,13 @@ import (
 	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/semconv/v1.39.0"
-	"go.opentelemetry.io/otel/semconv/v1.39.0/httpconv"
+	"go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/httpconv"
 )
 
 type RequestTraceAttrsOpts struct {
@@ -245,19 +246,11 @@ type MetricAttributes struct {
 }
 
 type MetricData struct {
-	RequestSize int64
-
-	// The request duration, in milliseconds
-	ElapsedTime float64
+	RequestSize     int64
+	RequestDuration time.Duration
 }
 
 var (
-	metricAddOptionPool = &sync.Pool{
-		New: func() any {
-			return &[]metric.AddOption{}
-		},
-	}
-
 	metricRecordOptionPool = &sync.Pool{
 		New: func() any {
 			return &[]metric.RecordOption{}
@@ -272,7 +265,7 @@ func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	*recordOpts = append(*recordOpts, o)
 	n.requestBodySizeHistogram.Inst().Record(ctx, md.RequestSize, *recordOpts...)
 	n.responseBodySizeHistogram.Inst().Record(ctx, md.ResponseSize, *recordOpts...)
-	n.requestDurationHistogram.Inst().Record(ctx, md.ElapsedTime/1000.0, o)
+	n.requestDurationHistogram.Inst().Record(ctx, durationToSeconds(md.RequestDuration), o)
 	*recordOpts = (*recordOpts)[:0]
 	metricRecordOptionPool.Put(recordOpts)
 }

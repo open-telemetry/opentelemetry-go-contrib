@@ -1,19 +1,19 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful
 
-go 1.24.0
+go 1.25.0
 
 replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
 
 require (
 	github.com/emicklei/go-restful/v3 v3.13.0
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/contrib/propagators/b3 v1.40.0
-	go.opentelemetry.io/otel v1.40.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.40.0
-	go.opentelemetry.io/otel/metric v1.40.0
-	go.opentelemetry.io/otel/sdk v1.40.0
-	go.opentelemetry.io/otel/sdk/metric v1.40.0
-	go.opentelemetry.io/otel/trace v1.40.0
+	go.opentelemetry.io/contrib/propagators/b3 v1.41.0
+	go.opentelemetry.io/otel v1.41.1-0.20260303203755-5deb0d31ed71
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.41.1-0.20260303203755-5deb0d31ed71
+	go.opentelemetry.io/otel/metric v1.41.1-0.20260303203755-5deb0d31ed71
+	go.opentelemetry.io/otel/sdk v1.41.1-0.20260303203755-5deb0d31ed71
+	go.opentelemetry.io/otel/sdk/metric v1.41.1-0.20260303203755-5deb0d31ed71
+	go.opentelemetry.io/otel/trace v1.41.1-0.20260303203755-5deb0d31ed71
 )
 
 require (

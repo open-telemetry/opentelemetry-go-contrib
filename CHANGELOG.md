@@ -8,12 +8,40 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add environment variables propagation carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#8442)
+
+### Changed
+
+- Upgrade `go.opentelemetry.io/otel/semconv` to `v1.40.0`, including updates across instrumentation and detector modules. (#8631)
+  - The semantic conventions v1.40.0 release introduces RPC breaking changes applied in this repository:
+    - RPC spans and metrics no longer include `network.protocol.name`, `network.protocol.version`, or `network.transport` attributes.
+    - `rpc.client.request.size`, `rpc.client.response.size`, `rpc.server.request.size`, and `rpc.server.response.size` are no longer emitted in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`.
+    - `rpc.message` span events and their message attributes are no longer emitted in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` (including when `WithMessageEvents` is configured).
+
+  See [semantic-conventions v1.40.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.40.0) for complete details.
+
+### Fixed
+
+- Ignore informational response status codes (`100-199`) except `101 Switching Protocols` when storing the HTTP status code in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6913)
+- Make `Body` handling in `Transport` consistent with stdlib in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8618)
+
+### Removed
+
+- Drop support for [Go 1.24]. (#8628)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.13.0] - 2026-03-02
+
 This release is the last to support [Go 1.24].
 The next release will require at least [Go 1.25].
 
 ### Added
 
-- `WithSpanKind` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to override the default span kind. (#8506)
+- Add `WithSpanKind` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to override the default span kind. (#8506)
 - Add `const Version` in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8544)
 - Support testing of [Go 1.26]. (#8549)
 - Add `const Version` in `go.opentelemetry.io/contrib/detectors/autodetect`. (#8555)
@@ -22,19 +50,19 @@ The next release will require at least [Go 1.25].
 - Add `const Version` in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#8510)
 - Add `const Version` in `go.opentelemetry.io/contrib/propagators/autoprop`. (#8488)
 - Add `const Version` in `go.opentelemetry.io/contrib/processors/minsev`. (#8590)
-- Add `const Version` in `go.opentelemetry.io/contrib/exporters/autoexport`. (#8611)
+- Add `const Version` in `go.opentelemetry.io/contrib/exporters/autoexport`. (#8612)
 
 ### Fixed
 
 - Change the `rpc.server.call.duration` metric value from milliseconds to seconds in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8509)
 - Change the `rpc.response.status_code` attribute to the canonical `UPPER_SNAKE_CASE` format in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8565)
 - Enforce that `client_certificate_file` and `client_key_file` are provided together in `go.opentelemetry.io/contrib/otelconf`. (#8450)
-- Fixed broken CSS and JavaScript CDN URLs in `go.opentelemetry.io/contrib/zpages` by replacing the inaccessible code.getmdl.io CDN with cdnjs.cloudflare.com. (#8502)
+- Fix broken CSS and JavaScript CDN URLs in `go.opentelemetry.io/contrib/zpages` by replacing the inaccessible code.getmdl.io CDN with cdnjs.cloudflare.com. (#8502)
 - Use Prometheus translation strategy instead of deprecated funcs in `go.opentelemetry.io/contrib/otelconf`. (#8595)
 
 ### Removed
 
-- Removed the deprecated zipkin exporter example in `go.opentelemetry.io/contrib/examples/zipkin`. (#8501)
+- Remove the deprecated zipkin exporter example in `go.opentelemetry.io/contrib/examples/zipkin`. (#8501)
 
 ### Changed
 
@@ -46,15 +74,12 @@ The next release will require at least [Go 1.25].
   - `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
-- Updated the configuration schema used in `go.opentelemetry.io/contrib/otelconf` to [rc.3](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.3). (#8505)
+- Update the configuration schema used in `go.opentelemetry.io/contrib/otelconf` to [rc.3](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.3). (#8505)
 - Moved experimental types from `go.opentelemetry.io/contrib/otelconf` to `go.opentelemetry.io/contrib/otelconf/x`. (#8529)
 
 ### Deprecated
 
 - `WithMetricAttributesFn` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated and will be removed in a future release. Use `Labeler` instead. (#8587)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.40.0/2.2.0/0.65.0/0.34.0/0.20.0/0.15.0/0.13.0/0.12.0] - 2026-02-02
 
@@ -1698,7 +1723,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.40.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.41.0...HEAD
+[1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.13.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.41.0
 [1.40.0/2.2.0/0.65.0/0.34.0/0.20.0/0.15.0/0.13.0/0.12.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.40.0
 [1.39.0/2.1.0/0.64.0/0.33.0/0.19.0/0.14.0/0.12.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.39.0
 [1.38.0/2.0.0/0.63.0/0.32.0/0.18.0/0.13.0/0.11.0/0.10.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.38.0

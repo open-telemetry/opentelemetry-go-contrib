@@ -149,6 +149,12 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 
 		if u.Scheme == "http" {
 			opts = append(opts, otlpmetrichttp.WithInsecure())
+		} else {
+			tlsConfig, err := tls.CreateConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
+			if err != nil {
+				return nil, err
+			}
+			opts = append(opts, otlpmetrichttp.WithTLSClientConfig(tlsConfig))
 		}
 		if u.Path != "" {
 			opts = append(opts, otlpmetrichttp.WithURLPath(u.Path))
@@ -186,12 +192,6 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPMetric) (sdkmet
 			return nil, fmt.Errorf("unsupported temporality preference %q", *otlpConfig.TemporalityPreference)
 		}
 	}
-
-	tlsConfig, err := tls.CreateConfig(otlpConfig.Certificate, otlpConfig.ClientCertificate, otlpConfig.ClientKey)
-	if err != nil {
-		return nil, err
-	}
-	opts = append(opts, otlpmetrichttp.WithTLSClientConfig(tlsConfig))
 
 	return otlpmetrichttp.New(ctx, opts...)
 }
