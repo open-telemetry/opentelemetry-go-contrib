@@ -99,7 +99,6 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	_, ok := os.LookupEnv(envVarConfigFileDeprecated)
 	if ok {
 		return noopSDK, errDeprecatedEnvVarUsed
-
 	}
 	filename, ok := os.LookupEnv(envVarConfigFile)
 	if ok {
