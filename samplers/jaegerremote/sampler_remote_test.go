@@ -58,17 +58,13 @@ func TestRemotelyControlledSampler_updateConcurrentSafe(*testing.T) {
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		sampler.UpdateSampler()
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		sampler.ShouldSample(s)
-	}()
+	})
 
 	wg.Wait()
 }

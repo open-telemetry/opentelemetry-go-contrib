@@ -66,7 +66,7 @@ func TestWithSpanNameFormatter(t *testing.T) {
 			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			opts.Deployment = md //nolint:staticcheck // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
+			opts.Deployment = md
 			opts.Monitor = NewMonitor(
 				WithTracerProvider(provider),
 				WithSpanNameFormatter(tc.SpanNameFormatter),
@@ -170,7 +170,7 @@ func TestDBCrudOperation(t *testing.T) {
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			opts.Deployment = md //nolint:staticcheck // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
+			opts.Deployment = md
 			opts.Monitor = NewMonitor(
 				WithTracerProvider(provider),
 				WithCommandAttributeDisabled(tc.excludeCommand),
@@ -278,7 +278,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			opts.Deployment = md //nolint:staticcheck // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
+			opts.Deployment = md
 			opts.Monitor = NewMonitor(
 				WithTracerProvider(provider),
 				WithCommandAttributeDisabled(true),
