@@ -187,16 +187,12 @@ func TestCoreWriteContextConcurrentSafe(t *testing.T) {
 	ctx = context.WithValue(ctx, testEntry, true)
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		logger.Debug(testMessage, zap.Any("ctx", ctx))
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		logger.Debug(testMessage, zap.Any("ctx", ctx))
-	}()
+	})
 	wg.Wait()
 
 	want := logtest.Recording{

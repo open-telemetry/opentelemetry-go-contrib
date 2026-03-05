@@ -351,7 +351,7 @@ func mockRequestCarrier(eventJSON []byte) propagation.TextMapCarrier {
 	var event mockRequest
 	err := json.Unmarshal(eventJSON, &event)
 	if err != nil {
-		fmt.Println("event type: ", reflect.TypeOf(event))
+		fmt.Println("event type: ", reflect.TypeFor[mockRequest]())
 		panic("mockRequestCarrier only supports events of type mockRequest")
 	}
 	return propagation.HeaderCarrier{mockPropagatorKey: []string{event.Headers[mockPropagatorKey]}}
@@ -361,10 +361,10 @@ func mockTraceAttributeFn(eventJSON []byte) []attribute.KeyValue {
 	var event mockRequest
 	err := json.Unmarshal(eventJSON, &event)
 	if err != nil {
-		fmt.Println("event type: ", reflect.TypeOf(event))
+		fmt.Println("event type: ", reflect.TypeFor[mockRequest]())
 		panic("mockRequestCarrier only supports events of type mockRequest")
 	}
-	return []attribute.KeyValue{attribute.String("mock.request.type", reflect.TypeOf(event).String())}
+	return []attribute.KeyValue{attribute.String("mock.request.type", reflect.TypeFor[mockRequest]().String())}
 }
 
 func TestInstrumentHandlerTracingWithMockPropagator(t *testing.T) {
@@ -427,6 +427,6 @@ func TestWrapHandlerTracingWithTraceAttributeFn(t *testing.T) {
 
 	assert.Len(t, memExporter.GetSpans(), 1)
 	stub := memExporter.GetSpans()[0]
-	expectedAttr := attribute.KeyValue{Key: "mock.request.type", Value: attribute.StringValue(reflect.TypeOf(mockPropagatorTestsEvent).String())}
+	expectedAttr := attribute.KeyValue{Key: "mock.request.type", Value: attribute.StringValue(reflect.TypeFor[mockRequest]().String())}
 	assert.Contains(t, stub.Attributes, expectedAttr, "custom attribute 'mock.request.type' with value 'otellambda_test.mockRequest' not found")
 }
