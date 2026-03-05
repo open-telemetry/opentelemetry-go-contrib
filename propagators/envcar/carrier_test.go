@@ -250,7 +250,7 @@ func TestConcurrentChildProcesses(t *testing.T) {
 	}
 }
 
-// Ensure Get and Keys to fetch from cache
+// Ensure Get and Keys to fetch from cache.
 func TestCarrierGetFetchOnce(t *testing.T) {
 	t.Setenv("TRACEPARENT", "myvalue")
 	c := envcar.Carrier{}
