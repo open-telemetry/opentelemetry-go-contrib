@@ -6,6 +6,7 @@ package envcar_test
 import (
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -247,4 +248,18 @@ func TestConcurrentChildProcesses(t *testing.T) {
 		assert.Equal(t, r.want, r.got,
 			"goroutine %d: child process received wrong trace context", r.index)
 	}
+}
+
+// Ensure Get and Keys to fetch from cache
+func TestCarrierGetFetchOnce(t *testing.T) {
+	t.Setenv("TRACEPARENT", "myvalue")
+	c := envcar.Carrier{}
+	require.Equal(t, "myvalue", c.Get("TRACEPARENT"))
+	require.NotEqual(t, -1, slices.Index(c.Keys(), "TRACEPARENT"))
+	t.Setenv("TRACEPARENT", "bad")
+	t.Setenv("SOMETHINGNEW", "bad")
+	// Assert a carrier instance reads the env vars only once:
+	assert.Equal(t, "myvalue", c.Get("TRACEPARENT"))
+	assert.NotEqual(t, -1, slices.Index(c.Keys(), "TRACEPARENT"))
+	assert.Equal(t, -1, slices.Index(c.Keys(), "SOMETHINGNEW"))
 }
