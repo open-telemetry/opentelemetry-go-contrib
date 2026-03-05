@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Ignore informational response status codes (`100-199`) except `101 Switching Protocols` when storing the HTTP status code in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6913)
 - Make `Body` handling in `Transport` consistent with stdlib in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8618)
+- Fix bucket boundaries for `rpc.server.call.duration` and `rpc.client.call.duration` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8642)
 
 ### Removed
 
