@@ -11,6 +11,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add environment variables propagation carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#8442)
+- Added semantic convention attribute keys `HTTPRequestBodySizeKey`,
+    `HTTPResponseBodySizeKey`, and `ErrorMessageKey` as replacements for the
+    legacy `ReadBytesKey`, `WroteBytesKey`, `ReadErrorKey`, and `WriteErrorKey` in
+    `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`,
+    which are now deprecated and will be removed in a future release. (#8435)
 
 ### Changed
 
@@ -26,6 +31,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Ignore informational response status codes (`100-199`) except `101 Switching Protocols` when storing the HTTP status code in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6913)
 - Make `Body` handling in `Transport` consistent with stdlib in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8618)
+- Fix bucket boundaries for `rpc.server.call.duration` and `rpc.client.call.duration` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8642)
 
 ### Removed
 
@@ -51,11 +57,6 @@ The next release will require at least [Go 1.25].
 - Add `const Version` in `go.opentelemetry.io/contrib/propagators/autoprop`. (#8488)
 - Add `const Version` in `go.opentelemetry.io/contrib/processors/minsev`. (#8590)
 - Add `const Version` in `go.opentelemetry.io/contrib/exporters/autoexport`. (#8612)
-- Added semantic convention attribute keys `HTTPRequestBodySizeKey`,
-    `HTTPResponseBodySizeKey`, and `ErrorMessageKey` as replacements for the
-    legacy `ReadBytesKey`, `WroteBytesKey`, `ReadErrorKey`, and `WriteErrorKey` in
-    `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`,
-    which are now deprecated and will be removed in a future release. (#8435)
 
 ### Fixed
 
