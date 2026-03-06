@@ -41,7 +41,7 @@ func TestGetJSON(t *testing.T) {
 	defer server.Close()
 
 	var s testJSONStruct
-	err := getJSON(server.URL, &s)
+	err := getJSON(t.Context(), server.URL, &s)
 	require.NoError(t, err)
 
 	assert.Equal(t, "Bender", s.Name)
@@ -50,7 +50,7 @@ func TestGetJSON(t *testing.T) {
 
 func TestGetJSONErrors(t *testing.T) {
 	var s testJSONStruct
-	err := getJSON("localhost:0", &s)
+	err := getJSON(t.Context(), "localhost:0", &s)
 	assert.Error(t, err)
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -58,6 +58,6 @@ func TestGetJSONErrors(t *testing.T) {
 	}))
 	defer server.Close()
 
-	err = getJSON(server.URL, &s)
+	err = getJSON(t.Context(), server.URL, &s)
 	assert.Error(t, err)
 }
