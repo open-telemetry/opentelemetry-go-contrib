@@ -28,7 +28,7 @@ type middleware struct {
 	spanStartOptions   []trace.SpanStartOption
 	readEvent          bool
 	writeEvent         bool
-	routeAttribute     bool
+	withoutRouteAttr   bool
 	filters            []Filter
 	spanNameFormatter  func(string, *http.Request) string
 	publicEndpointFn   func(*http.Request) bool
@@ -76,7 +76,7 @@ func (h *middleware) configure(c *config) {
 	h.spanStartOptions = c.SpanStartOptions
 	h.readEvent = c.ReadEvent
 	h.writeEvent = c.WriteEvent
-	h.routeAttribute = c.RouteAttribute
+	h.withoutRouteAttr = c.WithoutRouteAttr
 	h.filters = c.Filters
 	h.spanNameFormatter = c.SpanNameFormatter
 	h.publicEndpointFn = c.PublicEndpointFn
@@ -221,7 +221,7 @@ func (h *middleware) metricAttributesFromRequest(r *http.Request) []attribute.Ke
 }
 
 func (h *middleware) routeFromRequest(r *http.Request) string {
-	if !h.routeAttribute || r.Pattern == "" {
+	if h.withoutRouteAttr || r.Pattern == "" {
 		return ""
 	}
 	if idx := strings.IndexByte(r.Pattern, '/'); idx >= 0 {
