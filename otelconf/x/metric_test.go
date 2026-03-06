@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf
+package x
 
 import (
 	"bytes"
@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -25,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
+	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -161,6 +163,8 @@ func TestReader(t *testing.T) {
 	require.NoError(t, err)
 	otlpHTTPExporter, err := otlpmetrichttp.New(ctx)
 	require.NoError(t, err)
+	promExporter, err := otelprom.New()
+	require.NoError(t, err)
 	testCases := []struct {
 		name       string
 		reader     MetricReader
@@ -178,6 +182,70 @@ func TestReader(t *testing.T) {
 				Pull: &PullMetricReader{},
 			},
 			wantErrT: newErrInvalid("no valid metric exporter"),
+		},
+		{
+			name: "pull/prometheus-no-host",
+			reader: MetricReader{
+				Pull: &PullMetricReader{
+					Exporter: PullMetricExporter{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("host must be specified"),
+		},
+		{
+			name: "pull/prometheus-no-port",
+			reader: MetricReader{
+				Pull: &PullMetricReader{
+					Exporter: PullMetricExporter{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
+							Host: ptr("localhost"),
+						},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("port must be specified"),
+		},
+		{
+			name: "pull/prometheus",
+			reader: MetricReader{
+				Pull: &PullMetricReader{
+					Exporter: PullMetricExporter{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
+							Host:                ptr("localhost"),
+							Port:                ptr(0),
+							WithoutScopeInfo:    ptr(true),
+							TranslationStrategy: ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithoutSuffixes),
+							WithResourceConstantLabels: &IncludeExclude{
+								Included: []string{"include"},
+								Excluded: []string{"exclude"},
+							},
+						},
+					},
+				},
+			},
+			wantReader: readerWithServer{promExporter, nil},
+		},
+		{
+			name: "pull/prometheus/invalid strategy",
+			reader: MetricReader{
+				Pull: &PullMetricReader{
+					Exporter: PullMetricExporter{
+						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
+							Host:                ptr("localhost"),
+							Port:                ptr(0),
+							WithoutScopeInfo:    ptr(true),
+							TranslationStrategy: ptr(ExperimentalPrometheusTranslationStrategy("invalid-strategy")),
+							WithResourceConstantLabels: &IncludeExclude{
+								Included: []string{"include"},
+								Excluded: []string{"exclude"},
+							},
+						},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("translation strategy invalid"),
 		},
 		{
 			name: "periodic/otlp-grpc-exporter",
@@ -225,7 +293,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+								CaFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
 							},
 						},
 					},
@@ -243,7 +311,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								CaFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+								CaFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 							},
 						},
 					},
@@ -261,8 +329,8 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								KeyFile:  ptr(filepath.Join("testdata", "bad_cert.crt")),
-								CertFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+								KeyFile:  ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								CertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 							},
 						},
 					},
@@ -497,7 +565,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								CaFile: ptr(filepath.Join("testdata", "ca.crt")),
+								CaFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
 							},
 						},
 					},
@@ -515,7 +583,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								CaFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+								CaFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 							},
 						},
 					},
@@ -533,8 +601,8 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								KeyFile:  ptr(filepath.Join("testdata", "bad_cert.crt")),
-								CertFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+								KeyFile:  ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								CertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
 							},
 						},
 					},
@@ -778,6 +846,17 @@ func TestReader(t *testing.T) {
 				sdkmetric.WithTimeout(5_000*time.Millisecond),
 			),
 		},
+		{
+			name: "periodic/otlp_file",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("otlp_file/development"),
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -791,7 +870,7 @@ func TestReader(t *testing.T) {
 				switch reflect.TypeOf(tt.wantReader).String() {
 				case "*metric.PeriodicReader":
 					fieldName = "exporter"
-				case "otelconf.readerWithServer":
+				case "x.readerWithServer":
 					fieldName = "Reader"
 				default:
 					fieldName = "e"
@@ -1275,10 +1354,94 @@ func TestNewIncludeExcludeFilterError(t *testing.T) {
 	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
 }
 
+func TestPrometheusReaderOpts(t *testing.T) {
+	testCases := []struct {
+		name        string
+		cfg         ExperimentalPrometheusMetricExporter
+		wantOptions int
+	}{
+		{
+			name:        "no options",
+			cfg:         ExperimentalPrometheusMetricExporter{},
+			wantOptions: 0,
+		},
+		{
+			name: "all set",
+			cfg: ExperimentalPrometheusMetricExporter{
+				WithoutScopeInfo:           ptr(true),
+				TranslationStrategy:        ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithoutSuffixes),
+				WithResourceConstantLabels: &IncludeExclude{},
+			},
+			wantOptions: 3,
+		},
+		{
+			name: "all set false",
+			cfg: ExperimentalPrometheusMetricExporter{
+				WithoutScopeInfo:           ptr(false),
+				TranslationStrategy:        ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes),
+				WithResourceConstantLabels: &IncludeExclude{},
+			},
+			wantOptions: 2,
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			opts, err := prometheusReaderOpts(&tt.cfg)
+			require.NoError(t, err)
+			require.Len(t, opts, tt.wantOptions)
+		})
+	}
+}
+
+func TestPrometheusIPv6(t *testing.T) {
+	tests := []struct {
+		name string
+		host string
+	}{
+		{
+			name: "IPv6",
+			host: "::1",
+		},
+		{
+			name: "[IPv6]",
+			host: "[::1]",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			port := 0
+			cfg := ExperimentalPrometheusMetricExporter{
+				Host:                       &tt.host,
+				Port:                       &port,
+				WithoutScopeInfo:           ptr(true),
+				TranslationStrategy:        ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes),
+				WithResourceConstantLabels: &IncludeExclude{},
+			}
+
+			rs, err := prometheusReader(t.Context(), &cfg)
+			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				require.NoError(t, rs.Shutdown(context.Background()))
+			})
+			require.NoError(t, err)
+
+			hServ := rs.(readerWithServer).server
+			assert.True(t, strings.HasPrefix(hServ.Addr, "[::1]:"))
+
+			resp, err := http.DefaultClient.Get("http://" + hServ.Addr + "/metrics")
+			t.Cleanup(func() {
+				require.NoError(t, resp.Body.Close())
+			})
+			require.NoError(t, err)
+			assert.Equal(t, http.StatusOK, resp.StatusCode)
+		})
+	}
+}
+
 func Test_otlpGRPCMetricExporter(t *testing.T) {
-	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
-		// TODO (#8115): Fix the flakiness on Windows and MacOS.
-		t.Skip("Test is flaky on Windows and MacOS.")
+	if runtime.GOOS == "windows" {
+		// TODO (#7446): Fix the flakiness on Windows.
+		t.Skip("Test is flaky on Windows.")
 	}
 	type args struct {
 		ctx        context.Context
@@ -1316,7 +1479,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Tls: &GrpcTls{
-						CaFile: ptr("testdata/server-certs/server.crt"),
+						CaFile: ptr("../testdata/server-certs/server.crt"),
 					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -1325,7 +1488,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				tlsCreds, err := credentials.NewServerTLSFromFile("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				tlsCreds, err := credentials.NewServerTLSFromFile("../testdata/server-certs/server.crt", "../testdata/server-certs/server.key")
 				if err != nil {
 					return nil, err
 				}
@@ -1341,9 +1504,9 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Tls: &GrpcTls{
-						CaFile:   ptr("testdata/server-certs/server.crt"),
-						KeyFile:  ptr("testdata/client-certs/client.key"),
-						CertFile: ptr("testdata/client-certs/client.crt"),
+						CaFile:   ptr("../testdata/server-certs/server.crt"),
+						KeyFile:  ptr("../testdata/client-certs/client.key"),
+						CertFile: ptr("../testdata/client-certs/client.crt"),
 					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -1352,11 +1515,11 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				cert, err := tls.LoadX509KeyPair("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				cert, err := tls.LoadX509KeyPair("../testdata/server-certs/server.crt", "../testdata/server-certs/server.key")
 				if err != nil {
 					return nil, err
 				}
-				caCert, err := os.ReadFile("testdata/ca.crt")
+				caCert, err := os.ReadFile("../testdata/ca.crt")
 				if err != nil {
 					return nil, err
 				}

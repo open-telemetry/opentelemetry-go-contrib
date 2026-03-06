@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf // import "go.opentelemetry.io/contrib/otelconf"
+package x // import "go.opentelemetry.io/contrib/otelconf/x"
 
 import (
 	"context"
@@ -91,6 +91,10 @@ func logExporter(ctx context.Context, exporter LogRecordExporter) (sdklog.Export
 		exportFunc = func() (sdklog.Exporter, error) {
 			return otlpGRPCLogExporter(ctx, exporter.OTLPGrpc)
 		}
+	}
+	if exporter.OTLPFileDevelopment != nil {
+		// TODO: implement file exporter https://github.com/open-telemetry/opentelemetry-go/issues/5408
+		return nil, newErrInvalid("otlp_file/development")
 	}
 
 	if exportersConfigured > 1 {

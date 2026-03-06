@@ -76,6 +76,7 @@ The next release will require at least [Go 1.25].
   - `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`
   - `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`
 - Update the configuration schema used in `go.opentelemetry.io/contrib/otelconf` to [rc.3](https://github.com/open-telemetry/opentelemetry-configuration/releases/tag/v1.0.0-rc.3). (#8505)
+- Moved experimental types from `go.opentelemetry.io/contrib/otelconf` to `go.opentelemetry.io/contrib/otelconf/x`. (#8529)
 
 ### Deprecated
 
