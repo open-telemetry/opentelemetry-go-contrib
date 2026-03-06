@@ -11,11 +11,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add environment variables propagation carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#8442)
-- Added semantic convention attribute keys `HTTPRequestBodySizeKey`,
-    `HTTPResponseBodySizeKey`, and `ErrorMessageKey` as replacements for the
-    legacy `ReadBytesKey`, `WroteBytesKey`, `ReadErrorKey`, and `WriteErrorKey` in
-    `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`,
-    which are now deprecated and will be removed in a future release. (#8435)
 
 ### Changed
 
@@ -24,7 +19,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - RPC spans and metrics no longer include `network.protocol.name`, `network.protocol.version`, or `network.transport` attributes.
     - `rpc.client.request.size`, `rpc.client.response.size`, `rpc.server.request.size`, and `rpc.server.response.size` are no longer emitted in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`.
     - `rpc.message` span events and their message attributes are no longer emitted in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` (including when `WithMessageEvents` is configured).
-
+- The semantic conventions introduce new HTTP attribute keys to replace legacy
+  attributes in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`:
+  - `ReadBytesKey` → `HTTPRequestBodySizeKey`
+  - `WroteBytesKey` → `HTTPResponseBodySizeKey`
+  - `ReadErrorKey` and `WriteErrorKey` → `ErrorMessageKey` (#8435)
   See [semantic-conventions v1.40.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.40.0) for complete details.
 
 ### Fixed
@@ -85,6 +84,9 @@ The next release will require at least [Go 1.25].
 ### Deprecated
 
 - `WithMetricAttributesFn` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` is deprecated and will be removed in a future release. Use `Labeler` instead. (#8587)
+- `ReadBytesKey`, `WroteBytesKey`, `ReadErrorKey`, and `WriteErrorKey` in
+  `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are deprecated and will be removed in a future 
+  release. Use `HTTPRequestBodySizeKey`, `HTTPResponseBodySizeKey`, and `ErrorMessageKey` instead. (#8435)
 
 ## [1.40.0/2.2.0/0.65.0/0.34.0/0.20.0/0.15.0/0.13.0/0.12.0] - 2026-02-02
 
