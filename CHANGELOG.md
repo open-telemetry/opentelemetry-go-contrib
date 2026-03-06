@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add environment variables propagation carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#84420
+- Add environment variables propagation carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#8442)
 - Added semantic convention attribute keys `HTTPRequestBodySizeKey`,
     `HTTPResponseBodySizeKey`, and `ErrorMessageKey` as replacements for the
     legacy `ReadBytesKey`, `WroteBytesKey`, `ReadErrorKey`, and `WriteErrorKey` in
