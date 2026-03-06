@@ -45,6 +45,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
+### Deprecated
+
+- `ReadBytesKey`, `WroteBytesKey`, `ReadErrorKey`, and `WriteErrorKey` in
+  `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are deprecated and will be removed in a future
+  release. Use `HTTPRequestBodySizeKey`, `HTTPResponseBodySizeKey`, and `ErrorMessageKey` instead. (#8435)
+
 ## [1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.13.0] - 2026-03-02
 
 This release is the last to support [Go 1.24].
