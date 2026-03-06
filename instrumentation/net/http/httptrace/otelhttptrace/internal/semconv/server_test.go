@@ -7,7 +7,6 @@
 package semconv
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -142,7 +141,7 @@ func TestRequestTraceAttrs_HTTPRoute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/path/abc123", http.NoBody)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/path/abc123", http.NoBody)
 			req.Pattern = tt.pattern
 
 			attrs := (HTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
@@ -190,7 +189,7 @@ func TestRequestTraceAttrs_ClientIP(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/example", http.NoBody)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/example", http.NoBody)
 			req.RemoteAddr = "1.2.3.4:5678"
 
 			if tt.requestModifierFn != nil {
