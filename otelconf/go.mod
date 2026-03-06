@@ -46,10 +46,10 @@ require (
 	github.com/prometheus/common v0.67.5 // indirect
 	github.com/prometheus/procfs v0.20.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/propagators/aws v1.41.0 // indirect
-	go.opentelemetry.io/contrib/propagators/b3 v1.41.0 // indirect
-	go.opentelemetry.io/contrib/propagators/jaeger v1.41.0 // indirect
-	go.opentelemetry.io/contrib/propagators/ot v1.41.0 // indirect
+	go.opentelemetry.io/contrib/propagators/aws v1.42.0 // indirect
+	go.opentelemetry.io/contrib/propagators/b3 v1.42.0 // indirect
+	go.opentelemetry.io/contrib/propagators/jaeger v1.42.0 // indirect
+	go.opentelemetry.io/contrib/propagators/ot v1.42.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.42.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.3 // indirect
