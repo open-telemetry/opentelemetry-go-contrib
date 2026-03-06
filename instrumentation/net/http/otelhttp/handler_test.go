@@ -110,64 +110,54 @@ func TestHandlerBasics(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
-	h := NewHandler(
+	handler := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			l, _ := LabelerFromContext(r.Context())
 			l.Add(attribute.String("test", "attribute"))
 
-			if _, err := io.WriteString(w, "hello world"); err != nil {
-				t.Fatal(err)
-			}
+			_, err := io.WriteString(w, "hello world")
+			assert.NoError(t, err)
 		}), "test_handler",
 		WithTracerProvider(provider),
 		WithMeterProvider(meterProvider),
 		WithPropagators(propagation.TraceContext{}),
 	)
 
-	r, err := http.NewRequest(http.MethodGet, "http://localhost/", strings.NewReader("foo"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	mux := http.NewServeMux()
+	mux.Handle("/test", handler)
+
 	// set a custom start time 10 minutes in the past.
 	startTime := time.Now().Add(-10 * time.Minute)
-	r = r.WithContext(ContextWithStartTime(r.Context(), startTime))
-	h.ServeHTTP(rr, r)
+	ctx := ContextWithStartTime(t.Context(), startTime)
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/test", strings.NewReader("foo"))
+	mux.ServeHTTP(rr, req)
 
 	rm := metricdata.ResourceMetrics{}
-	err = reader.Collect(t.Context(), &rm)
+	err := reader.Collect(t.Context(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	attrs := attribute.NewSet(
 		attribute.String("http.request.method", "GET"),
+		attribute.String("http.route", "/test"),
 		attribute.Int64("http.response.status_code", 200),
 		attribute.String("network.protocol.name", "http"),
-		attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
-		attribute.String("server.address", r.Host),
+		attribute.String("network.protocol.version", fmt.Sprintf("1.%d", req.ProtoMinor)),
+		attribute.String("server.address", req.Host),
 		attribute.String("url.scheme", "http"),
 		attribute.String("test", "attribute"),
 	)
 	assertScopeMetrics(t, rm.ScopeMetrics[0], attrs)
 
-	if got, expected := rr.Result().StatusCode, http.StatusOK; got != expected {
-		t.Fatalf("got %d, expected %d", got, expected)
-	}
+	assert.Equal(t, http.StatusOK, rr.Result().StatusCode)
 
 	spans := spanRecorder.Ended()
-	if got, expected := len(spans), 1; got != expected {
-		t.Fatalf("got %d spans, expected %d", got, expected)
-	}
-	if !spans[0].SpanContext().IsValid() {
-		t.Fatalf("invalid span created: %#v", spans[0].SpanContext())
-	}
-
-	d, err := io.ReadAll(rr.Result().Body)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if got, expected := string(d), "hello world"; got != expected {
-		t.Fatalf("got %q, expected %q", got, expected)
-	}
+	require.Len(t, spans, 1)
+	assert.True(t, spans[0].SpanContext().IsValid())
 	assert.Equal(t, startTime, spans[0].StartTime())
+
+	body, err := io.ReadAll(rr.Result().Body)
+	require.NoError(t, err)
+	assert.Equal(t, "hello world", string(body))
 }
 
 func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
