@@ -19,7 +19,7 @@ func expFromFloat64(x float64) int {
 	// The biased exponent can only be expressed with 11 bits (size (i.e. 64) -
 	// significant (i.e 52) - sign (i.e. 1)). Meaning the int conversion below
 	// is guaranteed to be lossless.
-	return int(biased) - offsetExponentBias
+	return int(biased) - offsetExponentBias //nolint:gosec // See comment above.
 }
 
 // expToFloat64 returns 2^x.
@@ -36,7 +36,7 @@ func expToFloat64(x int) float64 {
 	if x > high {
 		x = high
 	}
-	biased := uint64(offsetExponentBias + x)
+	biased := uint64(offsetExponentBias + x) //nolint:gosec // See comment above.
 	return math.Float64frombits(biased << significandBits)
 }
 
