@@ -729,10 +729,10 @@ func TestSpanEmitsLegacyAndSemconvReadWriteAttributes(t *testing.T) {
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			b, err := io.ReadAll(r.Body)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 
 			_, err = w.Write(b)
-			require.NoError(t, err)
+			assert.NoError(t, err)
 		}),
 		"test_handler",
 		WithTracerProvider(tp),
