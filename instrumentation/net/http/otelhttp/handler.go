@@ -11,10 +11,11 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
-	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
+	internalsemconv "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 )
 
 // middleware is an http middleware which wraps the next handler in a span.
@@ -32,7 +33,7 @@ type middleware struct {
 	publicEndpointFn   func(*http.Request) bool
 	metricAttributesFn func(*http.Request) []attribute.KeyValue
 
-	semconv semconv.HTTPServer
+	httpSemconv internalsemconv.HTTPServer
 }
 
 func defaultHandlerFormatter(operation string, _ *http.Request) string {
@@ -78,7 +79,7 @@ func (h *middleware) configure(c *config) {
 	h.spanNameFormatter = c.SpanNameFormatter
 	h.publicEndpointFn = c.PublicEndpointFn
 	h.server = c.ServerName
-	h.semconv = semconv.NewHTTPServer(c.Meter)
+	h.httpSemconv = internalsemconv.NewHTTPServer(c.Meter)
 	h.metricAttributesFn = c.MetricAttributesFn
 }
 
@@ -96,7 +97,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 	opts := []trace.SpanStartOption{
-		trace.WithAttributes(h.semconv.RequestTraceAttrs(h.server, r, semconv.RequestTraceAttrsOpts{})...),
+		trace.WithAttributes(h.httpSemconv.RequestTraceAttrs(h.server, r, internalsemconv.RequestTraceAttrsOpts{})...),
 	}
 
 	opts = append(opts, h.spanStartOptions...)
@@ -129,13 +130,17 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	readRecordFunc := func(int64) {}
 	if h.readEvent {
 		readRecordFunc = func(n int64) {
-			span.AddEvent("read", trace.WithAttributes(ReadBytesKey.Int64(n)))
+			span.AddEvent("read", trace.WithAttributes(
+				ReadBytesKey.Int64(n),
+				semconv.HTTPRequestBodySize(int(n)),
+			),
+			)
 		}
 	}
 
 	// if request body is nil or NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
-	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
+	// ReadCloser fulfills a certain interface, and it is indeed nil or NoBody.
 	bw := request.NewBodyWrapper(r.Body, readRecordFunc)
 	if r.Body != nil && r.Body != http.NoBody {
 		r.Body = bw
@@ -144,7 +149,11 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	writeRecordFunc := func(int64) {}
 	if h.writeEvent {
 		writeRecordFunc = func(n int64) {
-			span.AddEvent("write", trace.WithAttributes(WroteBytesKey.Int64(n)))
+			span.AddEvent("write", trace.WithAttributes(
+				WroteBytesKey.Int64(n),
+				semconv.HTTPResponseBodySize(int(n)),
+			),
+			)
 		}
 	}
 
@@ -183,9 +192,9 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	statusCode := rww.StatusCode()
 	bytesWritten := rww.BytesWritten()
-	span.SetStatus(h.semconv.Status(statusCode))
+	span.SetStatus(h.httpSemconv.Status(statusCode))
 	bytesRead := bw.BytesRead()
-	span.SetAttributes(h.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
+	span.SetAttributes(h.httpSemconv.ResponseTraceAttrs(internalsemconv.ResponseTelemetry{
 		StatusCode: statusCode,
 		ReadBytes:  bytesRead,
 		ReadError:  bw.Error(),
@@ -193,15 +202,15 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		WriteError: rww.Error(),
 	})...)
 
-	h.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
+	h.httpSemconv.RecordMetrics(ctx, internalsemconv.ServerMetricData{
 		ServerName:   h.server,
 		ResponseSize: bytesWritten,
-		MetricAttributes: semconv.MetricAttributes{
+		MetricAttributes: internalsemconv.MetricAttributes{
 			Req:                  r,
 			StatusCode:           statusCode,
 			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(r)...),
 		},
-		MetricData: semconv.MetricData{
+		MetricData: internalsemconv.MetricData{
 			RequestSize:     bytesRead,
 			RequestDuration: time.Since(requestStartTime),
 		},

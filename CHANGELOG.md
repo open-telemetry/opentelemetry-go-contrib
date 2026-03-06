@@ -19,7 +19,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
     - RPC spans and metrics no longer include `network.protocol.name`, `network.protocol.version`, or `network.transport` attributes.
     - `rpc.client.request.size`, `rpc.client.response.size`, `rpc.server.request.size`, and `rpc.server.response.size` are no longer emitted in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`.
     - `rpc.message` span events and their message attributes are no longer emitted in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` (including when `WithMessageEvents` is configured).
-
+- The semantic conventions introduce new HTTP attribute keys to replace legacy
+  attributes in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`:
+  - `ReadBytesKey` → `HTTPRequestBodySizeKey`
+  - `WroteBytesKey` → `HTTPResponseBodySizeKey`
+  - `ReadErrorKey` and `WriteErrorKey` → `ErrorMessageKey` (#8435)
   See [semantic-conventions v1.40.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.40.0) for complete details.
 
 ### Fixed
@@ -32,8 +36,20 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Drop support for [Go 1.24]. (#8628)
 
+### Deprecated
+
+- `ReadBytesKey`, `WroteBytesKey`, `ReadErrorKey`, and `WriteErrorKey` in
+  `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are deprecated and will be removed in a future
+  release. Use `HTTPRequestBodySizeKey`, `HTTPResponseBodySizeKey`, and `ErrorMessageKey` instead. (#8435)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
+
+### Deprecated
+
+- `ReadBytesKey`, `WroteBytesKey`, `ReadErrorKey`, and `WriteErrorKey` in
+  `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` are deprecated and will be removed in a future
+  release. Use `HTTPRequestBodySizeKey`, `HTTPResponseBodySizeKey`, and `ErrorMessageKey` instead. (#8435)
 
 ## [1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.13.0] - 2026-03-02
 
