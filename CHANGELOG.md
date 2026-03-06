@@ -8,10 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [1.42.0/2.4.0/0.67.0/0.36.0/0.22.0/0.17.0/0.15.0/0.14.0] - 2026-03-06
-
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
+
+## [1.42.0/2.4.0/0.67.0/0.36.0/0.22.0/0.17.0/0.15.0/0.14.0] - 2026-03-06
 
 ### Added
 
