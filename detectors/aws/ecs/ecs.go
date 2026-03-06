@@ -17,7 +17,7 @@ import (
 	ecsmetadata "github.com/brunoscheufler/aws-ecs-metadata-go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 const (
@@ -260,8 +260,8 @@ func (ecsDetectorUtils) getContainerName() (string, error) {
 }
 
 func getCgroupContainerID(fileData []byte) string {
-	splitData := strings.Split(strings.TrimSpace(string(fileData)), "\n")
-	for _, str := range splitData {
+	splitData := strings.SplitSeq(strings.TrimSpace(string(fileData)), "\n")
+	for str := range splitData {
 		if ecsCgroupPathPattern.MatchString(str) {
 			return str[len(str)-containerIDLength:]
 		}

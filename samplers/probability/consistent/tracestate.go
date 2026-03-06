@@ -46,11 +46,11 @@ func (otts otelTraceState) serialize() string {
 	}
 
 	if otts.hasPValue() {
-		_, _ = sb.WriteString(fmt.Sprintf("p:%d", otts.pvalue))
+		_, _ = fmt.Fprintf(&sb, "p:%d", otts.pvalue)
 	}
 	if otts.hasRValue() {
 		semi()
-		_, _ = sb.WriteString(fmt.Sprintf("r:%d", otts.rvalue))
+		_, _ = fmt.Fprintf(&sb, "r:%d", otts.rvalue)
 	}
 	for _, unk := range otts.unknown {
 		ex := 0

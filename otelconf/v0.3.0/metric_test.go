@@ -1374,7 +1374,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 		{
 			name:        "no options",
 			cfg:         Prometheus{},
-			wantOptions: 0,
+			wantOptions: 1,
 		},
 		{
 			name: "all set",
@@ -1384,7 +1384,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 				WithoutUnits:               ptr(true),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
-			wantOptions: 4,
+			wantOptions: 3,
 		},
 		{
 			name: "all set false",
@@ -1394,7 +1394,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 				WithoutUnits:               ptr(false),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
-			wantOptions: 1,
+			wantOptions: 2,
 		},
 	}
 	for _, tt := range testCases {

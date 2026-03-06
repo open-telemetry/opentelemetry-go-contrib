@@ -21,8 +21,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
-	"go.opentelemetry.io/otel/semconv/v1.39.0/rpcconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/rpcconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -153,26 +153,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	emptySpan := spans[0]
 	assert.False(t, emptySpan.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/EmptyCall", emptySpan.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(0),
-				semconv.RPCMessageUncompressedSizeKey.Int(0),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(0),
-				semconv.RPCMessageUncompressedSizeKey.Int(0),
-			},
-		},
-	}, emptySpan.Events())
+	assert.Empty(t, emptySpan.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/EmptyCall"),
 		semconv.RPCSystemNameGRPC,
@@ -185,26 +166,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	largeSpan := spans[1]
 	assert.False(t, largeSpan.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/UnaryCall", largeSpan.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(271840),
-				semconv.RPCMessageUncompressedSizeKey.Int(271840),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(314167),
-				semconv.RPCMessageUncompressedSizeKey.Int(314167),
-			},
-		},
-	}, largeSpan.Events())
+	assert.Empty(t, largeSpan.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/UnaryCall"),
 		semconv.RPCSystemNameGRPC,
@@ -217,54 +179,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	streamInput := spans[2]
 	assert.False(t, streamInput.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/StreamingInputCall", streamInput.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(27190),
-				semconv.RPCMessageUncompressedSizeKey.Int(27190),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(12),
-				semconv.RPCMessageUncompressedSizeKey.Int(12),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(1834),
-				semconv.RPCMessageUncompressedSizeKey.Int(1834),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(45912),
-				semconv.RPCMessageUncompressedSizeKey.Int(45912),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(4),
-				semconv.RPCMessageUncompressedSizeKey.Int(4),
-			},
-		},
-		// client does not record an event for the server response.
-	}, streamInput.Events())
+	assert.Empty(t, streamInput.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/StreamingInputCall"),
 		semconv.RPCSystemNameGRPC,
@@ -277,53 +192,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	streamOutput := spans[3]
 	assert.False(t, streamOutput.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/StreamingOutputCall", streamOutput.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(21),
-				semconv.RPCMessageUncompressedSizeKey.Int(21),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(31423),
-				semconv.RPCMessageUncompressedSizeKey.Int(31423),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(13),
-				semconv.RPCMessageUncompressedSizeKey.Int(13),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(2659),
-				semconv.RPCMessageUncompressedSizeKey.Int(2659),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(58987),
-				semconv.RPCMessageUncompressedSizeKey.Int(58987),
-			},
-		},
-	}, streamOutput.Events())
+	assert.Empty(t, streamOutput.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/StreamingOutputCall"),
 		semconv.RPCSystemNameGRPC,
@@ -336,80 +205,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	pingPong := spans[4]
 	assert.False(t, pingPong.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/FullDuplexCall", pingPong.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(27196),
-				semconv.RPCMessageUncompressedSizeKey.Int(27196),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(31423),
-				semconv.RPCMessageUncompressedSizeKey.Int(31423),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(16),
-				semconv.RPCMessageUncompressedSizeKey.Int(16),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(13),
-				semconv.RPCMessageUncompressedSizeKey.Int(13),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(1839),
-				semconv.RPCMessageUncompressedSizeKey.Int(1839),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(2659),
-				semconv.RPCMessageUncompressedSizeKey.Int(2659),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(45918),
-				semconv.RPCMessageUncompressedSizeKey.Int(45918),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(58987),
-				semconv.RPCMessageUncompressedSizeKey.Int(58987),
-			},
-		},
-	}, pingPong.Events())
+	assert.Empty(t, pingPong.Events())
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/FullDuplexCall"),
 		semconv.RPCSystemNameGRPC,
@@ -426,26 +222,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	emptySpan := spans[0]
 	assert.False(t, emptySpan.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/EmptyCall", emptySpan.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(0),
-				semconv.RPCMessageUncompressedSizeKey.Int(0),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(0),
-				semconv.RPCMessageUncompressedSizeKey.Int(0),
-			},
-		},
-	}, emptySpan.Events())
+	assert.Empty(t, emptySpan.Events())
 	port, ok := findAttribute(emptySpan.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
@@ -460,26 +237,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	largeSpan := spans[1]
 	assert.False(t, largeSpan.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/UnaryCall", largeSpan.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageCompressedSizeKey.Int(271840),
-				semconv.RPCMessageUncompressedSizeKey.Int(271840),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageCompressedSizeKey.Int(314167),
-				semconv.RPCMessageUncompressedSizeKey.Int(314167),
-			},
-		},
-	}, largeSpan.Events())
+	assert.Empty(t, largeSpan.Events())
 	port, ok = findAttribute(largeSpan.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
@@ -494,54 +252,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	streamInput := spans[2]
 	assert.False(t, streamInput.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/StreamingInputCall", streamInput.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(27190),
-				semconv.RPCMessageUncompressedSizeKey.Int(27190),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(12),
-				semconv.RPCMessageUncompressedSizeKey.Int(12),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(1834),
-				semconv.RPCMessageUncompressedSizeKey.Int(1834),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(45912),
-				semconv.RPCMessageUncompressedSizeKey.Int(45912),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(4),
-				semconv.RPCMessageUncompressedSizeKey.Int(4),
-			},
-		},
-		// client does not record an event for the server response.
-	}, streamInput.Events())
+	assert.Empty(t, streamInput.Events())
 	port, ok = findAttribute(streamInput.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
@@ -556,53 +267,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	streamOutput := spans[3]
 	assert.False(t, streamOutput.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/StreamingOutputCall", streamOutput.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(21),
-				semconv.RPCMessageUncompressedSizeKey.Int(21),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(31423),
-				semconv.RPCMessageUncompressedSizeKey.Int(31423),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(13),
-				semconv.RPCMessageUncompressedSizeKey.Int(13),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(2659),
-				semconv.RPCMessageUncompressedSizeKey.Int(2659),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(58987),
-				semconv.RPCMessageUncompressedSizeKey.Int(58987),
-			},
-		},
-	}, streamOutput.Events())
+	assert.Empty(t, streamOutput.Events())
 	port, ok = findAttribute(streamOutput.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
@@ -617,80 +282,7 @@ func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
 	pingPong := spans[4]
 	assert.False(t, pingPong.EndTime().IsZero())
 	assert.Equal(t, "grpc.testing.TestService/FullDuplexCall", pingPong.Name())
-	assertEvents(t, []trace.Event{
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(27196),
-				semconv.RPCMessageUncompressedSizeKey.Int(27196),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(1),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(31423),
-				semconv.RPCMessageUncompressedSizeKey.Int(31423),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(16),
-				semconv.RPCMessageUncompressedSizeKey.Int(16),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(2),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(13),
-				semconv.RPCMessageUncompressedSizeKey.Int(13),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(1839),
-				semconv.RPCMessageUncompressedSizeKey.Int(1839),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(3),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(2659),
-				semconv.RPCMessageUncompressedSizeKey.Int(2659),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("RECEIVED"),
-				semconv.RPCMessageCompressedSizeKey.Int(45918),
-				semconv.RPCMessageUncompressedSizeKey.Int(45918),
-			},
-		},
-		{
-			Name: "message",
-			Attributes: []attribute.KeyValue{
-				semconv.RPCMessageIDKey.Int(4),
-				semconv.RPCMessageTypeKey.String("SENT"),
-				semconv.RPCMessageCompressedSizeKey.Int(58987),
-				semconv.RPCMessageUncompressedSizeKey.Int(58987),
-			},
-		},
-	}, pingPong.Events())
+	assert.Empty(t, pingPong.Events())
 	port, ok = findAttribute(pingPong.Attributes(), semconv.ServerPortKey)
 	assert.True(t, ok)
 	assert.ElementsMatch(t, []attribute.KeyValue{
@@ -708,7 +300,7 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 	err := reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
-	require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
@@ -761,146 +353,6 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			{
-				Name:        rpcconv.ClientRequestSize{}.Name(),
-				Description: rpcconv.ClientRequestSize{}.Description(),
-				Unit:        rpcconv.ClientRequestSize{}.Unit(),
-				Data: metricdata.Histogram[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/EmptyCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(0)),
-							Min:          metricdata.NewExtrema(int64(0)),
-							Count:        1,
-							Sum:          0,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/UnaryCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-							Max:          metricdata.NewExtrema(int64(271840)),
-							Min:          metricdata.NewExtrema(int64(271840)),
-							Count:        1,
-							Sum:          271840,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(45912)),
-							Min:          metricdata.NewExtrema(int64(12)),
-							Count:        4,
-							Sum:          74948,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(21)),
-							Min:          metricdata.NewExtrema(int64(21)),
-							Count:        1,
-							Sum:          21,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(45918)),
-							Min:          metricdata.NewExtrema(int64(16)),
-							Count:        4,
-							Sum:          74969,
-						},
-					},
-				},
-			},
-			{
-				Name:        rpcconv.ClientResponseSize{}.Name(),
-				Description: rpcconv.ClientResponseSize{}.Description(),
-				Unit:        rpcconv.ClientResponseSize{}.Unit(),
-				Data: metricdata.Histogram[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/EmptyCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(0)),
-							Min:          metricdata.NewExtrema(int64(0)),
-							Count:        1,
-							Sum:          0,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/UnaryCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-							Max:          metricdata.NewExtrema(int64(314167)),
-							Min:          metricdata.NewExtrema(int64(314167)),
-							Count:        1,
-							Sum:          314167,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(4)),
-							Min:          metricdata.NewExtrema(int64(4)),
-							Count:        1,
-							Sum:          4,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(58987)),
-							Min:          metricdata.NewExtrema(int64(13)),
-							Count:        4,
-							Sum:          93082,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(58987)),
-							Min:          metricdata.NewExtrema(int64(13)),
-							Count:        4,
-							Sum:          93082,
-						},
-					},
-				},
-			},
 		},
 	}
 	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
@@ -911,7 +363,7 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 	err := reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
-	require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
@@ -964,146 +416,6 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 					},
 				},
 			},
-			{
-				Name:        rpcconv.ServerRequestSize{}.Name(),
-				Description: rpcconv.ServerRequestSize{}.Description(),
-				Unit:        rpcconv.ServerRequestSize{}.Unit(),
-				Data: metricdata.Histogram[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/EmptyCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(0)),
-							Min:          metricdata.NewExtrema(int64(0)),
-							Count:        1,
-							Sum:          0,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/UnaryCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-							Max:          metricdata.NewExtrema(int64(271840)),
-							Min:          metricdata.NewExtrema(int64(271840)),
-							Count:        1,
-							Sum:          271840,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(45912)),
-							Min:          metricdata.NewExtrema(int64(12)),
-							Count:        4,
-							Sum:          74948,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(21)),
-							Min:          metricdata.NewExtrema(int64(21)),
-							Count:        1,
-							Sum:          21,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(45918)),
-							Min:          metricdata.NewExtrema(int64(16)),
-							Count:        4,
-							Sum:          74969,
-						},
-					},
-				},
-			},
-			{
-				Name:        rpcconv.ServerResponseSize{}.Name(),
-				Description: rpcconv.ServerResponseSize{}.Description(),
-				Unit:        rpcconv.ServerResponseSize{}.Unit(),
-				Data: metricdata.Histogram[int64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[int64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/EmptyCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(0)),
-							Min:          metricdata.NewExtrema(int64(0)),
-							Count:        1,
-							Sum:          0,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/UnaryCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1},
-							Max:          metricdata.NewExtrema(int64(314167)),
-							Min:          metricdata.NewExtrema(int64(314167)),
-							Count:        1,
-							Sum:          314167,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-							Max:          metricdata.NewExtrema(int64(4)),
-							Min:          metricdata.NewExtrema(int64(4)),
-							Count:        1,
-							Sum:          4,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(58987)),
-							Min:          metricdata.NewExtrema(int64(13)),
-							Count:        4,
-							Sum:          93082,
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-							Bounds:       []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							BucketCounts: []uint64{0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 2},
-							Max:          metricdata.NewExtrema(int64(58987)),
-							Min:          metricdata.NewExtrema(int64(13)),
-							Count:        4,
-							Sum:          93082,
-						},
-					},
-				},
-			},
 		},
 	}
 
@@ -1133,9 +445,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 		const messageCount = 10
 		var wg sync.WaitGroup
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range messageCount {
 				const reqSize = 1
 				pl := test.ClientNewPayload(testpb.PayloadType_COMPRESSABLE, reqSize)
@@ -1157,11 +467,9 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 				}
 			}
 			assert.NoError(t, stream.CloseSend())
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for i := range messageCount {
 				_, err := stream.Recv()
 				if i > messageCount/2 {
@@ -1173,7 +481,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 				}
 				assert.NoError(t, err)
 			}
-		}()
+		})
 
 		wg.Wait()
 	}
