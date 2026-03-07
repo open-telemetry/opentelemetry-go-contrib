@@ -1147,7 +1147,10 @@ func TestPrometheusIPv6(t *testing.T) {
 			hServ := rs.(readerWithServer).server
 			assert.True(t, strings.HasPrefix(hServ.Addr, "[::1]:"))
 
-			resp, err := http.DefaultClient.Get("http://" + hServ.Addr + "/metrics")
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+hServ.Addr+"/metrics", http.NoBody)
+			require.NoError(t, err)
+
+			resp, err := http.DefaultClient.Do(req)
 			t.Cleanup(func() {
 				require.NoError(t, resp.Body.Close())
 			})
@@ -1228,7 +1231,10 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 	// localhost resolves to 127.0.0.1, so we expect the resolved IP
 	assert.Contains(t, addr, "127.0.0.1")
 
-	resp, err := http.Get("http://" + addr + "/metrics")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/metrics", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 

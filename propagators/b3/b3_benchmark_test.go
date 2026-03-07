@@ -33,7 +33,7 @@ func BenchmarkExtractB3(b *testing.B) {
 		for _, tt := range tg.tests {
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
 				ctx := b.Context()
-				req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
+				req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com", http.NoBody)
 				for h, v := range tt.headers {
 					req.Header.Set(h, v)
 				}
@@ -67,7 +67,7 @@ func BenchmarkInjectB3(b *testing.B) {
 			tt := &tg.tests[i]
 			propagator := b3.New(b3.WithInjectEncoding(tt.encoding))
 			traceBenchmark(tg.name+"/"+tt.name, b, func(b *testing.B) {
-				req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
+				req, _ := http.NewRequestWithContext(b.Context(), http.MethodGet, "http://example.com", http.NoBody)
 				ctx := trace.ContextWithSpan(
 					b.Context(),
 					testSpan{sc: trace.NewSpanContext(tt.scc)},

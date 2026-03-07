@@ -315,7 +315,7 @@ func BenchmarkPropagatorExtract(b *testing.B) {
 	propagator := Propagator{}
 
 	ctx := b.Context()
-	req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com", http.NoBody)
 
 	req.Header.Set("Root", "1-8a3c60f7-d188f8fa79d48a391a778fa6")
 	req.Header.Set("Parent", "53995c3f42cd8ad8")
@@ -331,7 +331,7 @@ func BenchmarkPropagatorInject(b *testing.B) {
 	propagator := Propagator{}
 	tracer := otel.Tracer("test")
 
-	req, _ := http.NewRequest("GET", "http://example.com", http.NoBody)
+	req, _ := http.NewRequestWithContext(b.Context(), http.MethodGet, "http://example.com", http.NoBody)
 	ctx, _ := tracer.Start(b.Context(), "Parent operation...")
 
 	b.ResetTimer()

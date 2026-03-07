@@ -4,10 +4,10 @@ go 1.25.0
 
 require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
-	go.opentelemetry.io/contrib/samplers/jaegerremote v0.35.0
-	go.opentelemetry.io/otel v1.41.1-0.20260303203755-5deb0d31ed71
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.41.1-0.20260303203755-5deb0d31ed71
-	go.opentelemetry.io/otel/sdk v1.41.1-0.20260303203755-5deb0d31ed71
+	go.opentelemetry.io/contrib/samplers/jaegerremote v0.36.0
+	go.opentelemetry.io/otel v1.42.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.42.0
+	go.opentelemetry.io/otel/sdk v1.42.0
 )
 
 require (
@@ -19,13 +19,13 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jaegertracing/jaeger-idl v0.6.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.41.1-0.20260303203755-5deb0d31ed71 // indirect
-	go.opentelemetry.io/otel/trace v1.41.1-0.20260303203755-5deb0d31ed71 // indirect
+	go.opentelemetry.io/otel/metric v1.42.0 // indirect
+	go.opentelemetry.io/otel/trace v1.42.0 // indirect
 	golang.org/x/net v0.51.0 // indirect
 	golang.org/x/sys v0.41.0 // indirect
 	golang.org/x/text v0.34.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
-	google.golang.org/grpc v1.79.1 // indirect
+	google.golang.org/grpc v1.79.2 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
 

@@ -20,6 +20,7 @@ linters:
     - intrange
     - modernize
     - misspell
+    - noctx
     - nolintlint
     - perfsprint
     - revive
@@ -112,7 +113,7 @@ linters:
         - name: context-as-argument
           disabled: true
           arguments:
-            allowTypesBefore: "*testing.T"
+            - allow-types-before: "*testing.T"
         - name: context-keys-type
         - name: deep-exit
         - name: defer
@@ -129,7 +130,7 @@ linters:
         - name: errorf
         - name: exported
           arguments:
-            - "sayRepetitiveInsteadOfStutters"
+            - "say-repetitive-instead-of-stutters"
         - name: flag-parameter
         - name: identical-branches
         - name: if-return
@@ -169,6 +170,10 @@ linters:
           arguments:
             - ["ID"] # AllowList
             - ["Otel", "Aws", "Gcp"] # DenyList
+            - - skip-initialism-name-checks: true
+                upper-case-const: true
+                skip-package-name-checks: true
+                skip-package-name-collision-with-go-std: true
         - name: waitgroup-by-value
     testifylint:
       enable-all: true
