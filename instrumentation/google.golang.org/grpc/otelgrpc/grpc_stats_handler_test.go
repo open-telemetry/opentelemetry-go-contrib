@@ -71,7 +71,7 @@ func TestStatsHandler(t *testing.T) {
 			serverMetricReader := metric.NewManualReader()
 			serverMP := metric.NewMeterProvider(metric.WithReader(serverMetricReader))
 
-			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 			require.NoError(t, err, "failed to open port")
 			client := newGrpcTest(t, listener,
 				[]grpc.DialOption{
@@ -425,7 +425,7 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 // Ensure there is no data race for the following scenario:
 // Bidirectional streaming + client cancels context in the middle of streaming.
 func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err, "failed to open port")
 	client := newGrpcTest(t, listener,
 		[]grpc.DialOption{

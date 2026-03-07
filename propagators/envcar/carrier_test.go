@@ -207,7 +207,7 @@ func TestConcurrentChildProcesses(t *testing.T) {
 			ctx := trace.ContextWithSpanContext(baseCtx, spanCtx)
 
 			// Each goroutine gets its own cmd with its own Env slice.
-			cmd := exec.Command("printenv", "TRACEPARENT")
+			cmd := exec.CommandContext(t.Context(), "printenv", "TRACEPARENT")
 			cmd.Env = os.Environ()
 
 			// Each goroutine gets its own carrier that writes to its cmd.Env.

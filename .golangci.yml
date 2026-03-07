@@ -20,6 +20,7 @@ linters:
     - intrange
     - modernize
     - misspell
+    - noctx
     - nolintlint
     - perfsprint
     - revive

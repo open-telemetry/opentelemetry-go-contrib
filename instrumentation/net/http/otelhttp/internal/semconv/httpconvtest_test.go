@@ -195,7 +195,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 			server := tt.serverFunc(mp)
-			req, err := http.NewRequest("POST", "http://example.com", http.NoBody)
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://example.com", http.NoBody)
 			assert.NoError(t, err)
 
 			server.RecordMetrics(t.Context(), semconv.ServerMetricData{
@@ -273,7 +273,7 @@ func TestNewTraceResponse(t *testing.T) {
 func TestNewTraceRequest_Client(t *testing.T) {
 	body := strings.NewReader("Hello, world!")
 	url := "https://example.com:8888/foo/bar?stuff=morestuff"
-	req := httptest.NewRequest("pOST", url, body)
+	req := httptest.NewRequestWithContext(t.Context(), "pOST", url, body)
 	req.Header.Set("User-Agent", "go-test-agent")
 
 	want := []attribute.KeyValue{
@@ -306,7 +306,7 @@ func TestNewTraceResponse_Client(t *testing.T) {
 func TestClientRequest(t *testing.T) {
 	body := strings.NewReader("Hello, world!")
 	url := "https://example.com:8888/foo/bar?stuff=morestuff"
-	req := httptest.NewRequest("pOST", url, body)
+	req := httptest.NewRequestWithContext(t.Context(), "pOST", url, body)
 	req.Header.Set("User-Agent", "go-test-agent")
 
 	want := []attribute.KeyValue{
@@ -415,7 +415,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 			client := tt.clientFunc(mp)
-			req, err := http.NewRequest("POST", "http://example.com", http.NoBody)
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://example.com", http.NoBody)
 			assert.NoError(t, err)
 
 			client.RecordMetrics(t.Context(), semconv.MetricData{
