@@ -161,18 +161,11 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPHttpMetricExpor
 	opts := []otlpmetrichttp.Option{}
 
 	if otlpConfig.Endpoint != nil {
-		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
+		_, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {
 			return nil, errors.Join(newErrInvalid("endpoint parsing failed"), err)
 		}
-		opts = append(opts, otlpmetrichttp.WithEndpoint(u.Host))
-
-		if u.Scheme == "http" {
-			opts = append(opts, otlpmetrichttp.WithInsecure())
-		}
-		if u.Path != "" {
-			opts = append(opts, otlpmetrichttp.WithURLPath(u.Path))
-		}
+		opts = append(opts, otlpmetrichttp.WithEndpointURL(*otlpConfig.Endpoint))
 	}
 	if otlpConfig.Compression != nil {
 		switch *otlpConfig.Compression {

@@ -247,18 +247,11 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sd
 	var opts []otlptracehttp.Option
 
 	if otlpConfig.Endpoint != nil {
-		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
+		_, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {
 			return nil, errors.Join(newErrInvalid("endpoint parsing failed"), err)
 		}
-		opts = append(opts, otlptracehttp.WithEndpoint(u.Host))
-
-		if u.Scheme == "http" {
-			opts = append(opts, otlptracehttp.WithInsecure())
-		}
-		if u.Path != "" {
-			opts = append(opts, otlptracehttp.WithURLPath(u.Path))
-		}
+		opts = append(opts, otlptracehttp.WithEndpointURL(*otlpConfig.Endpoint))
 	}
 	if otlpConfig.Compression != nil {
 		switch *otlpConfig.Compression {
