@@ -29,6 +29,7 @@ const ScopeName = "go.opentelemetry.io/contrib/instrumentation/host"
 type host struct {
 	config config
 	meter  metric.Meter
+	psi    *psiMetrics
 }
 
 // config contains optional settings for reporting host metrics.
@@ -192,6 +193,11 @@ func (h *host) register() error {
 		return err
 	}
 	if netIO, err = systemconv.NewNetworkIO(h.meter); err != nil {
+		return err
+	}
+
+	// Register PSI metrics (Linux only)
+	if h.psi, err = h.registerPSI(); err != nil {
 		return err
 	}
 
