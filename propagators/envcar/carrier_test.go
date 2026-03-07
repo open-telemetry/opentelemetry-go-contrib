@@ -195,10 +195,7 @@ func TestConcurrentChildProcesses(t *testing.T) {
 	baseCtx := t.Context()
 
 	for i := range numGoroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-
+		wg.Go(func() {
 			// Create a unique trace ID for this goroutine.
 			traceID := trace.TraceID{byte(i + 1)}
 			spanID := trace.SpanID{byte(i + 1)}
@@ -236,7 +233,7 @@ func TestConcurrentChildProcesses(t *testing.T) {
 				got:   strings.TrimSpace(string(out)),
 				err:   err,
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
