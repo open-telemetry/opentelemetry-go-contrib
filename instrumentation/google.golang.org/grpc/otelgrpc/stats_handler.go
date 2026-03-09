@@ -59,7 +59,13 @@ func NewServerHandler(opts ...Option) stats.Handler {
 	)
 
 	var err error
-	h.duration, err = rpcconv.NewServerCallDuration(meter)
+	h.duration, err = rpcconv.NewServerCallDuration(
+		meter,
+		metric.WithExplicitBucketBoundaries(
+			0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
+			0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
+		),
+	)
 	if err != nil {
 		otel.Handle(err)
 	}
@@ -162,7 +168,13 @@ func NewClientHandler(opts ...Option) stats.Handler {
 	)
 
 	var err error
-	h.duration, err = rpcconv.NewClientCallDuration(meter)
+	h.duration, err = rpcconv.NewClientCallDuration(
+		meter,
+		metric.WithExplicitBucketBoundaries(
+			0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
+			0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
+		),
+	)
 	if err != nil {
 		otel.Handle(err)
 	}

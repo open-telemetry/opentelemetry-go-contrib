@@ -71,7 +71,7 @@ func TestStatsHandler(t *testing.T) {
 			serverMetricReader := metric.NewManualReader()
 			serverMP := metric.NewMeterProvider(metric.WithReader(serverMetricReader))
 
-			listener, err := net.Listen("tcp", "127.0.0.1:0")
+			listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 			require.NoError(t, err, "failed to open port")
 			client := newGrpcTest(t, listener,
 				[]grpc.DialOption{
@@ -425,7 +425,7 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 // Ensure there is no data race for the following scenario:
 // Bidirectional streaming + client cancels context in the middle of streaming.
 func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err, "failed to open port")
 	client := newGrpcTest(t, listener,
 		[]grpc.DialOption{
@@ -445,9 +445,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 		const messageCount = 10
 		var wg sync.WaitGroup
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range messageCount {
 				const reqSize = 1
 				pl := test.ClientNewPayload(testpb.PayloadType_COMPRESSABLE, reqSize)
@@ -469,11 +467,9 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 				}
 			}
 			assert.NoError(t, stream.CloseSend())
-		}()
+		})
 
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for i := range messageCount {
 				_, err := stream.Recv()
 				if i > messageCount/2 {
@@ -485,7 +481,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 				}
 				assert.NoError(t, err)
 			}
-		}()
+		})
 
 		wg.Wait()
 	}
