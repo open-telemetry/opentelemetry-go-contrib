@@ -57,6 +57,15 @@ func SplitHostPort(hostport string) (host string, port int) {
 	return host, int(p) //nolint:gosec  // Byte size checked 16 above.
 }
 
+// RouteFromPattern extracts the HTTP route path from a pattern string.
+// If the pattern does not contain '/', an empty string is returned.
+func RouteFromPattern(pattern string) string {
+	if idx := strings.IndexByte(pattern, '/'); idx >= 0 {
+		return pattern[idx:]
+	}
+	return ""
+}
+
 func requiredHTTPPort(https bool, port int) int { //nolint:revive // ignore linter
 	if https {
 		if port > 0 && port != 443 {
@@ -75,13 +84,6 @@ func serverClientIP(xForwardedFor string) string {
 		xForwardedFor = xForwardedFor[:idx]
 	}
 	return xForwardedFor
-}
-
-func httpRoute(pattern string) string {
-	if idx := strings.IndexByte(pattern, '/'); idx >= 0 {
-		return pattern[idx:]
-	}
-	return ""
 }
 
 func netProtocol(proto string) (name string, version string) {

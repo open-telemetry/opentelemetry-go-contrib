@@ -112,7 +112,7 @@ func (n CurrentHTTPServer) RequestTraceAttrs(server string, req *http.Request, o
 		count++
 	}
 
-	route := httpRoute(req.Pattern)
+	route := RouteFromPattern(req.Pattern)
 	if route != "" {
 		count++
 	}
