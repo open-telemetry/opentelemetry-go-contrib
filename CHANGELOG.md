@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add the `http.route` metric attribute with the `WithoutMetricRouteAttribute` option to disable it to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` (#8632)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -16,7 +20,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add environment variables propagation carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#8442)
-- Add `WithMetricRouteAttribute` option in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` (#8632)
 
 ### Changed
 
