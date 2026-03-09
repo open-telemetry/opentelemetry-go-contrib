@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add the `http.route` metric attribute with the `WithoutMetricRouteAttribute` option to disable it to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` (#8632)
+- Add the `http.route` metric attribute to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` (#8632)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
