@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add environment variables propagation carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#8442)
+- Add `Resource` method to `SDK` in `go.opentelemetry.io/contrib/otelconf/v0.3.0` to expose the resolved SDK resource from declarative configuration. (#8659)
 
 ### Changed
 
