@@ -43,37 +43,6 @@ func TestSplitHostPort(t *testing.T) {
 	}
 }
 
-func TestRouteFromPattern(t *testing.T) {
-	tests := [...]struct {
-		name      string
-		pattern   string
-		wantRoute string
-	}{
-		{
-			name:      "only path",
-			pattern:   "/path/{id}",
-			wantRoute: "/path/{id}",
-		},
-		{
-			name:      "with method",
-			pattern:   "GET /path/{id}",
-			wantRoute: "/path/{id}",
-		},
-		{
-			name:      "with domain",
-			pattern:   "example.com/path/{id}",
-			wantRoute: "/path/{id}",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			gotRoute := RouteFromPattern(tt.pattern)
-			assert.Equal(t, tt.wantRoute, gotRoute)
-		})
-	}
-}
-
 func TestStandardizeHTTPMethod(t *testing.T) {
 	tests := []struct {
 		method string

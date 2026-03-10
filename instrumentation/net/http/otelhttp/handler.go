@@ -199,7 +199,6 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		MetricAttributes: semconv.MetricAttributes{
 			Req:                  r,
 			StatusCode:           statusCode,
-			Route:                semconv.RouteFromPattern(r.Pattern),
 			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(r)...),
 		},
 		MetricData: semconv.MetricData{
