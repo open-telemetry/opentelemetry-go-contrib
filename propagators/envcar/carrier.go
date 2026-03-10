@@ -18,9 +18,9 @@ func upperWithUnderscores(s string) string {
 	for _, r := range s {
 		switch {
 		case r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_':
-			b = append(b, byte(r))
+			b = append(b, byte(r)) //nolint:gosec // G115: overflow is already checked.
 		case r >= 'a' && r <= 'z':
-			b = append(b, byte(r+'A'-'a'))
+			b = append(b, byte(r+'A'-'a')) //nolint:gosec // G115: overflow is already checked.
 		default:
 			b = append(b, '_')
 		}

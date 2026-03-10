@@ -8,6 +8,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Configuration file can now be set via `OTEL_CONFIG_FILE` in `go.opentelemetry.io/contrib/otelconf`. (#8639)
+
+### Fixed
+
+- Limit the request body size at 1MB in `go.opentelemetry.io/contrib/zpages`. (#8656)
+
 ### Deprecated
 
 - `OTEL_EXPERIMENTAL_CONFIG_FILE` has been deprecated in favour of `OTEL_CONFIG_FILE` in `go.opentelemetry.io/contrib/otelconf`. (#8639)
