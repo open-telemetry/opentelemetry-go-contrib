@@ -8,6 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Limit the request body size at 1MB in `go.opentelemetry.io/contrib/zpages`. (#8656)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.42.0/2.4.0/0.67.0/0.36.0/0.22.0/0.17.0/0.15.0/0.14.0] - 2026-03-06
+
 ### Added
 
 - Add environment variables propagation carrier in `go.opentelemetry.io/contrib/propagators/envcar`. (#8442)
@@ -28,13 +37,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Ignore informational response status codes (`100-199`) except `101 Switching Protocols` when storing the HTTP status code in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6913)
 - Make `Body` handling in `Transport` consistent with stdlib in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8618)
 - Fix bucket boundaries for `rpc.server.call.duration` and `rpc.client.call.duration` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8642)
+- Host resource detector in `go.opentelemetry.io/contrib/otelconf` now includes `os.` attributes. (#8578)
 
 ### Removed
 
 - Drop support for [Go 1.24]. (#8628)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.13.0] - 2026-03-02
 
@@ -1724,7 +1731,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.41.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.42.0...HEAD
+[1.42.0/2.4.0/0.67.0/0.36.0/0.22.0/0.17.0/0.15.0/0.14.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.42.0
 [1.41.0/2.3.0/0.66.0/0.35.0/0.21.0/0.16.0/0.14.0/0.13.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.41.0
 [1.40.0/2.2.0/0.65.0/0.34.0/0.20.0/0.15.0/0.13.0/0.12.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.40.0
 [1.39.0/2.1.0/0.64.0/0.33.0/0.19.0/0.14.0/0.12.0/0.11.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.39.0

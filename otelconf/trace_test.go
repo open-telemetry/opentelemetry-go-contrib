@@ -999,7 +999,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := net.Listen("tcp4", "localhost:0")
+			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp4", "localhost:0")
 			require.NoError(t, err)
 
 			// We need to manually construct the endpoint using the port on which the server is listening.

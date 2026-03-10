@@ -54,7 +54,7 @@ func ExampleCarrier_childProcess() {
 	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
 
 	// Prepare a command that prints the TRACEPARENT environment variable.
-	cmd := exec.Command("printenv", "TRACEPARENT")
+	cmd := exec.CommandContext(context.Background(), "printenv", "TRACEPARENT")
 	cmd.Env = os.Environ()
 
 	// Create a carrier that injects trace context into the child

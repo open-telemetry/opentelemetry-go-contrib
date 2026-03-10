@@ -14,13 +14,13 @@ require (
 	github.com/aws/aws-lambda-go v1.53.0
 	github.com/aws/aws-sdk-go-v2/config v1.32.11
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.96.4
-	go.opentelemetry.io/contrib/detectors/aws/lambda v0.66.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.66.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.66.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.66.0
-	go.opentelemetry.io/otel v1.41.1-0.20260303203755-5deb0d31ed71
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.41.1-0.20260303203755-5deb0d31ed71
-	go.opentelemetry.io/otel/sdk v1.41.1-0.20260303203755-5deb0d31ed71
+	go.opentelemetry.io/contrib/detectors/aws/lambda v0.67.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.67.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws v0.67.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.67.0
+	go.opentelemetry.io/otel v1.42.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.42.0
+	go.opentelemetry.io/otel/sdk v1.42.0
 )
 
 require (
@@ -51,7 +51,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.41.1-0.20260303203755-5deb0d31ed71 // indirect
-	go.opentelemetry.io/otel/trace v1.41.1-0.20260303203755-5deb0d31ed71 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	go.opentelemetry.io/otel/metric v1.42.0 // indirect
+	go.opentelemetry.io/otel/trace v1.42.0 // indirect
+	golang.org/x/sys v0.42.0 // indirect
 )
