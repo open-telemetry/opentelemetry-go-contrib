@@ -7,7 +7,7 @@ exclude github.com/blizzy78/varnamelen v0.6.1
 require (
 	github.com/atombender/go-jsonschema v0.22.0
 	github.com/client9/misspell v0.3.4
-	github.com/golangci/golangci-lint/v2 v2.11.2
+	github.com/golangci/golangci-lint/v2 v2.11.3
 	github.com/itchyny/gojq v0.12.18
 	github.com/jcchavezs/porto v0.7.0
 	github.com/stretchr/testify v1.11.1
@@ -193,7 +193,7 @@ require (
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
 	github.com/sashamelentyev/interfacebloat v1.1.0 // indirect
 	github.com/sashamelentyev/usestdlibvars v1.29.0 // indirect
-	github.com/securego/gosec/v2 v2.24.7 // indirect
+	github.com/securego/gosec/v2 v2.24.8-0.20260309165252-619ce2117e08 // indirect
 	github.com/sergi/go-diff v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/sivchari/containedctx v1.0.3 // indirect
