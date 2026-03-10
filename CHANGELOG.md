@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add the `http.route` metric attribute to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` (#8632)
 
+### Fixed
+
+- Limit the request body size at 1MB in `go.opentelemetry.io/contrib/zpages`. (#8656)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
