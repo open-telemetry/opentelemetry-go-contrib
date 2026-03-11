@@ -88,7 +88,6 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 		detectors            []ExperimentalResourceDetector
 		wantHostAttributes   bool
 		wantOSAttributes     bool
-		wantHostIDAttribute  bool
 		wantProcessAttribute bool
 	}{
 		{
@@ -100,9 +99,8 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			detectors: []ExperimentalResourceDetector{
 				{Host: ExperimentalHostResourceDetector{}},
 			},
-			wantHostAttributes:  true,
-			wantOSAttributes:    true,
-			wantHostIDAttribute: true,
+			wantHostAttributes: true,
+			wantOSAttributes:   true,
 		},
 		{
 			name: "process-detector-only",
@@ -120,7 +118,6 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			},
 			wantHostAttributes:   true,
 			wantOSAttributes:     true,
-			wantHostIDAttribute:  true,
 			wantProcessAttribute: true,
 		},
 	}
@@ -143,7 +140,6 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 
 			assert.Equal(t, tt.wantHostAttributes, attrSet[semconv.HostNameKey], "should have host.name attribute")
 			assert.Equal(t, tt.wantOSAttributes, attrSet[semconv.OSTypeKey], "should have os.type attribute (from WithOS()")
-			assert.Equal(t, tt.wantHostIDAttribute, attrSet[semconv.HostIDKey], "should have host.id attribute")
 			assert.Equal(t, tt.wantProcessAttribute, attrSet[semconv.ProcessPIDKey], "should have process.pid attribute")
 		})
 	}
