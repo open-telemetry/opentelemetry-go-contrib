@@ -142,7 +142,7 @@ func TestTracezHandler_ServeHTTP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, tt.url, http.NoBody)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tt.url, http.NoBody)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, req)
@@ -199,10 +199,8 @@ func TestTracezHandler_ConcurrentSafe(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for range 5 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			req := httptest.NewRequest(http.MethodGet, "/tracez", http.NoBody)
+		wg.Go(func() {
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/tracez", http.NoBody)
 			w := httptest.NewRecorder()
 
 			handler.ServeHTTP(w, req)
@@ -211,7 +209,7 @@ func TestTracezHandler_ConcurrentSafe(t *testing.T) {
 			_ = resp.Body.Close()
 
 			assert.Equal(t, http.StatusOK, resp.StatusCode)
-		}()
+		})
 	}
 
 	wg.Wait()

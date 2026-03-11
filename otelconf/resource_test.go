@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.39.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 func TestNewResource(t *testing.T) {
@@ -78,6 +78,73 @@ func TestNewResource(t *testing.T) {
 			got, err := newResource(tt.config)
 			require.ErrorIs(t, tt.wantErrT, err)
 			assert.Equal(t, tt.wantResource, got)
+		})
+	}
+}
+
+func TestResourceOptsWithDetectors(t *testing.T) {
+	tests := []struct {
+		name                 string
+		detectors            []ExperimentalResourceDetector
+		wantHostAttributes   bool
+		wantOSAttributes     bool
+		wantHostIDAttribute  bool
+		wantProcessAttribute bool
+	}{
+		{
+			name:      "no-detectors",
+			detectors: []ExperimentalResourceDetector{},
+		},
+		{
+			name: "host-detector-enabled",
+			detectors: []ExperimentalResourceDetector{
+				{Host: ExperimentalHostResourceDetector{}},
+			},
+			wantHostAttributes:  true,
+			wantOSAttributes:    true,
+			wantHostIDAttribute: true,
+		},
+		{
+			name: "process-detector-only",
+			detectors: []ExperimentalResourceDetector{
+				{Process: ExperimentalProcessResourceDetector{}},
+			},
+			wantProcessAttribute: true,
+		},
+		{
+			name: "all-detectors",
+			detectors: []ExperimentalResourceDetector{
+				{Container: ExperimentalContainerResourceDetector{}},
+				{Host: ExperimentalHostResourceDetector{}},
+				{Process: ExperimentalProcessResourceDetector{}},
+			},
+			wantHostAttributes:   true,
+			wantOSAttributes:     true,
+			wantHostIDAttribute:  true,
+			wantProcessAttribute: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			config := &Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: tt.detectors,
+				},
+			}
+			got, err := newResource(config)
+			require.NoError(t, err)
+			require.NotNil(t, got)
+
+			attrs := got.Attributes()
+			attrSet := make(map[attribute.Key]bool)
+			for _, attr := range attrs {
+				attrSet[attr.Key] = true
+			}
+
+			assert.Equal(t, tt.wantHostAttributes, attrSet[semconv.HostNameKey], "should have host.name attribute")
+			assert.Equal(t, tt.wantOSAttributes, attrSet[semconv.OSTypeKey], "should have os.type attribute (from WithOS()")
+			assert.Equal(t, tt.wantHostIDAttribute, attrSet[semconv.HostIDKey], "should have host.id attribute")
+			assert.Equal(t, tt.wantProcessAttribute, attrSet[semconv.ProcessPIDKey], "should have process.pid attribute")
 		})
 	}
 }
