@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Limit the request body size at 1MB in `go.opentelemetry.io/contrib/zpages`. (#8656)
+-  Flaky test in `opentelemetry-go-contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8676)
 
 ### Removed
 
