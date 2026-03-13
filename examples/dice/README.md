@@ -4,6 +4,10 @@ This is the foundation example for [Getting Started](https://opentelemetry.io/do
 
 Below, you will see instructions on how to run this application, either with or without instrumentation.
 
+## What can you learn from this example?
+
+This example primarily focuses on **Metrics instrumentation** using OpenTelemetry.
+
 ## Usage
 
 The `run.sh` script accepts one argument to determine which example to run:
