@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Configuration file can now be set via `OTEL_CONFIG_FILE` in `go.opentelemetry.io/contrib/otelconf`. (#8639)
+- Add the `http.route` metric attribute to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` (#8632)
 
 ### Fixed
 

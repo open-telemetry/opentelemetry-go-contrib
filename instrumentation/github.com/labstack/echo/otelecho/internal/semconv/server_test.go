@@ -24,7 +24,7 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 	tests := []struct {
 		name                 string
 		server               string
-		req                  *http.Request
+		reqFunc              func(t *testing.T) *http.Request
 		statusCode           int
 		route                string
 		additionalAttributes []attribute.KeyValue
@@ -33,7 +33,7 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 		{
 			name:                 "routine testing",
 			server:               "",
-			req:                  defaultRequest,
+			reqFunc:              func(_ *testing.T) *http.Request { return defaultRequest },
 			statusCode:           200,
 			route:                "",
 			additionalAttributes: []attribute.KeyValue{attribute.String("test", "test")},
@@ -53,7 +53,7 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 		{
 			name:                 "use server address",
 			server:               "example.com:9999",
-			req:                  defaultRequest,
+			reqFunc:              func(_ *testing.T) *http.Request { return defaultRequest },
 			statusCode:           200,
 			route:                "/path/${id}",
 			additionalAttributes: nil,
@@ -71,11 +71,31 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 				}, attrs)
 			},
 		},
+		{
+			name: "use route from request pattern",
+			reqFunc: func(t *testing.T) *http.Request {
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/path/abc123", http.NoBody)
+				req.Pattern = "/path/abc123"
+				return req
+			},
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 6)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("url.scheme", "http"),
+					attribute.String("server.address", "example.com"),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "1.1"),
+					attribute.String("http.route", "/path/abc123"),
+				}, attrs)
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := HTTPServer{}.MetricAttributes(tt.server, tt.req, tt.statusCode, tt.route, tt.additionalAttributes)
+			req := tt.reqFunc(t)
+			got := HTTPServer{}.MetricAttributes(tt.server, req, tt.statusCode, tt.route, tt.additionalAttributes)
 			tt.wantFunc(t, got)
 		})
 	}
