@@ -70,7 +70,7 @@ func doCalls(ctx context.Context, client pb.TestServiceClient) {
 	test.DoPingPong(ctx, client)
 }
 
-func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) { //nolint:unparam // ignore unparam lint
+func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) {
 	for _, kv := range kvs {
 		if kv.Key == key {
 			return kv, true
