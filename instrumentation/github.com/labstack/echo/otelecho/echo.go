@@ -108,9 +108,6 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 
 			// Record the server-side attributes.
 			var additionalAttributes []attribute.KeyValue
-			if path := c.Path(); path != "" {
-				additionalAttributes = append(additionalAttributes, semconvSrv.Route(path))
-			}
 			if cfg.MetricAttributeFn != nil {
 				additionalAttributes = append(additionalAttributes, cfg.MetricAttributeFn(request)...)
 			}
@@ -124,6 +121,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 				MetricAttributes: semconv.MetricAttributes{
 					Req:                  request,
 					StatusCode:           status,
+					Route:                c.Path(),
 					AdditionalAttributes: additionalAttributes,
 				},
 				MetricData: semconv.MetricData{
