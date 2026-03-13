@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Configuration file can now be set via `OTEL_CONFIG_FILE` in `go.opentelemetry.io/contrib/otelconf`. (#8639)
 
+### Changed
+
+- Prepend `_` to the normalized environment variable name when the key starts with a digit in `go.opentelemetry.io/contrib/propagators/envcar`, ensuring POSIX compliance. (#8678)
+
 ### Fixed
 
 - Limit the request body size at 1MB in `go.opentelemetry.io/contrib/zpages`. (#8656)
