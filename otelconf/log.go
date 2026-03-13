@@ -134,18 +134,11 @@ func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sdk
 	var opts []otlploghttp.Option
 
 	if otlpConfig.Endpoint != nil {
-		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
+		_, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {
 			return nil, errors.Join(newErrInvalid("endpoint parsing failed"), err)
 		}
-		opts = append(opts, otlploghttp.WithEndpoint(u.Host))
-
-		if u.Scheme == "http" {
-			opts = append(opts, otlploghttp.WithInsecure())
-		}
-		if u.Path != "" {
-			opts = append(opts, otlploghttp.WithURLPath(u.Path))
-		}
+		opts = append(opts, otlploghttp.WithEndpointURL(*otlpConfig.Endpoint))
 	}
 	if otlpConfig.Compression != nil {
 		switch *otlpConfig.Compression {
