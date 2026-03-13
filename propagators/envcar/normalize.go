@@ -37,7 +37,7 @@ func normalize(s string) string {
 			b[i] = byte(r) //nolint:gosec // G115: overflow is not possible.
 		case r >= 'a' && r <= 'z':
 			// Lowercase letters are converted to uppercase.
-			b[i] = byte(r + 'A' - 'a') //nolint:gosec // G115: overflow is not possible.
+			b[i] = byte(r + 'A' - 'a')
 		default:
 			// All other characters (including non-ASCII runes) become underscores.
 			b[i] = '_'
