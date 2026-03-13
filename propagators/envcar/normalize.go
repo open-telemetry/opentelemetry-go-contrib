@@ -7,7 +7,7 @@ import (
 	"unicode/utf8"
 )
 
-// normalize converts s to a valid POSIX environment-variable name.
+// normalize converts s to a valid POSIX environment variable name.
 // The conversion rules are:
 //   - A–Z, 0–9, and _ are kept as-is.
 //   - a–z are uppercased.
