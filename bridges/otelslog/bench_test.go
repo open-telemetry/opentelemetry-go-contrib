@@ -4,7 +4,6 @@
 package otelslog
 
 import (
-	"context"
 	"log/slog"
 	"testing"
 	"time"
@@ -30,7 +29,7 @@ func BenchmarkHandler(b *testing.B) {
 	}
 	attrs5 := attrs10[:5]
 	record := slog.NewRecord(time.Now(), slog.LevelInfo, "body", 0)
-	ctx := context.Background()
+	ctx := b.Context()
 
 	b.Run("Handle", func(b *testing.B) {
 		handlers := make([]*Handler, b.N)
@@ -40,7 +39,7 @@ func BenchmarkHandler(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			err = handlers[n].Handle(ctx, record)
 		}
 	})
@@ -54,7 +53,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				h = handlers[n].WithAttrs(attrs5)
 			}
 		})
@@ -66,7 +65,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				h = handlers[n].WithAttrs(attrs10)
 			}
 		})
@@ -80,7 +79,7 @@ func BenchmarkHandler(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			h = handlers[n].WithGroup("group")
 		}
 	})
@@ -94,7 +93,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				h = handlers[n].WithGroup("group").WithAttrs(attrs5)
 			}
 		})
@@ -106,7 +105,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				h = handlers[n].WithGroup("group").WithAttrs(attrs10)
 			}
 		})
@@ -121,7 +120,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				err = handlers[n].Handle(ctx, record)
 			}
 		})
@@ -133,7 +132,7 @@ func BenchmarkHandler(b *testing.B) {
 
 			b.ReportAllocs()
 			b.ResetTimer()
-			for n := 0; n < b.N; n++ {
+			for n := range b.N {
 				err = handlers[n].Handle(ctx, record)
 			}
 		})
@@ -147,7 +146,7 @@ func BenchmarkHandler(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			err = handlers[n].Handle(ctx, record)
 		}
 	})

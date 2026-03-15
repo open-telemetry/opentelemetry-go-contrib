@@ -4,15 +4,13 @@
 package otelaws
 
 import (
-	"context"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
-
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 func TestSQSDeleteMessageBatchInput(t *testing.T) {
@@ -22,7 +20,7 @@ func TestSQSDeleteMessageBatchInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -34,7 +32,7 @@ func TestSQSDeleteMessageInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -46,7 +44,7 @@ func TestSQSDeleteQueueInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -58,7 +56,7 @@ func TestSQSGetQueueAttributesInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -70,7 +68,7 @@ func TestSQSListDeadLetterSourceQueuesInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -82,7 +80,7 @@ func TestSQSListQueueTagsInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -94,7 +92,7 @@ func TestSQSPurgeQueueInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -106,7 +104,7 @@ func TestSQSReceiveMessageInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -118,7 +116,7 @@ func TestSQSRemovePermissionInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -130,7 +128,7 @@ func TestSQSSendMessageBatchInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -142,7 +140,7 @@ func TestSQSSendMessageInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -154,7 +152,7 @@ func TestSQSSetQueueAttributesInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -166,7 +164,7 @@ func TestSQSTagQueueInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }
@@ -178,7 +176,7 @@ func TestSQSUntagQueueInput(t *testing.T) {
 		},
 	}
 
-	attributes := SQSAttributeBuilder(context.TODO(), input, middleware.InitializeOutput{})
+	attributes := SQSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
 	assert.Contains(t, attributes, semconv.ServerAddress("test-queue-url"))
 }

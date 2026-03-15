@@ -24,7 +24,7 @@ func testFactory() func() resource.Detector {
 	return func() resource.Detector { return &testDetector{} }
 }
 
-func (d *testDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (d *testDetector) Detect(context.Context) (*resource.Resource, error) {
 	return resource.NewWithAttributes(d.schemaURL, d.attr...), d.err
 }
 
@@ -96,7 +96,7 @@ func TestOptDetectorDetect(t *testing.T) {
 	opt := resource.WithAttributes(want)
 	detector := optDetector{opt: opt}
 
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 	if err != nil {
 		t.Fatalf("got error: %v, expected no error", err)
 	}
@@ -123,7 +123,7 @@ func TestCompositeDetect(t *testing.T) {
 	}
 	comp := newComposite(detectors)
 
-	res, err := comp.Detect(context.Background())
+	res, err := comp.Detect(t.Context())
 	if !errors.Is(err, knownErr) {
 		t.Errorf("got error %v, expected %v", err, knownErr)
 	}
@@ -159,7 +159,7 @@ func TestCompositeDetectMergeError(t *testing.T) {
 	}
 	comp := newComposite(detectors)
 
-	res, err := comp.Detect(context.Background())
+	res, err := comp.Detect(t.Context())
 	if !errors.Is(err, resource.ErrSchemaURLConflict) {
 		t.Errorf("got error %v, expected %v", err, resource.ErrSchemaURLConflict)
 	}

@@ -11,12 +11,11 @@ import (
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
-
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -36,7 +35,7 @@ type otelMiddlewares struct {
 	attributeBuilders []AttributeBuilder
 }
 
-func (m otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
+func (otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
 	return stack.Initialize.Add(middleware.InitializeMiddlewareFunc("OTelInitializeMiddlewareBefore", func(
 		ctx context.Context, in middleware.InitializeInput, next middleware.InitializeHandler) (
 		out middleware.InitializeOutput, metadata middleware.Metadata, err error,
@@ -58,9 +57,8 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 
 		attributes := []attribute.KeyValue{
 			SystemAttr(),
-			ServiceAttr(serviceID),
+			MethodAttr(serviceID, operation),
 			RegionAttr(region),
-			OperationAttr(operation),
 		}
 
 		ctx, span := m.tracer.Start(ctx, spanName(serviceID, operation),
@@ -73,7 +71,7 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		out, metadata, err = next.HandleInitialize(ctx, in)
 		span.SetAttributes(m.buildAttributes(ctx, in, out)...)
 		if err != nil {
-			span.RecordError(err)
+			span.SetAttributes(semconv.ErrorType(err))
 			span.SetStatus(codes.Error, err.Error())
 		}
 
@@ -99,7 +97,7 @@ func (m otelMiddlewares) finalizeMiddlewareAfter(stack *middleware.Stack) error 
 		middleware.After)
 }
 
-func (m otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
+func (otelMiddlewares) deserializeMiddleware(stack *middleware.Stack) error {
 	return stack.Deserialize.Add(middleware.DeserializeMiddlewareFunc("OTelDeserializeMiddleware", func(
 		ctx context.Context, in middleware.DeserializeInput, next middleware.DeserializeHandler) (
 		out middleware.DeserializeOutput, metadata middleware.Metadata, err error,
@@ -158,7 +156,7 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 
 	m := otelMiddlewares{
 		tracer: cfg.TracerProvider.Tracer(ScopeName,
-			trace.WithInstrumentationVersion(Version())),
+			trace.WithInstrumentationVersion(Version)),
 		propagator:        cfg.TextMapPropagator,
 		attributeBuilders: cfg.AttributeBuilders,
 	}

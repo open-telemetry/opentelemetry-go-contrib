@@ -58,11 +58,10 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 type config struct {
@@ -198,7 +197,7 @@ func NewLogSink(name string, options ...Option) *LogSink {
 // OpenTelemetry. See package documentation for how conversions are made.
 type LogSink struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
-	noCmp [0]func() //nolint: unused  // This is indeed used.
+	noCmp [0]func() //nolint:unused  // This is indeed used.
 
 	name          string
 	provider      log.LoggerProvider
@@ -255,7 +254,7 @@ func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
 
 // Init receives optional information about the logr library this
 // implementation does not use it.
-func (l *LogSink) Init(logr.RuntimeInfo) {
+func (*LogSink) Init(logr.RuntimeInfo) {
 	// We don't need to do anything here.
 	// CallDepth is used to calculate the caller's PC.
 	// PC is dropped as part of the conversion to the OpenTelemetry log.Record.

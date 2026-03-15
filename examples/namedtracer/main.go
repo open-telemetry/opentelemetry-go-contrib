@@ -10,14 +10,14 @@ import (
 	"log"
 
 	"github.com/go-logr/stdr"
-
-	"go.opentelemetry.io/contrib/examples/namedtracer/foo"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/examples/namedtracer/foo"
 )
 
 var (

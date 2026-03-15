@@ -46,11 +46,11 @@ func (otts otelTraceState) serialize() string {
 	}
 
 	if otts.hasPValue() {
-		_, _ = sb.WriteString(fmt.Sprintf("p:%d", otts.pvalue))
+		_, _ = fmt.Fprintf(&sb, "p:%d", otts.pvalue)
 	}
 	if otts.hasRValue() {
 		semi()
-		_, _ = sb.WriteString(fmt.Sprintf("r:%d", otts.rvalue))
+		_, _ = fmt.Fprintf(&sb, "r:%d", otts.rvalue)
 	}
 	for _, unk := range otts.unknown {
 		ex := 0
@@ -92,11 +92,11 @@ func isUCAlpha(r byte) bool {
 	return r >= 'A' && r <= 'Z'
 }
 
-func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { // nolint: revive
+func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //nolint:revive // ignore linter
 	var pval, rval string
 	var unknown []string
 
-	if len(ts) == 0 {
+	if ts == "" {
 		return newTraceState(), nil
 	}
 
@@ -104,7 +104,7 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //
 		return newTraceState(), errTraceStateSyntax
 	}
 
-	for len(ts) > 0 {
+	for ts != "" {
 		eqPos := 0
 		for ; eqPos < len(ts); eqPos++ {
 			if eqPos == 0 {
@@ -189,7 +189,7 @@ func parseOTelTraceState(ts string, isSampled bool) (otelTraceState, error) { //
 	return otts, nil
 }
 
-func parseNumber(key string, input string, maximum uint8) (uint8, error) {
+func parseNumber(key, input string, maximum uint8) (uint8, error) {
 	if input == "" {
 		return maximum + 1, nil
 	}
@@ -200,8 +200,7 @@ func parseNumber(key string, input string, maximum uint8) (uint8, error) {
 	if value > uint64(maximum) {
 		return maximum + 1, parseError(key, strconv.ErrRange)
 	}
-	// `value` is strictly less then the uint8 maximum. This cast is safe.
-	return uint8(value), nil // nolint: gosec
+	return uint8(value), nil //nolint:gosec // `value` is strictly less then the uint8 maximum. This cast is safe.
 }
 
 func parseError(key string, err error) error {

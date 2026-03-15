@@ -6,13 +6,8 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf/v0.3.0"
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"errors"
 	"fmt"
-	"os"
-
-	yaml "go.yaml.in/yaml/v3"
 
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log"
@@ -24,6 +19,9 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
+	yaml "go.yaml.in/yaml/v3"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
 
 const (
@@ -81,7 +79,7 @@ var noopSDK = SDK{
 	loggerProvider: nooplog.LoggerProvider{},
 	meterProvider:  noopmetric.MeterProvider{},
 	tracerProvider: nooptrace.TracerProvider{},
-	shutdown:       func(ctx context.Context) error { return nil },
+	shutdown:       func(context.Context) error { return nil },
 }
 
 // NewSDK creates SDK providers based on the configuration model.
@@ -180,40 +178,18 @@ func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) Configurat
 
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
 func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
+	file, err := provider.ReplaceEnvVars(file)
+	if err != nil {
+		return nil, err
+	}
+
 	var cfg OpenTelemetryConfiguration
-	err := yaml.Unmarshal(file, &cfg)
+	err = yaml.Unmarshal(file, &cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	return &cfg, nil
-}
-
-// createTLSConfig creates a tls.Config from certificate files.
-func createTLSConfig(caCertFile *string, clientCertFile *string, clientKeyFile *string) (*tls.Config, error) {
-	tlsConfig := &tls.Config{}
-	if caCertFile != nil {
-		caText, err := os.ReadFile(*caCertFile)
-		if err != nil {
-			return nil, err
-		}
-		certPool := x509.NewCertPool()
-		if !certPool.AppendCertsFromPEM(caText) {
-			return nil, errors.New("could not create certificate authority chain from certificate")
-		}
-		tlsConfig.RootCAs = certPool
-	}
-	if clientCertFile != nil {
-		if clientKeyFile == nil {
-			return nil, errors.New("client certificate was provided but no client key was provided")
-		}
-		clientCert, err := tls.LoadX509KeyPair(*clientCertFile, *clientKeyFile)
-		if err != nil {
-			return nil, fmt.Errorf("could not use client certificate: %w", err)
-		}
-		tlsConfig.Certificates = []tls.Certificate{clientCert}
-	}
-	return tlsConfig, nil
 }
 
 // createHeadersConfig combines the two header config fields. Headers take precedence over headersList.

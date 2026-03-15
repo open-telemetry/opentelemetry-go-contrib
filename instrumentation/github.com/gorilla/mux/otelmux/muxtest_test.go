@@ -4,17 +4,15 @@
 package otelmux_test
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
@@ -23,7 +21,41 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
 )
+
+func TestDefaultTrace(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware("foobar", otelmux.WithTracerProvider(provider)))
+
+	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code, "unexpected status code")
+
+	spans := sr.Ended()
+
+	require.Len(t, sr.Ended(), 1)
+	span := spans[0]
+	attr := span.Attributes()
+	assert.True(t, ensurePrefix(http.MethodGet, spans[0].Name()))
+	assert.Equal(t, "GET /user/{id}", span.Name())
+	assert.Equal(t, trace.SpanKindServer, span.SpanKind())
+	assert.Contains(t, attr, attribute.Int("http.response.status_code", http.StatusOK))
+	assert.Contains(t, attr, attribute.String("http.request.method", "GET"))
+	assert.Contains(t, attr, attribute.String("http.route", "/user/{id}"))
+	assert.Equal(t, codes.Unset, span.Status().Code)
+	assert.Empty(t, span.Status().Description)
+}
 
 func TestCustomSpanNameFormatter(t *testing.T) {
 	exporter := tracetest.NewInMemoryExporter()
@@ -34,9 +66,9 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 
 	testdata := []struct {
 		spanNameFormatter func(string, *http.Request) string
-		expected          string
+		want              string
 	}{
-		{nil, routeTpl},
+		{nil, setDefaultName(http.MethodGet, routeTpl)},
 		{
 			func(string, *http.Request) string { return "custom" },
 			"custom",
@@ -50,30 +82,30 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 	}
 
 	for i, d := range testdata {
-		t.Run(fmt.Sprintf("%d_%s", i, d.expected), func(t *testing.T) {
+		t.Run(fmt.Sprintf("%d_%s", i, d.want), func(t *testing.T) {
 			router := mux.NewRouter()
 			router.Use(otelmux.Middleware(
 				"foobar",
 				otelmux.WithTracerProvider(tp),
 				otelmux.WithSpanNameFormatter(d.spanNameFormatter),
 			))
-			router.HandleFunc(routeTpl, func(w http.ResponseWriter, r *http.Request) {})
+			router.HandleFunc(routeTpl, func(http.ResponseWriter, *http.Request) {})
 
-			r := httptest.NewRequest("GET", "/user/123", nil)
+			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, r)
 
 			spans := exporter.GetSpans()
 			require.Len(t, spans, 1)
-			assert.Equal(t, d.expected, spans[0].Name)
+			assert.Equal(t, d.want, spans[0].Name)
 
 			exporter.Reset()
 		})
 	}
 }
 
-func ok(w http.ResponseWriter, _ *http.Request) {}
+func ok(http.ResponseWriter, *http.Request) {}
 func notfound(w http.ResponseWriter, _ *http.Request) {
 	http.Error(w, "not found", http.StatusNotFound)
 }
@@ -95,28 +127,49 @@ func TestSDKIntegration(t *testing.T) {
 	router.HandleFunc("/book/{title}", ok)
 
 	tests := []struct {
-		name     string
-		path     string
-		reqFunc  func(r *http.Request)
-		expected string
+		name         string
+		method       string
+		path         string
+		reqFunc      func(r *http.Request)
+		wantSpanName string
+		wantMethod   string
+		wantRoute    string
 	}{
 		{
-			name:     "user route",
-			path:     "/user/123",
-			reqFunc:  nil,
-			expected: "/user/{id:[0-9]+}",
+			name:         "user route",
+			method:       http.MethodGet,
+			path:         "/user/123",
+			reqFunc:      nil,
+			wantSpanName: "GET /user/{id:[0-9]+}",
+			wantMethod:   http.MethodGet,
+			wantRoute:    "/user/{id:[0-9]+}",
 		},
 		{
-			name:     "book route",
-			path:     "/book/foo",
-			reqFunc:  nil,
-			expected: "/book/{title}",
+			name:         "POST book route",
+			method:       http.MethodPost,
+			path:         "/book/foo",
+			reqFunc:      nil,
+			wantSpanName: "POST /book/{title}",
+			wantMethod:   http.MethodPost,
+			wantRoute:    "/book/{title}",
 		},
 		{
-			name:     "book route with custom pattern",
-			path:     "/book/bar",
-			reqFunc:  func(r *http.Request) { r.Pattern = "/book/{custom}" },
-			expected: "/book/{custom}",
+			name:         "book route with custom pattern",
+			method:       http.MethodGet,
+			path:         "/book/bar",
+			reqFunc:      func(r *http.Request) { r.Pattern = "/book/{custom}" },
+			wantSpanName: "GET /book/{custom}",
+			wantMethod:   http.MethodGet,
+			wantRoute:    "/book/{custom}",
+		},
+		{
+			name:         "Invalid HTTP Method",
+			method:       "INVALID",
+			path:         "/book/bar",
+			reqFunc:      func(r *http.Request) { r.Pattern = "/book/{custom}" },
+			wantSpanName: "HTTP /book/{custom}",
+			wantMethod:   http.MethodGet,
+			wantRoute:    "/book/{custom}",
 		},
 	}
 
@@ -124,22 +177,23 @@ func TestSDKIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer sr.Reset()
 
-			r := httptest.NewRequest("GET", tt.path, nil)
+			r := httptest.NewRequestWithContext(t.Context(), tt.method, tt.path, http.NoBody)
 			if tt.reqFunc != nil {
 				tt.reqFunc(r)
 			}
 
 			w := httptest.NewRecorder()
 			router.ServeHTTP(w, r)
+			spans := sr.Ended()
 
-			require.Len(t, sr.Ended(), 1)
+			require.Len(t, spans, 1)
 			assertSpan(t, sr.Ended()[0],
-				tt.expected,
+				tt.wantSpanName,
 				trace.SpanKindServer,
 				attribute.String("server.address", "foobar"),
 				attribute.Int("http.response.status_code", http.StatusOK),
-				attribute.String("http.request.method", "GET"),
-				attribute.String("http.route", tt.expected),
+				attribute.String("http.request.method", tt.wantMethod),
+				attribute.String("http.route", tt.wantRoute),
 			)
 		})
 	}
@@ -154,13 +208,13 @@ func TestNotFoundIsNotError(t *testing.T) {
 	router.Use(otelmux.Middleware("foobar", otelmux.WithTracerProvider(provider)))
 	router.HandleFunc("/does/not/exist", notfound)
 
-	r0 := httptest.NewRequest("GET", "/does/not/exist", nil)
+	r0 := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/does/not/exist", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r0)
 
 	require.Len(t, sr.Ended(), 1)
 	assertSpan(t, sr.Ended()[0],
-		"/does/not/exist",
+		"GET /does/not/exist",
 		trace.SpanKindServer,
 		attribute.String("server.address", "foobar"),
 		attribute.Int("http.response.status_code", http.StatusNotFound),
@@ -206,7 +260,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 		otelmux.WithPropagators(prop),
 		otelmux.WithTracerProvider(provider),
 	))
-	router.HandleFunc("/with/public/endpoint", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc("/with/public/endpoint", func(_ http.ResponseWriter, r *http.Request) {
 		s := trace.SpanFromContext(r.Context())
 		sc := s.SpanContext()
 
@@ -216,15 +270,15 @@ func TestWithPublicEndpoint(t *testing.T) {
 		assert.NotEqual(t, remoteSpan.TraceID, sc.TraceID())
 	})
 
-	r0 := httptest.NewRequest("GET", "/with/public/endpoint", nil)
+	r0 := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/with/public/endpoint", http.NoBody)
 	w := httptest.NewRecorder()
 
 	sc := trace.NewSpanContext(remoteSpan)
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r0.Header))
 
 	router.ServeHTTP(w, r0)
-	assert.Equal(t, http.StatusOK, w.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+	assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 
 	// Recorded span should be linked with an incoming span context.
 	assert.NoError(t, sr.ForceFlush(ctx))
@@ -251,7 +305,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 	}{
 		{
 			name: "with the method returning true",
-			fn: func(r *http.Request) bool {
+			fn: func(*http.Request) bool {
 				return true
 			},
 			handlerAssert: func(t *testing.T, sc trace.SpanContext) {
@@ -268,7 +322,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 		},
 		{
 			name: "with the method returning false",
-			fn: func(r *http.Request) bool {
+			fn: func(*http.Request) bool {
 				return false
 			},
 			handlerAssert: func(t *testing.T, sc trace.SpanContext) {
@@ -296,20 +350,20 @@ func TestWithPublicEndpointFn(t *testing.T) {
 				otelmux.WithPropagators(prop),
 				otelmux.WithTracerProvider(provider),
 			))
-			router.HandleFunc("/with/public/endpointfn", func(w http.ResponseWriter, r *http.Request) {
+			router.HandleFunc("/with/public/endpointfn", func(_ http.ResponseWriter, r *http.Request) {
 				s := trace.SpanFromContext(r.Context())
 				tt.handlerAssert(t, s.SpanContext())
 			})
 
-			r0 := httptest.NewRequest("GET", "/with/public/endpointfn", nil)
+			r0 := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/with/public/endpointfn", http.NoBody)
 			w := httptest.NewRecorder()
 
 			sc := trace.NewSpanContext(remoteSpan)
-			ctx := trace.ContextWithSpanContext(context.Background(), sc)
+			ctx := trace.ContextWithSpanContext(t.Context(), sc)
 			prop.Inject(ctx, propagation.HeaderCarrier(r0.Header))
 
 			router.ServeHTTP(w, r0)
-			assert.Equal(t, http.StatusOK, w.Result().StatusCode) //nolint:bodyclose // False positive for httptest.ResponseRecorder: https://github.com/timakin/bodyclose/issues/59.
+			assert.Equal(t, http.StatusOK, w.Result().StatusCode)
 
 			// Recorded span should be linked with an incoming span context.
 			assert.NoError(t, sr.ForceFlush(ctx))
@@ -319,31 +373,73 @@ func TestWithPublicEndpointFn(t *testing.T) {
 	}
 }
 
+func TestDefaultMetricAttributes(t *testing.T) {
+	defaultMetricAttributes := []attribute.KeyValue{
+		attribute.String("http.route", "/user/{id:[0-9]+}"),
+		attribute.String("server.address", "foobar"),
+	}
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware("foobar",
+		otelmux.WithMeterProvider(meterProvider),
+	))
+
+	router.HandleFunc("/user/{id:[0-9]+}", ok)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/user/123", http.NoBody)
+	require.NoError(t, err)
+	rr := httptest.NewRecorder()
+	router.ServeHTTP(rr, r)
+
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(t.Context(), &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+
+	// Verify that the additional attribute is present in the metrics.
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch d := m.Data.(type) {
+		case metricdata.Histogram[int64]:
+			assert.Len(t, d.DataPoints, 1)
+			containsAttributes(t, d.DataPoints[0].Attributes, defaultMetricAttributes)
+		case metricdata.Histogram[float64]:
+			assert.Len(t, d.DataPoints, 1)
+			containsAttributes(t, d.DataPoints[0].Attributes, defaultMetricAttributes)
+		default:
+			// Intentional failure to keep the test updated with changes in metrics
+			t.Errorf("Unexpected metric type")
+		}
+	}
+}
+
 func TestHandlerWithMetricAttributesFn(t *testing.T) {
 	const (
-		serverRequestSize  = "http.server.request.size"
-		serverResponseSize = "http.server.response.size"
-		serverDuration     = "http.server.duration"
+		serverRequestSize  = "http.server.request.body.size"
+		serverResponseSize = "http.server.response.body.size"
+		serverDuration     = "http.server.request.duration"
 	)
 	testCases := []struct {
-		name                        string
-		fn                          func(r *http.Request) []attribute.KeyValue
-		expectedAdditionalAttribute []attribute.KeyValue
+		name                    string
+		fn                      func(r *http.Request) []attribute.KeyValue
+		wantAdditionalAttribute []attribute.KeyValue
 	}{
 		{
-			name:                        "With a nil function",
-			fn:                          nil,
-			expectedAdditionalAttribute: []attribute.KeyValue{},
+			name:                    "With a nil function",
+			fn:                      nil,
+			wantAdditionalAttribute: []attribute.KeyValue{},
 		},
 		{
 			name: "With a function that returns an additional attribute",
-			fn: func(r *http.Request) []attribute.KeyValue {
+			fn: func(*http.Request) []attribute.KeyValue {
 				return []attribute.KeyValue{
 					attribute.String("fooKey", "fooValue"),
 					attribute.String("barKey", "barValue"),
 				}
 			},
-			expectedAdditionalAttribute: []attribute.KeyValue{
+			wantAdditionalAttribute: []attribute.KeyValue{
 				attribute.String("fooKey", "fooValue"),
 				attribute.String("barKey", "barValue"),
 			},
@@ -361,13 +457,13 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		))
 
 		router.HandleFunc("/user/{id:[0-9]+}", ok)
-		r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", nil)
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/user/123", http.NoBody)
 		require.NoError(t, err)
 		rr := httptest.NewRecorder()
 		router.ServeHTTP(rr, r)
 
 		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(context.Background(), &rm)
+		err = reader.Collect(t.Context(), &rm)
 		require.NoError(t, err)
 		require.Len(t, rm.ScopeMetrics, 1)
 		assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)
@@ -376,15 +472,18 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		for _, m := range rm.ScopeMetrics[0].Metrics {
 			switch m.Name {
 			case serverRequestSize, serverResponseSize:
-				d, ok := m.Data.(metricdata.Sum[int64])
+				d, ok := m.Data.(metricdata.Histogram[int64])
 				assert.True(t, ok)
 				assert.Len(t, d.DataPoints, 1)
-				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
+				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].wantAdditionalAttribute)
 			case serverDuration:
 				d, ok := m.Data.(metricdata.Histogram[float64])
 				assert.True(t, ok)
 				assert.Len(t, d.DataPoints, 1)
-				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
+				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].wantAdditionalAttribute)
+			default:
+				// Intentional failure to keep the test updated with changes in metrics
+				t.Errorf("Unexpected metric name")
 			}
 		}
 	}
@@ -396,4 +495,12 @@ func containsAttributes(t *testing.T, attrSet attribute.Set, expected []attribut
 		assert.True(t, ok)
 		assert.Equal(t, att.Value.AsString(), actualValue.AsString())
 	}
+}
+
+func setDefaultName(method, path string) string {
+	return method + " " + path
+}
+
+func ensurePrefix(prefix, s string) bool {
+	return strings.HasPrefix(s, prefix)
 }

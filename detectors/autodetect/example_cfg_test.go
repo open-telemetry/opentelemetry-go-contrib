@@ -8,8 +8,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"go.opentelemetry.io/contrib/detectors/autodetect"
 	"go.opentelemetry.io/otel/sdk/resource"
+
+	"go.opentelemetry.io/contrib/detectors/autodetect"
 )
 
 func init() {

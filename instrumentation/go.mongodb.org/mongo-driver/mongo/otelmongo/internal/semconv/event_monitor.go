@@ -12,18 +12,15 @@ import (
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/event"
-
 	"go.opentelemetry.io/otel/attribute"
-
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 // Constants for environment variable keys and versions.
 const (
-	semconvOptIn     = "OTEL_SEMCONV_STABILITY_OPT_IN"
-	semconvOptInDup  = "database/dup"
-	semconvOptIn1260 = "database"
+	semconvOptIn    = "OTEL_SEMCONV_STABILITY_OPT_IN"
+	semconvOptInDup = "database/dup"
 )
 
 // EventMonitor is responsible for monitoring events with a specified semantic
@@ -68,7 +65,7 @@ func WithCommandAttributeDisabled(disabled bool) AttributeOption {
 // hasOptIn returns true if the comma-separated version string contains the
 // exact optIn value.
 func hasOptIn(version, optIn string) bool {
-	for _, v := range strings.Split(version, ",") {
+	for v := range strings.SplitSeq(version, ",") {
 		if strings.TrimSpace(v) == optIn {
 			return true
 		}
@@ -90,13 +87,7 @@ func (m EventMonitor) CommandStartedTraceAttrs(
 		)
 	}
 
-	// Check for the 1.26.0 opt-in
-	if hasOptIn(m.version, semconvOptIn1260) {
-		return commandStartedTraceAttrs(evt, opts...)
-	}
-
-	// Fallback to v1.21.0
-	return commandStartedTraceAttrsV1210(evt, opts...)
+	return commandStartedTraceAttrs(evt, opts...)
 }
 
 // peerInfo extracts the hostname and port from a CommandStartedEvent.
@@ -137,13 +128,19 @@ func commandStartedTraceAttrs(evt *event.CommandStartedEvent, setters ...Attribu
 
 	attrs := []attribute.KeyValue{semconv.DBSystemNameMongoDB}
 
-	attrs = append(attrs, semconv.DBOperationName(evt.CommandName))
-	attrs = append(attrs, semconv.DBNamespace(evt.DatabaseName))
-	attrs = append(attrs, semconv.NetworkTransportTCP)
+	attrs = append(
+		attrs,
+		semconv.DBOperationName(evt.CommandName),
+		semconv.DBNamespace(evt.DatabaseName),
+		semconv.NetworkTransportTCP,
+	)
 
 	hostname, port := peerInfo(evt)
-	attrs = append(attrs, semconv.NetworkPeerPort(port))
-	attrs = append(attrs, semconv.NetworkPeerAddress(net.JoinHostPort(hostname, strconv.Itoa(port))))
+	attrs = append(
+		attrs,
+		semconv.NetworkPeerPort(port),
+		semconv.NetworkPeerAddress(net.JoinHostPort(hostname, strconv.Itoa(port))),
+	)
 
 	if !opts.commandAttributeDisabled {
 		attrs = append(attrs, semconv.DBQueryText(sanitizeCommand(evt.Command)))
@@ -166,13 +163,19 @@ func commandStartedTraceAttrsV1210(evt *event.CommandStartedEvent, setters ...At
 
 	attrs := []attribute.KeyValue{semconv1210.DBSystemMongoDB}
 
-	attrs = append(attrs, semconv1210.DBOperation(evt.CommandName))
-	attrs = append(attrs, semconv1210.DBName(evt.DatabaseName))
-	attrs = append(attrs, semconv1210.NetTransportTCP)
+	attrs = append(
+		attrs,
+		semconv1210.DBOperation(evt.CommandName),
+		semconv1210.DBName(evt.DatabaseName),
+		semconv1210.NetTransportTCP,
+	)
 
 	hostname, port := peerInfo(evt)
-	attrs = append(attrs, semconv1210.NetPeerPort(port))
-	attrs = append(attrs, semconv1210.NetPeerName(hostname))
+	attrs = append(
+		attrs,
+		semconv1210.NetPeerPort(port),
+		semconv1210.NetPeerName(hostname),
+	)
 
 	if !opts.commandAttributeDisabled {
 		attrs = append(attrs, semconv1210.DBStatement(sanitizeCommand(evt.Command)))

@@ -10,15 +10,14 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/stats"
-
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/stats"
 )
 
 func TestWithPublicEndpoint(t *testing.T) {
@@ -39,7 +38,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 	)
 
 	sc := trace.NewSpanContext(remoteSpan)
-	ctx := trace.ContextWithSpanContext(context.Background(), sc)
+	ctx := trace.ContextWithSpanContext(t.Context(), sc)
 
 	ctx = h.TagRPC(ctx, &stats.RPCTagInfo{
 		FullMethodName: "some.package/Method",
@@ -133,7 +132,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			)
 
 			sc := trace.NewSpanContext(remoteSpan)
-			ctx := trace.ContextWithSpanContext(context.Background(), sc)
+			ctx := trace.ContextWithSpanContext(t.Context(), sc)
 
 			ctx = h.TagRPC(ctx, &stats.RPCTagInfo{
 				FullMethodName: "some.package/Method",
@@ -165,11 +164,128 @@ func TestWithPublicEndpointFn(t *testing.T) {
 	}
 }
 
+func TestWithSpanKind(t *testing.T) {
+	tests := []struct {
+		name           string
+		handler        func(...Option) stats.Handler
+		opt            Option
+		wantSpanKind   trace.SpanKind
+		defaultKind    trace.SpanKind
+		defaultKindStr string
+	}{
+		{
+			name:           "ServerHandler with default kind",
+			handler:        NewServerHandler,
+			opt:            nil,
+			wantSpanKind:   trace.SpanKindServer,
+			defaultKind:    trace.SpanKindServer,
+			defaultKindStr: "server",
+		},
+		{
+			name:         "ServerHandler with Internal kind",
+			handler:      NewServerHandler,
+			opt:          WithSpanKind(trace.SpanKindInternal),
+			wantSpanKind: trace.SpanKindInternal,
+		},
+		{
+			name:         "ServerHandler with Consumer kind",
+			handler:      NewServerHandler,
+			opt:          WithSpanKind(trace.SpanKindConsumer),
+			wantSpanKind: trace.SpanKindConsumer,
+		},
+		{
+			name:           "ClientHandler with default kind",
+			handler:        NewClientHandler,
+			opt:            nil,
+			wantSpanKind:   trace.SpanKindClient,
+			defaultKind:    trace.SpanKindClient,
+			defaultKindStr: "client",
+		},
+		{
+			name:         "ClientHandler with Internal kind",
+			handler:      NewClientHandler,
+			opt:          WithSpanKind(trace.SpanKindInternal),
+			wantSpanKind: trace.SpanKindInternal,
+		},
+		{
+			name:         "ClientHandler with Producer kind",
+			handler:      NewClientHandler,
+			opt:          WithSpanKind(trace.SpanKindProducer),
+			wantSpanKind: trace.SpanKindProducer,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			spanRecorder := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(
+				sdktrace.WithSpanProcessor(spanRecorder),
+			)
+
+			opts := []Option{WithTracerProvider(provider)}
+			if tt.opt != nil {
+				opts = append(opts, tt.opt)
+			}
+
+			h := tt.handler(opts...)
+
+			ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{
+				FullMethodName: "some.package/Method",
+				FailFast:       true,
+			})
+
+			h.HandleRPC(ctx, &stats.End{
+				Client:    false,
+				BeginTime: time.Time{},
+				EndTime:   time.Time{},
+				Trailer:   metadata.MD{},
+				Error:     nil,
+			})
+
+			require.NoError(t, spanRecorder.ForceFlush(ctx))
+			spans := spanRecorder.Ended()
+			require.Len(t, spans, 1)
+			assert.Equal(t, tt.wantSpanKind, spans[0].SpanKind())
+		})
+	}
+}
+
+func TestNilProviderOption(t *testing.T) {
+	// Passing a nil TracerProvider or MeterProvider should not panic and
+	// should use the global provider instead.
+	t.Run("nil TracerProvider", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			_ = NewClientHandler(WithTracerProvider(nil))
+		})
+		assert.NotPanics(t, func() {
+			_ = NewServerHandler(WithTracerProvider(nil))
+		})
+	})
+
+	t.Run("nil MeterProvider", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			_ = NewClientHandler(WithMeterProvider(nil))
+		})
+		assert.NotPanics(t, func() {
+			_ = NewServerHandler(WithMeterProvider(nil))
+		})
+	})
+
+	t.Run("both nil", func(t *testing.T) {
+		assert.NotPanics(t, func() {
+			_ = NewClientHandler(WithTracerProvider(nil), WithMeterProvider(nil))
+		})
+		assert.NotPanics(t, func() {
+			_ = NewServerHandler(WithTracerProvider(nil), WithMeterProvider(nil))
+		})
+	})
+}
+
 func TestNilInstruments(t *testing.T) {
 	mp := meterProvider{}
 	opts := []Option{WithMeterProvider(mp)}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	t.Run("ServerHandler", func(t *testing.T) {
 		hIface := NewServerHandler(opts...)
@@ -178,11 +294,7 @@ func TestNilInstruments(t *testing.T) {
 
 		h := hIface.(*serverHandler)
 
-		assert.NotPanics(t, func() { h.duration.Record(ctx, 0) }, "duration")
-		assert.NotPanics(t, func() { h.inSize.Record(ctx, 0) }, "inSize")
-		assert.NotPanics(t, func() { h.outSize.Record(ctx, 0) }, "outSize")
-		assert.NotPanics(t, func() { h.inMsg.Record(ctx, 0) }, "inMsg")
-		assert.NotPanics(t, func() { h.outMsg.Record(ctx, 0) }, "outMsg")
+		assert.NotPanics(t, func() { h.duration.Record(ctx, 0, "") }, "duration")
 	})
 
 	t.Run("ClientHandler", func(t *testing.T) {
@@ -192,11 +304,7 @@ func TestNilInstruments(t *testing.T) {
 
 		h := hIface.(*clientHandler)
 
-		assert.NotPanics(t, func() { h.duration.Record(ctx, 0) }, "duration")
-		assert.NotPanics(t, func() { h.inSize.Record(ctx, 0) }, "inSize")
-		assert.NotPanics(t, func() { h.outSize.Record(ctx, 0) }, "outSize")
-		assert.NotPanics(t, func() { h.inMsg.Record(ctx, 0) }, "inMsg")
-		assert.NotPanics(t, func() { h.outMsg.Record(ctx, 0) }, "outMsg")
+		assert.NotPanics(t, func() { h.duration.Record(ctx, 0, "") }, "duration")
 	})
 }
 

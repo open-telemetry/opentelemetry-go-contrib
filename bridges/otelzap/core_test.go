@@ -11,14 +11,13 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 )
 
 var (
@@ -67,7 +66,7 @@ func TestCore(t *testing.T) {
 	t.Run("WriteContext", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		ctx = context.WithValue(ctx, testEntry, true)
 		logger.Info(testMessage, zap.Any("ctx", ctx))
 
@@ -93,7 +92,7 @@ func TestCore(t *testing.T) {
 	t.Run("WithContext", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 
-		ctx := context.Background()
+		ctx := t.Context()
 		ctx = context.WithValue(ctx, testEntry, false)
 		childlogger := logger.With(zap.Reflect("ctx", ctx))
 		childlogger.Info(testMessage)
@@ -184,20 +183,16 @@ func TestCoreWriteContextConcurrentSafe(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc)
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = context.WithValue(ctx, testEntry, true)
 
 	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		logger.Debug(testMessage, zap.Any("ctx", ctx))
-	}()
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	})
+	wg.Go(func() {
 		logger.Debug(testMessage, zap.Any("ctx", ctx))
-	}()
+	})
 	wg.Wait()
 
 	want := logtest.Recording{
@@ -226,7 +221,7 @@ func TestCoreWriteContextConcurrentSafe(t *testing.T) {
 }
 
 func TestCoreEnabled(t *testing.T) {
-	enabledFunc := func(c context.Context, param log.EnabledParameters) bool {
+	enabledFunc := func(_ context.Context, param log.EnabledParameters) bool {
 		return param.Severity >= log.SeverityInfo
 	}
 

@@ -9,11 +9,11 @@ import (
 	"net/http"
 
 	"github.com/labstack/echo/v4"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
 )
 
 func ExampleMiddleware() {
@@ -64,7 +64,6 @@ func ExampleMiddleware() {
 		if err != nil {
 			log.Println("error reading body: ", err)
 			// Record the error in the span and set its status
-			span.RecordError(err)
 			span.SetStatus(codes.Error, "failed to read request body")
 			return c.String(http.StatusBadRequest, "Bad request")
 		}
@@ -95,4 +94,62 @@ func ExampleMiddleware() {
 	if !errors.Is(err, http.ErrServerClosed) {
 		log.Fatal(err)
 	}
+}
+
+func ExampleMiddleware_withMetrics() {
+	// This example shows how to use the otelecho middleware with custom metrics attributes
+	// The middleware will automatically collect HTTP server metrics including:
+	// - http.server.request.duration
+	// - http.server.request.body.size
+	// - http.server.response.body.size
+
+	// Create a new Echo instance
+	e := echo.New()
+
+	// Use the otelecho middleware with metrics and custom attributes
+	e.Use(otelecho.Middleware("api-server",
+		otelecho.WithMetricAttributeFn(func(r *http.Request) []attribute.KeyValue {
+			// Add custom attributes from HTTP request
+			return []attribute.KeyValue{
+				attribute.Bool("custom.has_request_body", r.ContentLength != 0),
+				attribute.Bool("custom.has_content_type", r.Header.Get("Content-Type") != ""),
+			}
+		}),
+		otelecho.WithEchoMetricAttributeFn(func(c echo.Context) []attribute.KeyValue {
+			// Add custom attributes from Echo context
+			// If attributes are duplicated between this method and `WithMetricAttributeFn`, the attributes in this method will be used.
+			return []attribute.KeyValue{
+				attribute.Bool("custom.has_request_body", c.Request().ContentLength != 0),
+				attribute.Bool("custom.has_content_type", c.Request().Header.Get("Content-Type") != ""),
+			}
+		}),
+	))
+
+	// Define routes
+	e.GET("/api/users/:id", func(c echo.Context) error {
+		userID := c.Param("id")
+		return c.JSON(http.StatusOK, map[string]any{
+			"id":   userID,
+			"name": "User " + userID,
+		})
+	})
+
+	e.POST("/api/users", func(c echo.Context) error {
+		var user struct {
+			Name  string `json:"name"`
+			Email string `json:"email"`
+		}
+
+		if err := c.Bind(&user); err != nil {
+			return c.JSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+		}
+
+		return c.JSON(http.StatusCreated, map[string]any{
+			"id":    "12345",
+			"name":  user.Name,
+			"email": user.Email,
+		})
+	})
+
+	// Output:
 }

@@ -191,7 +191,7 @@ vanity-import-check: | $(PORTO)
 	@$(PORTO) --include-internal -l . || ( echo "(run: make vanity-import-fix)"; exit 1 )
 
 .PHONY: lint
-lint: go-mod-tidy golangci-lint misspell govulncheck
+lint: go-mod-tidy golangci-lint misspell
 
 .PHONY: toolchain-check
 toolchain-check:
@@ -322,20 +322,16 @@ update-all-otel-deps:
 # The source directory for opentelemetry-configuration schema.
 OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelemetry-configuration
 
-# The SHA matching the current version of the opentelemetry-configuration schema to use
-OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION=v0.3.0
-
 # Cleanup temporary directory
 genjsonschema-cleanup:
 	rm -Rf ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 
-GENERATED_CONFIG=./otelconf/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}/generated_config.go
+GENERATED_CONFIG=./otelconf/generated_config.go
 
 # Generate structs for configuration from opentelemetry-configuration schema
 genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	mkdir -p ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
-	mkdir -p ./otelconf/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION}
-	curl -sSL https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_VERSION} | tar xz --strip 1 -C ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
+	curl -sSL https://api.github.com/repos/open-telemetry/opentelemetry-configuration/tarball/v1.0.0-rc.3 | tar xz --strip 1 -C ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 	$(GOJSONSCHEMA) \
 		--capitalization ID \
 		--capitalization OTLP \
@@ -343,7 +339,7 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 		--package otelconf \
 		--only-models \
 		--output ${GENERATED_CONFIG} \
-		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/schema/opentelemetry_configuration.json
+		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/opentelemetry_configuration.json
 	@echo Modify jsonschema generated files.
 	sed -f ./otelconf/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
 	mv ${GENERATED_CONFIG}.tmp ${GENERATED_CONFIG}

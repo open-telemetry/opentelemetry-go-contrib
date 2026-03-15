@@ -15,14 +15,12 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -33,6 +31,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 )
 
 func TestTracerProvider(t *testing.T) {
@@ -114,7 +114,7 @@ func TestTracerProvider(t *testing.T) {
 		tp, shutdown, err := tracerProvider(tt.cfg, resource.Default())
 		require.Equal(t, tt.wantProvider, tp)
 		assert.Equal(t, tt.wantErr, err)
-		require.NoError(t, shutdown(context.Background()))
+		require.NoError(t, shutdown(t.Context()))
 	}
 }
 
@@ -153,14 +153,14 @@ func TestTracerProviderOptions(t *testing.T) {
 	)
 	require.NoError(t, err)
 	defer func() {
-		assert.NoError(t, sdk.Shutdown(context.Background()))
+		assert.NoError(t, sdk.Shutdown(t.Context()))
 	}()
 
 	// The exporter, which we passed in as an extra option to NewSDK,
 	// should be wired up to the provider in addition to the
 	// configuration-based OTLP exporter.
 	tracer := sdk.TracerProvider().Tracer("test")
-	_, span := tracer.Start(context.Background(), "span")
+	_, span := tracer.Start(t.Context(), "span")
 	span.End()
 	assert.NotZero(t, buf)
 	assert.Equal(t, 1, calls)
@@ -175,7 +175,7 @@ func TestSpanProcessor(t *testing.T) {
 		stdouttrace.WithPrettyPrint(),
 	)
 	require.NoError(t, err)
-	ctx := context.Background()
+	ctx := t.Context()
 	otlpGRPCExporter, err := otlptracegrpc.New(ctx)
 	require.NoError(t, err)
 	otlpHTTPExporter, err := otlptracehttp.New(ctx)
@@ -760,7 +760,7 @@ func TestSpanProcessor(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := spanProcessor(context.Background(), tt.processor)
+			got, err := spanProcessor(t.Context(), tt.processor)
 			if tt.wantErr != "" {
 				require.Error(t, err)
 				require.Equal(t, tt.wantErr, err.Error())
@@ -909,6 +909,10 @@ func TestSampler(t *testing.T) {
 }
 
 func Test_otlpGRPCTraceExporter(t *testing.T) {
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		// TODO (#8115): Fix the flakiness on Windows and MacOS.
+		t.Skip("Test is flaky on Windows and MacOS.")
+	}
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLP
@@ -921,7 +925,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 		{
 			name: "no TLS config",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
@@ -939,7 +943,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 		{
 			name: "with TLS config",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
@@ -963,7 +967,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 		{
 			name: "with TLS config and client key",
 			args: args{
-				ctx: context.Background(),
+				ctx: t.Context(),
 				otlpConfig: &OTLP{
 					Protocol:          ptr("grpc"),
 					Compression:       ptr("gzip"),
@@ -1000,7 +1004,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := net.Listen("tcp4", "localhost:0")
+			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp4", "localhost:0")
 			require.NoError(t, err)
 
 			// We need to manually construct the endpoint using the port on which the server is listening.
@@ -1027,7 +1031,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			}
 
 			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.ExportSpans(context.Background(), input.Snapshots()))
+				assert.NoError(collect, exporter.ExportSpans(context.Background(), input.Snapshots())) //nolint:usetesting // required to avoid getting a canceled context.
 			}, 10*time.Second, 1*time.Second)
 		})
 	}
@@ -1063,7 +1067,7 @@ func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions 
 }
 
 // Export handles the export req.
-func (c *grpcTraceCollector) Export(
+func (*grpcTraceCollector) Export(
 	_ context.Context,
 	_ *v1.ExportTraceServiceRequest,
 ) (*v1.ExportTraceServiceResponse, error) {

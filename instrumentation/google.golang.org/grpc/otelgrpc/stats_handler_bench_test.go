@@ -9,19 +9,18 @@ import (
 	"testing"
 	"time"
 
+	metricnoop "go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/trace"
+	tracenoop "go.opentelemetry.io/otel/trace/noop"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
-
-	"go.opentelemetry.io/otel/sdk/trace"
-
-	metricnoop "go.opentelemetry.io/otel/metric/noop"
-	tracenoop "go.opentelemetry.io/otel/trace/noop"
 )
 
 func benchmarkStatsHandlerHandleRPC(b *testing.B, ctx context.Context, handler stats.Handler, stat stats.RPCStats) {
 	b.ReportAllocs()
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		handler.HandleRPC(ctx, stat)
 	}
 }
@@ -31,10 +30,10 @@ func benchmarkServerHandlerHandleRPC(b *testing.B, stat stats.RPCStats) {
 		WithTracerProvider(trace.NewTracerProvider(
 			trace.WithSampler(trace.AlwaysSample()),
 		)),
-		WithMeterProvider(metricnoop.NewMeterProvider()),
+		WithMeterProvider(metric.NewMeterProvider()),
 		WithMessageEvents(ReceivedEvents, SentEvents),
 	)
-	ctx := context.Background()
+	ctx := b.Context()
 	ctx = handler.TagRPC(ctx, &stats.RPCTagInfo{
 		FullMethodName: "/package.service/method",
 	})
@@ -91,7 +90,7 @@ func benchmarkServerHandlerHandleRPCNoOp(b *testing.B, stat stats.RPCStats) {
 		WithMeterProvider(metricnoop.NewMeterProvider()),
 		WithMessageEvents(ReceivedEvents, SentEvents),
 	)
-	ctx := context.Background()
+	ctx := b.Context()
 	ctx = handler.TagRPC(ctx, &stats.RPCTagInfo{
 		FullMethodName: "/package.service/method",
 	})
@@ -141,4 +140,40 @@ func BenchmarkServerHandler_HandleRPC_NoOp_End(b *testing.B) {
 
 func BenchmarkServerHandler_HandleRPC_NoOp_Nil(b *testing.B) {
 	benchmarkServerHandlerHandleRPCNoOp(b, nil)
+}
+
+func BenchmarkServerHandler_TagRPCNoOp(b *testing.B) {
+	handler := NewServerHandler(
+		WithTracerProvider(tracenoop.NewTracerProvider()),
+		WithMeterProvider(metricnoop.NewMeterProvider()),
+		WithMessageEvents(ReceivedEvents, SentEvents),
+	)
+	ctx := b.Context()
+
+	tagInfo := &stats.RPCTagInfo{
+		FullMethodName: "/package.service/method",
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		_ = handler.TagRPC(ctx, tagInfo)
+	}
+}
+
+func BenchmarkClientHandler_TagRPCNoOp(b *testing.B) {
+	handler := NewClientHandler(
+		WithTracerProvider(tracenoop.NewTracerProvider()),
+		WithMeterProvider(metricnoop.NewMeterProvider()),
+		WithMessageEvents(ReceivedEvents, SentEvents),
+	)
+	ctx := b.Context()
+
+	tagInfo := &stats.RPCTagInfo{
+		FullMethodName: "/package.service/method",
+	}
+
+	b.ReportAllocs()
+	for b.Loop() {
+		_ = handler.TagRPC(ctx, tagInfo)
+	}
 }

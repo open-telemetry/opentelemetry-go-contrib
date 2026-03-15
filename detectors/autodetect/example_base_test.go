@@ -15,7 +15,7 @@ const key = "my.key"
 
 type MyDetector struct{}
 
-func (d MyDetector) Detect(context.Context) (*resource.Resource, error) {
+func (MyDetector) Detect(context.Context) (*resource.Resource, error) {
 	return resource.NewSchemaless(attribute.String(key, "value")), nil
 }
 

@@ -15,7 +15,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/drivertest"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -24,6 +23,75 @@ import (
 )
 
 type validator func(sdktrace.ReadOnlySpan) bool
+
+func TestWithSpanNameFormatter(t *testing.T) {
+	tt := []struct {
+		title             string
+		operation         func(context.Context, *mongo.Database) (any, error)
+		expectedSpanName  string
+		mockResponses     []bson.D
+		SpanNameFormatter SpanNameFormatterFunc
+	}{
+		{
+			title: "insert using default SpanNameFormatter",
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
+				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+			},
+			expectedSpanName:  "test-collection.insert",
+			SpanNameFormatter: nil,
+			mockResponses:     []bson.D{{{Key: "ok", Value: 1}}},
+		},
+		{
+			title: "delete with custom SpanNameFormatter",
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
+				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
+			},
+			SpanNameFormatter: func(event *event.CommandStartedEvent) string {
+				return "my-" + event.CommandName + "-span"
+			},
+			expectedSpanName: "my-delete-span",
+			mockResponses:    []bson.D{{{Key: "ok", Value: 1}}},
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.title, func(t *testing.T) {
+			md := drivertest.NewMockDeployment()
+
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
+			defer cancel()
+
+			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
+			addr := "mongodb://localhost:27017/?connect=direct"
+			opts := options.Client()
+			opts.Deployment = md //nolint:staticcheck  // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
+			opts.Monitor = NewMonitor(
+				WithTracerProvider(provider),
+				WithSpanNameFormatter(tc.SpanNameFormatter),
+			)
+			opts.ApplyURI(addr)
+
+			md.AddResponses(tc.mockResponses...)
+			client, err := mongo.Connect(opts)
+			defer func() {
+				e := client.Disconnect(t.Context())
+				require.NoError(t, e)
+			}()
+			require.NoError(t, err)
+
+			_, err = tc.operation(ctx, client.Database("test-database"))
+			require.NoError(t, err)
+
+			span.End()
+			spans := sr.Ended()
+
+			s := spans[0]
+			assert.Equal(t, tc.expectedSpanName, s.Name())
+		})
+	}
+}
 
 func TestDBCrudOperation(t *testing.T) {
 	commonValidators := []validator{
@@ -43,14 +111,14 @@ func TestDBCrudOperation(t *testing.T) {
 
 	tt := []struct {
 		title          string
-		operation      func(context.Context, *mongo.Database) (interface{}, error)
+		operation      func(context.Context, *mongo.Database) (any, error)
 		mockResponses  []bson.D
 		excludeCommand bool
 		validators     []validator
 	}{
 		{
 			title: "insert",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
 			mockResponses:  []bson.D{{{Key: "ok", Value: 1}}},
@@ -66,7 +134,7 @@ func TestDBCrudOperation(t *testing.T) {
 		},
 		{
 			title: "insert",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").InsertOne(ctx, bson.D{{Key: "test-item", Value: "test-value"}})
 			},
 			mockResponses:  []bson.D{{{Key: "ok", Value: 1}}},
@@ -82,13 +150,11 @@ func TestDBCrudOperation(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		title := tc.title
 		if tc.excludeCommand {
-			title = title + "/excludeCommand"
+			title += "/excludeCommand"
 		} else {
-			title = title + "/includeCommand"
+			title += "/includeCommand"
 		}
 
 		t.Run(title, func(t *testing.T) {
@@ -97,15 +163,14 @@ func TestDBCrudOperation(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
 			defer cancel()
 
 			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			//nolint:staticcheck
-			opts.Deployment = md // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
+			opts.Deployment = md //nolint:staticcheck  // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
 			opts.Monitor = NewMonitor(
 				WithTracerProvider(provider),
 				WithCommandAttributeDisabled(tc.excludeCommand),
@@ -115,7 +180,7 @@ func TestDBCrudOperation(t *testing.T) {
 			md.AddResponses(tc.mockResponses...)
 			client, err := mongo.Connect(opts)
 			defer func() {
-				err := client.Disconnect(context.Background())
+				err := client.Disconnect(t.Context())
 				require.NoError(t, err)
 			}()
 			require.NoError(t, err)
@@ -150,13 +215,13 @@ func TestDBCrudOperation(t *testing.T) {
 func TestDBCollectionAttribute(t *testing.T) {
 	tt := []struct {
 		title         string
-		operation     func(context.Context, *mongo.Database) (interface{}, error)
+		operation     func(context.Context, *mongo.Database) (any, error)
 		mockResponses []bson.D
 		validators    []validator
 	}{
 		{
 			title: "delete",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.Collection("test-collection").DeleteOne(ctx, bson.D{{Key: "test-item"}})
 			},
 			mockResponses: []bson.D{{{Key: "ok", Value: 1}}},
@@ -177,7 +242,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 		},
 		{
 			title: "listCollectionNames",
-			operation: func(ctx context.Context, db *mongo.Database) (interface{}, error) {
+			operation: func(ctx context.Context, db *mongo.Database) (any, error) {
 				return db.ListCollectionNames(ctx, bson.D{})
 			},
 			mockResponses: []bson.D{
@@ -200,23 +265,20 @@ func TestDBCollectionAttribute(t *testing.T) {
 		},
 	}
 	for _, tc := range tt {
-		tc := tc
-
 		t.Run(tc.title, func(t *testing.T) {
 			md := drivertest.NewMockDeployment()
 
 			sr := tracetest.NewSpanRecorder()
 			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+			ctx, cancel := context.WithTimeout(t.Context(), time.Second*3)
 			defer cancel()
 
 			ctx, span := provider.Tracer("test").Start(ctx, "mongodb-test")
 
 			addr := "mongodb://localhost:27017/?connect=direct"
 			opts := options.Client()
-			//nolint:staticcheck
-			opts.Deployment = md // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
+			opts.Deployment = md //nolint:staticcheck  // This method is the current documented way to set the mongodb mock. See https://github.com/mongodb/mongo-go-driver/blob/v2.0.0/x/mongo/driver/drivertest/opmsg_deployment_test.go#L24
 			opts.Monitor = NewMonitor(
 				WithTracerProvider(provider),
 				WithCommandAttributeDisabled(true),
@@ -228,7 +290,7 @@ func TestDBCollectionAttribute(t *testing.T) {
 			require.NoError(t, err)
 
 			defer func() {
-				err := client.Disconnect(context.Background())
+				err := client.Disconnect(t.Context())
 				require.NoError(t, err)
 			}()
 
@@ -314,10 +376,7 @@ func TestPeerInfo(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			evt := &event.CommandStartedEvent{
-				ConnectionID: tc.connectionID,
-			}
-			host, port := peerInfo(evt)
+			host, port := peerInfo(tc.connectionID)
 			assert.Equal(t, tc.expectedHost, host)
 			assert.Equal(t, tc.expectedPort, port)
 		})

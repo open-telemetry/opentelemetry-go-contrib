@@ -14,7 +14,7 @@ import (
 
 	"go.opentelemetry.io/otel/sdk/resource"
 
-	"go.opentelemetry.io/contrib/detectors/aws/ec2"
+	"go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
 	"go.opentelemetry.io/contrib/detectors/aws/ecs"
 	"go.opentelemetry.io/contrib/detectors/aws/eks"
 	"go.opentelemetry.io/contrib/detectors/aws/lambda"
@@ -118,18 +118,10 @@ var (
 var (
 	registryMu sync.Mutex
 	registry   = map[ID]func() resource.Detector{
-		IDAWSEC2: func() resource.Detector {
-			return ec2.NewResourceDetector()
-		},
-		IDAWSECS: func() resource.Detector {
-			return ecs.NewResourceDetector()
-		},
-		IDAWSEKS: func() resource.Detector {
-			return eks.NewResourceDetector()
-		},
-		IDAWSLambda: func() resource.Detector {
-			return lambda.NewResourceDetector()
-		},
+		IDAWSEC2:    ec2.NewResourceDetector,
+		IDAWSECS:    ecs.NewResourceDetector,
+		IDAWSEKS:    eks.NewResourceDetector,
+		IDAWSLambda: lambda.NewResourceDetector,
 
 		IDAzureVM: func() resource.Detector {
 			return azurevm.New()

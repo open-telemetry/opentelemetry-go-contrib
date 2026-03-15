@@ -33,7 +33,7 @@ type testJSONStruct struct {
 }
 
 func TestGetJSON(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Add("Content-Type", "application/json")
 		_, err := w.Write([]byte("{\"name\": \"Bender\", \"age\": 3}"))
 		assert.NoError(t, err)
@@ -41,7 +41,7 @@ func TestGetJSON(t *testing.T) {
 	defer server.Close()
 
 	var s testJSONStruct
-	err := getJSON(server.URL, &s)
+	err := getJSON(t.Context(), server.URL, &s)
 	require.NoError(t, err)
 
 	assert.Equal(t, "Bender", s.Name)
@@ -50,14 +50,14 @@ func TestGetJSON(t *testing.T) {
 
 func TestGetJSONErrors(t *testing.T) {
 	var s testJSONStruct
-	err := getJSON("localhost:0", &s)
+	err := getJSON(t.Context(), "localhost:0", &s)
 	assert.Error(t, err)
 
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "some error", http.StatusInternalServerError)
 	}))
 	defer server.Close()
 
-	err = getJSON(server.URL, &s)
+	err = getJSON(t.Context(), server.URL, &s)
 	assert.Error(t, err)
 }

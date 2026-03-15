@@ -54,7 +54,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 // NewLogger returns a new [slog.Logger] backed by a new [Handler]. See
@@ -161,7 +161,7 @@ func WithSource(source bool) Option {
 // OpenTelemetry. See package documentation for how conversions are made.
 type Handler struct {
 	// Ensure forward compatibility by explicitly making this not comparable.
-	noCmp [0]func() //nolint: unused  // This is indeed used.
+	noCmp [0]func() //nolint:unused  // This is indeed used.
 
 	attrs  *kvBuffer
 	group  *group
@@ -361,7 +361,7 @@ func (g *group) KeyValue(kvs ...log.KeyValue) log.KeyValue {
 // Clone returns a copy of g.
 func (g *group) Clone() *group {
 	if g == nil {
-		return g
+		return nil
 	}
 	g2 := *g
 	g2.attrs = g2.attrs.Clone()
@@ -471,7 +471,7 @@ func convert(v slog.Value) log.Value {
 		if u > maxInt64 {
 			return log.Float64Value(float64(u))
 		}
-		return log.Int64Value(int64(u)) // nolint:gosec  // Overflow checked above.
+		return log.Int64Value(int64(u))
 	case slog.KindGroup:
 		g := v.Group()
 		buf := newKVBuffer(len(g))

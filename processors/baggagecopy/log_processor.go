@@ -32,6 +32,11 @@ func NewLogProcessor(filter Filter) *LogProcessor {
 	}
 }
 
+// Enabled reports whether the Processor will process.
+func (LogProcessor) Enabled(context.Context, log.EnabledParameters) bool {
+	return true
+}
+
 // OnEmit adds Baggage member to a log record as attributes that are pulled from
 // the Baggage found in ctx. Baggage members are filtered by the filter passed
 // to NewLogProcessor.
@@ -51,7 +56,7 @@ func (processor LogProcessor) OnEmit(ctx context.Context, record *log.Record) er
 }
 
 // Shutdown is called when the [log.Processor] is shutting down and is a no-op for this processor.
-func (processor LogProcessor) Shutdown(context.Context) error { return nil }
+func (LogProcessor) Shutdown(context.Context) error { return nil }
 
 // ForceFlush is called to ensure all logs are flushed to the output and is a no-op for this processor.
-func (processor LogProcessor) ForceFlush(context.Context) error { return nil }
+func (LogProcessor) ForceFlush(context.Context) error { return nil }

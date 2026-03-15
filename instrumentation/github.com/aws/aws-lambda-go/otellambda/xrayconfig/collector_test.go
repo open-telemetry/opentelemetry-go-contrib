@@ -8,6 +8,7 @@ package xrayconfig
 
 import (
 	"sort"
+	"strings"
 
 	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	commonpb "go.opentelemetry.io/proto/otlp/common/v1"
@@ -44,12 +45,10 @@ func (s *SpansStorage) AddSpans(request *collectortracepb.ExportTraceServiceRequ
 				}
 			}
 			s.spanCount += len(rs.ScopeSpans[0].Spans)
-		} else {
-			if len(rs.ScopeSpans) > 0 {
-				newSpans := rs.ScopeSpans[0].GetSpans()
-				existingRs.ScopeSpans[0].Spans = append(existingRs.ScopeSpans[0].Spans, newSpans...)
-				s.spanCount += len(newSpans)
-			}
+		} else if len(rs.ScopeSpans) > 0 {
+			newSpans := rs.ScopeSpans[0].GetSpans()
+			existingRs.ScopeSpans[0].Spans = append(existingRs.ScopeSpans[0].Spans, newSpans...)
+			s.spanCount += len(newSpans)
 		}
 	}
 }
@@ -74,15 +73,15 @@ func (s *SpansStorage) GetResourceSpans() []*tracepb.ResourceSpans {
 
 func resourceString(res *resourcepb.Resource) string {
 	sAttrs := sortedAttributes(res.GetAttributes())
-	rstr := ""
-	for _, attr := range sAttrs {
-		rstr = rstr + attr.String()
+	strs := make([]string, len(sAttrs))
+	for i, attr := range sAttrs {
+		strs[i] = attr.String()
 	}
-	return rstr
+	return strings.Join(strs, "")
 }
 
 func sortedAttributes(attrs []*commonpb.KeyValue) []*commonpb.KeyValue {
-	sort.Slice(attrs[:], func(i, j int) bool {
+	sort.Slice(attrs, func(i, j int) bool {
 		return attrs[i].Key < attrs[j].Key
 	})
 	return attrs

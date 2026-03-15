@@ -13,14 +13,14 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	awsConfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
 	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func lambdaHandler(ctx context.Context) error {
@@ -53,7 +53,7 @@ func lambdaHandler(ctx context.Context) error {
 			otelhttp.WithTracerProvider(otel.GetTracerProvider()),
 		),
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/repos/open-telemetry/opentelemetry-go/releases/latest", nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "https://api.github.com/repos/open-telemetry/opentelemetry-go/releases/latest", http.NoBody)
 	if err != nil {
 		log.Printf("failed to create http request, %v\n", err)
 		return err
@@ -72,7 +72,7 @@ func lambdaHandler(ctx context.Context) error {
 		}
 	}()
 
-	var data map[string]interface{}
+	var data map[string]any
 	err = json.NewDecoder(res.Body).Decode(&data)
 	if err != nil {
 		log.Printf("failed to read http response body, %v\n", err)

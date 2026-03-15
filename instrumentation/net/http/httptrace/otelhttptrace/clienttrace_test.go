@@ -22,7 +22,13 @@ func ExampleNewClientTrace() {
 		),
 	}
 
-	resp, err := client.Get("https://example.com")
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, "https://example.com", http.NoBody)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	resp, err := client.Do(req)
 	if err != nil {
 		fmt.Println(err)
 		return

@@ -4,7 +4,6 @@
 package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
 
 import (
-	"context"
 	"math"
 	"runtime/debug"
 	"testing"
@@ -12,13 +11,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.34.0/goconv"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/goconv"
 )
 
 func TestRefreshGoCollector(t *testing.T) {
@@ -72,7 +70,7 @@ func TestRuntimeWithLimit(t *testing.T) {
 	err := Start(WithMeterProvider(mp))
 	assert.NoError(t, err)
 	rm := metricdata.ResourceMetrics{}
-	err = reader.Collect(context.Background(), &rm)
+	err = reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 8)
@@ -80,7 +78,7 @@ func TestRuntimeWithLimit(t *testing.T) {
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:    "go.opentelemetry.io/contrib/instrumentation/runtime",
-			Version: Version(),
+			Version: Version,
 		},
 		Metrics: []metricdata.Metrics{
 			{

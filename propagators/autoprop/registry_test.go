@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/propagation"
 )
 
@@ -42,23 +41,19 @@ func TestRegistryConcurrentSafe(t *testing.T) {
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		assert.NotPanics(t, func() {
 			require.ErrorIs(t, r.store(propName, noop), errDupReg)
 		})
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		assert.NotPanics(t, func() {
 			v, ok := r.load(propName)
 			assert.True(t, ok, "missing propagator in registry")
 			assert.Equal(t, noop, v, "wrong propagator returned")
 		})
-	}()
+	})
 
 	wg.Wait()
 }

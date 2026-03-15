@@ -4,8 +4,9 @@
 package otelslog_test
 
 import (
-	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel/log/noop"
+
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 )
 
 func Example() {

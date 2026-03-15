@@ -4,8 +4,9 @@
 package ot_test
 
 import (
-	"go.opentelemetry.io/contrib/propagators/ot"
 	"go.opentelemetry.io/otel"
+
+	"go.opentelemetry.io/contrib/propagators/ot"
 )
 
 func ExampleOT() {

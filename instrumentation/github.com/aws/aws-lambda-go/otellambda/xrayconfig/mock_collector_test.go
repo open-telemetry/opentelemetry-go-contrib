@@ -16,11 +16,10 @@ import (
 	"testing"
 	"time"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/metadata"
-
 	collectortracepb "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	tracepb "go.opentelemetry.io/proto/otlp/trace/v1"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 )
 
 func makeMockCollector(t *testing.T, mockConfig *mockConfig) *mockCollector {
@@ -127,7 +126,7 @@ func runMockCollectorAtEndpoint(t *testing.T, endpoint string) *mockCollector {
 }
 
 func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockCollector {
-	ln, err := net.Listen("tcp", mockConfig.endpoint)
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", mockConfig.endpoint)
 	if err != nil {
 		t.Fatalf("Failed to get an endpoint: %v", err)
 	}
@@ -137,7 +136,7 @@ func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockColle
 	collectortracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
 	mc.ln = newListener(ln)
 	go func() {
-		_ = srv.Serve((net.Listener)(mc.ln))
+		_ = srv.Serve(net.Listener(mc.ln))
 	}()
 
 	mc.endpoint = ln.Addr().String()

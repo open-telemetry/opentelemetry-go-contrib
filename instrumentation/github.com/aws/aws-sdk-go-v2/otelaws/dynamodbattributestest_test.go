@@ -17,7 +17,6 @@ import (
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -29,7 +28,7 @@ import (
 
 type dynamoDBAuthResolver struct{}
 
-func (r *dynamoDBAuthResolver) ResolveAuthSchemes(context.Context, *dynamodb.AuthResolverParameters) ([]*smithyauth.Option, error) {
+func (*dynamoDBAuthResolver) ResolveAuthSchemes(context.Context, *dynamodb.AuthResolverParameters) ([]*smithyauth.Option, error) {
 	return []*smithyauth.Option{
 		{SchemeID: smithyauth.SchemeIDAnonymous},
 	}, nil
@@ -48,7 +47,7 @@ func TestDynamodbTags(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
+		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(cases.responseStatus)
 		}))
 	defer server.Close()
@@ -67,7 +66,7 @@ func TestDynamodbTags(t *testing.T) {
 			Retryer: aws.NopRetryer{},
 		})
 
-		_, err := svc.GetItem(context.Background(), &dynamodb.GetItemInput{
+		_, err := svc.GetItem(t.Context(), &dynamodb.GetItemInput{
 			TableName:            aws.String("table1"),
 			ConsistentRead:       aws.Bool(false),
 			ProjectionExpression: aws.String("test"),
@@ -93,10 +92,9 @@ func TestDynamodbTags(t *testing.T) {
 		assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 		attrs := span.Attributes()
 		assert.Contains(t, attrs, attribute.Int("http.response.status_code", cases.expectedStatusCode))
-		assert.Contains(t, attrs, attribute.String("rpc.service", "DynamoDB"))
 		assert.Contains(t, attrs, attribute.String("aws.region", cases.expectedRegion))
-		assert.Contains(t, attrs, attribute.String("rpc.method", "GetItem"))
-		assert.Contains(t, attrs, attribute.String("rpc.system", "aws-api"))
+		assert.Contains(t, attrs, attribute.String("rpc.method", "DynamoDB/GetItem"))
+		assert.Contains(t, attrs, attribute.String("rpc.system.name", "aws-api"))
 		assert.Contains(t, attrs, attribute.StringSlice(
 			"aws.dynamodb.table_names", []string{"table1"},
 		))
@@ -118,7 +116,7 @@ func TestDynamodbTagsCustomBuilder(t *testing.T) {
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(
-		func(w http.ResponseWriter, r *http.Request) {
+		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(cases.responseStatus)
 		}))
 	defer server.Close()
@@ -149,7 +147,7 @@ func TestDynamodbTagsCustomBuilder(t *testing.T) {
 			return customAttributes
 		})
 
-		_, err := svc.GetItem(context.Background(), &dynamodb.GetItemInput{
+		_, err := svc.GetItem(t.Context(), &dynamodb.GetItemInput{
 			TableName:            aws.String("table1"),
 			ConsistentRead:       aws.Bool(false),
 			ProjectionExpression: aws.String("test"),
@@ -175,9 +173,8 @@ func TestDynamodbTagsCustomBuilder(t *testing.T) {
 		assert.Equal(t, trace.SpanKindClient, span.SpanKind())
 		attrs := span.Attributes()
 		assert.Contains(t, attrs, attribute.Int("http.response.status_code", cases.expectedStatusCode))
-		assert.Contains(t, attrs, attribute.String("rpc.service", "DynamoDB"))
 		assert.Contains(t, attrs, attribute.String("aws.region", cases.expectedRegion))
-		assert.Contains(t, attrs, attribute.String("rpc.method", "GetItem"))
+		assert.Contains(t, attrs, attribute.String("rpc.method", "DynamoDB/GetItem"))
 		assert.Contains(t, attrs, attribute.StringSlice(
 			"aws.dynamodb.table_names", []string{"table1"},
 		))

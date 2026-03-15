@@ -18,19 +18,21 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/stretchr/testify/assert"
-
-	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
-	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
-	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
+
+	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+	"go.opentelemetry.io/contrib/propagators/aws/xray"
 )
+
+const miB = 1 << 20
 
 var errorLogger = log.New(log.Writer(), "OTel Lambda Test Error: ", 0)
 
@@ -40,7 +42,7 @@ type mockIDGenerator struct {
 	spanCount  int
 }
 
-func (m *mockIDGenerator) NewIDs(_ context.Context) (trace.TraceID, trace.SpanID) {
+func (m *mockIDGenerator) NewIDs(context.Context) (trace.TraceID, trace.SpanID) {
 	m.Lock()
 	defer m.Unlock()
 	m.traceCount++
@@ -48,7 +50,7 @@ func (m *mockIDGenerator) NewIDs(_ context.Context) (trace.TraceID, trace.SpanID
 	return [16]byte{byte(m.traceCount)}, [8]byte{byte(m.spanCount)}
 }
 
-func (m *mockIDGenerator) NewSpanID(_ context.Context, _ trace.TraceID) trace.SpanID {
+func (m *mockIDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
 	m.Lock()
 	defer m.Unlock()
 	m.spanCount++
@@ -59,7 +61,7 @@ var _ sdktrace.IDGenerator = &mockIDGenerator{}
 
 type emptyHandler struct{}
 
-func (h emptyHandler) Invoke(_ context.Context, _ []byte) ([]byte, error) {
+func (emptyHandler) Invoke(context.Context, []byte) ([]byte, error) {
 	return nil, nil
 }
 
@@ -142,15 +144,15 @@ var (
 			attribute.String("faas.name", "testFunction"),
 			attribute.String("faas.version", "$LATEST"),
 			attribute.String("faas.instance", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
-			attribute.Int("faas.max_memory", 128)),
+			attribute.Int("faas.max_memory", 128*miB)),
 		InstrumentationScope: instrumentation.Scope{
 			Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda",
-			Version: otellambda.Version(),
+			Version: otellambda.Version,
 		},
 	}
 )
 
-func assertStubEqualsIgnoreTime(t *testing.T, expected tracetest.SpanStub, actual tracetest.SpanStub) {
+func assertStubEqualsIgnoreTime(t *testing.T, expected, actual tracetest.SpanStub) {
 	assert.Equal(t, expected.Name, actual.Name)
 	assert.Equal(t, expected.SpanContext, actual.SpanContext)
 	assert.Equal(t, expected.Parent, actual.Parent)
@@ -256,7 +258,7 @@ const mockPropagatorKey = "Mockkey"
 
 type mockPropagator struct{}
 
-func (prop mockPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
+func (mockPropagator) Extract(ctx context.Context, carrier propagation.TextMapCarrier) context.Context {
 	// extract tracing information
 	if header := carrier.Get(mockPropagatorKey); header != "" {
 		scc := trace.SpanContextConfig{}
@@ -281,11 +283,11 @@ func (prop mockPropagator) Extract(ctx context.Context, carrier propagation.Text
 	return ctx
 }
 
-func (prop mockPropagator) Inject(context.Context, propagation.TextMapCarrier) {
+func (mockPropagator) Inject(context.Context, propagation.TextMapCarrier) {
 	// not needed other than to satisfy interface
 }
 
-func (prop mockPropagator) Fields() []string {
+func (mockPropagator) Fields() []string {
 	// not needed other than to satisfy interface
 	return []string{}
 }
@@ -337,10 +339,10 @@ var (
 			attribute.String("faas.name", "testFunction"),
 			attribute.String("faas.version", "$LATEST"),
 			attribute.String("faas.instance", "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"),
-			attribute.Int("faas.max_memory", 128)),
+			attribute.Int("faas.max_memory", 128*miB)),
 		InstrumentationScope: instrumentation.Scope{
 			Name:    "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda",
-			Version: otellambda.Version(),
+			Version: otellambda.Version,
 		},
 	}
 )
@@ -349,17 +351,27 @@ func mockRequestCarrier(eventJSON []byte) propagation.TextMapCarrier {
 	var event mockRequest
 	err := json.Unmarshal(eventJSON, &event)
 	if err != nil {
-		fmt.Println("event type: ", reflect.TypeOf(event))
+		fmt.Println("event type: ", reflect.TypeFor[mockRequest]())
 		panic("mockRequestCarrier only supports events of type mockRequest")
 	}
 	return propagation.HeaderCarrier{mockPropagatorKey: []string{event.Headers[mockPropagatorKey]}}
+}
+
+func mockTraceAttributeFn(eventJSON []byte) []attribute.KeyValue {
+	var event mockRequest
+	err := json.Unmarshal(eventJSON, &event)
+	if err != nil {
+		fmt.Println("event type: ", reflect.TypeFor[mockRequest]())
+		panic("mockRequestCarrier only supports events of type mockRequest")
+	}
+	return []attribute.KeyValue{attribute.String("mock.request.type", reflect.TypeFor[mockRequest]().String())}
 }
 
 func TestInstrumentHandlerTracingWithMockPropagator(t *testing.T) {
 	setEnvVars(t)
 	tp, memExporter := initMockTracerProvider()
 
-	customerHandler := func(event mockRequest) (string, error) {
+	customerHandler := func(mockRequest) (string, error) {
 		return "hello world", nil
 	}
 
@@ -397,4 +409,24 @@ func TestWrapHandlerTracingWithMockPropagator(t *testing.T) {
 	assert.Len(t, memExporter.GetSpans(), 1)
 	stub := memExporter.GetSpans()[0]
 	assertStubEqualsIgnoreTime(t, mockPropagatorTestsExpectedSpanStub, stub)
+}
+
+func TestWrapHandlerTracingWithTraceAttributeFn(t *testing.T) {
+	setEnvVars(t)
+	tp, memExporter := initMockTracerProvider()
+
+	// No flusher needed as SimpleSpanProcessor is synchronous
+	wrapped := otellambda.WrapHandler(emptyHandler{},
+		otellambda.WithTracerProvider(tp),
+		otellambda.WithTraceAttributeFn(mockTraceAttributeFn),
+	)
+
+	payload, _ := json.Marshal(mockPropagatorTestsEvent)
+	_, err := wrapped.Invoke(mockPropagatorTestsContext, payload)
+	assert.NoError(t, err)
+
+	assert.Len(t, memExporter.GetSpans(), 1)
+	stub := memExporter.GetSpans()[0]
+	expectedAttr := attribute.KeyValue{Key: "mock.request.type", Value: attribute.StringValue(reflect.TypeFor[mockRequest]().String())}
+	assert.Contains(t, stub.Attributes, expectedAttr, "custom attribute 'mock.request.type' with value 'otellambda_test.mockRequest' not found")
 }

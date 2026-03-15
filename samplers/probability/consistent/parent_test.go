@@ -4,12 +4,10 @@
 package consistent
 
 import (
-	"context"
 	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
@@ -74,7 +72,7 @@ func TestParentSamplerValidContext(t *testing.T) {
 			}
 
 			parentCtx := trace.ContextWithSpanContext(
-				context.Background(),
+				t.Context(),
 				trace.NewSpanContext(sccfg),
 			)
 
@@ -140,7 +138,7 @@ func TestParentSamplerInvalidContext(t *testing.T) {
 			}
 
 			parentCtx := trace.ContextWithSpanContext(
-				context.Background(),
+				t.Context(),
 				trace.NewSpanContext(sccfg),
 			)
 

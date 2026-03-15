@@ -5,11 +5,11 @@ package otelrestful // import "go.opentelemetry.io/contrib/instrumentation/githu
 
 import (
 	"github.com/emicklei/go-restful/v3"
-
-	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconv"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconv"
 )
 
 // ScopeName is the instrumentation scope name.
@@ -30,7 +30,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		ScopeName,
-		oteltrace.WithInstrumentationVersion(Version()),
+		oteltrace.WithInstrumentationVersion(Version),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()

@@ -28,7 +28,7 @@ func BenchmarkLogSink(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			logSinks[n].Info(0, message, keyValues...)
 		}
 	})
@@ -41,7 +41,7 @@ func BenchmarkLogSink(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			logSinks[n].Error(err, message, keyValues...)
 		}
 	})
@@ -54,7 +54,7 @@ func BenchmarkLogSink(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			logSinks[n].WithValues(keyValues...)
 		}
 	})
@@ -67,7 +67,7 @@ func BenchmarkLogSink(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			logSinks[n].WithName("name")
 		}
 	})
@@ -80,7 +80,7 @@ func BenchmarkLogSink(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			logSinks[n].WithName("name").WithValues(keyValues...)
 		}
 	})
@@ -93,7 +93,7 @@ func BenchmarkLogSink(b *testing.B) {
 
 		b.ReportAllocs()
 		b.ResetTimer()
-		for n := 0; n < b.N; n++ {
+		for n := range b.N {
 			logSinks[n].Info(0, message)
 		}
 	})

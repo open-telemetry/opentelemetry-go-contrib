@@ -11,13 +11,13 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-
-	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
 )
 
 func TestRoundtrip(t *testing.T) {
@@ -85,7 +85,7 @@ func TestRoundtrip(t *testing.T) {
 	}
 
 	client := ts.Client()
-	ctx := context.Background()
+	ctx := t.Context()
 	sc := trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID: trace.TraceID{0x01},
 		SpanID:  trace.SpanID{0x01},
@@ -96,7 +96,7 @@ func TestRoundtrip(t *testing.T) {
 		defer span.End()
 		bag, _ := baggage.Parse("foo=bar")
 		ctx = baggage.ContextWithBaggage(ctx, bag)
-		req, _ := http.NewRequest("GET", ts.URL, strings.NewReader("foo"))
+		req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL, strings.NewReader("foo"))
 		otelhttptrace.Inject(ctx, req, props)
 
 		res, err := client.Do(req)
@@ -149,7 +149,7 @@ func TestSpecifyPropagators(t *testing.T) {
 		defer span.End()
 		bag, _ := baggage.Parse("foo=bar")
 		ctx = baggage.ContextWithBaggage(ctx, bag)
-		req, _ := http.NewRequest("GET", ts.URL, nil)
+		req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL, http.NoBody)
 		otelhttptrace.Inject(ctx, req, otelhttptrace.WithPropagators(propagation.Baggage{}))
 
 		res, err := client.Do(req)
@@ -159,7 +159,7 @@ func TestSpecifyPropagators(t *testing.T) {
 		_ = res.Body.Close()
 
 		return nil
-	}(context.Background())
+	}(t.Context())
 	if err != nil {
 		panic("unexpected error in http request: " + err.Error())
 	}

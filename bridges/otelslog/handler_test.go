@@ -19,12 +19,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.34.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 var now = time.Now()
@@ -35,7 +34,7 @@ func TestNewLogger(t *testing.T) {
 
 // embeddedLogger is a type alias so the embedded.Logger type doesn't conflict
 // with the Logger method of the recorder when it is embedded.
-type embeddedLogger = embedded.Logger // nolint:unused  // Used below.
+type embeddedLogger = embedded.Logger //nolint:unused  // Used below.
 
 type scope struct {
 	Name, Version, SchemaURL string
@@ -45,7 +44,7 @@ type scope struct {
 // recorder records all [log.Record]s it is asked to emit.
 type recorder struct {
 	embedded.LoggerProvider
-	embeddedLogger // nolint:unused  // Used to embed embedded.Logger.
+	embeddedLogger //nolint:unused  // Used to embed embedded.Logger.
 
 	// Records are the records emitted.
 	Records []log.Record
@@ -454,10 +453,10 @@ func TestSLogHandler(t *testing.T) {
 
 func TestSlogtest(t *testing.T) {
 	r := new(recorder)
-	slogtest.Run(t, func(t *testing.T) slog.Handler {
+	slogtest.Run(t, func(*testing.T) slog.Handler {
 		r = new(recorder)
 		return NewHandler("", WithLoggerProvider(r))
-	}, func(t *testing.T) map[string]any {
+	}, func(*testing.T) map[string]any {
 		return r.Results()[0]
 	})
 }
@@ -513,7 +512,7 @@ func TestHandlerEnabled(t *testing.T) {
 
 	h := NewHandler("name", WithLoggerProvider(r))
 
-	ctx := context.Background()
+	ctx := t.Context()
 	assert.False(t, h.Enabled(ctx, slog.LevelDebug), "level conversion: permissive")
 	assert.True(t, h.Enabled(ctx, slog.LevelInfo), "level conversion: restrictive")
 
