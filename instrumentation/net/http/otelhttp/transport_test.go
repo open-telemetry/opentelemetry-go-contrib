@@ -562,9 +562,7 @@ func TestTransportWithMessageEventsReadEvents(t *testing.T) {
 	)
 	c := http.Client{Transport: tr}
 	r, err := http.NewRequest(http.MethodGet, ts.URL, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
+	require.NoError(t, err)
 	res, err := c.Do(r) // nolint:bodyclose  // False-positive.
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, res.Body.Close()) }()
@@ -574,9 +572,7 @@ func TestTransportWithMessageEventsReadEvents(t *testing.T) {
 
 	// Check span.
 	spans := spanRecorder.Ended()
-	if len(spans) != 1 {
-		t.Fatalf("expected 1 span; got: %d", len(spans))
-	}
+	require.Len(t, spans, 1)
 	span := spans[0]
 
 	events := span.Events()
