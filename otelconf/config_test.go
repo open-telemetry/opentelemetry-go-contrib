@@ -428,6 +428,10 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0.yaml"))
 	_, err = NewSDK(cfg...)
 	require.ErrorIs(t, err, newErrInvalid("otlp_file/development"))
+	// validate that use of deprecated env var returns an error
+	t.Setenv(envVarConfigFileDeprecated, filepath.Join("testdata", "v1.0.0.yaml"))
+	_, err = NewSDK(cfg...)
+	require.ErrorIs(t, err, errDeprecatedEnvVarUsed)
 }
 
 var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
