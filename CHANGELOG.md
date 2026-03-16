@@ -80,6 +80,10 @@ The next release will require at least [Go 1.25].
 - Fix broken CSS and JavaScript CDN URLs in `go.opentelemetry.io/contrib/zpages` by replacing the inaccessible code.getmdl.io CDN with cdnjs.cloudflare.com. (#8502)
 - Use Prometheus translation strategy instead of deprecated funcs in `go.opentelemetry.io/contrib/otelconf`. (#8595)
 
+### Changed
+
+- Refactored field conversion in `go.opentelemetry.io/contrib/bridges/otellogrus` to use `kvBuffer` abstraction for improved code organization. (#fdffe010e)
+
 ### Removed
 
 - Remove the deprecated zipkin exporter example in `go.opentelemetry.io/contrib/examples/zipkin`. (#8501)
