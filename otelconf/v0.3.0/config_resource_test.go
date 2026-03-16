@@ -8,6 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 )
 
 func TestSDKResource(t *testing.T) {
@@ -37,5 +38,28 @@ func TestSDKResource(t *testing.T) {
 		assert.NoError(t, err)
 		assert.NotNil(t, sdk.Resource())
 		assert.Empty(t, sdk.Resource().Attributes())
+	})
+
+	t.Run("returns a defensive copy", func(t *testing.T) {
+		sdk, err := NewSDK(
+			WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+				Resource: &Resource{
+					Attributes: []AttributeNameValue{
+						{Name: "service.name", Value: "collector"},
+					},
+				},
+			}),
+		)
+		assert.NoError(t, err)
+
+		res := sdk.Resource()
+		assert.NotNil(t, res)
+
+		newRes := sdkresource.NewSchemaless(attribute.String("service.name", "mutated"))
+		*res = *newRes
+
+		assert.Contains(t, res.Attributes(), attribute.String("service.name", "mutated"))
+		assert.Contains(t, sdk.Resource().Attributes(), attribute.String("service.name", "collector"))
+		assert.NotContains(t, sdk.Resource().Attributes(), attribute.String("service.name", "mutated"))
 	})
 }

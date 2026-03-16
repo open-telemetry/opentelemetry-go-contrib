@@ -72,9 +72,13 @@ func (s *SDK) LoggerProvider() log.LoggerProvider {
 	return s.loggerProvider
 }
 
-// Resource returns the resolved SDK resource configured in this SDK.
+// Resource returns a copy of the resolved SDK resource configured in this SDK.
 func (s *SDK) Resource() *sdkresource.Resource {
-	return s.resource
+	if s.resource == nil {
+		return nil
+	}
+	res := *s.resource
+	return &res
 }
 
 // Shutdown calls shutdown on all configured providers.
