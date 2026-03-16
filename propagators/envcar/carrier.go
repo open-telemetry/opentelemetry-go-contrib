@@ -11,23 +11,6 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
-// upperWithUnderscores converts a string so that A-Z and 0-9 and _ are kept
-// as-is, a-z is uppercased, and all other characters are replaced with _.
-func upperWithUnderscores(s string) string {
-	b := make([]byte, 0, len(s))
-	for _, r := range s {
-		switch {
-		case r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_':
-			b = append(b, byte(r)) //nolint:gosec // G115: overflow is already checked.
-		case r >= 'a' && r <= 'z':
-			b = append(b, byte(r+'A'-'a'))
-		default:
-			b = append(b, '_')
-		}
-	}
-	return string(b)
-}
-
 // Carrier is a TextMapCarrier that uses the environment variables as a
 // storage medium for propagated key-value pairs. The keys are normalised
 // before being used to access the environment variables.
@@ -71,7 +54,7 @@ func (c *Carrier) fetch() {
 // environment and all future reads will be from that store.
 func (c *Carrier) Get(key string) string {
 	c.fetch()
-	return c.values[upperWithUnderscores(key)]
+	return c.values[normalize(key)]
 }
 
 // Set stores the key-value pair in the environment variable.
@@ -82,7 +65,7 @@ func (c *Carrier) Set(key, value string) {
 	if c.SetEnvFunc == nil {
 		return
 	}
-	k := upperWithUnderscores(key)
+	k := normalize(key)
 	c.SetEnvFunc(k, value)
 }
 
