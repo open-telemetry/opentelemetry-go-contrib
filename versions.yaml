@@ -56,6 +56,7 @@ module-sets:
       - go.opentelemetry.io/contrib/samplers/jaegerremote
       - go.opentelemetry.io/contrib/samplers/jaegerremote/example
       - go.opentelemetry.io/contrib/samplers/probability/consistent
+      - go.opentelemetry.io/contrib/samplers/probability/traceidratio
   experimental-config:
     version: v0.22.0
     modules:
