@@ -42,8 +42,21 @@ func loggerProvider(cfg configOptions, res *resource.Resource) (log.LoggerProvid
 		return noop.NewLoggerProvider(), noopShutdown, errors.Join(errs...)
 	}
 
+	if cfg.opentelemetryConfig.LoggerProvider.Limits != nil {
+		opts = logProcessorLimits(opts, *cfg.opentelemetryConfig.LoggerProvider.Limits)
+	}
 	lp := sdklog.NewLoggerProvider(opts...)
 	return lp, lp.Shutdown, nil
+}
+
+func logProcessorLimits(opts []sdklog.LoggerProviderOption, limits LogRecordLimits) []sdklog.LoggerProviderOption {
+	if limits.AttributeCountLimit != nil {
+		opts = append(opts, sdklog.WithAttributeCountLimit(*limits.AttributeCountLimit))
+	}
+	if limits.AttributeValueLengthLimit != nil {
+		opts = append(opts, sdklog.WithAttributeValueLengthLimit(*limits.AttributeValueLengthLimit))
+	}
+	return opts
 }
 
 func logProcessor(ctx context.Context, processor LogRecordProcessor) (sdklog.Processor, error) {
