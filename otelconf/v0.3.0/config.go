@@ -73,6 +73,7 @@ func (s *SDK) LoggerProvider() log.LoggerProvider {
 }
 
 // Resource returns a copy of the resolved SDK resource configured in this SDK.
+// The copy preserves the immutability of the SDK-owned resource.
 func (s *SDK) Resource() *sdkresource.Resource {
 	if s.resource == nil {
 		return nil

@@ -12,6 +12,11 @@ import (
 )
 
 func TestSDKResource(t *testing.T) {
+	t.Run("returns nil for zero value sdk", func(t *testing.T) {
+		var sdk SDK
+		assert.Nil(t, sdk.Resource())
+	})
+
 	t.Run("returns resource even when providers are not configured", func(t *testing.T) {
 		sdk, err := NewSDK(
 			WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
