@@ -48,8 +48,31 @@ func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProv
 	if len(errs) > 0 {
 		return noop.NewTracerProvider(), noopShutdown, errors.Join(errs...)
 	}
+
+	if cfg.opentelemetryConfig.TracerProvider.Limits != nil {
+		opts = spanProcessorLimits(opts, *cfg.opentelemetryConfig.TracerProvider.Limits)
+	}
 	tp := sdktrace.NewTracerProvider(opts...)
 	return tp, tp.Shutdown, nil
+}
+
+func spanProcessorLimits(opts []sdktrace.TracerProviderOption, limits SpanLimits) []sdktrace.TracerProviderOption {
+	spanLimits := sdktrace.NewSpanLimits()
+	hasLimits := false
+
+	if limits.AttributeCountLimit != nil {
+		spanLimits.AttributeCountLimit = *limits.AttributeCountLimit
+		hasLimits = true
+	}
+	if limits.AttributeValueLengthLimit != nil {
+		spanLimits.AttributeValueLengthLimit = *limits.AttributeValueLengthLimit
+		hasLimits = true
+	}
+
+	if hasLimits {
+		opts = append(opts, sdktrace.WithRawSpanLimits(spanLimits))
+	}
+	return opts
 }
 
 func parentBasedSampler(s *ParentBasedSampler) (sdktrace.Sampler, error) {
