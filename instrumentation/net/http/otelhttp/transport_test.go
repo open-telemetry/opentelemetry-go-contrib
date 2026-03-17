@@ -4,6 +4,7 @@
 package otelhttp
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -16,7 +17,9 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -221,6 +224,7 @@ type span struct {
 	trace.Span
 
 	ended      bool
+	endCalls   int
 	attributes []attribute.KeyValue
 
 	statusCode codes.Code
@@ -229,6 +233,7 @@ type span struct {
 
 func (s *span) End(...trace.SpanEndOption) {
 	s.ended = true
+	s.endCalls++
 }
 
 func (s *span) SetAttributes(kv ...attribute.KeyValue) {
@@ -326,10 +331,116 @@ func TestWrappedBodyCloseError(t *testing.T) {
 	assert.True(t, called, "record should have been called")
 }
 
+type eofReadCloser struct {
+	closeCalls int
+}
+
+func (rc *eofReadCloser) Read([]byte) (int, error) {
+	return readSize, io.EOF
+}
+
+func (rc *eofReadCloser) Close() error {
+	rc.closeCalls++
+	return nil
+}
+
+func TestWrappedBodyReadEOFThenCloseRecordsOnce(t *testing.T) {
+	s := new(span)
+	body := &eofReadCloser{}
+	recordCalls := 0
+	recordedBytes := int64(0)
+	wb := newWrappedBody(s, func(n int64) {
+		recordCalls++
+		recordedBytes = n
+	}, body)
+
+	n, err := wb.Read([]byte{})
+	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
+	assert.Equal(t, io.EOF, err)
+	assert.NoError(t, wb.Close())
+
+	s.assert(t, true, nil, codes.Unset, "")
+	assert.Equal(t, 1, s.endCalls, "span should only end once")
+	assert.Equal(t, 1, recordCalls, "record should only have been called once")
+	assert.Equal(t, int64(readSize), recordedBytes, "record recorded wrong number of bytes")
+	assert.Equal(t, 1, body.closeCalls, "body should only have been closed once")
+}
+
 type readWriteCloser struct {
 	readCloser
 
 	writeErr error
+}
+
+type slowRequestBody struct {
+	totalBytes int64
+	chunkSize  int64
+	delay      time.Duration
+
+	bytesRead atomic.Int64
+	closed    chan struct{}
+}
+
+func newSlowRequestBody(totalBytes, chunkSize int64, delay time.Duration) *slowRequestBody {
+	return &slowRequestBody{
+		totalBytes: totalBytes,
+		chunkSize:  chunkSize,
+		delay:      delay,
+		closed:     make(chan struct{}),
+	}
+}
+
+func (b *slowRequestBody) Read(p []byte) (int, error) {
+	time.Sleep(b.delay)
+
+	read := b.bytesRead.Load()
+	if read >= b.totalBytes {
+		return 0, io.EOF
+	}
+
+	n := b.chunkSize
+	if remaining := b.totalBytes - read; remaining < n {
+		n = remaining
+	}
+	if int64(len(p)) < n {
+		n = int64(len(p))
+	}
+
+	for i := int64(0); i < n; i++ {
+		p[i] = 'a'
+	}
+	b.bytesRead.Add(n)
+
+	return int(n), nil
+}
+
+func (b *slowRequestBody) Close() error {
+	select {
+	case <-b.closed:
+	default:
+		close(b.closed)
+	}
+	return nil
+}
+
+func requestBodySizeMetricValue(t *testing.T, rm metricdata.ResourceMetrics) int64 {
+	t.Helper()
+
+	for _, sm := range rm.ScopeMetrics {
+		for _, metric := range sm.Metrics {
+			if metric.Name != "http.client.request.body.size" {
+				continue
+			}
+
+			data, ok := metric.Data.(metricdata.Histogram[int64])
+			require.True(t, ok)
+			require.Len(t, data.DataPoints, 1)
+			return data.DataPoints[0].Sum
+		}
+	}
+
+	t.Fatal("http.client.request.body.size metric not found")
+	return 0
 }
 
 const writeSize = 1
@@ -858,6 +969,83 @@ func TestTransportMetrics(t *testing.T) {
 	})
 }
 
+func TestTransportMetricsReportFinalRequestBodySize(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, listener.Close()) })
+
+	serverErr := make(chan error, 1)
+	go func() {
+		var serverErrValue error
+		defer func() { serverErr <- serverErrValue }()
+
+		conn, err := listener.Accept()
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+		defer func() {
+			if err := conn.Close(); serverErrValue == nil {
+				serverErrValue = err
+			}
+		}()
+
+		req, err := http.ReadRequest(bufio.NewReader(conn))
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+		_ = req
+
+		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: keep-alive\r\n\r\nok"))
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+
+		time.Sleep(250 * time.Millisecond)
+	}()
+
+	body := newSlowRequestBody(256*1024, 1024, 20*time.Millisecond)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://"+listener.Addr().String(), body)
+	require.NoError(t, err)
+	req.ContentLength = body.totalBytes
+
+	client := http.Client{Transport: NewTransport(http.DefaultTransport, WithMeterProvider(meterProvider))}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+
+	bytesWhenResponseReturned := body.bytesRead.Load()
+	require.Eventually(t, func() bool {
+		return body.bytesRead.Load() > bytesWhenResponseReturned
+	}, 5*time.Second, 10*time.Millisecond, "request body bytes should continue increasing after the response is returned")
+
+	require.NoError(t, resp.Body.Close())
+
+	select {
+	case <-body.closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("request body was not closed")
+	}
+
+	select {
+	case err := <-serverErr:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("server did not finish")
+	}
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	actualBytesRead := body.bytesRead.Load()
+	require.Greater(t, actualBytesRead, bytesWhenResponseReturned)
+	assert.Equal(t, actualBytesRead, requestBodySizeMetricValue(t, rm))
+}
+
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
@@ -940,11 +1128,10 @@ func TestCustomAttributesHandling(t *testing.T) {
 	r = r.WithContext(ctx)
 
 	// test bonus: intententionally ignoring response to confirm that
-	// http.client.response.size metric is not recorded
-	// by the Transport.RoundTrip logic
+	// metrics are recorded when the response body lifecycle finishes
 	resp, err := client.Do(r)
 	require.NoError(t, err)
-	defer func() { assert.NoError(t, resp.Body.Close()) }()
+	require.NoError(t, resp.Body.Close())
 
 	err = reader.Collect(ctx, &rm)
 	assert.NoError(t, err)
