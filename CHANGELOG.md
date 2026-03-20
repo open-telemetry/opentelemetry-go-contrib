@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add trace ID ratio sampler in `go.opentelemetry.io/contrib/samplers/probability/traceidratio` that conforms to the threshold-based sampling algorithm.
+- Add trace ID ratio sampler in `go.opentelemetry.io/contrib/samplers/probability/traceidratio` that conforms to the threshold-based sampling algorithm. (#8714)
 - Configuration file can now be set via `OTEL_CONFIG_FILE` in `go.opentelemetry.io/contrib/otelconf`. (#8639)
 - Added support for `service` resource detector in `go.opentelemetry.io/contrib/otelconf`. (#8674)
 
