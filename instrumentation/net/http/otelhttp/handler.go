@@ -4,6 +4,7 @@
 package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -169,10 +170,8 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		},
 	})
 
-	labeler, found := LabelerFromContext(ctx)
-	if !found {
-		ctx = ContextWithLabeler(ctx, labeler)
-	}
+	l := &labeler{}
+	ctx = context.WithValue(ctx, handlerLabelerKey, l)
 
 	r = r.WithContext(ctx)
 	next.ServeHTTP(w, r)
@@ -199,7 +198,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		MetricAttributes: semconv.MetricAttributes{
 			Req:                  r,
 			StatusCode:           statusCode,
-			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(r)...),
+			AdditionalAttributes: append(l.get(), h.metricAttributesFromRequest(r)...),
 		},
 		MetricData: semconv.MetricData{
 			RequestSize:     bytesRead,

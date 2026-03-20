@@ -919,9 +919,6 @@ func TestCustomAttributesHandling(t *testing.T) {
 		}
 	}()
 
-	transport := NewTransport(http.DefaultTransport, WithMeterProvider(provider))
-	client := http.Client{Transport: transport}
-
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
@@ -932,12 +929,17 @@ func TestCustomAttributesHandling(t *testing.T) {
 		attribute.String("bar", "barValue"),
 	}
 
+	// Use an inner RoundTripper to add custom client metric attributes via
+	// AddClientMetricsAttributes, the idiomatic approach with the new API.
+	inner := roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		AddClientMetricsAttributes(r.Context(), expectedAttributes...)
+		return http.DefaultTransport.RoundTrip(r)
+	})
+	transport := NewTransport(inner, WithMeterProvider(provider))
+	client := http.Client{Transport: transport}
+
 	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
-	labeler := &Labeler{}
-	labeler.Add(expectedAttributes...)
-	ctx = ContextWithLabeler(ctx, labeler)
-	r = r.WithContext(ctx)
 
 	// test bonus: intententionally ignoring response to confirm that
 	// http.client.response.size metric is not recorded
@@ -1193,4 +1195,11 @@ func TestHandleErrorOnGetBodyError(t *testing.T) {
 	assert.ErrorContains(t, err, getBodyErr.Error())
 	assert.Equal(t, body, receivedBody) // got it one time
 	assert.Equal(t, 1, requests)
+}
+
+// roundTripperFunc is a function type that implements http.RoundTripper.
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return f(r)
 }

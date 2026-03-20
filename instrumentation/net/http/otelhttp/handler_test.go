@@ -112,8 +112,7 @@ func TestHandlerBasics(t *testing.T) {
 
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			l, _ := LabelerFromContext(r.Context())
-			l.Add(attribute.String("test", "attribute"))
+			AddHandlerMetricsAttributes(r.Context(), attribute.String("test", "attribute"))
 
 			if _, err := io.WriteString(w, "hello world"); err != nil {
 				t.Fatal(err)
@@ -675,6 +674,142 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 				assert.Len(t, d.DataPoints, 1)
 				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
 			}
+		}
+	}
+}
+
+// TestLabelerIsolation is the core correctness test for the separate
+// handlerLabelerKey / clientLabelerKey design. It verifies that
+// AddHandlerMetricsAttributes and AddClientMetricsAttributes do not bleed into
+// each other even when both are called with the same context — the scenario
+// that arises when a server handler makes an outbound HTTP request using the
+// incoming request's context.
+func TestLabelerIsolation(t *testing.T) {
+	const (
+		serverDuration     = "http.server.request.duration"
+		serverRequestSize  = "http.server.request.body.size"
+		serverResponseSize = "http.server.response.body.size"
+		clientDuration     = "http.client.request.duration"
+		clientRequestSize  = "http.client.request.body.size"
+	)
+
+	handlerAttr := attribute.Bool("handler_labeler", true)
+	clientAttr := attribute.Bool("client_labeler", true)
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	// Downstream server that the handler makes outbound requests to.
+	downstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer downstream.Close()
+
+	// Base RoundTripper that tags client metrics via AddClientMetricsAttributes.
+	inner := roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		AddClientMetricsAttributes(r.Context(), clientAttr)
+		return http.DefaultTransport.RoundTrip(r)
+	})
+	outboundClient := http.Client{
+		Transport: NewTransport(inner, WithMeterProvider(meterProvider)),
+	}
+
+	// Server under test: handler tags server metrics and then makes an outbound
+	// call using the same context, so both labeler keys are exercised within a
+	// single context value chain.
+	ts := httptest.NewServer(NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := r.Context()
+			AddHandlerMetricsAttributes(ctx, handlerAttr)
+
+			req, err := http.NewRequestWithContext(ctx, http.MethodGet, downstream.URL, http.NoBody)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			resp, err := outboundClient.Do(req)
+			if err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			if err := resp.Body.Close(); err != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		}),
+		"test_server",
+		WithMeterProvider(meterProvider),
+	))
+	defer ts.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, resp.StatusCode, "handler must not have errored")
+	require.NoError(t, resp.Body.Close())
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	serverMetrics := map[string]bool{
+		serverDuration: false, serverRequestSize: false, serverResponseSize: false,
+	}
+	clientMetrics := map[string]bool{
+		clientDuration: false, clientRequestSize: false,
+	}
+
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if _, isServer := serverMetrics[m.Name]; isServer {
+				serverMetrics[m.Name] = true
+				forEachDataPointAttrs(m, func(attrs attribute.Set) {
+					_, hasHandler := attrs.Value(handlerAttr.Key)
+					_, hasClient := attrs.Value(clientAttr.Key)
+					assert.True(t, hasHandler, "server metric %q: missing handlerAttr", m.Name)
+					assert.False(t, hasClient, "server metric %q: must not contain clientAttr", m.Name)
+				})
+			}
+			if _, isClient := clientMetrics[m.Name]; isClient {
+				clientMetrics[m.Name] = true
+				forEachDataPointAttrs(m, func(attrs attribute.Set) {
+					_, hasHandler := attrs.Value(handlerAttr.Key)
+					_, hasClient := attrs.Value(clientAttr.Key)
+					assert.False(t, hasHandler, "client metric %q: must not contain handlerAttr", m.Name)
+					assert.True(t, hasClient, "client metric %q: missing clientAttr", m.Name)
+				})
+			}
+		}
+	}
+
+	for name, found := range serverMetrics {
+		assert.True(t, found, "server metric %q was not emitted", name)
+	}
+	for name, found := range clientMetrics {
+		assert.True(t, found, "client metric %q was not emitted", name)
+	}
+}
+
+// forEachDataPointAttrs calls f for each data point's attribute set in m,
+// covering the histogram and sum data types used by otelhttp metrics.
+func forEachDataPointAttrs(m metricdata.Metrics, f func(attribute.Set)) {
+	switch d := m.Data.(type) {
+	case metricdata.Histogram[float64]:
+		for _, dp := range d.DataPoints {
+			f(dp.Attributes)
+		}
+	case metricdata.Histogram[int64]:
+		for _, dp := range d.DataPoints {
+			f(dp.Attributes)
+		}
+	case metricdata.Sum[int64]:
+		for _, dp := range d.DataPoints {
+			f(dp.Attributes)
+		}
+	case metricdata.Sum[float64]:
+		for _, dp := range d.DataPoints {
+			f(dp.Attributes)
 		}
 	}
 }

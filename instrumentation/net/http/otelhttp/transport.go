@@ -109,10 +109,8 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		ctx = httptrace.WithClientTrace(ctx, t.clientTrace(ctx))
 	}
 
-	labeler, found := LabelerFromContext(ctx)
-	if !found {
-		ctx = ContextWithLabeler(ctx, labeler)
-	}
+	l := &labeler{}
+	ctx = context.WithValue(ctx, clientLabelerKey, l)
 
 	r = r.Clone(ctx) // According to RoundTripper spec, we shouldn't modify the origin request.
 
@@ -161,7 +159,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		t.semconv.MetricOptions(semconv.MetricAttributes{
 			Req:                  r,
 			StatusCode:           statusCode,
-			AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
+			AdditionalAttributes: append(l.get(), t.metricAttributesFromRequest(r)...),
 		}),
 	)
 
