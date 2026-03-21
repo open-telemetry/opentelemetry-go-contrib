@@ -63,11 +63,29 @@ func TestLoggerProvider(t *testing.T) {
 			wantProvider: noop.NewLoggerProvider(),
 			wantErr:      newErrInvalid("must not specify multiple log processor type"),
 		},
+		{
+			name: "with-limits",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					LoggerProvider: &LoggerProvider{
+						Limits: &LogRecordLimits{
+							AttributeCountLimit:       ptr(50),
+							AttributeValueLengthLimit: ptr(100),
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mp, shutdown, err := loggerProvider(tt.cfg, resource.Default())
-			require.Equal(t, tt.wantProvider, mp)
+			lp, shutdown, err := loggerProvider(tt.cfg, resource.Default())
+			if tt.wantProvider != nil {
+				require.Equal(t, tt.wantProvider, lp)
+			} else {
+				require.NotNil(t, lp)
+				require.IsType(t, &sdklog.LoggerProvider{}, lp)
+			}
 			assert.ErrorIs(t, err, tt.wantErr)
 			require.NoError(t, shutdown(t.Context()))
 		})
@@ -734,6 +752,51 @@ func TestLoggerProviderOptions(t *testing.T) {
 	// by configuration, e.g. the resource is always defined via
 	// configuration.
 	assert.NotContains(t, buf.String(), "foo")
+}
+
+func TestLogProcessorLimits(t *testing.T) {
+	tests := []struct {
+		name               string
+		limits             LogRecordLimits
+		wantAdditionalOpts int
+	}{
+		{
+			name:               "no-limits",
+			limits:             LogRecordLimits{},
+			wantAdditionalOpts: 0,
+		},
+		{
+			name: "attribute-count-limit-only",
+			limits: LogRecordLimits{
+				AttributeCountLimit: ptr(50),
+			},
+			wantAdditionalOpts: 1,
+		},
+		{
+			name: "attribute-value-length-limit-only",
+			limits: LogRecordLimits{
+				AttributeValueLengthLimit: ptr(100),
+			},
+			wantAdditionalOpts: 1,
+		},
+		{
+			name: "both-limits",
+			limits: LogRecordLimits{
+				AttributeCountLimit:       ptr(50),
+				AttributeValueLengthLimit: ptr(100),
+			},
+			wantAdditionalOpts: 2,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			initialOpts := []sdklog.LoggerProviderOption{}
+			result := logProcessorLimits(initialOpts, tt.limits)
+
+			assert.Len(t, result, tt.wantAdditionalOpts, "unexpected number of options returned")
+		})
+	}
 }
 
 func Test_otlpGRPCLogExporter(t *testing.T) {
