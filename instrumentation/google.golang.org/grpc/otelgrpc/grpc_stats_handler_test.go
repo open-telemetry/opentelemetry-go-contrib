@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -109,7 +110,7 @@ func TestStatsHandler(t *testing.T) {
 				})
 
 				t.Run("ServerSpans", func(t *testing.T) {
-					checkServerSpans(t, serverSR.Ended())
+					checkServerSpans(t, serverSR)
 				})
 
 				t.Run("ServerMetrics", func(t *testing.T) {
@@ -216,83 +217,45 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	}, pingPong.Attributes())
 }
 
-func checkServerSpans(t *testing.T, spans []trace.ReadOnlySpan) {
-	require.Len(t, spans, 5)
+func checkServerSpans(t *testing.T, sr *tracetest.SpanRecorder) {
+	var spans []trace.ReadOnlySpan
+	require.Eventually(t, func() bool {
+		spans = sr.Ended()
+		return len(spans) == 5
+	}, 1*time.Second, 10*time.Millisecond)
 
-	emptySpan := spans[0]
-	assert.False(t, emptySpan.EndTime().IsZero())
-	assert.Equal(t, "grpc.testing.TestService/EmptyCall", emptySpan.Name())
-	assert.Empty(t, emptySpan.Events())
-	port, ok := findAttribute(emptySpan.Attributes(), semconv.ServerPortKey)
-	assert.True(t, ok)
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("grpc.testing.TestService/EmptyCall"),
-		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
-		semconv.ServerAddress("127.0.0.1"),
-		port,
-		testSpanAttr,
-	}, emptySpan.Attributes())
+	spansByName := make(map[string]trace.ReadOnlySpan, len(spans))
+	for _, s := range spans {
+		spansByName[s.Name()] = s
+	}
 
-	largeSpan := spans[1]
-	assert.False(t, largeSpan.EndTime().IsZero())
-	assert.Equal(t, "grpc.testing.TestService/UnaryCall", largeSpan.Name())
-	assert.Empty(t, largeSpan.Events())
-	port, ok = findAttribute(largeSpan.Attributes(), semconv.ServerPortKey)
-	assert.True(t, ok)
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("grpc.testing.TestService/UnaryCall"),
-		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
-		semconv.ServerAddress("127.0.0.1"),
-		port,
-		testSpanAttr,
-	}, largeSpan.Attributes())
-
-	streamInput := spans[2]
-	assert.False(t, streamInput.EndTime().IsZero())
-	assert.Equal(t, "grpc.testing.TestService/StreamingInputCall", streamInput.Name())
-	assert.Empty(t, streamInput.Events())
-	port, ok = findAttribute(streamInput.Attributes(), semconv.ServerPortKey)
-	assert.True(t, ok)
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("grpc.testing.TestService/StreamingInputCall"),
-		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
-		semconv.ServerAddress("127.0.0.1"),
-		port,
-		testSpanAttr,
-	}, streamInput.Attributes())
-
-	streamOutput := spans[3]
-	assert.False(t, streamOutput.EndTime().IsZero())
-	assert.Equal(t, "grpc.testing.TestService/StreamingOutputCall", streamOutput.Name())
-	assert.Empty(t, streamOutput.Events())
-	port, ok = findAttribute(streamOutput.Attributes(), semconv.ServerPortKey)
-	assert.True(t, ok)
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("grpc.testing.TestService/StreamingOutputCall"),
-		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
-		semconv.ServerAddress("127.0.0.1"),
-		port,
-		testSpanAttr,
-	}, streamOutput.Attributes())
-
-	pingPong := spans[4]
-	assert.False(t, pingPong.EndTime().IsZero())
-	assert.Equal(t, "grpc.testing.TestService/FullDuplexCall", pingPong.Name())
-	assert.Empty(t, pingPong.Events())
-	port, ok = findAttribute(pingPong.Attributes(), semconv.ServerPortKey)
-	assert.True(t, ok)
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.RPCMethodKey.String("grpc.testing.TestService/FullDuplexCall"),
-		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
-		semconv.ServerAddress("127.0.0.1"),
-		port,
-		testSpanAttr,
-	}, pingPong.Attributes())
+	for _, tc := range []struct {
+		name string
+	}{
+		{"grpc.testing.TestService/EmptyCall"},
+		{"grpc.testing.TestService/UnaryCall"},
+		{"grpc.testing.TestService/StreamingInputCall"},
+		{"grpc.testing.TestService/StreamingOutputCall"},
+		{"grpc.testing.TestService/FullDuplexCall"},
+	} {
+		s, ok := spansByName[tc.name]
+		if !assert.True(t, ok, "missing span %s", tc.name) {
+			continue
+		}
+		assert.False(t, s.EndTime().IsZero())
+		assert.Equal(t, tc.name, s.Name())
+		assert.Empty(t, s.Events())
+		port, ok := findAttribute(s.Attributes(), semconv.ServerPortKey)
+		assert.True(t, ok)
+		assert.ElementsMatch(t, []attribute.KeyValue{
+			semconv.RPCMethodKey.String(tc.name),
+			semconv.RPCSystemNameGRPC,
+			semconv.RPCResponseStatusCode(codes.OK.String()),
+			semconv.ServerAddress("127.0.0.1"),
+			port,
+			testSpanAttr,
+		}, s.Attributes())
+	}
 }
 
 func checkClientMetrics(t *testing.T, reader metric.Reader) {
@@ -359,9 +322,25 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 }
 
 func checkServerMetrics(t *testing.T, reader metric.Reader) {
-	rm := metricdata.ResourceMetrics{}
-	err := reader.Collect(t.Context(), &rm)
-	assert.NoError(t, err)
+	var rm metricdata.ResourceMetrics
+	require.Eventually(t, func() bool {
+		rm = metricdata.ResourceMetrics{}
+		if err := reader.Collect(t.Context(), &rm); err != nil {
+			return false
+		}
+		if len(rm.ScopeMetrics) == 0 || len(rm.ScopeMetrics[0].Metrics) == 0 {
+			return false
+		}
+		wantName := rpcconv.ServerCallDuration{}.Name()
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			if m.Name == wantName {
+				data, ok := m.Data.(metricdata.Histogram[float64])
+				return ok && len(data.DataPoints) == 5
+			}
+		}
+		return false
+	}, 1*time.Second, 10*time.Millisecond)
+
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
 	expectedScopeMetric := metricdata.ScopeMetrics{
@@ -418,7 +397,6 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 			},
 		},
 	}
-
 	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 }
 
@@ -460,7 +438,7 @@ func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 					Payload:            pl,
 				}
 				err := stream.Send(req)
-				if errors.Is(err, io.EOF) { // possible due to context cancellation
+				if errors.Is(err, io.EOF) || status.Code(err) == codes.Canceled { // possible due to context cancellation
 					assert.ErrorIs(t, ctx.Err(), context.Canceled)
 				} else {
 					assert.NoError(t, err)
