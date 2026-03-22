@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build ignore
-
 // #docregion
 package main
 
@@ -18,7 +16,7 @@ var (
 	roomBedroom    = attribute.String("room", "bedroom")
 )
 
-func gaugeCallbackUsage(meter metric.Meter) {
+func otelGaugeCallbackUsage(meter metric.Meter) {
 	// Temperature sensors maintain their own readings in firmware.
 	// Use an observable gauge to report those values when metrics are collected.
 	_, err := meter.Float64ObservableGauge("room.temperature",

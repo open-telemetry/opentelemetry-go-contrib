@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build ignore
-
 // #docregion
 package main
 
@@ -19,7 +17,7 @@ var (
 	deviceLockOpts       = []metric.RecordOption{metric.WithAttributes(attribute.String("device_type", "lock"))}
 )
 
-func histogramUsage(ctx context.Context, meter metric.Meter) {
+func otelHistogramUsage(ctx context.Context, meter metric.Meter) {
 	// WithExplicitBucketBoundaries sets default boundaries as a hint to the SDK.
 	// Views configured at the SDK level take precedence over this hint.
 	deviceCommandDuration, err := meter.Float64Histogram("device.command.duration",

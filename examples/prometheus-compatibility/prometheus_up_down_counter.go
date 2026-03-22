@@ -1,14 +1,12 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build ignore
-
 // #docregion
 package main
 
 import "github.com/prometheus/client_golang/prometheus"
 
-func upDownCounterUsage(reg *prometheus.Registry) {
+func prometheusUpDownCounterUsage(reg *prometheus.Registry) {
 	// Prometheus uses Gauge for values that can increase or decrease.
 	devicesConnected := prometheus.NewGaugeVec(prometheus.GaugeOpts{
 		Name: "devices_connected",

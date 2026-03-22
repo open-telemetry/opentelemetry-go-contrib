@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build ignore
-
 // #docregion
 package main
 
@@ -19,7 +17,7 @@ var (
 	zoneDownstairsOpts = []metric.AddOption{metric.WithAttributes(attribute.String("zone", "downstairs"))}
 )
 
-func counterUsage(ctx context.Context, meter metric.Meter) {
+func otelCounterUsage(ctx context.Context, meter metric.Meter) {
 	// No upfront label declaration: attributes are provided at record time.
 	hvacOnTime, err := meter.Float64Counter("hvac.on",
 		metric.WithDescription("Total time the HVAC system has been running"),

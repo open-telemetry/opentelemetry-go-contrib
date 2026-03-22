@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build ignore
-
 // #docregion
 package main
 
@@ -24,7 +22,7 @@ func (c *deviceCountCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.desc, prometheus.GaugeValue, float64(connectedDeviceCount("lock")), "lock")
 }
 
-func upDownCounterCallbackUsage(reg *prometheus.Registry) {
+func prometheusUpDownCounterCallbackUsage(reg *prometheus.Registry) {
 	// The device manager maintains the count of connected devices.
 	// Implement prometheus.Collector to report those values at scrape time.
 	reg.MustRegister(newDeviceCountCollector())

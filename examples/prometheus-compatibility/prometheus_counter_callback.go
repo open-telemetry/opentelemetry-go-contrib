@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build ignore
-
 // #docregion
 package main
 
@@ -24,7 +22,7 @@ func (c *energyCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.desc, prometheus.CounterValue, totalEnergyJoules("downstairs"), "downstairs")
 }
 
-func counterCallbackUsage(reg *prometheus.Registry) {
+func prometheusCounterCallbackUsage(reg *prometheus.Registry) {
 	// Each zone has its own smart energy meter tracking cumulative joule totals.
 	// Implement prometheus.Collector to report those values at scrape time.
 	reg.MustRegister(newEnergyCollector())

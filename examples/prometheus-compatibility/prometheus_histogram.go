@@ -1,14 +1,12 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build ignore
-
 // #docregion
 package main
 
 import "github.com/prometheus/client_golang/prometheus"
 
-func histogramUsage(reg *prometheus.Registry) {
+func prometheusHistogramUsage(reg *prometheus.Registry) {
 	deviceCommandDuration := prometheus.NewHistogramVec(prometheus.HistogramOpts{
 		Name:    "device_command_duration_seconds",
 		Help:    "Time to receive acknowledgment from a smart home device",

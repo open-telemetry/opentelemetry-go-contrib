@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build ignore
-
 // #docregion
 package main
 
@@ -24,7 +22,7 @@ func (c *temperatureCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(c.desc, prometheus.GaugeValue, bedroomTemperatureCelsius(), "bedroom")
 }
 
-func gaugeCallbackUsage(reg *prometheus.Registry) {
+func prometheusGaugeCallbackUsage(reg *prometheus.Registry) {
 	// Temperature sensors maintain their own readings in firmware.
 	// Implement prometheus.Collector to report those values at scrape time.
 	reg.MustRegister(newTemperatureCollector())

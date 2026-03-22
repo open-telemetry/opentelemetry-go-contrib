@@ -1,8 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build ignore
-
 // #docregion
 package main
 
@@ -18,7 +16,7 @@ var (
 	zoneDownstairs = attribute.String("zone", "downstairs")
 )
 
-func counterCallbackUsage(meter metric.Meter) {
+func otelCounterCallbackUsage(meter metric.Meter) {
 	// Each zone has its own smart energy meter tracking cumulative joule totals.
 	// Use an observable counter to report those values when metrics are collected.
 	_, err := meter.Float64ObservableCounter("energy.consumed",
