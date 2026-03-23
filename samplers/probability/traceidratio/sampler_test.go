@@ -4,8 +4,8 @@
 package traceidratio
 
 import (
-	"context"
-	"math/rand"
+	"crypto/rand"
+	mrand "math/rand"
 	"strings"
 	"testing"
 
@@ -56,7 +56,7 @@ func TestTraceIDRatioBased(t *testing.T) {
 		const numSamplers = 100
 		const numTraces = 50
 		for range numSamplers {
-			ratioLo, ratioHi := rand.Float64(), rand.Float64()
+			ratioLo, ratioHi := mrand.Float64(), mrand.Float64()
 			if ratioHi < ratioLo {
 				ratioLo, ratioHi = ratioHi, ratioLo
 			}
@@ -64,7 +64,7 @@ func TestTraceIDRatioBased(t *testing.T) {
 			samplerLo := TraceIDRatioBased(ratioLo)
 			for range numTraces {
 				traceID := trace.TraceID{}
-				rand.Read(traceID[:])
+				_, _ = rand.Read(traceID[:])
 				params := sdktrace.SamplingParameters{
 					ParentContext: trace.ContextWithSpanContext(
 						t.Context(),
@@ -125,7 +125,7 @@ func TestTraceIDRatioBased(t *testing.T) {
 		require.NoError(t, err)
 
 		parentCtx := trace.ContextWithSpanContext(
-			context.Background(),
+			t.Context(),
 			trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
@@ -143,7 +143,7 @@ func TestTraceIDRatioBased(t *testing.T) {
 		assert.Equal(t, sdktrace.RecordAndSample, result.Decision, "rv value should be used for sampling decision")
 		ot := result.Tracestate.Get("ot")
 		require.NotEmpty(t, ot)
-		assert.True(t, strings.Contains(ot, "th:"), "ot value should contain th when rv is present, got %q", ot)
+		assert.Contains(t, ot, "th:", "ot value should contain th when rv is present, got %q", ot)
 		assert.Equal(t, "value", result.Tracestate.Get("vendor"))
 	})
 
@@ -159,7 +159,7 @@ func TestTraceIDRatioBased(t *testing.T) {
 		require.NoError(t, err)
 
 		parentCtx := trace.ContextWithSpanContext(
-			context.Background(),
+			t.Context(),
 			trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
@@ -177,7 +177,7 @@ func TestTraceIDRatioBased(t *testing.T) {
 		assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
 		ot := result.Tracestate.Get("ot")
 		// When neither hasRandomness nor TraceFlags.IsRandom(), th is erased
-		assert.False(t, strings.Contains(ot, "th:"), "ot value should not contain th when TraceFlags has no randomness flag and no rv in tracestate, got %q", ot)
+		assert.NotContains(t, ot, "th:", "ot value should not contain th when TraceFlags has no randomness flag and no rv in tracestate, got %q", ot)
 		assert.Equal(t, "v", result.Tracestate.Get("vendor"))
 	})
 
@@ -190,7 +190,7 @@ func TestTraceIDRatioBased(t *testing.T) {
 		require.NoError(t, err)
 
 		parentCtx := trace.ContextWithSpanContext(
-			context.Background(),
+			t.Context(),
 			trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
@@ -236,5 +236,126 @@ func TestTraceIDRatioBased(t *testing.T) {
 
 		assert.Equal(t, sdktrace.Drop, result.Decision)
 		assert.Equal(t, initialState, result.Tracestate)
+	})
+
+	t.Run("root span RecordAndSample", func(t *testing.T) {
+		// No parent context - root span. Trace ID randomness >= threshold.
+		// hasRandomness=false, IsRandom()=false => we erase th; no existing ot => newOtts=""
+		// => delete ot, return RecordAndSample with empty tracestate.
+		sampler := TraceIDRatioBased(0.5)
+		traceID, _ := trace.TraceIDFromHex("00000000000000000080000000000000")
+		params := sdktrace.SamplingParameters{
+			ParentContext: t.Context(),
+			TraceID:       traceID,
+		}
+
+		result := sampler.ShouldSample(params)
+
+		assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
+		assert.Empty(t, result.Tracestate.Get("ot"))
+	})
+
+	t.Run("root span Drop", func(t *testing.T) {
+		// No parent context - root span. Trace ID below threshold.
+		sampler := TraceIDRatioBased(0.5)
+		traceID, _ := trace.TraceIDFromHex("00000000000000000000000000000000")
+		params := sdktrace.SamplingParameters{
+			ParentContext: t.Context(),
+			TraceID:       traceID,
+		}
+
+		result := sampler.ShouldSample(params)
+
+		assert.Equal(t, sdktrace.Drop, result.Decision)
+		assert.Empty(t, result.Tracestate.Get("ot"))
+	})
+
+	t.Run("RecordAndSample updates existing th in tracestate", func(t *testing.T) {
+		// Parent has TraceFlags.IsRandom() and existing ot with th from a different sampler.
+		// Should replace old th with current sampler's th.
+		sampler := TraceIDRatioBased(0.5)
+		traceID, _ := trace.TraceIDFromHex("00000000000000000080000000000000")
+		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+		initialState, err := trace.ParseTraceState("ot=th:0ad;other:value,vendor=v")
+		require.NoError(t, err)
+
+		parentCtx := trace.ContextWithSpanContext(
+			t.Context(),
+			trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.FlagsRandom,
+				TraceState: initialState,
+			}),
+		)
+		params := sdktrace.SamplingParameters{
+			ParentContext: parentCtx,
+			TraceID:       traceID,
+		}
+
+		result := sampler.ShouldSample(params)
+
+		assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
+		ot := result.Tracestate.Get("ot")
+		require.NotEmpty(t, ot)
+		assert.True(t, strings.HasPrefix(ot, "th:8"), "ot should have updated th for 0.5 sampler, got %q", ot)
+		assert.Equal(t, "v", result.Tracestate.Get("vendor"))
+	})
+
+	t.Run("trace ID all zeros Drop", func(t *testing.T) {
+		// randomness = 0, any positive threshold causes Drop
+		sampler := TraceIDRatioBased(0.5)
+		traceID, _ := trace.TraceIDFromHex("00000000000000000000000000000000")
+		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+		initialState, err := trace.ParseTraceState("vendor=value")
+		require.NoError(t, err)
+
+		parentCtx := trace.ContextWithSpanContext(
+			t.Context(),
+			trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.FlagsRandom,
+				TraceState: initialState,
+			}),
+		)
+		params := sdktrace.SamplingParameters{
+			ParentContext: parentCtx,
+			TraceID:       traceID,
+		}
+
+		result := sampler.ShouldSample(params)
+
+		assert.Equal(t, sdktrace.Drop, result.Decision)
+	})
+
+	t.Run("trace ID max randomness RecordAndSample", func(t *testing.T) {
+		// randomness = 0x00ffffffffffffff, always samples for any ratio > 0
+		sampler := TraceIDRatioBased(0.5)
+		traceID, _ := trace.TraceIDFromHex("000000000000000000ffffffffffffff")
+		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+		initialState, err := trace.ParseTraceState("vendor=value")
+		require.NoError(t, err)
+
+		parentCtx := trace.ContextWithSpanContext(
+			t.Context(),
+			trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.FlagsRandom,
+				TraceState: initialState,
+			}),
+		)
+		params := sdktrace.SamplingParameters{
+			ParentContext: parentCtx,
+			TraceID:       traceID,
+		}
+
+		result := sampler.ShouldSample(params)
+
+		assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
+		ot := result.Tracestate.Get("ot")
+		require.NotEmpty(t, ot)
+		assert.True(t, strings.HasPrefix(ot, "th:"), "ot should contain th, got %q", ot)
 	})
 }

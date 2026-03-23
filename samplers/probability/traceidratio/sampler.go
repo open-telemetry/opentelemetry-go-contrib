@@ -100,6 +100,8 @@ func (ts *Sampler) Description() string {
 // always sample. Fractions < 0 are treated as zero. To respect the parent
 // trace's SampledFlag, the TraceIDRatioBased sampler should be used as a
 // delegate of a Parent sampler.
+//
+//nolint:revive // TraceIDRatioBased is the standard OpenTelemetry sampler name
 func TraceIDRatioBased(fraction float64) sdktrace.Sampler {
 	const (
 		maxp  = 14

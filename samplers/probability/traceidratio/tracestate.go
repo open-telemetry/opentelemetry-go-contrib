@@ -20,7 +20,7 @@ func InsertOrUpdateTraceStateThKeyValue(existingOtts, thkv string) string {
 	}
 
 	start := -1
-	end := -1
+	var end int
 	if strings.HasPrefix(existingOtts, "th:") {
 		start = 0
 	} else if idx := strings.Index(existingOtts, ";th:"); idx != -1 {
@@ -68,7 +68,7 @@ func tracestateRandomness(otts string) (randomness uint64, hasRandomness bool) {
 	}
 	randomness = rv
 	hasRandomness = true
-	return
+	return randomness, hasRandomness
 }
 
 func eraseTraceStateThKeyValue(otts string) string {
