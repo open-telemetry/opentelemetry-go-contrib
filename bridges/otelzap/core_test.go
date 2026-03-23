@@ -5,6 +5,7 @@ package otelzap
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -58,6 +59,63 @@ func TestCore(t *testing.T) {
 				cp := r.Clone()
 				cp.Context = nil           // Ignore context for comparison.
 				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+				return cp
+			}),
+		)
+	})
+
+	t.Run("WriteError", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.Error(testMessage, zap.Error(errors.New("test error")))
+
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Body:         log.StringValue(testMessage),
+					Severity:     log.SeverityError,
+					SeverityText: zap.ErrorLevel.String(),
+					Attributes: []log.KeyValue{
+						log.String(string(semconv.ExceptionMessageKey), "test error"),
+						log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"),
+					},
+				},
+			},
+		}
+		logtest.AssertEqual(t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Context = nil
+				cp.Timestamp = time.Time{}
+				return cp
+			}),
+		)
+	})
+
+	t.Run("WriteNamedError", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.Error(testMessage, zap.NamedError("db", errors.New("test error")))
+
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Body:         log.StringValue(testMessage),
+					Severity:     log.SeverityError,
+					SeverityText: zap.ErrorLevel.String(),
+					Attributes: []log.KeyValue{
+						log.String(string(semconv.ExceptionMessageKey), "test error"),
+						log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"),
+						log.String("db", "test error"),
+					},
+				},
+			},
+		}
+		logtest.AssertEqual(t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Context = nil
+				cp.Timestamp = time.Time{}
 				return cp
 			}),
 		)
@@ -336,6 +394,42 @@ func TestCoreWithStacktrace(t *testing.T) {
 				if attr.Key == string(semconv.CodeStacktraceKey) {
 					// Adjust the stacktrace to be non-empty, as it will vary based on the test environment.
 					cp.Attributes[i].Value = log.StringValue("stacktrace") // Set to a placeholder for consistency in tests.
+				}
+			}
+			return cp
+		}),
+	)
+}
+
+func TestCoreWithExceptionStacktrace(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
+
+	logger.Error(testMessage, zap.Error(errors.New("test error")))
+
+	want := logtest.Recording{
+		logtest.Scope{Name: "name"}: {
+			{
+				Body:         log.StringValue(testMessage),
+				Severity:     log.SeverityError,
+				SeverityText: zap.ErrorLevel.String(),
+				Attributes: []log.KeyValue{
+					log.String(string(semconv.ExceptionMessageKey), "test error"),
+					log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"),
+					log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
+				},
+			},
+		},
+	}
+	logtest.AssertEqual(t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Context = nil
+			cp.Timestamp = time.Time{}
+			for i, attr := range cp.Attributes {
+				if attr.Key == string(semconv.ExceptionStacktraceKey) {
+					cp.Attributes[i].Value = log.StringValue("stacktrace")
 				}
 			}
 			return cp
