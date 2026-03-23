@@ -4,7 +4,6 @@
 package traceidratio
 
 import (
-	"context"
 	"math/rand"
 	"strings"
 	"testing"
@@ -47,7 +46,7 @@ func TestTraceIDRatioBased(t *testing.T) {
 			{1 / 65536.0, 0xffff0000000000},
 			{1 / 1048576.0, 0xfffff000000000},
 		} {
-			sampler := TraceIDRatioBased(tc.prob).(*TraceIDRatioSampler)
+			sampler := TraceIDRatioBased(tc.prob).(*Sampler)
 			require.Equal(t, tc.threshold, sampler.Threshold())
 		}
 	})
@@ -67,7 +66,7 @@ func TestTraceIDRatioBased(t *testing.T) {
 				rand.Read(traceID[:])
 				params := sdktrace.SamplingParameters{
 					ParentContext: trace.ContextWithSpanContext(
-						context.Background(),
+						t.Context(),
 						trace.NewSpanContext(trace.SpanContextConfig{
 							TraceID:    traceID,
 							TraceFlags: trace.FlagsRandom,
@@ -92,7 +91,7 @@ func TestTraceIDRatioBased(t *testing.T) {
 		require.NoError(t, err)
 
 		parentCtx := trace.ContextWithSpanContext(
-			context.Background(),
+			t.Context(),
 			trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,
@@ -123,7 +122,7 @@ func TestTraceIDRatioBased(t *testing.T) {
 		require.NoError(t, err)
 
 		parentCtx := trace.ContextWithSpanContext(
-			context.Background(),
+			t.Context(),
 			trace.NewSpanContext(trace.SpanContextConfig{
 				TraceID:    traceID,
 				SpanID:     spanID,

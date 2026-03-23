@@ -20,7 +20,7 @@ import (
 const (
 	// DefaultSamplingPrecision is the default precision for threshold encoding.
 	DefaultSamplingPrecision = 4
-	maxAdjustedCount        = 1 << 56
+	maxAdjustedCount         = 1 << 56
 	// randomnessMask masks the least significant 56 bits of the trace ID per
 	// W3C Trace Context Level 2 Random Trace ID Flag.
 	// https://www.w3.org/TR/trace-context-2/#random-trace-id-flag
@@ -30,21 +30,21 @@ const (
 	probabilityOneThreshold  = 1 - 0x1p-52
 )
 
-// TraceIDRatioSampler is a sampler that samples a fraction of traces based on
+// Sampler is a sampler that samples a fraction of traces based on
 // the trace ID. It is exported for testing (e.g., to assert threshold values).
-type TraceIDRatioSampler struct {
+type Sampler struct {
 	threshold   uint64
 	thkv        string
 	description string
 }
 
 // Threshold returns the rejection threshold for testing.
-func (ts *TraceIDRatioSampler) Threshold() uint64 {
+func (ts *Sampler) Threshold() uint64 {
 	return ts.threshold
 }
 
 // ShouldSample implements sdktrace.Sampler.
-func (ts *TraceIDRatioSampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
+func (ts *Sampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
 	psc := trace.SpanContextFromContext(p.ParentContext)
 	state := psc.TraceState()
 
@@ -74,17 +74,17 @@ func (ts *TraceIDRatioSampler) ShouldSample(p sdktrace.SamplingParameters) sdktr
 		newOtts = InsertOrUpdateTraceStateThKeyValue(existingOtts, ts.thkv)
 	}
 
-	if combined, err := state.Insert("ot", newOtts); err != nil {
+	combined, err := state.Insert("ot", newOtts)
+	if err != nil {
 		otel.Handle(fmt.Errorf("could not combine tracestate: %w", err))
 		return sdktrace.SamplingResult{Decision: sdktrace.Drop, Tracestate: state}
-	} else {
-		state = combined
 	}
+	state = combined
 	return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample, Tracestate: state}
 }
 
 // Description implements sdktrace.Sampler.
-func (ts *TraceIDRatioSampler) Description() string {
+func (ts *Sampler) Description() string {
 	return ts.description
 }
 
@@ -120,10 +120,9 @@ func TraceIDRatioBased(fraction float64) sdktrace.Sampler {
 	}
 
 	tvalue := strings.TrimRight(strconv.FormatUint(maxAdjustedCount+threshold, 16)[1:], "0")
-	return &TraceIDRatioSampler{
+	return &Sampler{
 		threshold:   threshold,
 		thkv:        "th:" + tvalue,
 		description: fmt.Sprintf("TraceIDRatioBased{%g}", fraction),
 	}
 }
-

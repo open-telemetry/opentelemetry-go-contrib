@@ -61,13 +61,13 @@ func tracestateRandomness(otts string) (randomness uint64, hasRandomness bool) {
 		return 0, false
 	}
 
-	if rv, err := strconv.ParseUint(otts[start:start+14], 16, 56); err != nil {
+	rv, err := strconv.ParseUint(otts[start:start+14], 16, 56)
+	if err != nil {
 		otel.Handle(fmt.Errorf("could not parse tracestate randomness: %s", otts))
 		return 0, false
-	} else {
-		randomness = rv
-		hasRandomness = true
 	}
+	randomness = rv
+	hasRandomness = true
 	return
 }
 
@@ -79,7 +79,7 @@ func eraseTraceStateThKeyValue(otts string) string {
 	if start > 0 && otts[start-1] == ';' {
 		start--
 	}
-	end := -1
+	var end int
 	for end = start + 1; end < len(otts); end++ {
 		if otts[end] == ';' {
 			if start == 0 {
