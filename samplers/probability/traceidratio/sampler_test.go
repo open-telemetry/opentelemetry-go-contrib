@@ -181,6 +181,35 @@ func TestTraceIDRatioBased(t *testing.T) {
 		assert.Equal(t, "v", result.Tracestate.Get("vendor"))
 	})
 
+	t.Run("RecordAndSample when ot becomes empty deletes ot from tracestate", func(t *testing.T) {
+		// Erasing th yields empty string; delete ot from tracestate instead of inserting.
+		sampler := TraceIDRatioBased(0.5)
+		traceID, _ := trace.TraceIDFromHex("00000000000000000080000000000000")
+		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+		initialState, err := trace.ParseTraceState("ot=th:0ad,vendor=value")
+		require.NoError(t, err)
+
+		parentCtx := trace.ContextWithSpanContext(
+			context.Background(),
+			trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.TraceFlags(0),
+				TraceState: initialState,
+			}),
+		)
+		params := sdktrace.SamplingParameters{
+			ParentContext: parentCtx,
+			TraceID:       traceID,
+		}
+
+		result := sampler.ShouldSample(params)
+
+		assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
+		assert.Empty(t, result.Tracestate.Get("ot"))
+		assert.Equal(t, "value", result.Tracestate.Get("vendor"))
+	})
+
 	t.Run("Drop when randomness < threshold", func(t *testing.T) {
 		const traceIDWillDrop = "0000000000000000007fffffffffffff"
 		sampler := TraceIDRatioBased(0.5)

@@ -77,14 +77,18 @@ func (ts *Sampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.Sampling
 		newOtts = eraseTraceStateThKeyValue(existingOtts)
 	}
 
+	if newOtts == "" {
+		state = state.Delete("ot")
+		return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample, Tracestate: state}
+	}
 	combined, err := state.Insert("ot", newOtts)
 	if err != nil {
-		// TODO: think about how this should be handled.
+		// This in practice should never happen because `ot` is a valid key and any new value we
+		// create for it is an update to `th` and should always be valid.
 		otel.Handle(fmt.Errorf("could not combine tracestate: %w", err))
 		return sdktrace.SamplingResult{Decision: sdktrace.Drop, Tracestate: state}
 	}
-	state = combined
-	return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample, Tracestate: state}
+	return sdktrace.SamplingResult{Decision: sdktrace.RecordAndSample, Tracestate: combined}
 }
 
 // Description implements sdktrace.Sampler.
