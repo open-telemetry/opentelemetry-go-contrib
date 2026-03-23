@@ -68,14 +68,18 @@ func (ts *Sampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.Sampling
 	}
 
 	var newOtts string
-	if !psc.TraceFlags().IsRandom() {
-		newOtts = eraseTraceStateThKeyValue(existingOtts)
-	} else {
+	// Only when the randomness we extracted (either from explicit rv value or from trace ID) is present,
+	// can we insert or update the th key-value. Otherwise, we should erase any existing `th` key-value
+	// to signal that the span is not guaranteed to be statistically representative of the trace.
+	if hasRandomness || psc.TraceFlags().IsRandom() {
 		newOtts = InsertOrUpdateTraceStateThKeyValue(existingOtts, ts.thkv)
+	} else {
+		newOtts = eraseTraceStateThKeyValue(existingOtts)
 	}
 
 	combined, err := state.Insert("ot", newOtts)
 	if err != nil {
+		// TODO: think about how this should be handled.
 		otel.Handle(fmt.Errorf("could not combine tracestate: %w", err))
 		return sdktrace.SamplingResult{Decision: sdktrace.Drop, Tracestate: state}
 	}

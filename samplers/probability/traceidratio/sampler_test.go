@@ -4,6 +4,7 @@
 package traceidratio
 
 import (
+	"context"
 	"math/rand"
 	"strings"
 	"testing"
@@ -111,6 +112,73 @@ func TestTraceIDRatioBased(t *testing.T) {
 		require.NotEmpty(t, ot)
 		assert.True(t, strings.HasPrefix(ot, "th:"), "ot value should contain th key, got %q", ot)
 		assert.Equal(t, "value", result.Tracestate.Get("vendor"))
+	})
+
+	t.Run("RecordAndSample with explicit rv and no randomness flag inserts th in tracestate", func(t *testing.T) {
+		// No randomness flag, but explicit rv in tracestate: use rv for sampling and insert th.
+		// Use a trace ID with low randomness so we'd Drop without rv - proves we use rv.
+		sampler := TraceIDRatioBased(0.5)
+		traceID, _ := trace.TraceIDFromHex("00000000000000000000000000000001") // trace ID randomness would Drop
+		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+		// rv >= threshold (0x80000000000000) so we RecordAndSample
+		initialState, err := trace.ParseTraceState("ot=rv:80000000000000,vendor=value")
+		require.NoError(t, err)
+
+		parentCtx := trace.ContextWithSpanContext(
+			context.Background(),
+			trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.TraceFlags(0), // No randomness flag
+				TraceState: initialState,
+			}),
+		)
+		params := sdktrace.SamplingParameters{
+			ParentContext: parentCtx,
+			TraceID:       traceID,
+		}
+
+		result := sampler.ShouldSample(params)
+
+		assert.Equal(t, sdktrace.RecordAndSample, result.Decision, "rv value should be used for sampling decision")
+		ot := result.Tracestate.Get("ot")
+		require.NotEmpty(t, ot)
+		assert.True(t, strings.Contains(ot, "th:"), "ot value should contain th when rv is present, got %q", ot)
+		assert.Equal(t, "value", result.Tracestate.Get("vendor"))
+	})
+
+	t.Run("RecordAndSample without randomness flag erases ot.th from tracestate", func(t *testing.T) {
+		// No rv in tracestate and no randomness flag in TraceFlags - both must be false to erase th.
+		// Use trace ID with randomness >= threshold so we pass the threshold check.
+		sampler := TraceIDRatioBased(0.5)
+		traceID, _ := trace.TraceIDFromHex("00000000000000000080000000000000")
+		spanID, _ := trace.SpanIDFromHex("00f067aa0ba902b7")
+		// Initial state has th and other ot keys but no rv - randomness comes from trace ID.
+		// After erasing th, "other:value" remains (tracestate requires non-empty ot value).
+		initialState, err := trace.ParseTraceState("ot=th:0ad;other:value,vendor=v")
+		require.NoError(t, err)
+
+		parentCtx := trace.ContextWithSpanContext(
+			context.Background(),
+			trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceFlags: trace.TraceFlags(0), // No randomness flag - IsRandom() returns false
+				TraceState: initialState,
+			}),
+		)
+		params := sdktrace.SamplingParameters{
+			ParentContext: parentCtx,
+			TraceID:       traceID,
+		}
+
+		result := sampler.ShouldSample(params)
+
+		assert.Equal(t, sdktrace.RecordAndSample, result.Decision)
+		ot := result.Tracestate.Get("ot")
+		// When neither hasRandomness nor TraceFlags.IsRandom(), th is erased
+		assert.False(t, strings.Contains(ot, "th:"), "ot value should not contain th when TraceFlags has no randomness flag and no rv in tracestate, got %q", ot)
+		assert.Equal(t, "v", result.Tracestate.Get("vendor"))
 	})
 
 	t.Run("Drop when randomness < threshold", func(t *testing.T) {
