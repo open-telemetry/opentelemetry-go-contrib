@@ -85,4 +85,5 @@ excluded-modules:
   - go.opentelemetry.io/contrib/examples/otel-collector
   - go.opentelemetry.io/contrib/examples/passthrough
   - go.opentelemetry.io/contrib/examples/prometheus
+  - go.opentelemetry.io/contrib/examples/prometheus-compatibility
   - go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo
