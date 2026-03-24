@@ -76,8 +76,7 @@ func TestCore(t *testing.T) {
 					Severity:     log.SeverityError,
 					SeverityText: zap.ErrorLevel.String(),
 					Attributes: []log.KeyValue{
-						log.String(string(semconv.ExceptionMessageKey), "test error"),
-						log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"),
+						log.String("error", "test error"),
 					},
 				},
 			},
@@ -94,6 +93,73 @@ func TestCore(t *testing.T) {
 
 	t.Run("WriteNamedError", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
+
+		logger.Error(testMessage, zap.NamedError("db", errors.New("test error")))
+
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Body:         log.StringValue(testMessage),
+					Severity:     log.SeverityError,
+					SeverityText: zap.ErrorLevel.String(),
+					Attributes: []log.KeyValue{
+						log.String("db", "test error"),
+					},
+				},
+			},
+		}
+		logtest.AssertEqual(t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Context = nil
+				cp.Timestamp = time.Time{}
+				return cp
+			}),
+		)
+	})
+
+	t.Run("WriteErrorWithExceptionSemanticConventions", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger := zap.New(NewCore(
+			loggerName,
+			WithLoggerProvider(rec),
+			WithExceptionSemanticConventions(),
+		))
+
+		logger.Error(testMessage, zap.Error(errors.New("test error")))
+
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Body:         log.StringValue(testMessage),
+					Severity:     log.SeverityError,
+					SeverityText: zap.ErrorLevel.String(),
+					Attributes: []log.KeyValue{
+						log.String(string(semconv.ExceptionMessageKey), "test error"),
+						log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"),
+					},
+				},
+			},
+		}
+		logtest.AssertEqual(t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Context = nil
+				cp.Timestamp = time.Time{}
+				return cp
+			}),
+		)
+	})
+
+	t.Run("WriteNamedErrorWithExceptionSemanticConventions", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger := zap.New(NewCore(
+			loggerName,
+			WithLoggerProvider(rec),
+			WithExceptionSemanticConventions(),
+		))
 
 		logger.Error(testMessage, zap.NamedError("db", errors.New("test error")))
 
@@ -403,7 +469,11 @@ func TestCoreWithStacktrace(t *testing.T) {
 
 func TestCoreWithExceptionStacktrace(t *testing.T) {
 	rec := logtest.NewRecorder()
-	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	zc := NewCore(
+		loggerName,
+		WithLoggerProvider(rec),
+		WithExceptionSemanticConventions(),
+	)
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
 	logger.Error(testMessage, zap.Error(errors.New("test error")))
@@ -465,9 +535,11 @@ func TestNewCoreConfiguration(t *testing.T) {
 				WithVersion("1.0.0"),
 				WithSchemaURL("url"),
 				WithAttributes(attribute.String("testattr", "testval")),
+				WithExceptionSemanticConventions(),
 			)
 		})
 		require.NotNil(t, h.logger)
+		require.True(t, h.exceptionSemConv)
 		require.Len(t, r.Result(), 1)
 
 		want := logtest.Recording{
@@ -480,6 +552,41 @@ func TestNewCoreConfiguration(t *testing.T) {
 		}
 		logtest.AssertEqual(t, want, r.Result())
 	})
+}
+
+func TestCoreWithErrorStacktraceDefault(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
+
+	logger.Error(testMessage, zap.Error(errors.New("test error")))
+
+	want := logtest.Recording{
+		logtest.Scope{Name: "name"}: {
+			{
+				Body:         log.StringValue(testMessage),
+				Severity:     log.SeverityError,
+				SeverityText: zap.ErrorLevel.String(),
+				Attributes: []log.KeyValue{
+					log.String("error", "test error"),
+					log.String(string(semconv.CodeStacktraceKey), "stacktrace"),
+				},
+			},
+		},
+	}
+	logtest.AssertEqual(t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Context = nil
+			cp.Timestamp = time.Time{}
+			for i, attr := range cp.Attributes {
+				if attr.Key == string(semconv.CodeStacktraceKey) {
+					cp.Attributes[i].Value = log.StringValue("stacktrace")
+				}
+			}
+			return cp
+		}),
+	)
 }
 
 func TestConvertLevel(t *testing.T) {
