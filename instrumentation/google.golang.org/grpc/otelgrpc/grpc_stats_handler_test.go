@@ -106,11 +106,11 @@ func TestStatsHandler(t *testing.T) {
 				})
 
 				t.Run("ClientMetrics", func(t *testing.T) {
-					checkClientMetrics(t, clientMetricReader)
+					checkClientMetrics(t, clientMetricReader, listener.Addr().String())
 				})
 
 				t.Run("ServerSpans", func(t *testing.T) {
-					checkServerSpans(t, serverSR)
+					checkServerSpans(t, serverSR, listener.Addr().String())
 				})
 
 				t.Run("ServerMetrics", func(t *testing.T) {
@@ -217,7 +217,12 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	}, pingPong.Attributes())
 }
 
-func checkServerSpans(t *testing.T, sr *tracetest.SpanRecorder) {
+func checkServerSpans(t *testing.T, sr *tracetest.SpanRecorder, addr string) {
+	host, p, err := net.SplitHostPort(addr)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(p)
+	require.NoError(t, err)
+
 	var spans []trace.ReadOnlySpan
 	require.Eventually(t, func() bool {
 		spans = sr.Ended()
@@ -245,25 +250,28 @@ func checkServerSpans(t *testing.T, sr *tracetest.SpanRecorder) {
 		assert.False(t, s.EndTime().IsZero())
 		assert.Equal(t, tc.name, s.Name())
 		assert.Empty(t, s.Events())
-		port, ok := findAttribute(s.Attributes(), semconv.ServerPortKey)
-		assert.True(t, ok)
 		assert.ElementsMatch(t, []attribute.KeyValue{
 			semconv.RPCMethodKey.String(tc.name),
 			semconv.RPCSystemNameGRPC,
 			semconv.RPCResponseStatusCode(codes.OK.String()),
-			semconv.ServerAddress("127.0.0.1"),
-			port,
+			semconv.ServerAddress(host),
+			semconv.ServerPort(port),
 			testSpanAttr,
 		}, s.Attributes())
 	}
 }
 
-func checkClientMetrics(t *testing.T, reader metric.Reader) {
+func checkClientMetrics(t *testing.T, reader metric.Reader, addr string) {
 	rm := metricdata.ResourceMetrics{}
 	err := reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+	host, p, err := net.SplitHostPort(addr)
+	require.NoError(t, err)
+	port, err := strconv.Atoi(p)
+	require.NoError(t, err)
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
@@ -283,6 +291,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCResponseStatusCode(codes.OK.String()),
 								semconv.RPCMethod("grpc.testing.TestService/EmptyCall"),
 								semconv.RPCSystemNameGRPC,
+								semconv.ServerAddress(host),
+								semconv.ServerPort(port),
 								testMetricAttr),
 						},
 						{
@@ -290,6 +300,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCResponseStatusCode(codes.OK.String()),
 								semconv.RPCMethod("grpc.testing.TestService/UnaryCall"),
 								semconv.RPCSystemNameGRPC,
+								semconv.ServerAddress(host),
+								semconv.ServerPort(port),
 								testMetricAttr),
 						},
 						{
@@ -297,6 +309,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCResponseStatusCode(codes.OK.String()),
 								semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"),
 								semconv.RPCSystemNameGRPC,
+								semconv.ServerAddress(host),
+								semconv.ServerPort(port),
 								testMetricAttr),
 						},
 						{
@@ -304,6 +318,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCResponseStatusCode(codes.OK.String()),
 								semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"),
 								semconv.RPCSystemNameGRPC,
+								semconv.ServerAddress(host),
+								semconv.ServerPort(port),
 								testMetricAttr),
 						},
 						{
@@ -311,6 +327,8 @@ func checkClientMetrics(t *testing.T, reader metric.Reader) {
 								semconv.RPCResponseStatusCode(codes.OK.String()),
 								semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"),
 								semconv.RPCSystemNameGRPC,
+								semconv.ServerAddress(host),
+								semconv.ServerPort(port),
 								testMetricAttr),
 						},
 					},

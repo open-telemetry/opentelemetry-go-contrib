@@ -16,7 +16,6 @@ import (
 	"go.opentelemetry.io/otel/semconv/v1.40.0/rpcconv"
 	"go.opentelemetry.io/otel/trace"
 	grpc_codes "google.golang.org/grpc/codes"
-	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
 
@@ -255,12 +254,23 @@ func (*config) handleRPC(
 	switch rs := rs.(type) {
 	case *stats.Begin:
 	case *stats.InPayload:
+	case *stats.InHeader:
+		if !rs.Client && rs.LocalAddr != nil {
+			if span.IsRecording() {
+				span.SetAttributes(serverAddrAttrs(rs.LocalAddr.String())...)
+			}
+			// TODO: add server.address and server.port to metrics once the API supports opt-in attributes.
+		}
 	case *stats.OutPayload:
 	case *stats.OutTrailer:
 	case *stats.OutHeader:
-		if span.IsRecording() {
-			if p, ok := peer.FromContext(ctx); ok {
-				span.SetAttributes(serverAddrAttrs(p.Addr.String())...)
+		if rs.Client && rs.RemoteAddr != nil && (span.IsRecording() || gctx != nil) {
+			attrs := serverAddrAttrs(rs.RemoteAddr.String())
+			if span.IsRecording() {
+				span.SetAttributes(attrs...)
+			}
+			if gctx != nil {
+				gctx.metricAttrs = append(gctx.metricAttrs, attrs...)
 			}
 		}
 	case *stats.End:
