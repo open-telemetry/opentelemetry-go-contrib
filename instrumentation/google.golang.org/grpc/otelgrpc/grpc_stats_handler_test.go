@@ -106,7 +106,7 @@ func TestStatsHandler(t *testing.T) {
 				})
 
 				t.Run("ClientMetrics", func(t *testing.T) {
-					checkClientMetrics(t, clientMetricReader, listener.Addr().String())
+					checkClientMetrics(t, clientMetricReader, listener.Addr().String(), "")
 				})
 
 				t.Run("ServerSpans", func(t *testing.T) {
@@ -114,7 +114,7 @@ func TestStatsHandler(t *testing.T) {
 				})
 
 				t.Run("ServerMetrics", func(t *testing.T) {
-					checkServerMetrics(t, serverMetricReader)
+					checkServerMetrics(t, serverMetricReader, "")
 				})
 			} else {
 				t.Run("ClientSpans", func(t *testing.T) {
@@ -261,85 +261,109 @@ func checkServerSpans(t *testing.T, sr *tracetest.SpanRecorder, addr string) {
 	}
 }
 
-func checkClientMetrics(t *testing.T, reader metric.Reader, addr string) {
+func checkClientMetrics(t *testing.T, reader metric.Reader, addr, stabilityOptIn string) {
 	rm := metricdata.ResourceMetrics{}
 	err := reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
-	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
 
 	host, p, err := net.SplitHostPort(addr)
 	require.NoError(t, err)
 	port, err := strconv.Atoi(p)
 	require.NoError(t, err)
+
+	var expectedMetrics []metricdata.Metrics
+
+	switch stabilityOptIn {
+	case "rpc/old":
+		expectedMetrics = append(expectedMetrics, metricdata.Metrics{
+			Name:        "rpc.client.duration",
+			Description: "Measures the duration of outbound RPC.",
+			Unit:        "ms",
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[float64]{
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), semconv.ServerAddress(host), semconv.ServerPort(port), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "EmptyCall"), semconv.RPCResponseStatusCode(codes.OK.String()), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), semconv.ServerAddress(host), semconv.ServerPort(port), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "UnaryCall"), semconv.RPCResponseStatusCode(codes.OK.String()), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), semconv.ServerAddress(host), semconv.ServerPort(port), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "StreamingInputCall"), semconv.RPCResponseStatusCode(codes.OK.String()), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), semconv.ServerAddress(host), semconv.ServerPort(port), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "StreamingOutputCall"), semconv.RPCResponseStatusCode(codes.OK.String()), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), semconv.ServerAddress(host), semconv.ServerPort(port), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "FullDuplexCall"), semconv.RPCResponseStatusCode(codes.OK.String()), testMetricAttr)},
+				},
+			},
+		})
+	case "":
+		expectedMetrics = append(expectedMetrics, metricdata.Metrics{
+			Name:        rpcconv.ClientCallDuration{}.Name(),
+			Description: rpcconv.ClientCallDuration{}.Description(),
+			Unit:        rpcconv.ClientCallDuration{}.Unit(),
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[float64]{
+					{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/EmptyCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/UnaryCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
+				},
+			},
+		})
+	case "rpc/dup":
+		combinedAttr := func(method string) attribute.Set {
+			return attribute.NewSet(
+				attribute.String("rpc.system", "grpc"),
+				attribute.String("rpc.service", "grpc.testing.TestService"),
+				semconv.RPCMethod("grpc.testing.TestService/"+method),
+				semconv.RPCResponseStatusCode(codes.OK.String()),
+				semconv.RPCSystemNameGRPC,
+				semconv.ServerAddress(host),
+				semconv.ServerPort(port),
+				testMetricAttr,
+			)
+		}
+		expectedMetrics = append(expectedMetrics, metricdata.Metrics{
+			Name:        "rpc.client.duration",
+			Description: "Measures the duration of outbound RPC.",
+			Unit:        "ms",
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[float64]{
+					{Attributes: combinedAttr("EmptyCall")},
+					{Attributes: combinedAttr("UnaryCall")},
+					{Attributes: combinedAttr("StreamingInputCall")},
+					{Attributes: combinedAttr("StreamingOutputCall")},
+					{Attributes: combinedAttr("FullDuplexCall")},
+				},
+			},
+		}, metricdata.Metrics{
+			Name:        rpcconv.ClientCallDuration{}.Name(),
+			Description: rpcconv.ClientCallDuration{}.Description(),
+			Unit:        rpcconv.ClientCallDuration{}.Unit(),
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[float64]{
+					{Attributes: combinedAttr("EmptyCall")},
+					{Attributes: combinedAttr("UnaryCall")},
+					{Attributes: combinedAttr("StreamingInputCall")},
+					{Attributes: combinedAttr("StreamingOutputCall")},
+					{Attributes: combinedAttr("FullDuplexCall")},
+				},
+			},
+		})
+	}
+
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
 			Version:   otelgrpc.Version,
 			SchemaURL: semconv.SchemaURL,
 		},
-		Metrics: []metricdata.Metrics{
-			{
-				Name:        rpcconv.ClientCallDuration{}.Name(),
-				Description: rpcconv.ClientCallDuration{}.Description(),
-				Unit:        rpcconv.ClientCallDuration{}.Unit(),
-				Data: metricdata.Histogram[float64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[float64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
-								semconv.RPCMethod("grpc.testing.TestService/EmptyCall"),
-								semconv.RPCSystemNameGRPC,
-								semconv.ServerAddress(host),
-								semconv.ServerPort(port),
-								testMetricAttr),
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
-								semconv.RPCMethod("grpc.testing.TestService/UnaryCall"),
-								semconv.RPCSystemNameGRPC,
-								semconv.ServerAddress(host),
-								semconv.ServerPort(port),
-								testMetricAttr),
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
-								semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"),
-								semconv.RPCSystemNameGRPC,
-								semconv.ServerAddress(host),
-								semconv.ServerPort(port),
-								testMetricAttr),
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
-								semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"),
-								semconv.RPCSystemNameGRPC,
-								semconv.ServerAddress(host),
-								semconv.ServerPort(port),
-								testMetricAttr),
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
-								semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"),
-								semconv.RPCSystemNameGRPC,
-								semconv.ServerAddress(host),
-								semconv.ServerPort(port),
-								testMetricAttr),
-						},
-					},
-				},
-			},
-		},
+		Metrics: expectedMetrics,
 	}
-	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 }
 
-func checkServerMetrics(t *testing.T, reader metric.Reader) {
+func checkServerMetrics(t *testing.T, reader metric.Reader, stabilityOptIn string) {
 	var rm metricdata.ResourceMetrics
 	require.Eventually(t, func() bool {
 		rm = metricdata.ResourceMetrics{}
@@ -349,73 +373,108 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 		if len(rm.ScopeMetrics) == 0 || len(rm.ScopeMetrics[0].Metrics) == 0 {
 			return false
 		}
-		wantName := rpcconv.ServerCallDuration{}.Name()
-		for _, m := range rm.ScopeMetrics[0].Metrics {
-			if m.Name == wantName {
-				data, ok := m.Data.(metricdata.Histogram[float64])
-				return ok && len(data.DataPoints) == 5
-			}
+		isOld := stabilityOptIn == "rpc/old" || stabilityOptIn == "rpc/dup"
+		isNew := stabilityOptIn == "" || stabilityOptIn == "rpc/dup"
+
+		var expectedCount int
+		if isOld {
+			expectedCount++
 		}
-		return false
+		if isNew {
+			expectedCount++
+		}
+		return len(rm.ScopeMetrics[0].Metrics) == expectedCount
 	}, 1*time.Second, 10*time.Millisecond)
 
 	require.Len(t, rm.ScopeMetrics, 1)
-	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+
+	var expectedMetrics []metricdata.Metrics
+
+	switch stabilityOptIn {
+	case "rpc/old":
+		expectedMetrics = append(expectedMetrics, metricdata.Metrics{
+			Name:        "rpc.server.duration",
+			Description: "Measures the duration of inbound RPC.",
+			Unit:        "ms",
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[float64]{
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "EmptyCall"), semconv.RPCResponseStatusCode(codes.OK.String()), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "UnaryCall"), semconv.RPCResponseStatusCode(codes.OK.String()), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "StreamingInputCall"), semconv.RPCResponseStatusCode(codes.OK.String()), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "StreamingOutputCall"), semconv.RPCResponseStatusCode(codes.OK.String()), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "FullDuplexCall"), semconv.RPCResponseStatusCode(codes.OK.String()), testMetricAttr)},
+				},
+			},
+		})
+	case "":
+		expectedMetrics = append(expectedMetrics, metricdata.Metrics{
+			Name:        rpcconv.ServerCallDuration{}.Name(),
+			Description: rpcconv.ServerCallDuration{}.Description(),
+			Unit:        rpcconv.ServerCallDuration{}.Unit(),
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[float64]{
+					{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/EmptyCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/UnaryCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+				},
+			},
+		})
+	case "rpc/dup":
+		combinedAttr := func(method string) attribute.Set {
+			return attribute.NewSet(
+				attribute.String("rpc.system", "grpc"),
+				attribute.String("rpc.service", "grpc.testing.TestService"),
+				semconv.RPCMethod("grpc.testing.TestService/"+method),
+				semconv.RPCResponseStatusCode(codes.OK.String()),
+				semconv.RPCSystemNameGRPC,
+				testMetricAttr,
+			)
+		}
+		expectedMetrics = append(expectedMetrics, metricdata.Metrics{
+			Name:        "rpc.server.duration",
+			Description: "Measures the duration of inbound RPC.",
+			Unit:        "ms",
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[float64]{
+					{Attributes: combinedAttr("EmptyCall")},
+					{Attributes: combinedAttr("UnaryCall")},
+					{Attributes: combinedAttr("StreamingInputCall")},
+					{Attributes: combinedAttr("StreamingOutputCall")},
+					{Attributes: combinedAttr("FullDuplexCall")},
+				},
+			},
+		}, metricdata.Metrics{
+			Name:        rpcconv.ServerCallDuration{}.Name(),
+			Description: rpcconv.ServerCallDuration{}.Description(),
+			Unit:        rpcconv.ServerCallDuration{}.Unit(),
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints: []metricdata.HistogramDataPoint[float64]{
+					{Attributes: combinedAttr("EmptyCall")},
+					{Attributes: combinedAttr("UnaryCall")},
+					{Attributes: combinedAttr("StreamingInputCall")},
+					{Attributes: combinedAttr("StreamingOutputCall")},
+					{Attributes: combinedAttr("FullDuplexCall")},
+				},
+			},
+		})
+	}
+
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:      "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc",
 			Version:   otelgrpc.Version,
 			SchemaURL: semconv.SchemaURL,
 		},
-		Metrics: []metricdata.Metrics{
-			{
-				Name:        rpcconv.ServerCallDuration{}.Name(),
-				Description: rpcconv.ServerCallDuration{}.Description(),
-				Unit:        rpcconv.ServerCallDuration{}.Unit(),
-				Data: metricdata.Histogram[float64]{
-					Temporality: metricdata.CumulativeTemporality,
-					DataPoints: []metricdata.HistogramDataPoint[float64]{
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
-								semconv.RPCMethod("grpc.testing.TestService/EmptyCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
-								semconv.RPCMethod("grpc.testing.TestService/UnaryCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
-								semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
-								semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-						},
-						{
-							Attributes: attribute.NewSet(
-								semconv.RPCResponseStatusCode(codes.OK.String()),
-								semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"),
-								semconv.RPCSystemNameGRPC,
-								testMetricAttr),
-						},
-					},
-				},
-			},
-		},
+		Metrics: expectedMetrics,
 	}
-	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 }
 
 // Ensure there is no data race for the following scenario:
@@ -587,6 +646,155 @@ func TestClientHandlerTagRPC(t *testing.T) {
 			if tt.exp != got {
 				t.Errorf("expected %t, got %t", tt.exp, got)
 			}
+		})
+	}
+}
+
+func TestSpansSemconvOptIn(t *testing.T) {
+	tests := []struct {
+		name           string
+		stabilityOptIn string
+		wantAttrs      []attribute.KeyValue
+		notWantAttrs   []string
+	}{
+		{
+			name:           "default",
+			stabilityOptIn: "",
+			wantAttrs: []attribute.KeyValue{
+				attribute.String("rpc.system.name", "grpc"),
+				attribute.String("rpc.method", "pkg.Service/Method"),
+			},
+			notWantAttrs: []string{"rpc.service"},
+		},
+
+		{
+			name:           "rpc_old",
+			stabilityOptIn: "rpc/old",
+			wantAttrs: []attribute.KeyValue{
+				attribute.String("rpc.system", "grpc"),
+				attribute.String("rpc.service", "pkg.Service"),
+				attribute.String("rpc.method", "Method"),
+			},
+			notWantAttrs: []string{"rpc.system.name"},
+		},
+		{
+			name:           "rpc_dup",
+			stabilityOptIn: "rpc/dup",
+			wantAttrs: []attribute.KeyValue{
+				attribute.String("rpc.system", "grpc"),
+				attribute.String("rpc.service", "pkg.Service"),
+				attribute.String("rpc.method", "pkg.Service/Method"), // New wins
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.stabilityOptIn != "" {
+				t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", tt.stabilityOptIn)
+			}
+
+			sr := tracetest.NewSpanRecorder()
+			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+			h := otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(tp))
+
+			ctx := t.Context()
+			info := &stats.RPCTagInfo{
+				FullMethodName: "/pkg.Service/Method",
+			}
+
+			ctx = h.TagRPC(ctx, info)
+
+			span := oteltrace.SpanFromContext(ctx)
+			require.True(t, span.IsRecording())
+
+			span.End()
+
+			spans := sr.Ended()
+			require.Len(t, spans, 1)
+
+			attrs := spans[0].Attributes()
+			for _, want := range tt.wantAttrs {
+				assert.Contains(t, attrs, want)
+			}
+
+			for _, key := range tt.notWantAttrs {
+				found := false
+				for _, a := range attrs {
+					if string(a.Key) == key {
+						found = true
+						break
+					}
+				}
+				assert.False(t, found, "should not contain attribute %s", key)
+			}
+		})
+	}
+}
+
+func TestMetricsSemconvOptIn(t *testing.T) {
+	tests := []struct {
+		name           string
+		stabilityOptIn string
+	}{
+		{
+			name:           "default",
+			stabilityOptIn: "",
+		},
+		{
+			name:           "rpc_old",
+			stabilityOptIn: "rpc/old",
+		},
+		{
+			name:           "rpc_dup",
+			stabilityOptIn: "rpc/dup",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.stabilityOptIn != "" {
+				t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", tt.stabilityOptIn)
+			} else {
+				t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "")
+			}
+
+			clientMetricReader := metric.NewManualReader()
+			clientMP := metric.NewMeterProvider(metric.WithReader(clientMetricReader))
+
+			serverMetricReader := metric.NewManualReader()
+			serverMP := metric.NewMeterProvider(metric.WithReader(serverMetricReader))
+
+			listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+			require.NoError(t, err, "failed to open port")
+
+			client := newGrpcTest(t, listener,
+				[]grpc.DialOption{
+					grpc.WithStatsHandler(otelgrpc.NewClientHandler(
+						otelgrpc.WithMeterProvider(clientMP),
+						otelgrpc.WithMetricAttributes(testMetricAttr)),
+					),
+				},
+				[]grpc.ServerOption{
+					grpc.StatsHandler(otelgrpc.NewServerHandler(
+						otelgrpc.WithTracerProvider(trace.NewTracerProvider()), // ensure we create one for testing
+						otelgrpc.WithMeterProvider(serverMP),
+						otelgrpc.WithMetricAttributes(testMetricAttr)),
+					),
+				},
+			)
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			doCalls(ctx, client)
+
+			t.Run("ClientMetrics", func(t *testing.T) {
+				checkClientMetrics(t, clientMetricReader, listener.Addr().String(), tt.stabilityOptIn)
+			})
+
+			t.Run("ServerMetrics", func(t *testing.T) {
+				checkServerMetrics(t, serverMetricReader, tt.stabilityOptIn)
+			})
 		})
 	}
 }
