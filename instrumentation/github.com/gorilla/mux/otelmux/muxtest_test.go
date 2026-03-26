@@ -35,7 +35,7 @@ func TestDefaultTrace(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	})
 
-	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	router.ServeHTTP(w, r)
@@ -91,7 +91,7 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 			))
 			router.HandleFunc(routeTpl, func(http.ResponseWriter, *http.Request) {})
 
-			r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
 			w := httptest.NewRecorder()
 
 			router.ServeHTTP(w, r)
@@ -177,7 +177,7 @@ func TestSDKIntegration(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer sr.Reset()
 
-			r := httptest.NewRequest(tt.method, tt.path, http.NoBody)
+			r := httptest.NewRequestWithContext(t.Context(), tt.method, tt.path, http.NoBody)
 			if tt.reqFunc != nil {
 				tt.reqFunc(r)
 			}
@@ -208,7 +208,7 @@ func TestNotFoundIsNotError(t *testing.T) {
 	router.Use(otelmux.Middleware("foobar", otelmux.WithTracerProvider(provider)))
 	router.HandleFunc("/does/not/exist", notfound)
 
-	r0 := httptest.NewRequest(http.MethodGet, "/does/not/exist", http.NoBody)
+	r0 := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/does/not/exist", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r0)
 
@@ -270,7 +270,7 @@ func TestWithPublicEndpoint(t *testing.T) {
 		assert.NotEqual(t, remoteSpan.TraceID, sc.TraceID())
 	})
 
-	r0 := httptest.NewRequest(http.MethodGet, "/with/public/endpoint", http.NoBody)
+	r0 := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/with/public/endpoint", http.NoBody)
 	w := httptest.NewRecorder()
 
 	sc := trace.NewSpanContext(remoteSpan)
@@ -355,7 +355,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 				tt.handlerAssert(t, s.SpanContext())
 			})
 
-			r0 := httptest.NewRequest(http.MethodGet, "/with/public/endpointfn", http.NoBody)
+			r0 := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/with/public/endpointfn", http.NoBody)
 			w := httptest.NewRecorder()
 
 			sc := trace.NewSpanContext(remoteSpan)
@@ -388,7 +388,7 @@ func TestDefaultMetricAttributes(t *testing.T) {
 	))
 
 	router.HandleFunc("/user/{id:[0-9]+}", ok)
-	r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/user/123", http.NoBody)
 	require.NoError(t, err)
 	rr := httptest.NewRecorder()
 	router.ServeHTTP(rr, r)
@@ -457,7 +457,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		))
 
 		router.HandleFunc("/user/{id:[0-9]+}", ok)
-		r, err := http.NewRequest(http.MethodGet, "http://localhost/user/123", http.NoBody)
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/user/123", http.NoBody)
 		require.NoError(t, err)
 		rr := httptest.NewRecorder()
 		router.ServeHTTP(rr, r)

@@ -22,6 +22,10 @@ type processor struct {
 	records []*log.Record
 }
 
+func (*processor) Enabled(context.Context, log.EnabledParameters) bool {
+	return true
+}
+
 func (p *processor) OnEmit(_ context.Context, r *log.Record) error {
 	p.records = append(p.records, r)
 	return nil

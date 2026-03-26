@@ -32,6 +32,11 @@ func NewLogProcessor(filter Filter) *LogProcessor {
 	}
 }
 
+// Enabled reports whether the Processor will process.
+func (LogProcessor) Enabled(context.Context, log.EnabledParameters) bool {
+	return true
+}
+
 // OnEmit adds Baggage member to a log record as attributes that are pulled from
 // the Baggage found in ctx. Baggage members are filtered by the filter passed
 // to NewLogProcessor.

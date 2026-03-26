@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -87,7 +88,7 @@ func TestTransportFormatter(t *testing.T) {
 
 	for _, tc := range httpMethods {
 		t.Run(tc.name, func(t *testing.T) {
-			r, err := http.NewRequest(tc.method, "http://localhost/", http.NoBody)
+			r, err := http.NewRequestWithContext(t.Context(), tc.method, "http://localhost/", http.NoBody)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -219,8 +220,8 @@ func (rc readCloser) Close() error {
 type span struct {
 	trace.Span
 
-	ended       bool
-	recordedErr error
+	ended      bool
+	attributes []attribute.KeyValue
 
 	statusCode codes.Code
 	statusDesc string
@@ -230,8 +231,8 @@ func (s *span) End(...trace.SpanEndOption) {
 	s.ended = true
 }
 
-func (s *span) RecordError(err error, _ ...trace.EventOption) {
-	s.recordedErr = err
+func (s *span) SetAttributes(kv ...attribute.KeyValue) {
+	s.attributes = append(s.attributes, kv...)
 }
 
 func (s *span) SetStatus(c codes.Code, d string) {
@@ -246,9 +247,9 @@ func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d strin
 	}
 
 	if err == nil {
-		assert.NoError(t, s.recordedErr, "recorded an error")
+		assert.Empty(t, s.attributes, "recorded an error")
 	} else {
-		assert.Equal(t, err, s.recordedErr)
+		assert.Contains(t, s.attributes, semconv.ErrorType(err), "error type attribute missing")
 	}
 
 	assert.Equal(t, c, s.statusCode, "status codes not equal")
@@ -461,7 +462,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -501,7 +502,7 @@ func TestTransportErrorStatus(t *testing.T) {
 		WithTracerProvider(provider),
 	)
 	c := http.Client{Transport: tr}
-	r, err := http.NewRequest(http.MethodGet, server.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -557,7 +558,7 @@ func TestTransportRequestWithTraceContext(t *testing.T) {
 	tracer := provider.Tracer("")
 	ctx, span := tracer.Start(t.Context(), "test_span")
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	r = r.WithContext(ctx)
@@ -603,7 +604,7 @@ func TestWithHTTPTrace(t *testing.T) {
 	tracer := provider.Tracer("")
 	ctx, span := tracer.Start(t.Context(), "test_span")
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	r = r.WithContext(ctx)
@@ -667,7 +668,7 @@ func TestTransportMetrics(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, bytes.NewReader(requestBody))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -729,7 +730,7 @@ func TestTransportMetrics(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, bytes.NewReader(requestBody))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -801,7 +802,7 @@ func TestTransportMetrics(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, bytes.NewReader(requestBody))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -860,7 +861,7 @@ func TestTransportMetrics(t *testing.T) {
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
-		Version: Version(),
+		Version: Version,
 	}, sm.Scope)
 
 	require.Len(t, sm.Metrics, 2)
@@ -868,7 +869,7 @@ func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs at
 	want := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:    ScopeName,
-			Version: Version(),
+			Version: Version,
 		},
 		Metrics: []metricdata.Metrics{
 			{
@@ -931,7 +932,7 @@ func TestCustomAttributesHandling(t *testing.T) {
 		attribute.String("bar", "barValue"),
 	}
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 	labeler := &Labeler{}
 	labeler.Add(expectedAttributes...)
@@ -986,7 +987,7 @@ func TestMetricsExistenceOnRequestError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := client.Do(r)
@@ -1037,7 +1038,7 @@ func TestDefaultAttributesHandling(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := client.Do(r)
@@ -1082,7 +1083,7 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(b.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(b, err)
 
 	for _, bb := range []struct {
@@ -1113,4 +1114,83 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestRequestBodyReuse(t *testing.T) {
+	var (
+		receivedBody1, receivedBody2 string
+		requests                     int
+	)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+
+		requests++
+		if requests == 1 {
+			receivedBody1 = string(b)
+			http.Redirect(w, r, "/", http.StatusPermanentRedirect) // body is not sent again on 302, but it is on 308.
+		} else {
+			receivedBody2 = string(b)
+		}
+	}))
+	defer server.Close()
+
+	body1 := "plain text body1"
+	body2 := "plain text body2"
+
+	r, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		server.URL,
+		io.NopCloser(strings.NewReader(body1)), // hide *strings.Reader from NewRequestWithContext()
+	)
+	require.NoError(t, err)
+	r.GetBody = func() (io.ReadCloser, error) {
+		return io.NopCloser(strings.NewReader(body2)), nil
+	}
+
+	client := http.Client{Transport: NewTransport(http.DefaultTransport)}
+
+	resp, err := client.Do(r)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	assert.Equal(t, body1, receivedBody1)
+	assert.Equal(t, body2, receivedBody2)
+	assert.Equal(t, 2, requests)
+}
+
+func TestHandleErrorOnGetBodyError(t *testing.T) {
+	var receivedBody string
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		b, err := io.ReadAll(r.Body)
+		assert.NoError(t, err)
+		receivedBody = string(b)
+		http.Redirect(w, r, "/", http.StatusPermanentRedirect) // body is not sent again on 302, but it is on 308.
+	}))
+	defer server.Close()
+
+	body := "plain text body"
+
+	r, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodPost,
+		server.URL,
+		io.NopCloser(strings.NewReader(body)), // hide *strings.Reader from NewRequestWithContext()
+	)
+	require.NoError(t, err)
+
+	getBodyErr := errors.New("GetBody error")
+	r.GetBody = func() (io.ReadCloser, error) {
+		return nil, getBodyErr
+	}
+
+	client := http.Client{Transport: NewTransport(http.DefaultTransport)}
+	_, err = client.Do(r) //nolint:bodyclose // no response is returned here
+	assert.ErrorContains(t, err, getBodyErr.Error())
+	assert.Equal(t, body, receivedBody) // got it one time
+	assert.Equal(t, 1, requests)
 }

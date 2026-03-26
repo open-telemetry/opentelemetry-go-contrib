@@ -760,9 +760,9 @@ func TestLoggerProviderOptions(t *testing.T) {
 }
 
 func Test_otlpGRPCLogExporter(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// TODO (#7446): Fix the flakiness on Windows.
-		t.Skip("Test is flaky on Windows.")
+	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
+		// TODO (#8115): Fix the flakiness on Windows and MacOS.
+		t.Skip("Test is flaky on Windows and MacOS.")
 	}
 	type args struct {
 		ctx        context.Context
@@ -855,7 +855,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := net.Listen("tcp4", "localhost:0")
+			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp4", "localhost:0")
 			require.NoError(t, err)
 
 			// We need to manually construct the endpoint using the port on which the server is listening.

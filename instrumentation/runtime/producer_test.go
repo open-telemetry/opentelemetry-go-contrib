@@ -26,7 +26,7 @@ func TestNewProducer(t *testing.T) {
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:    "go.opentelemetry.io/contrib/instrumentation/runtime",
-			Version: Version(),
+			Version: Version,
 		},
 		Metrics: []metricdata.Metrics{
 			{

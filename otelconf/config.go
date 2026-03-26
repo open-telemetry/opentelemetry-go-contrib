@@ -13,6 +13,7 @@ import (
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/propagation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -23,7 +24,10 @@ import (
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
 
-const envVarConfigFile = "OTEL_EXPERIMENTAL_CONFIG_FILE"
+const (
+	envVarConfigFileDeprecated = "OTEL_EXPERIMENTAL_CONFIG_FILE"
+	envVarConfigFile           = "OTEL_CONFIG_FILE"
+)
 
 // SDK is a struct that contains all the providers
 // configured via the configuration model.
@@ -31,6 +35,7 @@ type SDK struct {
 	meterProvider  metric.MeterProvider
 	tracerProvider trace.TracerProvider
 	loggerProvider log.LoggerProvider
+	propagator     propagation.TextMapPropagator
 	shutdown       shutdownFunc
 }
 
@@ -49,17 +54,26 @@ func (s *SDK) LoggerProvider() log.LoggerProvider {
 	return s.loggerProvider
 }
 
+// Propagator returns a configured propagation.TextMapPropagator.
+func (s *SDK) Propagator() propagation.TextMapPropagator {
+	return s.propagator
+}
+
 // Shutdown calls shutdown on all configured providers.
 func (s *SDK) Shutdown(ctx context.Context) error {
 	return s.shutdown(ctx)
 }
 
-var noopSDK = SDK{
-	loggerProvider: nooplog.LoggerProvider{},
-	meterProvider:  noopmetric.MeterProvider{},
-	tracerProvider: nooptrace.TracerProvider{},
-	shutdown:       func(context.Context) error { return nil },
-}
+var (
+	noopSDK = SDK{
+		loggerProvider: nooplog.LoggerProvider{},
+		meterProvider:  noopmetric.MeterProvider{},
+		tracerProvider: nooptrace.TracerProvider{},
+		propagator:     propagation.NewCompositeTextMapPropagator(),
+		shutdown:       func(context.Context) error { return nil },
+	}
+	errDeprecatedEnvVarUsed = errors.New("OTEL_EXPERIMENTAL_CONFIG_FILE is no longer supported, use OTEL_CONFIG_FILE instead")
+)
 
 func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error) {
 	b, err := os.ReadFile(filename)
@@ -78,10 +92,14 @@ func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error
 }
 
 // NewSDK creates SDK providers based on the configuration model. It checks the local environment and
-// uses the file set in the variable `OTEL_EXPERIMENTAL_CONFIG_FILE` to configure the SDK automatically.
-// Any file defined by `OTEL_EXPERIMENTAL_CONFIG_FILE` will supersede all files passed with
+// uses the file set in the variable `OTEL_CONFIG_FILE` to configure the SDK automatically.
+// Any file defined by `OTEL_CONFIG_FILE` will supersede all files passed with
 // [WithOpenTelemetryConfiguration].
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
+	_, ok := os.LookupEnv(envVarConfigFileDeprecated)
+	if ok {
+		return noopSDK, errDeprecatedEnvVarUsed
+	}
 	filename, ok := os.LookupEnv(envVarConfigFile)
 	if ok {
 		opt, err := parseConfigFileFromEnvironment(filename)
@@ -105,6 +123,11 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, err
 	}
 
+	p, err := newPropagator(o.opentelemetryConfig.Propagator)
+	if err != nil {
+		return noopSDK, err
+	}
+
 	mp, mpShutdown, err := meterProvider(o, r)
 	if err != nil {
 		return noopSDK, err
@@ -124,6 +147,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		meterProvider:  mp,
 		tracerProvider: tp,
 		loggerProvider: lp,
+		propagator:     p,
 		shutdown: func(ctx context.Context) error {
 			return errors.Join(mpShutdown(ctx), tpShutdown(ctx), lpShutdown(ctx))
 		},

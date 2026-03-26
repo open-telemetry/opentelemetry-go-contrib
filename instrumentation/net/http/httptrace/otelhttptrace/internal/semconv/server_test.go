@@ -18,7 +18,7 @@ import (
 )
 
 func TestHTTPServer_MetricAttributes(t *testing.T) {
-	defaultRequest, err := http.NewRequest("GET", "http://example.com/path?query=test", http.NoBody)
+	defaultRequest, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com/path?query=test", http.NoBody)
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -141,7 +141,7 @@ func TestRequestTraceAttrs_HTTPRoute(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/path/abc123", http.NoBody)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/path/abc123", http.NoBody)
 			req.Pattern = tt.pattern
 
 			attrs := (HTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
@@ -189,7 +189,7 @@ func TestRequestTraceAttrs_ClientIP(t *testing.T) {
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodGet, "/example", http.NoBody)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/example", http.NoBody)
 			req.RemoteAddr = "1.2.3.4:5678"
 
 			if tt.requestModifierFn != nil {

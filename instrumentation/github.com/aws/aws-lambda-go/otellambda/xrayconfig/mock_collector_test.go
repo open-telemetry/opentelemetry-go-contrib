@@ -126,7 +126,7 @@ func runMockCollectorAtEndpoint(t *testing.T, endpoint string) *mockCollector {
 }
 
 func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockCollector {
-	ln, err := net.Listen("tcp", mockConfig.endpoint)
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", mockConfig.endpoint)
 	if err != nil {
 		t.Fatalf("Failed to get an endpoint: %v", err)
 	}

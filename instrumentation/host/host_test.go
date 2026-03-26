@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/processconv"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/systemconv"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/processconv"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/systemconv"
 
 	"go.opentelemetry.io/contrib/instrumentation/host"
 )
@@ -31,7 +31,7 @@ func TestHostMetrics(t *testing.T) {
 	want := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:    host.ScopeName,
-			Version: host.Version(),
+			Version: host.Version,
 		},
 		Metrics: []metricdata.Metrics{
 			{

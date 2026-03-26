@@ -49,12 +49,12 @@ func newConfig(opts ...Option) config {
 
 	cfg.Meter = cfg.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 	)
 
 	cfg.Tracer = cfg.TracerProvider.Tracer(
 		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
+		trace.WithInstrumentationVersion(Version),
 	)
 	return cfg
 }

@@ -20,7 +20,7 @@ func rolldice(w http.ResponseWriter, r *http.Request) {
 	} else {
 		msg = "Anonymous player is rolling the dice"
 	}
-	log.Printf("%s, result: %d", msg, roll)
+	log.Printf("%s, result: %d", msg, roll) //nolint:gosec // G706: In a real production environment, you should sanitize the player name.
 
 	resp := strconv.Itoa(roll) + "\n"
 	if _, err := io.WriteString(w, resp); err != nil {

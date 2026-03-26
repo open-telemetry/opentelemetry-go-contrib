@@ -46,11 +46,11 @@ func (otts otelTraceState) serialize() string {
 	}
 
 	if otts.hasPValue() {
-		_, _ = sb.WriteString(fmt.Sprintf("p:%d", otts.pvalue))
+		_, _ = fmt.Fprintf(&sb, "p:%d", otts.pvalue)
 	}
 	if otts.hasRValue() {
 		semi()
-		_, _ = sb.WriteString(fmt.Sprintf("r:%d", otts.rvalue))
+		_, _ = fmt.Fprintf(&sb, "r:%d", otts.rvalue)
 	}
 	for _, unk := range otts.unknown {
 		ex := 0
@@ -200,8 +200,7 @@ func parseNumber(key, input string, maximum uint8) (uint8, error) {
 	if value > uint64(maximum) {
 		return maximum + 1, parseError(key, strconv.ErrRange)
 	}
-	// `value` is strictly less then the uint8 maximum. This cast is safe.
-	return uint8(value), nil
+	return uint8(value), nil //nolint:gosec // `value` is strictly less then the uint8 maximum. This cast is safe.
 }
 
 func parseError(key string, err error) error {

@@ -47,6 +47,11 @@ func TestCreateConfig(t *testing.T) {
 			wantErrContains: "could not use client certificate: open nowhere.crt:",
 		},
 		{
+			name:            "clientkey-without-clientcert",
+			clientKeyFile:   ptr("nowhere.key"),
+			wantErrContains: "client key was provided but no client certificate was provided",
+		},
+		{
 			name:            "bad-cacert-file",
 			caCertFile:      ptr(filepath.Join("..", "..", "testdata", "bad_cert.crt")),
 			wantErrContains: "could not create certificate authority chain from certificate",

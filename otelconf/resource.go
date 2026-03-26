@@ -19,25 +19,21 @@ func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 			opts = append(opts, resource.WithContainer())
 		}
 		if d.Host != nil {
-			opts = append(opts, resource.WithHost(), resource.WithHostID())
+			opts = append(opts, resource.WithHost(), resource.WithOS())
 		}
 		if d.Process != nil {
 			opts = append(opts, resource.WithProcess())
 		}
-		// TODO: implement service:
-		// Waiting on https://github.com/open-telemetry/opentelemetry-go/pull/7642
+		if d.Service != nil {
+			opts = append(opts, resource.WithService())
+		}
 	}
 	return opts
 }
 
-func newResource(res OpenTelemetryConfigurationResource) (*resource.Resource, error) {
-	if res == nil {
+func newResource(r *Resource) (*resource.Resource, error) {
+	if r == nil {
 		return resource.Default(), nil
-	}
-
-	r, ok := res.(*ResourceJson)
-	if !ok {
-		return nil, newErrInvalid("resource")
 	}
 
 	attrs := make([]attribute.KeyValue, 0, len(r.Attributes))

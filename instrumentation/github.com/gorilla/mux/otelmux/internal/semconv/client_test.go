@@ -106,9 +106,9 @@ func TestHTTPClientStatus(t *testing.T) {
 }
 
 func TestHTTPClient_MetricAttributes(t *testing.T) {
-	defaultRequest, err := http.NewRequest("GET", "http://example.com/path?query=test", http.NoBody)
+	defaultRequest, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com/path?query=test", http.NoBody)
 	require.NoError(t, err)
-	httpsRequest, err := http.NewRequest("GET", "https://example.com/path?query=test", http.NoBody)
+	httpsRequest, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/path?query=test", http.NoBody)
 	require.NoError(t, err)
 
 	tests := []struct {

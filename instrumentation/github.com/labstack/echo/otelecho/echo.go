@@ -37,7 +37,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		ScopeName,
-		oteltrace.WithInstrumentationVersion(Version()),
+		oteltrace.WithInstrumentationVersion(Version),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -54,7 +54,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 
 	meter := cfg.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 	)
 
 	semconvSrv := semconv.NewHTTPServer(meter)
@@ -108,9 +108,6 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 
 			// Record the server-side attributes.
 			var additionalAttributes []attribute.KeyValue
-			if path := c.Path(); path != "" {
-				additionalAttributes = append(additionalAttributes, semconvSrv.Route(path))
-			}
 			if cfg.MetricAttributeFn != nil {
 				additionalAttributes = append(additionalAttributes, cfg.MetricAttributeFn(request)...)
 			}
@@ -124,11 +121,12 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 				MetricAttributes: semconv.MetricAttributes{
 					Req:                  request,
 					StatusCode:           status,
+					Route:                c.Path(),
 					AdditionalAttributes: additionalAttributes,
 				},
 				MetricData: semconv.MetricData{
-					RequestSize: request.ContentLength,
-					ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Millisecond),
+					RequestSize:     request.ContentLength,
+					RequestDuration: time.Since(requestStartTime),
 				},
 			})
 

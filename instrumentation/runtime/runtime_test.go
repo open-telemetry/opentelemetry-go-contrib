@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.37.0/goconv"
+	"go.opentelemetry.io/otel/semconv/v1.40.0/goconv"
 )
 
 func TestRefreshGoCollector(t *testing.T) {
@@ -78,7 +78,7 @@ func TestRuntimeWithLimit(t *testing.T) {
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
 			Name:    "go.opentelemetry.io/contrib/instrumentation/runtime",
-			Version: Version(),
+			Version: Version,
 		},
 		Metrics: []metricdata.Metrics{
 			{
