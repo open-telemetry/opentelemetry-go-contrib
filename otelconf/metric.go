@@ -196,11 +196,11 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPHttpMetricExpor
 	}
 	if otlpConfig.TemporalityPreference != nil {
 		switch *otlpConfig.TemporalityPreference {
-		case "delta":
+		case ExporterTemporalityPreferenceDelta:
 			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(deltaTemporality))
-		case "cumulative":
+		case ExporterTemporalityPreferenceCumulative:
 			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(cumulativeTemporality))
-		case "low_memory":
+		case ExporterTemporalityPreferenceLowMemory:
 			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(lowMemory))
 		default:
 			return nil, newErrInvalid(fmt.Sprintf("unsupported temporality preference %q", *otlpConfig.TemporalityPreference))
@@ -262,11 +262,11 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPGrpcMetricExpor
 	}
 	if otlpConfig.TemporalityPreference != nil {
 		switch *otlpConfig.TemporalityPreference {
-		case "delta":
+		case ExporterTemporalityPreferenceDelta:
 			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(deltaTemporality))
-		case "cumulative":
+		case ExporterTemporalityPreferenceCumulative:
 			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(cumulativeTemporality))
-		case "low_memory":
+		case ExporterTemporalityPreferenceLowMemory:
 			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(lowMemory))
 		default:
 			return nil, newErrInvalid(fmt.Sprintf("unsupported temporality preference %q", *otlpConfig.TemporalityPreference))
