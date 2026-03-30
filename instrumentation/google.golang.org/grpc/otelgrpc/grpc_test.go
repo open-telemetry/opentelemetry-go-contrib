@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"google.golang.org/grpc"
@@ -68,13 +67,4 @@ func doCalls(ctx context.Context, client pb.TestServiceClient) {
 	test.DoClientStreaming(ctx, client)
 	test.DoServerStreaming(ctx, client)
 	test.DoPingPong(ctx, client)
-}
-
-func findAttribute(kvs []attribute.KeyValue, key attribute.Key) (attribute.KeyValue, bool) {
-	for _, kv := range kvs {
-		if kv.Key == key {
-			return kv, true
-		}
-	}
-	return attribute.KeyValue{}, false
 }
