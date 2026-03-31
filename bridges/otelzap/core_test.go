@@ -44,7 +44,7 @@ type captureLogger struct {
 	records []capturedRecord
 }
 
-func (l *captureLogger) Enabled(context.Context, log.EnabledParameters) bool { return true }
+func (*captureLogger) Enabled(context.Context, log.EnabledParameters) bool { return true }
 
 func (l *captureLogger) Emit(_ context.Context, record log.Record) {
 	attrs := make([]log.KeyValue, 0, record.AttributesLen())
@@ -560,13 +560,13 @@ func TestCoreWithExceptionStacktrace(t *testing.T) {
 		logtest.Scope{Name: "name"}: {
 			{
 				Body:         log.StringValue(testMessage),
-					Severity:     log.SeverityError,
-					SeverityText: zap.ErrorLevel.String(),
-					Attributes: []log.KeyValue{
-						log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
-					},
+				Severity:     log.SeverityError,
+				SeverityText: zap.ErrorLevel.String(),
+				Attributes: []log.KeyValue{
+					log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
 				},
 			},
+		},
 	}
 	logtest.AssertEqual(t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
@@ -641,26 +641,26 @@ func TestCoreWithErrorStacktraceDefault(t *testing.T) {
 		logtest.Scope{Name: "name"}: {
 			{
 				Body:         log.StringValue(testMessage),
-					Severity:     log.SeverityError,
-					SeverityText: zap.ErrorLevel.String(),
-					Attributes: []log.KeyValue{
-						log.String("error", "test error"),
-						log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
-						log.String(string(semconv.ExceptionMessageKey), "test error"),
-					},
+				Severity:     log.SeverityError,
+				SeverityText: zap.ErrorLevel.String(),
+				Attributes: []log.KeyValue{
+					log.String("error", "test error"),
+					log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
+					log.String(string(semconv.ExceptionMessageKey), "test error"),
 				},
 			},
+		},
 	}
 	logtest.AssertEqual(t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil
 			cp.Timestamp = time.Time{}
-				for i, attr := range cp.Attributes {
-					if attr.Key == string(semconv.ExceptionStacktraceKey) {
-						cp.Attributes[i].Value = log.StringValue("stacktrace")
-					}
+			for i, attr := range cp.Attributes {
+				if attr.Key == string(semconv.ExceptionStacktraceKey) {
+					cp.Attributes[i].Value = log.StringValue("stacktrace")
 				}
+			}
 			return cp
 		}),
 	)
