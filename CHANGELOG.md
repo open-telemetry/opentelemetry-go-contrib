@@ -13,6 +13,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `Resource` method to `SDK` in `go.opentelemetry.io/contrib/otelconf/v0.3.0` to expose the resolved SDK resource from declarative configuration. (#8660)
 - Configuration file can now be set via `OTEL_CONFIG_FILE` in `go.opentelemetry.io/contrib/otelconf`. (#8639)
 - Added support for `service` resource detector in `go.opentelemetry.io/contrib/otelconf`. (#8674)
+- Added support for `attribute_count_limit` and `attribute_value_length_limit` in tracer provider configuration in `go.opentelemetry.io/contrib/otelconf`. (#8687)
+- Added support for `attribute_count_limit` and `attribute_value_length_limit` in logger provider configuration in `go.opentelemetry.io/contrib/otelconf`. (#8686)
+- Added support for `server.address` and `server.port` attributes in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8723)
+- Support `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. Supported values are `rpc` (default), `rpc/dup` and `rpc/old`. (#8726)
 
 ### Changed
 
@@ -21,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Limit the request body size at 1MB in `go.opentelemetry.io/contrib/zpages`. (#8656)
+- Fix server spans using the client's address and port for `server.address` and `server.port` attributes in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8723)
 
 ### Removed
 
