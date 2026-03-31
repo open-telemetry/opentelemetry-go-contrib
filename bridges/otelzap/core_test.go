@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
@@ -31,6 +32,55 @@ var (
 		Message: testMessage,
 	}
 )
+
+type capturedRecord struct {
+	err   error
+	attrs []log.KeyValue
+}
+
+type captureLogger struct {
+	embedded.Logger
+	mu      sync.Mutex
+	records []capturedRecord
+}
+
+func (l *captureLogger) Enabled(context.Context, log.EnabledParameters) bool { return true }
+
+func (l *captureLogger) Emit(_ context.Context, record log.Record) {
+	attrs := make([]log.KeyValue, 0, record.AttributesLen())
+	record.WalkAttributes(func(kv log.KeyValue) bool {
+		attrs = append(attrs, kv)
+		return true
+	})
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.records = append(l.records, capturedRecord{
+		err:   record.Err(),
+		attrs: attrs,
+	})
+}
+
+func (l *captureLogger) lastRecord(t *testing.T) capturedRecord {
+	t.Helper()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	require.NotEmpty(t, l.records)
+	return l.records[len(l.records)-1]
+}
+
+type captureProvider struct {
+	embedded.LoggerProvider
+	logger *captureLogger
+}
+
+func newCaptureProvider() *captureProvider {
+	return &captureProvider{logger: &captureLogger{}}
+}
+
+func (p *captureProvider) Logger(string, ...log.LoggerOption) log.Logger {
+	return p.logger
+}
 
 func TestCore(t *testing.T) {
 	rec := logtest.NewRecorder()
@@ -77,6 +127,7 @@ func TestCore(t *testing.T) {
 					SeverityText: zap.ErrorLevel.String(),
 					Attributes: []log.KeyValue{
 						log.String("error", "test error"),
+						log.String(string(semconv.ExceptionMessageKey), "test error"),
 					},
 				},
 			},
@@ -104,6 +155,7 @@ func TestCore(t *testing.T) {
 					SeverityText: zap.ErrorLevel.String(),
 					Attributes: []log.KeyValue{
 						log.String("db", "test error"),
+						log.String(string(semconv.ExceptionMessageKey), "test error"),
 					},
 				},
 			},
@@ -135,10 +187,7 @@ func TestCore(t *testing.T) {
 					Body:         log.StringValue(testMessage),
 					Severity:     log.SeverityError,
 					SeverityText: zap.ErrorLevel.String(),
-					Attributes: []log.KeyValue{
-						log.String(string(semconv.ExceptionMessageKey), "test error"),
-						log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"),
-					},
+					Attributes:   []log.KeyValue{},
 				},
 			},
 		}
@@ -170,8 +219,6 @@ func TestCore(t *testing.T) {
 					Severity:     log.SeverityError,
 					SeverityText: zap.ErrorLevel.String(),
 					Attributes: []log.KeyValue{
-						log.String(string(semconv.ExceptionMessageKey), "test error"),
-						log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"),
 						log.String("db", "test error"),
 					},
 				},
@@ -299,6 +346,37 @@ func TestCore(t *testing.T) {
 				return cp
 			}),
 		)
+	})
+}
+
+func TestCoreErrorFieldSetErrBehavior(t *testing.T) {
+	t.Run("DefaultEmitsExceptionMessageWithoutSetErr", func(t *testing.T) {
+		p := newCaptureProvider()
+		logger := zap.New(NewCore(loggerName, WithLoggerProvider(p)))
+
+		logger.Error(testMessage, zap.Error(errors.New("test error")))
+
+		r := p.logger.lastRecord(t)
+		require.NoError(t, r.err)
+		require.Contains(t, r.attrs, log.String("error", "test error"))
+		require.Contains(t, r.attrs, log.String(string(semconv.ExceptionMessageKey), "test error"))
+	})
+
+	t.Run("OptionEnabledUsesSetErr", func(t *testing.T) {
+		p := newCaptureProvider()
+		logger := zap.New(NewCore(
+			loggerName,
+			WithLoggerProvider(p),
+			WithExceptionSemanticConventions(),
+		))
+
+		logger.Error(testMessage, zap.Error(errors.New("test error")))
+
+		r := p.logger.lastRecord(t)
+		require.EqualError(t, r.err, "test error")
+		require.NotContains(t, r.attrs, log.String("error", "test error"))
+		require.NotContains(t, r.attrs, log.String(string(semconv.ExceptionMessageKey), "test error"))
+		require.NotContains(t, r.attrs, log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"))
 	})
 }
 
@@ -482,15 +560,13 @@ func TestCoreWithExceptionStacktrace(t *testing.T) {
 		logtest.Scope{Name: "name"}: {
 			{
 				Body:         log.StringValue(testMessage),
-				Severity:     log.SeverityError,
-				SeverityText: zap.ErrorLevel.String(),
-				Attributes: []log.KeyValue{
-					log.String(string(semconv.ExceptionMessageKey), "test error"),
-					log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"),
-					log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
+					Severity:     log.SeverityError,
+					SeverityText: zap.ErrorLevel.String(),
+					Attributes: []log.KeyValue{
+						log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
+					},
 				},
 			},
-		},
 	}
 	logtest.AssertEqual(t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
@@ -565,25 +641,26 @@ func TestCoreWithErrorStacktraceDefault(t *testing.T) {
 		logtest.Scope{Name: "name"}: {
 			{
 				Body:         log.StringValue(testMessage),
-				Severity:     log.SeverityError,
-				SeverityText: zap.ErrorLevel.String(),
-				Attributes: []log.KeyValue{
-					log.String("error", "test error"),
-					log.String(string(semconv.CodeStacktraceKey), "stacktrace"),
+					Severity:     log.SeverityError,
+					SeverityText: zap.ErrorLevel.String(),
+					Attributes: []log.KeyValue{
+						log.String("error", "test error"),
+						log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
+						log.String(string(semconv.ExceptionMessageKey), "test error"),
+					},
 				},
 			},
-		},
 	}
 	logtest.AssertEqual(t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil
 			cp.Timestamp = time.Time{}
-			for i, attr := range cp.Attributes {
-				if attr.Key == string(semconv.CodeStacktraceKey) {
-					cp.Attributes[i].Value = log.StringValue("stacktrace")
+				for i, attr := range cp.Attributes {
+					if attr.Key == string(semconv.ExceptionStacktraceKey) {
+						cp.Attributes[i].Value = log.StringValue("stacktrace")
+					}
 				}
-			}
 			return cp
 		}),
 	)
