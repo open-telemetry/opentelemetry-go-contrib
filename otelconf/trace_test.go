@@ -109,11 +109,29 @@ func TestTracerProvider(t *testing.T) {
 			wantProvider: noop.NewTracerProvider(),
 			wantErr:      errInvalidSamplerConfiguration,
 		},
+		{
+			name: "with-limits",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					TracerProvider: &TracerProvider{
+						Limits: &SpanLimits{
+							AttributeCountLimit:       ptr(50),
+							AttributeValueLengthLimit: ptr(100),
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tp, shutdown, err := tracerProvider(tt.cfg, resource.Default())
-			require.Equal(t, tt.wantProvider, tp)
+			if tt.wantProvider != nil {
+				require.Equal(t, tt.wantProvider, tp)
+			} else {
+				require.NotNil(t, tp)
+				require.IsType(t, &sdktrace.TracerProvider{}, tp)
+			}
 			assert.ErrorIs(t, err, tt.wantErr)
 			require.NoError(t, shutdown(t.Context()))
 		})
@@ -168,6 +186,51 @@ func TestTracerProviderOptions(t *testing.T) {
 	// by configuration, e.g. the resource is always defined via
 	// configuration.
 	assert.NotContains(t, buf.String(), "foo")
+}
+
+func TestSpanProcessorLimits(t *testing.T) {
+	tests := []struct {
+		name               string
+		limits             SpanLimits
+		wantAdditionalOpts int
+	}{
+		{
+			name:               "no-limits",
+			limits:             SpanLimits{},
+			wantAdditionalOpts: 0,
+		},
+		{
+			name: "attribute-count-limit-only",
+			limits: SpanLimits{
+				AttributeCountLimit: ptr(50),
+			},
+			wantAdditionalOpts: 1,
+		},
+		{
+			name: "attribute-value-length-limit-only",
+			limits: SpanLimits{
+				AttributeValueLengthLimit: ptr(100),
+			},
+			wantAdditionalOpts: 1,
+		},
+		{
+			name: "both-limits",
+			limits: SpanLimits{
+				AttributeCountLimit:       ptr(50),
+				AttributeValueLengthLimit: ptr(100),
+			},
+			wantAdditionalOpts: 1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			initialOpts := []sdktrace.TracerProviderOption{}
+			result := spanProcessorLimits(initialOpts, tt.limits)
+
+			assert.Len(t, result, tt.wantAdditionalOpts, "unexpected number of options returned")
+		})
+	}
 }
 
 func TestSpanProcessor(t *testing.T) {

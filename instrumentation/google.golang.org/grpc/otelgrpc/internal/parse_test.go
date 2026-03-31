@@ -58,3 +58,57 @@ func TestParseFullMethod(t *testing.T) {
 		})
 	}
 }
+
+func TestParseFullMethodOld(t *testing.T) {
+	cases := []struct {
+		input         string
+		expectedName  string
+		expectedAttrs []attribute.KeyValue
+	}{
+		{
+			input:        "no_slash/method",
+			expectedName: "no_slash/method",
+		},
+		{
+			input:        "/slash_but_no_second_slash",
+			expectedName: "slash_but_no_second_slash",
+			expectedAttrs: []attribute.KeyValue{
+				attribute.String("rpc.system", "grpc"),
+			},
+		},
+		{
+			input:        "/service_only/",
+			expectedName: "service_only/",
+			expectedAttrs: []attribute.KeyValue{
+				attribute.String("rpc.system", "grpc"),
+				attribute.String("rpc.service", "service_only"),
+				attribute.String("rpc.method", ""),
+			},
+		},
+		{
+			input:        "//method_only",
+			expectedName: "/method_only",
+			expectedAttrs: []attribute.KeyValue{
+				attribute.String("rpc.system", "grpc"),
+				attribute.String("rpc.service", ""),
+				attribute.String("rpc.method", "method_only"),
+			},
+		},
+		{
+			input:        "/service/method",
+			expectedName: "service/method",
+			expectedAttrs: []attribute.KeyValue{
+				attribute.String("rpc.system", "grpc"),
+				attribute.String("rpc.service", "service"),
+				attribute.String("rpc.method", "method"),
+			},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.input, func(t *testing.T) {
+			name, attrs := ParseFullMethodOld(tc.input)
+			assert.Equal(t, tc.expectedName, name)
+			assert.Equal(t, tc.expectedAttrs, attrs)
+		})
+	}
+}
