@@ -381,7 +381,7 @@ func prometheusReader(ctx context.Context, prometheusConfig *ExperimentalPrometh
 	}
 
 	addr := net.JoinHostPort(host, strconv.Itoa(*prometheusConfig.Port))
-	lis, err := net.Listen("tcp", addr)
+	lis, err := (&net.ListenConfig{}).Listen(ctx, "tcp", addr)
 	if err != nil {
 		return nil, errors.Join(
 			fmt.Errorf("binding address %s for Prometheus exporter: %w", addr, err),

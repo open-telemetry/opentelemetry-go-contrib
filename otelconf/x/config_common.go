@@ -147,7 +147,7 @@ func (e *errInvalid) Is(target error) bool {
 	if !ok {
 		return false
 	}
-	return reflect.TypeOf(e.Identifier) == reflect.TypeOf(t.Identifier)
+	return reflect.TypeOf(e) == reflect.TypeOf(t)
 }
 
 // newErrInvalid creates a new error indicating that an error occurred due to misconfiguration.
