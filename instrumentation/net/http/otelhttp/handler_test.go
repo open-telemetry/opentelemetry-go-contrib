@@ -124,21 +124,21 @@ func TestHandlerBasics(t *testing.T) {
 		WithPropagators(propagation.TraceContext{}),
 	)
 
-	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", strings.NewReader("foo"))
-	if err != nil {
-		t.Fatal(err)
-	}
 	// set a custom start time 10 minutes in the past.
 	startTime := time.Now().Add(-10 * time.Minute)
-	r = r.WithContext(ContextWithStartTime(r.Context(), startTime))
+	ctx := ContextWithStartTime(t.Context(), startTime)
+
+	r := httptest.NewRequestWithContext(ctx, http.MethodGet, "/test", strings.NewReader("foo"))
+	r.Pattern = "/test"
 	h.ServeHTTP(rr, r)
 
 	rm := metricdata.ResourceMetrics{}
-	err = reader.Collect(t.Context(), &rm)
+	err := reader.Collect(t.Context(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	attrs := attribute.NewSet(
 		attribute.String("http.request.method", "GET"),
+		attribute.String("http.route", "/test"),
 		attribute.Int64("http.response.status_code", 200),
 		attribute.String("network.protocol.name", "http"),
 		attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
