@@ -8,7 +8,7 @@ require (
 	github.com/atombender/go-jsonschema v0.23.0
 	github.com/client9/misspell v0.3.4
 	github.com/golangci/golangci-lint/v2 v2.11.4
-	github.com/itchyny/gojq v0.12.18
+	github.com/itchyny/gojq v0.12.19
 	github.com/jcchavezs/porto v0.7.0
 	github.com/stretchr/testify v1.11.1
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
