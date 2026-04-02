@@ -1504,7 +1504,7 @@ type TracerProvider struct {
 	// Configure the sampler.
 	// If omitted, parent based sampler with a root of always_on is used.
 	//
-	Sampler *Sampler `json:"sampler,omitempty" yaml:"sampler,omitempty" mapstructure:"sampler,omitempty"`
+	Sampler *Sampler `json:"sampler,omitempty,omitzero" yaml:"sampler,omitempty" mapstructure:"sampler,omitempty"`
 }
 
 type View struct {
