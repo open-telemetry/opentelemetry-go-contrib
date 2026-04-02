@@ -1631,8 +1631,9 @@ func TestPrometheusReaderDotStyleLabels(t *testing.T) {
 	require.NoError(t, err)
 	body := buf.String()
 
-	assert.Contains(t, body, `"service.name"="test-svc"`)
+	assert.Contains(t, body, `target_info{"service.name"="test-svc"}`)
 	assert.NotContains(t, body, "service_name")
+	assert.NotContains(t, body, "target.info")
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {
