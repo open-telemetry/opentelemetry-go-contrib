@@ -142,12 +142,9 @@ func (e *errInvalid) Error() string {
 	return "invalid config: " + e.Identifier
 }
 
-func (e *errInvalid) Is(target error) bool {
+func (*errInvalid) Is(target error) bool {
 	_, ok := target.(*errInvalid)
-	if !ok {
-		return false
-	}
-	return reflect.TypeFor[*errInvalid]() == reflect.TypeFor[*errInvalid]()
+	return ok
 }
 
 // newErrInvalid creates a new error indicating that an error occurred due to misconfiguration.
