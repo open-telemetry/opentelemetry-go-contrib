@@ -143,11 +143,11 @@ func (e *errInvalid) Error() string {
 }
 
 func (e *errInvalid) Is(target error) bool {
-	t, ok := target.(*errInvalid)
+	_, ok := target.(*errInvalid)
 	if !ok {
 		return false
 	}
-	return reflect.TypeOf(e) == reflect.TypeOf(t)
+	return reflect.TypeFor[*errInvalid]() == reflect.TypeFor[*errInvalid]()
 }
 
 // newErrInvalid creates a new error indicating that an error occurred due to misconfiguration.
