@@ -61,6 +61,19 @@ func TestExtractValidTraceContextEnvCarrier(t *testing.T) {
 				Remote:     true,
 			}),
 		},
+		{
+			name: "lowercase env names",
+			envs: map[string]string{
+				"traceparent": "00-000000000000007b00000000000001c8-000000000000007b-00",
+				"tracestate":  stateStr,
+			},
+			want: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    traceID,
+				SpanID:     spanID,
+				TraceState: state,
+				Remote:     true,
+			}),
+		},
 	}
 
 	for _, tc := range tests {
@@ -134,12 +147,13 @@ func TestInjectTraceContextEnvCarrier(t *testing.T) {
 }
 
 func TestCarrierKeys(t *testing.T) {
-	t.Setenv("TRACEPARENT", "value")
+	t.Setenv("traceparent", "value")
 
 	c := envcar.Carrier{}
 	keys := c.Keys()
 
 	assert.Contains(t, keys, "TRACEPARENT")
+	assert.NotContains(t, keys, "traceparent")
 }
 
 func TestCarrierSetNilFunc(_ *testing.T) {
@@ -147,8 +161,8 @@ func TestCarrierSetNilFunc(_ *testing.T) {
 	c.Set("key", "value") // should not panic, just no-op
 }
 
-func TestCarrierGetCaseInsensitive(t *testing.T) {
-	t.Setenv("TRACEPARENT", "myvalue")
+func TestCarrierGetNormalizesKey(t *testing.T) {
+	t.Setenv("traceparent", "myvalue")
 
 	c := envcar.Carrier{}
 	assert.Equal(t, "myvalue", c.Get("traceparent"))
