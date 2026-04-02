@@ -1,4 +1,4 @@
-module go.opentelemetry.io/contrib/processors/eventbridge
+module go.opentelemetry.io/contrib/processors/spaneventbridge
 
 go 1.25.0
 

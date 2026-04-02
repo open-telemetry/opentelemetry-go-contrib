@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package eventbridge_test
+package spaneventbridge_test
 
 import (
 	"context"
@@ -10,13 +10,13 @@ import (
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
-	"go.opentelemetry.io/contrib/processors/eventbridge"
+	"go.opentelemetry.io/contrib/processors/spaneventbridge"
 )
 
 func Example() {
 	tp := sdktrace.NewTracerProvider()
 	lp := sdklog.NewLoggerProvider(
-		sdklog.WithProcessor(eventbridge.NewLogProcessor()),
+		sdklog.WithProcessor(spaneventbridge.NewLogProcessor()),
 	)
 
 	ctx, span := tp.Tracer("Example").Start(context.Background(), "operation")

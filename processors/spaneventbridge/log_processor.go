@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package eventbridge // import "go.opentelemetry.io/contrib/processors/eventbridge"
+package spaneventbridge // import "go.opentelemetry.io/contrib/processors/spaneventbridge"
 
 import (
 	"context"
