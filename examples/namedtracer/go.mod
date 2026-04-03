@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/examples/namedtracer
 
-go 1.25.0
+go 1.25.8
 
 require (
 	github.com/go-logr/stdr v1.2.2

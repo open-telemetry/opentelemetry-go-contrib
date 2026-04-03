@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/examples/dice/instrumented
 
-go 1.25.0
+go 1.25.8
 
 require (
 	go.opentelemetry.io/contrib/bridges/otelslog v0.17.0
