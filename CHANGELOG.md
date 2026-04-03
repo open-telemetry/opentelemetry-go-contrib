@@ -21,7 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support for `attribute_count_limit` and `attribute_value_length_limit` in tracer provider configuration in `go.opentelemetry.io/contrib/otelconf`. (#8687)
 - Add support for `attribute_count_limit` and `attribute_value_length_limit` in logger provider configuration in `go.opentelemetry.io/contrib/otelconf`. (#8686)
 - Add support for `server.address` and `server.port` attributes in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8723)
-- Add suport for `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. Supported values are `rpc` (default), `rpc/dup` and `rpc/old`. (#8726)
+- Add support for `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. Supported values are `rpc` (default), `rpc/dup` and `rpc/old`. (#8726)
 - Add the `http.route` metric attribute to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8632)
 
 ### Changed
