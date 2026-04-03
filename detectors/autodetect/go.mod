@@ -5,11 +5,11 @@ go 1.25.0
 require (
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.4.0
-	go.opentelemetry.io/contrib/detectors/aws/ecs v1.42.0
-	go.opentelemetry.io/contrib/detectors/aws/eks v1.42.0
+	go.opentelemetry.io/contrib/detectors/aws/ecs v1.43.0
+	go.opentelemetry.io/contrib/detectors/aws/eks v1.43.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.67.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.14.0
-	go.opentelemetry.io/contrib/detectors/gcp v1.42.0
+	go.opentelemetry.io/contrib/detectors/gcp v1.43.0
 	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/sdk v1.43.0
 )
