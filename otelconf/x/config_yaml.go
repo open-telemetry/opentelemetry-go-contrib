@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf // import "go.opentelemetry.io/contrib/otelconf"
+package x // import "go.opentelemetry.io/contrib/otelconf/x"
 
 import (
 	"errors"
@@ -27,6 +27,31 @@ func hasYAMLMapKey(node *yaml.Node, key string) bool {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
+func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
+	type Plain ExperimentalResourceDetector
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	// container can be nil, must check and set here
+	if hasYAMLMapKey(node, "container") && plain.Container == nil {
+		plain.Container = ExperimentalContainerResourceDetector{}
+	}
+	// host can be nil, must check and set here
+	if hasYAMLMapKey(node, "host") && plain.Host == nil {
+		plain.Host = ExperimentalHostResourceDetector{}
+	}
+	// process can be nil, must check and set here
+	if hasYAMLMapKey(node, "process") && plain.Process == nil {
+		plain.Process = ExperimentalProcessResourceDetector{}
+	}
+	// service can be nil, must check and set here
+	if hasYAMLMapKey(node, "service") && plain.Service == nil {
+		plain.Service = ExperimentalServiceResourceDetector{}
+	}
+	*j = ExperimentalResourceDetector(plain)
+	return nil
+}
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
@@ -51,15 +76,16 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	type Plain OpenTelemetryConfiguration
 	type shadow struct {
 		Plain
-		LogLevel        *SeverityNumber  `yaml:"log_level,omitempty"`
-		AttributeLimits *AttributeLimits `yaml:"attribute_limits,omitempty"`
-		Disabled        *bool            `yaml:"disabled,omitempty"`
-		FileFormat      string           `yaml:"file_format"`
-		LoggerProvider  *LoggerProvider  `yaml:"logger_provider,omitempty"`
-		MeterProvider   *MeterProvider   `yaml:"meter_provider,omitempty"`
-		TracerProvider  *TracerProvider  `yaml:"tracer_provider,omitempty"`
-		Propagator      *Propagator      `yaml:"propagator,omitempty"`
-		Resource        *Resource        `yaml:"resource,omitempty"`
+		LogLevel                   *SeverityNumber              `yaml:"log_level,omitempty"`
+		AttributeLimits            *AttributeLimits             `yaml:"attribute_limits,omitempty"`
+		Disabled                   *bool                        `yaml:"disabled,omitempty"`
+		FileFormat                 string                       `yaml:"file_format"`
+		LoggerProvider             *LoggerProvider              `yaml:"logger_provider,omitempty"`
+		MeterProvider              *MeterProvider               `yaml:"meter_provider,omitempty"`
+		TracerProvider             *TracerProvider              `yaml:"tracer_provider,omitempty"`
+		Propagator                 *Propagator                  `yaml:"propagator,omitempty"`
+		Resource                   *Resource                    `yaml:"resource,omitempty"`
+		InstrumentationDevelopment *ExperimentalInstrumentation `yaml:"instrumentation/development"`
 	}
 	var sh shadow
 
@@ -93,6 +119,9 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	}
 	if sh.Resource != nil {
 		sh.Plain.Resource = sh.Resource
+	}
+	if sh.InstrumentationDevelopment != nil {
+		sh.Plain.InstrumentationDevelopment = sh.InstrumentationDevelopment
 	}
 
 	if sh.LogLevel != nil {
@@ -472,6 +501,25 @@ func (j *InstrumentType) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	*j = InstrumentType(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *ExperimentalPeerServiceMapping) UnmarshalYAML(node *yaml.Node) error {
+	if !hasYAMLMapKey(node, "peer") {
+		return newErrRequired(j, "peer")
+	}
+	if !hasYAMLMapKey(node, "service") {
+		return newErrRequired(j, "service")
+	}
+
+	type Plain ExperimentalPeerServiceMapping
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	*j = ExperimentalPeerServiceMapping(plain)
 	return nil
 }
 
