@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
-## [1.44.0/2.5.0/0.68.0/0.37.0/0.23.0/0.18.0/0.16.0/0.15.0] - 2026-03-06
+## [1.43.0/2.5.0/0.68.0/0.37.0/0.23.0/0.18.0/0.16.0/0.15.0] - 2026-04-03
 
 ### Added
 
