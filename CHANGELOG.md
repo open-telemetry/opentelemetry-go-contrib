@@ -22,7 +22,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Prepend `_` to the normalized environment variable name when the key starts with a digit in `go.opentelemetry.io/contrib/propagators/envcar`, ensuring POSIX compliance. (#8678)
-- Moved experimental types from `go.opentelemetry.io/contrib/otelconf` to `go.opentelemetry.io/contrib/otelconf/x`. (#8529)
+- Move experimental types from `go.opentelemetry.io/contrib/otelconf` to `go.opentelemetry.io/contrib/otelconf/x`. (#8529)
+- Normalize cached environment variable names in `go.opentelemetry.io/contrib/propagators/envcar`, aligning `Carrier.Keys` output with the carrier's normalized key format. (#8761)
 
 ### Fixed
 
