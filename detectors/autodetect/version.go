@@ -4,4 +4,4 @@
 package autodetect // import "go.opentelemetry.io/contrib/detectors/autodetect"
 
 // Version is the current release version of the autodetect detector.
-const Version = "0.14.0"
+const Version = "0.15.0"
