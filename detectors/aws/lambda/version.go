@@ -4,4 +4,4 @@
 package lambda // import "go.opentelemetry.io/contrib/detectors/aws/lambda"
 
 // Version is the current release version of the Lambda resource detector.
-const Version = "0.67.0"
+const Version = "0.68.0"

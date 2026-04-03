@@ -4,4 +4,4 @@
 package host // import "go.opentelemetry.io/contrib/instrumentation/host"
 
 // Version is the current release version of the host instrumentation.
-const Version = "0.67.0"
+const Version = "0.68.0"
