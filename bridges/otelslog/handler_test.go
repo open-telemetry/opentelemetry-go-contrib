@@ -9,6 +9,7 @@ package otelslog
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"reflect"
@@ -518,4 +519,63 @@ func TestHandlerEnabled(t *testing.T) {
 
 	ctx = context.WithValue(ctx, enableKey, true)
 	assert.True(t, h.Enabled(ctx, slog.LevelDebug), "context not passed")
+}
+
+func TestHandlerErrorFieldSetErr(t *testing.T) {
+	t.Run("RecordAttr", func(t *testing.T) {
+		r := new(recorder)
+		l := slog.New(NewHandler("", WithLoggerProvider(r)))
+		wantErr := errors.New("test error")
+
+		l.Info("msg", slog.Any("err", wantErr))
+
+		require.Len(t, r.Records, 1)
+		assert.ErrorIs(t, r.Records[0].Err(), wantErr)
+		got := r.Results()[0]
+		_, exists := got["err"]
+		assert.False(t, exists, "error field should not be emitted as an attribute")
+	})
+
+	t.Run("WithAttrs", func(t *testing.T) {
+		r := new(recorder)
+		wantErr := errors.New("with attrs error")
+		l := slog.New(NewHandler("", WithLoggerProvider(r)).WithAttrs([]slog.Attr{slog.Any("err", wantErr)}))
+
+		l.Info("msg")
+
+		require.Len(t, r.Records, 1)
+		assert.ErrorIs(t, r.Records[0].Err(), wantErr)
+		got := r.Results()[0]
+		_, exists := got["err"]
+		assert.False(t, exists, "error field should not be emitted as an attribute")
+	})
+
+	t.Run("WithGroupWithAttrs", func(t *testing.T) {
+		r := new(recorder)
+		wantErr := errors.New("group error")
+		l := slog.New(NewHandler("", WithLoggerProvider(r)).WithGroup("grp").WithAttrs([]slog.Attr{slog.Any("err", wantErr)}))
+
+		l.Info("msg")
+
+		require.Len(t, r.Records, 1)
+		assert.ErrorIs(t, r.Records[0].Err(), wantErr)
+		got := r.Results()[0]
+		_, exists := got["grp"]
+		assert.False(t, exists, "empty group should not be emitted")
+	})
+
+	t.Run("RecordErrorOverridesWithAttrsError", func(t *testing.T) {
+		r := new(recorder)
+		withAttrsErr := errors.New("with attrs error")
+		recordErr := errors.New("record error")
+		l := slog.New(NewHandler("", WithLoggerProvider(r)).WithAttrs([]slog.Attr{slog.Any("err", withAttrsErr)}))
+
+		l.Info("msg", slog.Any("record_err", recordErr))
+
+		require.Len(t, r.Records, 1)
+		assert.ErrorIs(t, r.Records[0].Err(), recordErr)
+		got := r.Results()[0]
+		_, exists := got["record_err"]
+		assert.False(t, exists, "error field should not be emitted as an attribute")
+	})
 }
