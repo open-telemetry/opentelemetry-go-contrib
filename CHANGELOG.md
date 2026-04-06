@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Configuration file can now be set via `OTEL_CONFIG_FILE` in `go.opentelemetry.io/contrib/otelconf`. (#8639)
 - Added support for `service` resource detector in `go.opentelemetry.io/contrib/otelconf`. (#8674)
-- Add `WithExceptionSemanticConventions` option to `go.opentelemetry.io/contrib/bridges/otelzap` to emit `exception.type` from zap error fields; `exception.message` is emitted by default when error fields are present. (#8719)
+- Emit zap error fields using OpenTelemetry exception semantic conventions by default in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8719)
 - Added support for `attribute_count_limit` and `attribute_value_length_limit` in tracer provider configuration in `go.opentelemetry.io/contrib/otelconf`. (#8687)
 - Added support for `attribute_count_limit` and `attribute_value_length_limit` in logger provider configuration in `go.opentelemetry.io/contrib/otelconf`. (#8686)
 - Added support for `server.address` and `server.port` attributes in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8723)

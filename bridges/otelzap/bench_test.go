@@ -155,24 +155,14 @@ func BenchmarkSemanticConvWrite(b *testing.B) {
 	for i := range benchmarks {
 		bm := &benchmarks[i]
 		b.Run(bm.name, func(b *testing.B) {
-			for _, opt := range []struct {
-				name string
-				opts []Option
-			}{
-				{name: "Disabled"},
-				{name: "Enabled", opts: []Option{WithExceptionSemanticConventions()}},
-			} {
-				b.Run(opt.name, func(b *testing.B) {
-					zc := NewCore(loggerName, opt.opts...)
-					b.ReportAllocs()
-					b.ResetTimer()
-					for range b.N {
-						err := zc.Write(bm.entry, bm.fields)
-						if err != nil {
-							b.Fatal(err)
-						}
-					}
-				})
+			zc := NewCore(loggerName)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for range b.N {
+				err := zc.Write(bm.entry, bm.fields)
+				if err != nil {
+					b.Fatal(err)
+				}
 			}
 		})
 	}
