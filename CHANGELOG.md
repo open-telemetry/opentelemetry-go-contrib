@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `Resource` method to `SDK` in `go.opentelemetry.io/contrib/otelconf/v0.3.0` to expose the resolved SDK resource from declarative configuration. (#8660)
 - Configuration file can now be set via `OTEL_CONFIG_FILE` in `go.opentelemetry.io/contrib/otelconf`. (#8639)
 - Added support for `service` resource detector in `go.opentelemetry.io/contrib/otelconf`. (#8674)
 - Emit zap error fields using OpenTelemetry exception semantic conventions by default in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8719)
@@ -17,13 +18,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Added support for `attribute_count_limit` and `attribute_value_length_limit` in logger provider configuration in `go.opentelemetry.io/contrib/otelconf`. (#8686)
 - Added support for `server.address` and `server.port` attributes in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8723)
 - Support `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. Supported values are `rpc` (default), `rpc/dup` and `rpc/old`. (#8726)
+- Add the `http.route` metric attribute to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8632)
 
 ### Changed
 
 - Prepend `_` to the normalized environment variable name when the key starts with a digit in `go.opentelemetry.io/contrib/propagators/envcar`, ensuring POSIX compliance. (#8678)
+- Move experimental types from `go.opentelemetry.io/contrib/otelconf` to `go.opentelemetry.io/contrib/otelconf/x`. (#8529)
+- Normalize cached environment variable names in `go.opentelemetry.io/contrib/propagators/envcar`, aligning `Carrier.Keys` output with the carrier's normalized key format. (#8761)
 
 ### Fixed
 
+- Fix `go.opentelemetry.io/contrib/otelconf` Prometheus reader converting OTel dot-style label names (e.g. `service.name`) to underscore-style (`service_name`) in `target_info` when both `without_type_suffix` and `without_units` are set. Use `NoTranslation` instead of `UnderscoreEscapingWithoutSuffixes` to preserve dot-style label names while still suppressing metric name suffixes. (#8763)
 - Limit the request body size at 1MB in `go.opentelemetry.io/contrib/zpages`. (#8656)
 - Fix server spans using the client's address and port for `server.address` and `server.port` attributes in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8723)
 

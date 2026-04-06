@@ -798,9 +798,7 @@ func TestSpanProcessor(t *testing.T) {
 			name: "simple/otlp_file",
 			processor: SpanProcessor{
 				Simple: &SimpleSpanProcessor{
-					Exporter: SpanExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{},
-					},
+					Exporter: SpanExporter{},
 				},
 			},
 			wantErrT: newErrInvalid("otlp_file/development"),

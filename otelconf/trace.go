@@ -174,10 +174,6 @@ func spanExporter(ctx context.Context, exporter SpanExporter) (sdktrace.SpanExpo
 			return otlpGRPCSpanExporter(ctx, exporter.OTLPGrpc)
 		}
 	}
-	if exporter.OTLPFileDevelopment != nil {
-		// TODO: implement file exporter https://github.com/open-telemetry/opentelemetry-go/issues/5408
-		return nil, newErrInvalid("otlp_file/development")
-	}
 
 	if exportersConfigured > 1 {
 		return nil, newErrInvalid("must not specify multiple exporters")

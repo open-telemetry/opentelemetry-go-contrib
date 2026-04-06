@@ -651,9 +651,7 @@ func TestLogProcessor(t *testing.T) {
 			name: "simple/otlp_file",
 			processor: LogRecordProcessor{
 				Simple: &SimpleLogRecordProcessor{
-					Exporter: LogRecordExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{},
-					},
+					Exporter: LogRecordExporter{},
 				},
 			},
 			wantErrT: newErrInvalid("otlp_file/development"),
