@@ -26,6 +26,31 @@ func (mockLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
 	return nil
 }
 
+type captureLoggerProvider struct {
+	embedded.LoggerProvider
+	logger *captureLogger
+}
+
+func (p *captureLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
+	if p.logger == nil {
+		p.logger = &captureLogger{}
+	}
+	return p.logger
+}
+
+type captureLogger struct {
+	embedded.Logger
+	records []log.Record
+}
+
+func (*captureLogger) Enabled(context.Context, log.EnabledParameters) bool {
+	return true
+}
+
+func (l *captureLogger) Emit(_ context.Context, record log.Record) {
+	l.records = append(l.records, record.Clone())
+}
+
 func TestNewConfig(t *testing.T) {
 	customLoggerProvider := mockLoggerProvider{}
 
@@ -311,9 +336,6 @@ func TestLogSink(t *testing.T) {
 					{
 						Body:     log.StringValue("error message"),
 						Severity: log.SeverityError,
-						Attributes: []log.KeyValue{
-							log.String("exception.message", "test"),
-						},
 					},
 				},
 			},
@@ -338,7 +360,6 @@ func TestLogSink(t *testing.T) {
 						Body:     log.StringValue("msg"),
 						Severity: log.SeverityError,
 						Attributes: []log.KeyValue{
-							{Key: "exception.message", Value: log.StringValue("test error")},
 							log.String("struct", "{data:1}"),
 							log.Bool("bool", true),
 							log.Int64("duration", 60_000_000_000),
@@ -369,6 +390,26 @@ func TestLogSink(t *testing.T) {
 				}),
 			)
 		})
+	}
+}
+
+func TestLogSinkErrorSetsErr(t *testing.T) {
+	provider := &captureLoggerProvider{}
+	l := logr.New(NewLogSink("name", WithLoggerProvider(provider)))
+	wantErr := errors.New("test")
+
+	l.Error(wantErr, "message")
+
+	if assert.NotNil(t, provider.logger) && assert.Len(t, provider.logger.records, 1) {
+		got := provider.logger.records[0]
+		assert.Equal(t, wantErr, got.Err())
+
+		var attrs []log.KeyValue
+		got.WalkAttributes(func(kv log.KeyValue) bool {
+			attrs = append(attrs, kv)
+			return true
+		})
+		assert.Empty(t, attrs)
 	}
 }
 
