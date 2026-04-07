@@ -4,4 +4,4 @@
 package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 
 // Version is the current release version of the otelconf module.
-const Version = "0.22.0"
+const Version = "0.23.0"
