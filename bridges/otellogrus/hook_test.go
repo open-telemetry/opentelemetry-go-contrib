@@ -377,7 +377,7 @@ func TestConvertEntrySetErr(t *testing.T) {
 			},
 		}
 		rec := h.convertEntry(entry)
-		assert.Nil(t, rec.Err())
+		assert.NoError(t, rec.Err())
 	})
 }
 
