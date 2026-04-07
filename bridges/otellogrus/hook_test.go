@@ -347,12 +347,47 @@ func TestHookFire(t *testing.T) {
 	}
 }
 
+func TestConvertEntrySetErr(t *testing.T) {
+	h := &Hook{}
+
+	t.Run("error field sets record error", func(t *testing.T) {
+		entry := &logrus.Entry{
+			Level: logrus.ErrorLevel,
+			Data: logrus.Fields{
+				logrus.ErrorKey: assert.AnError,
+				"other":         "value",
+			},
+		}
+		rec := h.convertEntry(entry)
+		assert.Equal(t, assert.AnError, rec.Err())
+		// The error field should not appear as an attribute.
+		var attrs []log.KeyValue
+		rec.WalkAttributes(func(kv log.KeyValue) bool {
+			attrs = append(attrs, kv)
+			return true
+		})
+		assert.Equal(t, []log.KeyValue{log.String("other", "value")}, attrs)
+	})
+
+	t.Run("no error field leaves record error nil", func(t *testing.T) {
+		entry := &logrus.Entry{
+			Level: logrus.InfoLevel,
+			Data: logrus.Fields{
+				"key": "val",
+			},
+		}
+		rec := h.convertEntry(entry)
+		assert.Nil(t, rec.Err())
+	})
+}
+
 func TestConvertFields(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 
-		fields logrus.Fields
-		want   []log.KeyValue
+		fields  logrus.Fields
+		want    []log.KeyValue
+		wantErr error
 	}{
 		{
 			name:   "with a boolean",
@@ -479,9 +514,22 @@ func TestConvertFields(t *testing.T) {
 				log.Slice("hello", log.StringValue("one"), log.StringValue("two")),
 			},
 		},
+		{
+			name:    "with an error field",
+			fields:  logrus.Fields{logrus.ErrorKey: assert.AnError},
+			wantErr: assert.AnError,
+		},
+		{
+			name:   "with a non-error value in error key",
+			fields: logrus.Fields{logrus.ErrorKey: "not an error"},
+			want: []log.KeyValue{
+				log.String(logrus.ErrorKey, "not an error"),
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := convertFields(tt.fields)
+			got, gotErr := convertFields(tt.fields)
+			assert.Equal(t, tt.wantErr, gotErr)
 			if !slices.EqualFunc(tt.want, got, log.KeyValue.Equal) {
 				t.Errorf("KeyValues are not equal:\nwant: %v\ngot:  %v", tt.want, got)
 			}
