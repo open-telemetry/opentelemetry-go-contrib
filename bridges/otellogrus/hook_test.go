@@ -335,6 +335,50 @@ func TestHookFire(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "emits a log entry with error field set as record error",
+			entry: &logrus.Entry{
+				Level: logrus.ErrorLevel,
+				Data: logrus.Fields{
+					logrus.ErrorKey: assert.AnError,
+					"other":         "value",
+				},
+			},
+			want: logtest.Recording{
+				logtest.Scope{Name: name}: {
+					{
+						Severity:     log.SeverityError,
+						SeverityText: "error",
+						Error:        assert.AnError,
+						Attributes: []log.KeyValue{
+							log.String("other", "value"),
+						},
+						Body: log.StringValue(""),
+					},
+				},
+			},
+		},
+		{
+			name: "emits a log entry without error field",
+			entry: &logrus.Entry{
+				Level: logrus.InfoLevel,
+				Data: logrus.Fields{
+					"key": "val",
+				},
+			},
+			want: logtest.Recording{
+				logtest.Scope{Name: name}: {
+					{
+						Severity:     log.SeverityInfo,
+						SeverityText: "info",
+						Attributes: []log.KeyValue{
+							log.String("key", "val"),
+						},
+						Body: log.StringValue(""),
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := logtest.NewRecorder()
@@ -345,40 +389,6 @@ func TestHookFire(t *testing.T) {
 			logtest.AssertEqual(t, tt.want, rec.Result())
 		})
 	}
-}
-
-func TestConvertEntrySetErr(t *testing.T) {
-	h := &Hook{}
-
-	t.Run("error field sets record error", func(t *testing.T) {
-		entry := &logrus.Entry{
-			Level: logrus.ErrorLevel,
-			Data: logrus.Fields{
-				logrus.ErrorKey: assert.AnError,
-				"other":         "value",
-			},
-		}
-		rec := h.convertEntry(entry)
-		assert.Equal(t, assert.AnError, rec.Err())
-		// The error field should not appear as an attribute.
-		var attrs []log.KeyValue
-		rec.WalkAttributes(func(kv log.KeyValue) bool {
-			attrs = append(attrs, kv)
-			return true
-		})
-		assert.Equal(t, []log.KeyValue{log.String("other", "value")}, attrs)
-	})
-
-	t.Run("no error field leaves record error nil", func(t *testing.T) {
-		entry := &logrus.Entry{
-			Level: logrus.InfoLevel,
-			Data: logrus.Fields{
-				"key": "val",
-			},
-		}
-		rec := h.convertEntry(entry)
-		assert.NoError(t, rec.Err())
-	})
 }
 
 func TestConvertFields(t *testing.T) {
