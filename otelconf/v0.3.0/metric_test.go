@@ -1594,6 +1594,48 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
+// TestPrometheusReaderDotStyleLabels verifies that OTel dot-style resource
+// attribute names (e.g. service.name) are preserved in target_info when both
+// without_type_suffix and without_units are set which is default config for OTel Collector.
+func TestPrometheusReaderDotStyleLabels(t *testing.T) {
+	host := "localhost"
+	port := 0
+	reader, err := prometheusReader(t.Context(), &Prometheus{
+		Host:              &host,
+		Port:              &port,
+		WithoutTypeSuffix: ptr(true),
+		WithoutUnits:      ptr(true),
+	})
+	require.NoError(t, err)
+
+	res := resource.NewWithAttributes("", attribute.String("service.name", "test-svc"))
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader), sdkmetric.WithResource(res))
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		require.NoError(t, mp.Shutdown(context.Background()))
+	})
+	c, err := mp.Meter("test").Int64Counter("test.counter")
+	require.NoError(t, err)
+	c.Add(t.Context(), 1)
+
+	addr := reader.(readerWithServer).server.Addr
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/metrics", http.NoBody)
+	require.NoError(t, err)
+	req.Header.Set("Accept", "application/openmetrics-text; version=1.0.0; escaping=allow-utf-8")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(resp.Body)
+	require.NoError(t, err)
+	body := buf.String()
+
+	assert.Contains(t, body, `target_info{"service.name"="test-svc"}`)
+	assert.NotContains(t, body, "service_name")
+	assert.NotContains(t, body, "target.info")
+}
+
 func Test_otlpGRPCMetricExporter(t *testing.T) {
 	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
 		// TODO (#8115): Fix the flakiness on Windows and MacOS.

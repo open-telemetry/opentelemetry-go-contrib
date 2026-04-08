@@ -387,7 +387,11 @@ func prometheusReaderOpts(prometheusConfig *Prometheus) ([]otelprom.Option, erro
 	}
 
 	if prometheusConfig.WithoutTypeSuffix != nil && *prometheusConfig.WithoutTypeSuffix && prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
-		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.UnderscoreEscapingWithoutSuffixes))
+		// NoTranslation preserves OTel dot-style label names (e.g. service.name)
+		// and suppresses metric name suffixes. The exporter's newConfig will
+		// automatically set withoutCounterSuffixes and withoutUnits when
+		// ShouldAddSuffixes() is false.
+		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.NoTranslation))
 	} else {
 		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes))
 	}
