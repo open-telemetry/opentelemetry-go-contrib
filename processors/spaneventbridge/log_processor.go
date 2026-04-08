@@ -53,6 +53,8 @@ func (LogProcessor) OnEmit(ctx context.Context, record *sdklog.Record) error {
 	var opts []trace.EventOption
 	if ts := record.Timestamp(); !ts.IsZero() {
 		opts = append(opts, trace.WithTimestamp(ts))
+	} else if ts := record.ObservedTimestamp(); !ts.IsZero() {
+		opts = append(opts, trace.WithTimestamp(ts))
 	}
 
 	if attrs := spanEventAttributes(record); len(attrs) > 0 {

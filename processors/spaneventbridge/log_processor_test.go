@@ -105,6 +105,48 @@ func TestLogProcessorOnEmit(t *testing.T) {
 	}, evt.cfg.Attributes())
 }
 
+func TestLogProcessorOnEmitUsesObservedTimestampWhenTimestampUnset(t *testing.T) {
+	observed := time.Date(2026, time.April, 1, 12, 0, 0, 0, time.UTC)
+	sc := newSpanContext(2)
+	span := &spanStub{sc: sc, recording: true}
+
+	record := logtest.RecordFactory{
+		EventName:         "cache.miss",
+		ObservedTimestamp: observed,
+		TraceID:           sc.TraceID(),
+		SpanID:            sc.SpanID(),
+		TraceFlags:        sc.TraceFlags(),
+	}.NewRecord()
+
+	err := NewLogProcessor().OnEmit(trace.ContextWithSpan(t.Context(), span), &record)
+	require.NoError(t, err)
+	require.Len(t, span.events, 1)
+
+	assert.Equal(t, observed, span.events[0].cfg.Timestamp())
+}
+
+func TestLogProcessorOnEmitPrefersTimestampOverObservedTimestamp(t *testing.T) {
+	ts := time.Date(2026, time.April, 1, 12, 0, 0, 0, time.UTC)
+	observed := ts.Add(10 * time.Millisecond)
+	sc := newSpanContext(2)
+	span := &spanStub{sc: sc, recording: true}
+
+	record := logtest.RecordFactory{
+		EventName:         "cache.miss",
+		Timestamp:         ts,
+		ObservedTimestamp: observed,
+		TraceID:           sc.TraceID(),
+		SpanID:            sc.SpanID(),
+		TraceFlags:        sc.TraceFlags(),
+	}.NewRecord()
+
+	err := NewLogProcessor().OnEmit(trace.ContextWithSpan(t.Context(), span), &record)
+	require.NoError(t, err)
+	require.Len(t, span.events, 1)
+
+	assert.Equal(t, ts, span.events[0].cfg.Timestamp())
+}
+
 func TestLogProcessorSkipsNonEventRecords(t *testing.T) {
 	sc := newSpanContext(2)
 	span := &spanStub{sc: sc, recording: true}
