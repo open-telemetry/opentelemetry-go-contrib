@@ -466,11 +466,11 @@ func TestWithSpanNameFormatter(t *testing.T) {
 				sdktrace.WithSpanProcessor(spanRecorder),
 			)
 
-			opts := []Option{
-				WithTracerProvider(provider),
+			opts := []HandlerOption{
+				HandlerOption(WithTracerProvider(provider)),
 			}
 			if tt.formatter != nil {
-				opts = append(opts, WithSpanNameFormatter(tt.formatter))
+				opts = append(opts, HandlerOption(WithSpanNameFormatter(tt.formatter)))
 			}
 
 			mux := http.NewServeMux()

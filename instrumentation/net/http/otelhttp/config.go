@@ -18,45 +18,103 @@ import (
 // ScopeName is the instrumentation scope name.
 const ScopeName = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-// config represents the configuration options available for the http.Handler
-// and http.Transport types.
-type config struct {
-	ServerName        string
-	Tracer            trace.Tracer
-	Meter             metric.Meter
-	Propagators       propagation.TextMapPropagator
-	SpanStartOptions  []trace.SpanStartOption
-	PublicEndpointFn  func(*http.Request) bool
-	ReadEvent         bool
-	WriteEvent        bool
-	Filters           []Filter
-	SpanNameFormatter func(string, *http.Request) string
-	ClientTrace       func(context.Context) *httptrace.ClientTrace
-
+// handlerConfig represents the configuration options available for the http.Handler.
+type handlerConfig struct {
+	Tracer             trace.Tracer
+	Meter              metric.Meter
+	Propagators        propagation.TextMapPropagator
+	SpanStartOptions   []trace.SpanStartOption
 	TracerProvider     trace.TracerProvider
 	MeterProvider      metric.MeterProvider
+	ServerName         string
+	PublicEndpointFn   func(*http.Request) bool
+	ReadEvent          bool
+	WriteEvent         bool
+	Filters            []Filter
+	SpanNameFormatter  func(string, *http.Request) string
 	MetricAttributesFn func(*http.Request) []attribute.KeyValue
+}
+
+// transportConfig represents the configuration options available for the http.Transport.
+type transportConfig struct {
+	Tracer             trace.Tracer
+	Meter              metric.Meter
+	Propagators        propagation.TextMapPropagator
+	SpanStartOptions   []trace.SpanStartOption
+	TracerProvider     trace.TracerProvider
+	MeterProvider      metric.MeterProvider
+	ClientTrace        func(context.Context) *httptrace.ClientTrace
+	Filters            []Filter
+	SpanNameFormatter  func(string, *http.Request) string
+	MetricAttributesFn func(*http.Request) []attribute.KeyValue
+}
+
+// HandlerOption is the interface used to set optional configuration for the Handler.
+type HandlerOption interface {
+	applyHandler(*handlerConfig)
+}
+
+// TransportOption is the interface used to set optional configuration for the Transport.
+type TransportOption interface {
+	applyTransport(*transportConfig)
 }
 
 // Option interface used for setting optional config properties.
 type Option interface {
-	apply(*config)
+	HandlerOption
+	TransportOption
 }
 
-type optionFunc func(*config)
-
-func (o optionFunc) apply(c *config) {
-	o(c)
+// sharedOption is an internal type used to implement Option for both Handler and Transport.
+type sharedOption struct {
+	handlerFunc   func(*handlerConfig)
+	transportFunc func(*transportConfig)
 }
 
-// newConfig creates a new config struct and applies opts to it.
-func newConfig(opts ...Option) *config {
-	c := &config{
+func (so sharedOption) applyHandler(c *handlerConfig)     { so.handlerFunc(c) }
+func (so sharedOption) applyTransport(c *transportConfig) { so.transportFunc(c) }
+
+// handlerOptionFunc is an internal type used to implement HandlerOption with a function.
+type handlerOptionFunc func(*handlerConfig)
+
+func (f handlerOptionFunc) applyHandler(c *handlerConfig) { f(c) }
+
+// transportOptionFunc is an internal type used to implement TransportOption with a function.
+type transportOptionFunc func(*transportConfig)
+
+func (f transportOptionFunc) applyTransport(c *transportConfig) { f(c) }
+
+// newHandlerConfig creates a new handlerConfig and applies the provided options to it.
+func newHandlerConfig(opts ...HandlerOption) *handlerConfig {
+	c := &handlerConfig{
 		Propagators:   otel.GetTextMapPropagator(),
 		MeterProvider: otel.GetMeterProvider(),
 	}
 	for _, opt := range opts {
-		opt.apply(c)
+		opt.applyHandler(c)
+	}
+
+	// Tracer is only initialized if manually specified. Otherwise, can be passed with the tracing context.
+	if c.TracerProvider != nil {
+		c.Tracer = newTracer(c.TracerProvider)
+	}
+
+	c.Meter = c.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version),
+	)
+
+	return c
+}
+
+// newTransportConfig creates a new transportConfig and applies the provided options to it.
+func newTransportConfig(opts ...TransportOption) *transportConfig {
+	c := &transportConfig{
+		Propagators:   otel.GetTextMapPropagator(),
+		MeterProvider: otel.GetMeterProvider(),
+	}
+	for _, opt := range opts {
+		opt.applyTransport(c)
 	}
 
 	// Tracer is only initialized if manually specified. Otherwise, can be passed with the tracing context.
@@ -75,49 +133,77 @@ func newConfig(opts ...Option) *config {
 // WithTracerProvider specifies a tracer provider to use for creating a tracer.
 // If none is specified, the global provider is used.
 func WithTracerProvider(provider trace.TracerProvider) Option {
-	return optionFunc(func(cfg *config) {
-		if provider != nil {
-			cfg.TracerProvider = provider
-		}
-	})
+	return sharedOption{
+		handlerFunc: func(c *handlerConfig) {
+			if provider != nil {
+				c.TracerProvider = provider
+			}
+		},
+		transportFunc: func(c *transportConfig) {
+			if provider != nil {
+				c.TracerProvider = provider
+			}
+		},
+	}
 }
 
 // WithMeterProvider specifies a meter provider to use for creating a meter.
 // If none is specified, the global provider is used.
 func WithMeterProvider(provider metric.MeterProvider) Option {
-	return optionFunc(func(cfg *config) {
-		if provider != nil {
-			cfg.MeterProvider = provider
-		}
-	})
+	return sharedOption{
+		handlerFunc: func(c *handlerConfig) {
+			if provider != nil {
+				c.MeterProvider = provider
+			}
+		},
+		transportFunc: func(c *transportConfig) {
+			if provider != nil {
+				c.MeterProvider = provider
+			}
+		},
+	}
 }
 
 // WithPublicEndpointFn runs with every request, and allows conditionally
 // configuring the Handler to link the span with an incoming span context. If
 // this option is not provided or returns false, then the association is a
 // child association instead of a link.
-func WithPublicEndpointFn(fn func(*http.Request) bool) Option {
-	return optionFunc(func(c *config) {
-		c.PublicEndpointFn = fn
-	})
+func WithPublicEndpointFn(fn func(*http.Request) bool) HandlerOption {
+	return handlerOptionFunc(func(c *handlerConfig) { c.PublicEndpointFn = fn })
 }
 
 // WithPropagators configures specific propagators. If this
 // option isn't specified, then the global TextMapPropagator is used.
 func WithPropagators(ps propagation.TextMapPropagator) Option {
-	return optionFunc(func(c *config) {
-		if ps != nil {
-			c.Propagators = ps
-		}
-	})
+	return sharedOption{
+		handlerFunc: func(c *handlerConfig) {
+			if ps != nil {
+				c.Propagators = ps
+			}
+		},
+		transportFunc: func(c *transportConfig) {
+			if ps != nil {
+				c.Propagators = ps
+			}
+		},
+	}
 }
 
 // WithSpanOptions configures an additional set of
 // trace.SpanOptions, which are applied to each new span.
 func WithSpanOptions(opts ...trace.SpanStartOption) Option {
-	return optionFunc(func(c *config) {
-		c.SpanStartOptions = append(c.SpanStartOptions, opts...)
-	})
+	return sharedOption{
+		handlerFunc: func(c *handlerConfig) {
+			if opts != nil {
+				c.SpanStartOptions = append(c.SpanStartOptions, opts...)
+			}
+		},
+		transportFunc: func(c *transportConfig) {
+			if opts != nil {
+				c.SpanStartOptions = append(c.SpanStartOptions, opts...)
+			}
+		},
+	}
 }
 
 // WithFilter adds a filter to the list of filters used by the handler.
@@ -126,10 +212,8 @@ func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 // If no filters are provided then all requests are traced.
 // Filters will be invoked for each processed request, it is advised to make them
 // simple and fast.
-func WithFilter(f Filter) Option {
-	return optionFunc(func(c *config) {
-		c.Filters = append(c.Filters, f)
-	})
+func WithFilter(f Filter) HandlerOption {
+	return handlerOptionFunc(func(c *handlerConfig) { c.Filters = append(c.Filters, f) })
 }
 
 // Event represents message event types for [WithMessageEvents].
@@ -151,8 +235,8 @@ const (
 //     using the ReadBytesKey
 //   - WriteEvents: Record the number of bytes written after every http.ResponeWriter.Write
 //     using the WriteBytesKey
-func WithMessageEvents(events ...Event) Option {
-	return optionFunc(func(c *config) {
+func WithMessageEvents(events ...Event) HandlerOption {
+	return handlerOptionFunc(func(c *handlerConfig) {
 		for _, e := range events {
 			switch e {
 			case ReadEvents:
@@ -171,23 +255,28 @@ func WithMessageEvents(events ...Event) Option {
 // the span name formatter will run twice. Once when the span is created, and
 // second time after the middleware, so the pattern can be used.
 func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
-	return optionFunc(func(c *config) {
-		c.SpanNameFormatter = f
-	})
+	return sharedOption{
+		handlerFunc: func(c *handlerConfig) {
+			c.SpanNameFormatter = f
+		},
+		transportFunc: func(c *transportConfig) {
+			c.SpanNameFormatter = f
+		},
+	}
 }
 
 // WithClientTrace takes a function that returns client trace instance that will be
 // applied to the requests sent through the otelhttp Transport.
-func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
-	return optionFunc(func(c *config) {
+func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) TransportOption {
+	return transportOptionFunc(func(c *transportConfig) {
 		c.ClientTrace = f
 	})
 }
 
 // WithServerName returns an Option that sets the name of the (virtual) server
 // handling requests.
-func WithServerName(server string) Option {
-	return optionFunc(func(c *config) {
+func WithServerName(server string) HandlerOption {
+	return handlerOptionFunc(func(c *handlerConfig) {
 		c.ServerName = server
 	})
 }
@@ -198,7 +287,12 @@ func WithServerName(server string) Option {
 // Deprecated: WithMetricAttributesFn is deprecated and will be removed in a
 // future release. Use [Labeler] instead.
 func WithMetricAttributesFn(metricAttributesFn func(r *http.Request) []attribute.KeyValue) Option {
-	return optionFunc(func(c *config) {
-		c.MetricAttributesFn = metricAttributesFn
-	})
+	return sharedOption{
+		handlerFunc: func(c *handlerConfig) {
+			c.MetricAttributesFn = metricAttributesFn
+		},
+		transportFunc: func(c *transportConfig) {
+			c.MetricAttributesFn = metricAttributesFn
+		},
+	}
 }
