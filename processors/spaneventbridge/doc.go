@@ -11,6 +11,5 @@
 //   - the record trace and span IDs match the current span.
 //
 // The bridged span event uses the log record event name and timestamp. Log
-// attributes are copied onto the span event, and selected log record metadata
-// is added using "log.record.*" attributes.
+// attributes are copied onto the span event.
 package spaneventbridge // import "go.opentelemetry.io/contrib/processors/spaneventbridge"

@@ -13,13 +13,6 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-var (
-	logRecordObservedTimeUnixNanoKey   = attribute.Key("log.record.observed_time_unix_nano")
-	logRecordSeverityNumberKey         = attribute.Key("log.record.severity_number")
-	logRecordBodyKey                   = attribute.Key("log.record.body")
-	logRecordDroppedAttributesCountKey = attribute.Key("log.record.dropped_attributes_count")
-)
-
 // LogProcessor is a [sdklog.Processor] implementation that bridges log-based
 // events onto the current span as span events.
 type LogProcessor struct{}
@@ -79,28 +72,12 @@ func (LogProcessor) Shutdown(context.Context) error { return nil }
 func (LogProcessor) ForceFlush(context.Context) error { return nil }
 
 func spanEventAttributes(record *sdklog.Record) []attribute.KeyValue {
-	attrs := make([]attribute.KeyValue, 0, record.AttributesLen()+4)
+	attrs := make([]attribute.KeyValue, 0, record.AttributesLen())
 
 	record.WalkAttributes(func(kv log.KeyValue) bool {
 		attrs = append(attrs, spanAttribute(kv))
 		return true
 	})
-
-	if observed := record.ObservedTimestamp(); !observed.IsZero() {
-		attrs = append(attrs, logRecordObservedTimeUnixNanoKey.Int64(observed.UnixNano()))
-	}
-
-	if sev := record.Severity(); sev != log.SeverityUndefined {
-		attrs = append(attrs, logRecordSeverityNumberKey.Int64(int64(sev)))
-	}
-
-	if body := record.Body(); !body.Empty() {
-		attrs = append(attrs, logRecordBodyKey.String(marshalLogValue(body)))
-	}
-
-	if dropped := record.DroppedAttributes(); dropped > 0 {
-		attrs = append(attrs, logRecordDroppedAttributesCountKey.Int64(int64(dropped)))
-	}
 
 	return attrs
 }

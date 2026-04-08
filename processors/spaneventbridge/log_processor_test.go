@@ -102,10 +102,6 @@ func TestLogProcessorOnEmit(t *testing.T) {
 		attribute.String("cache", "users"),
 		attribute.StringSlice("tags", []string{"hot", "read"}),
 		attribute.String("detail", `{"state":"miss"}`),
-		attribute.Int64("log.record.observed_time_unix_nano", observed.UnixNano()),
-		attribute.Int64("log.record.severity_number", int64(log.SeverityInfo2)),
-		attribute.String("log.record.body", `{"item":"widget","retry":2}`),
-		attribute.Int64("log.record.dropped_attributes_count", 2),
 	}, evt.cfg.Attributes())
 }
 
