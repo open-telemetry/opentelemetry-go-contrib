@@ -182,15 +182,29 @@ func (*Hook) convertEntry(e *logrus.Entry) log.Record {
 	return record
 }
 
-func convertFields(fields logrus.Fields) []log.KeyValue {
-	kvs := make([]log.KeyValue, 0, len(fields))
+type kvBuffer struct {
+	data []log.KeyValue
+}
+
+// newKVBuffer returns a new kvBuffer with the specified capacity.
+func newKVBuffer(n int) *kvBuffer {
+	return &kvBuffer{data: make([]log.KeyValue, 0, n)}
+}
+
+// addFields adds all fields from the logrus.Fields map to the buffer.
+func (b *kvBuffer) addFields(fields logrus.Fields) {
 	for k, v := range fields {
-		kvs = append(kvs, log.KeyValue{
+		b.data = append(b.data, log.KeyValue{
 			Key:   k,
 			Value: convertValue(v),
 		})
 	}
-	return kvs
+}
+
+func convertFields(fields logrus.Fields) []log.KeyValue {
+	buf := newKVBuffer(len(fields))
+	buf.addFields(fields)
+	return buf.data
 }
 
 func convertSeverity(level logrus.Level) log.Severity {
