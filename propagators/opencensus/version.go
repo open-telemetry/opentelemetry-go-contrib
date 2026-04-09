@@ -4,4 +4,4 @@
 package opencensus // import "go.opentelemetry.io/contrib/propagators/opencensus"
 
 // Version is the current release version of the OpenCensus propagator.
-const Version = "0.67.0"
+const Version = "0.68.0"

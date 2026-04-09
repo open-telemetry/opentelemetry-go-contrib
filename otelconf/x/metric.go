@@ -160,6 +160,9 @@ func periodicExporter(ctx context.Context, exporter PushMetricExporter, opts ...
 func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPHttpMetricExporter) (sdkmetric.Exporter, error) {
 	opts := []otlpmetrichttp.Option{}
 
+	if err := validateOTLPHTTPEncoding(otlpConfig.Encoding); err != nil {
+		return nil, err
+	}
 	if otlpConfig.Endpoint != nil {
 		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {

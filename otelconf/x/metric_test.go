@@ -810,6 +810,20 @@ func TestReader(t *testing.T) {
 			wantErrT: newErrInvalid("unsupported compression \"invalid\""),
 		},
 		{
+			name: "periodic/otlp-http-invalid-encoding",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLPHttp: &OTLPHttpMetricExporter{
+							Endpoint: ptr("http://localhost:4318"),
+							Encoding: ptr(OTLPHttpEncoding("json")),
+						},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("unsupported encoding \"json\""),
+		},
+		{
 			name: "periodic/no-exporter",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
