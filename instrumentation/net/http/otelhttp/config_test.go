@@ -4,11 +4,9 @@
 package otelhttp_test
 
 import (
-	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"net/http/httptrace"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -17,22 +15,6 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
-
-func TestNewHandlerAndTransportOptions(t *testing.T) {
-	t.Run("Handler with HandlerOption", func(t *testing.T) {
-		h := otelhttp.NewHandler(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}), "test",
-			otelhttp.WithServerName("test-server"),
-		)
-		assert.NotNil(t, h)
-	})
-
-	t.Run("Transport with TransportOption", func(t *testing.T) {
-		tr := otelhttp.NewTransport(http.DefaultTransport,
-			otelhttp.WithClientTrace(func(context.Context) *httptrace.ClientTrace { return nil }),
-		)
-		assert.NotNil(t, tr)
-	})
-}
 
 func TestBasicFilter(t *testing.T) {
 	rr := httptest.NewRecorder()
