@@ -214,8 +214,8 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 		)
 	}
 
-	if err := h.attrs.Err(); err != nil {
-		record.SetErr(err)
+	if h.attrs != nil && h.attrs.err != nil {
+		record.SetErr(h.attrs.err)
 	}
 	if h.attrs.Len() > 0 {
 		record.AddAttributes(h.attrs.KeyValues()...)
@@ -230,8 +230,8 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 		if n > 0 {
 			buf := newKVBuffer(n)
 			r.Attrs(buf.AddAttr)
-			if err := buf.Err(); err != nil {
-				record.SetErr(err)
+			if buf.err != nil {
+				record.SetErr(buf.err)
 			}
 			record.AddAttributes(h.group.KeyValue(buf.KeyValues()...))
 		} else {
@@ -244,8 +244,8 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 	} else if n > 0 {
 		buf := newKVBuffer(n)
 		r.Attrs(buf.AddAttr)
-		if err := buf.Err(); err != nil {
-			record.SetErr(err)
+		if buf.err != nil {
+			record.SetErr(buf.err)
 		}
 		record.AddAttributes(buf.KeyValues()...)
 	}
@@ -343,8 +343,8 @@ type group struct {
 // no error is found, nil is returned.
 func (g *group) Err() error {
 	for g != nil {
-		if g.attrs != nil && g.attrs.Err() != nil {
-			return g.attrs.Err()
+		if g.attrs != nil && g.attrs.err != nil {
+			return g.attrs.err
 		}
 		g = g.next
 	}
@@ -424,14 +424,6 @@ func (b *kvBuffer) Clone() *kvBuffer {
 		return nil
 	}
 	return &kvBuffer{data: slices.Clone(b.data), err: b.err}
-}
-
-// Err returns the error held by b.
-func (b *kvBuffer) Err() error {
-	if b == nil {
-		return nil
-	}
-	return b.err
 }
 
 // KeyValues returns kvs appended to the [log.KeyValue] held by b.

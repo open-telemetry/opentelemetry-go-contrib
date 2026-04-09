@@ -97,6 +97,9 @@ func (r *recorder) Results() []map[string]any {
 		if st := r.SeverityText(); st != "" {
 			m["severityText"] = st
 		}
+		if err := r.Err(); err != nil {
+			m["error"] = err
+		}
 		if body := r.Body(); body.Kind() != log.KindEmpty {
 			m[slog.MessageKey] = value2Result(body)
 		}
@@ -530,8 +533,8 @@ func TestHandlerErrorFieldSetErr(t *testing.T) {
 		l.Info("msg", slog.Any("err", wantErr))
 
 		require.Len(t, r.Records, 1)
-		assert.ErrorIs(t, r.Records[0].Err(), wantErr)
 		got := r.Results()[0]
+		assert.ErrorIs(t, got["error"].(error), wantErr)
 		_, exists := got["err"]
 		assert.False(t, exists, "error field should not be emitted as an attribute")
 	})
@@ -544,8 +547,8 @@ func TestHandlerErrorFieldSetErr(t *testing.T) {
 		l.Info("msg")
 
 		require.Len(t, r.Records, 1)
-		assert.ErrorIs(t, r.Records[0].Err(), wantErr)
 		got := r.Results()[0]
+		assert.ErrorIs(t, got["error"].(error), wantErr)
 		_, exists := got["err"]
 		assert.False(t, exists, "error field should not be emitted as an attribute")
 	})
@@ -558,8 +561,8 @@ func TestHandlerErrorFieldSetErr(t *testing.T) {
 		l.Info("msg")
 
 		require.Len(t, r.Records, 1)
-		assert.ErrorIs(t, r.Records[0].Err(), wantErr)
 		got := r.Results()[0]
+		assert.ErrorIs(t, got["error"].(error), wantErr)
 		_, exists := got["grp"]
 		assert.False(t, exists, "empty group should not be emitted")
 	})
@@ -573,8 +576,8 @@ func TestHandlerErrorFieldSetErr(t *testing.T) {
 		l.Info("msg", slog.Any("record_err", recordErr))
 
 		require.Len(t, r.Records, 1)
-		assert.ErrorIs(t, r.Records[0].Err(), recordErr)
 		got := r.Results()[0]
+		assert.ErrorIs(t, got["error"].(error), recordErr)
 		_, exists := got["record_err"]
 		assert.False(t, exists, "error field should not be emitted as an attribute")
 	})
