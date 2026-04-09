@@ -158,7 +158,7 @@ func BenchmarkSemanticConvWrite(b *testing.B) {
 			zc := NewCore(loggerName)
 			b.ReportAllocs()
 			b.ResetTimer()
-			for range b.N {
+			for b.Loop() {
 				err := zc.Write(bm.entry, bm.fields)
 				if err != nil {
 					b.Fatal(err)
