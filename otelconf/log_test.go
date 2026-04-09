@@ -628,6 +628,24 @@ func TestLogProcessor(t *testing.T) {
 			wantErrT: newErrInvalid("unsupported compression \"invalid\""),
 		},
 		{
+			name: "batch/otlp-http-invalid-encoding",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					MaxExportBatchSize: ptr(1),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(1),
+					ScheduleDelay:      ptr(0),
+					Exporter: LogRecordExporter{
+						OTLPHttp: &OTLPHttpExporter{
+							Endpoint: ptr("http://localhost:4318"),
+							Encoding: ptr(OTLPHttpEncoding("json")),
+						},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("unsupported encoding \"json\""),
+		},
+		{
 			name: "simple/no-exporter",
 			processor: LogRecordProcessor{
 				Simple: &SimpleLogRecordProcessor{

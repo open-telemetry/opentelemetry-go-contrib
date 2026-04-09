@@ -11,7 +11,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Set error field as `record.SetErr` instead of a plain attribute in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#8776)
-- Split `otelhttp.Option` into `HandlerOption` and `TransportOption` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8784)
+- Introduces breaking changes by refactoring `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to enforce distinct API boundaries between server and client instrumentation. (#8784)
+  - The `Option` interface has been split into `HandlerOption` and `TransportOption` to provide compile-time safety for configuration options.
+  - Internal configuration structures were refactored into `sharedConfig`, `handlerConfig`, and `transportConfig` to isolate server and client-specific settings.
+  - `NewHandler` and `NewTransport` now strictly accept their respective `HandlerOption` or `TransportOption` types.
 
 ### Fixed
 

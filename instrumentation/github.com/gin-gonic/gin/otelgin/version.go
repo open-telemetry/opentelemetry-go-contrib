@@ -4,4 +4,4 @@
 package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
 
 // Version is the current release version of the gin instrumentation.
-const Version = "0.67.0"
+const Version = "0.68.0"
