@@ -67,14 +67,14 @@ func NewTransport(base http.RoundTripper, opts ...TransportOption) *Transport {
 }
 
 func (t *Transport) applyConfig(c *transportConfig) {
-	t.tracer = c.Tracer
-	t.propagators = c.Propagators
-	t.spanStartOptions = c.SpanStartOptions
-	t.filters = c.Filters
-	t.spanNameFormatter = c.SpanNameFormatter
+	t.tracer = c.sharedConfig.Tracer
+	t.propagators = c.sharedConfig.Propagators
+	t.spanStartOptions = c.sharedConfig.SpanStartOptions
+	t.filters = c.sharedConfig.Filters
+	t.spanNameFormatter = c.sharedConfig.SpanNameFormatter
 	t.clientTrace = c.ClientTrace
-	t.semconv = semconv.NewHTTPClient(c.Meter)
-	t.metricAttributesFn = c.MetricAttributesFn
+	t.semconv = semconv.NewHTTPClient(c.sharedConfig.Meter)
+	t.metricAttributesFn = c.sharedConfig.MetricAttributesFn
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {

@@ -18,35 +18,31 @@ import (
 // ScopeName is the instrumentation scope name.
 const ScopeName = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-// handlerConfig represents the configuration options available for the http.Handler.
-type handlerConfig struct {
+type sharedConfig struct {
 	Tracer             trace.Tracer
 	Meter              metric.Meter
 	Propagators        propagation.TextMapPropagator
 	SpanStartOptions   []trace.SpanStartOption
 	TracerProvider     trace.TracerProvider
 	MeterProvider      metric.MeterProvider
-	ServerName         string
-	PublicEndpointFn   func(*http.Request) bool
-	ReadEvent          bool
-	WriteEvent         bool
 	Filters            []Filter
 	SpanNameFormatter  func(string, *http.Request) string
 	MetricAttributesFn func(*http.Request) []attribute.KeyValue
 }
 
+// handlerConfig represents the configuration options available for the http.Handler.
+type handlerConfig struct {
+	ServerName       string
+	PublicEndpointFn func(*http.Request) bool
+	ReadEvent        bool
+	WriteEvent       bool
+	sharedConfig     *sharedConfig
+}
+
 // transportConfig represents the configuration options available for the http.Transport.
 type transportConfig struct {
-	Tracer             trace.Tracer
-	Meter              metric.Meter
-	Propagators        propagation.TextMapPropagator
-	SpanStartOptions   []trace.SpanStartOption
-	TracerProvider     trace.TracerProvider
-	MeterProvider      metric.MeterProvider
-	ClientTrace        func(context.Context) *httptrace.ClientTrace
-	Filters            []Filter
-	SpanNameFormatter  func(string, *http.Request) string
-	MetricAttributesFn func(*http.Request) []attribute.KeyValue
+	ClientTrace  func(context.Context) *httptrace.ClientTrace
+	sharedConfig *sharedConfig
 }
 
 // HandlerOption is the interface used to set optional configuration for the Handler.
@@ -87,19 +83,21 @@ func (f transportOptionFunc) applyTransport(c *transportConfig) { f(c) }
 // newHandlerConfig creates a new handlerConfig and applies the provided options to it.
 func newHandlerConfig(opts ...HandlerOption) *handlerConfig {
 	c := &handlerConfig{
-		Propagators:   otel.GetTextMapPropagator(),
-		MeterProvider: otel.GetMeterProvider(),
+		sharedConfig: &sharedConfig{
+			Propagators:   otel.GetTextMapPropagator(),
+			MeterProvider: otel.GetMeterProvider(),
+		},
 	}
 	for _, opt := range opts {
 		opt.applyHandler(c)
 	}
 
 	// Tracer is only initialized if manually specified. Otherwise, can be passed with the tracing context.
-	if c.TracerProvider != nil {
-		c.Tracer = newTracer(c.TracerProvider)
+	if c.sharedConfig.TracerProvider != nil {
+		c.sharedConfig.Tracer = newTracer(c.sharedConfig.TracerProvider)
 	}
 
-	c.Meter = c.MeterProvider.Meter(
+	c.sharedConfig.Meter = c.sharedConfig.MeterProvider.Meter(
 		ScopeName,
 		metric.WithInstrumentationVersion(Version),
 	)
@@ -110,19 +108,21 @@ func newHandlerConfig(opts ...HandlerOption) *handlerConfig {
 // newTransportConfig creates a new transportConfig and applies the provided options to it.
 func newTransportConfig(opts ...TransportOption) *transportConfig {
 	c := &transportConfig{
-		Propagators:   otel.GetTextMapPropagator(),
-		MeterProvider: otel.GetMeterProvider(),
+		sharedConfig: &sharedConfig{
+			Propagators:   otel.GetTextMapPropagator(),
+			MeterProvider: otel.GetMeterProvider(),
+		},
 	}
 	for _, opt := range opts {
 		opt.applyTransport(c)
 	}
 
 	// Tracer is only initialized if manually specified. Otherwise, can be passed with the tracing context.
-	if c.TracerProvider != nil {
-		c.Tracer = newTracer(c.TracerProvider)
+	if c.sharedConfig.TracerProvider != nil {
+		c.sharedConfig.Tracer = newTracer(c.sharedConfig.TracerProvider)
 	}
 
-	c.Meter = c.MeterProvider.Meter(
+	c.sharedConfig.Meter = c.sharedConfig.MeterProvider.Meter(
 		ScopeName,
 		metric.WithInstrumentationVersion(Version),
 	)
@@ -136,12 +136,12 @@ func WithTracerProvider(provider trace.TracerProvider) Option {
 	return sharedOption{
 		handlerFunc: func(c *handlerConfig) {
 			if provider != nil {
-				c.TracerProvider = provider
+				c.sharedConfig.TracerProvider = provider
 			}
 		},
 		transportFunc: func(c *transportConfig) {
 			if provider != nil {
-				c.TracerProvider = provider
+				c.sharedConfig.TracerProvider = provider
 			}
 		},
 	}
@@ -153,12 +153,12 @@ func WithMeterProvider(provider metric.MeterProvider) Option {
 	return sharedOption{
 		handlerFunc: func(c *handlerConfig) {
 			if provider != nil {
-				c.MeterProvider = provider
+				c.sharedConfig.MeterProvider = provider
 			}
 		},
 		transportFunc: func(c *transportConfig) {
 			if provider != nil {
-				c.MeterProvider = provider
+				c.sharedConfig.MeterProvider = provider
 			}
 		},
 	}
@@ -178,12 +178,12 @@ func WithPropagators(ps propagation.TextMapPropagator) Option {
 	return sharedOption{
 		handlerFunc: func(c *handlerConfig) {
 			if ps != nil {
-				c.Propagators = ps
+				c.sharedConfig.Propagators = ps
 			}
 		},
 		transportFunc: func(c *transportConfig) {
 			if ps != nil {
-				c.Propagators = ps
+				c.sharedConfig.Propagators = ps
 			}
 		},
 	}
@@ -195,12 +195,12 @@ func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 	return sharedOption{
 		handlerFunc: func(c *handlerConfig) {
 			if opts != nil {
-				c.SpanStartOptions = append(c.SpanStartOptions, opts...)
+				c.sharedConfig.SpanStartOptions = append(c.sharedConfig.SpanStartOptions, opts...)
 			}
 		},
 		transportFunc: func(c *transportConfig) {
 			if opts != nil {
-				c.SpanStartOptions = append(c.SpanStartOptions, opts...)
+				c.sharedConfig.SpanStartOptions = append(c.sharedConfig.SpanStartOptions, opts...)
 			}
 		},
 	}
@@ -212,8 +212,11 @@ func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 // If no filters are provided then all requests are traced.
 // Filters will be invoked for each processed request, it is advised to make them
 // simple and fast.
-func WithFilter(f Filter) HandlerOption {
-	return handlerOptionFunc(func(c *handlerConfig) { c.Filters = append(c.Filters, f) })
+func WithFilter(f Filter) Option {
+	return sharedOption{
+		handlerFunc:   func(c *handlerConfig) { c.sharedConfig.Filters = append(c.sharedConfig.Filters, f) },
+		transportFunc: func(c *transportConfig) { c.sharedConfig.Filters = append(c.sharedConfig.Filters, f) },
+	}
 }
 
 // Event represents message event types for [WithMessageEvents].
@@ -257,10 +260,10 @@ func WithMessageEvents(events ...Event) HandlerOption {
 func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
 	return sharedOption{
 		handlerFunc: func(c *handlerConfig) {
-			c.SpanNameFormatter = f
+			c.sharedConfig.SpanNameFormatter = f
 		},
 		transportFunc: func(c *transportConfig) {
-			c.SpanNameFormatter = f
+			c.sharedConfig.SpanNameFormatter = f
 		},
 	}
 }
@@ -289,10 +292,10 @@ func WithServerName(server string) HandlerOption {
 func WithMetricAttributesFn(metricAttributesFn func(r *http.Request) []attribute.KeyValue) Option {
 	return sharedOption{
 		handlerFunc: func(c *handlerConfig) {
-			c.MetricAttributesFn = metricAttributesFn
+			c.sharedConfig.MetricAttributesFn = metricAttributesFn
 		},
 		transportFunc: func(c *transportConfig) {
-			c.MetricAttributesFn = metricAttributesFn
+			c.sharedConfig.MetricAttributesFn = metricAttributesFn
 		},
 	}
 }

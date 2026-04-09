@@ -69,17 +69,17 @@ func NewMiddleware(operation string, opts ...HandlerOption) func(http.Handler) h
 }
 
 func (h *middleware) configure(c *handlerConfig) {
-	h.tracer = c.Tracer
-	h.propagators = c.Propagators
-	h.spanStartOptions = c.SpanStartOptions
+	h.tracer = c.sharedConfig.Tracer
+	h.propagators = c.sharedConfig.Propagators
+	h.spanStartOptions = c.sharedConfig.SpanStartOptions
 	h.readEvent = c.ReadEvent
 	h.writeEvent = c.WriteEvent
-	h.filters = c.Filters
-	h.spanNameFormatter = c.SpanNameFormatter
+	h.filters = c.sharedConfig.Filters
+	h.spanNameFormatter = c.sharedConfig.SpanNameFormatter
 	h.publicEndpointFn = c.PublicEndpointFn
 	h.server = c.ServerName
-	h.semconv = semconv.NewHTTPServer(c.Meter)
-	h.metricAttributesFn = c.MetricAttributesFn
+	h.semconv = semconv.NewHTTPServer(c.sharedConfig.Meter)
+	h.metricAttributesFn = c.sharedConfig.MetricAttributesFn
 }
 
 // serveHTTP sets up tracing and calls the given next http.Handler with the span
