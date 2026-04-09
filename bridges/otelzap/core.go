@@ -274,13 +274,9 @@ func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue, erro
 			ctx = ctxFld
 			continue
 		}
-		if field.Type == zapcore.ErrorType {
-			if errField == nil {
-				errField = field.Interface.(error)
-			}
-			if field.Key == "error" {
-				continue
-			}
+		if field.Type == zapcore.ErrorType && field.Key == "error" {
+			errField = field.Interface.(error)
+			continue
 		}
 		field.AddTo(enc)
 	}

@@ -294,6 +294,33 @@ func TestCoreErrorFieldSetErrBehavior(t *testing.T) {
 		require.NotContains(t, r.attrs, log.String(string(semconv.ExceptionMessageKey), "test error"))
 		require.NotContains(t, r.attrs, log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"))
 	})
+
+	t.Run("NamedErrorDoesNotUseSetErr", func(t *testing.T) {
+		p := newCaptureProvider()
+		logger := zap.New(NewCore(loggerName, WithLoggerProvider(p)))
+
+		logger.Error(testMessage, zap.NamedError("db.error", errors.New("db failure")))
+
+		r := p.logger.lastRecord(t)
+		require.NoError(t, r.err)
+		require.Contains(t, r.attrs, log.String("db.error", "db failure"))
+	})
+
+	t.Run("NamedErrorDoesNotOverrideErrorField", func(t *testing.T) {
+		p := newCaptureProvider()
+		logger := zap.New(NewCore(loggerName, WithLoggerProvider(p)))
+
+		logger.Error(
+			testMessage,
+			zap.Error(errors.New("top level error")),
+			zap.NamedError("db.error", errors.New("db failure")),
+		)
+
+		r := p.logger.lastRecord(t)
+		require.EqualError(t, r.err, "top level error")
+		require.Contains(t, r.attrs, log.String("db.error", "db failure"))
+		require.NotContains(t, r.attrs, log.String("error", "top level error"))
+	})
 }
 
 func TestCoreWriteContextConcurrentSafe(t *testing.T) {
