@@ -277,6 +277,15 @@ func ptr[T any](v T) *T {
 	return &v
 }
 
+// validateOTLPHTTPEncoding validates the encoding configuration.
+// The Go SDK only supports protobuf encoding for OTLP HTTP exporters.
+func validateOTLPHTTPEncoding(encoding *OTLPHttpEncoding) error {
+	if encoding != nil && *encoding != OTLPHttpEncodingProtobuf {
+		return newErrInvalid(fmt.Sprintf("unsupported encoding %q", *encoding))
+	}
+	return nil
+}
+
 // createHeadersConfig combines the two header config fields. Headers take precedence over headersList.
 func createHeadersConfig(headers []NameStringValuePair, headersList *string) (map[string]string, error) {
 	result := make(map[string]string)
