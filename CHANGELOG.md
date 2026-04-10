@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Set error field as `record.SetErr` instead of a plain attribute in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#8776)
 - Set the "error" field (e.g. created via `zap.Error`) as `record.SetErr` instead of a plain attribute in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8719)
+- Set emitted errors in `go.opentelemetry.io/contrib/bridges/otellogr` as record errors (`Record.SetErr`) instead of `exception.message` attributes. (#8747)
 
 ### Fixed
 
@@ -46,7 +47,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `go.opentelemetry.io/contrib/otelconf` Prometheus reader converting OTel dot-style label names (e.g. `service.name`) to underscore-style (`service_name`) in `target_info` when both `without_type_suffix` and `without_units` are set. Use `NoTranslation` instead of `UnderscoreEscapingWithoutSuffixes` to preserve dot-style label names while still suppressing metric name suffixes. (#8763)
 - Limit the request body size at 1MB in `go.opentelemetry.io/contrib/zpages`. (#8656)
 - Fix server spans using the client's address and port for `server.address` and `server.port` attributes in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8723)
-- Set emitted errors in `go.opentelemetry.io/contrib/bridges/otellogr` as record errors (`Record.SetErr`) instead of `exception.message` attributes. (#8747)
 
 ### Removed
 

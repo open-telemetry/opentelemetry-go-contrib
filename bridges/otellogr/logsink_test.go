@@ -26,31 +26,6 @@ func (mockLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
 	return nil
 }
 
-type captureLoggerProvider struct {
-	embedded.LoggerProvider
-	logger *captureLogger
-}
-
-func (p *captureLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
-	if p.logger == nil {
-		p.logger = &captureLogger{}
-	}
-	return p.logger
-}
-
-type captureLogger struct {
-	embedded.Logger
-	records []log.Record
-}
-
-func (*captureLogger) Enabled(context.Context, log.EnabledParameters) bool {
-	return true
-}
-
-func (l *captureLogger) Emit(_ context.Context, record log.Record) {
-	l.records = append(l.records, record.Clone())
-}
-
 func TestNewConfig(t *testing.T) {
 	customLoggerProvider := mockLoggerProvider{}
 
@@ -143,6 +118,8 @@ func TestNewLogSink(t *testing.T) {
 
 func TestLogSink(t *testing.T) {
 	const name = "name"
+	testErr := errors.New("test")
+	testErrWithAttrs := errors.New("test error")
 
 	for _, tt := range []struct {
 		name         string
@@ -329,12 +306,13 @@ func TestLogSink(t *testing.T) {
 		{
 			name: "error",
 			f: func(l *logr.Logger) {
-				l.Error(errors.New("test"), "error message")
+				l.Error(testErr, "error message")
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: []logtest.Record{
 					{
 						Body:     log.StringValue("error message"),
+						Error:    testErr,
 						Severity: log.SeverityError,
 					},
 				},
@@ -343,7 +321,7 @@ func TestLogSink(t *testing.T) {
 		{
 			name: "error_multi_attrs",
 			f: func(l *logr.Logger) {
-				l.Error(errors.New("test error"), "msg",
+				l.Error(testErrWithAttrs, "msg",
 					"struct", struct{ data int64 }{data: 1},
 					"bool", true,
 					"duration", time.Minute,
@@ -358,6 +336,7 @@ func TestLogSink(t *testing.T) {
 				logtest.Scope{Name: name}: []logtest.Record{
 					{
 						Body:     log.StringValue("msg"),
+						Error:    testErrWithAttrs,
 						Severity: log.SeverityError,
 						Attributes: []log.KeyValue{
 							log.String("struct", "{data:1}"),
@@ -390,26 +369,6 @@ func TestLogSink(t *testing.T) {
 				}),
 			)
 		})
-	}
-}
-
-func TestLogSinkErrorSetsErr(t *testing.T) {
-	provider := &captureLoggerProvider{}
-	l := logr.New(NewLogSink("name", WithLoggerProvider(provider)))
-	wantErr := errors.New("test")
-
-	l.Error(wantErr, "message")
-
-	if assert.NotNil(t, provider.logger) && assert.Len(t, provider.logger.records, 1) {
-		got := provider.logger.records[0]
-		assert.Equal(t, wantErr, got.Err())
-
-		var attrs []log.KeyValue
-		got.WalkAttributes(func(kv log.KeyValue) bool {
-			attrs = append(attrs, kv)
-			return true
-		})
-		assert.Empty(t, attrs)
 	}
 }
 
