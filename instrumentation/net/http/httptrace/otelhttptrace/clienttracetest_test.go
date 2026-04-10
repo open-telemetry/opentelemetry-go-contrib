@@ -502,6 +502,41 @@ func TestWithInsecureHeaders(t *testing.T) {
 	)
 }
 
+func TestSubSpansHeaderAttributes(t *testing.T) {
+	fixture := prepareClientTraceTest(t)
+
+	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
+	ctx = httptrace.WithClientTrace(ctx,
+		otelhttptrace.NewClientTrace(ctx), // default: with sub-spans
+	)
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, http.NoBody)
+	require.NoError(t, err)
+	req.Header.Set("User-Agent", "oteltest/1.1")
+	req.Header.Set("Authorization", "Bearer token123")
+
+	resp, err := fixture.Client.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	span.End()
+
+	// wroteHeaderField() sets header attributes via ct.root.SetAttributes().
+	// Collect all attributes across all ended spans to verify they are recorded.
+	allAttrs := make(map[attribute.Key]attribute.Value)
+	for _, s := range fixture.SpanRecorder.Ended() {
+		for _, a := range s.Attributes() {
+			allAttrs[a.Key] = a.Value
+		}
+	}
+
+	assert.Contains(t, allAttrs, attribute.Key("http.request.header.host"),
+		"header attribute should be recorded on a span")
+	assert.Contains(t, allAttrs, attribute.Key("http.request.header.user-agent"),
+		"header attribute should be recorded on a span")
+	assert.Contains(t, allAttrs, attribute.Key("http.request.header.authorization"),
+		"header attribute should be recorded on a span (redacted)")
+}
+
 func TestHTTPRequestWithTraceContext(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))

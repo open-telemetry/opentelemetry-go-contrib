@@ -201,10 +201,9 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...attribute.KeyValue
 	defer ct.mtx.Unlock()
 
 	if hookCtx, found := ct.activeHooks[hook]; !found {
-		var sp trace.Span
-		ct.activeHooks[hook], sp = ct.tr.Start(ct.getParentContext(hook), spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
+		ct.activeHooks[hook], _ = ct.tr.Start(ct.getParentContext(hook), spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 		if ct.root == nil {
-			ct.root = sp
+			ct.root = trace.SpanFromContext(ct.Context)
 		}
 	} else {
 		// end was called before start finished, add the start attributes and end the span here
