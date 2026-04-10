@@ -4,6 +4,7 @@
 package otelzap
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
@@ -104,6 +105,65 @@ func BenchmarkCoreWrite(b *testing.B) {
 					}
 				}
 			})
+		})
+	}
+}
+
+func BenchmarkSemanticConvWrite(b *testing.B) {
+	testErr := errors.New("benchmark error")
+	infoEntry := zapcore.Entry{
+		Level:   zap.InfoLevel,
+		Message: "benchmark log",
+		Time:    time.Unix(1700000000, 0),
+	}
+	errorEntry := zapcore.Entry{
+		Level:   zap.ErrorLevel,
+		Message: "benchmark log",
+		Time:    time.Unix(1700000000, 0),
+		Stack:   "stacktrace",
+	}
+
+	tenFields := []zapcore.Field{
+		zap.Int16("a", 1),
+		zap.String("b", "a"),
+		zap.Bool("c", true),
+		zap.Time("d", time.Unix(1000, 1000)),
+		zap.Binary("e", []byte{1, 2}),
+		zap.ByteString("f", []byte{1, 2}),
+		zap.Object("g", loggable{true}),
+		zap.Array("h", loggable{true}),
+		zap.String("i", "a"),
+		zap.Ints("j", []int{1, 2}),
+	}
+
+	benchmarks := []struct {
+		name   string
+		entry  zapcore.Entry
+		fields []zapcore.Field
+	}{
+		{name: "NoFields", entry: infoEntry},
+		{name: "TenFields", entry: infoEntry, fields: tenFields},
+		{name: "ErrorField", entry: infoEntry, fields: []zapcore.Field{zap.Error(testErr)}},
+		{name: "NamedErrorField", entry: infoEntry, fields: []zapcore.Field{zap.NamedError("db", testErr)}},
+		{name: "AnyErrorField", entry: infoEntry, fields: []zapcore.Field{zap.Any("error", testErr)}},
+		{name: "ErrorFieldWithStack", entry: errorEntry, fields: []zapcore.Field{zap.Error(testErr)}},
+		{name: "TenFieldsWithError", entry: infoEntry, fields: append(append([]zapcore.Field{}, tenFields...), zap.Error(testErr))},
+		{name: "TenFieldsWithNamedError", entry: infoEntry, fields: append(append([]zapcore.Field{}, tenFields...), zap.NamedError("db", testErr))},
+		{name: "TenFieldsWithErrorAndStack", entry: errorEntry, fields: append(append([]zapcore.Field{}, tenFields...), zap.Error(testErr))},
+	}
+
+	for i := range benchmarks {
+		bm := &benchmarks[i]
+		b.Run(bm.name, func(b *testing.B) {
+			zc := NewCore(loggerName)
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				err := zc.Write(bm.entry, bm.fields)
+				if err != nil {
+					b.Fatal(err)
+				}
+			}
 		})
 	}
 }
