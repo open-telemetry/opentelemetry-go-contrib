@@ -265,6 +265,9 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLPGrpcExporter) (sd
 func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sdktrace.SpanExporter, error) {
 	var opts []otlptracehttp.Option
 
+	if err := validateOTLPHTTPEncoding(otlpConfig.Encoding); err != nil {
+		return nil, err
+	}
 	if otlpConfig.Endpoint != nil {
 		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {

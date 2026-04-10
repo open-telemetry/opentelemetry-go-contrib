@@ -14,6 +14,8 @@
 //   - Message is set as the Body using a [log.StringValue].
 //   - Level is transformed and set as the Severity. The SeverityText is also set.
 //   - Fields are transformed and set as the attributes.
+//   - A field with key [logrus.ErrorKey] and an [error] value is set using
+//     [log.Record.SetErr].
 //
 // The Level is transformed to the OpenTelemetry
 // Severity types. For example:
@@ -177,20 +179,32 @@ func (*Hook) convertEntry(e *logrus.Entry) log.Record {
 	record.SetBody(log.StringValue(e.Message))
 	record.SetSeverity(convertSeverity(e.Level))
 	record.SetSeverityText(e.Level.String())
-	record.AddAttributes(convertFields(e.Data)...)
+
+	attrs, err := convertFields(e.Data)
+	if err != nil {
+		record.SetErr(err)
+	}
+	record.AddAttributes(attrs...)
 
 	return record
 }
 
-func convertFields(fields logrus.Fields) []log.KeyValue {
+func convertFields(fields logrus.Fields) ([]log.KeyValue, error) {
+	var errVal error
 	kvs := make([]log.KeyValue, 0, len(fields))
 	for k, v := range fields {
+		if k == logrus.ErrorKey {
+			if e, ok := v.(error); ok {
+				errVal = e
+				continue
+			}
+		}
 		kvs = append(kvs, log.KeyValue{
 			Key:   k,
 			Value: convertValue(v),
 		})
 	}
-	return kvs
+	return kvs, errVal
 }
 
 func convertSeverity(level logrus.Level) log.Severity {
