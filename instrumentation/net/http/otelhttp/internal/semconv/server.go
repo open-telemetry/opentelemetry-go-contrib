@@ -20,7 +20,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.opentelemetry.io/otel/semconv/v1.40.0/httpconv"
 )
 
@@ -243,6 +243,7 @@ type MetricAttributes struct {
 	StatusCode           int
 	Route                string
 	AdditionalAttributes []attribute.KeyValue
+	Err                  error
 }
 
 type MetricData struct {
