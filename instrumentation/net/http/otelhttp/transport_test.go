@@ -1194,6 +1194,7 @@ func TestHandleErrorOnGetBodyError(t *testing.T) {
 	assert.Equal(t, body, receivedBody) // got it one time
 	assert.Equal(t, 1, requests)
 }
+
 func TestTransportErrorTypeMetricAttribute(t *testing.T) {
 	ctx := t.Context()
 	reader := sdkmetric.NewManualReader()
