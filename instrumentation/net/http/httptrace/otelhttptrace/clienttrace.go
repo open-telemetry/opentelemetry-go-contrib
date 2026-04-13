@@ -148,13 +148,6 @@ type clientTracer struct {
 // added as attributes to spans, although several headers will be automatically
 // redacted: Authorization, WWW-Authenticate, Proxy-Authenticate,
 // Proxy-Authorization, Cookie, and Set-Cookie.
-//
-// Sub-span creation carries non-trivial overhead: each outbound request may
-// produce up to 7 additional span objects that flow through the span
-// processor pipeline. In services that fan out to many backends per incoming
-// request, this can become the dominant source of memory and GC pressure.
-// See [WithoutSubSpans] for a lightweight alternative that records the same
-// information as span events instead.
 func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.ClientTrace {
 	ct := &clientTracer{
 		Context:     ctx,
