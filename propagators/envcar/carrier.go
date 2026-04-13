@@ -12,7 +12,7 @@ import (
 )
 
 // Carrier is a TextMapCarrier that uses the environment variables as a
-// storage medium for propagated key-value pairs. The keys are normalised
+// storage medium for propagated key-value pairs. The keys are normalized
 // before being used to access the environment variables.
 // This is useful for propagating values that are set in the environment
 // and need to be accessed by different processes or services.
@@ -43,7 +43,8 @@ func (c *Carrier) fetch() {
 		c.values = make(map[string]string, len(environ))
 		for _, kv := range environ {
 			kvPair := strings.SplitN(kv, "=", 2)
-			c.values[kvPair[0]] = kvPair[1]
+			key := normalize(kvPair[0])
+			c.values[key] = kvPair[1]
 		}
 	})
 }
@@ -74,8 +75,7 @@ func (c *Carrier) Set(key, value string) {
 // The first call to [Carrier.Get] or [Carrier.Keys] for a
 // given Carrier will read and store the values from the
 // environment and all future reads will be from that store.
-// Keys are returned as is, without any normalization, but
-// this behavior is subject to change.
+// The keys are returned in their normalized form.
 func (c *Carrier) Keys() []string {
 	c.fetch()
 	keys := make([]string, 0, len(c.values))

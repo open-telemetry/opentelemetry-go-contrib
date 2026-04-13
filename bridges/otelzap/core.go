@@ -14,6 +14,8 @@
 //   - Level is transformed and set as the Severity. The SeverityText is also
 //     set.
 //   - Fields are transformed and set as the Attributes.
+//   - Fields of type [error] are attached to the emitted record as an error via
+//     [log.Record.SetErr].
 //   - Field value of type [context.Context] is used as context when emitting log records.
 //   - For named loggers, LoggerName is used to access [log.Logger] from [log.LoggerProvider]
 //
@@ -42,6 +44,11 @@ import (
 	"go.opentelemetry.io/otel/log/global"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 	"go.uber.org/zap/zapcore"
+)
+
+var (
+	exceptionMessageKey = string(semconv.ExceptionMessageKey)
+	exceptionTypeKey    = string(semconv.ExceptionTypeKey)
 )
 
 type config struct {
@@ -121,6 +128,7 @@ type Core struct {
 	opts     []log.LoggerOption
 	attr     []log.KeyValue
 	ctx      context.Context
+	err      error
 }
 
 // Compile-time check *Core implements zapcore.Core.
@@ -163,11 +171,14 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	cloned := o.clone()
 	if len(fields) > 0 {
-		ctx, attrbuf := convertField(fields)
+		ctx, attrbuf, err := convertField(fields)
 		if ctx != nil {
 			cloned.ctx = ctx
 		}
 		cloned.attr = append(cloned.attr, attrbuf...)
+		if err != nil {
+			cloned.err = err
+		}
 	}
 	return cloned
 }
@@ -179,6 +190,7 @@ func (o *Core) clone() *Core {
 		logger:   o.logger,
 		attr:     slices.Clone(o.attr),
 		ctx:      o.ctx,
+		err:      o.err,
 	}
 }
 
@@ -211,6 +223,20 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.SetSeverity(convertLevel(ent.Level))
 	r.SetSeverityText(ent.Level.String())
 
+	emitCtx := o.ctx
+	recErr := o.err
+	var attrbuf []log.KeyValue
+	if len(fields) > 0 {
+		ctx, converted, err := convertField(fields)
+		if ctx != nil {
+			emitCtx = ctx
+		}
+		attrbuf = converted
+		if err != nil {
+			recErr = err
+		}
+	}
+
 	r.AddAttributes(o.attr...)
 	if ent.Caller.Defined {
 		r.AddAttributes(
@@ -220,15 +246,15 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 		)
 	}
 	if ent.Stack != "" {
-		r.AddAttributes(log.String(string(semconv.CodeStacktraceKey), ent.Stack))
-	}
-	emitCtx := o.ctx
-	if len(fields) > 0 {
-		ctx, attrbuf := convertField(fields)
-		if ctx != nil {
-			emitCtx = ctx
+		stacktraceKey := semconv.CodeStacktraceKey
+		if recErr != nil || hasExceptionAttributes(o.attr) || hasExceptionAttributes(attrbuf) {
+			stacktraceKey = semconv.ExceptionStacktraceKey
 		}
-		r.AddAttributes(attrbuf...)
+		r.AddAttributes(log.String(string(stacktraceKey), ent.Stack))
+	}
+	r.AddAttributes(attrbuf...)
+	if recErr != nil {
+		r.SetErr(recErr)
 	}
 
 	logger := o.logger
@@ -239,19 +265,36 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	return nil
 }
 
-func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue) {
+func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue, error) {
 	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
+	var errField error
 	for _, field := range fields {
 		if ctxFld, ok := field.Interface.(context.Context); ok {
 			ctx = ctxFld
+			continue
+		}
+		if field.Type == zapcore.ErrorType && field.Key == "error" {
+			errField = field.Interface.(error)
 			continue
 		}
 		field.AddTo(enc)
 	}
 
 	enc.calculate(enc.root)
-	return ctx, enc.root.attrs
+	return ctx, enc.root.attrs, errField
+}
+
+func hasExceptionAttributes(attrs []log.KeyValue) bool {
+	if len(attrs) == 0 {
+		return false
+	}
+	for _, attr := range attrs {
+		if attr.Key == exceptionMessageKey || attr.Key == exceptionTypeKey {
+			return true
+		}
+	}
+	return false
 }
 
 func convertLevel(level zapcore.Level) log.Severity {

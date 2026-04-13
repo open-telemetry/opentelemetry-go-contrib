@@ -5,6 +5,7 @@ package otelzap
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"sync"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
@@ -30,6 +32,55 @@ var (
 		Message: testMessage,
 	}
 )
+
+type capturedRecord struct {
+	err   error
+	attrs []log.KeyValue
+}
+
+type captureLogger struct {
+	embedded.Logger
+	mu      sync.Mutex
+	records []capturedRecord
+}
+
+func (*captureLogger) Enabled(context.Context, log.EnabledParameters) bool { return true }
+
+func (l *captureLogger) Emit(_ context.Context, record log.Record) {
+	attrs := make([]log.KeyValue, 0, record.AttributesLen())
+	record.WalkAttributes(func(kv log.KeyValue) bool {
+		attrs = append(attrs, kv)
+		return true
+	})
+
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.records = append(l.records, capturedRecord{
+		err:   record.Err(),
+		attrs: attrs,
+	})
+}
+
+func (l *captureLogger) lastRecord(t *testing.T) capturedRecord {
+	t.Helper()
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	require.NotEmpty(t, l.records)
+	return l.records[len(l.records)-1]
+}
+
+type captureProvider struct {
+	embedded.LoggerProvider
+	logger *captureLogger
+}
+
+func newCaptureProvider() *captureProvider {
+	return &captureProvider{logger: &captureLogger{}}
+}
+
+func (p *captureProvider) Logger(string, ...log.LoggerOption) log.Logger {
+	return p.logger
+}
 
 func TestCore(t *testing.T) {
 	rec := logtest.NewRecorder()
@@ -58,6 +109,58 @@ func TestCore(t *testing.T) {
 				cp := r.Clone()
 				cp.Context = nil           // Ignore context for comparison.
 				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+				return cp
+			}),
+		)
+	})
+
+	t.Run("WriteError", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.Error(testMessage, zap.Error(errors.New("test error")))
+
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Body:         log.StringValue(testMessage),
+					Severity:     log.SeverityError,
+					SeverityText: zap.ErrorLevel.String(),
+					Attributes:   []log.KeyValue{},
+				},
+			},
+		}
+		logtest.AssertEqual(t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Context = nil
+				cp.Timestamp = time.Time{}
+				return cp
+			}),
+		)
+	})
+
+	t.Run("WriteNamedError", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.Error(testMessage, zap.NamedError("db", errors.New("test error")))
+
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Body:         log.StringValue(testMessage),
+					Severity:     log.SeverityError,
+					SeverityText: zap.ErrorLevel.String(),
+					Attributes: []log.KeyValue{
+						log.String("db", "test error"),
+					},
+				},
+			},
+		}
+		logtest.AssertEqual(t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Context = nil
+				cp.Timestamp = time.Time{}
 				return cp
 			}),
 		)
@@ -175,6 +278,48 @@ func TestCore(t *testing.T) {
 				return cp
 			}),
 		)
+	})
+}
+
+func TestCoreErrorFieldSetErrBehavior(t *testing.T) {
+	t.Run("ErrorFieldUsesSetErr", func(t *testing.T) {
+		p := newCaptureProvider()
+		logger := zap.New(NewCore(loggerName, WithLoggerProvider(p)))
+
+		logger.Error(testMessage, zap.Error(errors.New("test error")))
+
+		r := p.logger.lastRecord(t)
+		require.EqualError(t, r.err, "test error")
+		require.NotContains(t, r.attrs, log.String("error", "test error"))
+		require.NotContains(t, r.attrs, log.String(string(semconv.ExceptionMessageKey), "test error"))
+		require.NotContains(t, r.attrs, log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"))
+	})
+
+	t.Run("NamedErrorDoesNotUseSetErr", func(t *testing.T) {
+		p := newCaptureProvider()
+		logger := zap.New(NewCore(loggerName, WithLoggerProvider(p)))
+
+		logger.Error(testMessage, zap.NamedError("db.error", errors.New("db failure")))
+
+		r := p.logger.lastRecord(t)
+		require.NoError(t, r.err)
+		require.Contains(t, r.attrs, log.String("db.error", "db failure"))
+	})
+
+	t.Run("NamedErrorDoesNotOverrideErrorField", func(t *testing.T) {
+		p := newCaptureProvider()
+		logger := zap.New(NewCore(loggerName, WithLoggerProvider(p)))
+
+		logger.Error(
+			testMessage,
+			zap.Error(errors.New("top level error")),
+			zap.NamedError("db.error", errors.New("db failure")),
+		)
+
+		r := p.logger.lastRecord(t)
+		require.EqualError(t, r.err, "top level error")
+		require.Contains(t, r.attrs, log.String("db.error", "db failure"))
+		require.NotContains(t, r.attrs, log.String("error", "top level error"))
 	})
 }
 
@@ -343,6 +488,40 @@ func TestCoreWithStacktrace(t *testing.T) {
 	)
 }
 
+func TestCoreWithExceptionStacktrace(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
+
+	logger.Error(testMessage, zap.Error(errors.New("test error")))
+
+	want := logtest.Recording{
+		logtest.Scope{Name: "name"}: {
+			{
+				Body:         log.StringValue(testMessage),
+				Severity:     log.SeverityError,
+				SeverityText: zap.ErrorLevel.String(),
+				Attributes: []log.KeyValue{
+					log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
+				},
+			},
+		},
+	}
+	logtest.AssertEqual(t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Context = nil
+			cp.Timestamp = time.Time{}
+			for i, attr := range cp.Attributes {
+				if attr.Key == string(semconv.ExceptionStacktraceKey) {
+					cp.Attributes[i].Value = log.StringValue("stacktrace")
+				}
+			}
+			return cp
+		}),
+	)
+}
+
 func TestNewCoreConfiguration(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
 		r := logtest.NewRecorder()
@@ -386,6 +565,40 @@ func TestNewCoreConfiguration(t *testing.T) {
 		}
 		logtest.AssertEqual(t, want, r.Result())
 	})
+}
+
+func TestCoreWithErrorStacktraceDefault(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
+
+	logger.Error(testMessage, zap.Error(errors.New("test error")))
+
+	want := logtest.Recording{
+		logtest.Scope{Name: "name"}: {
+			{
+				Body:         log.StringValue(testMessage),
+				Severity:     log.SeverityError,
+				SeverityText: zap.ErrorLevel.String(),
+				Attributes: []log.KeyValue{
+					log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
+				},
+			},
+		},
+	}
+	logtest.AssertEqual(t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Context = nil
+			cp.Timestamp = time.Time{}
+			for i, attr := range cp.Attributes {
+				if attr.Key == string(semconv.ExceptionStacktraceKey) {
+					cp.Attributes[i].Value = log.StringValue("stacktrace")
+				}
+			}
+			return cp
+		}),
+	)
 }
 
 func TestConvertLevel(t *testing.T) {
