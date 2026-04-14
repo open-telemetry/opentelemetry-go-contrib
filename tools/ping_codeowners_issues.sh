@@ -18,7 +18,7 @@ CUR_DIRECTORY=$(dirname "$0")
 # Extract the component name (the part after ': ') and resolve the full path
 # from CODEOWNERS, since get-codeowners.sh matches by path prefix.
 COMPONENT_NAME=$(echo "${COMPONENT}" | sed 's/^[^:]*:[[:space:]]*//')
-COMPONENT_PATH=$(grep -E "/${COMPONENT_NAME}[/[:space:]]" CODEOWNERS | awk '{ print $1 }' | sed 's|/$||' | head -1 || true)
+COMPONENT_PATH=$(grep -F "/${COMPONENT_NAME}/" CODEOWNERS | awk '{ print $1 }' | sed 's|/$||' | head -1 || true)
 
 if [[ -z "${COMPONENT_PATH}" ]]; then
     exit 0
