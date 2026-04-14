@@ -119,7 +119,6 @@ func TestNewLogSink(t *testing.T) {
 func TestLogSink(t *testing.T) {
 	const name = "name"
 	testErr := errors.New("test")
-	testErrWithAttrs := errors.New("test error")
 
 	for _, tt := range []struct {
 		name         string
@@ -321,7 +320,7 @@ func TestLogSink(t *testing.T) {
 		{
 			name: "error_multi_attrs",
 			f: func(l *logr.Logger) {
-				l.Error(testErrWithAttrs, "msg",
+				l.Error(testErr, "msg",
 					"struct", struct{ data int64 }{data: 1},
 					"bool", true,
 					"duration", time.Minute,
@@ -336,7 +335,7 @@ func TestLogSink(t *testing.T) {
 				logtest.Scope{Name: name}: []logtest.Record{
 					{
 						Body:     log.StringValue("msg"),
-						Error:    testErrWithAttrs,
+						Error:    testErr,
 						Severity: log.SeverityError,
 						Attributes: []log.KeyValue{
 							log.String("struct", "{data:1}"),
