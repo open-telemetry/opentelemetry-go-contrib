@@ -10,6 +10,7 @@ package x // import "go.opentelemetry.io/contrib/instrumentation/runtime/interna
 import (
 	"os"
 	"strconv"
+	"strings"
 )
 
 // DeprecatedRuntimeMetrics is an experimental feature flag that defines if the deprecated
@@ -50,4 +51,19 @@ func (f BoolFeature) Enabled() bool {
 	}
 
 	return val
+}
+
+// OptInMetrics returns a map of enabled opt-in metrics parsed from the
+// OTEL_GO_X_RUNTIME_METRICS_OPTIN environment variable.
+func OptInMetrics() map[string]bool {
+	v := os.Getenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN")
+	if v == "" {
+		return nil
+	}
+	parts := strings.Split(v, ",")
+	m := make(map[string]bool, len(parts))
+	for _, p := range parts {
+		m[strings.TrimSpace(p)] = true
+	}
+	return m
 }
