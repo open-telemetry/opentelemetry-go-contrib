@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package testtls provides runtime-generated TLS materials for tests.
-package testtls
+package testtls // import "go.opentelemetry.io/contrib/otelconf/internal/testtls"
 
 import (
 	"crypto/rand"
