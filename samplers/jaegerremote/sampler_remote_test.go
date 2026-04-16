@@ -301,8 +301,13 @@ func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
 		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 	)
-	time.Sleep(100 * time.Millisecond) // waiting for s.pollController
-	sampler.Close()                    // stop pollController, avoid date race
+	assert.Eventually(t, func() bool {
+		sampler.RLock()
+		defer sampler.RUnlock()
+		_, ok := sampler.sampler.(*rateLimitingSampler)
+		return ok
+	}, 1*time.Second, 10*time.Millisecond)
+	sampler.Close() // stop pollController, avoid data race
 	s, ok := sampler.sampler.(*rateLimitingSampler)
 	assert.True(t, ok)
 	assert.Equal(t, float64(100), s.maxTracesPerSecond)
