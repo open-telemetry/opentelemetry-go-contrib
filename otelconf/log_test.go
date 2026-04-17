@@ -33,6 +33,8 @@ import (
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/testtls"
 )
 
 func TestLoggerProvider(t *testing.T) {
@@ -820,6 +822,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 		// TODO (#8115): Fix the flakiness on Windows and MacOS.
 		t.Skip("Test is flaky on Windows and MacOS.")
 	}
+	material := testtls.Write(t)
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLPGrpcExporter
@@ -856,7 +859,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Tls: &GrpcTls{
-						CaFile: ptr("testdata/server-certs/server.crt"),
+						CaFile: ptr(material.CACertPath),
 					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -865,7 +868,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				tlsCreds, err := credentials.NewServerTLSFromFile("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				tlsCreds, err := credentials.NewServerTLSFromFile(material.ServerCertPath, material.ServerKeyPath)
 				if err != nil {
 					return nil, err
 				}
@@ -881,9 +884,9 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 					Compression: ptr("gzip"),
 					Timeout:     ptr(5000),
 					Tls: &GrpcTls{
-						CaFile:   ptr("testdata/server-certs/server.crt"),
-						KeyFile:  ptr("testdata/client-certs/client.key"),
-						CertFile: ptr("testdata/client-certs/client.crt"),
+						CaFile:   ptr(material.CACertPath),
+						KeyFile:  ptr(material.ClientKeyPath),
+						CertFile: ptr(material.ClientCertPath),
 					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -892,11 +895,11 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				cert, err := tls.LoadX509KeyPair("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				cert, err := tls.LoadX509KeyPair(material.ServerCertPath, material.ServerKeyPath)
 				if err != nil {
 					return nil, err
 				}
-				caCert, err := os.ReadFile("testdata/ca.crt")
+				caCert, err := os.ReadFile(material.CACertPath)
 				if err != nil {
 					return nil, err
 				}
