@@ -372,6 +372,21 @@ type readWriteCloser struct {
 	writeErr error
 }
 
+type eofReadWriteCloser struct {
+	readWriteCloser
+
+	closeCalls int
+}
+
+func (rwc *eofReadWriteCloser) Read([]byte) (int, error) {
+	return readSize, io.EOF
+}
+
+func (rwc *eofReadWriteCloser) Close() error {
+	rwc.closeCalls++
+	return rwc.readWriteCloser.Close()
+}
+
 type slowRequestBody struct {
 	totalBytes int64
 	chunkSize  int64
@@ -447,6 +462,27 @@ const writeSize = 1
 
 func (rwc readWriteCloser) Write([]byte) (int, error) {
 	return writeSize, rwc.writeErr
+}
+
+func TestWrappedBodyReadEOFKeepsReadWriteCloserOpenUntilClose(t *testing.T) {
+	s := new(span)
+	body := &eofReadWriteCloser{}
+	recordCalls := 0
+
+	rwc := newWrappedBody(s, func(int64) { recordCalls++ }, body).(io.ReadWriteCloser)
+	n, err := rwc.Read([]byte{})
+	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
+	assert.Equal(t, io.EOF, err)
+	assert.Equal(t, 0, body.closeCalls, "EOF should not close the underlying body")
+
+	written, writeErr := rwc.Write([]byte{})
+	assert.Equal(t, writeSize, written, "wrappedBody returned wrong bytes")
+	assert.NoError(t, writeErr)
+
+	assert.NoError(t, rwc.Close())
+	s.assert(t, true, nil, codes.Unset, "")
+	assert.Equal(t, 1, recordCalls, "record should only have been called once")
+	assert.Equal(t, 1, body.closeCalls, "explicit Close should close the underlying body once")
 }
 
 func TestNewWrappedBodyReadWriteCloserImplementation(t *testing.T) {

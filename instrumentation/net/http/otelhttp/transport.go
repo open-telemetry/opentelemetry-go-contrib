@@ -313,7 +313,6 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 	case nil:
 		// nothing to do here but fall through to the return
 	case io.EOF:
-		_ = wb.closeBody()
 		wb.recordMetricsOnce()
 	default:
 		wb.span.SetAttributes(otelsemconv.ErrorType(err))
