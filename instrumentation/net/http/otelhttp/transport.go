@@ -145,13 +145,15 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	r = r.Clone(ctx) // According to RoundTripper spec, we shouldn't modify the origin request.
 
+	// lastBodyMu protects both lastTrackedBody and recordMetrics from
+	// concurrent access. The request body tracker callback may fire on a
+	// different goroutine (e.g. during transport retries) while the main
+	// goroutine is still assigning recordMetrics after RoundTrip returns.
 	var (
 		lastBodyMu      sync.Mutex
 		lastTrackedBody *requestBodyTracker
-		recordMetrics   atomic.Pointer[func()]
+		recordMetrics   = func() {}
 	)
-	emptyFn := func() {}
-	recordMetrics.Store(&emptyFn)
 	setLastTrackedBody := func(body *requestBodyTracker) {
 		lastBodyMu.Lock()
 		lastTrackedBody = body
@@ -162,6 +164,12 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		defer lastBodyMu.Unlock()
 		return lastTrackedBody
 	}
+	callRecordMetrics := func() {
+		lastBodyMu.Lock()
+		fn := recordMetrics
+		lastBodyMu.Unlock()
+		fn()
+	}
 	maybeWrapBody := func(body io.ReadCloser) io.ReadCloser {
 		if body == nil || body == http.NoBody {
 			return body
@@ -169,7 +177,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		var trackedBody *requestBodyTracker
 		trackedBody = newRequestBodyTracker(body, func() {
 			if currentTrackedBody() == trackedBody {
-				(*recordMetrics.Load())()
+				callRecordMetrics()
 			}
 		})
 		setLastTrackedBody(trackedBody)
@@ -201,14 +209,13 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	metricOptions := t.semconv.MetricOptions(semconv.MetricAttributes{
 		Req:                  r,
 		StatusCode:           statusCode,
-		Err:                  err,
 		AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
 	})
 
 	// Delay metric recording until the response body is finalized. The
 	// transport can continue reading the request body after RoundTrip returns.
 	var recordMetricsOnce sync.Once
-	realRecordMetrics := func() {
+	fn := func() {
 		var requestSize int64
 		if lastTrackedBody := currentTrackedBody(); lastTrackedBody != nil {
 			requestSize = lastTrackedBody.BytesRead()
@@ -224,10 +231,12 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 			)
 		})
 	}
-	recordMetrics.Store(&realRecordMetrics)
+	lastBodyMu.Lock()
+	recordMetrics = fn
+	lastBodyMu.Unlock()
 
 	if err != nil {
-		recordMetrics()
+		callRecordMetrics()
 		span.SetAttributes(otelsemconv.ErrorType(err))
 		span.SetStatus(codes.Error, err.Error())
 		span.End()
@@ -238,7 +247,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	readRecordFunc := func(int64) {
 		lastTrackedBody := currentTrackedBody()
 		if lastTrackedBody == nil || lastTrackedBody.Closed() {
-			recordMetrics()
+			callRecordMetrics()
 		}
 	}
 	res.Body = newWrappedBody(span, readRecordFunc, res.Body)
