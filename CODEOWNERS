@@ -53,7 +53,7 @@ instrumentation/google.golang.org/grpc/otelgrpc/                        @open-te
 
 instrumentation/host/                                                   @open-telemetry/go-approvers @dmathieu
 instrumentation/net/http/httptrace/otelhttptrace/                       @open-telemetry/go-approvers @dmathieu
-instrumentation/net/http/otelhttp/                                      @open-telemetry/go-approvers @dmathieu
+instrumentation/net/http/otelhttp/                                      @open-telemetry/go-approvers @dmathieu @sonalgaud12
 instrumentation/runtime/                                                @open-telemetry/go-approvers @dmathieu @dashpole
 
 otelconf/                                                               @open-telemetry/go-approvers @pellared @codeboten
