@@ -243,6 +243,7 @@ type MetricAttributes struct {
 	StatusCode           int
 	Route                string
 	AdditionalAttributes []attribute.KeyValue
+	Err                  error
 }
 
 type MetricData struct {
@@ -250,13 +251,11 @@ type MetricData struct {
 	RequestDuration time.Duration
 }
 
-var (
-	metricRecordOptionPool = &sync.Pool{
-		New: func() any {
-			return &[]metric.RecordOption{}
-		},
-	}
-)
+var metricRecordOptionPool = &sync.Pool{
+	New: func() any {
+		return &[]metric.RecordOption{}
+	},
+}
 
 func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	attributes := n.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.Route, md.AdditionalAttributes)
