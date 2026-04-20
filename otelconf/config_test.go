@@ -438,6 +438,9 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 }
 
 func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfiguration {
+	material.CACertPath = filepath.ToSlash(material.CACertPath)
+	material.ClientCertPath = filepath.ToSlash(material.ClientCertPath)
+	material.ClientKeyPath = filepath.ToSlash(material.ClientKeyPath)
 	return &OpenTelemetryConfiguration{
 		Disabled:   ptr(false),
 		FileFormat: "1.0-rc.2",
@@ -887,9 +890,9 @@ func TestParseFiles(t *testing.T) {
 	}
 
 	replaceCertPaths := func(b []byte) []byte {
-		b = bytes.ReplaceAll(b, []byte("<CA_CERT>"), []byte(material.CACertPath))
-		b = bytes.ReplaceAll(b, []byte("<CLIENT_CERT>"), []byte(material.ClientCertPath))
-		b = bytes.ReplaceAll(b, []byte("<CLIENT_KEY>"), []byte(material.ClientKeyPath))
+		b = bytes.ReplaceAll(b, []byte("<CA_CERT>"), []byte(filepath.ToSlash(material.CACertPath)))
+		b = bytes.ReplaceAll(b, []byte("<CLIENT_CERT>"), []byte(filepath.ToSlash(material.ClientCertPath)))
+		b = bytes.ReplaceAll(b, []byte("<CLIENT_KEY>"), []byte(filepath.ToSlash(material.ClientKeyPath)))
 		return b
 	}
 
