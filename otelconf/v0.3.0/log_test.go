@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"reflect"
 	"runtime"
 	"testing"
@@ -76,6 +75,7 @@ func TestLoggerProvider(t *testing.T) {
 
 func TestLogProcessor(t *testing.T) {
 	ctx := t.Context()
+	material := testtls.Write(t)
 
 	otlpHTTPExporter, err := otlploghttp.New(ctx)
 	require.NoError(t, err)
@@ -269,7 +269,7 @@ func TestLogProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+							Certificate: ptr(material.CACertPath),
 						},
 					},
 				},
@@ -286,7 +286,7 @@ func TestLogProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Certificate: ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -320,8 +320,8 @@ func TestLogProcessor(t *testing.T) {
 							Endpoint:          ptr("localhost:4317"),
 							Compression:       ptr("gzip"),
 							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientCertificate: ptr(material.BadCertPath),
+							ClientKey:         ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -430,7 +430,7 @@ func TestLogProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+							Certificate: ptr(material.CACertPath),
 						},
 					},
 				},
@@ -447,7 +447,7 @@ func TestLogProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Certificate: ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -464,8 +464,8 @@ func TestLogProcessor(t *testing.T) {
 							Endpoint:          ptr("localhost:4317"),
 							Compression:       ptr("gzip"),
 							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientCertificate: ptr(material.BadCertPath),
+							ClientKey:         ptr(material.BadCertPath),
 						},
 					},
 				},

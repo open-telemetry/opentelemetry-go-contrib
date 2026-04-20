@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"reflect"
 	"runtime"
 	"testing"
@@ -173,6 +172,7 @@ func TestTracerProviderOptions(t *testing.T) {
 }
 
 func TestSpanProcessor(t *testing.T) {
+	material := testtls.Write(t)
 	consoleExporter, err := stdouttrace.New(
 		stdouttrace.WithPrettyPrint(),
 	)
@@ -382,7 +382,7 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+							Certificate: ptr(material.CACertPath),
 						},
 					},
 				},
@@ -399,7 +399,7 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Certificate: ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -416,8 +416,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:          ptr("localhost:4317"),
 							Compression:       ptr("gzip"),
 							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientCertificate: ptr(material.BadCertPath),
+							ClientKey:         ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -543,7 +543,7 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+							Certificate: ptr(material.CACertPath),
 						},
 					},
 				},
@@ -560,7 +560,7 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Certificate: ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -577,8 +577,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:          ptr("localhost:4317"),
 							Compression:       ptr("gzip"),
 							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientCertificate: ptr(material.BadCertPath),
+							ClientKey:         ptr(material.BadCertPath),
 						},
 					},
 				},
