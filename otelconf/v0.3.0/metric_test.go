@@ -15,7 +15,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -1639,10 +1638,6 @@ func TestPrometheusReaderDotStyleLabels(t *testing.T) {
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {
-	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
-		// TODO (#8115): Fix the flakiness on Windows and MacOS.
-		t.Skip("Test is flaky on Windows and MacOS.")
-	}
 	material := testtls.Write(t)
 	type args struct {
 		ctx        context.Context
