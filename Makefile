@@ -260,7 +260,8 @@ test/%: DIR=$*
 test/%:
 	@echo "$(GO) test -timeout $(TIMEOUT)s $(ARGS) $(DIR)/..." \
 		&& cd $(DIR) \
-		&& $(GO) test -p 1 -timeout $(TIMEOUT)s $(ARGS) ./...
+		&& $(GO) list ./... \
+		| xargs $(GO) test -timeout $(TIMEOUT)s $(ARGS)
 
 COVERAGE_MODE    = atomic
 COVERAGE_PROFILE = coverage.out
@@ -272,12 +273,13 @@ test-coverage: $(ALL_COVERAGE_MOD_DIRS:%=test-coverage/%) | $(GOCOVMERGE)
 test-coverage/%: DIR=$*
 test-coverage/%:
 	@set -e; \
-		CMD="$(GO) test -p 1 -race -covermode=$(COVERAGE_MODE) -coverprofile=$(COVERAGE_PROFILE)"; \
+		CMD="$(GO) test -race -covermode=$(COVERAGE_MODE) -coverprofile=$(COVERAGE_PROFILE)"; \
 		echo "$(DIR)" | grep -q 'test$$' \
 		&& CMD="$$CMD -coverpkg=go.opentelemetry.io/contrib/$$( dirname "$(DIR)" | sed -e "s/^\.\///g" )/..."; \
 		echo "$$CMD $(DIR)/..."; \
 		cd "$(DIR)" \
-		&& $$CMD ./... \
+		&& $(GO) list ./... \
+		| xargs $$CMD \
 		&& $(GO) tool cover -html=coverage.out -o coverage.html;
 
 # Releasing
