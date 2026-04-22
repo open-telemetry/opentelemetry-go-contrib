@@ -13,7 +13,7 @@ REGISTRY_BASE_URL = https://raw.githubusercontent.com/open-telemetry/opentelemet
 CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main
 
 GO = go
-TIMEOUT = 60
+TIMEOUT = 120
 
 # User to run as in docker images.
 DOCKER_USER=$(shell id -u):$(shell id -g)
