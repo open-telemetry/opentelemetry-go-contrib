@@ -4,6 +4,7 @@
 package x
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -20,6 +21,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 	"go.yaml.in/yaml/v3"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/testtls"
 )
 
 func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
@@ -430,518 +433,523 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 	require.ErrorIs(t, err, newErrInvalid("otlp_file/development"))
 }
 
-var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
-	Disabled:   ptr(false),
-	FileFormat: "1.0-rc.2",
-	AttributeLimits: &AttributeLimits{
-		AttributeCountLimit:       ptr(128),
-		AttributeValueLengthLimit: ptr(4096),
-	},
-	InstrumentationDevelopment: &ExperimentalInstrumentation{
-		Cpp: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Dotnet: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Erlang: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		General: &ExperimentalGeneralInstrumentation{
-			Http: &ExperimentalHttpInstrumentation{
-				Client: &ExperimentalHttpClientInstrumentation{
-					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
-					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
-				},
-				Server: &ExperimentalHttpServerInstrumentation{
-					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
-					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
-				},
-			},
-			Peer: &ExperimentalPeerInstrumentation{
-				ServiceMapping: []ExperimentalPeerServiceMapping{
-					{Peer: "1.2.3.4", Service: "FooService"},
-					{Peer: "2.3.4.5", Service: "BarService"},
-				},
-			},
-		},
-		Go: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Java: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Js: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Php: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Python: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Ruby: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Rust: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Swift: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-	},
-	LogLevel: ptr(SeverityNumberInfo),
-	LoggerProvider: &LoggerProvider{
-		LoggerConfiguratorDevelopment: &ExperimentalLoggerConfigurator{
-			DefaultConfig: &ExperimentalLoggerConfig{
-				Disabled: ptr(true),
-			},
-			Loggers: []ExperimentalLoggerMatcherAndConfig{
-				{
-					Config: ExperimentalLoggerConfig{
-						Disabled: ptr(false),
-					},
-					Name: "io.opentelemetry.contrib.*",
-				},
-			},
-		},
-		Limits: &LogRecordLimits{
+func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfiguration {
+	material.CACertPath = filepath.ToSlash(material.CACertPath)
+	material.ClientCertPath = filepath.ToSlash(material.ClientCertPath)
+	material.ClientKeyPath = filepath.ToSlash(material.ClientKeyPath)
+	return &OpenTelemetryConfiguration{
+		Disabled:   ptr(false),
+		FileFormat: "1.0-rc.2",
+		AttributeLimits: &AttributeLimits{
 			AttributeCountLimit:       ptr(128),
 			AttributeValueLengthLimit: ptr(4096),
 		},
-		Processors: []LogRecordProcessor{
-			{
-				Batch: &BatchLogRecordProcessor{
-					ExportTimeout: ptr(30000),
-					Exporter: LogRecordExporter{
-						OTLPHttp: &OTLPHttpExporter{
-							Tls: &HttpTls{
-								CaFile:   ptr("testdata/ca.crt"),
-								CertFile: ptr("testdata/client.crt"),
-								KeyFile:  ptr("testdata/client.key"),
-							},
-							Compression: ptr("gzip"),
-							Encoding:    ptr(OTLPHttpEncodingProtobuf),
-							Endpoint:    ptr("http://localhost:4318/v1/logs"),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
-							},
-							HeadersList: ptr("api-key=1234"),
-							Timeout:     ptr(10000),
-						},
-					},
-					MaxExportBatchSize: ptr(512),
-					MaxQueueSize:       ptr(2048),
-					ScheduleDelay:      ptr(5000),
+		InstrumentationDevelopment: &ExperimentalInstrumentation{
+			Cpp: ExperimentalLanguageSpecificInstrumentation{
+				"example": map[string]any{
+					"property": "value",
 				},
 			},
-			{
-				Batch: &BatchLogRecordProcessor{
-					Exporter: LogRecordExporter{
-						OTLPGrpc: &OTLPGrpcExporter{
-							Tls: &GrpcTls{
-								CaFile:   ptr("testdata/ca.crt"),
-								CertFile: ptr("testdata/client.crt"),
-								KeyFile:  ptr("testdata/client.key"),
-								Insecure: ptr(false),
-							},
-							Compression: ptr("gzip"),
-							Endpoint:    ptr("http://localhost:4317"),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
-							},
-							HeadersList: ptr("api-key=1234"),
-							Timeout:     ptr(10000),
-						},
+			Dotnet: ExperimentalLanguageSpecificInstrumentation{
+				"example": map[string]any{
+					"property": "value",
+				},
+			},
+			Erlang: ExperimentalLanguageSpecificInstrumentation{
+				"example": map[string]any{
+					"property": "value",
+				},
+			},
+			General: &ExperimentalGeneralInstrumentation{
+				Http: &ExperimentalHttpInstrumentation{
+					Client: &ExperimentalHttpClientInstrumentation{
+						RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
+						ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
+					},
+					Server: &ExperimentalHttpServerInstrumentation{
+						RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
+						ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
+					},
+				},
+				Peer: &ExperimentalPeerInstrumentation{
+					ServiceMapping: []ExperimentalPeerServiceMapping{
+						{Peer: "1.2.3.4", Service: "FooService"},
+						{Peer: "2.3.4.5", Service: "BarService"},
 					},
 				},
 			},
-			{
-				Batch: &BatchLogRecordProcessor{
-					Exporter: LogRecordExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
-							OutputStream: ptr("file:///var/log/logs.jsonl"),
-						},
-					},
+			Go: ExperimentalLanguageSpecificInstrumentation{
+				"example": map[string]any{
+					"property": "value",
 				},
 			},
-			{
-				Batch: &BatchLogRecordProcessor{
-					Exporter: LogRecordExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
-							OutputStream: ptr("stdout"),
-						},
-					},
+			Java: ExperimentalLanguageSpecificInstrumentation{
+				"example": map[string]any{
+					"property": "value",
 				},
 			},
-			{
-				Simple: &SimpleLogRecordProcessor{
-					Exporter: LogRecordExporter{
-						Console: ConsoleExporter{},
-					},
+			Js: ExperimentalLanguageSpecificInstrumentation{
+				"example": map[string]any{
+					"property": "value",
+				},
+			},
+			Php: ExperimentalLanguageSpecificInstrumentation{
+				"example": map[string]any{
+					"property": "value",
+				},
+			},
+			Python: ExperimentalLanguageSpecificInstrumentation{
+				"example": map[string]any{
+					"property": "value",
+				},
+			},
+			Ruby: ExperimentalLanguageSpecificInstrumentation{
+				"example": map[string]any{
+					"property": "value",
+				},
+			},
+			Rust: ExperimentalLanguageSpecificInstrumentation{
+				"example": map[string]any{
+					"property": "value",
+				},
+			},
+			Swift: ExperimentalLanguageSpecificInstrumentation{
+				"example": map[string]any{
+					"property": "value",
 				},
 			},
 		},
-	},
-	MeterProvider: &MeterProvider{
-		ExemplarFilter: ptr(ExemplarFilter("trace_based")),
-		MeterConfiguratorDevelopment: &ExperimentalMeterConfigurator{
-			DefaultConfig: &ExperimentalMeterConfig{
-				Disabled: ptr(true),
+		LogLevel: ptr(SeverityNumberInfo),
+		LoggerProvider: &LoggerProvider{
+			LoggerConfiguratorDevelopment: &ExperimentalLoggerConfigurator{
+				DefaultConfig: &ExperimentalLoggerConfig{
+					Disabled: ptr(true),
+				},
+				Loggers: []ExperimentalLoggerMatcherAndConfig{
+					{
+						Config: ExperimentalLoggerConfig{
+							Disabled: ptr(false),
+						},
+						Name: "io.opentelemetry.contrib.*",
+					},
+				},
 			},
-			Meters: []ExperimentalMeterMatcherAndConfig{
+			Limits: &LogRecordLimits{
+				AttributeCountLimit:       ptr(128),
+				AttributeValueLengthLimit: ptr(4096),
+			},
+			Processors: []LogRecordProcessor{
 				{
-					Config: ExperimentalMeterConfig{
-						Disabled: ptr(false),
-					},
-					Name: "io.opentelemetry.contrib.*",
-				},
-			},
-		},
-		Readers: []MetricReader{
-			{
-				Pull: &PullMetricReader{
-					Producers: []MetricProducer{
-						{
-							Opencensus: OpenCensusMetricProducer{},
-						},
-					},
-					CardinalityLimits: &CardinalityLimits{
-						Default:                 ptr(2000),
-						Counter:                 ptr(2000),
-						Gauge:                   ptr(2000),
-						Histogram:               ptr(2000),
-						ObservableCounter:       ptr(2000),
-						ObservableGauge:         ptr(2000),
-						ObservableUpDownCounter: ptr(2000),
-						UpDownCounter:           ptr(2000),
-					},
-					Exporter: PullMetricExporter{
-						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
-							Host:                ptr("localhost"),
-							Port:                ptr(9464),
-							TranslationStrategy: ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes),
-							WithResourceConstantLabels: &IncludeExclude{
-								Excluded: []string{"service.attr1"},
-								Included: []string{"service*"},
-							},
-							WithoutScopeInfo: ptr(false),
-						},
-					},
-				},
-			},
-			{
-				Periodic: &PeriodicMetricReader{
-					Producers: []MetricProducer{
-						{
-							AdditionalProperties: map[string]any{
-								"prometheus": nil,
+					Batch: &BatchLogRecordProcessor{
+						ExportTimeout: ptr(30000),
+						Exporter: LogRecordExporter{
+							OTLPHttp: &OTLPHttpExporter{
+								Tls: &HttpTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+								},
+								Compression: ptr("gzip"),
+								Encoding:    ptr(OTLPHttpEncodingProtobuf),
+								Endpoint:    ptr("http://localhost:4318/v1/logs"),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList: ptr("api-key=1234"),
+								Timeout:     ptr(10000),
 							},
 						},
-					},
-					CardinalityLimits: &CardinalityLimits{
-						Default:                 ptr(2000),
-						Counter:                 ptr(2000),
-						Gauge:                   ptr(2000),
-						Histogram:               ptr(2000),
-						ObservableCounter:       ptr(2000),
-						ObservableGauge:         ptr(2000),
-						ObservableUpDownCounter: ptr(2000),
-						UpDownCounter:           ptr(2000),
-					},
-					Exporter: PushMetricExporter{
-						OTLPHttp: &OTLPHttpMetricExporter{
-							Tls: &HttpTls{
-								CaFile:   ptr("testdata/ca.crt"),
-								CertFile: ptr("testdata/client.crt"),
-								KeyFile:  ptr("testdata/client.key"),
-							},
-							Compression:                 ptr("gzip"),
-							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
-							Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
-							Encoding:                    ptr(OTLPHttpEncodingProtobuf),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
-							},
-							HeadersList:           ptr("api-key=1234"),
-							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
-							Timeout:               ptr(10000),
-						},
-					},
-					Interval: ptr(60000),
-					Timeout:  ptr(30000),
-				},
-			},
-			{
-				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{
-						OTLPGrpc: &OTLPGrpcMetricExporter{
-							Tls: &GrpcTls{
-								CaFile:   ptr("testdata/ca.crt"),
-								CertFile: ptr("testdata/client.crt"),
-								KeyFile:  ptr("testdata/client.key"),
-								Insecure: ptr(false),
-							},
-							Compression:                 ptr("gzip"),
-							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
-							Endpoint:                    ptr("http://localhost:4317"),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
-							},
-							HeadersList:           ptr("api-key=1234"),
-							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
-							Timeout:               ptr(10000),
-						},
+						MaxExportBatchSize: ptr(512),
+						MaxQueueSize:       ptr(2048),
+						ScheduleDelay:      ptr(5000),
 					},
 				},
-			},
-			{
-				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
-							OutputStream:                ptr("file:///var/log/metrics.jsonl"),
-							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
-							TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
-						},
-					},
-				},
-			},
-			{
-				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
-							OutputStream:                ptr("stdout"),
-							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
-							TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
-						},
-					},
-				},
-			},
-			{
-				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{
-						Console: &ConsoleMetricExporter{},
-					},
-				},
-			},
-		},
-		Views: []View{
-			{
-				Selector: ViewSelector{
-					InstrumentName: ptr("my-instrument"),
-					InstrumentType: ptr(InstrumentTypeHistogram),
-					MeterName:      ptr("my-meter"),
-					MeterSchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
-					MeterVersion:   ptr("1.0.0"),
-					Unit:           ptr("ms"),
-				},
-				Stream: ViewStream{
-					Aggregation: &Aggregation{
-						ExplicitBucketHistogram: &ExplicitBucketHistogramAggregation{
-							Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							RecordMinMax: ptr(true),
-						},
-					},
-					AggregationCardinalityLimit: ptr(2000),
-					AttributeKeys: &IncludeExclude{
-						Included: []string{"key1", "key2"},
-						Excluded: []string{"key3"},
-					},
-					Description: ptr("new_description"),
-					Name:        ptr("new_instrument_name"),
-				},
-			},
-		},
-	},
-	Propagator: &Propagator{
-		Composite: []TextMapPropagator{
-			{
-				Tracecontext: TraceContextPropagator{},
-			},
-			{
-				Baggage: BaggagePropagator{},
-			},
-			{
-				B3: B3Propagator{},
-			},
-			{
-				B3Multi: B3MultiPropagator{},
-			},
-			{
-				Jaeger: JaegerPropagator{},
-			},
-			{
-				Ottrace: OpenTracingPropagator{},
-			},
-		},
-		CompositeList: ptr("tracecontext,baggage,b3,b3multi,jaeger,ottrace,xray"),
-	},
-	Resource: &Resource{
-		Attributes: []AttributeNameValue{
-			{Name: "service.name", Value: "unknown_service"},
-			{Name: "string_key", Type: ptr(AttributeTypeString), Value: "value"},
-			{Name: "bool_key", Type: ptr(AttributeTypeBool), Value: true},
-			{Name: "int_key", Type: ptr(AttributeTypeInt), Value: 1},
-			{Name: "double_key", Type: ptr(AttributeTypeDouble), Value: 1.1},
-			{Name: "string_array_key", Type: ptr(AttributeTypeStringArray), Value: []any{"value1", "value2"}},
-			{Name: "bool_array_key", Type: ptr(AttributeTypeBoolArray), Value: []any{true, false}},
-			{Name: "int_array_key", Type: ptr(AttributeTypeIntArray), Value: []any{1, 2}},
-			{Name: "double_array_key", Type: ptr(AttributeTypeDoubleArray), Value: []any{1.1, 2.2}},
-		},
-		AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
-		DetectionDevelopment: &ExperimentalResourceDetection{
-			Attributes: &IncludeExclude{
-				Excluded: []string{"process.command_args"},
-				Included: []string{"process.*"},
-			},
-			Detectors: []ExperimentalResourceDetector{
-				{Container: ExperimentalContainerResourceDetector{}},
-				{Host: ExperimentalHostResourceDetector{}},
-				{Process: ExperimentalProcessResourceDetector{}},
-				{Service: ExperimentalServiceResourceDetector{}},
-			},
-		},
-	},
-	TracerProvider: &TracerProvider{
-		TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
-			DefaultConfig: &ExperimentalTracerConfig{
-				Disabled: ptr(true),
-			},
-			Tracers: []ExperimentalTracerMatcherAndConfig{
 				{
-					Config: ExperimentalTracerConfig{
-						Disabled: ptr(false),
+					Batch: &BatchLogRecordProcessor{
+						Exporter: LogRecordExporter{
+							OTLPGrpc: &OTLPGrpcExporter{
+								Tls: &GrpcTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+									Insecure: ptr(false),
+								},
+								Compression: ptr("gzip"),
+								Endpoint:    ptr("http://localhost:4317"),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList: ptr("api-key=1234"),
+								Timeout:     ptr(10000),
+							},
+						},
 					},
-					Name: "io.opentelemetry.contrib.*",
+				},
+				{
+					Batch: &BatchLogRecordProcessor{
+						Exporter: LogRecordExporter{
+							OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+								OutputStream: ptr("file:///var/log/logs.jsonl"),
+							},
+						},
+					},
+				},
+				{
+					Batch: &BatchLogRecordProcessor{
+						Exporter: LogRecordExporter{
+							OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+								OutputStream: ptr("stdout"),
+							},
+						},
+					},
+				},
+				{
+					Simple: &SimpleLogRecordProcessor{
+						Exporter: LogRecordExporter{
+							Console: ConsoleExporter{},
+						},
+					},
 				},
 			},
 		},
+		MeterProvider: &MeterProvider{
+			ExemplarFilter: ptr(ExemplarFilter("trace_based")),
+			MeterConfiguratorDevelopment: &ExperimentalMeterConfigurator{
+				DefaultConfig: &ExperimentalMeterConfig{
+					Disabled: ptr(true),
+				},
+				Meters: []ExperimentalMeterMatcherAndConfig{
+					{
+						Config: ExperimentalMeterConfig{
+							Disabled: ptr(false),
+						},
+						Name: "io.opentelemetry.contrib.*",
+					},
+				},
+			},
+			Readers: []MetricReader{
+				{
+					Pull: &PullMetricReader{
+						Producers: []MetricProducer{
+							{
+								Opencensus: OpenCensusMetricProducer{},
+							},
+						},
+						CardinalityLimits: &CardinalityLimits{
+							Default:                 ptr(2000),
+							Counter:                 ptr(2000),
+							Gauge:                   ptr(2000),
+							Histogram:               ptr(2000),
+							ObservableCounter:       ptr(2000),
+							ObservableGauge:         ptr(2000),
+							ObservableUpDownCounter: ptr(2000),
+							UpDownCounter:           ptr(2000),
+						},
+						Exporter: PullMetricExporter{
+							PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
+								Host:                ptr("localhost"),
+								Port:                ptr(9464),
+								TranslationStrategy: ptr(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes),
+								WithResourceConstantLabels: &IncludeExclude{
+									Excluded: []string{"service.attr1"},
+									Included: []string{"service*"},
+								},
+								WithoutScopeInfo: ptr(false),
+							},
+						},
+					},
+				},
+				{
+					Periodic: &PeriodicMetricReader{
+						Producers: []MetricProducer{
+							{
+								AdditionalProperties: map[string]any{
+									"prometheus": nil,
+								},
+							},
+						},
+						CardinalityLimits: &CardinalityLimits{
+							Default:                 ptr(2000),
+							Counter:                 ptr(2000),
+							Gauge:                   ptr(2000),
+							Histogram:               ptr(2000),
+							ObservableCounter:       ptr(2000),
+							ObservableGauge:         ptr(2000),
+							ObservableUpDownCounter: ptr(2000),
+							UpDownCounter:           ptr(2000),
+						},
+						Exporter: PushMetricExporter{
+							OTLPHttp: &OTLPHttpMetricExporter{
+								Tls: &HttpTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+								},
+								Compression:                 ptr("gzip"),
+								DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+								Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
+								Encoding:                    ptr(OTLPHttpEncodingProtobuf),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList:           ptr("api-key=1234"),
+								TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
+								Timeout:               ptr(10000),
+							},
+						},
+						Interval: ptr(60000),
+						Timeout:  ptr(30000),
+					},
+				},
+				{
+					Periodic: &PeriodicMetricReader{
+						Exporter: PushMetricExporter{
+							OTLPGrpc: &OTLPGrpcMetricExporter{
+								Tls: &GrpcTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+									Insecure: ptr(false),
+								},
+								Compression:                 ptr("gzip"),
+								DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+								Endpoint:                    ptr("http://localhost:4317"),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList:           ptr("api-key=1234"),
+								TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
+								Timeout:               ptr(10000),
+							},
+						},
+					},
+				},
+				{
+					Periodic: &PeriodicMetricReader{
+						Exporter: PushMetricExporter{
+							OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
+								OutputStream:                ptr("file:///var/log/metrics.jsonl"),
+								DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+								TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
+							},
+						},
+					},
+				},
+				{
+					Periodic: &PeriodicMetricReader{
+						Exporter: PushMetricExporter{
+							OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
+								OutputStream:                ptr("stdout"),
+								DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+								TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
+							},
+						},
+					},
+				},
+				{
+					Periodic: &PeriodicMetricReader{
+						Exporter: PushMetricExporter{
+							Console: &ConsoleMetricExporter{},
+						},
+					},
+				},
+			},
+			Views: []View{
+				{
+					Selector: ViewSelector{
+						InstrumentName: ptr("my-instrument"),
+						InstrumentType: ptr(InstrumentTypeHistogram),
+						MeterName:      ptr("my-meter"),
+						MeterSchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
+						MeterVersion:   ptr("1.0.0"),
+						Unit:           ptr("ms"),
+					},
+					Stream: ViewStream{
+						Aggregation: &Aggregation{
+							ExplicitBucketHistogram: &ExplicitBucketHistogramAggregation{
+								Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+								RecordMinMax: ptr(true),
+							},
+						},
+						AggregationCardinalityLimit: ptr(2000),
+						AttributeKeys: &IncludeExclude{
+							Included: []string{"key1", "key2"},
+							Excluded: []string{"key3"},
+						},
+						Description: ptr("new_description"),
+						Name:        ptr("new_instrument_name"),
+					},
+				},
+			},
+		},
+		Propagator: &Propagator{
+			Composite: []TextMapPropagator{
+				{
+					Tracecontext: TraceContextPropagator{},
+				},
+				{
+					Baggage: BaggagePropagator{},
+				},
+				{
+					B3: B3Propagator{},
+				},
+				{
+					B3Multi: B3MultiPropagator{},
+				},
+				{
+					Jaeger: JaegerPropagator{},
+				},
+				{
+					Ottrace: OpenTracingPropagator{},
+				},
+			},
+			CompositeList: ptr("tracecontext,baggage,b3,b3multi,jaeger,ottrace,xray"),
+		},
+		Resource: &Resource{
+			Attributes: []AttributeNameValue{
+				{Name: "service.name", Value: "unknown_service"},
+				{Name: "string_key", Type: ptr(AttributeTypeString), Value: "value"},
+				{Name: "bool_key", Type: ptr(AttributeTypeBool), Value: true},
+				{Name: "int_key", Type: ptr(AttributeTypeInt), Value: 1},
+				{Name: "double_key", Type: ptr(AttributeTypeDouble), Value: 1.1},
+				{Name: "string_array_key", Type: ptr(AttributeTypeStringArray), Value: []any{"value1", "value2"}},
+				{Name: "bool_array_key", Type: ptr(AttributeTypeBoolArray), Value: []any{true, false}},
+				{Name: "int_array_key", Type: ptr(AttributeTypeIntArray), Value: []any{1, 2}},
+				{Name: "double_array_key", Type: ptr(AttributeTypeDoubleArray), Value: []any{1.1, 2.2}},
+			},
+			AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
+			DetectionDevelopment: &ExperimentalResourceDetection{
+				Attributes: &IncludeExclude{
+					Excluded: []string{"process.command_args"},
+					Included: []string{"process.*"},
+				},
+				Detectors: []ExperimentalResourceDetector{
+					{Container: ExperimentalContainerResourceDetector{}},
+					{Host: ExperimentalHostResourceDetector{}},
+					{Process: ExperimentalProcessResourceDetector{}},
+					{Service: ExperimentalServiceResourceDetector{}},
+				},
+			},
+		},
+		TracerProvider: &TracerProvider{
+			TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
+				DefaultConfig: &ExperimentalTracerConfig{
+					Disabled: ptr(true),
+				},
+				Tracers: []ExperimentalTracerMatcherAndConfig{
+					{
+						Config: ExperimentalTracerConfig{
+							Disabled: ptr(false),
+						},
+						Name: "io.opentelemetry.contrib.*",
+					},
+				},
+			},
 
-		Limits: &SpanLimits{
-			AttributeCountLimit:       ptr(128),
-			AttributeValueLengthLimit: ptr(4096),
-			EventCountLimit:           ptr(128),
-			EventAttributeCountLimit:  ptr(128),
-			LinkCountLimit:            ptr(128),
-			LinkAttributeCountLimit:   ptr(128),
+			Limits: &SpanLimits{
+				AttributeCountLimit:       ptr(128),
+				AttributeValueLengthLimit: ptr(4096),
+				EventCountLimit:           ptr(128),
+				EventAttributeCountLimit:  ptr(128),
+				LinkCountLimit:            ptr(128),
+				LinkAttributeCountLimit:   ptr(128),
+			},
+			Processors: []SpanProcessor{
+				{
+					Batch: &BatchSpanProcessor{
+						ExportTimeout: ptr(30000),
+						Exporter: SpanExporter{
+							OTLPHttp: &OTLPHttpExporter{
+								Tls: &HttpTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+								},
+								Compression: ptr("gzip"),
+								Encoding:    ptr(OTLPHttpEncodingProtobuf),
+								Endpoint:    ptr("http://localhost:4318/v1/traces"),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList: ptr("api-key=1234"),
+								Timeout:     ptr(10000),
+							},
+						},
+						MaxExportBatchSize: ptr(512),
+						MaxQueueSize:       ptr(2048),
+						ScheduleDelay:      ptr(5000),
+					},
+				},
+				{
+					Batch: &BatchSpanProcessor{
+						Exporter: SpanExporter{
+							OTLPGrpc: &OTLPGrpcExporter{
+								Tls: &GrpcTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+									Insecure: ptr(false),
+								},
+								Compression: ptr("gzip"),
+								Endpoint:    ptr("http://localhost:4317"),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList: ptr("api-key=1234"),
+								Timeout:     ptr(10000),
+							},
+						},
+					},
+				},
+				{
+					Batch: &BatchSpanProcessor{
+						Exporter: SpanExporter{
+							OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+								OutputStream: ptr("file:///var/log/traces.jsonl"),
+							},
+						},
+					},
+				},
+				{
+					Batch: &BatchSpanProcessor{
+						Exporter: SpanExporter{
+							OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
+								OutputStream: ptr("stdout"),
+							},
+						},
+					},
+				},
+				{
+					Simple: &SimpleSpanProcessor{
+						Exporter: SpanExporter{
+							Console: ConsoleExporter{},
+						},
+					},
+				},
+			},
+			Sampler: &Sampler{
+				ParentBased: &ParentBasedSampler{
+					LocalParentNotSampled: &Sampler{
+						AlwaysOff: AlwaysOffSampler{},
+					},
+					LocalParentSampled: &Sampler{
+						AlwaysOn: AlwaysOnSampler{},
+					},
+					RemoteParentNotSampled: &Sampler{
+						AlwaysOff: AlwaysOffSampler{},
+					},
+					RemoteParentSampled: &Sampler{
+						AlwaysOn: AlwaysOnSampler{},
+					},
+					Root: &Sampler{
+						TraceIDRatioBased: &TraceIDRatioBasedSampler{
+							Ratio: ptr(0.0001),
+						},
+					},
+				},
+			},
 		},
-		Processors: []SpanProcessor{
-			{
-				Batch: &BatchSpanProcessor{
-					ExportTimeout: ptr(30000),
-					Exporter: SpanExporter{
-						OTLPHttp: &OTLPHttpExporter{
-							Tls: &HttpTls{
-								CaFile:   ptr("testdata/ca.crt"),
-								CertFile: ptr("testdata/client.crt"),
-								KeyFile:  ptr("testdata/client.key"),
-							},
-							Compression: ptr("gzip"),
-							Encoding:    ptr(OTLPHttpEncodingProtobuf),
-							Endpoint:    ptr("http://localhost:4318/v1/traces"),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
-							},
-							HeadersList: ptr("api-key=1234"),
-							Timeout:     ptr(10000),
-						},
-					},
-					MaxExportBatchSize: ptr(512),
-					MaxQueueSize:       ptr(2048),
-					ScheduleDelay:      ptr(5000),
-				},
-			},
-			{
-				Batch: &BatchSpanProcessor{
-					Exporter: SpanExporter{
-						OTLPGrpc: &OTLPGrpcExporter{
-							Tls: &GrpcTls{
-								CaFile:   ptr("testdata/ca.crt"),
-								CertFile: ptr("testdata/client.crt"),
-								KeyFile:  ptr("testdata/client.key"),
-								Insecure: ptr(false),
-							},
-							Compression: ptr("gzip"),
-							Endpoint:    ptr("http://localhost:4317"),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
-							},
-							HeadersList: ptr("api-key=1234"),
-							Timeout:     ptr(10000),
-						},
-					},
-				},
-			},
-			{
-				Batch: &BatchSpanProcessor{
-					Exporter: SpanExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
-							OutputStream: ptr("file:///var/log/traces.jsonl"),
-						},
-					},
-				},
-			},
-			{
-				Batch: &BatchSpanProcessor{
-					Exporter: SpanExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
-							OutputStream: ptr("stdout"),
-						},
-					},
-				},
-			},
-			{
-				Simple: &SimpleSpanProcessor{
-					Exporter: SpanExporter{
-						Console: ConsoleExporter{},
-					},
-				},
-			},
-		},
-		Sampler: &Sampler{
-			ParentBased: &ParentBasedSampler{
-				LocalParentNotSampled: &Sampler{
-					AlwaysOff: AlwaysOffSampler{},
-				},
-				LocalParentSampled: &Sampler{
-					AlwaysOn: AlwaysOnSampler{},
-				},
-				RemoteParentNotSampled: &Sampler{
-					AlwaysOff: AlwaysOffSampler{},
-				},
-				RemoteParentSampled: &Sampler{
-					AlwaysOn: AlwaysOnSampler{},
-				},
-				Root: &Sampler{
-					TraceIDRatioBased: &TraceIDRatioBasedSampler{
-						Ratio: ptr(0.0001),
-					},
-				},
-			},
-		},
-	},
+	}
 }
 
 var v100OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
@@ -1003,6 +1011,8 @@ var v100OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 }
 
 func TestParseFiles(t *testing.T) {
+	material := testtls.Write(t)
+
 	tests := []struct {
 		name     string
 		input    string
@@ -1036,8 +1046,15 @@ func TestParseFiles(t *testing.T) {
 		{
 			name:     "valid v1.0.0 config",
 			input:    "v1.0.0",
-			wantType: &v10OpenTelemetryConfig,
+			wantType: newV10OpenTelemetryConfig(material),
 		},
+	}
+
+	replaceCertPaths := func(b []byte) []byte {
+		b = bytes.ReplaceAll(b, []byte("<CA_CERT>"), []byte(filepath.ToSlash(material.CACertPath)))
+		b = bytes.ReplaceAll(b, []byte("<CLIENT_CERT>"), []byte(filepath.ToSlash(material.ClientCertPath)))
+		b = bytes.ReplaceAll(b, []byte("<CLIENT_KEY>"), []byte(filepath.ToSlash(material.ClientKeyPath)))
+		return b
 	}
 
 	for _, tt := range tests {
@@ -1045,7 +1062,7 @@ func TestParseFiles(t *testing.T) {
 			b, err := os.ReadFile(filepath.Join("..", "testdata", fmt.Sprintf("%s.yaml", tt.input)))
 			require.NoError(t, err)
 
-			got, err := ParseYAML(b)
+			got, err := ParseYAML(replaceCertPaths(b))
 			require.ErrorIs(t, err, tt.wantErr)
 			if tt.wantErr == nil {
 				assert.Equal(t, tt.wantType, got)
@@ -1056,7 +1073,7 @@ func TestParseFiles(t *testing.T) {
 			require.NoError(t, err)
 
 			var got OpenTelemetryConfiguration
-			err = json.Unmarshal(b, &got)
+			err = json.Unmarshal(replaceCertPaths(b), &got)
 			require.ErrorIs(t, err, tt.wantErr)
 			assert.Equal(t, tt.wantType, &got)
 		})
