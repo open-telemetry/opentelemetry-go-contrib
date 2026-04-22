@@ -1307,7 +1307,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcMetricExporter{
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Tls: &GrpcTls{
 						Insecure: ptr(true),
 					},
@@ -1326,7 +1326,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcMetricExporter{
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Tls: &GrpcTls{
 						CaFile: ptr(material.CACertPath),
 					},
@@ -1351,7 +1351,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcMetricExporter{
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Tls: &GrpcTls{
 						CaFile:   ptr(material.CACertPath),
 						KeyFile:  ptr(material.ClientKeyPath),

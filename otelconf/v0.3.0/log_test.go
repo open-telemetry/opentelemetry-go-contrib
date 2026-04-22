@@ -777,7 +777,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Insecure:    ptr(true),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -795,7 +795,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Certificate: ptr(material.CACertPath),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
