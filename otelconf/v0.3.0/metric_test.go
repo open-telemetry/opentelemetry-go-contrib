@@ -1733,14 +1733,11 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 			require.NoError(t, err)
 
-			// We need to manually construct the endpoint using the port on which the server is listening.
-			//
-			// n.Addr() always returns 127.0.0.1 instead of localhost.
-			// But our certificate is created with CN as 'localhost', not '127.0.0.1'.
-			// So we have to manually form the endpoint as "localhost:<port>".
-			_, port, err := net.SplitHostPort(n.Addr().String())
-			require.NoError(t, err)
-			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
+			scheme := "https"
+			if tt.args.otlpConfig.Insecure != nil && *tt.args.otlpConfig.Insecure {
+				scheme = "http"
+			}
+			tt.args.otlpConfig.Endpoint = ptr(scheme + "://" + n.Addr().String())
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
