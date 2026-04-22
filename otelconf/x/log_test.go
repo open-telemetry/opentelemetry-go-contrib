@@ -13,7 +13,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"reflect"
 	"runtime"
 	"testing"
@@ -78,6 +77,7 @@ func TestLoggerProvider(t *testing.T) {
 
 func TestLogProcessor(t *testing.T) {
 	ctx := t.Context()
+	material := testtls.Write(t)
 
 	otlpHTTPExporter, err := otlploghttp.New(ctx)
 	require.NoError(t, err)
@@ -260,7 +260,7 @@ func TestLogProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
+								CaFile: ptr(material.CACertPath),
 							},
 						},
 					},
@@ -278,7 +278,7 @@ func TestLogProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								CaFile: ptr(material.BadCertPath),
 							},
 						},
 					},
@@ -312,8 +312,8 @@ func TestLogProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								KeyFile:  ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-								CertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								KeyFile:  ptr(material.BadCertPath),
+								CertFile: ptr(material.BadCertPath),
 							},
 						},
 					},
@@ -419,7 +419,7 @@ func TestLogProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
+								CaFile: ptr(material.CACertPath),
 							},
 						},
 					},
@@ -437,7 +437,7 @@ func TestLogProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								CaFile: ptr(material.BadCertPath),
 							},
 						},
 					},
@@ -455,8 +455,8 @@ func TestLogProcessor(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								KeyFile:  ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-								CertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								KeyFile:  ptr(material.BadCertPath),
+								CertFile: ptr(material.BadCertPath),
 							},
 						},
 					},

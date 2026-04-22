@@ -14,7 +14,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
@@ -156,6 +155,7 @@ func TestMeterProviderOptions(t *testing.T) {
 }
 
 func TestReader(t *testing.T) {
+	material := testtls.Write(t)
 	consoleExporter, err := stdoutmetric.New(
 		stdoutmetric.WithPrettyPrint(),
 	)
@@ -295,7 +295,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
+								CaFile: ptr(material.CACertPath),
 							},
 						},
 					},
@@ -313,7 +313,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								CaFile: ptr(material.BadCertPath),
 							},
 						},
 					},
@@ -331,8 +331,8 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								KeyFile:  ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-								CertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								KeyFile:  ptr(material.BadCertPath),
+								CertFile: ptr(material.BadCertPath),
 							},
 						},
 					},
@@ -567,7 +567,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
+								CaFile: ptr(material.CACertPath),
 							},
 						},
 					},
@@ -585,7 +585,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								CaFile: ptr(material.BadCertPath),
 							},
 						},
 					},
@@ -603,8 +603,8 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								KeyFile:  ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-								CertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								KeyFile:  ptr(material.BadCertPath),
+								CertFile: ptr(material.BadCertPath),
 							},
 						},
 					},
