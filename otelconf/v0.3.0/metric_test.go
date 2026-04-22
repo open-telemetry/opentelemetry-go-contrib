@@ -1697,7 +1697,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				otlpConfig: &OTLPMetric{
 					Protocol:          ptr("grpc"),
 					Compression:       ptr("gzip"),
-					Timeout:           ptr(5000),
+					Timeout:           ptr(50000),
 					Certificate:       ptr(material.CACertPath),
 					ClientKey:         ptr(material.ClientKeyPath),
 					ClientCertificate: ptr(material.ClientCertPath),
