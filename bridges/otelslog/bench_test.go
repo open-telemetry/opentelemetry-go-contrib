@@ -178,7 +178,7 @@ func BenchmarkHandlerErrorField(b *testing.B) {
 		},
 		{
 			name:   "WithErrorField",
-			record: newRecord(slog.Any("value", errValue)),
+			record: newRecord(slog.Any("error", errValue)),
 		},
 		{
 			name: "TenFieldsNoError",
@@ -207,7 +207,7 @@ func BenchmarkHandlerErrorField(b *testing.B) {
 				slog.Time("7", now),
 				slog.Duration("8", time.Second),
 				slog.Any("9", 9),
-				slog.Any("10", errValue),
+				slog.Any("error", errValue),
 			),
 		},
 	}

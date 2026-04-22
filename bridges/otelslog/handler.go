@@ -233,7 +233,15 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 			if buf.err != nil {
 				record.SetErr(buf.err)
 			}
-			record.AddAttributes(h.group.KeyValue(buf.KeyValues()...))
+			if buf.Len() > 0 {
+				record.AddAttributes(h.group.KeyValue(buf.KeyValues()...))
+			} else {
+				// A Handler should not output groups if there are no attributes.
+				g := h.group.NextNonEmpty()
+				if g != nil {
+					record.AddAttributes(g.KeyValue())
+				}
+			}
 		} else {
 			// A Handler should not output groups if there are no attributes.
 			g := h.group.NextNonEmpty()

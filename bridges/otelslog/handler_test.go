@@ -581,4 +581,35 @@ func TestHandlerErrorFieldSetErr(t *testing.T) {
 		_, exists := got["record_err"]
 		assert.False(t, exists, "error field should not be emitted as an attribute")
 	})
+
+	t.Run("WithGroupRecordErrorDoesNotEmitEmptyGroup", func(t *testing.T) {
+		r := new(recorder)
+		recordErr := errors.New("group record error")
+		l := slog.New(NewHandler("", WithLoggerProvider(r)).WithGroup("grp"))
+
+		l.Info("msg", slog.Any("error", recordErr))
+
+		require.Len(t, r.Records, 1)
+		got := r.Results()[0]
+		assert.ErrorIs(t, got["error"].(error), recordErr)
+		_, exists := got["grp"]
+		assert.False(t, exists, "empty group should not be emitted")
+	})
+
+	t.Run("WithGroupAttrsRecordErrorPreservesNonEmptyGroup", func(t *testing.T) {
+		r := new(recorder)
+		recordErr := errors.New("group record error")
+		l := slog.New(
+			NewHandler("", WithLoggerProvider(r)).
+				WithGroup("grp").
+				WithAttrs([]slog.Attr{slog.String("value", "x")}),
+		)
+
+		l.Info("msg", slog.Any("error", recordErr))
+
+		require.Len(t, r.Records, 1)
+		got := r.Results()[0]
+		assert.ErrorIs(t, got["error"].(error), recordErr)
+		assert.Equal(t, map[string]any{"value": "x"}, got["grp"])
+	})
 }
