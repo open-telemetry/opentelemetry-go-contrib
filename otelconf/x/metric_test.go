@@ -15,7 +15,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -1458,10 +1457,6 @@ func TestPrometheusIPv6(t *testing.T) {
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// TODO (#7446): Fix the flakiness on Windows.
-		t.Skip("Test is flaky on Windows.")
-	}
 	material := testtls.Write(t)
 	type args struct {
 		ctx        context.Context
