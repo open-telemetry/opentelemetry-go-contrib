@@ -144,6 +144,8 @@ jobs:
           - os: macos-latest
             arch: arm64
           - os: windows-latest
+            arch: "386"
+          - os: windows-latest
             arch: amd64
     runs-on: ${{ matrix.platform.os }}
     steps:

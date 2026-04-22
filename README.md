@@ -62,6 +62,8 @@ This project is tested on the following systems.
 | macOS    | 1.25       | arm64        |
 | Windows  | 1.26       | amd64        |
 | Windows  | 1.25       | amd64        |
+| Windows  | 1.26       | 386          |
+| Windows  | 1.25       | 386          |
 
 While this project should work for other systems, no compatibility guarantees
 are made for those systems currently.
