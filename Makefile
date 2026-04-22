@@ -260,7 +260,7 @@ test/%: DIR=$*
 test/%:
 	@echo "$(GO) test -timeout $(TIMEOUT)s $(ARGS) $(DIR)/..." \
 		&& cd $(DIR) \
-		&& $(GO) test -timeout $(TIMEOUT)s $(ARGS) ./...
+		&& $(GO) test -p 1 -timeout $(TIMEOUT)s $(ARGS) ./...
 
 COVERAGE_MODE    = atomic
 COVERAGE_PROFILE = coverage.out
