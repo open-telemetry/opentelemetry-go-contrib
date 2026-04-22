@@ -71,7 +71,7 @@ func Write(t TB) Material {
 			CommonName:   "localhost",
 		},
 		DNSNames:              []string{"localhost"},
-		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1)},
+		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
 		NotBefore:             now.Add(-time.Hour),
 		NotAfter:              now.AddDate(2, 0, 0),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
