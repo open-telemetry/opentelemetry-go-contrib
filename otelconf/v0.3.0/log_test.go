@@ -15,7 +15,6 @@ import (
 	"os"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -874,11 +873,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				Body: log.StringValue("test"),
 			}
 
-			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{ //nolint:usetesting // required to avoid getting a canceled context.
-					logFactory.NewRecord(),
-				}))
-			}, 10*time.Second, 1*time.Second)
+			assert.NoError(t, exporter.Export(t.Context(), []sdklog.Record{logFactory.NewRecord()}))
 		})
 	}
 }

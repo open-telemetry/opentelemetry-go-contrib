@@ -15,7 +15,6 @@ import (
 	"os"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -1099,9 +1098,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				},
 			}
 
-			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.ExportSpans(context.Background(), input.Snapshots())) //nolint:usetesting // required to avoid getting a canceled context.
-			}, 10*time.Second, 1*time.Second)
+			assert.NoError(t, exporter.ExportSpans(t.Context(), input.Snapshots()))
 		})
 	}
 }

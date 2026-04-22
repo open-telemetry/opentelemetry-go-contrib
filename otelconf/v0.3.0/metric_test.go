@@ -1750,27 +1750,25 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			res, err := resource.New(t.Context())
 			require.NoError(t, err)
 
-			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{ //nolint:usetesting // required to avoid getting a canceled context.
-					Resource: res,
-					ScopeMetrics: []metricdata.ScopeMetrics{
-						{
-							Metrics: []metricdata.Metrics{
-								{
-									Name: "test-metric",
-									Data: metricdata.Gauge[int64]{
-										DataPoints: []metricdata.DataPoint[int64]{
-											{
-												Value: 1,
-											},
+			assert.NoError(t, exporter.Export(t.Context(), &metricdata.ResourceMetrics{
+				Resource: res,
+				ScopeMetrics: []metricdata.ScopeMetrics{
+					{
+						Metrics: []metricdata.Metrics{
+							{
+								Name: "test-metric",
+								Data: metricdata.Gauge[int64]{
+									DataPoints: []metricdata.DataPoint[int64]{
+										{
+											Value: 1,
 										},
 									},
 								},
 							},
 						},
 					},
-				}))
-			}, 10*time.Second, 1*time.Second)
+				},
+			}))
 		})
 	}
 }
