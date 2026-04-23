@@ -13,7 +13,7 @@ REGISTRY_BASE_URL = https://raw.githubusercontent.com/open-telemetry/opentelemet
 CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main
 
 GO = go
-TIMEOUT = 60
+TIMEOUT = 120
 
 # User to run as in docker images.
 DOCKER_USER=$(shell id -u):$(shell id -g)
@@ -260,7 +260,8 @@ test/%: DIR=$*
 test/%:
 	@echo "$(GO) test -timeout $(TIMEOUT)s $(ARGS) $(DIR)/..." \
 		&& cd $(DIR) \
-		&& $(GO) test -timeout $(TIMEOUT)s $(ARGS) ./...
+		&& $(GO) list ./... \
+		| xargs $(GO) test -timeout $(TIMEOUT)s $(ARGS)
 
 COVERAGE_MODE    = atomic
 COVERAGE_PROFILE = coverage.out
@@ -277,7 +278,8 @@ test-coverage/%:
 		&& CMD="$$CMD -coverpkg=go.opentelemetry.io/contrib/$$( dirname "$(DIR)" | sed -e "s/^\.\///g" )/..."; \
 		echo "$$CMD $(DIR)/..."; \
 		cd "$(DIR)" \
-		&& $$CMD ./... \
+		&& $(GO) list ./... \
+		| xargs $$CMD \
 		&& $(GO) tool cover -html=coverage.out -o coverage.html;
 
 # Releasing

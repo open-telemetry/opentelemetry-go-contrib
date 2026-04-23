@@ -7,6 +7,9 @@
 package semconv
 
 import (
+	"context"
+	"errors"
+	"net"
 	"net/http"
 	"strconv"
 	"testing"
@@ -177,6 +180,38 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := HTTPClient{}.MetricAttributes(tt.req, tt.statusCode, tt.additionalAttributes)
 			tt.wantFunc(t, got)
+		})
+	}
+}
+
+func TestHTTPClient_ErrorType(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want string
+	}{
+		{
+			name: "named pointer type",
+			err:  &net.OpError{Op: "dial", Err: errors.New("refused")},
+			want: "net.OpError",
+		},
+		{
+			name: "named value type",
+			err:  context.DeadlineExceeded,
+			want: "context.deadlineExceededError",
+		},
+		{
+			name: "errors.New (unnamed)",
+			err:  errors.New("something"),
+			want: "errors.errorString",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			kv := HTTPClient{}.ErrorType(tt.err)
+			assert.Equal(t, attribute.Key("error.type"), kv.Key)
+			assert.Equal(t, tt.want, kv.Value.AsString())
 		})
 	}
 }
