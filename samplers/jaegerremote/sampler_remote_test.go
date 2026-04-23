@@ -301,11 +301,15 @@ func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
 		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 	)
-	time.Sleep(100 * time.Millisecond) // waiting for s.pollController
-	sampler.Close()                    // stop pollController, avoid date race
-	s, ok := sampler.sampler.(*rateLimitingSampler)
-	assert.True(t, ok)
-	assert.Equal(t, float64(100), s.maxTracesPerSecond)
+	t.Cleanup(sampler.Close)
+	assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+		sampler.RLock()
+		defer sampler.RUnlock()
+		s, ok := sampler.sampler.(*rateLimitingSampler)
+		if assert.True(collect, ok, "sampler is not a rateLimitingSampler") {
+			assert.Equal(collect, float64(100), s.maxTracesPerSecond, "unexpected maxTracesPerSecond")
+		}
+	}, 1*time.Second, 10*time.Millisecond)
 }
 
 func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {

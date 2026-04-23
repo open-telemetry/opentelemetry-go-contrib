@@ -98,3 +98,73 @@ func BenchmarkLogSink(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkLogSinkErrorField(b *testing.B) {
+	err := errors.New("error")
+	message := "body"
+	keyValues := []any{
+		"string", "hello",
+		"int", 42,
+		"float", 3.14,
+		"bool", false,
+		"bytes", []byte("bytes"),
+		"uint", uint(5),
+		"duration", 1,
+		"slice",
+		[]int{1, 2, 3},
+		"map",
+		map[string]int{"value": 1},
+	}
+
+	b.Run("NoErrorField", func(b *testing.B) {
+		logSinks := make([]logr.LogSink, b.N)
+		for i := range logSinks {
+			logSinks[i] = NewLogSink("")
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := range b.N {
+			logSinks[n].Info(0, message)
+		}
+	})
+
+	b.Run("WithErrorField", func(b *testing.B) {
+		logSinks := make([]logr.LogSink, b.N)
+		for i := range logSinks {
+			logSinks[i] = NewLogSink("")
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := range b.N {
+			logSinks[n].Error(err, message)
+		}
+	})
+
+	b.Run("TenFieldsNoError", func(b *testing.B) {
+		logSinks := make([]logr.LogSink, b.N)
+		for i := range logSinks {
+			logSinks[i] = NewLogSink("")
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := range b.N {
+			logSinks[n].Info(0, message, keyValues...)
+		}
+	})
+
+	b.Run("TenFieldsWithError", func(b *testing.B) {
+		logSinks := make([]logr.LogSink, b.N)
+		for i := range logSinks {
+			logSinks[i] = NewLogSink("")
+		}
+
+		b.ReportAllocs()
+		b.ResetTimer()
+		for n := range b.N {
+			logSinks[n].Error(err, message, keyValues...)
+		}
+	})
+}

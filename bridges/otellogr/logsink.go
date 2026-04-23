@@ -13,8 +13,8 @@
 //   - Level is transformed and set as the Severity. The SeverityText is not
 //     set.
 //   - KeyAndValues are transformed and set as Attributes.
-//   - Error is always logged as an additional attribute with the key
-//     "exception.message" and with the severity [log.SeverityError].
+//   - Error is always set as the record error with the severity
+//     [log.SeverityError].
 //   - The [context.Context] value in KeyAndValues is propagated to OpenTelemetry
 //     log record. All non-nested [context.Context] values are ignored and not
 //     added as attributes. If there are multiple [context.Context] the last one
@@ -61,7 +61,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 type config struct {
@@ -225,10 +224,7 @@ func (l *LogSink) Error(err error, msg string, keysAndValues ...any) {
 	var record log.Record
 	record.SetBody(log.StringValue(msg))
 	record.SetSeverity(log.SeverityError)
-
-	record.AddAttributes(
-		log.String(string(semconv.ExceptionMessageKey), err.Error()),
-	)
+	record.SetErr(err)
 
 	record.AddAttributes(l.attr...)
 
