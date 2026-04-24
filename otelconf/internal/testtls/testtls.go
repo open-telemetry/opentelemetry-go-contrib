@@ -25,6 +25,7 @@ type Material struct {
 	ServerKeyPath  string
 	ClientCertPath string
 	ClientKeyPath  string
+	BadCertPath    string
 }
 
 // TB is the minimal testing surface needed by this helper.
@@ -70,7 +71,7 @@ func Write(t TB) Material {
 			CommonName:   "localhost",
 		},
 		DNSNames:              []string{"localhost"},
-		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1)},
+		IPAddresses:           []net.IP{net.IPv4(127, 0, 0, 1), net.IPv6loopback},
 		NotBefore:             now.Add(-time.Hour),
 		NotAfter:              now.AddDate(2, 0, 0),
 		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageKeyEncipherment,
@@ -104,6 +105,7 @@ func Write(t TB) Material {
 		ServerKeyPath:  filepath.Join(dir, "server.key"),
 		ClientCertPath: filepath.Join(dir, "client.crt"),
 		ClientKeyPath:  filepath.Join(dir, "client.key"),
+		BadCertPath:    filepath.Join(dir, "bad_cert.crt"),
 	}
 	writeCert(t, m.CACertPath, caDER)
 	writeKey(t, m.CAKeyPath, caKey)
@@ -111,6 +113,7 @@ func Write(t TB) Material {
 	writeKey(t, m.ServerKeyPath, serverKey)
 	writeCert(t, m.ClientCertPath, clientDER)
 	writeKey(t, m.ClientKeyPath, clientKey)
+	writeBadCert(t, m.BadCertPath)
 	return m
 }
 
@@ -145,5 +148,12 @@ func writeKey(t TB, path string, key *rsa.PrivateKey) {
 	block := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: x509.MarshalPKCS1PrivateKey(key)}
 	if err := os.WriteFile(path, pem.EncodeToMemory(block), 0o600); err != nil {
 		t.Fatalf("write key %s: %v", path, err)
+	}
+}
+
+func writeBadCert(t TB, path string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte("This is intentionally not a PEM formatted cert file."), 0o600); err != nil {
+		t.Fatalf("write bad cert %s: %v", path, err)
 	}
 }
