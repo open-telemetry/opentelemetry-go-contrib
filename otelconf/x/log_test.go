@@ -14,9 +14,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"reflect"
-	"runtime"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -757,10 +755,6 @@ func TestLoggerProviderOptions(t *testing.T) {
 }
 
 func Test_otlpGRPCLogExporter(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// TODO (#7446): Fix the flakiness on Windows.
-		t.Skip("Test is flaky on Windows.")
-	}
 	material := testtls.Write(t)
 	type args struct {
 		ctx        context.Context
@@ -777,7 +771,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Tls: &GrpcTls{
 						Insecure: ptr(true),
 					},
@@ -796,7 +790,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Tls: &GrpcTls{
 						CaFile: ptr(material.CACertPath),
 					},
@@ -821,7 +815,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Tls: &GrpcTls{
 						CaFile:   ptr(material.CACertPath),
 						KeyFile:  ptr(material.ClientKeyPath),
@@ -856,17 +850,14 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp4", "localhost:0")
+			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 			require.NoError(t, err)
 
-			// We need to manually construct the endpoint using the port on which the server is listening.
-			//
-			// n.Addr() always returns 127.0.0.1 instead of localhost.
-			// But our certificate is created with CN as 'localhost', not '127.0.0.1'.
-			// So we have to manually form the endpoint as "localhost:<port>".
-			_, port, err := net.SplitHostPort(n.Addr().String())
-			require.NoError(t, err)
-			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
+			scheme := "https"
+			if tt.args.otlpConfig.Tls != nil && tt.args.otlpConfig.Tls.Insecure != nil && *tt.args.otlpConfig.Tls.Insecure {
+				scheme = "http"
+			}
+			tt.args.otlpConfig.Endpoint = ptr(scheme + "://" + n.Addr().String())
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
@@ -880,11 +871,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				Body: log.StringValue("test"),
 			}
 
-			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{ //nolint:usetesting // required to avoid getting a canceled context.
-					logFactory.NewRecord(),
-				}))
-			}, 10*time.Second, 1*time.Second)
+			assert.NoError(t, exporter.Export(t.Context(), []sdklog.Record{logFactory.NewRecord()}))
 		})
 	}
 }
@@ -911,7 +898,7 @@ func startGRPCLogsCollector(t *testing.T, listener net.Listener, serverOptions [
 	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.GracefulStop()
+		srv.Stop()
 		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			assert.NoError(t, err)
 		}
