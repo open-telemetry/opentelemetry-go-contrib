@@ -18,6 +18,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Set error field as `record.SetErr` instead of a plain attribute in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#8776)
 - Set the "error" field (e.g. created via `zap.Error`) as `record.SetErr` instead of a plain attribute in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8719)
 - Set emitted errors in `go.opentelemetry.io/contrib/bridges/otellogr` as record errors (`Record.SetErr`) instead of `exception.message` attributes. (#8775)
+- The default span name formatter in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` now conforms to the OpenTelemetry HTTP semantic conventions for server span names. (#TBD)
+  - The default span name is now `{method} {route}` (e.g. `GET /foo/{id}`) when a route pattern is available, or `{method}` (e.g. `GET`) otherwise.
 
 ### Fixed
 
