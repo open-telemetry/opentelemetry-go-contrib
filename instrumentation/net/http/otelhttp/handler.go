@@ -35,8 +35,11 @@ type middleware struct {
 	semconv semconv.HTTPServer
 }
 
-func defaultHandlerFormatter(operation string, _ *http.Request) string {
-	return operation
+func defaultHandlerFormatter(_ string, r *http.Request) string {
+	if r.Pattern != "" {
+		return r.Method + " " + r.Pattern
+	}
+	return r.Method
 }
 
 // NewHandler wraps the passed handler in a span named after the operation and

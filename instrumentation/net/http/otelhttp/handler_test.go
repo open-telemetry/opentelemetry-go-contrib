@@ -428,7 +428,7 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	spans := spanRecorder.Ended()
 	require.Len(t, spans, 2)
 
-	assert.Equal(t, "test_handler", spans[0].Name())
+	assert.Equal(t, "GET", spans[0].Name())
 	assert.Equal(t, "test_request", spans[1].Name())
 	assert.NotEmpty(t, spans[0].Parent().SpanID())
 	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[0].Parent().SpanID())
@@ -443,7 +443,7 @@ func TestWithSpanNameFormatter(t *testing.T) {
 	}{
 		{
 			name:         "with the default span name formatter",
-			wantSpanName: "test_handler",
+			wantSpanName: "GET /foo/{id}",
 		},
 		{
 			name: "with a custom span name formatter",
