@@ -105,6 +105,35 @@ func TestCustomSpanNameFormatter(t *testing.T) {
 	}
 }
 
+func TestWithSpanOptions(t *testing.T) {
+	exporter := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exporter))
+
+	wantAttr := attribute.String("foo", "bar")
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware(
+		"foobar",
+		otelmux.WithTracerProvider(tp),
+		otelmux.WithSpanOptions(
+			trace.WithAttributes(wantAttr),
+		),
+	))
+	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, r *http.Request) {})
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/111", http.NoBody)
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+
+	spans := exporter.GetSpans()
+	require.Len(t, spans, 1)
+	got := make(map[attribute.Key]attribute.Value, len(spans[0].Attributes))
+	for _, attr := range spans[0].Attributes {
+		got[attr.Key] = attr.Value
+	}
+	assert.Equal(t, wantAttr.Value, got[wantAttr.Key])
+}
+
 func ok(http.ResponseWriter, *http.Request) {}
 func notfound(w http.ResponseWriter, _ *http.Request) {
 	http.Error(w, "not found", http.StatusNotFound)
