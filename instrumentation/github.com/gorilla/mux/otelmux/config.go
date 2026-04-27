@@ -9,7 +9,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	"go.opentelemetry.io/otel/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
 
@@ -23,7 +22,7 @@ type config struct {
 	Filters            []Filter
 	MeterProvider      metric.MeterProvider
 	MetricAttributesFn func(*http.Request) []attribute.KeyValue
-	SpanStartOptions   []trace.SpanStartOption
+	SpanStartOptions   []oteltrace.SpanStartOption
 }
 
 // Option specifies instrumentation configuration options.
@@ -74,7 +73,7 @@ func WithPropagators(propagators propagation.TextMapPropagator) Option {
 
 // WithSpanOptions configures an additional set of
 // trace.SpanStartOption, which are applied to each new span.
-func WithSpanOptions(opts ...trace.SpanStartOption) Option {
+func WithSpanOptions(opts ...oteltrace.SpanStartOption) Option {
 	return optionFunc(func(cfg *config) {
 		cfg.SpanStartOptions = append(cfg.SpanStartOptions, opts...)
 	})

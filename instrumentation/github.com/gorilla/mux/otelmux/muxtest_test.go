@@ -118,7 +118,7 @@ func TestWithSpanOptions(t *testing.T) {
 			trace.WithAttributes(wantAttr),
 		),
 	))
-	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, r *http.Request) {})
+	router.HandleFunc("/user/{id}", func(http.ResponseWriter, *http.Request) {})
 
 	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/111", http.NoBody)
 	w := httptest.NewRecorder()
