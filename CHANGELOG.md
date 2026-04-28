@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Set error field as `record.SetErr` instead of a plain attribute in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#8776)
 - Set the "error" field (e.g. created via `zap.Error`) as `record.SetErr` instead of a plain attribute in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8719)
+- Set fields implementing `error` interface from `slog` records as `record.SetErr` instead of plain attributes in `go.opentelemetry.io/contrib/bridges/otelslog`. (#8746)
 - Set emitted errors in `go.opentelemetry.io/contrib/bridges/otellogr` as record errors (`Record.SetErr`) instead of `exception.message` attributes. (#8775)
 
 ### Fixed
