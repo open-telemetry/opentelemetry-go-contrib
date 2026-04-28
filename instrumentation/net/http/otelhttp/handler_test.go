@@ -494,6 +494,73 @@ func TestWithSpanNameFormatter(t *testing.T) {
 	}
 }
 
+func TestDefaultSpanNameFormatter(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		method       string
+		pattern      string
+		wantSpanName string
+	}{
+		{
+			name:         "standard method, no pattern",
+			method:       http.MethodGet,
+			wantSpanName: "GET",
+		},
+		{
+			name:         "standard method, path-only pattern",
+			method:       http.MethodGet,
+			pattern:      "/foo/{id}",
+			wantSpanName: "GET /foo/{id}",
+		},
+		{
+			name:         "standard method, pattern with method prefix",
+			method:       http.MethodGet,
+			pattern:      "GET /foo/{id}",
+			wantSpanName: "GET /foo/{id}",
+		},
+		{
+			name:         "standard method, pattern with host prefix",
+			method:       http.MethodGet,
+			pattern:      "example.com/foo/{id}",
+			wantSpanName: "GET /foo/{id}",
+		},
+		{
+			name:         "nonstandard method, no pattern",
+			method:       "CUSTOM",
+			wantSpanName: "HTTP",
+		},
+		{
+			name:         "nonstandard method, with pattern",
+			method:       "CUSTOM",
+			pattern:      "/foo/{id}",
+			wantSpanName: "HTTP /foo/{id}",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			spanRecorder := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+			h := NewHandler(
+				http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}),
+				"test_handler",
+				WithTracerProvider(provider),
+			)
+
+			r, err := http.NewRequestWithContext(t.Context(), tt.method, "http://localhost/foo/123", http.NoBody)
+			require.NoError(t, err)
+			r.Pattern = tt.pattern
+
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, r)
+
+			assert.NoError(t, spanRecorder.ForceFlush(t.Context()))
+			spans := spanRecorder.Ended()
+			require.Len(t, spans, 1)
+			assert.Equal(t, tt.wantSpanName, spans[0].Name())
+		})
+	}
+}
+
 func TestWithPublicEndpointFn(t *testing.T) {
 	remoteSpan := trace.SpanContextConfig{
 		TraceID:    trace.TraceID{0x01},
