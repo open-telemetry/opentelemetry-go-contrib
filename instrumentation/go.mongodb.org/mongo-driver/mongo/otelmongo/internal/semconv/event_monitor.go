@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/event"
 	"go.opentelemetry.io/otel/attribute"
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.37.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
 // Constants for environment variable keys and versions.
@@ -65,7 +65,7 @@ func WithCommandAttributeDisabled(disabled bool) AttributeOption {
 // hasOptIn returns true if the comma-separated version string contains the
 // exact optIn value.
 func hasOptIn(version, optIn string) bool {
-	for _, v := range strings.Split(version, ",") {
+	for v := range strings.SplitSeq(version, ",") {
 		if strings.TrimSpace(v) == optIn {
 			return true
 		}

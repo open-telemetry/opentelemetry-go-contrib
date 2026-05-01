@@ -4,6 +4,7 @@
 package otelconf
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"net/http"
@@ -1147,7 +1148,10 @@ func TestPrometheusIPv6(t *testing.T) {
 			hServ := rs.(readerWithServer).server
 			assert.True(t, strings.HasPrefix(hServ.Addr, "[::1]:"))
 
-			resp, err := http.DefaultClient.Get("http://" + hServ.Addr + "/metrics")
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+hServ.Addr+"/metrics", http.NoBody)
+			require.NoError(t, err)
+
+			resp, err := http.DefaultClient.Do(req)
 			t.Cleanup(func() {
 				require.NoError(t, resp.Body.Close())
 			})
@@ -1228,11 +1232,55 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 	// localhost resolves to 127.0.0.1, so we expect the resolved IP
 	assert.Contains(t, addr, "127.0.0.1")
 
-	resp, err := http.Get("http://" + addr + "/metrics")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/metrics", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+// TestPrometheusReaderDotStyleLabels verifies that OTel dot-style resource
+// attribute names (e.g. service.name) are preserved in target_info when both
+// without_type_suffix and without_units are set which is default config for OTel Collector.
+func TestPrometheusReaderDotStyleLabels(t *testing.T) {
+	host := "localhost"
+	port := 0
+	reader, err := prometheusReader(t.Context(), &Prometheus{
+		Host:              &host,
+		Port:              &port,
+		WithoutTypeSuffix: ptr(true),
+		WithoutUnits:      ptr(true),
+	})
+	require.NoError(t, err)
+
+	res := resource.NewWithAttributes("", attribute.String("service.name", "test-svc"))
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader), sdkmetric.WithResource(res))
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		require.NoError(t, mp.Shutdown(context.Background()))
+	})
+	c, err := mp.Meter("test").Int64Counter("test.counter")
+	require.NoError(t, err)
+	c.Add(t.Context(), 1)
+
+	addr := reader.(readerWithServer).server.Addr
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/metrics", http.NoBody)
+	require.NoError(t, err)
+	req.Header.Set("Accept", "application/openmetrics-text; version=1.0.0; escaping=allow-utf-8")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(resp.Body)
+	require.NoError(t, err)
+	body := buf.String()
+
+	assert.Contains(t, body, `"service.name"="test-svc"`)
+	assert.NotContains(t, body, "service_name")
 }
 
 func TestPrometheusReaderHostParsing(t *testing.T) {

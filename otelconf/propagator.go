@@ -12,14 +12,9 @@ import (
 	"go.opentelemetry.io/contrib/propagators/autoprop"
 )
 
-func newPropagator(prop OpenTelemetryConfigurationPropagator) (propagation.TextMapPropagator, error) {
-	if prop == nil {
+func newPropagator(p *Propagator) (propagation.TextMapPropagator, error) {
+	if p == nil {
 		return propagation.NewCompositeTextMapPropagator(), nil
-	}
-
-	p, ok := prop.(*PropagatorJson)
-	if !ok {
-		return nil, newErrInvalid("propagator")
 	}
 
 	n := len(p.Composite)
@@ -50,7 +45,7 @@ func newPropagator(prop OpenTelemetryConfigurationPropagator) (propagation.TextM
 	}
 
 	if p.CompositeList != nil {
-		for _, v := range strings.Split(*p.CompositeList, ",") {
+		for v := range strings.SplitSeq(*p.CompositeList, ",") {
 			names[v] = struct{}{}
 		}
 	}

@@ -19,6 +19,7 @@
 package testutils // import "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/testutils"
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -26,8 +27,12 @@ import (
 )
 
 // getJSON makes an HTTP call to the specified URL and parses the returned JSON into `out`.
-func getJSON(url string, out any) error {
-	resp, err := http.Get(url) //nolint:gosec // False positive G107: Potential HTTP request made with variable url
+func getJSON(ctx context.Context, url string, out any) error {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
+	if err != nil {
+		return err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}

@@ -13,7 +13,7 @@ import (
 func TestPropagator(t *testing.T) {
 	tests := []struct {
 		name    string
-		cfg     OpenTelemetryConfigurationPropagator
+		cfg     *Propagator
 		want    []string
 		wantErr bool
 		errMsg  string
@@ -26,7 +26,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "valid tracecontext",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				Composite: []TextMapPropagator{
 					{
 						Tracecontext: TraceContextPropagator{},
@@ -38,7 +38,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "valid baggage",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				Composite: []TextMapPropagator{
 					{
 						Baggage: BaggagePropagator{},
@@ -50,7 +50,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "valid b3",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				Composite: []TextMapPropagator{
 					{
 						B3: B3Propagator{},
@@ -62,7 +62,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "valid b3multi",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				Composite: []TextMapPropagator{
 					{
 						B3Multi: B3MultiPropagator{},
@@ -74,7 +74,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "valid jaeger",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				Composite: []TextMapPropagator{
 					{
 						Jaeger: JaegerPropagator{},
@@ -86,7 +86,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "valid ottrace",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				Composite: []TextMapPropagator{
 					{
 						Ottrace: OpenTracingPropagator{},
@@ -98,7 +98,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "multiple propagators",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				Composite: []TextMapPropagator{
 					{
 						Tracecontext: TraceContextPropagator{},
@@ -116,7 +116,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "empty composite",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				Composite: []TextMapPropagator{
 					{},
 				},
@@ -126,7 +126,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "multiple propagators via composite_list",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				CompositeList: ptr("tracecontext,baggage,b3"),
 			},
 			want:    []string{"tracestate", "baggage", "x-b3-traceid", "x-b3-spanid", "x-b3-sampled", "x-b3-flags", "traceparent"},
@@ -134,7 +134,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "valid xray",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				CompositeList: ptr("xray"),
 			},
 			want:    []string{"X-Amzn-Trace-Id"},
@@ -142,7 +142,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "empty propagator name",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				CompositeList: ptr(""),
 			},
 			want:    []string{},
@@ -151,7 +151,7 @@ func TestPropagator(t *testing.T) {
 		},
 		{
 			name: "unsupported propagator",
-			cfg: &PropagatorJson{
+			cfg: &Propagator{
 				CompositeList: ptr("random-garbage,baggage,b3"),
 			},
 			want:    []string{},

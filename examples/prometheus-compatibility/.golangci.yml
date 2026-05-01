@@ -1,0 +1,9 @@
+version: "2"
+linters:
+  exclusions:
+    rules:
+      # Documentation example functions and variables are intentionally unexported
+      # and unreferenced from outside their own file.
+      - linters:
+          - unused
+        path: ".*\\.go"

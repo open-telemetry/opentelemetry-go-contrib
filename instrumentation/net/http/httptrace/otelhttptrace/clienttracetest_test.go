@@ -59,7 +59,7 @@ func TestHTTPRequestWithClientTrace(t *testing.T) {
 	err := func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "test")
 		defer span.End()
-		req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
+		req, _ := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, http.NoBody)
 		_, req = otelhttptrace.W3C(ctx, req)
 
 		res, err := client.Do(req)
@@ -515,7 +515,7 @@ func TestHTTPRequestWithTraceContext(t *testing.T) {
 
 	ctx, span := tp.Tracer("").Start(t.Context(), "parent_span")
 
-	req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
+	req, _ := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	req = req.WithContext(httptrace.WithClientTrace(req.Context(), otelhttptrace.NewClientTrace(ctx)))
 
 	client := ts.Client()

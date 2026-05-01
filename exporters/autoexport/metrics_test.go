@@ -138,7 +138,10 @@ func TestMetricExporterPrometheus(t *testing.T) {
 		t.Errorf("expected readerWithServer but got %v", r)
 	}
 
-	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("http://%s/metrics", rws.addr), http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, resp.Body.Close()) }()
 	body, err := io.ReadAll(resp.Body)
@@ -218,7 +221,10 @@ func TestMetricProducerPrometheusWithPrometheusExporter(t *testing.T) {
 
 	t.Logf("Prometheus metrics server listening at http://%s/metrics", rws.addr)
 
-	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("http://%s/metrics", rws.addr), http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, resp.Body.Close()) }()
 	body, err := io.ReadAll(resp.Body)
@@ -228,46 +234,6 @@ func TestMetricProducerPrometheusWithPrometheusExporter(t *testing.T) {
 
 	// "target_info" and "promhttp_metric_handler_errors_total".
 	assert.GreaterOrEqual(t, strings.Count(string(body), "# HELP"), 2)
-
-	assert.NoError(t, mp.Shutdown(t.Context()))
-	goleak.VerifyNone(t)
-}
-
-func TestMetricProducerFallbackWithPrometheusExporter(t *testing.T) {
-	assertNoOtelHandleErrors(t)
-
-	reg := prometheus.NewRegistry()
-	someDummyMetric := prometheus.NewCounter(prometheus.CounterOpts{
-		Name: "dummy_metric",
-		Help: "dummy metric",
-	})
-	reg.MustRegister(someDummyMetric)
-
-	WithFallbackMetricProducer(func(context.Context) (metric.Producer, error) {
-		return prometheusbridge.NewMetricProducer(prometheusbridge.WithGatherer(reg)), nil
-	})
-
-	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
-	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "0")
-
-	r, err := NewMetricReader(t.Context())
-	assert.NoError(t, err)
-
-	// pull-based exporters like Prometheus need to be registered
-	mp := metric.NewMeterProvider(metric.WithReader(r))
-
-	rws, ok := r.(readerWithServer)
-	if !ok {
-		t.Errorf("expected readerWithServer but got %v", r)
-	}
-
-	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
-	require.NoError(t, err)
-	defer func() { assert.NoError(t, resp.Body.Close()) }()
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-
-	assert.Contains(t, string(body), "HELP dummy_metric_total dummy metric")
 
 	assert.NoError(t, mp.Shutdown(t.Context()))
 	goleak.VerifyNone(t)

@@ -127,9 +127,6 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 		// Record the server-side attributes.
 		var additionalAttributes []attribute.KeyValue
-		if c.FullPath() != "" {
-			additionalAttributes = append(additionalAttributes, sc.Route(c.FullPath()))
-		}
 		if cfg.MetricAttributeFn != nil {
 			additionalAttributes = append(additionalAttributes, cfg.MetricAttributeFn(c.Request)...)
 		}
@@ -143,11 +140,12 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			MetricAttributes: semconv.MetricAttributes{
 				Req:                  c.Request,
 				StatusCode:           status,
+				Route:                c.FullPath(),
 				AdditionalAttributes: additionalAttributes,
 			},
 			MetricData: semconv.MetricData{
-				RequestSize: c.Request.ContentLength,
-				ElapsedTime: float64(time.Since(requestStartTime)) / float64(time.Millisecond),
+				RequestSize:     c.Request.ContentLength,
+				RequestDuration: time.Since(requestStartTime),
 			},
 		})
 	}

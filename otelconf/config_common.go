@@ -142,12 +142,9 @@ func (e *errInvalid) Error() string {
 	return "invalid config: " + e.Identifier
 }
 
-func (e *errInvalid) Is(target error) bool {
-	t, ok := target.(*errInvalid)
-	if !ok {
-		return false
-	}
-	return reflect.TypeOf(e.Identifier) == reflect.TypeOf(t.Identifier)
+func (*errInvalid) Is(target error) bool {
+	_, ok := target.(*errInvalid)
+	return ok
 }
 
 // newErrInvalid creates a new error indicating that an error occurred due to misconfiguration.
@@ -278,6 +275,15 @@ func validateSpanLimits(plain *SpanLimits) error {
 
 func ptr[T any](v T) *T {
 	return &v
+}
+
+// validateOTLPHTTPEncoding validates the encoding configuration.
+// The Go SDK only supports protobuf encoding for OTLP HTTP exporters.
+func validateOTLPHTTPEncoding(encoding *OTLPHttpEncoding) error {
+	if encoding != nil && *encoding != OTLPHttpEncodingProtobuf {
+		return newErrInvalid(fmt.Sprintf("unsupported encoding %q", *encoding))
+	}
+	return nil
 }
 
 // createHeadersConfig combines the two header config fields. Headers take precedence over headersList.
