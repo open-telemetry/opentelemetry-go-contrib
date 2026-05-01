@@ -59,7 +59,7 @@ func setupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 	otel.SetTextMapPropagator(prop)
 
 	// Set up trace provider.
-	tracerProvider, err := newTracerProvider()
+	tracerProvider, err := newTracerProvider(res)
 	if err != nil {
 		handleErr(err)
 		return shutdown, err
@@ -95,7 +95,7 @@ func newPropagator() propagation.TextMapPropagator {
 	)
 }
 
-func newtracerProvider() (*trace.TracerProvider, error) {
+func newTracerProvider(res *resource.Resource) (*trace.TracerProvider, error) {
 	traceExporter, err := stdouttrace.New(
 		stdouttrace.WithPrettyPrint())
 	if err != nil {
@@ -109,7 +109,7 @@ func newtracerProvider() (*trace.TracerProvider, error) {
 	return tracerProvider, nil
 }
 
-func newMeterProvider() (*metric.MeterProvider, error) {
+func newMeterProvider(res *resource.Resource) (*metric.MeterProvider, error) {
 	metricExporter, err := stdoutmetric.New()
 	if err != nil {
 		return nil, err
@@ -122,7 +122,7 @@ func newMeterProvider() (*metric.MeterProvider, error) {
 	return meterProvider, nil
 }
 
-func newLoggerProvider() (*log.LoggerProvider, error) {
+func newLoggerProvider(res *resource.Resource) (*log.LoggerProvider, error) {
 	logExporter, err := stdoutlog.New()
 	if err != nil {
 		return nil, err
