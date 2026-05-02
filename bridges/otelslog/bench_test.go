@@ -4,6 +4,7 @@
 package otelslog
 
 import (
+	"errors"
 	"log/slog"
 	"testing"
 	"time"
@@ -152,4 +153,77 @@ func BenchmarkHandler(b *testing.B) {
 	})
 
 	_, _ = h, err
+}
+
+func BenchmarkHandlerErrorField(b *testing.B) {
+	ctx := b.Context()
+	errValue := errors.New("benchmark error")
+	now := time.Now()
+
+	type benchCase struct {
+		name   string
+		record slog.Record
+	}
+
+	newRecord := func(attrs ...slog.Attr) slog.Record {
+		r := slog.NewRecord(now, slog.LevelInfo, "body", 0)
+		r.AddAttrs(attrs...)
+		return r
+	}
+
+	benchmarks := []benchCase{
+		{
+			name:   "NoErrorField",
+			record: newRecord(slog.Any("value", "x")),
+		},
+		{
+			name:   "WithErrorField",
+			record: newRecord(slog.Any("error", errValue)),
+		},
+		{
+			name: "TenFieldsNoError",
+			record: newRecord(
+				slog.String("1", "1"),
+				slog.Int64("2", 2),
+				slog.Int("3", 3),
+				slog.Uint64("4", 4),
+				slog.Float64("5", 5.),
+				slog.Bool("6", true),
+				slog.Time("7", now),
+				slog.Duration("8", time.Second),
+				slog.Any("9", 9),
+				slog.Any("10", "10"),
+			),
+		},
+		{
+			name: "TenFieldsWithError",
+			record: newRecord(
+				slog.String("1", "1"),
+				slog.Int64("2", 2),
+				slog.Int("3", 3),
+				slog.Uint64("4", 4),
+				slog.Float64("5", 5.),
+				slog.Bool("6", true),
+				slog.Time("7", now),
+				slog.Duration("8", time.Second),
+				slog.Any("9", 9),
+				slog.Any("error", errValue),
+			),
+		},
+	}
+
+	for i := range benchmarks {
+		bm := &benchmarks[i]
+		b.Run(bm.name, func(b *testing.B) {
+			h := NewHandler("")
+			record := bm.record
+			b.ReportAllocs()
+			b.ResetTimer()
+			for range b.N {
+				if err := h.Handle(ctx, record); err != nil {
+					b.Fatalf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
 }
