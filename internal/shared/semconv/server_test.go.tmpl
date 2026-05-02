@@ -110,15 +110,21 @@ func TestNewMethod(t *testing.T) {
 			want:   attribute.String("http.request.method", "POST"),
 		},
 		{
-			method:   "Put",
+			method:   "",
 			n:        2,
+			want:     attribute.String("http.request.method", "_OTHER"),
+			wantOrig: attribute.KeyValue{},
+		},
+		{
+			method:   "Put",
+			n:        3,
 			want:     attribute.String("http.request.method", "PUT"),
 			wantOrig: attribute.String("http.request.method_original", "Put"),
 		},
 		{
 			method:   "Unknown",
-			n:        2,
-			want:     attribute.String("http.request.method", "GET"),
+			n:        4,
+			want:     attribute.String("http.request.method", "_OTHER"),
 			wantOrig: attribute.String("http.request.method_original", "Unknown"),
 		},
 	}

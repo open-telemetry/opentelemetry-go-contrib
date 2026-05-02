@@ -168,7 +168,7 @@ func TestSDKIntegration(t *testing.T) {
 			path:         "/book/bar",
 			reqFunc:      func(r *http.Request) { r.Pattern = "/book/{custom}" },
 			wantSpanName: "HTTP /book/{custom}",
-			wantMethod:   http.MethodGet,
+			wantMethod:   "_OTHER",
 			wantRoute:    "/book/{custom}",
 		},
 	}

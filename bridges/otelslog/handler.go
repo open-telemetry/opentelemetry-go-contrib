@@ -214,16 +214,34 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 		)
 	}
 
+	if h.attrs != nil && h.attrs.err != nil {
+		record.SetErr(h.attrs.err)
+	}
 	if h.attrs.Len() > 0 {
 		record.AddAttributes(h.attrs.KeyValues()...)
 	}
 
 	n := r.NumAttrs()
 	if h.group != nil {
+		if err := h.group.Err(); err != nil {
+			record.SetErr(err)
+		}
+
 		if n > 0 {
 			buf := newKVBuffer(n)
 			r.Attrs(buf.AddAttr)
-			record.AddAttributes(h.group.KeyValue(buf.KeyValues()...))
+			if buf.err != nil {
+				record.SetErr(buf.err)
+			}
+			if buf.Len() > 0 {
+				record.AddAttributes(h.group.KeyValue(buf.KeyValues()...))
+			} else {
+				// A Handler should not output groups if there are no attributes.
+				g := h.group.NextNonEmpty()
+				if g != nil {
+					record.AddAttributes(g.KeyValue())
+				}
+			}
 		} else {
 			// A Handler should not output groups if there are no attributes.
 			g := h.group.NextNonEmpty()
@@ -234,6 +252,9 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 	} else if n > 0 {
 		buf := newKVBuffer(n)
 		r.Attrs(buf.AddAttr)
+		if buf.err != nil {
+			record.SetErr(buf.err)
+		}
 		record.AddAttributes(buf.KeyValues()...)
 	}
 
@@ -326,6 +347,18 @@ type group struct {
 	next *group
 }
 
+// Err returns the error to use from g's linked-list (including g itself). If
+// no error is found, nil is returned.
+func (g *group) Err() error {
+	for g != nil {
+		if g.attrs != nil && g.attrs.err != nil {
+			return g.attrs.err
+		}
+		g = g.next
+	}
+	return nil
+}
+
 // NextNonEmpty returns the next group within g's linked-list that has
 // attributes (including g itself). If no group is found, nil is returned.
 func (g *group) NextNonEmpty() *group {
@@ -378,6 +411,7 @@ func (g *group) AddAttrs(attrs []slog.Attr) {
 
 type kvBuffer struct {
 	data []log.KeyValue
+	err  error
 }
 
 func newKVBuffer(n int) *kvBuffer {
@@ -397,7 +431,7 @@ func (b *kvBuffer) Clone() *kvBuffer {
 	if b == nil {
 		return nil
 	}
-	return &kvBuffer{data: slices.Clone(b.data)}
+	return &kvBuffer{data: slices.Clone(b.data), err: b.err}
 }
 
 // KeyValues returns kvs appended to the [log.KeyValue] held by b.
@@ -425,14 +459,18 @@ func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
 //
 // If attr is empty, it will be dropped.
 func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
+	if attr.Value.Kind() == slog.KindAny {
+		if err, ok := attr.Value.Any().(error); ok {
+			b.err = err
+			return true
+		}
+	}
+
 	if attr.Key == "" {
 		if attr.Value.Kind() == slog.KindGroup {
 			// A Handler should inline the Attrs of a group with an empty key.
 			for _, a := range attr.Value.Group() {
-				b.data = append(b.data, log.KeyValue{
-					Key:   a.Key,
-					Value: convert(a.Value),
-				})
+				_ = b.AddAttr(a)
 			}
 			return true
 		}
