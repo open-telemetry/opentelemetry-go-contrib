@@ -170,7 +170,7 @@ func eventExists(event any) bool {
 	// Values of certain Kinds. Unsupported Kinds
 	// will panic rather than return false
 	switch reflect.TypeOf(event).Kind() {
-	case reflect.Chan, reflect.Func, reflect.Map, reflect.Ptr, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
+	case reflect.Chan, reflect.Func, reflect.Map, reflect.Pointer, reflect.UnsafePointer, reflect.Interface, reflect.Slice:
 		return !reflect.ValueOf(event).IsNil()
 	}
 	return true
