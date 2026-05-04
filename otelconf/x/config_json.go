@@ -192,6 +192,7 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	type Plain ExperimentalResourceDetector
 	type shadow struct {
 		Plain
+		AWSECS    json.RawMessage `json:"aws.ecs"`
 		Container json.RawMessage `json:"container"`
 		Host      json.RawMessage `json:"host"`
 		Process   json.RawMessage `json:"process"`
@@ -200,6 +201,17 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	var sh shadow
 	if err := json.Unmarshal(b, &sh); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if sh.AWSECS != nil {
+		var c ExperimentalAWSECSResourceDetector
+		if err := json.Unmarshal(sh.AWSECS, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		if c == nil {
+			c = ExperimentalAWSECSResourceDetector{}
+		}
+		sh.Plain.AWSECS = c
 	}
 
 	if sh.Container != nil {
