@@ -188,6 +188,10 @@ func TestRemotelyControlledSampler(t *testing.T) {
 
 	remoteSampler.setSampler(defaultSampler)
 
+	// Use a distinct startup strategy so the later assertion cannot be satisfied
+	// by pollControllerWithTicker's immediate update before the ticker fires.
+	agent.AddSamplingStrategy("client app",
+		getSamplingStrategyResponse(jaeger_api_v2.SamplingStrategyType_RATE_LIMITING, 1))
 	c := make(chan time.Time)
 	ticker := &time.Ticker{C: c}
 	// reset closed so the next call to Close() correctly stops the polling goroutine
@@ -198,6 +202,17 @@ func TestRemotelyControlledSampler(t *testing.T) {
 		remoteSampler.pollControllerWithTicker(ticker)
 	}()
 
+	// Wait for the immediate startup update before changing the strategy and
+	// forcing a tick. This makes the final assertion prove the ticker path ran.
+	assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+		remoteSampler.RLock()
+		defer remoteSampler.RUnlock()
+		_, ok := remoteSampler.sampler.(*rateLimitingSampler)
+		assert.True(collect, ok, "sampler should have been updated on startup")
+	}, time.Second, 10*time.Millisecond)
+
+	agent.AddSamplingStrategy("client app",
+		getSamplingStrategyResponse(jaeger_api_v2.SamplingStrategyType_PROBABILISTIC, testDefaultSamplingProbability))
 	c <- time.Now() // force update based on timer
 	remoteSampler.Close()
 	<-done

@@ -289,7 +289,7 @@ func (n HTTPServer) SpanName(r *http.Request) string {
 
 func (n HTTPServer) method(method string) (attribute.KeyValue, attribute.KeyValue) {
 	if method == "" {
-		return semconv.HTTPRequestMethodGet, attribute.KeyValue{}
+		return semconv.HTTPRequestMethodOther, attribute.KeyValue{}
 	}
 	if attr, ok := methodLookup[method]; ok {
 		return attr, attribute.KeyValue{}
@@ -299,7 +299,7 @@ func (n HTTPServer) method(method string) (attribute.KeyValue, attribute.KeyValu
 	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
 		return attr, orig
 	}
-	return semconv.HTTPRequestMethodGet, orig
+	return semconv.HTTPRequestMethodOther, orig
 }
 
 func (n HTTPServer) scheme(https bool) attribute.KeyValue { //nolint:revive // ignore linter
