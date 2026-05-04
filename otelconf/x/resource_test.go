@@ -148,3 +148,23 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 		})
 	}
 }
+
+func TestSDKResource(t *testing.T) {
+	cfg := OpenTelemetryConfiguration{
+		Resource: &Resource{
+			Attributes: []AttributeNameValue{
+				{Name: string(semconv.ServiceNameKey), Value: "service-a"},
+			},
+		},
+	}
+
+	sdk, err := NewSDK(WithOpenTelemetryConfiguration(cfg))
+	require.NoError(t, err)
+
+	res := sdk.Resource()
+	require.NotNil(t, res)
+	assert.Equal(t, resource.NewWithAttributes("", semconv.ServiceName("service-a")), res)
+
+	// Ensure callers receive a copy, not the SDK-owned pointer.
+	require.NotSame(t, res, sdk.Resource())
+}
