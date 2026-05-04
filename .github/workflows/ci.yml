@@ -55,6 +55,29 @@ jobs:
     - name: Check clean repository
       run: make check-clean-work-tree
 
+  weaver-live-check:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout Repo
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+    - name: Install Go
+      uses: actions/setup-go@v6
+      with:
+        go-version: ${{ env.DEFAULT_GO_VERSION }}
+        check-latest: true
+        cache-dependency-path: "**/go.sum"
+    - name: Install netcat
+      run: sudo apt-get update && sudo apt-get install -y netcat-openbsd
+    - name: Run Weaver Live Check
+      run: |
+        chmod +x ./tools/weaver-live-check.sh
+        ./tools/weaver-live-check.sh
+    - name: Upload Weaver Reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: weaver-reports
+        path: weaver-reports/
+
   govulncheck:
     runs-on: ubuntu-latest
     steps:
