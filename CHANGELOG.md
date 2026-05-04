@@ -20,6 +20,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Set fields implementing `error` interface from `slog` records as `record.SetErr` instead of plain attributes in `go.opentelemetry.io/contrib/bridges/otelslog`. (#8746)
 - Set emitted errors in `go.opentelemetry.io/contrib/bridges/otellogr` as record errors (`Record.SetErr`) instead of `exception.message` attributes. (#8775)
 - Unknown or empty HTTP methods now report "_OTHER" instead of "GET" across all HTTP instrumentations to align with OpenTelemetry semantic conventions. (#8868)
+- The default span name formatter in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` now conforms to the OpenTelemetry HTTP semantic conventions for server span names. (#8871)
+  - The default span name is now `{method} {route}` (e.g. `GET /foo/{id}`) when a route pattern is available, or `{method}` (e.g. `GET`) otherwise.
 
 ### Fixed
 

@@ -35,10 +35,6 @@ type middleware struct {
 	semconv semconv.HTTPServer
 }
 
-func defaultHandlerFormatter(operation string, _ *http.Request) string {
-	return operation
-}
-
 // NewHandler wraps the passed handler in a span named after the operation and
 // enriches it with metrics.
 func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
@@ -55,11 +51,16 @@ func NewMiddleware(operation string, opts ...Option) func(http.Handler) http.Han
 
 	defaultOpts := []Option{
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
-		WithSpanNameFormatter(defaultHandlerFormatter),
 	}
 
 	c := newConfig(append(defaultOpts, opts...)...)
 	h.configure(c)
+
+	if h.spanNameFormatter == nil {
+		h.spanNameFormatter = func(_ string, r *http.Request) string {
+			return h.semconv.SpanName(r)
+		}
+	}
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
