@@ -6,9 +6,10 @@ package x // import "go.opentelemetry.io/contrib/otelconf/x"
 import (
 	"context"
 
-	ecsdetector "go.opentelemetry.io/contrib/detectors/aws/ecs"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
+
+	ecsdetector "go.opentelemetry.io/contrib/detectors/aws/ecs"
 
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
