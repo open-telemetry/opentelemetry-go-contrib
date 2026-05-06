@@ -1006,7 +1006,6 @@ type ExperimentalResourceDetector struct {
 }
 
 type ExperimentalAWSECSResourceDetector map[string]interface{}
-
 type ExperimentalServiceResourceDetector map[string]interface{}
 
 type ExperimentalSpanParent string
