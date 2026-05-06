@@ -936,7 +936,7 @@ func TestCustomAttributesHandling(t *testing.T) {
 	require.NoError(t, err)
 	labeler := &Labeler{}
 	labeler.Add(expectedAttributes...)
-	ctx = ContextWithLabeler(ctx, labeler)
+	ctx = ContextWithClientLabeler(ctx, labeler)
 	r = r.WithContext(ctx)
 
 	// test bonus: intententionally ignoring response to confirm that
