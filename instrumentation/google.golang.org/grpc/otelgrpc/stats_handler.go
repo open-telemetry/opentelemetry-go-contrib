@@ -26,7 +26,7 @@ import (
 
 type gRPCContextKey struct{}
 
-// dialTargetContextKey carries the dial target seeded by NewClientOptions interceptors
+// dialTargetContextKey carries the dial target seeded by upcoming interceptors
 // so the stats handler can use the hostname for server.address instead of the
 // post-DNS IP from RemoteAddr.
 type dialTargetContextKey struct{}
@@ -333,8 +333,8 @@ func (*config) handleRPC(
 
 	switch rs := rs.(type) {
 	case *stats.Begin:
-		// Set server.address early from the dial target when available (NewClientOptions
-		// interceptors seed this). Covers both success and failure paths since Begin
+		// Set server.address early from the dial target when available (upcoming
+		// interceptors will seed this). Covers both success and failure paths since Begin
 		// fires on every RPC regardless of outcome.
 		if rs.Client {
 			if target, ok := ctx.Value(dialTargetContextKey{}).(string); ok && target != "" {
