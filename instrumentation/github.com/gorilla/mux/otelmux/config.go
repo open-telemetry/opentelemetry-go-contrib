@@ -22,6 +22,7 @@ type config struct {
 	Filters            []Filter
 	MeterProvider      metric.MeterProvider
 	MetricAttributesFn func(*http.Request) []attribute.KeyValue
+	SpanStartOptions   []oteltrace.SpanStartOption
 }
 
 // Option specifies instrumentation configuration options.
@@ -67,6 +68,14 @@ func WithPropagators(propagators propagation.TextMapPropagator) Option {
 		if propagators != nil {
 			cfg.Propagators = propagators
 		}
+	})
+}
+
+// WithSpanOptions configures an additional set of
+// trace.SpanStartOption, which are applied to each new span.
+func WithSpanOptions(opts ...oteltrace.SpanStartOption) Option {
+	return optionFunc(func(cfg *config) {
+		cfg.SpanStartOptions = append(cfg.SpanStartOptions, opts...)
 	})
 }
 

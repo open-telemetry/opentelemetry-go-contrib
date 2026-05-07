@@ -66,6 +66,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 			meter:              meter,
 			semconv:            semconv.NewHTTPServer(meter),
 			metricAttributesFn: cfg.MetricAttributesFn,
+			spanStartOptions:   cfg.SpanStartOptions,
 		}
 	}
 }
@@ -82,6 +83,7 @@ type traceware struct {
 	meter              metric.Meter
 	semconv            semconv.HTTPServer
 	metricAttributesFn func(*http.Request) []attribute.KeyValue
+	spanStartOptions   []trace.SpanStartOption
 }
 
 // validMethods are all the OTel recognized HTTP methods.
@@ -124,6 +126,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		trace.WithSpanKind(trace.SpanKindServer),
 	}
 
+	opts = append(opts, tw.spanStartOptions...)
 	if tw.publicEndpoint || (tw.publicEndpointFn != nil && tw.publicEndpointFn(r.WithContext(ctx))) {
 		opts = append(opts, trace.WithNewRoot())
 		// Linking incoming span context if any for public endpoint.
