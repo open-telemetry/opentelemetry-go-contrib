@@ -26,4 +26,3 @@ instrumentation/google.golang.org/grpc/otelgrpc/example/server/server
 instrumentation/google.golang.org/grpc/otelgrpc/example/client/client
 
 tmp
-weaver-reports/
