@@ -4,7 +4,6 @@
 package otelhttp
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,7 +13,7 @@ import (
 
 func TestLabelerFromContext(t *testing.T) {
 	t.Run("no labeler in context", func(t *testing.T) {
-		l, ok := LabelerFromContext(context.Background())
+		l, ok := LabelerFromContext(t.Context())
 		assert.False(t, ok)
 		require.NotNil(t, l)
 		assert.Empty(t, l.Get())
@@ -24,7 +23,7 @@ func TestLabelerFromContext(t *testing.T) {
 		labeler := &Labeler{}
 		labeler.Add(attribute.String("server.key", "server.value"))
 
-		ctx := ContextWithLabeler(context.Background(), labeler)
+		ctx := ContextWithLabeler(t.Context(), labeler)
 		got, ok := LabelerFromContext(ctx)
 		assert.True(t, ok)
 		assert.Same(t, labeler, got)
@@ -33,7 +32,7 @@ func TestLabelerFromContext(t *testing.T) {
 
 func TestClientLabelerFromContext(t *testing.T) {
 	t.Run("no client labeler in context", func(t *testing.T) {
-		l, ok := ClientLabelerFromContext(context.Background())
+		l, ok := ClientLabelerFromContext(t.Context())
 		assert.False(t, ok)
 		require.NotNil(t, l)
 		assert.Empty(t, l.Get())
@@ -43,7 +42,7 @@ func TestClientLabelerFromContext(t *testing.T) {
 		labeler := &Labeler{}
 		labeler.Add(attribute.String("client.key", "client.value"))
 
-		ctx := ContextWithClientLabeler(context.Background(), labeler)
+		ctx := ContextWithClientLabeler(t.Context(), labeler)
 		got, ok := ClientLabelerFromContext(ctx)
 		assert.True(t, ok)
 		assert.Same(t, labeler, got)
@@ -57,7 +56,7 @@ func TestClientLabelerContextIsolation(t *testing.T) {
 	clientLabeler := &Labeler{}
 	clientLabeler.Add(attribute.String("client.key", "client.value"))
 
-	ctx := context.Background()
+	ctx := t.Context()
 	ctx = ContextWithLabeler(ctx, serverLabeler)
 	ctx = ContextWithClientLabeler(ctx, clientLabeler)
 
