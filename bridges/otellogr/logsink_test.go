@@ -189,7 +189,8 @@ func TestLogSink(t *testing.T) {
 		{
 			name: "info_multi_attrs",
 			f: func(l *logr.Logger) {
-				l.Info("msg",
+				l.Info(
+					"msg",
 					"struct", struct{ data int64 }{data: 1},
 					"bool", true,
 					"duration", time.Minute,
@@ -320,7 +321,8 @@ func TestLogSink(t *testing.T) {
 		{
 			name: "error_multi_attrs",
 			f: func(l *logr.Logger) {
-				l.Error(testErr, "msg",
+				l.Error(
+					testErr, "msg",
 					"struct", struct{ data int64 }{data: 1},
 					"bool", true,
 					"duration", time.Minute,
@@ -354,14 +356,16 @@ func TestLogSink(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := logtest.NewRecorder()
-			ls := NewLogSink(name,
+			ls := NewLogSink(
+				name,
 				WithLoggerProvider(rec),
 				WithLevelSeverity(tt.wantSeverity),
 			)
 			l := logr.New(ls)
 			tt.f(&l)
 
-			logtest.AssertEqual(t, tt.want, rec.Result(),
+			logtest.AssertEqual(
+				t, tt.want, rec.Result(),
 				logtest.Transform(func(r logtest.Record) logtest.Record {
 					r.Context = nil // Ignore context for comparison.
 					return r
@@ -412,7 +416,8 @@ func TestLogSinkContext(t *testing.T) {
 			l := logr.New(ls)
 			tt.f(&l)
 
-			logtest.AssertEqual(t, tt.want, rec.Result(),
+			logtest.AssertEqual(
+				t, tt.want, rec.Result(),
 				logtest.Transform(func(r logtest.Record) logtest.Record {
 					// Only compare the context, ignore the rest.
 					return logtest.Record{

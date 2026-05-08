@@ -36,7 +36,8 @@ var serviceName = semconv.ServiceNameKey.String("test-service")
 func initConn() (*grpc.ClientConn, error) {
 	// It connects the OpenTelemetry Collector through local gRPC connection.
 	// You may replace `localhost:4317` with your endpoint.
-	conn, err := grpc.NewClient("localhost:4317",
+	conn, err := grpc.NewClient(
+		"localhost:4317",
 		// Note the use of insecure transport here. TLS is recommended in production.
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
@@ -99,7 +100,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	res, err := resource.New(ctx,
+	res, err := resource.New(
+		ctx,
 		resource.WithAttributes(
 			// The service name used to display traces in backends
 			serviceName,
@@ -150,7 +152,8 @@ func main() {
 	ctx, span := tracer.Start(
 		ctx,
 		"CollectorExporter-Example",
-		trace.WithAttributes(commonAttrs...))
+		trace.WithAttributes(commonAttrs...),
+	)
 	defer span.End()
 	for i := range 10 {
 		_, iSpan := tracer.Start(ctx, fmt.Sprintf("Sample-%d", i))

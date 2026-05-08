@@ -234,7 +234,7 @@ func TestObjectEncoder(t *testing.T) {
 			tt.f(enc)
 			enc.calculate(enc.root)
 			require.Len(t, enc.root.attrs, 1)
-			assert.Equal(t, tt.expected, value2Result((enc.root.attrs[0].Value)), "Unexpected encoder output.")
+			assert.Equal(t, tt.expected, value2Result(enc.root.attrs[0].Value), "Unexpected encoder output.")
 		})
 	}
 }

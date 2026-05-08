@@ -416,7 +416,8 @@ func TestWrapHandlerTracingWithTraceAttributeFn(t *testing.T) {
 	tp, memExporter := initMockTracerProvider()
 
 	// No flusher needed as SimpleSpanProcessor is synchronous
-	wrapped := otellambda.WrapHandler(emptyHandler{},
+	wrapped := otellambda.WrapHandler(
+		emptyHandler{},
 		otellambda.WithTracerProvider(tp),
 		otellambda.WithTraceAttributeFn(mockTraceAttributeFn),
 	)
