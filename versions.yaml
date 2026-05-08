@@ -76,6 +76,7 @@ module-sets:
     version: v0.15.0
     modules:
       - go.opentelemetry.io/contrib/detectors/autodetect
+      - go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
 excluded-modules:
   - go.opentelemetry.io/contrib/examples/dice/instrumented
