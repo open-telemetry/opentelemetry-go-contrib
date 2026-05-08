@@ -8,7 +8,7 @@ Before you start please be sure to read through these contributing requirements 
 
 The Go special interest group (SIG) meets regularly. See the
 OpenTelemetry
-[community](https://github.com/open-telemetry/community#golang-sdk)
+[community](https://github.com/open-telemetry/community#implementation-sigs)
 repo for information on this and other language SIGs.
 
 See the [public meeting
