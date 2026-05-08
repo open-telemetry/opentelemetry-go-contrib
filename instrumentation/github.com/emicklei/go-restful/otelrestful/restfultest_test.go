@@ -218,10 +218,11 @@ func TestWithPublicEndpoint(t *testing.T) {
 	ws.Route(ws.GET("/user/{id}").To(handlerFunc))
 
 	container := restful.NewContainer()
-	container.Filter(otelrestful.OTelFilter("test_handler",
-		otelrestful.WithPublicEndpoint(),
-		otelrestful.WithPropagators(prop),
-		otelrestful.WithTracerProvider(provider)),
+	container.Filter(
+		otelrestful.OTelFilter("test_handler",
+			otelrestful.WithPublicEndpoint(),
+			otelrestful.WithPropagators(prop),
+			otelrestful.WithTracerProvider(provider)),
 	)
 	container.Add(ws)
 
@@ -308,10 +309,11 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			ws.Route(ws.GET("/user/{id}").To(handlerFunc))
 
 			container := restful.NewContainer()
-			container.Filter(otelrestful.OTelFilter("test_handler",
-				otelrestful.WithPublicEndpointFn(tt.fn),
-				otelrestful.WithPropagators(prop),
-				otelrestful.WithTracerProvider(provider)),
+			container.Filter(
+				otelrestful.OTelFilter("test_handler",
+					otelrestful.WithPublicEndpointFn(tt.fn),
+					otelrestful.WithPropagators(prop),
+					otelrestful.WithTracerProvider(provider)),
 			)
 			container.Add(ws)
 

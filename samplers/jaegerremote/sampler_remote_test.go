@@ -274,7 +274,8 @@ func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
 				},
 			}
 			for opName, prob := range test.probabilities {
-				res.OperationSampling.PerOperationStrategies = append(res.OperationSampling.PerOperationStrategies,
+				res.OperationSampling.PerOperationStrategies = append(
+					res.OperationSampling.PerOperationStrategies,
 					&jaeger_api_v2.OperationSamplingStrategy{
 						Operation: opName,
 						ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{

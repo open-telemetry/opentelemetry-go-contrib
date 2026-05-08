@@ -104,7 +104,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Context = nil           // Ignore context for comparison.
@@ -129,7 +130,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Context = nil
@@ -156,7 +158,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Context = nil
@@ -183,7 +186,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
@@ -210,7 +214,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
@@ -240,7 +245,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Context = nil           // Ignore context for comparison.
@@ -270,7 +276,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Context = nil           // Ignore context for comparison.
@@ -356,7 +363,8 @@ func TestCoreWriteContextConcurrentSafe(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
@@ -378,14 +386,16 @@ func TestCoreEnabled(t *testing.T) {
 	}
 
 	logger.Debug(testMessage)
-	logtest.AssertEqual(t, wantEmpty, rec.Result(),
+	logtest.AssertEqual(
+		t, wantEmpty, rec.Result(),
 		logtest.Desc("Debug message should not be recorded"),
 	)
 
 	if ce := logger.Check(zap.DebugLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-	logtest.AssertEqual(t, wantEmpty, rec.Result(),
+	logtest.AssertEqual(
+		t, wantEmpty, rec.Result(),
 		logtest.Desc("Debug message should not be recorded"),
 	)
 
@@ -402,7 +412,8 @@ func TestCoreEnabled(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil           // Ignore context for comparison.
@@ -432,7 +443,8 @@ func TestCoreWithCaller(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil           // Ignore context for comparison.
@@ -472,7 +484,8 @@ func TestCoreWithStacktrace(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil           // Ignore context for comparison.
@@ -507,7 +520,8 @@ func TestCoreWithExceptionStacktrace(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil
@@ -586,7 +600,8 @@ func TestCoreWithErrorStacktraceDefault(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil

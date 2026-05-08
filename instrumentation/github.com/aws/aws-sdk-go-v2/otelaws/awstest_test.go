@@ -97,7 +97,8 @@ func TestAppendMiddlewares(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-			}))
+			},
+		))
 
 		t.Run(name, func(t *testing.T) {
 			sr := tracetest.NewSpanRecorder()
@@ -121,7 +122,8 @@ func TestAppendMiddlewares(t *testing.T) {
 				HostedZoneId: aws.String("zone"),
 			}, func(options *route53.Options) {
 				otelaws.AppendMiddlewares(
-					&options.APIOptions, otelaws.WithTracerProvider(provider))
+					&options.APIOptions, otelaws.WithTracerProvider(provider),
+				)
 			})
 			if c.expectedError == codes.Unset {
 				assert.NoError(t, err)

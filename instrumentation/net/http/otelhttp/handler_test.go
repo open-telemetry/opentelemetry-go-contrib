@@ -407,7 +407,8 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, err := w.Write([]byte("hello world"))
 			assert.NoError(t, err)
-		}), "test_handler")
+		}), "test_handler",
+	)
 
 	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
 	require.NoError(t, err)

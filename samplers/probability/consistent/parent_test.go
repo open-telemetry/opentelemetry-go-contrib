@@ -20,7 +20,8 @@ func TestParentSamplerDescription(t *testing.T) {
 	root := ProbabilityBased(1)
 	compare := sdktrace.ParentBased(root, opts...)
 	parent := ParentProbabilityBased(root, opts...)
-	require.Equal(t,
+	require.Equal(
+		t,
 		strings.Replace(
 			compare.Description(),
 			"ParentBased",

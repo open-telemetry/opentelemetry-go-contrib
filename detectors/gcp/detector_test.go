@@ -32,7 +32,8 @@ func TestDetect(t *testing.T) {
 				gkeClusterName:      "my-cluster",
 				gkeAvailabilityZone: "us-central1-c",
 			}},
-			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPKubernetesEngine,
@@ -50,7 +51,8 @@ func TestDetect(t *testing.T) {
 				gkeClusterName: "my-cluster",
 				gkeRegion:      "us-central1",
 			}},
-			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPKubernetesEngine,
@@ -72,7 +74,8 @@ func TestDetect(t *testing.T) {
 				gcpGceInstanceName:     "my-gke-node-1234",
 				gcpGceInstanceHostname: "hostname",
 			}},
-			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPComputeEngine,
@@ -95,7 +98,8 @@ func TestDetect(t *testing.T) {
 				faaSName:        "my-service",
 				faaSVersion:     "123456",
 			}},
-			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPCloudRun,
@@ -116,7 +120,8 @@ func TestDetect(t *testing.T) {
 				cloudRunJobExecution: "my-service-ekdih",
 				cloudRunJobTaskIndex: "0",
 			}},
-			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPCloudRun,
@@ -138,7 +143,8 @@ func TestDetect(t *testing.T) {
 				cloudRunJobExecution: "my-service-ekdih",
 				cloudRunJobTaskIndex: "bad-value",
 			}},
-			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPCloudRun,
@@ -159,7 +165,8 @@ func TestDetect(t *testing.T) {
 				faaSName:        "my-service",
 				faaSVersion:     "123456",
 			}},
-			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPCloudFunctions,
@@ -180,7 +187,8 @@ func TestDetect(t *testing.T) {
 				appEngineServiceName:      "my-service",
 				appEngineServiceVersion:   "123456",
 			}},
-			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPAppEngine,
@@ -202,7 +210,8 @@ func TestDetect(t *testing.T) {
 				appEngineServiceName:      "my-service",
 				appEngineServiceVersion:   "123456",
 			}},
-			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPAppEngine,
@@ -219,7 +228,8 @@ func TestDetect(t *testing.T) {
 				projectID:     "my-project",
 				cloudPlatform: gcp.UnknownPlatform,
 			}},
-			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
 				semconv.CloudAccountID("my-project"),
 			),
@@ -230,7 +240,8 @@ func TestDetect(t *testing.T) {
 				err: fmt.Errorf("failed to get metadata"),
 			}},
 			expectErr: true,
-			expectedResource: resource.NewWithAttributes(semconv.SchemaURL,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
 			),
 		},
