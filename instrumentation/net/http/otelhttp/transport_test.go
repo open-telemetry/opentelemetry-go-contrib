@@ -1030,7 +1030,8 @@ func TestDefaultAttributesHandling(t *testing.T) {
 		http.DefaultTransport, WithMeterProvider(provider),
 		WithMetricAttributesFn(func(_ *http.Request) []attribute.KeyValue {
 			return defaultAttributes
-		}))
+		}),
+	)
 	client := http.Client{Transport: transport}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

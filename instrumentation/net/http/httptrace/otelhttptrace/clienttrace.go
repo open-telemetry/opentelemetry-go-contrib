@@ -315,14 +315,16 @@ func (ct *clientTracer) dnsDone(info httptrace.DNSDoneInfo) {
 }
 
 func (ct *clientTracer) connectStart(network, addr string) {
-	ct.start("http.connect."+addr, "http.connect",
+	ct.start(
+		"http.connect."+addr, "http.connect",
 		HTTPRemoteAddr.String(addr),
 		HTTPConnectionStartNetwork.String(network),
 	)
 }
 
 func (ct *clientTracer) connectDone(network, addr string, err error) {
-	ct.end("http.connect."+addr, err,
+	ct.end(
+		"http.connect."+addr, err,
 		HTTPConnectionDoneAddr.String(addr),
 		HTTPConnectionDoneNetwork.String(network),
 	)
