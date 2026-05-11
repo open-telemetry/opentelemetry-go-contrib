@@ -2,7 +2,7 @@
 
 [![PkgGoDev](https://pkg.go.dev/badge/go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps)](https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps)
 
-This module detects resource attributes available in Azure Container Apps.
+This module detects resource attributes available in Azure Container Apps. Azure Container Apps jobs are not supported at the moment.
 
 ## Installation
 ```bash
