@@ -33,7 +33,7 @@ func NewResourceDetector() resource.Detector {
 
 // Detect collects resource attributes available when running on Azure Container Apps.
 // It returns an empty resource when not running on Azure Container Apps.
-func (*ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (*ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	appName := os.Getenv(containerAppNameEnvVar)
 	if appName == "" {
 		return resource.Empty(), nil
