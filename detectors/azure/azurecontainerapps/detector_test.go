@@ -13,6 +13,11 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
+func TestNewResourceDetector(t *testing.T) {
+	d := NewResourceDetector()
+	assert.IsType(t, &ResourceDetector{}, d)
+}
+
 // Successfully return resource when process is running in an Azure Container Apps environment.
 func TestDetectSuccess(t *testing.T) {
 	t.Setenv("CONTAINER_APP_NAME", "my-app")
