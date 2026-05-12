@@ -54,7 +54,9 @@ func newResource(r *Resource) (*resource.Resource, error) {
 	if r.DetectionDevelopment != nil {
 		opts = append(opts, resourceOpts(r.DetectionDevelopment.Detectors)...)
 	}
-	opts = append(opts,
+
+	opts = append(
+		opts,
 		resource.WithAttributes(attrs...),
 		resource.WithSchemaURL(schema),
 	)
