@@ -175,7 +175,8 @@ func TestMetrics(t *testing.T) {
 			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 			e := echo.New()
-			e.Use(Middleware("foobar",
+			e.Use(Middleware(
+				"foobar",
 				WithMeterProvider(meterProvider),
 				WithMetricAttributeFn(tt.metricAttributeExtractor),
 				WithEchoMetricAttributeFn(tt.echoMetricAttributeExtractor),
@@ -273,7 +274,8 @@ func TestWithMetricAttributeFn(t *testing.T) {
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 	e := echo.New()
-	e.Use(Middleware("test-service",
+	e.Use(Middleware(
+		"test-service",
 		WithMeterProvider(meterProvider),
 		WithMetricAttributeFn(func(r *http.Request) []attribute.KeyValue {
 			return []attribute.KeyValue{
@@ -323,7 +325,8 @@ func TestWithEchoMetricAttributeFn(t *testing.T) {
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 	e := echo.New()
-	e.Use(Middleware("test-service",
+	e.Use(Middleware(
+		"test-service",
 		WithMeterProvider(meterProvider),
 		WithEchoMetricAttributeFn(func(c echo.Context) []attribute.KeyValue {
 			return []attribute.KeyValue{

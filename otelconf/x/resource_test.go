@@ -43,7 +43,8 @@ func TestNewResource(t *testing.T) {
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
 			},
-			wantResource: resource.NewWithAttributes("",
+			wantResource: resource.NewWithAttributes(
+				"",
 				semconv.ServiceName("service-a"),
 			),
 		},
@@ -55,7 +56,8 @@ func TestNewResource(t *testing.T) {
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
-			wantResource: resource.NewWithAttributes(semconv.SchemaURL,
+			wantResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				semconv.ServiceName("service-a"),
 			),
 		},

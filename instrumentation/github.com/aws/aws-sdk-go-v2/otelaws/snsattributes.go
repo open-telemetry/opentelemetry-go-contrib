@@ -19,14 +19,16 @@ func SNSAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ mid
 
 	switch v := in.Parameters.(type) {
 	case *sns.PublishBatchInput:
-		snsAttributes = append(snsAttributes,
+		snsAttributes = append(
+			snsAttributes,
 			semconv.MessagingDestinationName(extractDestinationName(v.TopicArn, nil)),
 			semconv.MessagingOperationTypeSend,
 			semconv.MessagingOperationName("publish_batch_input"),
 			semconv.MessagingBatchMessageCount(len(v.PublishBatchRequestEntries)),
 		)
 	case *sns.PublishInput:
-		snsAttributes = append(snsAttributes,
+		snsAttributes = append(
+			snsAttributes,
 			semconv.MessagingDestinationName(extractDestinationName(v.TopicArn, v.TargetArn)),
 			semconv.MessagingOperationTypeSend,
 			semconv.MessagingOperationName("publish_input"),

@@ -175,7 +175,8 @@ func TestMetricAttributesFn_ServerSide_Baggage(t *testing.T) {
 		}
 	}
 
-	lis, server := startTestServerWithOptions(t, mp,
+	lis, server := startTestServerWithOptions(
+		t, mp,
 		otelgrpc.WithMetricAttributesFn(metricFunc),
 		otelgrpc.WithPropagators(propagation.NewCompositeTextMapPropagator(
 			propagation.Baggage{},
@@ -610,7 +611,8 @@ func createTestClient(t *testing.T, addr string, mp *metric.MeterProvider, metri
 	}
 
 	if mp != nil && metricFunc != nil {
-		opts = append(opts,
+		opts = append(
+			opts,
 			grpc.WithStatsHandler(
 				otelgrpc.NewClientHandler(
 					otelgrpc.WithMeterProvider(mp),

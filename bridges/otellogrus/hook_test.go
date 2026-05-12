@@ -106,7 +106,8 @@ func TestNewHook(t *testing.T) {
 				WithAttributes(attribute.String("testattr", "testval")),
 			},
 
-			wantLogger: provider.Logger(name,
+			wantLogger: provider.Logger(
+				name,
 				log.WithInstrumentationVersion("42.1"),
 				log.WithSchemaURL("https://example.com"),
 				log.WithInstrumentationAttributes(attribute.String("testattr", "testval")),
@@ -459,7 +460,8 @@ func TestConvertFields(t *testing.T) {
 			name:   "with a slice",
 			fields: logrus.Fields{"hello": []string{"foo", "bar"}},
 			want: []log.KeyValue{
-				log.Slice("hello",
+				log.Slice(
+					"hello",
 					log.StringValue("foo"),
 					log.StringValue("bar"),
 				),
@@ -469,7 +471,8 @@ func TestConvertFields(t *testing.T) {
 			name:   "with an interface slice",
 			fields: logrus.Fields{"hello": []any{"foo", 42}},
 			want: []log.KeyValue{
-				log.Slice("hello",
+				log.Slice(
+					"hello",
 					log.StringValue("foo"),
 					log.Int64Value(42),
 				),

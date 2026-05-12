@@ -21,7 +21,8 @@ func newResource(res *Resource) (*resource.Resource, error) {
 	}
 
 	return resource.Merge(resource.Default(),
-		resource.NewWithAttributes(*res.SchemaUrl,
+		resource.NewWithAttributes(
+			*res.SchemaUrl,
 			attrs...,
 		))
 }
