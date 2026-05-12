@@ -125,3 +125,43 @@ func TestDetect_PartialFailure(t *testing.T) {
 		assert.False(t, ok, "expected attribute %s to be absent", k)
 	}
 }
+
+func TestDetect_WithAttributeFilter(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/hostname", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("srv-789"))
+	})
+	mux.HandleFunc("/instance-id", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("111222333"))
+	})
+	mux.HandleFunc("/region", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("fsn1"))
+	})
+	mux.HandleFunc("/availability-zone", func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("fsn1-dc14"))
+	})
+	withFakeMetaServer(t, mux)
+
+	// Filter out cloud.platform.
+	filter := attribute.NewDenyKeysFilter(semconv.CloudPlatformKey)
+	res, err := NewResourceDetector(WithAttributeFilter(filter)).Detect(t.Context())
+	require.NoError(t, err)
+
+	// cloud.platform must be absent.
+	_, ok := res.Set().Value(semconv.CloudPlatformKey)
+	assert.False(t, ok, "expected cloud.platform to be absent")
+
+	// The other five attributes must be present.
+	presentAttrs := []attribute.KeyValue{
+		semconv.CloudProviderHetzner,
+		semconv.HostID("111222333"),
+		semconv.HostName("srv-789"),
+		semconv.CloudRegion("fsn1"),
+		semconv.CloudAvailabilityZone("fsn1-dc14"),
+	}
+	for _, kv := range presentAttrs {
+		val, ok := res.Set().Value(kv.Key)
+		assert.True(t, ok, "expected attribute %s to be present", kv.Key)
+		assert.Equal(t, kv.Value, val)
+	}
+}

@@ -5,7 +5,7 @@ package hetzner // import "go.opentelemetry.io/contrib/detectors/hetzner"
 
 // Version is the current release version of the Hetzner resource detector.
 func Version() string {
-	return "1.43.0"
+	return "0.15.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

@@ -1,7 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package hetzner provides a resource detector for Hetzner Cloud servers.
 package hetzner // import "go.opentelemetry.io/contrib/detectors/hetzner"
 
 import (
@@ -24,15 +23,40 @@ var newHcloudClient = func() *hcloudmeta.Client {
 	return hcloudmeta.NewClient()
 }
 
+type config struct {
+	filter attribute.Filter
+}
+
+// Option configures a [ResourceDetector].
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (f optionFunc) apply(c *config) { f(c) }
+
+// WithAttributeFilter sets a filter that controls which detected attributes are
+// included in the returned resource. Only attributes for which filter returns
+// true are included. By default all attributes are included.
+func WithAttributeFilter(filter attribute.Filter) Option {
+	return optionFunc(func(c *config) { c.filter = filter })
+}
+
 // ResourceDetector collects resource information of Hetzner Cloud servers.
 type ResourceDetector struct {
 	client *hcloudmeta.Client
+	cfg    config
 }
 
 // NewResourceDetector returns a [resource.Detector] that detects resource
 // attributes on Hetzner Cloud servers.
-func NewResourceDetector() *ResourceDetector {
-	return &ResourceDetector{client: newHcloudClient()}
+func NewResourceDetector(opts ...Option) *ResourceDetector {
+	var cfg config
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+	return &ResourceDetector{client: newHcloudClient(), cfg: cfg}
 }
 
 // Detect detects resource attributes of the Hetzner Cloud server the process
@@ -40,11 +64,6 @@ func NewResourceDetector() *ResourceDetector {
 // a Hetzner Cloud server. If the process is running on a Hetzner Cloud server
 // but some attributes cannot be retrieved, a partial resource is returned
 // together with [resource.ErrPartialResource].
-//
-// All six attributes are always emitted when available. Callers that need
-// per-attribute suppression (e.g. processor/resourcedetectionprocessor) should
-// post-filter the returned [resource.Resource] according to their own
-// configuration.
 func (d *ResourceDetector) Detect(_ context.Context) (*resource.Resource, error) {
 	if !d.client.IsHcloudServer() {
 		return resource.Empty(), nil
@@ -83,6 +102,16 @@ func (d *ResourceDetector) Detect(_ context.Context) (*resource.Resource, error)
 		errs = append(errs, fmt.Errorf("availability zone: %w", err))
 	} else {
 		attrs = append(attrs, semconv.CloudAvailabilityZone(az))
+	}
+
+	if d.cfg.filter != nil {
+		filtered := attrs[:0]
+		for _, kv := range attrs {
+			if d.cfg.filter(kv) {
+				filtered = append(filtered, kv)
+			}
+		}
+		attrs = filtered
 	}
 
 	res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
