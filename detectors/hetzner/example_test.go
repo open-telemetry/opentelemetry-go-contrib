@@ -7,9 +7,10 @@ import (
 	"context"
 	"log"
 
-	"go.opentelemetry.io/contrib/detectors/hetzner"
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"go.opentelemetry.io/contrib/detectors/hetzner"
 )
 
 func ExampleNewResourceDetector() {
@@ -22,6 +23,6 @@ func ExampleNewResourceDetector() {
 	}
 
 	tp := sdktrace.NewTracerProvider(sdktrace.WithResource(res))
-	defer func() { _ = tp.Shutdown(context.Background()) }()
+	_ = tp.Shutdown(context.Background())
 	// Use tp to create tracers ...
 }
