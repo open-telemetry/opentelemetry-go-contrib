@@ -5,18 +5,23 @@ package hetzner_test
 
 import (
 	"context"
-	"fmt"
+	"log"
 
 	"go.opentelemetry.io/contrib/detectors/hetzner"
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
 func ExampleNewResourceDetector() {
-	detector := hetzner.NewResourceDetector()
-	res, err := detector.Detect(context.Background())
+	res, err := resource.New(
+		context.Background(),
+		resource.WithDetectors(hetzner.NewResourceDetector()),
+	)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	// Pass the resource to a tracer or meter provider.
-	fmt.Println(res.SchemaURL())
+	tp := sdktrace.NewTracerProvider(sdktrace.WithResource(res))
+	defer func() { _ = tp.Shutdown(context.Background()) }()
+	// Use tp to create tracers ...
 }
