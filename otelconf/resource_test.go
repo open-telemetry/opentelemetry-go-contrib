@@ -14,6 +14,13 @@ import (
 )
 
 func TestNewResource(t *testing.T) {
+	withDefaultAttributes := func(attrs ...attribute.KeyValue) []attribute.KeyValue {
+		// Order matters as we expect default attributes to be overriden by config resource attributes
+		return append(
+			resource.Default().Attributes(),
+			attrs...,
+		)
+	}
 	tests := []struct {
 		name         string
 		config       *Resource
@@ -27,14 +34,14 @@ func TestNewResource(t *testing.T) {
 		{
 			name:         "resource-no-attributes",
 			config:       &Resource{},
-			wantResource: resource.NewSchemaless(),
+			wantResource: resource.NewSchemaless(withDefaultAttributes()...),
 		},
 		{
 			name: "resource-with-schema",
 			config: &Resource{
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
-			wantResource: resource.NewWithAttributes(semconv.SchemaURL),
+			wantResource: resource.NewWithAttributes(semconv.SchemaURL, withDefaultAttributes()...),
 		},
 		{
 			name: "resource-with-attributes",
@@ -45,7 +52,7 @@ func TestNewResource(t *testing.T) {
 			},
 			wantResource: resource.NewWithAttributes(
 				"",
-				semconv.ServiceName("service-a"),
+				withDefaultAttributes(semconv.ServiceName("service-a"))...,
 			),
 		},
 		{
@@ -58,7 +65,7 @@ func TestNewResource(t *testing.T) {
 			},
 			wantResource: resource.NewWithAttributes(
 				semconv.SchemaURL,
-				semconv.ServiceName("service-a"),
+				withDefaultAttributes(semconv.ServiceName("service-a"))...,
 			),
 		},
 		{
@@ -71,14 +78,15 @@ func TestNewResource(t *testing.T) {
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
 			wantResource: resource.NewWithAttributes(semconv.SchemaURL,
-				semconv.ServiceName("service-a"),
-				attribute.Bool("attr-bool", true)),
+				withDefaultAttributes(semconv.ServiceName("service-a"),
+					attribute.Bool("attr-bool", true))...,
+			),
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := newResource(tt.config)
-			require.ErrorIs(t, tt.wantErrT, err)
+			require.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantResource, got)
 		})
 	}
