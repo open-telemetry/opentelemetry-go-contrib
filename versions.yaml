@@ -77,6 +77,7 @@ module-sets:
     modules:
       - go.opentelemetry.io/contrib/detectors/autodetect
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
+      - go.opentelemetry.io/contrib/detectors/hetzner
       - go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk
 excluded-modules:
   - go.opentelemetry.io/contrib/examples/dice/instrumented
