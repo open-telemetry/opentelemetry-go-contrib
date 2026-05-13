@@ -479,7 +479,13 @@ func TestNewHandlerConfiguration(t *testing.T) {
 		require.IsType(t, &recorder{}, h.logger)
 
 		l := h.logger.(*recorder)
-		want := scope{Name: name}
+		want := scope{
+			Name: name,
+			Attributes: attribute.NewSet(
+				attribute.String("log_bridge.name", "go.opentelemetry.io/contrib/bridges/otelslog"),
+				attribute.String("log_bridge.version", Version),
+			),
+		}
 		assert.Equal(t, want, l.Scope)
 	})
 
@@ -501,10 +507,14 @@ func TestNewHandlerConfiguration(t *testing.T) {
 
 		l := h.logger.(*recorder)
 		scope := scope{
-			Name:       "name",
-			Version:    "ver",
-			SchemaURL:  "url",
-			Attributes: attribute.NewSet(attribute.String("testattr", "testval")),
+			Name:      "name",
+			Version:   "ver",
+			SchemaURL: "url",
+			Attributes: attribute.NewSet(
+				attribute.String("log_bridge.name", "go.opentelemetry.io/contrib/bridges/otelslog"),
+				attribute.String("log_bridge.version", Version),
+				attribute.String("testattr", "testval"),
+			),
 		}
 		assert.Equal(t, scope, l.Scope)
 	})
