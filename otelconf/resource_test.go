@@ -15,7 +15,7 @@ import (
 
 func TestNewResource(t *testing.T) {
 	withDefaultAttributes := func(attrs ...attribute.KeyValue) []attribute.KeyValue {
-		// Order matters as we expect default attributes to be overriden by config resource attributes
+		// Default attributes come first so they're overridden by config-provided attributes
 		return append(
 			resource.Default().Attributes(),
 			attrs...,
@@ -77,7 +77,8 @@ func TestNewResource(t *testing.T) {
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
-			wantResource: resource.NewWithAttributes(semconv.SchemaURL,
+			wantResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
 				withDefaultAttributes(semconv.ServiceName("service-a"),
 					attribute.Bool("attr-bool", true))...,
 			),
