@@ -37,6 +37,7 @@ detectors/aws/ecs                                                       @open-te
 detectors/aws/eks                                                       @open-telemetry/go-approvers @pyohannes
 detectors/aws/lambda                                                    @open-telemetry/go-approvers @akats7
 detectors/azure/                                                        @open-telemetry/go-approvers @pyohannes
+detectors/azure/azurecontainerapps                                      @open-telemetry/go-approvers @iblancasa
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
