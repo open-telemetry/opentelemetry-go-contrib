@@ -482,8 +482,8 @@ func TestNewHandlerConfiguration(t *testing.T) {
 		want := scope{
 			Name: name,
 			Attributes: attribute.NewSet(
-				attribute.String("log_bridge.name", "go.opentelemetry.io/contrib/bridges/otelslog"),
-				attribute.String("log_bridge.version", Version),
+				attribute.String("log.bridge.name", "go.opentelemetry.io/contrib/bridges/otelslog"),
+				attribute.String("log.bridge.version", Version),
 			),
 		}
 		assert.Equal(t, want, l.Scope)
@@ -511,8 +511,8 @@ func TestNewHandlerConfiguration(t *testing.T) {
 			Version:   "ver",
 			SchemaURL: "url",
 			Attributes: attribute.NewSet(
-				attribute.String("log_bridge.name", "go.opentelemetry.io/contrib/bridges/otelslog"),
-				attribute.String("log_bridge.version", Version),
+				attribute.String("log.bridge.name", "go.opentelemetry.io/contrib/bridges/otelslog"),
+				attribute.String("log.bridge.version", Version),
 				attribute.String("testattr", "testval"),
 			),
 		}
