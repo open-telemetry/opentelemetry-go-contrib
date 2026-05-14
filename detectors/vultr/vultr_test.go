@@ -99,6 +99,31 @@ func TestDetect_NotOnVultr(t *testing.T) {
 	assert.Equal(t, resource.Empty(), res)
 }
 
+func TestDetect_MalformedJSON(t *testing.T) {
+	// 200 OK with a body that isn't valid JSON. The detector treats this the
+	// same as any other fetch failure: empty resource, no error.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte("not json"))
+	}))
+	t.Cleanup(srv.Close)
+
+	res, err := vultr.NewResourceDetector(vultr.WithEndpoint(srv.URL)).Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
+}
+
+func TestDetect_ConnectionRefused(t *testing.T) {
+	// Closed server → connection refused → not on Vultr → empty resource, no error.
+	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	url := srv.URL
+	srv.Close()
+
+	res, err := vultr.NewResourceDetector(vultr.WithEndpoint(url)).Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
+}
+
 func TestDetect_PartialFailure(t *testing.T) {
 	// Serve JSON with hostname, instanceid, instance-v2-id, and regioncode all absent.
 	url := newFakeServer(t, vultrMetadata{})

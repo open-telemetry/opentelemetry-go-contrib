@@ -71,9 +71,18 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
+	// Use a transport with Proxy explicitly disabled. The metadata endpoint is
+	// a link-local address (169.254.169.254) that must never be reached via an
+	// HTTP(S) proxy: doing so could leak instance metadata or break detection
+	// in environments where users set HTTP_PROXY/HTTPS_PROXY for outbound
+	// traffic.
+	transport := &http.Transport{Proxy: nil}
 	return &ResourceDetector{
-		cfg:    cfg,
-		client: &http.Client{Timeout: 2 * time.Second},
+		cfg: cfg,
+		client: &http.Client{
+			Timeout:   2 * time.Second,
+			Transport: transport,
+		},
 	}
 }
 
