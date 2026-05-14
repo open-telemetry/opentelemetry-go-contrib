@@ -5,6 +5,8 @@
 Package azurecontainerapps provides a resource detector which supports
 detecting attributes specific to Azure Container Apps.
 
+Note: Azure Container Apps jobs are not supported.
+
 According to semantic conventions for [cloud] and [service] attributes,
 the following attributes are added when running on Azure Container Apps:
 
