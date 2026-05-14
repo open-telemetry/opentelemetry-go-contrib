@@ -4,6 +4,25 @@ Welcome to the OpenTelemetry Go contrib repository!
 Thank you for your interest in contributing to this project.
 Before you start please be sure to read through these contributing requirements and recommendations.
 
+## OpenTelemetry Go SIG
+
+The Go special interest group (SIG) meets regularly. See the
+OpenTelemetry
+[community](https://github.com/open-telemetry/community#implementation-sigs)
+repo for information on this and other language SIGs.
+
+See the [public meeting
+notes](https://docs.google.com/document/d/1E5e7Ld0NuU1iVvf-42tOBpu2VBBLYnh73GJuITGJTTU/edit)
+for a summary description of past meetings. To request edit access,
+join the meeting or get in touch on
+[Slack](https://cloud-native.slack.com/archives/C01NPAXACKT).
+
+The meeting is open for all to join. We invite everyone to join our
+meeting, regardless of your experience level. Whether you're a
+seasoned OpenTelemetry developer, just starting your journey, or
+simply curious about the work we do, you're more than welcome to
+participate!
+
 ## Become a Contributor
 
 All contributions to this project MUST be licensed under this project's [license](LICENSE).
