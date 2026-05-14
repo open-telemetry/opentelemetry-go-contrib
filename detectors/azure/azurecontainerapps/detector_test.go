@@ -5,6 +5,7 @@ package azurecontainerapps
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -14,8 +15,25 @@ import (
 )
 
 func TestNewResourceDetector(t *testing.T) {
-	d := NewResourceDetector()
-	assert.IsType(t, &ResourceDetector{}, d)
+	assert.IsType(t, &ResourceDetector{}, NewResourceDetector())
+}
+
+func TestWithAttributeFilter(t *testing.T) {
+	t.Setenv("CONTAINER_APP_NAME", "my-app")
+	t.Setenv("CONTAINER_APP_REPLICA_NAME", "my-app--abc123-0")
+
+	filter := func(kv attribute.KeyValue) bool {
+		return strings.HasPrefix(string(kv.Key), "service.")
+	}
+	detector := NewResourceDetector(WithAttributeFilter(filter))
+	res, err := detector.Detect(t.Context())
+
+	assert.NoError(t, err)
+	expected := resource.NewWithAttributes(semconv.SchemaURL,
+		semconv.ServiceName("my-app"),
+		semconv.ServiceInstanceID("my-app--abc123-0"),
+	)
+	assert.Equal(t, expected, res)
 }
 
 // Successfully return resource when process is running in an Azure Container Apps environment.
