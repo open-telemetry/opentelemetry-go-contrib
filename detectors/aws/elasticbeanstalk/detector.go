@@ -63,7 +63,7 @@ func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, e
 		semconv.SchemaURL,
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSElasticBeanstalk,
-		semconv.ServiceInstanceID(strconv.Itoa(ebmd.DeploymentID)),
+		semconv.DeploymentID(strconv.Itoa(ebmd.DeploymentID)),
 		semconv.DeploymentEnvironmentName(ebmd.EnvironmentName),
 		semconv.ServiceVersion(ebmd.VersionLabel),
 	), nil

@@ -8,6 +8,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.43.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.43.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.68.0
+	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.15.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.15.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.43.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.15.0
@@ -101,6 +102,8 @@ replace go.opentelemetry.io/contrib/detectors/aws/lambda => ../aws/lambda
 replace go.opentelemetry.io/contrib/detectors/aws/eks => ../aws/eks
 
 replace go.opentelemetry.io/contrib/detectors/aws/ecs => ../aws/ecs
+
+replace go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk => ../aws/elasticbeanstalk
 
 replace go.opentelemetry.io/contrib/detectors/gcp => ../gcp
 

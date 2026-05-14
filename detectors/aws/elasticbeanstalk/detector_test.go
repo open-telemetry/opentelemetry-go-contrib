@@ -69,7 +69,7 @@ func Test_AttributesDetectedSuccessfully(t *testing.T) {
 	expected := resource.NewWithAttributes(semconv.SchemaURL,
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSElasticBeanstalk,
-		semconv.ServiceInstanceID("23"),
+		semconv.DeploymentID("23"),
 		semconv.DeploymentEnvironmentName("BETA"),
 		semconv.ServiceVersion("env-version-1234"),
 	)
