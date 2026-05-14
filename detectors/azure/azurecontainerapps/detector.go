@@ -6,6 +6,7 @@ package azurecontainerapps // import "go.opentelemetry.io/contrib/detectors/azur
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -71,8 +72,12 @@ func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 		semconv.ServiceName(appName),
 	}
 
-	if replicaName := os.Getenv(containerAppReplicaNameEnvVar); replicaName != "" {
+	var partialErr error
+	replicaName := os.Getenv(containerAppReplicaNameEnvVar)
+	if replicaName != "" {
 		attrs = append(attrs, semconv.ServiceInstanceID(replicaName))
+	} else {
+		partialErr = fmt.Errorf("%w: %s not set", resource.ErrPartialResource, containerAppReplicaNameEnvVar)
 	}
 
 	if d.cfg.filter != nil {
@@ -85,5 +90,5 @@ func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 		attrs = filtered
 	}
 
-	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), nil
+	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), partialErr
 }

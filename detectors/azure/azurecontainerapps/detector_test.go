@@ -55,6 +55,22 @@ func TestDetectSuccess(t *testing.T) {
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
+// Return partial resource with ErrPartialResource when replica name is not set.
+func TestDetectMissingReplicaName(t *testing.T) {
+	t.Setenv("CONTAINER_APP_NAME", "my-app")
+
+	expected := resource.NewWithAttributes(semconv.SchemaURL,
+		semconv.CloudProviderAzure,
+		semconv.CloudPlatformAzureContainerApps,
+		semconv.ServiceName("my-app"),
+	)
+	detector := ResourceDetector{}
+	res, err := detector.Detect(t.Context())
+
+	assert.ErrorIs(t, err, resource.ErrPartialResource)
+	assert.Equal(t, expected, res)
+}
+
 // Return empty resource when not running in an Azure Container Apps environment.
 func TestReturnsIfNoEnvVars(t *testing.T) {
 	os.Clearenv()
