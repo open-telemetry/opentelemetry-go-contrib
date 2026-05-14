@@ -11,6 +11,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.15.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.43.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.15.0
+	go.opentelemetry.io/contrib/detectors/vultr v0.15.0
 	go.opentelemetry.io/otel v1.43.0
 	go.opentelemetry.io/otel/sdk v1.43.0
 )
@@ -105,5 +106,7 @@ replace go.opentelemetry.io/contrib/detectors/aws/ecs => ../aws/ecs
 replace go.opentelemetry.io/contrib/detectors/gcp => ../gcp
 
 replace go.opentelemetry.io/contrib/detectors/hetzner => ../hetzner
+
+replace go.opentelemetry.io/contrib/detectors/vultr => ../vultr
 
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
