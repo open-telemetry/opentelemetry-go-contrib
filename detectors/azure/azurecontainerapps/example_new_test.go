@@ -5,18 +5,24 @@ package azurecontainerapps_test
 
 import (
 	"context"
-	"fmt"
+	"log"
+
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 )
 
 func ExampleNewResourceDetector() {
-	azureContainerAppsResourceDetector := azurecontainerapps.NewResourceDetector()
-	resource, err := azureContainerAppsResourceDetector.Detect(context.Background())
+	res, err := resource.New(
+		context.Background(),
+		resource.WithDetectors(azurecontainerapps.NewResourceDetector()),
+	)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
-	// Now, you can use the resource (e.g. pass it to a tracer or meter provider).
-	fmt.Println(resource.SchemaURL())
+	tp := sdktrace.NewTracerProvider(sdktrace.WithResource(res))
+	_ = tp.Shutdown(context.Background())
+	// Use tp to create tracers ...
 }
