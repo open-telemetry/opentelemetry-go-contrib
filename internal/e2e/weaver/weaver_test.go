@@ -7,6 +7,7 @@ import (
 	"archive/tar"
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -31,8 +32,10 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
-const weaverImage = "otel/weaver"
-const weaverTag = "v0.23.0"
+const (
+	weaverImage = "otel/weaver"
+	weaverTag   = "v0.23.0"
+)
 
 // TestWeaverLiveCheck spins up a weaver container via dockertest, exercises
 // otelhttp instrumentation against it, and validates the resulting
@@ -78,7 +81,8 @@ func TestWeaverLiveCheck(t *testing.T) {
 
 	// Wait for the OTLP gRPC listener inside the container to accept connections.
 	if err := pool.Retry(func() error {
-		conn, dialErr := net.DialTimeout("tcp", otlpEndpoint, 2*time.Second)
+		dialer := &net.Dialer{Timeout: 2 * time.Second}
+		conn, dialErr := dialer.DialContext(t.Context(), "tcp", otlpEndpoint)
 		if dialErr != nil {
 			return dialErr
 		}
@@ -87,7 +91,7 @@ func TestWeaverLiveCheck(t *testing.T) {
 		t.Fatalf("weaver OTLP listener not ready: %v", err)
 	}
 
-	ctx := context.Background()
+	ctx := t.Context()
 
 	shutdown, err := initOTLP(ctx, otlpEndpoint)
 	if err != nil {
@@ -156,14 +160,18 @@ func initOTLP(ctx context.Context, endpoint string) (func(context.Context) error
 	return func(c context.Context) error {
 		tpErr := tp.Shutdown(c)
 		mpErr := mp.Shutdown(c)
-		if tpErr != nil {
-			return fmt.Errorf("trace provider: %w", tpErr)
-		}
-		if mpErr != nil {
-			return fmt.Errorf("metric provider: %w", mpErr)
-		}
-		return nil
+		return errors.Join(
+			errWithLabel("trace provider", tpErr),
+			errWithLabel("metric provider", mpErr),
+		)
 	}, nil
+}
+
+func errWithLabel(label string, err error) error {
+	if err == nil {
+		return nil
+	}
+	return fmt.Errorf("%s: %w", label, err)
 }
 
 func waitForWeaver(ctx context.Context, pool *dockertest.Pool, containerID string) (int, error) {
