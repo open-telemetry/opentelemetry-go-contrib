@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 
+	aws "github.com/aws/aws-sdk-go-v2/aws"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
@@ -20,6 +21,13 @@ import (
 )
 
 var errClient = errors.New("EC2 Client Error")
+
+var (
+	loadDefaultConfig = awsconfig.LoadDefaultConfig
+	newIMDSClient     = func(cfg aws.Config) client {
+		return imds.NewFromConfig(cfg)
+	}
+)
 
 // client implements methods to capture EC2 environment metadata information.
 type client interface {
@@ -85,12 +93,12 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 }
 
 func newClient() client {
-	cfg, err := awsconfig.LoadDefaultConfig(context.Background())
+	cfg, err := loadDefaultConfig(context.Background())
 	if err != nil {
 		return nil
 	}
 
-	return imds.NewFromConfig(cfg)
+	return newIMDSClient(cfg)
 }
 
 type metadata struct {
