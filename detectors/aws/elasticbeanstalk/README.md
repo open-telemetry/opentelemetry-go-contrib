@@ -39,7 +39,7 @@ func main() {
 | `cloud.provider` | aws |
 | `cloud.platform` | aws_elastic_beanstalk |
 | `deployment.environment.name` | production |
-| `service.instance.id` | 23 |
+| `deployment.id` | 23 |
 | `service.version` | env-version-1234 |
 
 ## Useful links

@@ -11,7 +11,7 @@ the following attributes are added when running on AWS Elastic Beanstalk:
   - cloud.provider
   - cloud.platform
   - deployment.environment.name
-  - service.instance.id
+  - deployment.id
   - service.version
 
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
