@@ -10,6 +10,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.69.0
 	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.16.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0
+	go.opentelemetry.io/contrib/detectors/docker v0.16.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.16.0
 	go.opentelemetry.io/otel v1.44.0
@@ -110,3 +111,5 @@ replace go.opentelemetry.io/contrib/detectors/gcp => ../gcp
 replace go.opentelemetry.io/contrib/detectors/hetzner => ../hetzner
 
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
+
+replace go.opentelemetry.io/contrib/detectors/docker => ../docker
