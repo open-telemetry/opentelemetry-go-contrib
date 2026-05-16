@@ -6,63 +6,47 @@ package docker // import "go.opentelemetry.io/contrib/detectors/docker"
 import (
 	"context"
 	"fmt"
-	"os"
 
-	"github.com/moby/moby/api/types/container"
 	"github.com/moby/moby/client"
-	"go.opentelemetry.io/contrib/detectors/internal"
+	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
 
-type provider interface {
-	// Hostname returns the OS hostname
-	Hostname(context.Context) (string, error)
-
-	// OSType returns the host operating system
-	OSType(context.Context) (string, error)
-
-	// ContainerInfo returns the current container information
-	ContainerInfo(context.Context) (container.InspectResponse, error)
+type resourceDetector struct {
+	newProvider func(...client.Opt) (provider, error)
 }
 
-type dockerProviderImpl struct {
-	dockerClient *client.Client
+// Detect implements [resource.Detector].
+func (r *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+	dockerProvider, err := r.newProvider()
+	if err != nil {
+		return resource.Empty(), err
+	}
+
+	osType, err := dockerProvider.OSType(ctx)
+	if err != nil {
+		return resource.Empty(), fmt.Errorf("failed to fetch Docker OS type: %w", err)
+	}
+
+	hostname, err := dockerProvider.Hostname(ctx)
+	if err != nil {
+		return resource.Empty(), fmt.Errorf("failed getting OS hostname: %w", err)
+	}
+
+	containerInfo, err := dockerProvider.ContainerInfo(ctx)
+	if err != nil {
+		return resource.Empty(), fmt.Errorf("failed getting container info: %w", err)
+	}
+
+	return resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.HostName(hostname),
+		semconv.OSTypeKey.String(osType),
+		semconv.ContainerName(containerInfo.Name),
+		semconv.ContainerImageName(containerInfo.Image),
+	), nil
 }
 
-func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (container.InspectResponse, error) {
-	hostname, err := os.Hostname()
-	if err != nil {
-		return container.InspectResponse{}, err
-	}
-	result, err := d.dockerClient.ContainerInspect(ctx, hostname, client.ContainerInspectOptions{})
-	if err != nil {
-		return container.InspectResponse{}, fmt.Errorf("failed to fetch container information: %w", err)
-	}
-	return result.Container, nil
-}
-
-func (d *dockerProviderImpl) Hostname(ctx context.Context) (string, error) {
-	result, err := d.dockerClient.Info(ctx, client.InfoOptions{})
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch Docker information: %w", err)
-	}
-	return result.Info.Name, nil
-}
-
-func (d *dockerProviderImpl) OSType(ctx context.Context) (string, error) {
-	result, err := d.dockerClient.Info(ctx, client.InfoOptions{})
-	if err != nil {
-		return "", fmt.Errorf("failed to fetch Docker OS type: %w", err)
-	}
-	return internal.GOOSToOSType(result.Info.OSType), nil
-}
-
-func newProvider(opts ...client.Opt) (provider, error) {
-	opts = append(opts, client.FromEnv)
-	cli, err := client.New(opts...)
-
-	if err != nil {
-		return nil, fmt.Errorf("could not initialize Docker client: %w", err)
-	}
-
-	return &dockerProviderImpl{dockerClient: cli}, nil
+func NewResourceDetector() resource.Detector {
+	return &resourceDetector{newProvider: newProvider}
 }
