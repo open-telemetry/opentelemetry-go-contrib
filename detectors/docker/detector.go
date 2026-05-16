@@ -13,12 +13,12 @@ import (
 )
 
 type resourceDetector struct {
-	newProvider func(...client.Opt) (provider, error)
+	createProvider func(...client.Opt) (provider, error)
 }
 
 // Detect implements [resource.Detector].
 func (r *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	dockerProvider, err := r.newProvider()
+	dockerProvider, err := r.createProvider()
 	if err != nil {
 		return resource.Empty(), err
 	}
@@ -48,5 +48,5 @@ func (r *resourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 }
 
 func NewResourceDetector() resource.Detector {
-	return &resourceDetector{newProvider: newProvider}
+	return &resourceDetector{createProvider: newProvider}
 }

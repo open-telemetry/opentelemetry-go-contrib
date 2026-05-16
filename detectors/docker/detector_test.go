@@ -41,7 +41,7 @@ func (m *mockProvider) ContainerInfo(_ context.Context) (container.InspectRespon
 
 func TestDockerResourceDetectorProviderError(t *testing.T) {
 	detector := &resourceDetector{
-		newProvider: func(...client.Opt) (provider, error) {
+		createProvider: func(...client.Opt) (provider, error) {
 			return nil, errors.New("cannot connect to Docker daemon")
 		},
 	}
@@ -53,7 +53,7 @@ func TestDockerResourceDetectorProviderError(t *testing.T) {
 
 func TestDockerResourceDetectorSuccess(t *testing.T) {
 	detector := &resourceDetector{
-		newProvider: func(...client.Opt) (provider, error) {
+		createProvider: func(...client.Opt) (provider, error) {
 			return &mockProvider{
 				hostname:       "docker-host",
 				osType:         "linux",
@@ -82,7 +82,7 @@ func TestDockerResourceDetectorSuccess(t *testing.T) {
 
 func TestDockerResourceDetectorZos(t *testing.T) {
 	detector := &resourceDetector{
-		newProvider: func(...client.Opt) (provider, error) {
+		createProvider: func(...client.Opt) (provider, error) {
 			return &mockProvider{
 				hostname:       "docker-host",
 				osType:         "linux",
