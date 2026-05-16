@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add examples for prometheus compatibility document. (#8716)
 - Add `Resource` method to `SDK` in `go.opentelemetry.io/contrib/otelconf/x` to expose the resolved SDK resource from declarative configuration. (#8912)
 - Add `go.opentelemetry.io/contrib/detectors/hetzner` — a new resource detector for Hetzner Cloud servers, ported from `processor/resourcedetectionprocessor/internal/hetzner` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `cloud.availability_zone`, `host.id`, and `host.name`. (#8962)
+- Ported `go.opentelemetry.io/contrib/detectors/docker`, a resource detector for docker, from `processor/resourcedetectionprocessor/internal/docker`.(#8951)
 
 ### Changed
 
