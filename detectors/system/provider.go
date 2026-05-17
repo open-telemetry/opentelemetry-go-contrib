@@ -4,9 +4,7 @@
 package system // import "go.opentelemetry.io/contrib/detectors/system"
 
 import (
-	"bytes"
 	"context"
-	"encoding/xml"
 	"fmt"
 	"net"
 	"os"
