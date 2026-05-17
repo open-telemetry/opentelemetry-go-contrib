@@ -84,7 +84,7 @@ func (p *systemMetadataProvider) Hostname() (string, error) {
 	return p.osHostname()
 }
 
-func (p *systemMetadataProvider) FQDN() (string, error) {
+func (*systemMetadataProvider) FQDN() (string, error) {
 	return gofqdn.FqdnHostname()
 }
 
@@ -240,43 +240,4 @@ func goarchToHostArch(goarch string) string {
 		return "x86"
 	}
 	return goarch
-}
-
-// parsePlistValue extracts a string value from an XML plist by key.
-func parsePlistValue(data []byte, key string) string {
-	decoder := xml.NewDecoder(bytes.NewReader(data))
-	var currKey string
-	for {
-		tok, err := decoder.Token()
-		if err != nil {
-			break
-		}
-		se, ok := tok.(xml.StartElement)
-		if !ok {
-			continue
-		}
-		if se.Name.Local == "key" {
-			var k string
-			if err2 := decoder.DecodeElement(&k, &se); err2 == nil {
-				currKey = k
-			}
-		} else if se.Name.Local == "string" && currKey == key {
-			var v string
-			if err2 := decoder.DecodeElement(&v, &se); err2 == nil {
-				return v
-			}
-		}
-	}
-	return ""
-}
-
-// parseOSReleaseValue extracts a value from a key=value os-release file.
-func parseOSReleaseValue(data []byte, key string) string {
-	prefix := key + "="
-	for line := range strings.SplitSeq(string(data), "\n") {
-		if strings.HasPrefix(line, prefix) {
-			return strings.Trim(line[len(prefix):], `"`)
-		}
-	}
-	return ""
 }

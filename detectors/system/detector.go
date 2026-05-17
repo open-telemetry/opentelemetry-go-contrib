@@ -150,7 +150,7 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		errs = append(errs, fmt.Errorf("host.arch: %w", err))
 	}
 
-	// host.ip (single multi-value attribute)
+	// host.ip
 	if hostIPs, err := d.provider.HostIPs(); err == nil {
 		ipStrs := make([]string, len(hostIPs))
 		for i, ip := range hostIPs {
@@ -161,7 +161,7 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		errs = append(errs, fmt.Errorf("host.ip: %w", err))
 	}
 
-	// host.mac (single multi-value attribute)
+	// host.mac
 	if hostMACs, err := d.provider.HostMACs(); err == nil {
 		macStrs := make([]string, len(hostMACs))
 		for i, mac := range hostMACs {
