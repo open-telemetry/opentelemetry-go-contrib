@@ -196,14 +196,18 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	// host.cpu.*
 	if cpuInfos, err := d.provider.CPUInfo(ctx); err == nil && len(cpuInfos) > 0 {
 		c := cpuInfos[0]
-		attrs = append(attrs, semconv.HostCPUVendorID(c.VendorID))
-		attrs = append(attrs, semconv.HostCPUFamily(c.Family))
+		attrs = append(attrs,
+			semconv.HostCPUVendorID(c.VendorID),
+			semconv.HostCPUFamily(c.Family),
+		)
 		if c.Model != "" {
 			attrs = append(attrs, semconv.HostCPUModelID(c.Model))
 		}
-		attrs = append(attrs, semconv.HostCPUModelName(c.ModelName))
-		attrs = append(attrs, semconv.HostCPUStepping(strconv.Itoa(int(c.Stepping))))
-		attrs = append(attrs, semconv.HostCPUCacheL2Size(int(c.CacheSize)))
+		attrs = append(attrs,
+			semconv.HostCPUModelName(c.ModelName),
+			semconv.HostCPUStepping(fmt.Sprintf("%d", c.Stepping)),
+			semconv.HostCPUCacheL2Size(int(c.CacheSize)),
+		)
 	} else if err != nil {
 		errs = append(errs, fmt.Errorf("host.cpu.*: %w", err))
 	}
