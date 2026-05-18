@@ -8,8 +8,6 @@ func GOOSToOSType(goos string) string {
 	switch goos {
 	case "dragonfly":
 		return "dragonflybsd"
-	case "zos":
-		return "z_os"
 	}
 	return goos
 }
