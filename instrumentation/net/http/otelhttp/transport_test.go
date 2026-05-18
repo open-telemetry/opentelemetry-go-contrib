@@ -335,7 +335,7 @@ type eofReadCloser struct {
 	closeCalls int
 }
 
-func (rc *eofReadCloser) Read([]byte) (int, error) {
+func (*eofReadCloser) Read([]byte) (int, error) {
 	return readSize, io.EOF
 }
 
@@ -378,7 +378,7 @@ type eofReadWriteCloser struct {
 	closeCalls int
 }
 
-func (rwc *eofReadWriteCloser) Read([]byte) (int, error) {
+func (*eofReadWriteCloser) Read([]byte) (int, error) {
 	return readSize, io.EOF
 }
 
@@ -421,7 +421,7 @@ func (b *slowRequestBody) Read(p []byte) (int, error) {
 		n = int64(len(p))
 	}
 
-	for i := int64(0); i < n; i++ {
+	for i := range n {
 		p[i] = 'a'
 	}
 	b.bytesRead.Add(n)
@@ -1009,7 +1009,7 @@ func TestTransportMetricsReportFinalRequestBodySize(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	t.Cleanup(func() { require.NoError(t, listener.Close()) })
 
