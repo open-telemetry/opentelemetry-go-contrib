@@ -318,8 +318,10 @@ func TestWithoutSubSpans(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
 
 	ctx := t.Context()
-	ctx = httptrace.WithClientTrace(ctx,
-		otelhttptrace.NewClientTrace(ctx,
+	ctx = httptrace.WithClientTrace(
+		ctx,
+		otelhttptrace.NewClientTrace(
+			ctx,
 			otelhttptrace.WithoutSubSpans(),
 		),
 	)
@@ -334,8 +336,10 @@ func TestWithoutSubSpans(t *testing.T) {
 	// Start again with a "real" span in the context, now tracing should add
 	// events and annotations.
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
-	ctx = httptrace.WithClientTrace(ctx,
-		otelhttptrace.NewClientTrace(ctx,
+	ctx = httptrace.WithClientTrace(
+		ctx,
+		otelhttptrace.NewClientTrace(
+			ctx,
 			otelhttptrace.WithoutSubSpans(),
 		),
 	)
@@ -353,7 +357,8 @@ func TestWithoutSubSpans(t *testing.T) {
 
 	gotAttributes := recSpan.Attributes()
 	require.Len(t, gotAttributes, 4)
-	assert.Equal(t,
+	assert.Equal(
+		t,
 		[]attribute.KeyValue{
 			attribute.Key("http.request.header.host").String(fixture.Address),
 			attribute.Key("http.request.header.user-agent").String("oteltest/1.1"),
@@ -369,7 +374,8 @@ func TestWithoutSubSpans(t *testing.T) {
 		VerifyAttrs func(t *testing.T, got attrMap)
 	}{
 		{"http.getconn.start", func(t *testing.T, got attrMap) {
-			assert.Equal(t,
+			assert.Equal(
+				t,
 				attribute.StringValue(fixture.Address),
 				got[attribute.Key("server.address")],
 			)
@@ -377,15 +383,18 @@ func TestWithoutSubSpans(t *testing.T) {
 		{"http.getconn.done", func(t *testing.T, got attrMap) {
 			// value is dynamic, just verify we have the attribute
 			assert.Contains(t, got, attribute.Key("http.conn.idletime"))
-			assert.Equal(t,
+			assert.Equal(
+				t,
 				attribute.BoolValue(true),
 				got[attribute.Key("http.conn.reused")],
 			)
-			assert.Equal(t,
+			assert.Equal(
+				t,
 				attribute.BoolValue(true),
 				got[attribute.Key("http.conn.wasidle")],
 			)
-			assert.Equal(t,
+			assert.Equal(
+				t,
 				attribute.StringValue(fixture.Address),
 				got[attribute.Key("http.remote")],
 			)
@@ -420,8 +429,10 @@ func TestWithRedactedHeaders(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
-	ctx = httptrace.WithClientTrace(ctx,
-		otelhttptrace.NewClientTrace(ctx,
+	ctx = httptrace.WithClientTrace(
+		ctx,
+		otelhttptrace.NewClientTrace(
+			ctx,
 			otelhttptrace.WithoutSubSpans(),
 			otelhttptrace.WithRedactedHeaders("user-agent"),
 		),
@@ -436,7 +447,8 @@ func TestWithRedactedHeaders(t *testing.T) {
 	recSpan := fixture.SpanRecorder.Ended()[0]
 
 	gotAttributes := recSpan.Attributes()
-	assert.Equal(t,
+	assert.Equal(
+		t,
 		[]attribute.KeyValue{
 			attribute.Key("http.request.header.host").String(fixture.Address),
 			attribute.Key("http.request.header.user-agent").String("****"),
@@ -450,8 +462,10 @@ func TestWithoutHeaders(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
-	ctx = httptrace.WithClientTrace(ctx,
-		otelhttptrace.NewClientTrace(ctx,
+	ctx = httptrace.WithClientTrace(
+		ctx,
+		otelhttptrace.NewClientTrace(
+			ctx,
 			otelhttptrace.WithoutSubSpans(),
 			otelhttptrace.WithoutHeaders(),
 		),
@@ -473,8 +487,10 @@ func TestWithInsecureHeaders(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
-	ctx = httptrace.WithClientTrace(ctx,
-		otelhttptrace.NewClientTrace(ctx,
+	ctx = httptrace.WithClientTrace(
+		ctx,
+		otelhttptrace.NewClientTrace(
+			ctx,
 			otelhttptrace.WithoutSubSpans(),
 			otelhttptrace.WithInsecureHeaders(),
 		),
@@ -491,7 +507,8 @@ func TestWithInsecureHeaders(t *testing.T) {
 	recSpan := fixture.SpanRecorder.Ended()[0]
 
 	gotAttributes := recSpan.Attributes()
-	assert.Equal(t,
+	assert.Equal(
+		t,
 		[]attribute.KeyValue{
 			attribute.Key("http.request.header.host").String(fixture.Address),
 			attribute.Key("http.request.header.user-agent").String("oteltest/1.1"),
@@ -506,7 +523,8 @@ func TestSubSpansHeaderAttributes(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
-	ctx = httptrace.WithClientTrace(ctx,
+	ctx = httptrace.WithClientTrace(
+		ctx,
 		otelhttptrace.NewClientTrace(ctx), // default: with sub-spans
 	)
 
