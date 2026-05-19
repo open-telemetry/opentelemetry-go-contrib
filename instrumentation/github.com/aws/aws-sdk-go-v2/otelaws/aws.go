@@ -61,7 +61,8 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 			RegionAttr(region),
 		}
 
-		ctx, span := m.tracer.Start(ctx, spanName(serviceID, operation),
+		ctx, span := m.tracer.Start(
+			ctx, spanName(serviceID, operation),
 			trace.WithTimestamp(ctx.Value(spanTimestampKey{}).(time.Time)),
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(attributes...),

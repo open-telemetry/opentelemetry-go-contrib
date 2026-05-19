@@ -161,6 +161,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		t.semconv.MetricOptions(semconv.MetricAttributes{
 			Req:                  r,
 			StatusCode:           statusCode,
+			Err:                  err,
 			AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
 		}),
 	)
