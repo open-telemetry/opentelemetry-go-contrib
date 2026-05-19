@@ -46,7 +46,7 @@ var _ http.RoundTripper = &Transport{}
 //
 // If the provided http.RoundTripper is nil, http.DefaultTransport will be used
 // as the base http.RoundTripper.
-func NewTransport(base http.RoundTripper, opts ...TransportOption) *Transport {
+func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 	if base == nil {
 		base = http.DefaultTransport
 	}
@@ -55,7 +55,7 @@ func NewTransport(base http.RoundTripper, opts ...TransportOption) *Transport {
 		rt: base,
 	}
 
-	defaultOpts := []TransportOption{
+	defaultOpts := []Option{
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindClient)),
 		WithSpanNameFormatter(defaultTransportFormatter),
 	}

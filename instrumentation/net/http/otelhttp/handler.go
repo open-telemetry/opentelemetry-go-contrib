@@ -37,19 +37,19 @@ type middleware struct {
 
 // NewHandler wraps the passed handler in a span named after the operation and
 // enriches it with metrics.
-func NewHandler(handler http.Handler, operation string, opts ...HandlerOption) http.Handler {
+func NewHandler(handler http.Handler, operation string, opts ...Option) http.Handler {
 	return NewMiddleware(operation, opts...)(handler)
 }
 
 // NewMiddleware returns a tracing and metrics instrumentation middleware.
 // The handler returned by the middleware wraps a handler
 // in a span named after the operation and enriches it with metrics.
-func NewMiddleware(operation string, opts ...HandlerOption) func(http.Handler) http.Handler {
+func NewMiddleware(operation string, opts ...Option) func(http.Handler) http.Handler {
 	h := middleware{
 		operation: operation,
 	}
 
-	defaultOpts := []HandlerOption{
+	defaultOpts := []Option{
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 
