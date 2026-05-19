@@ -70,21 +70,19 @@ type config struct {
 }
 
 // HandlerOption defines an option for configuring an HTTP handler.
-// It extends the Option interface with handler-specific application logic.
 type HandlerOption interface {
 	Option
 	applyHandler(*handlerConfig)
 }
 
 // TransportOption defines an option for configuring an HTTP transport.
-// It extends the Option interface with transport-specific application logic.
 type TransportOption interface {
 	Option
 	applyTransport(*transportConfig)
 }
 
-// CombinedOption is a combination of HandlerOption and TransportOption.
-// It is used for options that configure fields shared between handler and transport configs.
+// CombinedOption is a combination of [HandlerOption[ and [TransportOption].
+// It is implemented by options that are applicable for both [NewHandler] and [NewTransport].
 type CombinedOption interface {
 	HandlerOption
 	TransportOption
@@ -92,7 +90,7 @@ type CombinedOption interface {
 
 // Option defines the legacy interface for setting optional configuration properties.
 //
-// Deprecated: Use HandlerOption or TransportOption instead. This interface will be removed in a future release.
+// Deprecated: Use [HandlerOption] or [TransportOption] instead. This interface will be removed in a future release.
 type Option interface {
 	apply(*config)
 }

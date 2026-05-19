@@ -18,10 +18,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Set error field as `record.SetErr` instead of a plain attribute in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#8776)
-- Introduces breaking changes by refactoring `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to enforce distinct API boundaries between server and client instrumentation. (#8784)
-  - The `Option` interface has been split into `HandlerOption` and `TransportOption` to provide compile-time safety for configuration options.
-  - Internal configuration structures were refactored into `sharedConfig`, `handlerConfig`, and `transportConfig` to isolate server and client-specific settings.
-  - `NewHandler` and `NewTransport` now strictly accept their respective `HandlerOption` or `TransportOption` types.
+- Refactor `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` options to enforce distinct API boundaries between server and client instrumentation.
+  - The `Option` interface is now deprecated in favor of `HandlerOption` and `TransportOption`, providing type-safe configuration boundaries while maintaining full backward compatibility.
+  - New `CombinedOption` interface introduced for shared configuration options (`WithTracerProvider`, `WithMeterProvider`, etc.), which are applicable to both Handler and Transport.
+  - Existing `With*` constructor functions have been updated to return `CombinedOption`, `HandlerOption`, or `TransportOption` as appropriate, enhancing type safety.
+  - Internal configuration structures were refactored into `sharedConfig`, `handlerConfig`, and `transportConfig` to isolate concerns, with legacy support maintained via `applyLegacy` sh
 - Set the "error" field (e.g. created via `zap.Error`) as `record.SetErr` instead of a plain attribute in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8719)
 - Set fields implementing `error` interface from `slog` records as `record.SetErr` instead of plain attributes in `go.opentelemetry.io/contrib/bridges/otelslog`. (#8746)
 - Set emitted errors in `go.opentelemetry.io/contrib/bridges/otellogr` as record errors (`Record.SetErr`) instead of `exception.message` attributes. (#8775)
