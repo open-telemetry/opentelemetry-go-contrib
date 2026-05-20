@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
@@ -17,7 +18,12 @@ func TestNewResource(t *testing.T) {
 	withDefaultAttributes := func(attrs ...attribute.KeyValue) []attribute.KeyValue {
 		// Default attributes come first so they're overridden by config-provided attributes
 		return append(
-			resource.Default().Attributes(),
+			[]attribute.KeyValue{
+				semconv.ServiceName("unknown_service:otelconf.test"),
+				semconv.TelemetrySDKName("opentelemetry"),
+				semconv.TelemetrySDKLanguageGo,
+				semconv.TelemetrySDKVersion(sdk.Version()),
+			},
 			attrs...,
 		)
 	}
