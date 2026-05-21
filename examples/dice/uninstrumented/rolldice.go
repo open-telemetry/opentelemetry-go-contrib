@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
-	"math/rand"
+	"math/rand/v2"
 	"net/http"
 	"strconv"
 )
@@ -25,6 +25,7 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 	// Check if rolls is a number.
 	rolls, err := strconv.Atoi(rollsParam)
 	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		msg := "Parameter rolls must be a positive integer"
 		_ = json.NewEncoder(w).Encode(map[string]string{
@@ -46,9 +47,9 @@ func handleRolldice(w http.ResponseWriter, r *http.Request) {
 	if player == "" {
 		log.Printf("DEBUG: anonymous player rolled %v", results)
 	} else {
-		log.Printf("DEBUG: player=%s rolled %v", player, results)
+		log.Printf("DEBUG: player=%s rolled %v", strconv.Quote(player), results)
 	}
-	log.Printf("INFO: %s %s -> 200 OK", r.Method, r.URL.String())
+	log.Printf("INFO: %s %s -> 200 OK", strconv.Quote(r.Method), strconv.Quote(r.URL.String()))
 
 	if len(results) == 1 {
 		writeJSON(w, results[0])
@@ -98,6 +99,6 @@ func rolldice(rolls int) ([]int, error) {
 
 // rollOnce returns a random number between 1 and 6.
 func rollOnce() int {
-	roll := 1 + rand.Intn(6) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
+	roll := 1 + rand.IntN(6) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
 	return roll
 }

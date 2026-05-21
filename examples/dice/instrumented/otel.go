@@ -43,7 +43,8 @@ func setupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 		err = errors.Join(inErr, shutdown(ctx))
 	}
 
-	res, resErr := resource.New(ctx,
+	res, resErr := resource.New(
+		ctx,
 		resource.WithFromEnv(), // Parses OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES.
 		resource.WithProcess(),
 		resource.WithHost(),
@@ -97,7 +98,8 @@ func newPropagator() propagation.TextMapPropagator {
 
 func newTracerProvider(res *resource.Resource) (*trace.TracerProvider, error) {
 	traceExporter, err := stdouttrace.New(
-		stdouttrace.WithPrettyPrint())
+		stdouttrace.WithPrettyPrint(),
+	)
 	if err != nil {
 		return nil, err
 	}
