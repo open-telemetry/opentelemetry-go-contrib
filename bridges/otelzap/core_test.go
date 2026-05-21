@@ -31,7 +31,7 @@ var (
 		Level:   zap.InfoLevel,
 		Message: testMessage,
 	}
-	testErr = errors.New("test error")
+	errTest = errors.New("test error")
 )
 
 type capturedRecord struct {
@@ -119,13 +119,13 @@ func TestCore(t *testing.T) {
 	t.Run("WriteError", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 
-		logger.Error(testMessage, zap.Error(testErr))
+		logger.Error(testMessage, zap.Error(errTest))
 
 		want := logtest.Recording{
 			logtest.Scope{Name: loggerName}: {
 				{
 					Body:         log.StringValue(testMessage),
-					Error:        testErr,
+					Error:        errTest,
 					Severity:     log.SeverityError,
 					SeverityText: zap.ErrorLevel.String(),
 					Attributes:   []log.KeyValue{},
@@ -508,13 +508,13 @@ func TestCoreWithExceptionStacktrace(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
-	logger.Error(testMessage, zap.Error(testErr))
+	logger.Error(testMessage, zap.Error(errTest))
 
 	want := logtest.Recording{
 		logtest.Scope{Name: "name"}: {
 			{
 				Body:         log.StringValue(testMessage),
-				Error:        testErr,
+				Error:        errTest,
 				Severity:     log.SeverityError,
 				SeverityText: zap.ErrorLevel.String(),
 				Attributes: []log.KeyValue{
@@ -589,13 +589,13 @@ func TestCoreWithErrorStacktraceDefault(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
-	logger.Error(testMessage, zap.Error(testErr))
+	logger.Error(testMessage, zap.Error(errTest))
 
 	want := logtest.Recording{
 		logtest.Scope{Name: "name"}: {
 			{
 				Body:         log.StringValue(testMessage),
-				Error:        testErr,
+				Error:        errTest,
 				Severity:     log.SeverityError,
 				SeverityText: zap.ErrorLevel.String(),
 				Attributes: []log.KeyValue{
