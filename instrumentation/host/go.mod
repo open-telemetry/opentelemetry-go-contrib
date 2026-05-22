@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/shirou/gopsutil/v4 v4.26.4
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/otel v1.43.1-0.20260521080857-e5bdc311108b
+	go.opentelemetry.io/otel v1.43.1-0.20260522060909-fef000a7cc74
 	go.opentelemetry.io/otel/metric v1.43.1-0.20260521080857-e5bdc311108b
 	go.opentelemetry.io/otel/sdk v1.43.1-0.20260521080857-e5bdc311108b
 	go.opentelemetry.io/otel/sdk/metric v1.43.1-0.20260521080857-e5bdc311108b
