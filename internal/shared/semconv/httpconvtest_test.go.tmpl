@@ -201,9 +201,9 @@ func TestNewServerRecordMetrics(t *testing.T) {
 			server.RecordMetrics(t.Context(), semconv.ServerMetricData{
 				ServerName:   "stuff",
 				ResponseSize: 200,
+				StatusCode:   301,
 				MetricAttributes: semconv.MetricAttributes{
-					Req:        req,
-					StatusCode: 301,
+					Req: req,
 					AdditionalAttributes: []attribute.KeyValue{
 						attribute.String("key", "value"),
 					},
@@ -422,8 +422,8 @@ func TestNewClientRecordMetrics(t *testing.T) {
 				RequestSize:     100,
 				RequestDuration: 300 * time.Millisecond,
 			}, client.MetricOptions(semconv.MetricAttributes{
-				Req:        req,
-				StatusCode: 301,
+				Req:  req,
+				Resp: &http.Response{StatusCode: 301},
 			}))
 
 			rm := metricdata.ResourceMetrics{}

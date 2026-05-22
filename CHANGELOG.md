@@ -29,6 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix header attributes lost when using sub-spans in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#8797)
 - Validate `encoding` configuration for OTLP HTTP exporters in `go.opentelemetry.io/contrib/otelconf`. (#8772)
+- Record `network.protocol.version` from the response's protocol on client spans and metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, so the attribute reflects the protocol negotiated on the wire (e.g. HTTP/2 via ALPN) instead of the request struct's default `HTTP/1.1`.
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

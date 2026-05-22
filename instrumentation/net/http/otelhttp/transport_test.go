@@ -1075,6 +1075,71 @@ func containsAttributes(t *testing.T, attrSet attribute.Set, expected []attribut
 	}
 }
 
+func TestTransportProtocolVersionHTTP2(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("hello"))
+	}))
+	ts.EnableHTTP2 = true
+	ts.StartTLS()
+	defer ts.Close()
+
+	// ts.Client() returns an *http.Client whose Transport trusts the test
+	// server's cert and is configured to negotiate HTTP/2 via ALPN.
+	inner, ok := ts.Client().Transport.(*http.Transport)
+	require.True(t, ok, "expected *http.Transport from httptest server client")
+
+	tr := NewTransport(
+		inner,
+		WithTracerProvider(tracerProvider),
+		WithMeterProvider(meterProvider),
+	)
+	c := http.Client{Transport: tr}
+
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+	require.Equal(t, "HTTP/1.1", r.Proto)
+
+	res, err := c.Do(r)
+	require.NoError(t, err)
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+	require.Equal(t, []byte("hello"), body)
+
+	require.Equal(t, "HTTP/2.0", res.Proto)
+
+	spans := spanRecorder.Ended()
+	require.Len(t, spans, 1)
+	attrs := spans[0].Attributes()
+	assert.Contains(t, attrs, attribute.String("network.protocol.version", "2.0"))
+
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	expected := []attribute.KeyValue{
+		attribute.String("network.protocol.name", "http"),
+		attribute.String("network.protocol.version", "2.0"),
+	}
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch d := m.Data.(type) {
+		case metricdata.Sum[int64]:
+			require.NotEmpty(t, d.DataPoints, "metric %s has no data points", m.Name)
+			containsAttributes(t, d.DataPoints[0].Attributes, expected)
+		case metricdata.Histogram[float64]:
+			require.NotEmpty(t, d.DataPoints, "metric %s has no data points", m.Name)
+			containsAttributes(t, d.DataPoints[0].Attributes, expected)
+		}
+	}
+}
+
 func BenchmarkTransportRoundTrip(b *testing.B) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		fmt.Fprint(w, "Hello World")
@@ -1250,4 +1315,7 @@ func TestTransportErrorTypeMetricAttribute(t *testing.T) {
 		assert.NotEmpty(t, errorTypeVal.AsString())
 		assert.NotEqual(t, "_OTHER", errorTypeVal.AsString())
 	}
+
+	_, hasStatusCode := hist.DataPoints[0].Attributes.Value(semconv.HTTPResponseStatusCodeKey)
+	assert.False(t, hasStatusCode, "http.response.status_code should be absent when the round trip failed")
 }

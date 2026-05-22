@@ -233,6 +233,7 @@ func (s HTTPServer) NetworkTransportAttr(network string) []attribute.KeyValue {
 type ServerMetricData struct {
 	ServerName   string
 	ResponseSize int64
+	StatusCode   int
 
 	MetricData
 	MetricAttributes
@@ -240,7 +241,7 @@ type ServerMetricData struct {
 
 type MetricAttributes struct {
 	Req                  *http.Request
-	StatusCode           int
+	Resp                 *http.Response
 	Route                string
 	AdditionalAttributes []attribute.KeyValue
 	Err                  error
