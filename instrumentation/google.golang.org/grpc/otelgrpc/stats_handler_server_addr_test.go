@@ -68,14 +68,14 @@ func TestClientHandlerUsesDialTargetWhenPresent(t *testing.T) {
 		wantPort    int
 	}{
 		{
-			name:        "plain host:port",
-			dialTarget:  "myservice:443",
+			name:        "dns canonical",
+			dialTarget:  "dns:///myservice:443",
 			wantAddress: "myservice",
 			wantPort:    443,
 		},
 		{
-			name:        "passthrough scheme",
-			dialTarget:  "passthrough:myservice:443",
+			name:        "passthrough canonical",
+			dialTarget:  "passthrough:///myservice:443",
 			wantAddress: "myservice",
 			wantPort:    443,
 		},
