@@ -59,33 +59,54 @@ func TestClientHandlerFallsBackToRemoteAddr(t *testing.T) {
 // is seeded (as NewClientOptions interceptors will do), server.address is taken
 // from the dial target hostname on both success and failure paths.
 func TestClientHandlerUsesDialTargetWhenPresent(t *testing.T) {
-	const dialTarget = "myservice:443"
 	remoteAddr := &net.TCPAddr{IP: net.ParseIP("192.0.2.1"), Port: 9090}
 
-	t.Run("failure/OutHeader absent", func(t *testing.T) {
-		h, sr := newClientHandlerForAddrTest(t)
-		ctx := context.WithValue(t.Context(), dialTargetContextKey{}, dialTarget)
+	tests := []struct {
+		name        string
+		dialTarget  string
+		wantAddress string
+		wantPort    int
+	}{
+		{
+			name:        "plain host:port",
+			dialTarget:  "myservice:443",
+			wantAddress: "myservice",
+			wantPort:    443,
+		},
+		{
+			name:        "passthrough scheme",
+			dialTarget:  "passthrough:myservice:443",
+			wantAddress: "myservice",
+			wantPort:    443,
+		},
+	}
 
-		runRPC(t, h, ctx, nil)
+	for _, tt := range tests {
+		t.Run(tt.name+"/failure/OutHeader absent", func(t *testing.T) {
+			h, sr := newClientHandlerForAddrTest(t)
+			ctx := context.WithValue(t.Context(), dialTargetContextKey{}, tt.dialTarget)
 
-		spans := sr.Ended()
-		require.Len(t, spans, 1)
-		attrs := spans[0].Attributes()
-		assert.Contains(t, attrs, semconv.ServerAddress("myservice"))
-		assert.Contains(t, attrs, semconv.ServerPort(443))
-	})
+			runRPC(t, h, ctx, nil)
 
-	t.Run("success/OutHeader fires but hostname wins", func(t *testing.T) {
-		h, sr := newClientHandlerForAddrTest(t)
-		ctx := context.WithValue(t.Context(), dialTargetContextKey{}, dialTarget)
+			spans := sr.Ended()
+			require.Len(t, spans, 1)
+			attrs := spans[0].Attributes()
+			assert.Contains(t, attrs, semconv.ServerAddress(tt.wantAddress))
+			assert.Contains(t, attrs, semconv.ServerPort(tt.wantPort))
+		})
 
-		runRPC(t, h, ctx, remoteAddr)
+		t.Run(tt.name+"/success/OutHeader fires but hostname wins", func(t *testing.T) {
+			h, sr := newClientHandlerForAddrTest(t)
+			ctx := context.WithValue(t.Context(), dialTargetContextKey{}, tt.dialTarget)
 
-		spans := sr.Ended()
-		require.Len(t, spans, 1)
-		attrs := spans[0].Attributes()
-		assert.Contains(t, attrs, semconv.ServerAddress("myservice"))
-		assert.Contains(t, attrs, semconv.ServerPort(443))
-		assert.NotContains(t, attrs, semconv.ServerAddress("192.0.2.1"))
-	})
+			runRPC(t, h, ctx, remoteAddr)
+
+			spans := sr.Ended()
+			require.Len(t, spans, 1)
+			attrs := spans[0].Attributes()
+			assert.Contains(t, attrs, semconv.ServerAddress(tt.wantAddress))
+			assert.Contains(t, attrs, semconv.ServerPort(tt.wantPort))
+			assert.NotContains(t, attrs, semconv.ServerAddress("192.0.2.1"))
+		})
+	}
 }
