@@ -7,116 +7,88 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-
 	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
-func TestServerAddrAttrsFromDialTarget(t *testing.T) {
+func TestServerAddrAttrsFromCanonicalTarget(t *testing.T) {
 	tests := []struct {
-		name   string
-		target string
-		want   []attribute.KeyValue
+		name            string
+		canonicalTarget string
+		want            []attribute.KeyValue
 	}{
-		// Plain host:port — no scheme, fast path.
+		// passthrough scheme.
 		{
-			name:   "plain host:port",
-			target: "myservice:443",
-			want:   []attribute.KeyValue{semconv.ServerAddress("myservice"), semconv.ServerPort(443)},
-		},
-		{
-			name:   "plain IP:port",
-			target: "192.168.1.1:9090",
-			want:   []attribute.KeyValue{semconv.ServerAddress("192.168.1.1"), semconv.ServerPort(9090)},
-		},
-		{
-			name:   "localhost",
-			target: "localhost:8080",
-			want:   []attribute.KeyValue{semconv.ServerAddress("localhost"), semconv.ServerPort(8080)},
-		},
-		// passthrough scheme — short form (scheme:host:port).
-		{
-			name:   "passthrough short form",
-			target: "passthrough:127.0.0.1:7777",
-			want:   []attribute.KeyValue{semconv.ServerAddress("127.0.0.1"), semconv.ServerPort(7777)},
-		},
-		// passthrough scheme — full URI form (scheme:///host:port).
-		{
-			name:   "passthrough full URI",
-			target: "passthrough:///127.0.0.1:7777",
-			want:   []attribute.KeyValue{semconv.ServerAddress("127.0.0.1"), semconv.ServerPort(7777)},
+			name:            "passthrough",
+			canonicalTarget: "passthrough:///127.0.0.1:7777",
+			want:            []attribute.KeyValue{semconv.ServerAddress("127.0.0.1"), semconv.ServerPort(7777)},
 		},
 		// dns scheme — empty authority.
 		{
-			name:   "dns empty authority",
-			target: "dns:///example.com:443",
-			want:   []attribute.KeyValue{semconv.ServerAddress("example.com"), semconv.ServerPort(443)},
+			name:            "dns empty authority",
+			canonicalTarget: "dns:///example.com:443",
+			want:            []attribute.KeyValue{semconv.ServerAddress("example.com"), semconv.ServerPort(443)},
 		},
 		// dns scheme — with authority.
 		{
-			name:   "dns with authority",
-			target: "dns://ns.example.com/example.com:443",
-			want:   []attribute.KeyValue{semconv.ServerAddress("example.com"), semconv.ServerPort(443)},
+			name:            "dns with authority",
+			canonicalTarget: "dns://ns.example.com/example.com:443",
+			want:            []attribute.KeyValue{semconv.ServerAddress("example.com"), semconv.ServerPort(443)},
 		},
-		// xds scheme.
+		// dns scheme — plain host:port normalized by gRPC (e.g. "myservice:443" → "dns:///myservice:443").
 		{
-			name:   "xds scheme",
-			target: "xds:///my-service:50051",
-			want:   []attribute.KeyValue{semconv.ServerAddress("my-service"), semconv.ServerPort(50051)},
+			name:            "dns normalized host:port",
+			canonicalTarget: "dns:///myservice:443",
+			want:            []attribute.KeyValue{semconv.ServerAddress("myservice"), semconv.ServerPort(443)},
 		},
-		// Unix socket — absolute path, leading slash must be preserved.
+		// dns scheme — named port, non-numeric port omitted from attributes.
 		{
-			name:   "unix absolute path",
-			target: "unix:///tmp/grpc.sock",
-			want:   []attribute.KeyValue{semconv.ServerAddress("/tmp/grpc.sock")},
+			name:            "dns named port",
+			canonicalTarget: "dns:///svc:https",
+			want:            []attribute.KeyValue{semconv.ServerAddress("svc")},
 		},
-		// Unix socket — relative path.
+		// xds scheme — requires google.golang.org/grpc/xds to be imported in the
+		// client binary; without it grpc.NewClient produces "dns:///xds:///..." instead.
 		{
-			name:   "unix relative path",
-			target: "unix:tmp/grpc.sock",
-			want:   []attribute.KeyValue{semconv.ServerAddress("tmp/grpc.sock")},
+			name:            "xds",
+			canonicalTarget: "xds:///my-service:50051",
+			want:            []attribute.KeyValue{semconv.ServerAddress("my-service"), semconv.ServerPort(50051)},
+		},
+		// Unix socket — absolute path, leading slash preserved.
+		{
+			name:            "unix absolute path",
+			canonicalTarget: "unix:///tmp/grpc.sock",
+			want:            []attribute.KeyValue{semconv.ServerAddress("/tmp/grpc.sock")},
 		},
 		// unix-abstract scheme.
 		{
-			name:   "unix-abstract",
-			target: "unix-abstract:///grpc.sock",
-			want:   []attribute.KeyValue{semconv.ServerAddress("/grpc.sock")},
+			name:            "unix-abstract",
+			canonicalTarget: "unix-abstract:///grpc.sock",
+			want:            []attribute.KeyValue{semconv.ServerAddress("/grpc.sock")},
 		},
-		// Non-address target (bufconn) — best-effort, return whatever endpoint we find.
+		// passthrough bufconn — non-address endpoint, best-effort.
 		{
-			name:   "passthrough bufconn",
-			target: "passthrough:bufnet",
-			want:   []attribute.KeyValue{semconv.ServerAddress("bufnet")},
-		},
-		// IPv6 — plain bracket notation handled by fast path before url.Parse.
-		{
-			name:   "ipv6 plain",
-			target: "[::1]:8080",
-			want:   []attribute.KeyValue{semconv.ServerAddress("::1"), semconv.ServerPort(8080)},
-		},
-		// IPv6 — passthrough short form, url.Parse places address in Opaque.
-		{
-			name:   "ipv6 passthrough short form",
-			target: "passthrough:[::1]:8080",
-			want:   []attribute.KeyValue{semconv.ServerAddress("::1"), semconv.ServerPort(8080)},
-		},
-		// IPv6 — passthrough full URI, address in Path.
-		{
-			name:   "ipv6 passthrough full URI",
-			target: "passthrough:///[::1]:8080",
-			want:   []attribute.KeyValue{semconv.ServerAddress("::1"), semconv.ServerPort(8080)},
+			name:            "passthrough bufconn",
+			canonicalTarget: "passthrough:///bufnet",
+			want:            []attribute.KeyValue{semconv.ServerAddress("bufnet")},
 		},
 		// IPv6 — dns scheme.
 		{
-			name:   "ipv6 dns",
-			target: "dns:///[::1]:8080",
-			want:   []attribute.KeyValue{semconv.ServerAddress("::1"), semconv.ServerPort(8080)},
+			name:            "ipv6 dns",
+			canonicalTarget: "dns:///[::1]:8080",
+			want:            []attribute.KeyValue{semconv.ServerAddress("::1"), semconv.ServerPort(8080)},
+		},
+		// IPv6 — passthrough scheme.
+		{
+			name:            "ipv6 passthrough",
+			canonicalTarget: "passthrough:///[::1]:8080",
+			want:            []attribute.KeyValue{semconv.ServerAddress("::1"), semconv.ServerPort(8080)},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := serverAddrAttrsFromDialTarget(tt.target)
+			got := serverAddrAttrsFromCanonicalTarget(tt.canonicalTarget)
 			assert.Equal(t, tt.want, got)
 		})
 	}

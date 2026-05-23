@@ -18,15 +18,15 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// serverAddrAttrsFromDialTarget extracts server address attributes from a raw
-// gRPC dial target, which may carry a scheme and authority before the endpoint:
+// serverAddrAttrsFromCanonicalTarget extracts server address attributes from a
+// canonical gRPC target as returned by [google.golang.org/grpc.ClientConn.CanonicalTarget].
+// Canonical targets always have the form "scheme://[authority]/endpoint", e.g.:
 //
-//	passthrough:127.0.0.1:7777       → ServerAddress("127.0.0.1"), ServerPort(7777)
 //	passthrough:///127.0.0.1:7777   → ServerAddress("127.0.0.1"), ServerPort(7777)
+//	dns:///example.com:443          → ServerAddress("example.com"), ServerPort(443)
 //	dns://authority/example.com:443 → ServerAddress("example.com"), ServerPort(443)
 //	unix:///tmp/grpc.sock           → ServerAddress("/tmp/grpc.sock")
-//	myservice:443                   → ServerAddress("myservice"),   ServerPort(443)
-func serverAddrAttrsFromDialTarget(target string) []attribute.KeyValue {
+func serverAddrAttrsFromCanonicalTarget(target string) []attribute.KeyValue {
 	// Fast path: confirmed host:port with numeric port — no scheme involved.
 	if h, pStr, err := net.SplitHostPort(target); err == nil {
 		if p, err := strconv.Atoi(pStr); err == nil {
