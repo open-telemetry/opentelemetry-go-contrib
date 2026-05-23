@@ -362,7 +362,7 @@ func (*config) handleRPC(
 		// (i.e. NewClientHandler callers without interceptors). When dialTargetContextKey
 		// is present, Begin already set server.address to the hostname.
 		if rs.Client && rs.RemoteAddr != nil && (span.IsRecording() || gctx != nil) {
-			if _, ok := ctx.Value(dialTargetContextKey{}).(string); !ok {
+			if target, ok := ctx.Value(dialTargetContextKey{}).(string); !ok || target == "" {
 				attrs := serverAddrAttrs(rs.RemoteAddr.String())
 				if span.IsRecording() {
 					span.SetAttributes(attrs...)
