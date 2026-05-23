@@ -26,7 +26,7 @@ import (
 
 type gRPCContextKey struct{}
 
-// dialTargetContextKey carries the dial target seeded by upcoming interceptors
+// dialTargetContextKey carries the dial target seeded by client interceptors
 // so the stats handler can use the hostname for server.address instead of the
 // post-DNS IP from RemoteAddr.
 type dialTargetContextKey struct{}
