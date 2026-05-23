@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -31,6 +31,7 @@ var (
 		Level:   zap.InfoLevel,
 		Message: testMessage,
 	}
+	errTest = errors.New("test error")
 )
 
 type capturedRecord struct {
@@ -104,7 +105,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Context = nil           // Ignore context for comparison.
@@ -117,19 +119,21 @@ func TestCore(t *testing.T) {
 	t.Run("WriteError", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 
-		logger.Error(testMessage, zap.Error(errors.New("test error")))
+		logger.Error(testMessage, zap.Error(errTest))
 
 		want := logtest.Recording{
 			logtest.Scope{Name: loggerName}: {
 				{
 					Body:         log.StringValue(testMessage),
+					Error:        errTest,
 					Severity:     log.SeverityError,
 					SeverityText: zap.ErrorLevel.String(),
 					Attributes:   []log.KeyValue{},
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Context = nil
@@ -156,7 +160,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Context = nil
@@ -183,7 +188,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
@@ -210,7 +216,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
@@ -240,7 +247,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Context = nil           // Ignore context for comparison.
@@ -270,7 +278,8 @@ func TestCore(t *testing.T) {
 				},
 			},
 		}
-		logtest.AssertEqual(t, want, rec.Result(),
+		logtest.AssertEqual(
+			t, want, rec.Result(),
 			logtest.Transform(func(r logtest.Record) logtest.Record {
 				cp := r.Clone()
 				cp.Context = nil           // Ignore context for comparison.
@@ -356,7 +365,8 @@ func TestCoreWriteContextConcurrentSafe(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
@@ -378,14 +388,16 @@ func TestCoreEnabled(t *testing.T) {
 	}
 
 	logger.Debug(testMessage)
-	logtest.AssertEqual(t, wantEmpty, rec.Result(),
+	logtest.AssertEqual(
+		t, wantEmpty, rec.Result(),
 		logtest.Desc("Debug message should not be recorded"),
 	)
 
 	if ce := logger.Check(zap.DebugLevel, testMessage); ce != nil {
 		ce.Write()
 	}
-	logtest.AssertEqual(t, wantEmpty, rec.Result(),
+	logtest.AssertEqual(
+		t, wantEmpty, rec.Result(),
 		logtest.Desc("Debug message should not be recorded"),
 	)
 
@@ -402,7 +414,8 @@ func TestCoreEnabled(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil           // Ignore context for comparison.
@@ -432,7 +445,8 @@ func TestCoreWithCaller(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil           // Ignore context for comparison.
@@ -472,7 +486,8 @@ func TestCoreWithStacktrace(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil           // Ignore context for comparison.
@@ -493,12 +508,13 @@ func TestCoreWithExceptionStacktrace(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
-	logger.Error(testMessage, zap.Error(errors.New("test error")))
+	logger.Error(testMessage, zap.Error(errTest))
 
 	want := logtest.Recording{
 		logtest.Scope{Name: "name"}: {
 			{
 				Body:         log.StringValue(testMessage),
+				Error:        errTest,
 				Severity:     log.SeverityError,
 				SeverityText: zap.ErrorLevel.String(),
 				Attributes: []log.KeyValue{
@@ -507,7 +523,8 @@ func TestCoreWithExceptionStacktrace(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil
@@ -572,12 +589,13 @@ func TestCoreWithErrorStacktraceDefault(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
-	logger.Error(testMessage, zap.Error(errors.New("test error")))
+	logger.Error(testMessage, zap.Error(errTest))
 
 	want := logtest.Recording{
 		logtest.Scope{Name: "name"}: {
 			{
 				Body:         log.StringValue(testMessage),
+				Error:        errTest,
 				Severity:     log.SeverityError,
 				SeverityText: zap.ErrorLevel.String(),
 				Attributes: []log.KeyValue{
@@ -586,7 +604,8 @@ func TestCoreWithErrorStacktraceDefault(t *testing.T) {
 			},
 		},
 	}
-	logtest.AssertEqual(t, want, rec.Result(),
+	logtest.AssertEqual(
+		t, want, rec.Result(),
 		logtest.Transform(func(r logtest.Record) logtest.Record {
 			cp := r.Clone()
 			cp.Context = nil

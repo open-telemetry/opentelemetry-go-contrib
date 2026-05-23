@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.opentelemetry.io/otel/trace"
 
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
@@ -416,7 +416,8 @@ func TestWrapHandlerTracingWithTraceAttributeFn(t *testing.T) {
 	tp, memExporter := initMockTracerProvider()
 
 	// No flusher needed as SimpleSpanProcessor is synchronous
-	wrapped := otellambda.WrapHandler(emptyHandler{},
+	wrapped := otellambda.WrapHandler(
+		emptyHandler{},
 		otellambda.WithTracerProvider(tp),
 		otellambda.WithTraceAttributeFn(mockTraceAttributeFn),
 	)
