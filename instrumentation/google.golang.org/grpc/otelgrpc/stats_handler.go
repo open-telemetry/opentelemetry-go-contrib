@@ -338,7 +338,7 @@ func (*config) handleRPC(
 		// fires on every RPC regardless of outcome.
 		if rs.Client {
 			if target, ok := ctx.Value(dialTargetContextKey{}).(string); ok && target != "" {
-				attrs := serverAddrAttrs(target)
+				attrs := serverAddrAttrsFromDialTarget(target)
 				if span.IsRecording() {
 					span.SetAttributes(attrs...)
 				}

@@ -7,7 +7,9 @@ package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.g
 // https://opentelemetry.io/docs/specs/semconv/rpc/
 import (
 	"net"
+	"net/url"
 	"strconv"
+	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -15,6 +17,45 @@ import (
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+// serverAddrAttrsFromDialTarget extracts server address attributes from a raw
+// gRPC dial target, which may carry a scheme and authority before the endpoint:
+//
+//	passthrough:127.0.0.1:7777       → ServerAddress("127.0.0.1"), ServerPort(7777)
+//	passthrough:///127.0.0.1:7777   → ServerAddress("127.0.0.1"), ServerPort(7777)
+//	dns://authority/example.com:443 → ServerAddress("example.com"), ServerPort(443)
+//	unix:///tmp/grpc.sock           → ServerAddress("/tmp/grpc.sock")
+//	myservice:443                   → ServerAddress("myservice"),   ServerPort(443)
+func serverAddrAttrsFromDialTarget(target string) []attribute.KeyValue {
+	// Fast path: confirmed host:port with numeric port — no scheme involved.
+	if h, pStr, err := net.SplitHostPort(target); err == nil {
+		if p, err := strconv.Atoi(pStr); err == nil {
+			return []attribute.KeyValue{
+				semconv.ServerAddress(h),
+				semconv.ServerPort(p),
+			}
+		}
+	}
+	// gRPC URI: scheme://authority/endpoint  → endpoint in Path
+	//           scheme:endpoint              → endpoint in Opaque
+	u, err := url.Parse(target)
+	if err != nil {
+		return []attribute.KeyValue{semconv.ServerAddress(target)}
+	}
+	ep := u.Path
+	if u.Scheme != "unix" && u.Scheme != "unix-abstract" {
+		// Strip the leading "/" added by url.Parse for hierarchical URIs;
+		// preserve it for unix socket paths where the slash is meaningful.
+		ep = strings.TrimPrefix(ep, "/")
+	}
+	if ep == "" {
+		ep = u.Opaque
+	}
+	if ep != "" {
+		return serverAddrAttrs(ep)
+	}
+	return []attribute.KeyValue{semconv.ServerAddress(target)}
+}
 
 // serverAddrAttrs returns the server address attributes for the hostport.
 func serverAddrAttrs(hostport string) []attribute.KeyValue {
