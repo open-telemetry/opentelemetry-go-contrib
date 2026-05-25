@@ -13,10 +13,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"reflect"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,6 +30,8 @@ import (
 	v1 "go.opentelemetry.io/proto/otlp/collector/trace/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/testtls"
 )
 
 func TestTracerProvider(t *testing.T) {
@@ -170,6 +170,7 @@ func TestTracerProviderOptions(t *testing.T) {
 }
 
 func TestSpanProcessor(t *testing.T) {
+	material := testtls.Write(t)
 	consoleExporter, err := stdouttrace.New(
 		stdouttrace.WithPrettyPrint(),
 	)
@@ -379,7 +380,7 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+							Certificate: ptr(material.CACertPath),
 						},
 					},
 				},
@@ -396,7 +397,7 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Certificate: ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -413,8 +414,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:          ptr("localhost:4317"),
 							Compression:       ptr("gzip"),
 							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientCertificate: ptr(material.BadCertPath),
+							ClientKey:         ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -540,7 +541,7 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+							Certificate: ptr(material.CACertPath),
 						},
 					},
 				},
@@ -557,7 +558,7 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:    ptr("localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Certificate: ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -574,8 +575,8 @@ func TestSpanProcessor(t *testing.T) {
 							Endpoint:          ptr("localhost:4317"),
 							Compression:       ptr("gzip"),
 							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientCertificate: ptr(material.BadCertPath),
+							ClientKey:         ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -908,6 +909,7 @@ func TestSampler(t *testing.T) {
 }
 
 func Test_otlpGRPCTraceExporter(t *testing.T) {
+	material := testtls.Write(t)
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLP
@@ -924,7 +926,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Insecure:    ptr(true),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -942,8 +944,8 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				otlpConfig: &OTLP{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
-					Certificate: ptr("testdata/server-certs/server.crt"),
+					Timeout:     ptr(50000),
+					Certificate: ptr(material.CACertPath),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -951,7 +953,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				tlsCreds, err := credentials.NewServerTLSFromFile("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				tlsCreds, err := credentials.NewServerTLSFromFile(material.ServerCertPath, material.ServerKeyPath)
 				if err != nil {
 					return nil, err
 				}
@@ -966,10 +968,10 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				otlpConfig: &OTLP{
 					Protocol:          ptr("grpc"),
 					Compression:       ptr("gzip"),
-					Timeout:           ptr(5000),
-					Certificate:       ptr("testdata/server-certs/server.crt"),
-					ClientKey:         ptr("testdata/client-certs/client.key"),
-					ClientCertificate: ptr("testdata/client-certs/client.crt"),
+					Timeout:           ptr(50000),
+					Certificate:       ptr(material.CACertPath),
+					ClientKey:         ptr(material.ClientKeyPath),
+					ClientCertificate: ptr(material.ClientCertPath),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -977,11 +979,11 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				cert, err := tls.LoadX509KeyPair("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				cert, err := tls.LoadX509KeyPair(material.ServerCertPath, material.ServerKeyPath)
 				if err != nil {
 					return nil, err
 				}
-				caCert, err := os.ReadFile("testdata/ca.crt")
+				caCert, err := os.ReadFile(material.CACertPath)
 				if err != nil {
 					return nil, err
 				}
@@ -999,17 +1001,14 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := net.Listen("tcp4", "localhost:0")
+			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 			require.NoError(t, err)
 
-			// We need to manually construct the endpoint using the port on which the server is listening.
-			//
-			// n.Addr() always returns 127.0.0.1 instead of localhost.
-			// But our certificate is created with CN as 'localhost', not '127.0.0.1'.
-			// So we have to manually form the endpoint as "localhost:<port>".
-			_, port, err := net.SplitHostPort(n.Addr().String())
-			require.NoError(t, err)
-			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
+			scheme := "https"
+			if tt.args.otlpConfig.Insecure != nil && *tt.args.otlpConfig.Insecure {
+				scheme = "http"
+			}
+			tt.args.otlpConfig.Endpoint = ptr(scheme + "://" + n.Addr().String())
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
@@ -1025,9 +1024,7 @@ func Test_otlpGRPCTraceExporter(t *testing.T) {
 				},
 			}
 
-			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.ExportSpans(context.Background(), input.Snapshots())) //nolint:usetesting // required to avoid getting a canceled context.
-			}, 10*time.Second, 1*time.Second)
+			assert.NoError(t, exporter.ExportSpans(t.Context(), input.Snapshots()))
 		})
 	}
 }
@@ -1054,7 +1051,7 @@ func startGRPCTraceCollector(t *testing.T, listener net.Listener, serverOptions 
 	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.GracefulStop()
+		srv.Stop()
 		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			assert.NoError(t, err)
 		}

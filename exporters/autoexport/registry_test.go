@@ -46,18 +46,14 @@ func TestRegistryIsConcurrentSafe(t *testing.T) {
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		assert.ErrorIs(t, r.store(exporterName, factory("stdout")), errDuplicateRegistration)
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		_, err := r.load(t.Context(), exporterName)
 		assert.NoError(t, err, "missing exporter in registry")
-	}()
+	})
 
 	wg.Wait()
 }

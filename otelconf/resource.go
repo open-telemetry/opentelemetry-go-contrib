@@ -12,25 +12,7 @@ import (
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
 
-func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
-	opts := []resource.Option{}
-	for _, d := range detectors {
-		if d.Container != nil {
-			opts = append(opts, resource.WithContainer())
-		}
-		if d.Host != nil {
-			opts = append(opts, resource.WithHost(), resource.WithHostID())
-		}
-		if d.Process != nil {
-			opts = append(opts, resource.WithProcess())
-		}
-		// TODO: implement service:
-		// Waiting on https://github.com/open-telemetry/opentelemetry-go/pull/7642
-	}
-	return opts
-}
-
-func newResource(r *ResourceJson) (*resource.Resource, error) {
+func newResource(r *Resource) (*resource.Resource, error) {
 	if r == nil {
 		return resource.Default(), nil
 	}
@@ -47,10 +29,6 @@ func newResource(r *ResourceJson) (*resource.Resource, error) {
 	opts := []resource.Option{
 		resource.WithAttributes(attrs...),
 		resource.WithSchemaURL(schema),
-	}
-
-	if r.DetectionDevelopment != nil {
-		opts = append(opts, resourceOpts(r.DetectionDevelopment.Detectors)...)
 	}
 
 	return resource.New(context.Background(), opts...)

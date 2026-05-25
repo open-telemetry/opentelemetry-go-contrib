@@ -48,8 +48,31 @@ func tracerProvider(cfg configOptions, res *resource.Resource) (trace.TracerProv
 	if len(errs) > 0 {
 		return noop.NewTracerProvider(), noopShutdown, errors.Join(errs...)
 	}
+
+	if cfg.opentelemetryConfig.TracerProvider.Limits != nil {
+		opts = spanProcessorLimits(opts, *cfg.opentelemetryConfig.TracerProvider.Limits)
+	}
 	tp := sdktrace.NewTracerProvider(opts...)
 	return tp, tp.Shutdown, nil
+}
+
+func spanProcessorLimits(opts []sdktrace.TracerProviderOption, limits SpanLimits) []sdktrace.TracerProviderOption {
+	spanLimits := sdktrace.NewSpanLimits()
+	hasLimits := false
+
+	if limits.AttributeCountLimit != nil {
+		spanLimits.AttributeCountLimit = *limits.AttributeCountLimit
+		hasLimits = true
+	}
+	if limits.AttributeValueLengthLimit != nil {
+		spanLimits.AttributeValueLengthLimit = *limits.AttributeValueLengthLimit
+		hasLimits = true
+	}
+
+	if hasLimits {
+		opts = append(opts, sdktrace.WithRawSpanLimits(spanLimits))
+	}
+	return opts
 }
 
 func parentBasedSampler(s *ParentBasedSampler) (sdktrace.Sampler, error) {
@@ -151,14 +174,6 @@ func spanExporter(ctx context.Context, exporter SpanExporter) (sdktrace.SpanExpo
 			return otlpGRPCSpanExporter(ctx, exporter.OTLPGrpc)
 		}
 	}
-	if exporter.OTLPFileDevelopment != nil {
-		// TODO: implement file exporter https://github.com/open-telemetry/opentelemetry-go/issues/5408
-		return nil, newErrInvalid("otlp_file/development")
-	}
-	if exporter.Zipkin != nil {
-		// TODO: implement zipkin exporter
-		return nil, newErrInvalid("zipkin")
-	}
 
 	if exportersConfigured > 1 {
 		return nil, newErrInvalid("must not specify multiple exporters")
@@ -210,7 +225,7 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLPGrpcExporter) (sd
 			opts = append(opts, otlptracegrpc.WithEndpoint(*otlpConfig.Endpoint))
 		}
 
-		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Insecure != nil && *otlpConfig.Insecure) {
+		if u.Scheme == "http" || (u.Scheme != "https" && otlpConfig.Tls != nil && otlpConfig.Tls.Insecure != nil && *otlpConfig.Tls.Insecure) {
 			opts = append(opts, otlptracegrpc.WithInsecure())
 		}
 	}
@@ -236,8 +251,8 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLPGrpcExporter) (sd
 		opts = append(opts, otlptracegrpc.WithHeaders(headersConfig))
 	}
 
-	if otlpConfig.CertificateFile != nil || otlpConfig.ClientCertificateFile != nil || otlpConfig.ClientKeyFile != nil {
-		tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
+	if otlpConfig.Tls != nil && (otlpConfig.Tls.CaFile != nil || otlpConfig.Tls.CertFile != nil || otlpConfig.Tls.KeyFile != nil) {
+		tlsConfig, err := tls.CreateConfig(otlpConfig.Tls.CaFile, otlpConfig.Tls.CertFile, otlpConfig.Tls.KeyFile)
 		if err != nil {
 			return nil, errors.Join(newErrInvalid("tls configuration"), err)
 		}
@@ -250,6 +265,9 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLPGrpcExporter) (sd
 func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sdktrace.SpanExporter, error) {
 	var opts []otlptracehttp.Option
 
+	if err := validateOTLPHTTPEncoding(otlpConfig.Encoding); err != nil {
+		return nil, err
+	}
 	if otlpConfig.Endpoint != nil {
 		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {
@@ -285,11 +303,13 @@ func otlpHTTPSpanExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sd
 		opts = append(opts, otlptracehttp.WithHeaders(headersConfig))
 	}
 
-	tlsConfig, err := tls.CreateConfig(otlpConfig.CertificateFile, otlpConfig.ClientCertificateFile, otlpConfig.ClientKeyFile)
-	if err != nil {
-		return nil, errors.Join(newErrInvalid("tls configuration"), err)
+	if otlpConfig.Tls != nil {
+		tlsConfig, err := tls.CreateConfig(otlpConfig.Tls.CaFile, otlpConfig.Tls.CertFile, otlpConfig.Tls.KeyFile)
+		if err != nil {
+			return nil, errors.Join(newErrInvalid("tls configuration"), err)
+		}
+		opts = append(opts, otlptracehttp.WithTLSClientConfig(tlsConfig))
 	}
-	opts = append(opts, otlptracehttp.WithTLSClientConfig(tlsConfig))
 
 	return otlptracehttp.New(ctx, opts...)
 }

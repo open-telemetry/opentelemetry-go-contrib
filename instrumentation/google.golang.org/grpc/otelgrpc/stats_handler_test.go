@@ -10,7 +10,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/embedded"
 	"go.opentelemetry.io/otel/propagation"
@@ -296,8 +295,6 @@ func TestNilInstruments(t *testing.T) {
 		h := hIface.(*serverHandler)
 
 		assert.NotPanics(t, func() { h.duration.Record(ctx, 0, "") }, "duration")
-		assert.NotPanics(t, func() { h.inSize.RecordSet(ctx, 0, *attribute.EmptySet()) }, "inSize")
-		assert.NotPanics(t, func() { h.outSize.RecordSet(ctx, 0, *attribute.EmptySet()) }, "outSize")
 	})
 
 	t.Run("ClientHandler", func(t *testing.T) {
@@ -308,8 +305,6 @@ func TestNilInstruments(t *testing.T) {
 		h := hIface.(*clientHandler)
 
 		assert.NotPanics(t, func() { h.duration.Record(ctx, 0, "") }, "duration")
-		assert.NotPanics(t, func() { h.inSize.RecordSet(ctx, 0, *attribute.EmptySet()) }, "inSize")
-		assert.NotPanics(t, func() { h.outSize.RecordSet(ctx, 0, *attribute.EmptySet()) }, "outSize")
 	})
 }
 

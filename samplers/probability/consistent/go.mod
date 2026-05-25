@@ -1,12 +1,12 @@
 module go.opentelemetry.io/contrib/samplers/probability/consistent
 
-go 1.24.0
+go 1.25.0
 
 require (
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/otel v1.40.0
-	go.opentelemetry.io/otel/sdk v1.40.0
-	go.opentelemetry.io/otel/trace v1.40.0
+	go.opentelemetry.io/otel v1.43.1-0.20260521080857-e5bdc311108b
+	go.opentelemetry.io/otel/sdk v1.43.1-0.20260521080857-e5bdc311108b
+	go.opentelemetry.io/otel/trace v1.43.1-0.20260521080857-e5bdc311108b
 )
 
 require (
@@ -17,7 +17,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.40.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
+	go.opentelemetry.io/otel/metric v1.43.1-0.20260521080857-e5bdc311108b // indirect
+	golang.org/x/sys v0.44.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

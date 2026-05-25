@@ -189,10 +189,11 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 }
 
 func (ct *clientTracer) start(hook, spanName string, attrs ...attribute.KeyValue) {
+	if ct.root == nil {
+		ct.root = trace.SpanFromContext(ct.Context)
+	}
+
 	if !ct.useSpans {
-		if ct.root == nil {
-			ct.root = trace.SpanFromContext(ct.Context)
-		}
 		ct.root.AddEvent(hook+".start", trace.WithAttributes(attrs...))
 		return
 	}
@@ -201,11 +202,7 @@ func (ct *clientTracer) start(hook, spanName string, attrs ...attribute.KeyValue
 	defer ct.mtx.Unlock()
 
 	if hookCtx, found := ct.activeHooks[hook]; !found {
-		var sp trace.Span
-		ct.activeHooks[hook], sp = ct.tr.Start(ct.getParentContext(hook), spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
-		if ct.root == nil {
-			ct.root = sp
-		}
+		ct.activeHooks[hook], _ = ct.tr.Start(ct.getParentContext(hook), spanName, trace.WithAttributes(attrs...), trace.WithSpanKind(trace.SpanKindClient))
 	} else {
 		// end was called before start finished, add the start attributes and end the span here
 		span := trace.SpanFromContext(hookCtx)
@@ -306,14 +303,16 @@ func (ct *clientTracer) dnsDone(info httptrace.DNSDoneInfo) {
 }
 
 func (ct *clientTracer) connectStart(network, addr string) {
-	ct.start("http.connect."+addr, "http.connect",
+	ct.start(
+		"http.connect."+addr, "http.connect",
 		HTTPRemoteAddr.String(addr),
 		HTTPConnectionStartNetwork.String(network),
 	)
 }
 
 func (ct *clientTracer) connectDone(network, addr string, err error) {
-	ct.end("http.connect."+addr, err,
+	ct.end(
+		"http.connect."+addr, err,
 		HTTPConnectionDoneAddr.String(addr),
 		HTTPConnectionDoneNetwork.String(network),
 	)

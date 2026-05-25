@@ -13,11 +13,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"reflect"
-	"runtime"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,6 +30,8 @@ import (
 	collogpb "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/testtls"
 )
 
 func TestLoggerProvider(t *testing.T) {
@@ -50,7 +49,7 @@ func TestLoggerProvider(t *testing.T) {
 			name: "error-in-config",
 			cfg: configOptions{
 				opentelemetryConfig: OpenTelemetryConfiguration{
-					LoggerProvider: &LoggerProviderJson{
+					LoggerProvider: &LoggerProvider{
 						Processors: []LogRecordProcessor{
 							{
 								Simple: &SimpleLogRecordProcessor{},
@@ -63,11 +62,29 @@ func TestLoggerProvider(t *testing.T) {
 			wantProvider: noop.NewLoggerProvider(),
 			wantErr:      newErrInvalid("must not specify multiple log processor type"),
 		},
+		{
+			name: "with-limits",
+			cfg: configOptions{
+				opentelemetryConfig: OpenTelemetryConfiguration{
+					LoggerProvider: &LoggerProvider{
+						Limits: &LogRecordLimits{
+							AttributeCountLimit:       ptr(50),
+							AttributeValueLengthLimit: ptr(100),
+						},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			mp, shutdown, err := loggerProvider(tt.cfg, resource.Default())
-			require.Equal(t, tt.wantProvider, mp)
+			lp, shutdown, err := loggerProvider(tt.cfg, resource.Default())
+			if tt.wantProvider != nil {
+				require.Equal(t, tt.wantProvider, lp)
+			} else {
+				require.NotNil(t, lp)
+				require.IsType(t, &sdklog.LoggerProvider{}, lp)
+			}
 			assert.ErrorIs(t, err, tt.wantErr)
 			require.NoError(t, shutdown(t.Context()))
 		})
@@ -76,6 +93,7 @@ func TestLoggerProvider(t *testing.T) {
 
 func TestLogProcessor(t *testing.T) {
 	ctx := t.Context()
+	material := testtls.Write(t)
 
 	otlpHTTPExporter, err := otlploghttp.New(ctx)
 	require.NoError(t, err)
@@ -254,10 +272,12 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "ca.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								CaFile: ptr(material.CACertPath),
+							},
 						},
 					},
 				},
@@ -270,10 +290,12 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								CaFile: ptr(material.BadCertPath),
+							},
 						},
 					},
 				},
@@ -302,11 +324,13 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPGrpc: &OTLPGrpcExporter{
-							Endpoint:              ptr("localhost:4317"),
-							Compression:           ptr("gzip"),
-							Timeout:               ptr(1000),
-							ClientCertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
-							ClientKeyFile:         ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &GrpcTls{
+								KeyFile:  ptr(material.BadCertPath),
+								CertFile: ptr(material.BadCertPath),
+							},
 						},
 					},
 				},
@@ -407,10 +431,12 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "ca.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								CaFile: ptr(material.CACertPath),
+							},
 						},
 					},
 				},
@@ -423,10 +449,12 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:        ptr("localhost:4317"),
-							Compression:     ptr("gzip"),
-							Timeout:         ptr(1000),
-							CertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								CaFile: ptr(material.BadCertPath),
+							},
 						},
 					},
 				},
@@ -439,11 +467,13 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLPHttp: &OTLPHttpExporter{
-							Endpoint:              ptr("localhost:4317"),
-							Compression:           ptr("gzip"),
-							Timeout:               ptr(1000),
-							ClientCertificateFile: ptr(filepath.Join("testdata", "bad_cert.crt")),
-							ClientKeyFile:         ptr(filepath.Join("testdata", "bad_cert.crt")),
+							Endpoint:    ptr("localhost:4317"),
+							Compression: ptr("gzip"),
+							Timeout:     ptr(1000),
+							Tls: &HttpTls{
+								KeyFile:  ptr(material.BadCertPath),
+								CertFile: ptr(material.BadCertPath),
+							},
 						},
 					},
 				},
@@ -598,6 +628,24 @@ func TestLogProcessor(t *testing.T) {
 			wantErrT: newErrInvalid("unsupported compression \"invalid\""),
 		},
 		{
+			name: "batch/otlp-http-invalid-encoding",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					MaxExportBatchSize: ptr(1),
+					ExportTimeout:      ptr(0),
+					MaxQueueSize:       ptr(1),
+					ScheduleDelay:      ptr(0),
+					Exporter: LogRecordExporter{
+						OTLPHttp: &OTLPHttpExporter{
+							Endpoint: ptr("http://localhost:4318"),
+							Encoding: ptr(OTLPHttpEncoding("json")),
+						},
+					},
+				},
+			},
+			wantErrT: newErrInvalid("unsupported encoding \"json\""),
+		},
+		{
 			name: "simple/no-exporter",
 			processor: LogRecordProcessor{
 				Simple: &SimpleLogRecordProcessor{
@@ -621,9 +669,7 @@ func TestLogProcessor(t *testing.T) {
 			name: "simple/otlp_file",
 			processor: LogRecordProcessor{
 				Simple: &SimpleLogRecordProcessor{
-					Exporter: LogRecordExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{},
-					},
+					Exporter: LogRecordExporter{},
 				},
 			},
 			wantErrT: newErrInvalid("otlp_file/development"),
@@ -683,7 +729,7 @@ func TestLoggerProviderOptions(t *testing.T) {
 	defer srv.Close()
 
 	cfg := OpenTelemetryConfiguration{
-		LoggerProvider: &LoggerProviderJson{
+		LoggerProvider: &LoggerProvider{
 			Processors: []LogRecordProcessor{{
 				Simple: &SimpleLogRecordProcessor{
 					Exporter: LogRecordExporter{
@@ -724,11 +770,53 @@ func TestLoggerProviderOptions(t *testing.T) {
 	assert.NotContains(t, buf.String(), "foo")
 }
 
-func Test_otlpGRPCLogExporter(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// TODO (#7446): Fix the flakiness on Windows.
-		t.Skip("Test is flaky on Windows.")
+func TestLogProcessorLimits(t *testing.T) {
+	tests := []struct {
+		name               string
+		limits             LogRecordLimits
+		wantAdditionalOpts int
+	}{
+		{
+			name:               "no-limits",
+			limits:             LogRecordLimits{},
+			wantAdditionalOpts: 0,
+		},
+		{
+			name: "attribute-count-limit-only",
+			limits: LogRecordLimits{
+				AttributeCountLimit: ptr(50),
+			},
+			wantAdditionalOpts: 1,
+		},
+		{
+			name: "attribute-value-length-limit-only",
+			limits: LogRecordLimits{
+				AttributeValueLengthLimit: ptr(100),
+			},
+			wantAdditionalOpts: 1,
+		},
+		{
+			name: "both-limits",
+			limits: LogRecordLimits{
+				AttributeCountLimit:       ptr(50),
+				AttributeValueLengthLimit: ptr(100),
+			},
+			wantAdditionalOpts: 2,
+		},
 	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			initialOpts := []sdklog.LoggerProviderOption{}
+			result := logProcessorLimits(initialOpts, tt.limits)
+
+			assert.Len(t, result, tt.wantAdditionalOpts, "unexpected number of options returned")
+		})
+	}
+}
+
+func Test_otlpGRPCLogExporter(t *testing.T) {
+	material := testtls.Write(t)
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLPGrpcExporter
@@ -744,8 +832,10 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
-					Insecure:    ptr(true),
+					Timeout:     ptr(50000),
+					Tls: &GrpcTls{
+						Insecure: ptr(true),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -760,9 +850,11 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			args: args{
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
-					Compression:     ptr("gzip"),
-					Timeout:         ptr(5000),
-					CertificateFile: ptr("testdata/server-certs/server.crt"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(50000),
+					Tls: &GrpcTls{
+						CaFile: ptr(material.CACertPath),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -770,7 +862,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				tlsCreds, err := credentials.NewServerTLSFromFile("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				tlsCreds, err := credentials.NewServerTLSFromFile(material.ServerCertPath, material.ServerKeyPath)
 				if err != nil {
 					return nil, err
 				}
@@ -783,11 +875,13 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			args: args{
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcExporter{
-					Compression:           ptr("gzip"),
-					Timeout:               ptr(5000),
-					CertificateFile:       ptr("testdata/server-certs/server.crt"),
-					ClientKeyFile:         ptr("testdata/client-certs/client.key"),
-					ClientCertificateFile: ptr("testdata/client-certs/client.crt"),
+					Compression: ptr("gzip"),
+					Timeout:     ptr(50000),
+					Tls: &GrpcTls{
+						CaFile:   ptr(material.CACertPath),
+						KeyFile:  ptr(material.ClientKeyPath),
+						CertFile: ptr(material.ClientCertPath),
+					},
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -795,11 +889,11 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				cert, err := tls.LoadX509KeyPair("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				cert, err := tls.LoadX509KeyPair(material.ServerCertPath, material.ServerKeyPath)
 				if err != nil {
 					return nil, err
 				}
-				caCert, err := os.ReadFile("testdata/ca.crt")
+				caCert, err := os.ReadFile(material.CACertPath)
 				if err != nil {
 					return nil, err
 				}
@@ -817,17 +911,14 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := net.Listen("tcp4", "localhost:0")
+			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 			require.NoError(t, err)
 
-			// We need to manually construct the endpoint using the port on which the server is listening.
-			//
-			// n.Addr() always returns 127.0.0.1 instead of localhost.
-			// But our certificate is created with CN as 'localhost', not '127.0.0.1'.
-			// So we have to manually form the endpoint as "localhost:<port>".
-			_, port, err := net.SplitHostPort(n.Addr().String())
-			require.NoError(t, err)
-			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
+			scheme := "https"
+			if tt.args.otlpConfig.Tls != nil && tt.args.otlpConfig.Tls.Insecure != nil && *tt.args.otlpConfig.Tls.Insecure {
+				scheme = "http"
+			}
+			tt.args.otlpConfig.Endpoint = ptr(scheme + "://" + n.Addr().String())
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
@@ -841,11 +932,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 				Body: log.StringValue("test"),
 			}
 
-			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{ //nolint:usetesting // required to avoid getting a canceled context.
-					logFactory.NewRecord(),
-				}))
-			}, 10*time.Second, 1*time.Second)
+			assert.NoError(t, exporter.Export(t.Context(), []sdklog.Record{logFactory.NewRecord()}))
 		})
 	}
 }
@@ -872,7 +959,7 @@ func startGRPCLogsCollector(t *testing.T, listener net.Listener, serverOptions [
 	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.GracefulStop()
+		srv.Stop()
 		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			assert.NoError(t, err)
 		}

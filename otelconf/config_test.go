@@ -4,6 +4,7 @@
 package otelconf
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -20,16 +21,14 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 	"go.yaml.in/yaml/v3"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/testtls"
 )
 
 func TestUnmarshalPushMetricExporterInvalidData(t *testing.T) {
 	cl := PushMetricExporter{}
 	err := cl.UnmarshalJSON([]byte(`{:2000}`))
 	assert.ErrorIs(t, err, newErrUnmarshal(&PushMetricExporter{}))
-
-	cl = PushMetricExporter{}
-	err = cl.UnmarshalJSON([]byte(`{"console":2000}`))
-	assert.ErrorIs(t, err, newErrUnmarshal(&ConsoleExporter{}))
 
 	cl = PushMetricExporter{}
 	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)
@@ -373,10 +372,10 @@ func TestNewSDK(t *testing.T) {
 			cfg: []ConfigurationOption{
 				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-					TracerProvider: &TracerProviderJson{},
-					MeterProvider:  &MeterProviderJson{},
-					LoggerProvider: &LoggerProviderJson{},
-					Propagator:     &PropagatorJson{},
+					TracerProvider: &TracerProvider{},
+					MeterProvider:  &MeterProvider{},
+					LoggerProvider: &LoggerProvider{},
+					Propagator:     &Propagator{},
 				}),
 			},
 			wantTracerProvider: &sdktrace.TracerProvider{},
@@ -390,9 +389,9 @@ func TestNewSDK(t *testing.T) {
 				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
 					Disabled:       ptr(true),
-					TracerProvider: &TracerProviderJson{},
-					MeterProvider:  &MeterProviderJson{},
-					LoggerProvider: &LoggerProviderJson{},
+					TracerProvider: &TracerProvider{},
+					MeterProvider:  &MeterProvider{},
+					LoggerProvider: &LoggerProvider{},
 				}),
 			},
 			wantTracerProvider: tracenoop.NewTracerProvider(),
@@ -432,566 +431,412 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0.yaml"))
 	_, err = NewSDK(cfg...)
 	require.ErrorIs(t, err, newErrInvalid("otlp_file/development"))
+	// validate that use of deprecated env var returns an error
+	t.Setenv(envVarConfigFileDeprecated, filepath.Join("testdata", "v1.0.0.yaml"))
+	_, err = NewSDK(cfg...)
+	require.ErrorIs(t, err, errDeprecatedEnvVarUsed)
 }
 
-var v10OpenTelemetryConfig = OpenTelemetryConfiguration{
-	Disabled:   ptr(false),
-	FileFormat: "1.0-rc.2",
-	AttributeLimits: &AttributeLimits{
-		AttributeCountLimit:       ptr(128),
-		AttributeValueLengthLimit: ptr(4096),
-	},
-	InstrumentationDevelopment: &InstrumentationJson{
-		Cpp: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Dotnet: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Erlang: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		General: &ExperimentalGeneralInstrumentation{
-			Http: &ExperimentalHttpInstrumentation{
-				Client: &ExperimentalHttpInstrumentationClient{
-					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
-					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
-				},
-				Server: &ExperimentalHttpInstrumentationServer{
-					RequestCapturedHeaders:  []string{"Content-Type", "Accept"},
-					ResponseCapturedHeaders: []string{"Content-Type", "Content-Encoding"},
-				},
-			},
-			Peer: &ExperimentalPeerInstrumentation{
-				ServiceMapping: []ExperimentalPeerInstrumentationServiceMappingElem{
-					{Peer: "1.2.3.4", Service: "FooService"},
-					{Peer: "2.3.4.5", Service: "BarService"},
-				},
-			},
-		},
-		Go: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Java: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Js: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Php: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Python: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Ruby: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Rust: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-		Swift: ExperimentalLanguageSpecificInstrumentation{
-			"example": map[string]any{
-				"property": "value",
-			},
-		},
-	},
-	LogLevel: ptr("info"),
-	LoggerProvider: &LoggerProviderJson{
-		LoggerConfiguratorDevelopment: &ExperimentalLoggerConfigurator{
-			DefaultConfig: &ExperimentalLoggerConfig{
-				Disabled: ptr(true),
-			},
-			Loggers: []ExperimentalLoggerMatcherAndConfig{
-				{
-					Config: &ExperimentalLoggerConfig{
-						Disabled: ptr(false),
-					},
-					Name: ptr("io.opentelemetry.contrib.*"),
-				},
-			},
-		},
-		Limits: &LogRecordLimits{
+func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfiguration {
+	material.CACertPath = filepath.ToSlash(material.CACertPath)
+	material.ClientCertPath = filepath.ToSlash(material.ClientCertPath)
+	material.ClientKeyPath = filepath.ToSlash(material.ClientKeyPath)
+	return &OpenTelemetryConfiguration{
+		Disabled:   ptr(false),
+		FileFormat: "1.0-rc.2",
+		AttributeLimits: &AttributeLimits{
 			AttributeCountLimit:       ptr(128),
 			AttributeValueLengthLimit: ptr(4096),
-		},
-		Processors: []LogRecordProcessor{
-			{
-				Batch: &BatchLogRecordProcessor{
-					ExportTimeout: ptr(30000),
-					Exporter: LogRecordExporter{
-						OTLPHttp: &OTLPHttpExporter{
-							CertificateFile:       ptr("testdata/ca.crt"),
-							ClientCertificateFile: ptr("testdata/client.crt"),
-							ClientKeyFile:         ptr("testdata/client.key"),
-							Compression:           ptr("gzip"),
-							Encoding:              ptr(OTLPHttpEncodingProtobuf),
-							Endpoint:              ptr("http://localhost:4318/v1/logs"),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
-							},
-							HeadersList: ptr("api-key=1234"),
-							Timeout:     ptr(10000),
-						},
-					},
-					MaxExportBatchSize: ptr(512),
-					MaxQueueSize:       ptr(2048),
-					ScheduleDelay:      ptr(5000),
-				},
-			},
-			{
-				Batch: &BatchLogRecordProcessor{
-					Exporter: LogRecordExporter{
-						OTLPGrpc: &OTLPGrpcExporter{
-							CertificateFile:       ptr("testdata/ca.crt"),
-							ClientCertificateFile: ptr("testdata/client.crt"),
-							ClientKeyFile:         ptr("testdata/client.key"),
-							Compression:           ptr("gzip"),
-							Endpoint:              ptr("http://localhost:4317"),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
-							},
-							HeadersList: ptr("api-key=1234"),
-							Timeout:     ptr(10000),
-							Insecure:    ptr(false),
-						},
-					},
-				},
-			},
-			{
-				Batch: &BatchLogRecordProcessor{
-					Exporter: LogRecordExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
-							OutputStream: ptr("file:///var/log/logs.jsonl"),
-						},
-					},
-				},
-			},
-			{
-				Batch: &BatchLogRecordProcessor{
-					Exporter: LogRecordExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
-							OutputStream: ptr("stdout"),
-						},
-					},
-				},
-			},
-			{
-				Simple: &SimpleLogRecordProcessor{
-					Exporter: LogRecordExporter{
-						Console: ConsoleExporter{},
-					},
-				},
-			},
-		},
-	},
-	MeterProvider: &MeterProviderJson{
-		ExemplarFilter: ptr(ExemplarFilter("trace_based")),
-		MeterConfiguratorDevelopment: &ExperimentalMeterConfigurator{
-			DefaultConfig: &ExperimentalMeterConfig{
-				Disabled: ptr(true),
-			},
-			Meters: []ExperimentalMeterMatcherAndConfig{
-				{
-					Config: &ExperimentalMeterConfig{
-						Disabled: ptr(false),
-					},
-					Name: ptr("io.opentelemetry.contrib.*"),
-				},
-			},
-		},
-		Readers: []MetricReader{
-			{
-				Pull: &PullMetricReader{
-					Producers: []MetricProducer{
-						{
-							Opencensus: OpenCensusMetricProducer{},
-						},
-					},
-					CardinalityLimits: &CardinalityLimits{
-						Default:                 ptr(2000),
-						Counter:                 ptr(2000),
-						Gauge:                   ptr(2000),
-						Histogram:               ptr(2000),
-						ObservableCounter:       ptr(2000),
-						ObservableGauge:         ptr(2000),
-						ObservableUpDownCounter: ptr(2000),
-						UpDownCounter:           ptr(2000),
-					},
-					Exporter: PullMetricExporter{
-						PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{
-							Host:                ptr("localhost"),
-							Port:                ptr(9464),
-							TranslationStrategy: ptr(ExperimentalPrometheusMetricExporterTranslationStrategyUnderscoreEscapingWithSuffixes),
-							WithResourceConstantLabels: &IncludeExclude{
-								Excluded: []string{"service.attr1"},
-								Included: []string{"service*"},
-							},
-							WithoutScopeInfo: ptr(false),
-						},
-					},
-				},
-			},
-			{
-				Periodic: &PeriodicMetricReader{
-					Producers: []MetricProducer{
-						{
-							AdditionalProperties: map[string]any{
-								"prometheus": nil,
-							},
-						},
-					},
-					CardinalityLimits: &CardinalityLimits{
-						Default:                 ptr(2000),
-						Counter:                 ptr(2000),
-						Gauge:                   ptr(2000),
-						Histogram:               ptr(2000),
-						ObservableCounter:       ptr(2000),
-						ObservableGauge:         ptr(2000),
-						ObservableUpDownCounter: ptr(2000),
-						UpDownCounter:           ptr(2000),
-					},
-					Exporter: PushMetricExporter{
-						OTLPHttp: &OTLPHttpMetricExporter{
-							CertificateFile:             ptr("testdata/ca.crt"),
-							ClientCertificateFile:       ptr("testdata/client.crt"),
-							ClientKeyFile:               ptr("testdata/client.key"),
-							Compression:                 ptr("gzip"),
-							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
-							Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
-							Encoding:                    ptr(OTLPHttpEncodingProtobuf),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
-							},
-							HeadersList:           ptr("api-key=1234"),
-							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
-							Timeout:               ptr(10000),
-						},
-					},
-					Interval: ptr(60000),
-					Timeout:  ptr(30000),
-				},
-			},
-			{
-				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{
-						OTLPGrpc: &OTLPGrpcMetricExporter{
-							CertificateFile:             ptr("testdata/ca.crt"),
-							ClientCertificateFile:       ptr("testdata/client.crt"),
-							ClientKeyFile:               ptr("testdata/client.key"),
-							Compression:                 ptr("gzip"),
-							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
-							Endpoint:                    ptr("http://localhost:4317"),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
-							},
-							HeadersList:           ptr("api-key=1234"),
-							TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
-							Timeout:               ptr(10000),
-							Insecure:              ptr(false),
-						},
-					},
-				},
-			},
-			{
-				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
-							OutputStream:                ptr("file:///var/log/metrics.jsonl"),
-							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
-							TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
-						},
-					},
-				},
-			},
-			{
-				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileMetricExporter{
-							OutputStream:                ptr("stdout"),
-							DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
-							TemporalityPreference:       ptr(ExporterTemporalityPreferenceDelta),
-						},
-					},
-				},
-			},
-			{
-				Periodic: &PeriodicMetricReader{
-					Exporter: PushMetricExporter{
-						Console: ConsoleExporter{},
-					},
-				},
-			},
-		},
-		Views: []View{
-			{
-				Selector: &ViewSelector{
-					InstrumentName: ptr("my-instrument"),
-					InstrumentType: ptr(InstrumentTypeHistogram),
-					MeterName:      ptr("my-meter"),
-					MeterSchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
-					MeterVersion:   ptr("1.0.0"),
-					Unit:           ptr("ms"),
-				},
-				Stream: &ViewStream{
-					Aggregation: &Aggregation{
-						ExplicitBucketHistogram: &ExplicitBucketHistogramAggregation{
-							Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							RecordMinMax: ptr(true),
-						},
-					},
-					AggregationCardinalityLimit: ptr(2000),
-					AttributeKeys: &IncludeExclude{
-						Included: []string{"key1", "key2"},
-						Excluded: []string{"key3"},
-					},
-					Description: ptr("new_description"),
-					Name:        ptr("new_instrument_name"),
-				},
-			},
-		},
-	},
-	Propagator: &PropagatorJson{
-		Composite: []TextMapPropagator{
-			{
-				Tracecontext: TraceContextPropagator{},
-			},
-			{
-				Baggage: BaggagePropagator{},
-			},
-			{
-				B3: B3Propagator{},
-			},
-			{
-				B3Multi: B3MultiPropagator{},
-			},
-			{
-				Jaeger: JaegerPropagator{},
-			},
-			{
-				Ottrace: OpenTracingPropagator{},
-			},
-		},
-		CompositeList: ptr("tracecontext,baggage,b3,b3multi,jaeger,ottrace,xray"),
-	},
-	Resource: &ResourceJson{
-		Attributes: []AttributeNameValue{
-			{Name: "service.name", Value: "unknown_service"},
-			{Name: "string_key", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "bool_key", Type: &AttributeType{Value: "bool"}, Value: true},
-			{Name: "int_key", Type: &AttributeType{Value: "int"}, Value: 1},
-			{Name: "double_key", Type: &AttributeType{Value: "double"}, Value: 1.1},
-			{Name: "string_array_key", Type: &AttributeType{Value: "string_array"}, Value: []any{"value1", "value2"}},
-			{Name: "bool_array_key", Type: &AttributeType{Value: "bool_array"}, Value: []any{true, false}},
-			{Name: "int_array_key", Type: &AttributeType{Value: "int_array"}, Value: []any{1, 2}},
-			{Name: "double_array_key", Type: &AttributeType{Value: "double_array"}, Value: []any{1.1, 2.2}},
-		},
-		AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
-		DetectionDevelopment: &ExperimentalResourceDetection{
-			Attributes: &IncludeExclude{
-				Excluded: []string{"process.command_args"},
-				Included: []string{"process.*"},
-			},
-			Detectors: []ExperimentalResourceDetector{
-				{Container: ExperimentalContainerResourceDetector{}},
-				{Host: ExperimentalHostResourceDetector{}},
-				{Process: ExperimentalProcessResourceDetector{}},
-				{Service: ExperimentalServiceResourceDetector{}},
-			},
-		},
-	},
-	TracerProvider: &TracerProviderJson{
-		TracerConfiguratorDevelopment: &ExperimentalTracerConfigurator{
-			DefaultConfig: &ExperimentalTracerConfig{
-				Disabled: ptr(true),
-			},
-			Tracers: []ExperimentalTracerMatcherAndConfig{
-				{
-					Config: ptr(ExperimentalTracerConfig{
-						Disabled: ptr(false),
-					}),
-					Name: ptr("io.opentelemetry.contrib.*"),
-				},
-			},
 		},
 
-		Limits: &SpanLimits{
-			AttributeCountLimit:       ptr(128),
-			AttributeValueLengthLimit: ptr(4096),
-			EventCountLimit:           ptr(128),
-			EventAttributeCountLimit:  ptr(128),
-			LinkCountLimit:            ptr(128),
-			LinkAttributeCountLimit:   ptr(128),
-		},
-		Processors: []SpanProcessor{
-			{
-				Batch: &BatchSpanProcessor{
-					ExportTimeout: ptr(30000),
-					Exporter: SpanExporter{
-						OTLPHttp: &OTLPHttpExporter{
-							CertificateFile:       ptr("testdata/ca.crt"),
-							ClientCertificateFile: ptr("testdata/client.crt"),
-							ClientKeyFile:         ptr("testdata/client.key"),
-							Compression:           ptr("gzip"),
-							Encoding:              ptr(OTLPHttpEncodingProtobuf),
-							Endpoint:              ptr("http://localhost:4318/v1/traces"),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
+		LogLevel: ptr(SeverityNumberInfo),
+		LoggerProvider: &LoggerProvider{
+			Limits: &LogRecordLimits{
+				AttributeCountLimit:       ptr(128),
+				AttributeValueLengthLimit: ptr(4096),
+			},
+			Processors: []LogRecordProcessor{
+				{
+					Batch: &BatchLogRecordProcessor{
+						ExportTimeout: ptr(30000),
+						Exporter: LogRecordExporter{
+							OTLPHttp: &OTLPHttpExporter{
+								Tls: &HttpTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+								},
+								Compression: ptr("gzip"),
+								Encoding:    ptr(OTLPHttpEncodingProtobuf),
+								Endpoint:    ptr("http://localhost:4318/v1/logs"),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList: ptr("api-key=1234"),
+								Timeout:     ptr(10000),
 							},
-							HeadersList: ptr("api-key=1234"),
-							Timeout:     ptr(10000),
 						},
+						MaxExportBatchSize: ptr(512),
+						MaxQueueSize:       ptr(2048),
+						ScheduleDelay:      ptr(5000),
 					},
-					MaxExportBatchSize: ptr(512),
-					MaxQueueSize:       ptr(2048),
-					ScheduleDelay:      ptr(5000),
 				},
-			},
-			{
-				Batch: &BatchSpanProcessor{
-					Exporter: SpanExporter{
-						OTLPGrpc: &OTLPGrpcExporter{
-							CertificateFile:       ptr("testdata/ca.crt"),
-							ClientCertificateFile: ptr("testdata/client.crt"),
-							ClientKeyFile:         ptr("testdata/client.key"),
-							Compression:           ptr("gzip"),
-							Endpoint:              ptr("http://localhost:4317"),
-							Headers: []NameStringValuePair{
-								{Name: "api-key", Value: ptr("1234")},
+				{
+					Batch: &BatchLogRecordProcessor{
+						Exporter: LogRecordExporter{
+							OTLPGrpc: &OTLPGrpcExporter{
+								Tls: &GrpcTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+									Insecure: ptr(false),
+								},
+								Compression: ptr("gzip"),
+								Endpoint:    ptr("http://localhost:4317"),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList: ptr("api-key=1234"),
+								Timeout:     ptr(10000),
 							},
-							HeadersList: ptr("api-key=1234"),
-							Timeout:     ptr(10000),
-							Insecure:    ptr(false),
 						},
 					},
 				},
-			},
-			{
-				Batch: &BatchSpanProcessor{
-					Exporter: SpanExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
-							OutputStream: ptr("file:///var/log/traces.jsonl"),
-						},
+				{
+					Batch: &BatchLogRecordProcessor{
+						Exporter: LogRecordExporter{},
 					},
 				},
-			},
-			{
-				Batch: &BatchSpanProcessor{
-					Exporter: SpanExporter{
-						OTLPFileDevelopment: &ExperimentalOTLPFileExporter{
-							OutputStream: ptr("stdout"),
-						},
+				{
+					Batch: &BatchLogRecordProcessor{
+						Exporter: LogRecordExporter{},
 					},
 				},
-			},
-			{
-				Batch: &BatchSpanProcessor{
-					Exporter: SpanExporter{
-						Zipkin: &ZipkinSpanExporter{
-							Endpoint: ptr("http://localhost:9411/api/v2/spans"),
-							Timeout:  ptr(10000),
+				{
+					Simple: &SimpleLogRecordProcessor{
+						Exporter: LogRecordExporter{
+							Console: ConsoleExporter{},
 						},
-					},
-				},
-			},
-			{
-				Simple: &SimpleSpanProcessor{
-					Exporter: SpanExporter{
-						Console: ConsoleExporter{},
 					},
 				},
 			},
 		},
-		Sampler: &Sampler{
-			ParentBased: &ParentBasedSampler{
-				LocalParentNotSampled: &Sampler{
-					AlwaysOff: AlwaysOffSampler{},
+		MeterProvider: &MeterProvider{
+			ExemplarFilter: ptr(ExemplarFilter("trace_based")),
+			Readers: []MetricReader{
+				{
+					Pull: &PullMetricReader{
+						Producers: []MetricProducer{
+							{
+								Opencensus: OpenCensusMetricProducer{},
+							},
+						},
+						CardinalityLimits: &CardinalityLimits{
+							Default:                 ptr(2000),
+							Counter:                 ptr(2000),
+							Gauge:                   ptr(2000),
+							Histogram:               ptr(2000),
+							ObservableCounter:       ptr(2000),
+							ObservableGauge:         ptr(2000),
+							ObservableUpDownCounter: ptr(2000),
+							UpDownCounter:           ptr(2000),
+						},
+						Exporter: PullMetricExporter{},
+					},
 				},
-				LocalParentSampled: &Sampler{
-					AlwaysOn: AlwaysOnSampler{},
+				{
+					Periodic: &PeriodicMetricReader{
+						Producers: []MetricProducer{
+							{
+								AdditionalProperties: map[string]any{
+									"prometheus": nil,
+								},
+							},
+						},
+						CardinalityLimits: &CardinalityLimits{
+							Default:                 ptr(2000),
+							Counter:                 ptr(2000),
+							Gauge:                   ptr(2000),
+							Histogram:               ptr(2000),
+							ObservableCounter:       ptr(2000),
+							ObservableGauge:         ptr(2000),
+							ObservableUpDownCounter: ptr(2000),
+							UpDownCounter:           ptr(2000),
+						},
+						Exporter: PushMetricExporter{
+							OTLPHttp: &OTLPHttpMetricExporter{
+								Tls: &HttpTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+								},
+								Compression:                 ptr("gzip"),
+								DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+								Endpoint:                    ptr("http://localhost:4318/v1/metrics"),
+								Encoding:                    ptr(OTLPHttpEncodingProtobuf),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList:           ptr("api-key=1234"),
+								TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
+								Timeout:               ptr(10000),
+							},
+						},
+						Interval: ptr(60000),
+						Timeout:  ptr(30000),
+					},
 				},
-				RemoteParentNotSampled: &Sampler{
-					AlwaysOff: AlwaysOffSampler{},
+				{
+					Periodic: &PeriodicMetricReader{
+						Exporter: PushMetricExporter{
+							OTLPGrpc: &OTLPGrpcMetricExporter{
+								Tls: &GrpcTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+									Insecure: ptr(false),
+								},
+								Compression:                 ptr("gzip"),
+								DefaultHistogramAggregation: ptr(ExporterDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+								Endpoint:                    ptr("http://localhost:4317"),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList:           ptr("api-key=1234"),
+								TemporalityPreference: ptr(ExporterTemporalityPreferenceDelta),
+								Timeout:               ptr(10000),
+							},
+						},
+					},
 				},
-				RemoteParentSampled: &Sampler{
-					AlwaysOn: AlwaysOnSampler{},
+				{
+					Periodic: &PeriodicMetricReader{
+						Exporter: PushMetricExporter{},
+					},
 				},
-				Root: &Sampler{
-					TraceIDRatioBased: &TraceIDRatioBasedSampler{
-						Ratio: ptr(0.0001),
+				{
+					Periodic: &PeriodicMetricReader{
+						Exporter: PushMetricExporter{},
+					},
+				},
+				{
+					Periodic: &PeriodicMetricReader{
+						Exporter: PushMetricExporter{
+							Console: &ConsoleMetricExporter{},
+						},
+					},
+				},
+			},
+			Views: []View{
+				{
+					Selector: ViewSelector{
+						InstrumentName: ptr("my-instrument"),
+						InstrumentType: ptr(InstrumentTypeHistogram),
+						MeterName:      ptr("my-meter"),
+						MeterSchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
+						MeterVersion:   ptr("1.0.0"),
+						Unit:           ptr("ms"),
+					},
+					Stream: ViewStream{
+						Aggregation: &Aggregation{
+							ExplicitBucketHistogram: &ExplicitBucketHistogramAggregation{
+								Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
+								RecordMinMax: ptr(true),
+							},
+						},
+						AggregationCardinalityLimit: ptr(2000),
+						AttributeKeys: &IncludeExclude{
+							Included: []string{"key1", "key2"},
+							Excluded: []string{"key3"},
+						},
+						Description: ptr("new_description"),
+						Name:        ptr("new_instrument_name"),
 					},
 				},
 			},
 		},
-	},
+		Propagator: &Propagator{
+			Composite: []TextMapPropagator{
+				{
+					Tracecontext: TraceContextPropagator{},
+				},
+				{
+					Baggage: BaggagePropagator{},
+				},
+				{
+					B3: B3Propagator{},
+				},
+				{
+					B3Multi: B3MultiPropagator{},
+				},
+				{
+					Jaeger: JaegerPropagator{},
+				},
+				{
+					Ottrace: OpenTracingPropagator{},
+				},
+			},
+			CompositeList: ptr("tracecontext,baggage,b3,b3multi,jaeger,ottrace,xray"),
+		},
+		Resource: &Resource{
+			Attributes: []AttributeNameValue{
+				{Name: "service.name", Value: "unknown_service"},
+				{Name: "string_key", Type: ptr(AttributeTypeString), Value: "value"},
+				{Name: "bool_key", Type: ptr(AttributeTypeBool), Value: true},
+				{Name: "int_key", Type: ptr(AttributeTypeInt), Value: 1},
+				{Name: "double_key", Type: ptr(AttributeTypeDouble), Value: 1.1},
+				{Name: "string_array_key", Type: ptr(AttributeTypeStringArray), Value: []any{"value1", "value2"}},
+				{Name: "bool_array_key", Type: ptr(AttributeTypeBoolArray), Value: []any{true, false}},
+				{Name: "int_array_key", Type: ptr(AttributeTypeIntArray), Value: []any{1, 2}},
+				{Name: "double_array_key", Type: ptr(AttributeTypeDoubleArray), Value: []any{1.1, 2.2}},
+			},
+			AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
+		},
+		TracerProvider: &TracerProvider{
+			Limits: &SpanLimits{
+				AttributeCountLimit:       ptr(128),
+				AttributeValueLengthLimit: ptr(4096),
+				EventCountLimit:           ptr(128),
+				EventAttributeCountLimit:  ptr(128),
+				LinkCountLimit:            ptr(128),
+				LinkAttributeCountLimit:   ptr(128),
+			},
+			Processors: []SpanProcessor{
+				{
+					Batch: &BatchSpanProcessor{
+						ExportTimeout: ptr(30000),
+						Exporter: SpanExporter{
+							OTLPHttp: &OTLPHttpExporter{
+								Tls: &HttpTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+								},
+								Compression: ptr("gzip"),
+								Encoding:    ptr(OTLPHttpEncodingProtobuf),
+								Endpoint:    ptr("http://localhost:4318/v1/traces"),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList: ptr("api-key=1234"),
+								Timeout:     ptr(10000),
+							},
+						},
+						MaxExportBatchSize: ptr(512),
+						MaxQueueSize:       ptr(2048),
+						ScheduleDelay:      ptr(5000),
+					},
+				},
+				{
+					Batch: &BatchSpanProcessor{
+						Exporter: SpanExporter{
+							OTLPGrpc: &OTLPGrpcExporter{
+								Tls: &GrpcTls{
+									CaFile:   ptr(material.CACertPath),
+									CertFile: ptr(material.ClientCertPath),
+									KeyFile:  ptr(material.ClientKeyPath),
+									Insecure: ptr(false),
+								},
+								Compression: ptr("gzip"),
+								Endpoint:    ptr("http://localhost:4317"),
+								Headers: []NameStringValuePair{
+									{Name: "api-key", Value: ptr("1234")},
+								},
+								HeadersList: ptr("api-key=1234"),
+								Timeout:     ptr(10000),
+							},
+						},
+					},
+				},
+				{
+					Batch: &BatchSpanProcessor{
+						Exporter: SpanExporter{},
+					},
+				},
+				{
+					Batch: &BatchSpanProcessor{
+						Exporter: SpanExporter{},
+					},
+				},
+				{
+					Simple: &SimpleSpanProcessor{
+						Exporter: SpanExporter{
+							Console: ConsoleExporter{},
+						},
+					},
+				},
+			},
+			Sampler: &Sampler{
+				ParentBased: &ParentBasedSampler{
+					LocalParentNotSampled: &Sampler{
+						AlwaysOff: AlwaysOffSampler{},
+					},
+					LocalParentSampled: &Sampler{
+						AlwaysOn: AlwaysOnSampler{},
+					},
+					RemoteParentNotSampled: &Sampler{
+						AlwaysOff: AlwaysOffSampler{},
+					},
+					RemoteParentSampled: &Sampler{
+						AlwaysOn: AlwaysOnSampler{},
+					},
+					Root: &Sampler{
+						TraceIDRatioBased: &TraceIDRatioBasedSampler{
+							Ratio: ptr(0.0001),
+						},
+					},
+				},
+			},
+		},
+	}
 }
 
 var v100OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 	Disabled:   ptr(false),
 	FileFormat: "1.0",
-	LogLevel:   ptr("info"),
+	LogLevel:   ptr(SeverityNumberInfo),
 	AttributeLimits: &AttributeLimits{
 		AttributeCountLimit:       ptr(128),
 		AttributeValueLengthLimit: ptr(4096),
 	},
-	Resource: &ResourceJson{
+	Resource: &Resource{
 		Attributes: []AttributeNameValue{
 			{Name: "service.name", Value: "unknown_service"},
-			{Name: "string_key", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "bool_key", Type: &AttributeType{Value: "bool"}, Value: true},
-			{Name: "int_key", Type: &AttributeType{Value: "int"}, Value: 1},
-			{Name: "double_key", Type: &AttributeType{Value: "double"}, Value: 1.1},
-			{Name: "string_array_key", Type: &AttributeType{Value: "string_array"}, Value: []any{"value1", "value2"}},
-			{Name: "bool_array_key", Type: &AttributeType{Value: "bool_array"}, Value: []any{true, false}},
-			{Name: "int_array_key", Type: &AttributeType{Value: "int_array"}, Value: []any{1, 2}},
-			{Name: "double_array_key", Type: &AttributeType{Value: "double_array"}, Value: []any{1.1, 2.2}},
-			{Name: "string_value", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "bool_value", Type: &AttributeType{Value: "bool"}, Value: true},
-			{Name: "int_value", Type: &AttributeType{Value: "int"}, Value: 1},
-			{Name: "float_value", Type: &AttributeType{Value: "double"}, Value: 1.1},
-			{Name: "hex_value", Type: &AttributeType{Value: "int"}, Value: int(48879)},
-			{Name: "quoted_string_value", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "quoted_bool_value", Type: &AttributeType{Value: "string"}, Value: "true"},
-			{Name: "quoted_int_value", Type: &AttributeType{Value: "string"}, Value: "1"},
-			{Name: "quoted_float_value", Type: &AttributeType{Value: "string"}, Value: "1.1"},
-			{Name: "quoted_hex_value", Type: &AttributeType{Value: "string"}, Value: "0xbeef"},
-			{Name: "alternative_env_syntax", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "invalid_map_value", Type: &AttributeType{Value: "string"}, Value: "value\nkey:value"},
-			{Name: "multiple_references_inject", Type: &AttributeType{Value: "string"}, Value: "foo value 1.1"},
-			{Name: "undefined_key", Type: &AttributeType{Value: "string"}, Value: nil},
-			{Name: "undefined_key_fallback", Type: &AttributeType{Value: "string"}, Value: "fallback"},
-			{Name: "env_var_in_key", Type: &AttributeType{Value: "string"}, Value: "value"},
-			{Name: "replace_me", Type: &AttributeType{Value: "string"}, Value: "${DO_NOT_REPLACE_ME}"},
-			{Name: "undefined_defaults_to_var", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE}"},
-			{Name: "escaped_does_not_substitute", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE}"},
-			{Name: "escaped_does_not_substitute_fallback", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE:-fallback}"},
-			{Name: "escaped_and_substituted_fallback", Type: &AttributeType{Value: "string"}, Value: "${STRING_VALUE:-value}"},
-			{Name: "escaped_and_substituted", Type: &AttributeType{Value: "string"}, Value: "$value"},
-			{Name: "multiple_escaped_and_not_substituted", Type: &AttributeType{Value: "string"}, Value: "$${STRING_VALUE}"},
-			{Name: "undefined_key_with_escape_sequence_in_fallback", Type: &AttributeType{Value: "string"}, Value: "${UNDEFINED_KEY}"},
-			{Name: "value_with_escape", Type: &AttributeType{Value: "string"}, Value: "value$$"},
-			{Name: "escape_sequence", Type: &AttributeType{Value: "string"}, Value: "a $ b"},
-			{Name: "no_escape_sequence", Type: &AttributeType{Value: "string"}, Value: "a $ b"},
+			{Name: "string_key", Type: ptr(AttributeTypeString), Value: "value"},
+			{Name: "bool_key", Type: ptr(AttributeTypeBool), Value: true},
+			{Name: "int_key", Type: ptr(AttributeTypeInt), Value: 1},
+			{Name: "double_key", Type: ptr(AttributeTypeDouble), Value: 1.1},
+			{Name: "string_array_key", Type: ptr(AttributeTypeStringArray), Value: []any{"value1", "value2"}},
+			{Name: "bool_array_key", Type: ptr(AttributeTypeBoolArray), Value: []any{true, false}},
+			{Name: "int_array_key", Type: ptr(AttributeTypeIntArray), Value: []any{1, 2}},
+			{Name: "double_array_key", Type: ptr(AttributeTypeDoubleArray), Value: []any{1.1, 2.2}},
+			{Name: "string_value", Type: ptr(AttributeTypeString), Value: "value"},
+			{Name: "bool_value", Type: ptr(AttributeTypeBool), Value: true},
+			{Name: "int_value", Type: ptr(AttributeTypeInt), Value: 1},
+			{Name: "float_value", Type: ptr(AttributeTypeDouble), Value: 1.1},
+			{Name: "hex_value", Type: ptr(AttributeTypeInt), Value: int(48879)},
+			{Name: "quoted_string_value", Type: ptr(AttributeTypeString), Value: "value"},
+			{Name: "quoted_bool_value", Type: ptr(AttributeTypeString), Value: "true"},
+			{Name: "quoted_int_value", Type: ptr(AttributeTypeString), Value: "1"},
+			{Name: "quoted_float_value", Type: ptr(AttributeTypeString), Value: "1.1"},
+			{Name: "quoted_hex_value", Type: ptr(AttributeTypeString), Value: "0xbeef"},
+			{Name: "alternative_env_syntax", Type: ptr(AttributeTypeString), Value: "value"},
+			{Name: "invalid_map_value", Type: ptr(AttributeTypeString), Value: "value\nkey:value"},
+			{Name: "multiple_references_inject", Type: ptr(AttributeTypeString), Value: "foo value 1.1"},
+			{Name: "undefined_key", Type: ptr(AttributeTypeString), Value: nil},
+			{Name: "undefined_key_fallback", Type: ptr(AttributeTypeString), Value: "fallback"},
+			{Name: "env_var_in_key", Type: ptr(AttributeTypeString), Value: "value"},
+			{Name: "replace_me", Type: ptr(AttributeTypeString), Value: "${DO_NOT_REPLACE_ME}"},
+			{Name: "undefined_defaults_to_var", Type: ptr(AttributeTypeString), Value: "${STRING_VALUE}"},
+			{Name: "escaped_does_not_substitute", Type: ptr(AttributeTypeString), Value: "${STRING_VALUE}"},
+			{Name: "escaped_does_not_substitute_fallback", Type: ptr(AttributeTypeString), Value: "${STRING_VALUE:-fallback}"},
+			{Name: "escaped_and_substituted_fallback", Type: ptr(AttributeTypeString), Value: "${STRING_VALUE:-value}"},
+			{Name: "escaped_and_substituted", Type: ptr(AttributeTypeString), Value: "$value"},
+			{Name: "multiple_escaped_and_not_substituted", Type: ptr(AttributeTypeString), Value: "$${STRING_VALUE}"},
+			{Name: "undefined_key_with_escape_sequence_in_fallback", Type: ptr(AttributeTypeString), Value: "${UNDEFINED_KEY}"},
+			{Name: "value_with_escape", Type: ptr(AttributeTypeString), Value: "value$$"},
+			{Name: "escape_sequence", Type: ptr(AttributeTypeString), Value: "a $ b"},
+			{Name: "no_escape_sequence", Type: ptr(AttributeTypeString), Value: "a $ b"},
 		},
 		AttributesList: ptr("service.namespace=my-namespace,service.version=1.0.0"),
 		// Detectors: &Detectors{
@@ -1005,6 +850,8 @@ var v100OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 }
 
 func TestParseFiles(t *testing.T) {
+	material := testtls.Write(t)
+
 	tests := []struct {
 		name     string
 		input    string
@@ -1038,8 +885,15 @@ func TestParseFiles(t *testing.T) {
 		{
 			name:     "valid v1.0.0 config",
 			input:    "v1.0.0",
-			wantType: &v10OpenTelemetryConfig,
+			wantType: newV10OpenTelemetryConfig(material),
 		},
+	}
+
+	replaceCertPaths := func(b []byte) []byte {
+		b = bytes.ReplaceAll(b, []byte("<CA_CERT>"), []byte(filepath.ToSlash(material.CACertPath)))
+		b = bytes.ReplaceAll(b, []byte("<CLIENT_CERT>"), []byte(filepath.ToSlash(material.ClientCertPath)))
+		b = bytes.ReplaceAll(b, []byte("<CLIENT_KEY>"), []byte(filepath.ToSlash(material.ClientKeyPath)))
+		return b
 	}
 
 	for _, tt := range tests {
@@ -1047,7 +901,7 @@ func TestParseFiles(t *testing.T) {
 			b, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.yaml", tt.input)))
 			require.NoError(t, err)
 
-			got, err := ParseYAML(b)
+			got, err := ParseYAML(replaceCertPaths(b))
 			require.ErrorIs(t, err, tt.wantErr)
 			if tt.wantErr == nil {
 				assert.Equal(t, tt.wantType, got)
@@ -1058,7 +912,7 @@ func TestParseFiles(t *testing.T) {
 			require.NoError(t, err)
 
 			var got OpenTelemetryConfiguration
-			err = json.Unmarshal(b, &got)
+			err = json.Unmarshal(replaceCertPaths(b), &got)
 			require.ErrorIs(t, err, tt.wantErr)
 			assert.Equal(t, tt.wantType, &got)
 		})
@@ -1080,7 +934,7 @@ func TestUnmarshalOpenTelemetryConfiguration(t *testing.T) {
 			wantType: OpenTelemetryConfiguration{
 				Disabled:   ptr(false),
 				FileFormat: "1.0",
-				LogLevel:   ptr("info"),
+				LogLevel:   ptr(SeverityNumberInfo),
 			},
 		},
 		{
@@ -1117,12 +971,6 @@ func TestUnmarshalOpenTelemetryConfiguration(t *testing.T) {
 			name:       "attribute_limits invalid",
 			jsonConfig: []byte(`{"attribute_limits":[], "file_format": "1.0"}`),
 			yamlConfig: []byte("attribute_limits: []\nfile_format: 1.0"),
-			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
-		},
-		{
-			name:       "instrumentation invalid",
-			jsonConfig: []byte(`{"instrumentation/development":[], "file_format": "1.0"}`),
-			yamlConfig: []byte("instrumentation/development: []\nfile_format: 1.0"),
 			wantErr:    newErrUnmarshal(&OpenTelemetryConfiguration{}),
 		},
 		{
@@ -1304,31 +1152,31 @@ func TestUnmarshalPeriodicMetricReader(t *testing.T) {
 			name:         "valid with null console exporter",
 			jsonConfig:   []byte(`{"exporter":{"console":null}}`),
 			yamlConfig:   []byte("exporter:\n  console:\n"),
-			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
+			wantExporter: PushMetricExporter{Console: &ConsoleMetricExporter{}},
 		},
 		{
 			name:         "valid with console exporter",
 			jsonConfig:   []byte(`{"exporter":{"console":{}}}`),
 			yamlConfig:   []byte("exporter:\n  console: {}"),
-			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
+			wantExporter: PushMetricExporter{Console: &ConsoleMetricExporter{}},
 		},
 		{
 			name:         "valid with all fields positive",
 			jsonConfig:   []byte(`{"exporter":{"console":{}},"timeout":5000,"interval":1000}`),
 			yamlConfig:   []byte("exporter:\n  console: {}\ntimeout: 5000\ninterval: 1000"),
-			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
+			wantExporter: PushMetricExporter{Console: &ConsoleMetricExporter{}},
 		},
 		{
 			name:         "valid with zero timeout",
 			jsonConfig:   []byte(`{"exporter":{"console":{}},"timeout":0}`),
 			yamlConfig:   []byte("exporter:\n  console: {}\ntimeout: 0"),
-			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
+			wantExporter: PushMetricExporter{Console: &ConsoleMetricExporter{}},
 		},
 		{
 			name:         "valid with zero interval",
 			jsonConfig:   []byte(`{"exporter":{"console":{}},"interval":0}`),
 			yamlConfig:   []byte("exporter:\n  console: {}\ninterval: 0"),
-			wantExporter: PushMetricExporter{Console: ConsoleExporter{}},
+			wantExporter: PushMetricExporter{Console: &ConsoleMetricExporter{}},
 		},
 		{
 			name:       "missing required exporter field",
@@ -1883,59 +1731,6 @@ func TestUnmarshalOTLPGrpcMetricExporter(t *testing.T) {
 	}
 }
 
-func TestUnmarshalZipkinSpanExporter(t *testing.T) {
-	for _, tt := range []struct {
-		name         string
-		yamlConfig   []byte
-		jsonConfig   []byte
-		wantErrT     error
-		wantExporter ZipkinSpanExporter
-	}{
-		{
-			name:         "valid with exporter",
-			jsonConfig:   []byte(`{"endpoint":"localhost:9000"}`),
-			yamlConfig:   []byte("endpoint: localhost:9000\n"),
-			wantExporter: ZipkinSpanExporter{Endpoint: ptr("localhost:9000")},
-		},
-		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&ZipkinSpanExporter{}, "endpoint"),
-		},
-		{
-			name:         "valid with zero timeout",
-			jsonConfig:   []byte(`{"endpoint":"localhost:9000", "timeout":0}`),
-			yamlConfig:   []byte("endpoint: localhost:9000\ntimeout: 0"),
-			wantExporter: ZipkinSpanExporter{Endpoint: ptr("localhost:9000"), Timeout: ptr(0)},
-		},
-		{
-			name:       "invalid data",
-			jsonConfig: []byte(`{:2000}`),
-			yamlConfig: []byte("endpoint: localhost:9000\ntimeout: !!str str"),
-			wantErrT:   newErrUnmarshal(&ZipkinSpanExporter{}),
-		},
-		{
-			name:       "invalid timeout negative",
-			jsonConfig: []byte(`{"endpoint":"localhost:9000", "timeout":-1}`),
-			yamlConfig: []byte("endpoint: localhost:9000\ntimeout: -1"),
-			wantErrT:   newErrGreaterOrEqualZero("timeout"),
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			cl := ZipkinSpanExporter{}
-			err := cl.UnmarshalJSON(tt.jsonConfig)
-			assert.ErrorIs(t, err, tt.wantErrT)
-			assert.Equal(t, tt.wantExporter, cl)
-
-			cl = ZipkinSpanExporter{}
-			err = yaml.Unmarshal(tt.yamlConfig, &cl)
-			assert.ErrorIs(t, err, tt.wantErrT)
-			assert.Equal(t, tt.wantExporter, cl)
-		})
-	}
-}
-
 func TestUnmarshalAttributeNameValueType(t *testing.T) {
 	for _, tt := range []struct {
 		name                   string
@@ -1969,7 +1764,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: "test-val",
-				Type:  &AttributeType{Value: "string"},
+				Type:  ptr(AttributeTypeString),
 			},
 		},
 		{
@@ -1979,7 +1774,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: []any{"test-val", "test-val-2"},
-				Type:  &AttributeType{Value: "string_array"},
+				Type:  ptr(AttributeTypeStringArray),
 			},
 		},
 		{
@@ -1989,7 +1784,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: true,
-				Type:  &AttributeType{Value: "bool"},
+				Type:  ptr(AttributeTypeBool),
 			},
 		},
 		{
@@ -1999,7 +1794,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: []any{"test-val", "test-val-2"},
-				Type:  &AttributeType{Value: "string_array"},
+				Type:  ptr(AttributeTypeStringArray),
 			},
 		},
 		{
@@ -2009,7 +1804,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: int(1),
-				Type:  &AttributeType{Value: "int"},
+				Type:  ptr(AttributeTypeInt),
 			},
 		},
 		{
@@ -2019,7 +1814,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: []any{1, 2},
-				Type:  &AttributeType{Value: "int_array"},
+				Type:  ptr(AttributeTypeIntArray),
 			},
 		},
 		{
@@ -2029,7 +1824,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: float64(1),
-				Type:  &AttributeType{Value: "double"},
+				Type:  ptr(AttributeTypeDouble),
 			},
 		},
 		{
@@ -2039,7 +1834,7 @@ func TestUnmarshalAttributeNameValueType(t *testing.T) {
 			wantAttributeNameValue: AttributeNameValue{
 				Name:  "test",
 				Value: []any{float64(1), float64(2)},
-				Type:  &AttributeType{Value: "double_array"},
+				Type:  ptr(AttributeTypeDoubleArray),
 			},
 		},
 		{
@@ -2167,68 +1962,6 @@ func TestUnmarshalInstrumentType(t *testing.T) {
 	}
 }
 
-func TestUnmarshalExperimentalPeerInstrumentationServiceMappingElemType(t *testing.T) {
-	for _, tt := range []struct {
-		name                                                  string
-		yamlConfig                                            []byte
-		jsonConfig                                            []byte
-		wantErrT                                              error
-		wantExperimentalPeerInstrumentationServiceMappingElem ExperimentalPeerInstrumentationServiceMappingElem
-	}{
-		{
-			name:       "invalid data",
-			jsonConfig: []byte(`{:2000}`),
-			yamlConfig: []byte("peer: []\nservice: true"),
-			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
-		},
-		{
-			name:       "missing required peer field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&ExperimentalPeerInstrumentationServiceMappingElem{}, "peer"),
-		},
-		{
-			name:       "missing required service field",
-			jsonConfig: []byte(`{"peer":"test"}`),
-			yamlConfig: []byte("peer: test"),
-			wantErrT:   newErrRequired(&ExperimentalPeerInstrumentationServiceMappingElem{}, "service"),
-		},
-		{
-			name:       "invalid string_array peer",
-			jsonConfig: []byte(`{"peer":[], "service": ["test-val", "test-val-2"], "type": "string_array"}`),
-			yamlConfig: []byte("peer: []\nservice: [test-val, test-val-2]\ntype: string_array\n"),
-			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
-		},
-		{
-			name:       "valid string service",
-			jsonConfig: []byte(`{"peer":"test", "service": "test-val"}`),
-			yamlConfig: []byte("peer: test\nservice: test-val"),
-			wantExperimentalPeerInstrumentationServiceMappingElem: ExperimentalPeerInstrumentationServiceMappingElem{
-				Peer:    "test",
-				Service: "test-val",
-			},
-		},
-		{
-			name:       "invalid string_array service",
-			jsonConfig: []byte(`{"peer":"test", "service": ["test-val", "test-val-2"], "type": "string_array"}`),
-			yamlConfig: []byte("peer: test\nservice: [test-val, test-val-2]\ntype: string_array\n"),
-			wantErrT:   newErrUnmarshal(&ExperimentalPeerInstrumentationServiceMappingElem{}),
-		},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			val := ExperimentalPeerInstrumentationServiceMappingElem{}
-			err := val.UnmarshalJSON(tt.jsonConfig)
-			assert.ErrorIs(t, err, tt.wantErrT)
-			assert.Equal(t, tt.wantExperimentalPeerInstrumentationServiceMappingElem, val)
-
-			val = ExperimentalPeerInstrumentationServiceMappingElem{}
-			err = yaml.Unmarshal(tt.yamlConfig, &val)
-			assert.ErrorIs(t, err, tt.wantErrT)
-			assert.Equal(t, tt.wantExperimentalPeerInstrumentationServiceMappingElem, val)
-		})
-	}
-}
-
 func TestUnmarshalExporterDefaultHistogramAggregation(t *testing.T) {
 	var exporterDefaultHistogramAggregation ExporterDefaultHistogramAggregation
 	for _, tt := range []struct {
@@ -2283,19 +2016,13 @@ func TestUnmarshalPullMetricReader(t *testing.T) {
 			name:         "valid with proemtheus exporter",
 			jsonConfig:   []byte(`{"exporter":{"prometheus/development":{}}}`),
 			yamlConfig:   []byte("exporter:\n  prometheus/development: {}"),
-			wantExporter: PullMetricExporter{PrometheusDevelopment: &ExperimentalPrometheusMetricExporter{}},
+			wantExporter: PullMetricExporter{},
 		},
 		{
 			name:       "missing required exporter field",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
 			wantErrT:   newErrRequired(&PullMetricReader{}, "exporter"),
-		},
-		{
-			name:       "invalid data",
-			jsonConfig: []byte(`{:2000}`),
-			yamlConfig: []byte("exporter:\n  prometheus/development: []"),
-			wantErrT:   newErrUnmarshal(&PullMetricReader{}),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -2318,114 +2045,28 @@ func TestUnmarshalResourceJson(t *testing.T) {
 		yamlConfig   []byte
 		jsonConfig   []byte
 		wantErrT     error
-		wantResource ResourceJson
+		wantResource Resource
 	}{
 		{
-			name:       "valid with all detectors",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - container:\n    - host:\n    - process:\n    - service:"),
-			wantResource: ResourceJson{
-				DetectionDevelopment: &ExperimentalResourceDetection{
-					Detectors: []ExperimentalResourceDetector{
-						{
-							Container: ExperimentalContainerResourceDetector{},
-						},
-						{
-							Host: ExperimentalHostResourceDetector{},
-						},
-						{
-							Process: ExperimentalProcessResourceDetector{},
-						},
-						{
-							Service: ExperimentalServiceResourceDetector{},
-						},
-					},
-				},
-			},
+			name:         "valid with all detectors",
+			jsonConfig:   []byte(`{"detection/development": {"detectors": [{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
+			yamlConfig:   []byte("detection/development:\n  detectors:\n    - container:\n    - host:\n    - process:\n    - service:"),
+			wantResource: Resource{},
 		},
 		{
-			name:       "valid non-nil with all detectors",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
-			wantResource: ResourceJson{
-				DetectionDevelopment: &ExperimentalResourceDetection{
-					Detectors: []ExperimentalResourceDetector{
-						{
-							Container: ExperimentalContainerResourceDetector{},
-						},
-						{
-							Host: ExperimentalHostResourceDetector{},
-						},
-						{
-							Process: ExperimentalProcessResourceDetector{},
-						},
-						{
-							Service: ExperimentalServiceResourceDetector{},
-						},
-					},
-				},
-			},
-		},
-		{
-			name:       "invalid container detector",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": 1}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - container: 1"),
-			wantResource: ResourceJson{
-				DetectionDevelopment: &ExperimentalResourceDetection{
-					Detectors: []ExperimentalResourceDetector{
-						{},
-					},
-				},
-			},
-			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
-		},
-		{
-			name:       "invalid host detector",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"host": 1}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - host: 1"),
-			wantResource: ResourceJson{
-				DetectionDevelopment: &ExperimentalResourceDetection{
-					Detectors: []ExperimentalResourceDetector{
-						{},
-					},
-				},
-			},
-			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
-		},
-		{
-			name:       "invalid service detector",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"service": 1}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - service: 1"),
-			wantResource: ResourceJson{
-				DetectionDevelopment: &ExperimentalResourceDetection{
-					Detectors: []ExperimentalResourceDetector{
-						{},
-					},
-				},
-			},
-			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
-		},
-		{
-			name:       "invalid process detector",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"process": 1}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - process: 1"),
-			wantResource: ResourceJson{
-				DetectionDevelopment: &ExperimentalResourceDetection{
-					Detectors: []ExperimentalResourceDetector{
-						{},
-					},
-				},
-			},
-			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
+			name:         "valid non-nil with all detectors",
+			jsonConfig:   []byte(`{"detection/development": {"detectors": [{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
+			yamlConfig:   []byte("detection/development:\n  detectors:\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
+			wantResource: Resource{},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			r := ResourceJson{}
+			r := Resource{}
 			err := json.Unmarshal(tt.jsonConfig, &r)
 			assert.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantResource, r)
 
-			r = ResourceJson{}
+			r = Resource{}
 			err = yaml.Unmarshal(tt.yamlConfig, &r)
 			assert.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantResource, r)
