@@ -38,7 +38,7 @@ func TestRequestBodyWrapper(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	r := httptest.NewRequest("POST", "/user/123", strings.NewReader(`{"name":"John Doe","age":30}`))
+	r := httptest.NewRequestWithContext(t.Context(), "POST", "/user/123", strings.NewReader(`{"name":"John Doe","age":30}`))
 	r = r.WithContext(trace.ContextWithRemoteSpanContext(t.Context(), sc))
 	w := httptest.NewRecorder()
 
