@@ -8,7 +8,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
 func TestServerAddrAttrsFromCanonicalTarget(t *testing.T) {
@@ -23,38 +23,38 @@ func TestServerAddrAttrsFromCanonicalTarget(t *testing.T) {
 			canonicalTarget: "passthrough:///127.0.0.1:7777",
 			want:            []attribute.KeyValue{semconv.ServerAddress("127.0.0.1"), semconv.ServerPort(7777)},
 		},
-		// dns scheme — empty authority.
+		// dns scheme: empty authority.
 		{
 			name:            "dns empty authority",
 			canonicalTarget: "dns:///example.com:443",
 			want:            []attribute.KeyValue{semconv.ServerAddress("example.com"), semconv.ServerPort(443)},
 		},
-		// dns scheme — with authority.
+		// dns scheme: with authority.
 		{
 			name:            "dns with authority",
 			canonicalTarget: "dns://ns.example.com/example.com:443",
 			want:            []attribute.KeyValue{semconv.ServerAddress("example.com"), semconv.ServerPort(443)},
 		},
-		// dns scheme — plain host:port normalized by gRPC (e.g. "myservice:443" → "dns:///myservice:443").
+		// dns scheme: plain host:port normalized by gRPC (e.g. "myservice:443" → "dns:///myservice:443").
 		{
 			name:            "dns normalized host:port",
 			canonicalTarget: "dns:///myservice:443",
 			want:            []attribute.KeyValue{semconv.ServerAddress("myservice"), semconv.ServerPort(443)},
 		},
-		// dns scheme — named port, non-numeric port omitted from attributes.
+		// dns scheme: named port, non-numeric port omitted from attributes.
 		{
 			name:            "dns named port",
 			canonicalTarget: "dns:///svc:https",
 			want:            []attribute.KeyValue{semconv.ServerAddress("svc")},
 		},
-		// xds scheme — requires google.golang.org/grpc/xds to be imported in the
+		// xds scheme: requires google.golang.org/grpc/xds to be imported in the
 		// client binary; without it grpc.NewClient produces "dns:///xds:///..." instead.
 		{
 			name:            "xds",
 			canonicalTarget: "xds:///my-service:50051",
 			want:            []attribute.KeyValue{semconv.ServerAddress("my-service"), semconv.ServerPort(50051)},
 		},
-		// Unix socket — absolute path, leading slash preserved.
+		// Unix socket: absolute path, leading slash preserved.
 		{
 			name:            "unix absolute path",
 			canonicalTarget: "unix:///tmp/grpc.sock",
@@ -66,19 +66,19 @@ func TestServerAddrAttrsFromCanonicalTarget(t *testing.T) {
 			canonicalTarget: "unix-abstract:///grpc.sock",
 			want:            []attribute.KeyValue{semconv.ServerAddress("/grpc.sock")},
 		},
-		// passthrough bufconn — non-address endpoint, best-effort.
+		// passthrough bufconn: non-address endpoint, best-effort.
 		{
 			name:            "passthrough bufconn",
 			canonicalTarget: "passthrough:///bufnet",
 			want:            []attribute.KeyValue{semconv.ServerAddress("bufnet")},
 		},
-		// IPv6 — dns scheme.
+		// IPv6: dns scheme.
 		{
 			name:            "ipv6 dns",
 			canonicalTarget: "dns:///[::1]:8080",
 			want:            []attribute.KeyValue{semconv.ServerAddress("::1"), semconv.ServerPort(8080)},
 		},
-		// IPv6 — passthrough scheme.
+		// IPv6: passthrough scheme.
 		{
 			name:            "ipv6 passthrough",
 			canonicalTarget: "passthrough:///[::1]:8080",

@@ -27,7 +27,7 @@ import (
 //	dns://authority/example.com:443 → ServerAddress("example.com"), ServerPort(443)
 //	unix:///tmp/grpc.sock           → ServerAddress("/tmp/grpc.sock")
 func serverAddrAttrsFromCanonicalTarget(target string) []attribute.KeyValue {
-	// Fast path: confirmed host:port with numeric port — no scheme involved.
+	// Fast path: confirmed host:port with numeric port, no scheme involved.
 	if h, pStr, err := net.SplitHostPort(target); err == nil {
 		if p, err := strconv.Atoi(pStr); err == nil {
 			return []attribute.KeyValue{
