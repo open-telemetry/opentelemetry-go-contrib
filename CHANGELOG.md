@@ -13,6 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `error.type` attribute to `http.client.request.duration` for transport failures in `otelhttp`. (#8801)
 - Add examples for prometheus compatibility document. (#8716)
 - Add `Resource` method to `SDK` in `go.opentelemetry.io/contrib/otelconf/x` to expose the resolved SDK resource from declarative configuration. (#8912)
+- Add support for the `aws.ecs` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#8915)
 - Add `go.opentelemetry.io/contrib/detectors/hetzner` — a new resource detector for Hetzner Cloud servers, ported from `processor/resourcedetectionprocessor/internal/hetzner` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `cloud.availability_zone`, `host.id`, and `host.name`. (#8962)
 
 ### Changed
