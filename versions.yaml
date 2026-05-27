@@ -71,6 +71,7 @@ module-sets:
     version: v0.16.0
     modules:
       - go.opentelemetry.io/contrib/processors/baggagecopy
+      - go.opentelemetry.io/contrib/processors/spaneventbridge
       - go.opentelemetry.io/contrib/processors/minsev
   experimental-detectors:
     version: v0.15.0

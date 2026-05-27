@@ -60,6 +60,7 @@ instrumentation/runtime/                                                @open-te
 otelconf/                                                               @open-telemetry/go-approvers @pellared @codeboten
 
 processors/baggagecopy                                                  @open-telemetry/go-approvers @codeboten @MikeGoldsmith
+processors/spaneventbridge                                              @open-telemetry/go-approvers @pellared
 processors/minsev                                                       @open-telemetry/go-approvers @MrAlias
 
 propagators/autoprop/                                                   @open-telemetry/go-approvers @MrAlias
