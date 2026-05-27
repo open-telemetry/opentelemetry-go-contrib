@@ -5,8 +5,8 @@ go 1.25.0
 require (
 	github.com/shirou/gopsutil/v4 v4.26.4
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/otel v1.43.1-0.20260522060909-fef000a7cc74
-	go.opentelemetry.io/otel/metric v1.43.1-0.20260521080857-e5bdc311108b
+	go.opentelemetry.io/otel v1.44.0
+	go.opentelemetry.io/otel/metric v1.44.0
 	go.opentelemetry.io/otel/sdk v1.43.1-0.20260521080857-e5bdc311108b
 	go.opentelemetry.io/otel/sdk/metric v1.43.1-0.20260521080857-e5bdc311108b
 )
@@ -14,7 +14,7 @@ require (
 require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/ebitengine/purego v0.10.0 // indirect
+	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
@@ -27,7 +27,7 @@ require (
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/metric/x v0.0.0-20260521080857-e5bdc311108b // indirect
-	go.opentelemetry.io/otel/trace v1.43.1-0.20260521080857-e5bdc311108b // indirect
+	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

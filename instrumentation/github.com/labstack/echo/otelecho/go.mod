@@ -8,11 +8,11 @@ require (
 	github.com/labstack/echo/v4 v4.15.2
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.43.0
-	go.opentelemetry.io/otel v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/metric v1.43.1-0.20260521080857-e5bdc311108b
+	go.opentelemetry.io/otel v1.44.0
+	go.opentelemetry.io/otel/metric v1.44.0
 	go.opentelemetry.io/otel/sdk v1.43.1-0.20260521080857-e5bdc311108b
 	go.opentelemetry.io/otel/sdk/metric v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/trace v1.43.1-0.20260521080857-e5bdc311108b
+	go.opentelemetry.io/otel/trace v1.44.0
 )
 
 require (
