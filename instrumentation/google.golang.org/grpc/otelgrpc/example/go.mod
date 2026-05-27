@@ -7,8 +7,8 @@ replace go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelg
 require (
 	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.68.0
 	go.opentelemetry.io/otel v1.44.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/sdk v1.43.1-0.20260521080857-e5bdc311108b
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
+	go.opentelemetry.io/otel/sdk v1.44.0
 	go.opentelemetry.io/otel/trace v1.44.0
 	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11

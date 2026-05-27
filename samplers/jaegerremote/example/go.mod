@@ -6,8 +6,8 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
 	go.opentelemetry.io/contrib/samplers/jaegerremote v0.37.0
 	go.opentelemetry.io/otel v1.44.0
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/sdk v1.43.1-0.20260521080857-e5bdc311108b
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
+	go.opentelemetry.io/otel/sdk v1.44.0
 )
 
 require (
