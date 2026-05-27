@@ -9,7 +9,7 @@ require (
 	go.opentelemetry.io/otel/sdk v1.43.1-0.20260521080857-e5bdc311108b
 	go.opentelemetry.io/otel/sdk/metric v1.43.1-0.20260521080857-e5bdc311108b
 	go.opentelemetry.io/otel/trace v1.44.0
-	google.golang.org/grpc v1.81.0
+	google.golang.org/grpc v1.81.1
 	google.golang.org/protobuf v1.36.11
 )
 
