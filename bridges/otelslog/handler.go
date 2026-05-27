@@ -57,6 +57,14 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
+// bridgeName is the value reported as the log.bridge.name Instrumentation
+// Scope attribute on Loggers created by this bridge. It identifies the bridge
+// package itself, distinct from the producer (typically the slog logger name)
+// reported as the Instrumentation Scope name.
+//
+// See open-telemetry/semantic-conventions#3716.
+const bridgeName = "go.opentelemetry.io/contrib/bridges/otelslog"
+
 // NewLogger returns a new [slog.Logger] backed by a new [Handler]. See
 // [NewHandler] for details on how the backing Handler is created.
 func NewLogger(name string, options ...Option) *slog.Logger {
@@ -85,7 +93,16 @@ func newConfig(options []Option) config {
 }
 
 func (c config) logger(name string) log.Logger {
-	var opts []log.LoggerOption
+	// Identify this bridge per the in-progress OpenTelemetry semantic
+	// convention proposed in open-telemetry/semantic-conventions#3716.
+	// These are placed first so user-supplied WithAttributes can override
+	// on the unlikely event of a key collision.
+	opts := []log.LoggerOption{
+		log.WithInstrumentationAttributes(
+			attribute.String("log.bridge.name", bridgeName),
+			attribute.String("log.bridge.version", Version),
+		),
+	}
 	if c.version != "" {
 		opts = append(opts, log.WithInstrumentationVersion(c.version))
 	}
