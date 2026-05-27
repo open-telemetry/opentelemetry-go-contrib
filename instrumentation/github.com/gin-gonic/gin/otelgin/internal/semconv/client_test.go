@@ -118,14 +118,14 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 		name                 string
 		server               string
 		req                  *http.Request
-		statusCode           int
+		resp                 *http.Response
 		additionalAttributes []attribute.KeyValue
 		wantFunc             func(t *testing.T, attrs []attribute.KeyValue)
 	}{
 		{
 			name:                 "routine testing",
 			req:                  defaultRequest,
-			statusCode:           200,
+			resp:                 &http.Response{StatusCode: 200},
 			additionalAttributes: []attribute.KeyValue{attribute.String("test", "test")},
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
 				require.Len(t, attrs, 7)
@@ -143,7 +143,7 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 		{
 			name:                 "use server address",
 			req:                  defaultRequest,
-			statusCode:           200,
+			resp:                 &http.Response{StatusCode: 200},
 			additionalAttributes: nil,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
 				require.Len(t, attrs, 6)
@@ -160,7 +160,7 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 		{
 			name:                 "https scheme",
 			req:                  httpsRequest,
-			statusCode:           200,
+			resp:                 &http.Response{StatusCode: 200},
 			additionalAttributes: nil,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
 				require.Len(t, attrs, 6)
@@ -174,11 +174,61 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 				}, attrs)
 			},
 		},
+		{
+			name:                 "nil response falls back to request proto and omits status code",
+			req:                  defaultRequest,
+			resp:                 nil,
+			additionalAttributes: nil,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 5)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("server.address", "example.com"),
+					attribute.String("url.scheme", "http"),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "1.1"),
+				}, attrs)
+			},
+		},
+		{
+			name:                 "response proto overrides request proto",
+			req:                  defaultRequest,
+			resp:                 &http.Response{StatusCode: 200, Proto: "HTTP/2.0"},
+			additionalAttributes: nil,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 6)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("server.address", "example.com"),
+					attribute.String("url.scheme", "http"),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "2.0"),
+					attribute.Int64("http.response.status_code", 200),
+				}, attrs)
+			},
+		},
+		{
+			name:                 "http/3 response proto",
+			req:                  defaultRequest,
+			resp:                 &http.Response{StatusCode: 200, Proto: "HTTP/3.0"},
+			additionalAttributes: nil,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 6)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("server.address", "example.com"),
+					attribute.String("url.scheme", "http"),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "3.0"),
+					attribute.Int64("http.response.status_code", 200),
+				}, attrs)
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := HTTPClient{}.MetricAttributes(tt.req, tt.statusCode, tt.additionalAttributes)
+			got := HTTPClient{}.MetricAttributes(tt.req, tt.resp, tt.additionalAttributes)
 			tt.wantFunc(t, got)
 		})
 	}

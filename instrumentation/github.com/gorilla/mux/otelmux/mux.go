@@ -186,7 +186,6 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	metricAttributes := semconv.MetricAttributes{
 		Req:                  r,
-		StatusCode:           statusCode,
 		Route:                routeStr,
 		AdditionalAttributes: tw.metricAttributesFromRequest(r),
 	}
@@ -194,6 +193,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	tw.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
 		ServerName:       tw.service,
 		ResponseSize:     rww.BytesWritten(),
+		StatusCode:       statusCode,
 		MetricAttributes: metricAttributes,
 		MetricData: semconv.MetricData{
 			RequestSize:     bw.BytesRead(),

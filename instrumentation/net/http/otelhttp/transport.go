@@ -144,9 +144,9 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	res, err := t.rt.RoundTrip(r)
 
 	// Record the metrics on error or no error.
-	statusCode := 0
+	var resp *http.Response
 	if err == nil {
-		statusCode = res.StatusCode
+		resp = res
 	}
 	var requestSize int64
 	if lastBW != nil {
@@ -160,7 +160,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		},
 		t.semconv.MetricOptions(semconv.MetricAttributes{
 			Req:                  r,
-			StatusCode:           statusCode,
+			Resp:                 resp,
 			Err:                  err,
 			AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
 		}),

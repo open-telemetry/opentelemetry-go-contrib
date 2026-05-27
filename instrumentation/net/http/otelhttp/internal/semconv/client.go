@@ -143,6 +143,8 @@ func (n HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue
 	 below attributes are returned:
 	 - http.response.status_code
 	 - error.type
+	 - network.protocol.name
+	 - network.protocol.version
 	*/
 	var count int
 	if resp.StatusCode > 0 {
@@ -150,6 +152,14 @@ func (n HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue
 	}
 
 	if isErrorStatusCode(resp.StatusCode) {
+		count++
+	}
+
+	protoName, protoVersion := netProtocol(resp.Proto)
+	if protoName != "" && protoName != "http" {
+		count++
+	}
+	if protoVersion != "" {
 		count++
 	}
 
@@ -161,6 +171,13 @@ func (n HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue
 	if isErrorStatusCode(resp.StatusCode) {
 		errorType := strconv.Itoa(resp.StatusCode)
 		attrs = append(attrs, semconv.ErrorTypeKey.String(errorType))
+	}
+
+	if protoName != "" && protoName != "http" {
+		attrs = append(attrs, semconv.NetworkProtocolName(protoName))
+	}
+	if protoVersion != "" {
+		attrs = append(attrs, semconv.NetworkProtocolVersion(protoVersion))
 	}
 	return attrs
 }
@@ -180,7 +197,7 @@ func (n HTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValu
 	return semconv.HTTPRequestMethodOther, orig
 }
 
-func (n HTTPClient) MetricAttributes(req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
+func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
 	num := len(additionalAttributes) + 2
 	var h string
 	if req.URL != nil {
@@ -200,7 +217,11 @@ func (n HTTPClient) MetricAttributes(req *http.Request, statusCode int, addition
 		num++
 	}
 
-	protoName, protoVersion := netProtocol(req.Proto)
+	proto := req.Proto
+	if resp != nil && resp.Proto != "" {
+		proto = resp.Proto
+	}
+	protoName, protoVersion := netProtocol(proto)
 	if protoName != "" {
 		num++
 	}
@@ -208,6 +229,10 @@ func (n HTTPClient) MetricAttributes(req *http.Request, statusCode int, addition
 		num++
 	}
 
+	var statusCode int
+	if resp != nil {
+		statusCode = resp.StatusCode
+	}
 	if statusCode > 0 {
 		num++
 	}
@@ -249,8 +274,8 @@ func (o MetricOpts) AddOptions() metric.AddOption {
 }
 
 func (n HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
-	attributes := n.MetricAttributes(ma.Req, ma.StatusCode, ma.AdditionalAttributes)
-	if ma.StatusCode == 0 && ma.Err != nil {
+	attributes := n.MetricAttributes(ma.Req, ma.Resp, ma.AdditionalAttributes)
+	if ma.Resp == nil && ma.Err != nil {
 		attributes = append(attributes, n.ErrorType(ma.Err))
 	}
 	set := metric.WithAttributeSet(attribute.NewSet(attributes...))

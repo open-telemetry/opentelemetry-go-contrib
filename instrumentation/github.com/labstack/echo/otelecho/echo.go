@@ -118,9 +118,9 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 			semconvSrv.RecordMetrics(ctx, semconv.ServerMetricData{
 				ServerName:   serverName,
 				ResponseSize: c.Response().Size,
+				StatusCode:   status,
 				MetricAttributes: semconv.MetricAttributes{
 					Req:                  request,
-					StatusCode:           status,
 					Route:                c.Path(),
 					AdditionalAttributes: additionalAttributes,
 				},

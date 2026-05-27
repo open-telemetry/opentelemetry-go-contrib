@@ -197,9 +197,9 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	h.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
 		ServerName:   h.server,
 		ResponseSize: bytesWritten,
+		StatusCode:   statusCode,
 		MetricAttributes: semconv.MetricAttributes{
 			Req:                  r,
-			StatusCode:           statusCode,
 			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(r)...),
 		},
 		MetricData: semconv.MetricData{

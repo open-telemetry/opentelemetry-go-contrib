@@ -137,9 +137,9 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		sc.RecordMetrics(ctx, semconv.ServerMetricData{
 			ServerName:   service,
 			ResponseSize: int64(c.Writer.Size()),
+			StatusCode:   status,
 			MetricAttributes: semconv.MetricAttributes{
 				Req:                  c.Request,
-				StatusCode:           status,
 				Route:                c.FullPath(),
 				AdditionalAttributes: additionalAttributes,
 			},
