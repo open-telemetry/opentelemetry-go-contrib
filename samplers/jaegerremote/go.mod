@@ -5,7 +5,7 @@ go 1.25.0
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/gogo/protobuf v1.3.2
-	github.com/jaegertracing/jaeger-idl v0.6.0
+	github.com/jaegertracing/jaeger-idl v0.9.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.43.1-0.20260521080857-e5bdc311108b
 	go.opentelemetry.io/otel/sdk v1.43.1-0.20260521080857-e5bdc311108b
