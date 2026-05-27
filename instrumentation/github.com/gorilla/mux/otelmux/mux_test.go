@@ -61,7 +61,7 @@ func TestPassthroughSpanFromGlobalTracer(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
 	r = r.WithContext(trace.ContextWithRemoteSpanContext(t.Context(), sc))
 	w := httptest.NewRecorder()
 
@@ -77,7 +77,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	prop := propagation.TraceContext{}
 	otel.SetTextMapPropagator(prop)
 
-	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc)
@@ -100,7 +100,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 func TestPropagationWithCustomPropagators(t *testing.T) {
 	prop := propagation.TraceContext{}
 
-	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc)
@@ -167,7 +167,7 @@ func TestResponseWriterInterfaces(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
 	w := &testResponseWriter{
 		writer: httptest.NewRecorder(),
 	}
@@ -196,13 +196,13 @@ func TestFilter(t *testing.T) {
 		w.WriteHeader(http.StatusOK)
 	}))
 
-	r := httptest.NewRequest(http.MethodGet, "/health", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/health", http.NoBody)
 	ctx := trace.ContextWithRemoteSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 
-	r = httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	r = httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", http.NoBody)
 	ctx = trace.ContextWithRemoteSpanContext(t.Context(), sc)
 	prop.Inject(ctx, propagation.HeaderCarrier(r.Header))
 	w = httptest.NewRecorder()
@@ -235,7 +235,7 @@ func TestPassthroughSpanFromGlobalTracerWithBody(t *testing.T) {
 		assert.NoError(t, err)
 	})).Methods(http.MethodPost)
 
-	r := httptest.NewRequest(http.MethodPost, "/user", strings.NewReader(`{"name":"John Doe","age":30}`))
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/user", strings.NewReader(`{"name":"John Doe","age":30}`))
 	r.Header.Set("Content-Type", "application/json")
 	r = r.WithContext(trace.ContextWithRemoteSpanContext(t.Context(), sc))
 	w := httptest.NewRecorder()
@@ -262,7 +262,7 @@ func TestHeaderAlreadyWrittenWhenFlushing(t *testing.T) {
 		f.Flush()
 	})
 
-	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
 	r = r.WithContext(trace.ContextWithRemoteSpanContext(t.Context(), sc))
 	w := httptest.NewRecorder()
 

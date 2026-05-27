@@ -118,7 +118,7 @@ func main() {
 		}
 	}()
 
-	lis, err := net.Listen("tcp", "127.0.0.1:7777")
+	lis, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", "127.0.0.1:7777")
 	if err != nil {
 		log.Fatalf("failed to listen: %v", err)
 	}

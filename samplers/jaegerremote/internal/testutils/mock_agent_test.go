@@ -31,13 +31,13 @@ func TestMockAgentSamplingManager(t *testing.T) {
 	require.NoError(t, err)
 	defer mockAgent.Close()
 
-	err = getJSON("http://"+mockAgent.SamplingServerAddr()+"/", nil)
+	err = getJSON(t.Context(), "http://"+mockAgent.SamplingServerAddr()+"/", nil)
 	require.Error(t, err, "no 'service' parameter")
-	err = getJSON("http://"+mockAgent.SamplingServerAddr()+"/?service=a&service=b", nil)
+	err = getJSON(t.Context(), "http://"+mockAgent.SamplingServerAddr()+"/?service=a&service=b", nil)
 	require.Error(t, err, "Too many 'service' parameters")
 
 	var resp jaeger_api_v2.SamplingStrategyResponse
-	err = getJSON("http://"+mockAgent.SamplingServerAddr()+"/?service=something", &resp)
+	err = getJSON(t.Context(), "http://"+mockAgent.SamplingServerAddr()+"/?service=something", &resp)
 	require.NoError(t, err)
 	assert.Equal(t, jaeger_api_v2.SamplingStrategyType_PROBABILISTIC, resp.StrategyType)
 
@@ -47,7 +47,7 @@ func TestMockAgentSamplingManager(t *testing.T) {
 			MaxTracesPerSecond: 123,
 		},
 	})
-	err = getJSON("http://"+mockAgent.SamplingServerAddr()+"/?service=service123", &resp)
+	err = getJSON(t.Context(), "http://"+mockAgent.SamplingServerAddr()+"/?service=service123", &resp)
 	require.NoError(t, err)
 	assert.Equal(t, jaeger_api_v2.SamplingStrategyType_RATE_LIMITING, resp.StrategyType)
 	require.NotNil(t, resp.RateLimitingSampling)

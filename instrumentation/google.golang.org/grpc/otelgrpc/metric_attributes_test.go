@@ -175,7 +175,8 @@ func TestMetricAttributesFn_ServerSide_Baggage(t *testing.T) {
 		}
 	}
 
-	lis, server := startTestServerWithOptions(t, mp,
+	lis, server := startTestServerWithOptions(
+		t, mp,
 		otelgrpc.WithMetricAttributesFn(metricFunc),
 		otelgrpc.WithPropagators(propagation.NewCompositeTextMapPropagator(
 			propagation.Baggage{},
@@ -242,7 +243,7 @@ func TestMetricAttributesFn_ServerSide_WithWrappedHandler(t *testing.T) {
 		}
 	}
 
-	lis, err := net.Listen("tcp", "localhost:0")
+	lis, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 	require.NoError(t, err)
 
 	wrappedHandler := &enrichedServerHandler{
@@ -275,7 +276,7 @@ func TestMetricAttributesFn_ServerSide_WithWrappedHandler(t *testing.T) {
 
 // TestMetricAttributesFn_ClientSide tests that labels are added to client-side metrics for unary RPCs.
 func TestMetricAttributesFn_ClientSide(t *testing.T) {
-	serverLis, err := net.Listen("tcp", "localhost:0")
+	serverLis, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 	require.NoError(t, err)
 
 	server := grpc.NewServer()
@@ -326,7 +327,7 @@ func TestMetricAttributesFn_ClientSide(t *testing.T) {
 
 // TestMetricAttributesFn_ClientSideStreaming tests that labels are added to client-side metrics for client-side streaming RPCs.
 func TestMetricAttributesFn_ClientSideStreaming(t *testing.T) {
-	serverLis, err := net.Listen("tcp", "localhost:0")
+	serverLis, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 	require.NoError(t, err)
 
 	server := grpc.NewServer()
@@ -385,7 +386,7 @@ func TestMetricAttributesFn_ClientSideStreaming(t *testing.T) {
 
 // TestMetricAttributesFn_ClientSide_Baggage tests that baggage can be used on the client-side to populate context values for MetricAttributesFn.
 func TestMetricAttributesFn_ClientSide_Baggage(t *testing.T) {
-	serverLis, err := net.Listen("tcp", "localhost:0")
+	serverLis, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 	require.NoError(t, err)
 
 	server := grpc.NewServer()
@@ -446,7 +447,7 @@ func (h *enrichedClientHandler) TagRPC(ctx context.Context, info *stats.RPCTagIn
 // TestMetricAttributesFn_ClientSide_WithWrappedHandler tests that a wrapped client stats handler
 // can populate context values for MetricAttributesFn.
 func TestMetricAttributesFn_ClientSide_WithWrappedHandler(t *testing.T) {
-	serverLis, err := net.Listen("tcp", "localhost:0")
+	serverLis, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 	require.NoError(t, err)
 
 	server := grpc.NewServer()
@@ -560,7 +561,7 @@ func TestMetricAttributesFn_ClientAndServerIndependent(t *testing.T) {
 func startTestServerWithOptions(t *testing.T, mp *metric.MeterProvider, opts ...otelgrpc.Option) (net.Listener, *grpc.Server) {
 	t.Helper()
 
-	lis, err := net.Listen("tcp", "localhost:0")
+	lis, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 	require.NoError(t, err)
 
 	var allOpts []otelgrpc.Option
@@ -610,7 +611,8 @@ func createTestClient(t *testing.T, addr string, mp *metric.MeterProvider, metri
 	}
 
 	if mp != nil && metricFunc != nil {
-		opts = append(opts,
+		opts = append(
+			opts,
 			grpc.WithStatsHandler(
 				otelgrpc.NewClientHandler(
 					otelgrpc.WithMeterProvider(mp),

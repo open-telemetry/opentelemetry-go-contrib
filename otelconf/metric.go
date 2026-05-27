@@ -9,21 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"net"
-	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/otlptranslator"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
-	otelprom "go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
@@ -86,6 +78,10 @@ func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error)
 		if r.Periodic.Timeout != nil {
 			opts = append(opts, sdkmetric.WithTimeout(time.Duration(*r.Periodic.Timeout)*time.Millisecond))
 		}
+
+		if r.Periodic.CardinalityLimits != nil {
+			opts = append(opts, sdkmetric.WithCardinalityLimitSelector(cardinalityLimitSelector(r.Periodic.CardinalityLimits)))
+		}
 		return periodicExporter(ctx, r.Periodic.Exporter, opts...)
 	}
 
@@ -95,11 +91,51 @@ func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error)
 	return nil, newErrInvalid("no valid metric reader")
 }
 
-func pullReader(ctx context.Context, exporter PullMetricExporter) (sdkmetric.Reader, error) {
-	if exporter.PrometheusDevelopment != nil {
-		return prometheusReader(ctx, exporter.PrometheusDevelopment)
-	}
+func pullReader(_ context.Context, _ PullMetricExporter) (sdkmetric.Reader, error) {
 	return nil, newErrInvalid("no valid metric exporter")
+}
+
+// cardinalityLimitSelector returns a CardinalityLimitSelector for the given CardinalityLimits config.
+// Note: this function is intentionally duplicated in otelconf/x because the two packages define
+// their own CardinalityLimits types. Changes here must be mirrored there.
+func cardinalityLimitSelector(cl *CardinalityLimits) sdkmetric.CardinalityLimitSelector {
+	return func(ik sdkmetric.InstrumentKind) (int, bool) {
+		switch ik {
+		case sdkmetric.InstrumentKindCounter:
+			if cl.Counter != nil {
+				return *cl.Counter, false
+			}
+		case sdkmetric.InstrumentKindUpDownCounter:
+			if cl.UpDownCounter != nil {
+				return *cl.UpDownCounter, false
+			}
+		case sdkmetric.InstrumentKindHistogram:
+			if cl.Histogram != nil {
+				return *cl.Histogram, false
+			}
+		case sdkmetric.InstrumentKindObservableCounter:
+			if cl.ObservableCounter != nil {
+				return *cl.ObservableCounter, false
+			}
+		case sdkmetric.InstrumentKindObservableUpDownCounter:
+			if cl.ObservableUpDownCounter != nil {
+				return *cl.ObservableUpDownCounter, false
+			}
+		case sdkmetric.InstrumentKindObservableGauge:
+			if cl.ObservableGauge != nil {
+				return *cl.ObservableGauge, false
+			}
+		case sdkmetric.InstrumentKindGauge:
+			if cl.Gauge != nil {
+				return *cl.Gauge, false
+			}
+		}
+		if cl.Default != nil {
+			return *cl.Default, false
+		}
+		// fallback=true; defer to the SDK/provider global cardinality limit
+		return 0, true
+	}
 }
 
 func periodicExporter(ctx context.Context, exporter PushMetricExporter, opts ...sdkmetric.PeriodicReaderOption) (sdkmetric.Reader, error) {
@@ -141,10 +177,6 @@ func periodicExporter(ctx context.Context, exporter PushMetricExporter, opts ...
 			return sdkmetric.NewPeriodicReader(exp, opts...), nil
 		}
 	}
-	if exporter.OTLPFileDevelopment != nil {
-		// TODO: implement file exporter https://github.com/open-telemetry/opentelemetry-go/issues/5408
-		return nil, newErrInvalid("otlp_file/development")
-	}
 
 	if exportersConfigured > 1 {
 		return nil, newErrInvalid("must not specify multiple exporters")
@@ -160,6 +192,9 @@ func periodicExporter(ctx context.Context, exporter PushMetricExporter, opts ...
 func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPHttpMetricExporter) (sdkmetric.Exporter, error) {
 	opts := []otlpmetrichttp.Option{}
 
+	if err := validateOTLPHTTPEncoding(otlpConfig.Encoding); err != nil {
+		return nil, err
+	}
 	if otlpConfig.Endpoint != nil {
 		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {
@@ -196,11 +231,11 @@ func otlpHTTPMetricExporter(ctx context.Context, otlpConfig *OTLPHttpMetricExpor
 	}
 	if otlpConfig.TemporalityPreference != nil {
 		switch *otlpConfig.TemporalityPreference {
-		case "delta":
+		case ExporterTemporalityPreferenceDelta:
 			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(deltaTemporality))
-		case "cumulative":
+		case ExporterTemporalityPreferenceCumulative:
 			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(cumulativeTemporality))
-		case "low_memory":
+		case ExporterTemporalityPreferenceLowMemory:
 			opts = append(opts, otlpmetrichttp.WithTemporalitySelector(lowMemory))
 		default:
 			return nil, newErrInvalid(fmt.Sprintf("unsupported temporality preference %q", *otlpConfig.TemporalityPreference))
@@ -262,11 +297,11 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPGrpcMetricExpor
 	}
 	if otlpConfig.TemporalityPreference != nil {
 		switch *otlpConfig.TemporalityPreference {
-		case "delta":
+		case ExporterTemporalityPreferenceDelta:
 			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(deltaTemporality))
-		case "cumulative":
+		case ExporterTemporalityPreferenceCumulative:
 			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(cumulativeTemporality))
-		case "low_memory":
+		case ExporterTemporalityPreferenceLowMemory:
 			opts = append(opts, otlpmetricgrpc.WithTemporalitySelector(lowMemory))
 		default:
 			return nil, newErrInvalid(fmt.Sprintf("unsupported temporality preference %q", *otlpConfig.TemporalityPreference))
@@ -340,106 +375,6 @@ func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
 		_, ok := included[kv.Key]
 		return ok
 	}, nil
-}
-
-func prometheusReader(ctx context.Context, prometheusConfig *ExperimentalPrometheusMetricExporter) (sdkmetric.Reader, error) {
-	if prometheusConfig.Host == nil {
-		return nil, newErrInvalid("host must be specified")
-	}
-	if prometheusConfig.Port == nil {
-		return nil, newErrInvalid("port must be specified")
-	}
-
-	opts, err := prometheusReaderOpts(prometheusConfig)
-	if err != nil {
-		return nil, err
-	}
-
-	reg := prometheus.NewRegistry()
-	opts = append(opts, otelprom.WithRegisterer(reg))
-
-	reader, err := otelprom.New(opts...)
-	if err != nil {
-		return nil, fmt.Errorf("error creating otel prometheus exporter: %w", err)
-	}
-
-	mux := http.NewServeMux()
-	mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
-	server := http.Server{
-		// Timeouts are necessary to make a server resilient to attacks.
-		// We use values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
-		Handler:      mux,
-	}
-
-	// Remove surrounding "[]" from the host definition to allow users to define the host as "[::1]" or "::1".
-	host := *prometheusConfig.Host
-	if len(host) > 2 && host[0] == '[' && host[len(host)-1] == ']' {
-		host = host[1 : len(host)-1]
-	}
-
-	addr := net.JoinHostPort(host, strconv.Itoa(*prometheusConfig.Port))
-	lis, err := net.Listen("tcp", addr)
-	if err != nil {
-		return nil, errors.Join(
-			fmt.Errorf("binding address %s for Prometheus exporter: %w", addr, err),
-			reader.Shutdown(ctx),
-		)
-	}
-
-	// Only for testing reasons, add the address to the http Server, will not be used.
-	server.Addr = lis.Addr().String()
-
-	go func() {
-		if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
-		}
-	}()
-
-	return readerWithServer{reader, &server}, nil
-}
-
-func validTranslationStrategy(strategy ExperimentalPrometheusTranslationStrategy) bool {
-	return strategy == ExperimentalPrometheusTranslationStrategyNoTranslation ||
-		strategy == ExperimentalPrometheusTranslationStrategyNoUtf8EscapingWithSuffixes ||
-		strategy == ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes ||
-		strategy == ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithoutSuffixes
-}
-
-func prometheusReaderOpts(prometheusConfig *ExperimentalPrometheusMetricExporter) ([]otelprom.Option, error) {
-	var opts []otelprom.Option
-	if prometheusConfig.WithoutScopeInfo != nil && *prometheusConfig.WithoutScopeInfo {
-		opts = append(opts, otelprom.WithoutScopeInfo())
-	}
-	if prometheusConfig.TranslationStrategy != nil {
-		if !validTranslationStrategy(*prometheusConfig.TranslationStrategy) {
-			return nil, newErrInvalid("translation strategy invalid")
-		}
-		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.TranslationStrategyOption(*prometheusConfig.TranslationStrategy)))
-	}
-	if prometheusConfig.WithResourceConstantLabels != nil {
-		f, err := newIncludeExcludeFilter(prometheusConfig.WithResourceConstantLabels)
-		if err != nil {
-			return nil, err
-		}
-		opts = append(opts, otelprom.WithResourceAsConstantLabels(f))
-	}
-
-	return opts, nil
-}
-
-type readerWithServer struct {
-	sdkmetric.Reader
-	server *http.Server
-}
-
-func (rws readerWithServer) Shutdown(ctx context.Context) error {
-	return errors.Join(
-		rws.Reader.Shutdown(ctx),
-		rws.server.Shutdown(ctx),
-	)
 }
 
 func view(v View) (sdkmetric.View, error) {

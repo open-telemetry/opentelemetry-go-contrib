@@ -38,6 +38,12 @@ func TestAny(t *testing.T) {
 			req:    &http.Request{URL: &url.URL{Path: "/foo", Host: "bar.baz:8080"}},
 			exp:    true,
 		},
+		{
+			name:   "no filters",
+			filter: Any(),
+			req:    &http.Request{URL: &url.URL{Path: "/foo", Host: "bar.baz:8080"}},
+			exp:    false,
+		},
 	} {
 		res := s.filter(s.req)
 		if s.exp != res {
@@ -63,6 +69,12 @@ func TestAll(t *testing.T) {
 		{
 			name:   "all matching filters",
 			filter: All(Path("/foo"), Hostname("bar.baz")),
+			req:    &http.Request{URL: &url.URL{Path: "/foo", Host: "bar.baz:8080"}},
+			exp:    true,
+		},
+		{
+			name:   "no filters",
+			filter: All(),
 			req:    &http.Request{URL: &url.URL{Path: "/foo", Host: "bar.baz:8080"}},
 			exp:    true,
 		},
@@ -93,6 +105,12 @@ func TestNone(t *testing.T) {
 			filter: None(Path("/foo"), Hostname("bar.baz")),
 			req:    &http.Request{URL: &url.URL{Path: "/foo", Host: "bar.baz:8080"}},
 			exp:    false,
+		},
+		{
+			name:   "no filters",
+			filter: None(),
+			req:    &http.Request{URL: &url.URL{Path: "/foo", Host: "bar.baz:8080"}},
+			exp:    true,
 		},
 	} {
 		res := s.filter(s.req)

@@ -18,6 +18,7 @@ examples/dice/uninstrumented/uninstrumented
 examples/namedtracer/namedtracer
 examples/otel-collector/otel-collector
 examples/opencensus/opencensus
+examples/prometheus-compatibility/prometheus-compatibility
 examples/passthrough/passthrough
 examples/prometheus/prometheus
 

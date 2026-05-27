@@ -58,17 +58,13 @@ func TestRemotelyControlledSampler_updateConcurrentSafe(*testing.T) {
 
 	var wg sync.WaitGroup
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		sampler.UpdateSampler()
-	}()
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		sampler.ShouldSample(s)
-	}()
+	})
 
 	wg.Wait()
 }
@@ -192,6 +188,10 @@ func TestRemotelyControlledSampler(t *testing.T) {
 
 	remoteSampler.setSampler(defaultSampler)
 
+	// Use a distinct startup strategy so the later assertion cannot be satisfied
+	// by pollControllerWithTicker's immediate update before the ticker fires.
+	agent.AddSamplingStrategy("client app",
+		getSamplingStrategyResponse(jaeger_api_v2.SamplingStrategyType_RATE_LIMITING, 1))
 	c := make(chan time.Time)
 	ticker := &time.Ticker{C: c}
 	// reset closed so the next call to Close() correctly stops the polling goroutine
@@ -202,6 +202,17 @@ func TestRemotelyControlledSampler(t *testing.T) {
 		remoteSampler.pollControllerWithTicker(ticker)
 	}()
 
+	// Wait for the immediate startup update before changing the strategy and
+	// forcing a tick. This makes the final assertion prove the ticker path ran.
+	assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+		remoteSampler.RLock()
+		defer remoteSampler.RUnlock()
+		_, ok := remoteSampler.sampler.(*rateLimitingSampler)
+		assert.True(collect, ok, "sampler should have been updated on startup")
+	}, time.Second, 10*time.Millisecond)
+
+	agent.AddSamplingStrategy("client app",
+		getSamplingStrategyResponse(jaeger_api_v2.SamplingStrategyType_PROBABILISTIC, testDefaultSamplingProbability))
 	c <- time.Now() // force update based on timer
 	remoteSampler.Close()
 	<-done
@@ -263,7 +274,8 @@ func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
 				},
 			}
 			for opName, prob := range test.probabilities {
-				res.OperationSampling.PerOperationStrategies = append(res.OperationSampling.PerOperationStrategies,
+				res.OperationSampling.PerOperationStrategies = append(
+					res.OperationSampling.PerOperationStrategies,
 					&jaeger_api_v2.OperationSamplingStrategy{
 						Operation: opName,
 						ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
@@ -305,11 +317,15 @@ func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
 		WithSamplingStrategyFetcher(fetcher),
 		withSamplingStrategyParser(parser),
 	)
-	time.Sleep(100 * time.Millisecond) // waiting for s.pollController
-	sampler.Close()                    // stop pollController, avoid date race
-	s, ok := sampler.sampler.(*rateLimitingSampler)
-	assert.True(t, ok)
-	assert.Equal(t, float64(100), s.maxTracesPerSecond)
+	t.Cleanup(sampler.Close)
+	assert.EventuallyWithT(t, func(collect *assert.CollectT) {
+		sampler.RLock()
+		defer sampler.RUnlock()
+		s, ok := sampler.sampler.(*rateLimitingSampler)
+		if assert.True(collect, ok, "sampler is not a rateLimitingSampler") {
+			assert.Equal(collect, float64(100), s.maxTracesPerSecond, "unexpected maxTracesPerSecond")
+		}
+	}, 1*time.Second, 10*time.Millisecond)
 }
 
 func TestRemotelyControlledSampler_multiStrategyResponse(t *testing.T) {

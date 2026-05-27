@@ -42,8 +42,21 @@ func loggerProvider(cfg configOptions, res *resource.Resource) (log.LoggerProvid
 		return noop.NewLoggerProvider(), noopShutdown, errors.Join(errs...)
 	}
 
+	if cfg.opentelemetryConfig.LoggerProvider.Limits != nil {
+		opts = logProcessorLimits(opts, *cfg.opentelemetryConfig.LoggerProvider.Limits)
+	}
 	lp := sdklog.NewLoggerProvider(opts...)
 	return lp, lp.Shutdown, nil
+}
+
+func logProcessorLimits(opts []sdklog.LoggerProviderOption, limits LogRecordLimits) []sdklog.LoggerProviderOption {
+	if limits.AttributeCountLimit != nil {
+		opts = append(opts, sdklog.WithAttributeCountLimit(*limits.AttributeCountLimit))
+	}
+	if limits.AttributeValueLengthLimit != nil {
+		opts = append(opts, sdklog.WithAttributeValueLengthLimit(*limits.AttributeValueLengthLimit))
+	}
+	return opts
 }
 
 func logProcessor(ctx context.Context, processor LogRecordProcessor) (sdklog.Processor, error) {
@@ -92,10 +105,6 @@ func logExporter(ctx context.Context, exporter LogRecordExporter) (sdklog.Export
 			return otlpGRPCLogExporter(ctx, exporter.OTLPGrpc)
 		}
 	}
-	if exporter.OTLPFileDevelopment != nil {
-		// TODO: implement file exporter https://github.com/open-telemetry/opentelemetry-go/issues/5408
-		return nil, newErrInvalid("otlp_file/development")
-	}
 
 	if exportersConfigured > 1 {
 		return nil, newErrInvalid("must not specify multiple exporters")
@@ -133,6 +142,9 @@ func batchLogProcessor(blp *BatchLogRecordProcessor, exp sdklog.Exporter) (*sdkl
 func otlpHTTPLogExporter(ctx context.Context, otlpConfig *OTLPHttpExporter) (sdklog.Exporter, error) {
 	var opts []otlploghttp.Option
 
+	if err := validateOTLPHTTPEncoding(otlpConfig.Encoding); err != nil {
+		return nil, err
+	}
 	if otlpConfig.Endpoint != nil {
 		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
 		if err != nil {

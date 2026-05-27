@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -88,7 +88,7 @@ func TestTransportFormatter(t *testing.T) {
 
 	for _, tc := range httpMethods {
 		t.Run(tc.name, func(t *testing.T) {
-			r, err := http.NewRequest(tc.method, "http://localhost/", http.NoBody)
+			r, err := http.NewRequestWithContext(t.Context(), tc.method, "http://localhost/", http.NoBody)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -462,7 +462,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -502,7 +502,7 @@ func TestTransportErrorStatus(t *testing.T) {
 		WithTracerProvider(provider),
 	)
 	c := http.Client{Transport: tr}
-	r, err := http.NewRequest(http.MethodGet, server.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL, http.NoBody)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -558,7 +558,7 @@ func TestTransportRequestWithTraceContext(t *testing.T) {
 	tracer := provider.Tracer("")
 	ctx, span := tracer.Start(t.Context(), "test_span")
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	r = r.WithContext(ctx)
@@ -604,7 +604,7 @@ func TestWithHTTPTrace(t *testing.T) {
 	tracer := provider.Tracer("")
 	ctx, span := tracer.Start(t.Context(), "test_span")
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	r = r.WithContext(ctx)
@@ -668,7 +668,7 @@ func TestTransportMetrics(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, bytes.NewReader(requestBody))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -730,7 +730,7 @@ func TestTransportMetrics(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, bytes.NewReader(requestBody))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -802,7 +802,7 @@ func TestTransportMetrics(t *testing.T) {
 		}))
 		defer ts.Close()
 
-		r, err := http.NewRequest(http.MethodGet, ts.URL, bytes.NewReader(requestBody))
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, bytes.NewReader(requestBody))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -932,7 +932,7 @@ func TestCustomAttributesHandling(t *testing.T) {
 		attribute.String("bar", "barValue"),
 	}
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 	labeler := &Labeler{}
 	labeler.Add(expectedAttributes...)
@@ -987,7 +987,7 @@ func TestMetricsExistenceOnRequestError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
 	ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := client.Do(r)
@@ -1030,7 +1030,8 @@ func TestDefaultAttributesHandling(t *testing.T) {
 		http.DefaultTransport, WithMeterProvider(provider),
 		WithMetricAttributesFn(func(_ *http.Request) []attribute.KeyValue {
 			return defaultAttributes
-		}))
+		}),
+	)
 	client := http.Client{Transport: transport}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -1038,7 +1039,7 @@ func TestDefaultAttributesHandling(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := client.Do(r)
@@ -1083,7 +1084,7 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()
 
-	r, err := http.NewRequest(http.MethodGet, ts.URL, http.NoBody)
+	r, err := http.NewRequestWithContext(b.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(b, err)
 
 	for _, bb := range []struct {
@@ -1193,4 +1194,60 @@ func TestHandleErrorOnGetBodyError(t *testing.T) {
 	assert.ErrorContains(t, err, getBodyErr.Error())
 	assert.Equal(t, body, receivedBody) // got it one time
 	assert.Equal(t, 1, requests)
+}
+
+func TestTransportErrorTypeMetricAttribute(t *testing.T) {
+	ctx := t.Context()
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	defer func() {
+		assert.NoError(t, provider.Shutdown(ctx))
+	}()
+
+	// Simulate a connection error by closing the server before the request.
+	ts := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	ts.Close()
+
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	transport := NewTransport(http.DefaultTransport, WithMeterProvider(provider))
+	client := http.Client{Transport: transport}
+
+	resp, err := client.Do(r)
+	if err == nil {
+		_ = resp.Body.Close()
+	}
+	require.Error(t, err)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+
+	// Find http.client.request.duration metric.
+	var durationMetric metricdata.Metrics
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == "http.client.request.duration" {
+			durationMetric = m
+			break
+		}
+	}
+	require.Equal(t, "http.client.request.duration", durationMetric.Name)
+
+	hist, ok := durationMetric.Data.(metricdata.Histogram[float64])
+	require.True(t, ok)
+	require.Len(t, hist.DataPoints, 1)
+
+	errorTypeVal, hasErrorType := hist.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
+	assert.True(t, hasErrorType, "error.type attribute should be present in metrics for failed requests")
+	if hasErrorType {
+		// The otelhttp Transport calls t.rt.RoundTrip() directly; errors at
+		// that level are typically *net.OpError (connection refused), not *url.Error
+		// (which is only added by http.Client.Do above the Transport layer).
+		// The exact type varies by OS and Go version, so assert only that a
+		// specific named type is recorded rather than the generic "_OTHER" fallback.
+		assert.NotEmpty(t, errorTypeVal.AsString())
+		assert.NotEqual(t, "_OTHER", errorTypeVal.AsString())
+	}
 }

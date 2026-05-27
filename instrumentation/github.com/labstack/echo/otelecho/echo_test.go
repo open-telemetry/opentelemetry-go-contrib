@@ -37,7 +37,7 @@ func TestGetSpanNotInstrumented(t *testing.T) {
 		assert.True(t, ok)
 		return c.String(http.StatusOK, "ok")
 	})
-	r := httptest.NewRequest(http.MethodGet, "/ping", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ping", http.NoBody)
 	w := httptest.NewRecorder()
 	router.ServeHTTP(w, r)
 	response := w.Result()
@@ -48,7 +48,7 @@ func TestPropagationWithGlobalPropagators(t *testing.T) {
 	provider := noop.NewTracerProvider()
 	otel.SetTextMapPropagator(propagation.TraceContext{})
 
-	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	ctx := t.Context()
@@ -79,7 +79,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 
 	b3 := b3prop.New()
 
-	r := httptest.NewRequest(http.MethodGet, "/user/123", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
 	w := httptest.NewRecorder()
 
 	ctx := t.Context()
@@ -105,7 +105,7 @@ func TestPropagationWithCustomPropagators(t *testing.T) {
 }
 
 func TestSkipper(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, "/ping", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ping", http.NoBody)
 	w := httptest.NewRecorder()
 
 	skipper := func(c echo.Context) bool {
@@ -175,7 +175,8 @@ func TestMetrics(t *testing.T) {
 			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 			e := echo.New()
-			e.Use(Middleware("foobar",
+			e.Use(Middleware(
+				"foobar",
 				WithMeterProvider(meterProvider),
 				WithMetricAttributeFn(tt.metricAttributeExtractor),
 				WithEchoMetricAttributeFn(tt.echoMetricAttributeExtractor),
@@ -186,7 +187,7 @@ func TestMetrics(t *testing.T) {
 				return c.String(http.StatusOK, id)
 			})
 
-			r := httptest.NewRequest(http.MethodGet, tt.requestTarget, http.NoBody)
+			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tt.requestTarget, http.NoBody)
 			w := httptest.NewRecorder()
 			e.ServeHTTP(w, r)
 
@@ -273,7 +274,8 @@ func TestWithMetricAttributeFn(t *testing.T) {
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 	e := echo.New()
-	e.Use(Middleware("test-service",
+	e.Use(Middleware(
+		"test-service",
 		WithMeterProvider(meterProvider),
 		WithMetricAttributeFn(func(r *http.Request) []attribute.KeyValue {
 			return []attribute.KeyValue{
@@ -286,7 +288,7 @@ func TestWithMetricAttributeFn(t *testing.T) {
 		return c.String(http.StatusOK, "test response")
 	})
 
-	r := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/test", http.NoBody)
 	r.Header.Set("X-Test-Header", "test-value")
 	w := httptest.NewRecorder()
 	e.ServeHTTP(w, r)
@@ -323,7 +325,8 @@ func TestWithEchoMetricAttributeFn(t *testing.T) {
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 	e := echo.New()
-	e.Use(Middleware("test-service",
+	e.Use(Middleware(
+		"test-service",
 		WithMeterProvider(meterProvider),
 		WithEchoMetricAttributeFn(func(c echo.Context) []attribute.KeyValue {
 			return []attribute.KeyValue{
@@ -338,7 +341,7 @@ func TestWithEchoMetricAttributeFn(t *testing.T) {
 		return c.String(http.StatusOK, "user: "+c.Param("id"))
 	})
 
-	r := httptest.NewRequest(http.MethodGet, "/user/456", http.NoBody)
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/456", http.NoBody)
 	w := httptest.NewRecorder()
 	e.ServeHTTP(w, r)
 
@@ -408,7 +411,7 @@ func TestWithOnError(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := httptest.NewRequest("GET", "/ping", http.NoBody)
+			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ping", http.NoBody)
 			w := httptest.NewRecorder()
 
 			router := echo.New()

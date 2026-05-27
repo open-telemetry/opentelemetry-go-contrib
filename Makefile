@@ -13,7 +13,7 @@ REGISTRY_BASE_URL = https://raw.githubusercontent.com/open-telemetry/opentelemet
 CONTRIB_REPO_URL = https://github.com/open-telemetry/opentelemetry-go-contrib/tree/main
 
 GO = go
-TIMEOUT = 60
+TIMEOUT = 120
 
 # User to run as in docker images.
 DOCKER_USER=$(shell id -u):$(shell id -g)
@@ -260,7 +260,8 @@ test/%: DIR=$*
 test/%:
 	@echo "$(GO) test -timeout $(TIMEOUT)s $(ARGS) $(DIR)/..." \
 		&& cd $(DIR) \
-		&& $(GO) test -timeout $(TIMEOUT)s $(ARGS) ./...
+		&& $(GO) list ./... \
+		| xargs $(GO) test -timeout $(TIMEOUT)s $(ARGS)
 
 COVERAGE_MODE    = atomic
 COVERAGE_PROFILE = coverage.out
@@ -277,7 +278,8 @@ test-coverage/%:
 		&& CMD="$$CMD -coverpkg=go.opentelemetry.io/contrib/$$( dirname "$(DIR)" | sed -e "s/^\.\///g" )/..."; \
 		echo "$$CMD $(DIR)/..."; \
 		cd "$(DIR)" \
-		&& $$CMD ./... \
+		&& $(GO) list ./... \
+		| xargs $$CMD \
 		&& $(GO) tool cover -html=coverage.out -o coverage.html;
 
 # Releasing
@@ -326,7 +328,8 @@ OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR=tmp/opentelemetry-configuration
 genjsonschema-cleanup:
 	rm -Rf ${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}
 
-GENERATED_CONFIG=./otelconf/generated_config.go
+GENERATED_EXPERIMENTAL_CONFIG=./otelconf/x/generated_config.go
+GENERATED_STABLE_CONFIG=./otelconf/generated_config.go
 
 # Generate structs for configuration from opentelemetry-configuration schema
 genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
@@ -336,13 +339,17 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 		--capitalization ID \
 		--capitalization OTLP \
 		--struct-name-from-title \
-		--package otelconf \
+		--package x \
 		--only-models \
-		--output ${GENERATED_CONFIG} \
+		--output ${GENERATED_EXPERIMENTAL_CONFIG} \
 		${OPENTELEMETRY_CONFIGURATION_JSONSCHEMA_SRC_DIR}/opentelemetry_configuration.json
 	@echo Modify jsonschema generated files.
-	sed -f ./otelconf/jsonschema_patch.sed ${GENERATED_CONFIG} > ${GENERATED_CONFIG}.tmp
-	mv ${GENERATED_CONFIG}.tmp ${GENERATED_CONFIG}
+	sed -f ./otelconf/jsonschema_patch.sed ${GENERATED_EXPERIMENTAL_CONFIG} > ${GENERATED_EXPERIMENTAL_CONFIG}.tmp
+	cp ${GENERATED_EXPERIMENTAL_CONFIG}.tmp ${GENERATED_EXPERIMENTAL_CONFIG}
+	sed -f ./otelconf/remove_experimental_patch.sed ${GENERATED_EXPERIMENTAL_CONFIG}.tmp > ${GENERATED_STABLE_CONFIG}.tmp
+	rm ${GENERATED_EXPERIMENTAL_CONFIG}.tmp
+	mv ${GENERATED_STABLE_CONFIG}.tmp ${GENERATED_STABLE_CONFIG}
+	$(GO) fmt ${GENERATED_STABLE_CONFIG}
 	$(MAKE) genjsonschema-cleanup
 
 .PHONY: codespell

@@ -14,9 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -37,6 +35,8 @@ import (
 	v1 "go.opentelemetry.io/proto/otlp/collector/metrics/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/testtls"
 )
 
 func TestMeterProvider(t *testing.T) {
@@ -154,6 +154,7 @@ func TestMeterProviderOptions(t *testing.T) {
 }
 
 func TestReader(t *testing.T) {
+	material := testtls.Write(t)
 	consoleExporter, err := stdoutmetric.New(
 		stdoutmetric.WithPrettyPrint(),
 	)
@@ -289,7 +290,7 @@ func TestReader(t *testing.T) {
 							Endpoint:    ptr("https://localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+							Certificate: ptr(material.CACertPath),
 						},
 					},
 				},
@@ -306,7 +307,7 @@ func TestReader(t *testing.T) {
 							Endpoint:    ptr("https://localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Certificate: ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -323,8 +324,8 @@ func TestReader(t *testing.T) {
 							Endpoint:          ptr("localhost:4317"),
 							Compression:       ptr("gzip"),
 							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientCertificate: ptr(material.BadCertPath),
+							ClientKey:         ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -570,7 +571,7 @@ func TestReader(t *testing.T) {
 							Endpoint:    ptr("https://localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+							Certificate: ptr(material.CACertPath),
 						},
 					},
 				},
@@ -587,7 +588,7 @@ func TestReader(t *testing.T) {
 							Endpoint:    ptr("https://localhost:4317"),
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Certificate: ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -604,8 +605,8 @@ func TestReader(t *testing.T) {
 							Endpoint:          ptr("localhost:4317"),
 							Compression:       ptr("gzip"),
 							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							ClientCertificate: ptr(material.BadCertPath),
+							ClientKey:         ptr(material.BadCertPath),
 						},
 					},
 				},
@@ -1442,7 +1443,10 @@ func TestPrometheusIPv6(t *testing.T) {
 			hServ := rs.(readerWithServer).server
 			assert.True(t, strings.HasPrefix(hServ.Addr, "[::1]:"))
 
-			resp, err := http.DefaultClient.Get("http://" + hServ.Addr + "/metrics")
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+hServ.Addr+"/metrics", http.NoBody)
+			require.NoError(t, err)
+
+			resp, err := http.DefaultClient.Do(req)
 			t.Cleanup(func() {
 				require.NoError(t, resp.Body.Close())
 			})
@@ -1581,18 +1585,60 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 	// localhost resolves to 127.0.0.1, so we expect the resolved IP
 	assert.Contains(t, addr, "127.0.0.1")
 
-	resp, err := http.Get("http://" + addr + "/metrics")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/metrics", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
 
 	assert.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
+// TestPrometheusReaderDotStyleLabels verifies that OTel dot-style resource
+// attribute names (e.g. service.name) are preserved in target_info when both
+// without_type_suffix and without_units are set which is default config for OTel Collector.
+func TestPrometheusReaderDotStyleLabels(t *testing.T) {
+	host := "localhost"
+	port := 0
+	reader, err := prometheusReader(t.Context(), &Prometheus{
+		Host:              &host,
+		Port:              &port,
+		WithoutTypeSuffix: ptr(true),
+		WithoutUnits:      ptr(true),
+	})
+	require.NoError(t, err)
+
+	res := resource.NewWithAttributes("", attribute.String("service.name", "test-svc"))
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader), sdkmetric.WithResource(res))
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		require.NoError(t, mp.Shutdown(context.Background()))
+	})
+	c, err := mp.Meter("test").Int64Counter("test.counter")
+	require.NoError(t, err)
+	c.Add(t.Context(), 1)
+
+	addr := reader.(readerWithServer).server.Addr
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/metrics", http.NoBody)
+	require.NoError(t, err)
+	req.Header.Set("Accept", "application/openmetrics-text; version=1.0.0; escaping=allow-utf-8")
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	var buf bytes.Buffer
+	_, err = buf.ReadFrom(resp.Body)
+	require.NoError(t, err)
+	body := buf.String()
+
+	assert.Contains(t, body, `"service.name"="test-svc"`)
+	assert.NotContains(t, body, "service_name")
+	assert.NotContains(t, body, "target.info")
+}
+
 func Test_otlpGRPCMetricExporter(t *testing.T) {
-	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
-		// TODO (#8115): Fix the flakiness on Windows and MacOS.
-		t.Skip("Test is flaky on Windows and MacOS.")
-	}
+	material := testtls.Write(t)
 	type args struct {
 		ctx        context.Context
 		otlpConfig *OTLPMetric
@@ -1609,7 +1655,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				otlpConfig: &OTLPMetric{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Insecure:    ptr(true),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
@@ -1627,8 +1673,8 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				otlpConfig: &OTLPMetric{
 					Protocol:    ptr("grpc"),
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
-					Certificate: ptr("testdata/server-certs/server.crt"),
+					Timeout:     ptr(50000),
+					Certificate: ptr(material.CACertPath),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -1636,7 +1682,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				tlsCreds, err := credentials.NewServerTLSFromFile("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				tlsCreds, err := credentials.NewServerTLSFromFile(material.ServerCertPath, material.ServerKeyPath)
 				if err != nil {
 					return nil, err
 				}
@@ -1651,10 +1697,10 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				otlpConfig: &OTLPMetric{
 					Protocol:          ptr("grpc"),
 					Compression:       ptr("gzip"),
-					Timeout:           ptr(5000),
-					Certificate:       ptr("testdata/server-certs/server.crt"),
-					ClientKey:         ptr("testdata/client-certs/client.key"),
-					ClientCertificate: ptr("testdata/client-certs/client.crt"),
+					Timeout:           ptr(50000),
+					Certificate:       ptr(material.CACertPath),
+					ClientKey:         ptr(material.ClientKeyPath),
+					ClientCertificate: ptr(material.ClientCertPath),
 					Headers: []NameStringValuePair{
 						{Name: "test", Value: ptr("test1")},
 					},
@@ -1662,11 +1708,11 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			},
 			grpcServerOpts: func() ([]grpc.ServerOption, error) {
 				opts := []grpc.ServerOption{}
-				cert, err := tls.LoadX509KeyPair("testdata/server-certs/server.crt", "testdata/server-certs/server.key")
+				cert, err := tls.LoadX509KeyPair(material.ServerCertPath, material.ServerKeyPath)
 				if err != nil {
 					return nil, err
 				}
-				caCert, err := os.ReadFile("testdata/ca.crt")
+				caCert, err := os.ReadFile(material.CACertPath)
 				if err != nil {
 					return nil, err
 				}
@@ -1684,17 +1730,14 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := net.Listen("tcp4", "localhost:0")
+			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 			require.NoError(t, err)
 
-			// We need to manually construct the endpoint using the port on which the server is listening.
-			//
-			// n.Addr() always returns 127.0.0.1 instead of localhost.
-			// But our certificate is created with CN as 'localhost', not '127.0.0.1'.
-			// So we have to manually form the endpoint as "localhost:<port>".
-			_, port, err := net.SplitHostPort(n.Addr().String())
-			require.NoError(t, err)
-			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
+			scheme := "https"
+			if tt.args.otlpConfig.Insecure != nil && *tt.args.otlpConfig.Insecure {
+				scheme = "http"
+			}
+			tt.args.otlpConfig.Endpoint = ptr(scheme + "://" + n.Addr().String())
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
@@ -1707,27 +1750,25 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			res, err := resource.New(t.Context())
 			require.NoError(t, err)
 
-			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{ //nolint:usetesting // required to avoid getting a canceled context.
-					Resource: res,
-					ScopeMetrics: []metricdata.ScopeMetrics{
-						{
-							Metrics: []metricdata.Metrics{
-								{
-									Name: "test-metric",
-									Data: metricdata.Gauge[int64]{
-										DataPoints: []metricdata.DataPoint[int64]{
-											{
-												Value: 1,
-											},
+			assert.NoError(t, exporter.Export(t.Context(), &metricdata.ResourceMetrics{
+				Resource: res,
+				ScopeMetrics: []metricdata.ScopeMetrics{
+					{
+						Metrics: []metricdata.Metrics{
+							{
+								Name: "test-metric",
+								Data: metricdata.Gauge[int64]{
+									DataPoints: []metricdata.DataPoint[int64]{
+										{
+											Value: 1,
 										},
 									},
 								},
 							},
 						},
 					},
-				}))
-			}, 10*time.Second, 1*time.Second)
+				},
+			}))
 		})
 	}
 }
@@ -1754,7 +1795,7 @@ func startGRPCMetricCollector(t *testing.T, listener net.Listener, serverOptions
 	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.GracefulStop()
+		srv.Stop()
 		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			assert.NoError(t, err)
 		}

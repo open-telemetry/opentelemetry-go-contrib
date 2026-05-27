@@ -92,7 +92,7 @@ func TestHandler(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			r, err := http.NewRequest(http.MethodGet, "http://localhost/", tc.requestBody)
+			r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", tc.requestBody)
 			require.NoError(t, err)
 
 			rr := httptest.NewRecorder()
@@ -128,21 +128,21 @@ func TestHandlerBasics(t *testing.T) {
 		WithPropagators(propagation.TraceContext{}),
 	)
 
-	r, err := http.NewRequest(http.MethodGet, "http://localhost/", strings.NewReader("foo"))
-	if err != nil {
-		t.Fatal(err)
-	}
 	// set a custom start time 10 minutes in the past.
 	startTime := time.Now().Add(-10 * time.Minute)
-	r = r.WithContext(ContextWithStartTime(r.Context(), startTime))
+	ctx := ContextWithStartTime(t.Context(), startTime)
+
+	r := httptest.NewRequestWithContext(ctx, http.MethodGet, "/test", strings.NewReader("foo"))
+	r.Pattern = "/test"
 	h.ServeHTTP(rr, r)
 
 	rm := metricdata.ResourceMetrics{}
-	err = reader.Collect(t.Context(), &rm)
+	err := reader.Collect(t.Context(), &rm)
 	require.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
 	attrs := attribute.NewSet(
 		attribute.String("http.request.method", "GET"),
+		attribute.String("http.route", "/test"),
 		attribute.Int64("http.response.status_code", 200),
 		attribute.String("network.protocol.name", "http"),
 		attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
@@ -288,7 +288,7 @@ func TestHandlerEmittedAttributes(t *testing.T) {
 				WithTracerProvider(provider),
 			)
 
-			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", http.NoBody))
+			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
 			attrs := sr.Ended()[0].Attributes()
@@ -398,7 +398,7 @@ func TestHandlerPropagateWriteHeaderCalls(t *testing.T) {
 
 			recorder := httptest.NewRecorder()
 			rw := &respWriteHeaderCounter{ResponseWriter: recorder}
-			h.ServeHTTP(rw, httptest.NewRequest(http.MethodGet, "/", http.NoBody))
+			h.ServeHTTP(rw, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody))
 			require.Equal(t, tc.expectHeadersWritten, rw.headersWritten, "should propagate all WriteHeader calls to underlying ResponseWriter")
 		})
 	}
@@ -411,9 +411,10 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			_, err := w.Write([]byte("hello world"))
 			assert.NoError(t, err)
-		}), "test_handler")
+		}), "test_handler",
+	)
 
-	r, err := http.NewRequest(http.MethodGet, "http://localhost/", http.NoBody)
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
 	require.NoError(t, err)
 
 	spanRecorder := tracetest.NewSpanRecorder()
@@ -432,7 +433,7 @@ func TestHandlerRequestWithTraceContext(t *testing.T) {
 	spans := spanRecorder.Ended()
 	require.Len(t, spans, 2)
 
-	assert.Equal(t, "test_handler", spans[0].Name())
+	assert.Equal(t, "GET", spans[0].Name())
 	assert.Equal(t, "test_request", spans[1].Name())
 	assert.NotEmpty(t, spans[0].Parent().SpanID())
 	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[0].Parent().SpanID())
@@ -447,7 +448,7 @@ func TestWithSpanNameFormatter(t *testing.T) {
 	}{
 		{
 			name:         "with the default span name formatter",
-			wantSpanName: "test_handler",
+			wantSpanName: "GET /foo/{id}",
 		},
 		{
 			name: "with a custom span name formatter",
@@ -483,7 +484,7 @@ func TestWithSpanNameFormatter(t *testing.T) {
 			}))
 			h := NewHandler(mux, "test_handler", opts...)
 
-			r, err := http.NewRequest(http.MethodGet, "http://localhost/foo/123", http.NoBody)
+			r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/foo/123", http.NoBody)
 			require.NoError(t, err)
 
 			rr := httptest.NewRecorder()
@@ -493,6 +494,73 @@ func TestWithSpanNameFormatter(t *testing.T) {
 			assert.NoError(t, spanRecorder.ForceFlush(t.Context()))
 			spans := spanRecorder.Ended()
 			assert.Len(t, spans, 1)
+			assert.Equal(t, tt.wantSpanName, spans[0].Name())
+		})
+	}
+}
+
+func TestDefaultSpanNameFormatter(t *testing.T) {
+	for _, tt := range []struct {
+		name         string
+		method       string
+		pattern      string
+		wantSpanName string
+	}{
+		{
+			name:         "standard method, no pattern",
+			method:       http.MethodGet,
+			wantSpanName: "GET",
+		},
+		{
+			name:         "standard method, path-only pattern",
+			method:       http.MethodGet,
+			pattern:      "/foo/{id}",
+			wantSpanName: "GET /foo/{id}",
+		},
+		{
+			name:         "standard method, pattern with method prefix",
+			method:       http.MethodGet,
+			pattern:      "GET /foo/{id}",
+			wantSpanName: "GET /foo/{id}",
+		},
+		{
+			name:         "standard method, pattern with host prefix",
+			method:       http.MethodGet,
+			pattern:      "example.com/foo/{id}",
+			wantSpanName: "GET /foo/{id}",
+		},
+		{
+			name:         "nonstandard method, no pattern",
+			method:       "CUSTOM",
+			wantSpanName: "HTTP",
+		},
+		{
+			name:         "nonstandard method, with pattern",
+			method:       "CUSTOM",
+			pattern:      "/foo/{id}",
+			wantSpanName: "HTTP /foo/{id}",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			spanRecorder := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+			h := NewHandler(
+				http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}),
+				"test_handler",
+				WithTracerProvider(provider),
+			)
+
+			r, err := http.NewRequestWithContext(t.Context(), tt.method, "http://localhost/foo/123", http.NoBody)
+			require.NoError(t, err)
+			r.Pattern = tt.pattern
+
+			rr := httptest.NewRecorder()
+			h.ServeHTTP(rr, r)
+
+			assert.NoError(t, spanRecorder.ForceFlush(t.Context()))
+			spans := spanRecorder.Ended()
+			require.Len(t, spans, 1)
 			assert.Equal(t, tt.wantSpanName, spans[0].Name())
 		})
 	}
@@ -563,7 +631,7 @@ func TestWithPublicEndpointFn(t *testing.T) {
 				WithTracerProvider(provider),
 			)
 
-			r, err := http.NewRequest(http.MethodGet, "http://localhost/", http.NoBody)
+			r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
 			require.NoError(t, err)
 
 			sc := trace.NewSpanContext(remoteSpan)
@@ -603,7 +671,7 @@ func TestSpanStatus(t *testing.T) {
 				WithTracerProvider(provider),
 			)
 
-			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(http.MethodGet, "/", http.NoBody))
+			h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody))
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
 			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
@@ -654,7 +722,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 			WithMetricAttributesFn(tc.fn),
 		)
 
-		r, err := http.NewRequest(http.MethodGet, "http://localhost/", http.NoBody)
+		r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
 		require.NoError(t, err)
 		rr := httptest.NewRecorder()
 		h.ServeHTTP(rr, r)
@@ -687,7 +755,7 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()
 
-	r, err := http.NewRequest(http.MethodGet, "http://localhost/", http.NoBody)
+	r, err := http.NewRequestWithContext(b.Context(), http.MethodGet, "http://localhost/", http.NoBody)
 	require.NoError(b, err)
 
 	for _, bb := range []struct {

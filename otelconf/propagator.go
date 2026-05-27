@@ -45,7 +45,7 @@ func newPropagator(p *Propagator) (propagation.TextMapPropagator, error) {
 	}
 
 	if p.CompositeList != nil {
-		for _, v := range strings.Split(*p.CompositeList, ",") {
+		for v := range strings.SplitSeq(*p.CompositeList, ",") {
 			names[v] = struct{}{}
 		}
 	}

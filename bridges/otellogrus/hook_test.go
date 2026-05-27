@@ -106,7 +106,8 @@ func TestNewHook(t *testing.T) {
 				WithAttributes(attribute.String("testattr", "testval")),
 			},
 
-			wantLogger: provider.Logger(name,
+			wantLogger: provider.Logger(
+				name,
 				log.WithInstrumentationVersion("42.1"),
 				log.WithSchemaURL("https://example.com"),
 				log.WithInstrumentationAttributes(attribute.String("testattr", "testval")),
@@ -335,6 +336,50 @@ func TestHookFire(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "emits a log entry with error field set as record error",
+			entry: &logrus.Entry{
+				Level: logrus.ErrorLevel,
+				Data: logrus.Fields{
+					logrus.ErrorKey: assert.AnError,
+					"other":         "value",
+				},
+			},
+			want: logtest.Recording{
+				logtest.Scope{Name: name}: {
+					{
+						Severity:     log.SeverityError,
+						SeverityText: "error",
+						Error:        assert.AnError,
+						Attributes: []log.KeyValue{
+							log.String("other", "value"),
+						},
+						Body: log.StringValue(""),
+					},
+				},
+			},
+		},
+		{
+			name: "emits a log entry without error field",
+			entry: &logrus.Entry{
+				Level: logrus.InfoLevel,
+				Data: logrus.Fields{
+					"key": "val",
+				},
+			},
+			want: logtest.Recording{
+				logtest.Scope{Name: name}: {
+					{
+						Severity:     log.SeverityInfo,
+						SeverityText: "info",
+						Attributes: []log.KeyValue{
+							log.String("key", "val"),
+						},
+						Body: log.StringValue(""),
+					},
+				},
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := logtest.NewRecorder()
@@ -351,8 +396,9 @@ func TestConvertFields(t *testing.T) {
 	for _, tt := range []struct {
 		name string
 
-		fields logrus.Fields
-		want   []log.KeyValue
+		fields  logrus.Fields
+		want    []log.KeyValue
+		wantErr error
 	}{
 		{
 			name:   "with a boolean",
@@ -414,7 +460,8 @@ func TestConvertFields(t *testing.T) {
 			name:   "with a slice",
 			fields: logrus.Fields{"hello": []string{"foo", "bar"}},
 			want: []log.KeyValue{
-				log.Slice("hello",
+				log.Slice(
+					"hello",
 					log.StringValue("foo"),
 					log.StringValue("bar"),
 				),
@@ -424,7 +471,8 @@ func TestConvertFields(t *testing.T) {
 			name:   "with an interface slice",
 			fields: logrus.Fields{"hello": []any{"foo", 42}},
 			want: []log.KeyValue{
-				log.Slice("hello",
+				log.Slice(
+					"hello",
 					log.StringValue("foo"),
 					log.Int64Value(42),
 				),
@@ -479,9 +527,22 @@ func TestConvertFields(t *testing.T) {
 				log.Slice("hello", log.StringValue("one"), log.StringValue("two")),
 			},
 		},
+		{
+			name:    "with an error field",
+			fields:  logrus.Fields{logrus.ErrorKey: assert.AnError},
+			wantErr: assert.AnError,
+		},
+		{
+			name:   "with a non-error value in error key",
+			fields: logrus.Fields{logrus.ErrorKey: "not an error"},
+			want: []log.KeyValue{
+				log.String(logrus.ErrorKey, "not an error"),
+			},
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			got := convertFields(tt.fields)
+			got, gotErr := convertFields(tt.fields)
+			assert.Equal(t, tt.wantErr, gotErr)
 			if !slices.EqualFunc(tt.want, got, log.KeyValue.Equal) {
 				t.Errorf("KeyValues are not equal:\nwant: %v\ngot:  %v", tt.want, got)
 			}

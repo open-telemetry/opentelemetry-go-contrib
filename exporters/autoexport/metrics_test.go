@@ -138,7 +138,10 @@ func TestMetricExporterPrometheus(t *testing.T) {
 		t.Errorf("expected readerWithServer but got %v", r)
 	}
 
-	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("http://%s/metrics", rws.addr), http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, resp.Body.Close()) }()
 	body, err := io.ReadAll(resp.Body)
@@ -218,7 +221,10 @@ func TestMetricProducerPrometheusWithPrometheusExporter(t *testing.T) {
 
 	t.Logf("Prometheus metrics server listening at http://%s/metrics", rws.addr)
 
-	resp, err := http.Get(fmt.Sprintf("http://%s/metrics", rws.addr))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("http://%s/metrics", rws.addr), http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, resp.Body.Close()) }()
 	body, err := io.ReadAll(resp.Body)
