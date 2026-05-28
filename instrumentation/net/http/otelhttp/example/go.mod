@@ -5,12 +5,12 @@ go 1.25.0
 replace go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../
 
 require (
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.68.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0
 	go.opentelemetry.io/otel v1.44.0
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/sdk v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/sdk/metric v1.43.1-0.20260521080857-e5bdc311108b
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.44.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
+	go.opentelemetry.io/otel/sdk v1.44.0
+	go.opentelemetry.io/otel/sdk/metric v1.44.0
 	go.opentelemetry.io/otel/trace v1.44.0
 )
 
