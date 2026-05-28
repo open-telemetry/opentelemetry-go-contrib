@@ -106,4 +106,6 @@ replace go.opentelemetry.io/contrib/detectors/gcp => ../gcp
 
 replace go.opentelemetry.io/contrib/detectors/hetzner => ../hetzner
 
+replace go.opentelemetry.io/contrib/detectors/heroku => ../heroku
+
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
