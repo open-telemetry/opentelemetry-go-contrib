@@ -63,8 +63,20 @@ func (fn clientTraceOptionFunc) apply(c *clientTracer) {
 }
 
 // WithoutSubSpans will modify the httptrace.ClientTrace to only collect data
-// as Events and Attributes on a span found in the context.  By default
+// as Events and Attributes on a span found in the context. By default
 // sub-spans will be generated.
+//
+// This option is recommended for services that make a large number of
+// outbound HTTP requests per incoming request (e.g., API gateways,
+// fan-out proxies, or GraphQL servers). Each outbound request creates
+// up to 7 sub-spans (http.getconn, http.dns, http.connect, http.tls,
+// http.headers, http.send, http.receive) as separate heap-allocated
+// trace.Span objects. In high fan-out services this multiplied span
+// volume can overwhelm the span processor queue and increase GC
+// pressure, resulting in elevated and continuously growing memory usage.
+// Using WithoutSubSpans replaces those spans with lightweight events on
+// the parent span, preserving the diagnostic information at a fraction
+// of the cost.
 func WithoutSubSpans() ClientTraceOption {
 	return clientTraceOptionFunc(func(ct *clientTracer) {
 		ct.useSpans = false
