@@ -16,7 +16,9 @@ type resourceDetector struct {
 	createProvider func(...client.Opt) (provider, error)
 }
 
-// Detect implements [resource.Detector].
+// Detect returns a [resource.Resource] containing Docker host and container
+// attributes for the running container. It returns an empty resource and an
+// error if the Docker daemon is unreachable or any daemon call fails.
 func (r *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	dockerProvider, err := r.createProvider()
 	if err != nil {
@@ -47,6 +49,8 @@ func (r *resourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	), nil
 }
 
+// NewResourceDetector returns a [resource.Detector] that detects resource
+// attributes for Docker containers using the local Docker daemon.
 func NewResourceDetector() resource.Detector {
 	return &resourceDetector{createProvider: newProvider}
 }
