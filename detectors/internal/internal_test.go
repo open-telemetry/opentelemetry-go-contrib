@@ -1,3 +1,6 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package internal
 
 import (
@@ -29,6 +32,6 @@ func TestGoarchToHostArch(t *testing.T) {
 		{"s390x", "s390x"},
 	}
 	for _, tc := range cases {
-		assert.Equal(t, tc.want, GOARCHtoHostArch(tc.in), "input: %s", tc.in)
+		assert.Equal(t, tc.want, GOARCHToHostArch(tc.in), "input: %s", tc.in)
 	}
 }

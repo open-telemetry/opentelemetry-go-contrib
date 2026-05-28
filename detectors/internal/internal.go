@@ -12,7 +12,8 @@ func GOOSToOSType(goos string) string {
 	return goos
 }
 
-func GOARCHtoHostArch(goarch string) string {
+// GOARCHToHostArch maps a runtime.GOARCH-like value to host.arch style.
+func GOARCHToHostArch(goarch string) string {
 	// These cases differ from the spec well-known values
 	switch goarch {
 	case "arm":
