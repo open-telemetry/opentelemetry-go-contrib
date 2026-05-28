@@ -1,0 +1,136 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package k8snode
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"os"
+
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
+
+	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
+
+const defaultNodeEnvVar = "K8S_NODE_NAME"
+
+type config struct {
+	nodeEnvVar string
+	kubeClient kubernetes.Interface
+	filter     attribute.Filter
+}
+
+// Option configures a [ResourceDetector].
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (f optionFunc) apply(c *config) {
+	f(c)
+}
+
+// WithNodeEnvVar sets the environment variable name from which the Kubernetes
+// node name is read. Defaults to "K8S_NODE_NAME".
+func WithNodeEnvVar(name string) Option {
+	return optionFunc(func(c *config) { c.nodeEnvVar = name })
+}
+
+// WithKubeClient sets the Kubernetes client used to query the node. If not
+// set, an in-cluster client is created automatically during
+// [ResourceDetector.Detect]. This option is primarily useful for testing or
+// when running outside a cluster.
+func WithKubeClient(client kubernetes.Interface) Option {
+	return optionFunc(func(c *config) { c.kubeClient = client })
+}
+
+// WithAttributeFilter sets a filter that controls which detected attributes
+// are included in the returned resource. Only attributes for which filter
+// returns true are included. By default all attributes are included.
+func WithAttributeFilter(filter attribute.Filter) Option {
+	return optionFunc(func(c *config) { c.filter = filter })
+}
+
+// ResourceDetector collects resource attributes from the Kubernetes node the
+// process is running on.
+type resourceDetector struct {
+	cfg config
+}
+
+// Compile-time interface assertion.
+var _ resource.Detector = (*resourceDetector)(nil)
+
+// Detect returns a [*resource.Resource] describing the Kubernetes node. If the
+// node-name environment variable is not set or the process is not running
+// inside a cluster, an empty resource and no error are returned.
+func (rd *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+	nodeName := os.Getenv(rd.cfg.nodeEnvVar)
+	if nodeName == "" {
+		return resource.Empty(), nil
+	}
+
+	client := rd.cfg.kubeClient
+	if client == nil {
+		conf, err := rest.InClusterConfig()
+		if err != nil {
+			if errors.Is(err, rest.ErrNotInCluster) {
+				return resource.Empty(), nil
+			}
+			return nil, fmt.Errorf("k8snode detector: %w", err)
+		}
+		var clientErr error
+		client, clientErr = kubernetes.NewForConfig(conf)
+		if clientErr != nil {
+			return nil, fmt.Errorf("k8snode detector: failed to create Kubernetes client: %w", clientErr)
+		}
+	}
+
+	node, err := client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("k8snode detector: failed to get node %q: %w", nodeName, err)
+	}
+
+	attrs := []attribute.KeyValue{
+		semconv.K8SNodeName(node.Name),
+		semconv.K8SNodeUID(string(node.UID)),
+	}
+
+	if rd.cfg.filter != nil {
+		filtered := attrs[:0]
+		for _, kv := range attrs {
+			if rd.cfg.filter(kv) {
+				filtered = append(filtered, kv)
+			}
+		}
+		attrs = filtered
+	}
+
+	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), nil
+}
+
+// NewResourceDetector returns a [resource.Detector] that detects resource
+// attributes on the Kubernetes node the process is running on.
+//
+// The node name is read from the K8S_NODE_NAME environment variable by
+// default. Use [WithNodeEnvVar] to customise the variable name. The variable
+// is typically populated via the Kubernetes downward API:
+//
+//	env:
+//	  - name: K8S_NODE_NAME
+//	    valueFrom:
+//	      fieldRef:
+//	        fieldPath: spec.nodeName
+func NewResourceDetector(opts ...Option) resource.Detector {
+	cfg := config{nodeEnvVar: defaultNodeEnvVar}
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+	return &resourceDetector{cfg: cfg}
+}
