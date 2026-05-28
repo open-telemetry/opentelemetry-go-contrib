@@ -79,33 +79,3 @@ func TestDockerResourceDetectorSuccess(t *testing.T) {
 	containerImage, _ := attrs.Value(semconv.ContainerImageNameKey)
 	assert.Equal(t, "golang:1.25", containerImage.AsString())
 }
-
-func TestDockerResourceDetectorZos(t *testing.T) {
-	detector := &resourceDetector{
-		createProvider: func(...client.Opt) (provider, error) {
-			return &mockProvider{
-				hostname:       "docker-host",
-				osType:         "linux",
-				containerName:  "/my-container",
-				containerImage: "golang:1.25",
-			}, nil
-		},
-	}
-
-	res, err := detector.Detect(context.Background())
-	require.NoError(t, err)
-
-	attrs := res.Set()
-	hostname, _ := attrs.Value(semconv.HostNameKey)
-	assert.Equal(t, "docker-host", hostname.AsString())
-
-	osType, _ := attrs.Value(semconv.OSTypeKey)
-	assert.Equal(t, "linux", osType.AsString())
-	assert.Equal(t, semconv.OSTypeLinux.Value.AsString(), osType.AsString())
-
-	containerName, _ := attrs.Value(semconv.ContainerNameKey)
-	assert.Equal(t, "/my-container", containerName.AsString())
-
-	containerImage, _ := attrs.Value(semconv.ContainerImageNameKey)
-	assert.Equal(t, "golang:1.25", containerImage.AsString())
-}
