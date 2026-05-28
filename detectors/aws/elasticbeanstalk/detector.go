@@ -25,7 +25,12 @@ type resourceDetector struct {
 // compile time assertion that resource detector implements the resource.Detector interface.
 var _ resource.Detector = (*resourceDetector)(nil)
 
-// NewResourceDetector returns a resource detector that will detect AWS Elastic Beanstalk resources.
+// NewResourceDetector returns a resource detector that reads the AWS X-Ray daemon
+// configuration file to detect Elastic Beanstalk resource attributes.
+//
+// If the configuration file is absent (i.e. the process is not running on an
+// Elastic Beanstalk environment, or X-Ray integration is disabled), the detector
+// returns an empty resource without an error.
 func NewResourceDetector() resource.Detector {
 	return &resourceDetector{fs: &ebFileSystem{}}
 }
