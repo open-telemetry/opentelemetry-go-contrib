@@ -11,6 +11,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+### Changed
+
+- The configuration-provided resource now includes default SDK attributes. (#8990)
 
 ### Changed
 
@@ -35,7 +38,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Set the "error" field (e.g. created via `zap.Error`) as `record.SetErr` instead of a plain attribute in `go.opentelemetry.io/contrib/bridges/otelzap`. (#8719)
 - Set fields implementing `error` interface from `slog` records as `record.SetErr` instead of plain attributes in `go.opentelemetry.io/contrib/bridges/otelslog`. (#8774)
 - Set emitted errors in `go.opentelemetry.io/contrib/bridges/otellogr` as record errors (`Record.SetErr`) instead of `exception.message` attributes. (#8775)
-- The configuration-provided resource now includes default SDK attributes. (#8990)
 
 ### Fixed
 
