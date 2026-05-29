@@ -50,7 +50,7 @@ func newMockDetector(m *mockProvider) *resourceDetector {
 	}
 }
 
-func TestDockerResourceDetectorProviderError(t *testing.T) {
+func TestDockerResourceDetectorNotDockerEnvironment(t *testing.T) {
 	detector := &resourceDetector{
 		createProvider: func(...client.Opt) (provider, error) {
 			return nil, errors.New("cannot connect to Docker daemon")
@@ -58,8 +58,7 @@ func TestDockerResourceDetectorProviderError(t *testing.T) {
 	}
 
 	res, err := detector.Detect(context.Background())
-	require.Error(t, err)
-	assert.False(t, errors.Is(err, resource.ErrPartialResource))
+	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
 }
 
