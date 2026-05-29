@@ -9,6 +9,18 @@
   "postUpdateOptions" : [
     "gomodTidy"
   ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Update the Weaver Docker image tag used by the live-check e2e test.",
+      "managerFilePatterns": ["/^internal/e2e/weaver/weaver_test\\.go$/"],
+      "matchStrings": [
+        "weaverImage\\s*=\\s*\"(?<depName>[^\"]+)\"\\s+weaverTag\\s*=\\s*\"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ],
   "packageRules": [
     {
       "matchManagers": ["gomod"],
