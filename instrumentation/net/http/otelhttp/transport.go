@@ -109,9 +109,9 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		ctx = httptrace.WithClientTrace(ctx, t.clientTrace(ctx))
 	}
 
-	labeler, found := LabelerFromContext(ctx)
+	labeler, found := ClientLabelerFromContext(ctx)
 	if !found {
-		ctx = ContextWithLabeler(ctx, labeler)
+		ctx = ContextWithClientLabeler(ctx, labeler)
 	}
 
 	r = r.Clone(ctx) // According to RoundTripper spec, we shouldn't modify the origin request.
