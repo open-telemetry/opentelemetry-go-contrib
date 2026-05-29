@@ -18,14 +18,17 @@ type resourceDetector struct {
 }
 
 // Detect returns a [resource.Resource] containing Docker host and container
-// attributes for the running container. It returns an empty resource and an
-// error if the Docker daemon is unreachable. If the daemon is reachable but
-// some attributes cannot be retrieved, a partial resource is returned together
-// with [resource.ErrPartialResource].
+// attributes for the running container. It returns an empty resource and no
+// error when the Docker daemon is unreachable (not a Docker environment). If
+// the daemon is reachable but some attributes cannot be retrieved, a partial
+// resource is returned together with [resource.ErrPartialResource].
 func (r *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+	// A provider failure means the Docker daemon is unreachable, which is
+	// indistinguishable from not running in a Docker environment. Return an
+	// empty resource with no error so autodetect can continue with other detectors.
 	dockerProvider, err := r.createProvider()
 	if err != nil {
-		return resource.Empty(), err
+		return resource.Empty(), nil
 	}
 
 	var (
