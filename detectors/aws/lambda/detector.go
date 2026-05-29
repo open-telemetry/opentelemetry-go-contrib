@@ -23,12 +23,16 @@ const (
 	lambdaFunctionVersionEnvVar = "AWS_LAMBDA_FUNCTION_VERSION"
 	lambdaLogStreamNameEnvVar   = "AWS_LAMBDA_LOG_STREAM_NAME"
 	lambdaMemoryLimitEnvVar     = "AWS_LAMBDA_FUNCTION_MEMORY_SIZE"
+	accountIDSymlinkPath        = "/tmp/.otel-aws-account-id"
 	miB                         = 1 << 20
 )
 
 var (
 	empty          = resource.Empty()
 	errNotOnLambda = errors.New("process is not on Lambda, cannot detect environment variables from Lambda")
+
+	// readlinkFunc is used to read the account ID symlink; overridable for testing.
+	readlinkFunc = os.Readlink
 )
 
 // resource detector collects resource information from Lambda environment.
@@ -67,6 +71,10 @@ func (*resourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	maxMemory, err := strconv.Atoi(maxMemoryStr)
 	if err == nil {
 		attrs = append(attrs, semconv.FaaSMaxMemory(maxMemory*miB))
+	}
+
+	if accountID, err := readlinkFunc(accountIDSymlinkPath); err == nil {
+		attrs = append(attrs, semconv.CloudAccountID(accountID))
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), nil
