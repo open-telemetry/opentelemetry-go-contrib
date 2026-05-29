@@ -6,7 +6,6 @@ package lambda // import "go.opentelemetry.io/contrib/detectors/aws/lambda"
 
 import (
 	"context"
-	"errors"
 	"os"
 	"strconv"
 
@@ -26,10 +25,7 @@ const (
 	miB                         = 1 << 20
 )
 
-var (
-	empty          = resource.Empty()
-	errNotOnLambda = errors.New("process is not on Lambda, cannot detect environment variables from Lambda")
-)
+var empty = resource.Empty()
 
 // resource detector collects resource information from Lambda environment.
 type resourceDetector struct{}
@@ -47,7 +43,7 @@ func (*resourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	// Lambda resources come from ENV
 	lambdaName := os.Getenv(lambdaFunctionNameEnvVar)
 	if lambdaName == "" {
-		return empty, errNotOnLambda
+		return empty, nil
 	}
 	awsRegion := os.Getenv(awsRegionEnvVar)
 	functionVersion := os.Getenv(lambdaFunctionVersionEnvVar)
