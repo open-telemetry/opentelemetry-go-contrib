@@ -4,12 +4,12 @@ go 1.25.0
 
 require (
 	go.opencensus.io v0.24.0
-	go.opentelemetry.io/otel v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/bridge/opencensus v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/sdk v1.43.1-0.20260521080857-e5bdc311108b
-	go.opentelemetry.io/otel/sdk/metric v1.43.1-0.20260521080857-e5bdc311108b
+	go.opentelemetry.io/otel v1.44.0
+	go.opentelemetry.io/otel/bridge/opencensus v1.44.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.44.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
+	go.opentelemetry.io/otel/sdk v1.44.0
+	go.opentelemetry.io/otel/sdk/metric v1.44.0
 )
 
 require (
@@ -19,8 +19,7 @@ require (
 	github.com/golang/groupcache v0.0.0-20241129210726-2c02b8208cf8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.43.1-0.20260521080857-e5bdc311108b // indirect
-	go.opentelemetry.io/otel/metric/x v0.0.0-20260521080857-e5bdc311108b // indirect
-	go.opentelemetry.io/otel/trace v1.43.1-0.20260521080857-e5bdc311108b // indirect
-	golang.org/x/sys v0.44.0 // indirect
+	go.opentelemetry.io/otel/metric v1.44.0 // indirect
+	go.opentelemetry.io/otel/trace v1.44.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 )

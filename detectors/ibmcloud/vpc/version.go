@@ -5,8 +5,8 @@ package vpc // import "go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
 
 // Version is the current release version of the IBM Cloud VPC resource detector.
 func Version() string {
-	return "0.15.0"
 	// This string is updated by the pre_release.sh script during release
+	return "0.16.0"
 }
 
 // SemVersion is the semantic version to be supplied to tracer/meter creation.

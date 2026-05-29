@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -104,7 +105,7 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 }
 
 // Detect detects IBM Cloud VPC instance metadata. It returns an empty resource
-// and no error when the metadata service is unavailable.
+// and no error when metadata cannot be retrieved.
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	if d.err != nil {
 		return nil, d.err
@@ -248,11 +249,18 @@ func (d *ResourceDetector) getToken(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to decode token response: %w", err)
 	}
 	if tr.AccessToken == "" {
-		return "", fmt.Errorf("metadata token response missing access_token")
+		return "", errors.New("metadata token response missing access_token")
 	}
 
 	d.token = tr.AccessToken
-	d.tokenExpiry = time.Now().Add(time.Duration(tr.ExpiresIn)*time.Second - tokenRefreshBuffer)
+	tokenTTL := time.Duration(tr.ExpiresIn) * time.Second
+	if tokenTTL > tokenRefreshBuffer {
+		tokenTTL -= tokenRefreshBuffer
+	}
+	if tokenTTL < 0 {
+		tokenTTL = 0
+	}
+	d.tokenExpiry = time.Now().Add(tokenTTL)
 
 	return d.token, nil
 }

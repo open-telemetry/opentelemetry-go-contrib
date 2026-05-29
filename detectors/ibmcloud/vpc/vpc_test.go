@@ -65,6 +65,22 @@ func TestDetect(t *testing.T) {
 	assert.Equal(t, int32(1), tokenRequests.Load(), "second detection should reuse the metadata token")
 }
 
+func TestDetectReusesShortLivedToken(t *testing.T) {
+	var tokenRequests atomic.Int32
+	srv := newMetadataServerWithTokenBody(t, &tokenRequests, http.StatusOK, testInstanceJSON, `{"access_token":"test-token","expires_in":1}`)
+	defer srv.Close()
+
+	detector := NewResourceDetector()
+	detector.endpoint = srv.URL
+
+	_, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+
+	_, err = detector.Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, int32(1), tokenRequests.Load(), "second detection should reuse a still-valid short-lived token")
+}
+
 func TestDetectMetadataUnavailable(t *testing.T) {
 	srv := newMetadataServer(t, nil, http.StatusServiceUnavailable, "service unavailable")
 	defer srv.Close()
@@ -117,6 +133,12 @@ func TestAccountIDFromCRN(t *testing.T) {
 func newMetadataServer(t *testing.T, tokenRequests *atomic.Int32, metadataStatus int, metadataBody string) *httptest.Server {
 	t.Helper()
 
+	return newMetadataServerWithTokenBody(t, tokenRequests, metadataStatus, metadataBody, `{"access_token":"test-token","expires_in":300}`)
+}
+
+func newMetadataServerWithTokenBody(t *testing.T, tokenRequests *atomic.Int32, metadataStatus int, metadataBody, tokenBody string) *httptest.Server {
+	t.Helper()
+
 	return httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case r.URL.Path == tokenPath && r.Method == http.MethodPut:
@@ -128,7 +150,7 @@ func newMetadataServer(t *testing.T, tokenRequests *atomic.Int32, metadataStatus
 				tokenRequests.Add(1)
 			}
 			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write([]byte(`{"access_token":"test-token","expires_in":300}`))
+			_, _ = w.Write([]byte(tokenBody))
 		case r.URL.Path == instancePath && r.Method == http.MethodGet:
 			if r.Header.Get("Authorization") != "Bearer test-token" {
 				w.WriteHeader(http.StatusUnauthorized)

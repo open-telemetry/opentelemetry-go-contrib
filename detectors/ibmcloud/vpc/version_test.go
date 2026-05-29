@@ -21,3 +21,7 @@ func TestVersionSemver(t *testing.T) {
 	v := vpc.Version()
 	assert.NotNil(t, versionRegex.FindStringSubmatch(v), "version is not semver: %s", v)
 }
+
+func TestSemVersion(t *testing.T) {
+	assert.Equal(t, vpc.Version(), vpc.SemVersion())
+}
