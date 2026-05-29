@@ -15,7 +15,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+<<<<<<< HEAD
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
+=======
+- The configuration-provided resource now includes default SDK attributes. (#8990)
+>>>>>>> 052b058b8 (fix changelog)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
