@@ -17,26 +17,37 @@ import (
 )
 
 type mockProvider struct {
-	hostname       string
-	osType         string
-	containerName  string
-	containerImage string
+	hostname         string
+	hostnameErr      error
+	osType           string
+	osTypeErr        error
+	containerName    string
+	containerImage   string
+	containerInfoErr error
 }
 
 func (m *mockProvider) Hostname(_ context.Context) (string, error) {
-	return m.hostname, nil
+	return m.hostname, m.hostnameErr
 }
 
 func (m *mockProvider) OSType(_ context.Context) (string, error) {
-	return m.osType, nil
+	return m.osType, m.osTypeErr
 }
 
 func (m *mockProvider) ContainerInfo(_ context.Context) (container.InspectResponse, error) {
-	resp := container.InspectResponse{}
-	resp.Name = m.containerName
-	resp.Image = m.containerImage
+	if m.containerInfoErr != nil {
+		return container.InspectResponse{}, m.containerInfoErr
+	}
+	return container.InspectResponse{
+		Name:   m.containerName,
+		Config: &container.Config{Image: m.containerImage},
+	}, nil
+}
 
-	return resp, nil
+func newMockDetector(m *mockProvider) *resourceDetector {
+	return &resourceDetector{
+		createProvider: func(...client.Opt) (provider, error) { return m, nil },
+	}
 }
 
 func TestDockerResourceDetectorProviderError(t *testing.T) {
@@ -48,20 +59,17 @@ func TestDockerResourceDetectorProviderError(t *testing.T) {
 
 	res, err := detector.Detect(context.Background())
 	require.Error(t, err)
+	assert.False(t, errors.Is(err, resource.ErrPartialResource))
 	assert.Equal(t, resource.Empty(), res)
 }
 
 func TestDockerResourceDetectorSuccess(t *testing.T) {
-	detector := &resourceDetector{
-		createProvider: func(...client.Opt) (provider, error) {
-			return &mockProvider{
-				hostname:       "docker-host",
-				osType:         "linux",
-				containerName:  "/my-container",
-				containerImage: "golang:1.25",
-			}, nil
-		},
-	}
+	detector := newMockDetector(&mockProvider{
+		hostname:       "docker-host",
+		osType:         "linux",
+		containerName:  "my-container",
+		containerImage: "golang:1.25",
+	})
 
 	res, err := detector.Detect(context.Background())
 	require.NoError(t, err)
@@ -74,8 +82,67 @@ func TestDockerResourceDetectorSuccess(t *testing.T) {
 	assert.Equal(t, "linux", osType.AsString())
 
 	containerName, _ := attrs.Value(semconv.ContainerNameKey)
-	assert.Equal(t, "/my-container", containerName.AsString())
+	assert.Equal(t, "my-container", containerName.AsString())
 
 	containerImage, _ := attrs.Value(semconv.ContainerImageNameKey)
 	assert.Equal(t, "golang:1.25", containerImage.AsString())
+}
+
+func TestDockerResourceDetectorOSTypeError(t *testing.T) {
+	detector := newMockDetector(&mockProvider{
+		osTypeErr:      errors.New("daemon unavailable"),
+		hostname:       "docker-host",
+		containerName:  "my-container",
+		containerImage: "golang:1.25",
+	})
+
+	res, err := detector.Detect(context.Background())
+	require.ErrorIs(t, err, resource.ErrPartialResource)
+
+	attrs := res.Set()
+	_, hasOSType := attrs.Value(semconv.OSTypeKey)
+	assert.False(t, hasOSType)
+
+	hostname, _ := attrs.Value(semconv.HostNameKey)
+	assert.Equal(t, "docker-host", hostname.AsString())
+}
+
+func TestDockerResourceDetectorHostnameError(t *testing.T) {
+	detector := newMockDetector(&mockProvider{
+		osType:         "linux",
+		hostnameErr:    errors.New("daemon unavailable"),
+		containerName:  "my-container",
+		containerImage: "golang:1.25",
+	})
+
+	res, err := detector.Detect(context.Background())
+	require.ErrorIs(t, err, resource.ErrPartialResource)
+
+	attrs := res.Set()
+	_, hasHostname := attrs.Value(semconv.HostNameKey)
+	assert.False(t, hasHostname)
+
+	osType, _ := attrs.Value(semconv.OSTypeKey)
+	assert.Equal(t, "linux", osType.AsString())
+}
+
+func TestDockerResourceDetectorContainerInfoError(t *testing.T) {
+	detector := newMockDetector(&mockProvider{
+		osType:           "linux",
+		hostname:         "docker-host",
+		containerInfoErr: errors.New("no such container"),
+	})
+
+	res, err := detector.Detect(context.Background())
+	require.ErrorIs(t, err, resource.ErrPartialResource)
+
+	attrs := res.Set()
+	_, hasContainerName := attrs.Value(semconv.ContainerNameKey)
+	assert.False(t, hasContainerName)
+
+	osType, _ := attrs.Value(semconv.OSTypeKey)
+	assert.Equal(t, "linux", osType.AsString())
+
+	hostname, _ := attrs.Value(semconv.HostNameKey)
+	assert.Equal(t, "docker-host", hostname.AsString())
 }

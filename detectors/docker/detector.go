@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/moby/moby/client"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
@@ -18,35 +19,52 @@ type resourceDetector struct {
 
 // Detect returns a [resource.Resource] containing Docker host and container
 // attributes for the running container. It returns an empty resource and an
-// error if the Docker daemon is unreachable or any daemon call fails.
+// error if the Docker daemon is unreachable. If the daemon is reachable but
+// some attributes cannot be retrieved, a partial resource is returned together
+// with [resource.ErrPartialResource].
 func (r *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	dockerProvider, err := r.createProvider()
 	if err != nil {
 		return resource.Empty(), err
 	}
 
+	var (
+		attrs []attribute.KeyValue
+		errs  []error
+	)
+
 	osType, err := dockerProvider.OSType(ctx)
 	if err != nil {
-		return resource.Empty(), fmt.Errorf("failed to fetch Docker OS type: %w", err)
+		errs = append(errs, fmt.Errorf("os type: %w", err))
+	} else {
+		attrs = append(attrs, semconv.OSTypeKey.String(osType))
 	}
 
 	hostname, err := dockerProvider.Hostname(ctx)
 	if err != nil {
-		return resource.Empty(), fmt.Errorf("failed getting OS hostname: %w", err)
+		errs = append(errs, fmt.Errorf("hostname: %w", err))
+	} else {
+		attrs = append(attrs, semconv.HostName(hostname))
 	}
 
 	containerInfo, err := dockerProvider.ContainerInfo(ctx)
 	if err != nil {
-		return resource.Empty(), fmt.Errorf("failed getting container info: %w", err)
+		errs = append(errs, fmt.Errorf("container info: %w", err))
+	} else {
+		attrs = append(attrs, semconv.ContainerName(containerInfo.Name))
+		if containerInfo.Config != nil {
+			attrs = append(attrs, semconv.ContainerImageName(containerInfo.Config.Image))
+		} else {
+			errs = append(errs, fmt.Errorf("container image name: config is nil"))
+		}
 	}
 
-	return resource.NewWithAttributes(
-		semconv.SchemaURL,
-		semconv.HostName(hostname),
-		semconv.OSTypeKey.String(osType),
-		semconv.ContainerName(containerInfo.Name),
-		semconv.ContainerImageName(containerInfo.Image),
-	), nil
+	res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
+
+	if len(errs) > 0 {
+		return res, fmt.Errorf("%w: %v", resource.ErrPartialResource, errs)
+	}
+	return res, nil
 }
 
 // NewResourceDetector returns a [resource.Detector] that detects resource
