@@ -40,6 +40,11 @@ func (d *dockerProviderImpl) OSType(ctx context.Context) (string, error) {
 }
 
 func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (container.InspectResponse, error) {
+	// Docker sets the container hostname to the first 12 characters of the
+	// container ID by default, which ContainerInspect can resolve. This breaks
+	// when a custom hostname is set via --hostname or an orchestrator (e.g.
+	// Kubernetes pod.spec.hostname), in which case ContainerInspect returns
+	// "no such container" and container attributes will not be detected.
 	hostname, err := os.Hostname()
 	if err != nil {
 		return container.InspectResponse{}, err
