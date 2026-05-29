@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- The configuration-provided resource now includes default SDK attributes. (#8990)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
