@@ -63,9 +63,16 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 // is running on. It returns an empty resource and no error when not running on
 // a Hetzner Cloud server. If the process is running on a Hetzner Cloud server
 // but some attributes cannot be retrieved, a partial resource is returned
-// together with [resource.ErrPartialResource].
+// together with [resource.ErrPartialResource]. If ctx is cancelled or its
+// deadline expires before detection completes, Detect returns ctx.Err().
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	if !d.client.IsHcloudServerWithContext(ctx) {
+		// IsHcloudServerWithContext returns a bool, so a false answer can mean
+		// either "not a Hetzner server" or "ctx was already done before we
+		// could find out". Peek at ctx to distinguish the two.
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
 		return resource.Empty(), nil
 	}
 
