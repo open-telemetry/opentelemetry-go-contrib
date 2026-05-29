@@ -4,7 +4,7 @@ go 1.25.0
 
 require github.com/moby/moby/client v0.4.1
 
-require go.opentelemetry.io/contrib/detectors/internal v0.15.0
+require go.opentelemetry.io/contrib/detectors/internal v0.16.0
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
