@@ -75,8 +75,8 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	if sh.Disabled != nil {
 		sh.Plain.Disabled = sh.Disabled
 	} else {
-		// Configure the log level of the internal logger used by the SDK.
-		// If omitted, info is used.
+		// Configure if the SDK is disabled or not.
+		// If omitted, false is used.
 		sh.Plain.Disabled = ptr(false)
 	}
 	if sh.LoggerProvider != nil {
@@ -97,10 +97,6 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 
 	if sh.LogLevel != nil {
 		sh.Plain.LogLevel = sh.LogLevel
-	} else {
-		// Configure the log level of the internal logger used by the SDK.
-		// If omitted, info is used.
-		sh.Plain.LogLevel = ptr(SeverityNumberInfo)
 	}
 
 	*j = OpenTelemetryConfiguration(sh.Plain)

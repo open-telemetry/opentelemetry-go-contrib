@@ -399,6 +399,20 @@ func TestNewSDK(t *testing.T) {
 			wantLoggerProvider: lognoop.NewLoggerProvider(),
 			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
+		{
+			name: "invalid log_level",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: ptr(SeverityNumber("invalid_level")),
+				}),
+			},
+			wantErr:            newErrInvalid(fmt.Sprintf("unsupported log_level %q", "invalid_level")),
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
+		},
 	}
 	for _, tt := range tests {
 		sdk, err := NewSDK(tt.cfg...)
@@ -409,6 +423,81 @@ func TestNewSDK(t *testing.T) {
 		assert.IsType(t, tt.wantPropagator, sdk.Propagator())
 		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
 	}
+}
+
+func TestNewLogger(t *testing.T) {
+	tests := []struct {
+		name     string
+		logLevel *SeverityNumber
+		wantErr  bool
+		wantSink bool // expect non-nil sink
+	}{
+		{"nil returns zero logger", nil, false, false},
+		{"info", ptr(SeverityNumberInfo), false, true},
+		{"info2", ptr(SeverityNumberInfo2), false, true},
+		{"debug", ptr(SeverityNumberDebug), false, true},
+		{"debug3", ptr(SeverityNumberDebug3), false, true},
+		{"warn", ptr(SeverityNumberWarn), false, true},
+		{"warn4", ptr(SeverityNumberWarn4), false, true},
+		{"error", ptr(SeverityNumberError), false, true},
+		{"error2", ptr(SeverityNumberError2), false, true},
+		{"trace", ptr(SeverityNumberTrace), false, true},
+		{"trace4", ptr(SeverityNumberTrace4), false, true},
+		{"fatal", ptr(SeverityNumberFatal), false, true},
+		{"fatal3", ptr(SeverityNumberFatal3), false, true},
+		{"invalid", ptr(SeverityNumber("invalid")), true, false},
+		{"empty", ptr(SeverityNumber("")), true, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			l, err := newLogger(tt.logLevel)
+			if tt.wantErr {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+				if tt.wantSink {
+					assert.NotNil(t, l.GetSink(), "logger sink should not be nil")
+				} else {
+					assert.Nil(t, l.GetSink(), "logger sink should be nil")
+				}
+			}
+		})
+	}
+}
+
+func TestSeverityToVerbosity(t *testing.T) {
+	for _, sev := range []SeverityNumber{
+		SeverityNumberTrace, SeverityNumberTrace2, SeverityNumberTrace3, SeverityNumberTrace4,
+		SeverityNumberDebug, SeverityNumberDebug2, SeverityNumberDebug3, SeverityNumberDebug4,
+	} {
+		v, err := severityToVerbosity(sev)
+		require.NoError(t, err)
+		assert.Equal(t, 8, v, "severity %s", sev)
+	}
+	for _, sev := range []SeverityNumber{
+		SeverityNumberInfo, SeverityNumberInfo2, SeverityNumberInfo3, SeverityNumberInfo4,
+	} {
+		v, err := severityToVerbosity(sev)
+		require.NoError(t, err)
+		assert.Equal(t, 4, v, "severity %s", sev)
+	}
+	for _, sev := range []SeverityNumber{
+		SeverityNumberWarn, SeverityNumberWarn2, SeverityNumberWarn3, SeverityNumberWarn4,
+	} {
+		v, err := severityToVerbosity(sev)
+		require.NoError(t, err)
+		assert.Equal(t, 1, v, "severity %s", sev)
+	}
+	for _, sev := range []SeverityNumber{
+		SeverityNumberError, SeverityNumberError2, SeverityNumberError3, SeverityNumberError4,
+		SeverityNumberFatal, SeverityNumberFatal2, SeverityNumberFatal3, SeverityNumberFatal4,
+	} {
+		v, err := severityToVerbosity(sev)
+		require.NoError(t, err)
+		assert.Equal(t, 0, v, "severity %s", sev)
+	}
+	_, err := severityToVerbosity(SeverityNumber("bogus"))
+	assert.ErrorIs(t, err, newErrInvalid("log_level"))
 }
 
 func TestNewSDKWithEnvVar(t *testing.T) {
@@ -794,7 +883,6 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 var v100OpenTelemetryConfigEnvParsing = OpenTelemetryConfiguration{
 	Disabled:   ptr(false),
 	FileFormat: "1.0",
-	LogLevel:   ptr(SeverityNumberInfo),
 	AttributeLimits: &AttributeLimits{
 		AttributeCountLimit:       ptr(128),
 		AttributeValueLengthLimit: ptr(4096),
@@ -934,7 +1022,6 @@ func TestUnmarshalOpenTelemetryConfiguration(t *testing.T) {
 			wantType: OpenTelemetryConfiguration{
 				Disabled:   ptr(false),
 				FileFormat: "1.0",
-				LogLevel:   ptr(SeverityNumberInfo),
 			},
 		},
 		{

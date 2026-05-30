@@ -7,8 +7,11 @@ package otelconf // import "go.opentelemetry.io/contrib/otelconf"
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 
+	"github.com/go-logr/logr"
+	"github.com/go-logr/logr/funcr"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
@@ -35,6 +38,7 @@ type SDK struct {
 	meterProvider  metric.MeterProvider
 	tracerProvider trace.TracerProvider
 	loggerProvider log.LoggerProvider
+	logger         logr.Logger
 	propagator     propagation.TextMapPropagator
 	shutdown       shutdownFunc
 }
@@ -52,6 +56,38 @@ func (s *SDK) MeterProvider() metric.MeterProvider {
 // LoggerProvider returns a configured log.LoggerProvider.
 func (s *SDK) LoggerProvider() log.LoggerProvider {
 	return s.loggerProvider
+}
+
+// Logger returns a [logr.Logger] whose verbosity is derived from the
+// log_level field in the configuration.
+//
+// Scope: this logger is intended for the OTel SDK internal diagnostics
+// logger only (the one set via [go.opentelemetry.io/otel.SetLogger]).
+// It does NOT control application-level or per-component logging.
+//
+// When log_level is omitted from the configuration (nil), Logger returns
+// a no-op logger so that any previously installed logger is left untouched.
+// Callers should check before overriding:
+//
+//	if l := sdk.Logger(); l.GetSink() != nil {
+//	    otel.SetLogger(l)
+//	}
+//
+// Calling [go.opentelemetry.io/otel.SetLogger] unconditionally will
+// replace a user-provided logger.
+//
+// The severity-to-verbosity mapping follows the OTel SDK internal
+// logging conventions:
+//
+//	trace, debug (1–8)  → V(8)  (most verbose)
+//	info         (9–12) → V(4)
+//	warn         (13–16) → V(1)
+//	error, fatal (17–24) → V(0)  (errors only)
+//
+// Numeric suffixes (debug2, warn4, …) map to their base level because
+// [logr] does not model sub-levels.
+func (s *SDK) Logger() logr.Logger {
+	return s.logger
 }
 
 // Propagator returns a configured propagation.TextMapPropagator.
@@ -118,6 +154,11 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, nil
 	}
 
+	l, err := newLogger(o.opentelemetryConfig.LogLevel)
+	if err != nil {
+		return noopSDK, err
+	}
+
 	r, err := newResource(o.opentelemetryConfig.Resource)
 	if err != nil {
 		return noopSDK, err
@@ -147,6 +188,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		meterProvider:  mp,
 		tracerProvider: tp,
 		loggerProvider: lp,
+		logger:         l,
 		propagator:     p,
 		shutdown: func(ctx context.Context) error {
 			return errors.Join(mpShutdown(ctx), tpShutdown(ctx), lpShutdown(ctx))
@@ -207,6 +249,53 @@ func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) Configurat
 		c.tracerProviderOptions = append(c.tracerProviderOptions, opts...)
 		return c
 	})
+}
+
+// newLogger creates a [logr.Logger] for the OTel SDK internal diagnostics.
+//
+// When logLevel is nil (not configured), a zero-value [logr.Logger] is
+// returned (nil sink) so that the caller can detect "not configured" via
+// GetSink() == nil and avoid overriding a user-provided logger.
+func newLogger(logLevel *SeverityNumber) (logr.Logger, error) {
+	if logLevel == nil {
+		return logr.Logger{}, nil
+	}
+
+	v, err := severityToVerbosity(*logLevel)
+	if err != nil {
+		return logr.Logger{}, err
+	}
+
+	// Use funcr which supports per-instance verbosity and avoids the
+	// process-global stdr.SetVerbosity.
+	l := funcr.NewJSON(func(obj string) {
+		fmt.Fprintln(os.Stderr, obj)
+	}, funcr.Options{
+		Verbosity: v,
+	})
+	return l, nil
+}
+
+func severityToVerbosity(s SeverityNumber) (int, error) {
+	base := s
+	if len(s) > 0 {
+		last := s[len(s)-1]
+		if last >= '2' && last <= '4' {
+			base = s[:len(s)-1]
+		}
+	}
+	switch base {
+	case SeverityNumberTrace, SeverityNumberDebug:
+		return 8, nil
+	case SeverityNumberInfo:
+		return 4, nil
+	case SeverityNumberWarn:
+		return 1, nil
+	case SeverityNumberError, SeverityNumberFatal:
+		return 0, nil
+	default:
+		return 0, newErrInvalid(fmt.Sprintf("unsupported log_level %q", s))
+	}
 }
 
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.

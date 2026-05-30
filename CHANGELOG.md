@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `log_level` support to `otelconf` to configure the OTel SDK internal logger. (#8847)
 - Add `error.type` attribute to `http.client.request.duration` for transport failures in `otelhttp`. (#8801)
 - Add examples for prometheus compatibility document. (#8716)
 - Add support for `cardinality_limits` in `PeriodicMetricReader` in `otelconf`. (#8885)
