@@ -5,6 +5,7 @@ package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -149,7 +150,7 @@ func (r *resourceBuilder) addZoneOrRegion(detect func() (string, gcp.LocationTyp
 func (r *resourceBuilder) build() (*resource.Resource, error) {
 	var err error
 	if len(r.errs) > 0 {
-		err = fmt.Errorf("%w: %s", resource.ErrPartialResource, r.errs)
+		err = fmt.Errorf("%w: %v", resource.ErrPartialResource, errors.Join(r.errs...))
 	}
 	return resource.NewWithAttributes(semconv.SchemaURL, r.attrs...), err
 }
