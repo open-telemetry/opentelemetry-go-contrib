@@ -5,6 +5,7 @@ package docker // import "go.opentelemetry.io/contrib/detectors/docker"
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/moby/moby/client"
@@ -65,7 +66,7 @@ func (r *resourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
 
 	if len(errs) > 0 {
-		return res, fmt.Errorf("%w: %v", resource.ErrPartialResource, errs)
+		return res, fmt.Errorf("%w: %w", resource.ErrPartialResource, errors.Join(errs...))
 	}
 	return res, nil
 }
