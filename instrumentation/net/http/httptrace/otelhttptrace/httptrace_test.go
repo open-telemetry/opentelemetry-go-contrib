@@ -80,6 +80,7 @@ func TestRoundtrip(t *testing.T) {
 		"server.address":           "127.0.0.1",
 		"server.port":              hp[1],
 		"url.path":                 "/",
+		"url.query":                "",
 		"url.scheme":               "http",
 		"user_agent.original":      "Go-http-client/1.1",
 	}

@@ -201,6 +201,24 @@ func (n HTTPServer) RequestTraceAttrs(server string, req *http.Request, opts Req
 	if req.URL != nil && req.URL.Path != "" {
 		attrs = append(attrs, semconv.URLPath(req.URL.Path))
 	}
+	
+	if req.URL != nil && req.URL.Query() != nil {
+		query := req.URL.Query()
+		sensitiveKeys := map[string]struct{}{
+			"AWSAccessKeyId":   {},
+			"Signature":        {},
+			"sig":              {},
+			"X-Goog-Signature": {},
+		}
+
+		for key := range query {
+			if _, isSensitive := sensitiveKeys[key]; isSensitive {
+				query.Set(key, "REDACTED")
+			}
+		}
+
+		attrs = append(attrs, semconv.URLQuery(query.Encode()))
+	}
 
 	if protoName != "" && protoName != "http" {
 		attrs = append(attrs, semconv.NetworkProtocolName(protoName))
