@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- `otelconf`: Fix Prometheus reader resource label filter configuration in v0.2.0. (#9045)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
