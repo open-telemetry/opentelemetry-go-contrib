@@ -1006,6 +1006,7 @@ type ExperimentalResourceDetector struct {
 }
 
 type ExperimentalAzureVMResourceDetector map[string]interface{}
+
 type ExperimentalServiceResourceDetector map[string]interface{}
 
 type ExperimentalSpanParent string
