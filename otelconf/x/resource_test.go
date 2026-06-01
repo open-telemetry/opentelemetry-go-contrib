@@ -150,3 +150,31 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 		})
 	}
 }
+
+func TestResourceOptsWithAzureVMDetector(t *testing.T) {
+	opts := resourceOpts([]ExperimentalResourceDetector{
+		{AzureVM: ExperimentalAzureVMResourceDetector{}},
+	})
+
+	assert.Len(t, opts, 1)
+}
+
+func TestNewResourceConfiguredAttributesOverrideDetectors(t *testing.T) {
+	t.Setenv("OTEL_SERVICE_NAME", "detected-service")
+
+	got, err := newResource(&Resource{
+		Attributes: []AttributeNameValue{
+			{Name: string(semconv.ServiceNameKey), Value: "configured-service"},
+		},
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Service: ExperimentalServiceResourceDetector{}},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	value, ok := got.Set().Value(semconv.ServiceNameKey)
+	require.True(t, ok)
+	assert.Equal(t, "configured-service", value.AsString())
+}

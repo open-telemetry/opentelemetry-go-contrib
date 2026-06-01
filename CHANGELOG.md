@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add support for the `azure.vm` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#8914)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
