@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/detectors/autodetect
 
-go 1.25.0
+go 1.25.1
 
 require (
 	github.com/stretchr/testify v1.11.1
@@ -11,6 +11,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.16.0
+  go.opentelemetry.io/contrib/detectors/env v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/sdk v1.44.0
 )
@@ -107,3 +108,5 @@ replace go.opentelemetry.io/contrib/detectors/gcp => ../gcp
 replace go.opentelemetry.io/contrib/detectors/hetzner => ../hetzner
 
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
+
+replace go.opentelemetry.io/contrib/detectors/env => ../env

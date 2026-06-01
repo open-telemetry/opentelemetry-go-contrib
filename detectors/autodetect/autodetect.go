@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/aws/eks"
 	"go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
+	"go.opentelemetry.io/contrib/detectors/env"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
 )
@@ -118,6 +119,10 @@ var (
 	// identifying the container in which the process is running, especially in
 	// containerized environments like Kubernetes or Docker.
 	IDContainer = ID("container")
+	// IDEnv is the ID for the environment variable detector that detects
+	// resource attributes from the "OTEL_RESOURCE_ATTRIBUTES" environment
+	// variable (see env.NewResourceDetector for details).
+	IDEnv = ID("env")
 )
 
 var (
@@ -132,6 +137,7 @@ var (
 			return azurevm.New()
 		},
 
+		IDEnv: env.NewResourceDetector,
 		IDGCP: gcp.NewDetector,
 
 		IDHetzner: func() resource.Detector { return hetzner.NewResourceDetector() },
