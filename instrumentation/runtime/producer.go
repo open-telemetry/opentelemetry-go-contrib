@@ -105,7 +105,7 @@ func convertRuntimeHistogram(runtimeHist *metrics.Float64Histogram, ts time.Time
 		count += c
 		// This computed sum is an underestimate, since it assumes each
 		// observation happens at the bucket's lower bound.
-		if i > 0 && count != 0 {
+		if i > 0 && c != 0 {
 			sum += bounds[i-1] * float64(c)
 		}
 	}
