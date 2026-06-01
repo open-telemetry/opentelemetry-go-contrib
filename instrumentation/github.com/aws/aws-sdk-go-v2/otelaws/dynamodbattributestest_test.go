@@ -49,7 +49,8 @@ func TestDynamodbTags(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(cases.responseStatus)
-		}))
+		},
+	))
 	defer server.Close()
 
 	t.Run("dynamodb tags", func(t *testing.T) {
@@ -75,7 +76,8 @@ func TestDynamodbTags(t *testing.T) {
 			},
 		}, func(options *dynamodb.Options) {
 			otelaws.AppendMiddlewares(
-				&options.APIOptions, otelaws.WithAttributeBuilder(otelaws.DynamoDBAttributeBuilder), otelaws.WithTracerProvider(provider))
+				&options.APIOptions, otelaws.WithAttributeBuilder(otelaws.DynamoDBAttributeBuilder), otelaws.WithTracerProvider(provider),
+			)
 		})
 
 		if cases.expectedError == codes.Unset {
@@ -118,7 +120,8 @@ func TestDynamodbTagsCustomBuilder(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(
 		func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(cases.responseStatus)
-		}))
+		},
+	))
 	defer server.Close()
 
 	t.Run("dynamodb tags", func(t *testing.T) {
@@ -156,7 +159,8 @@ func TestDynamodbTagsCustomBuilder(t *testing.T) {
 			},
 		}, func(options *dynamodb.Options) {
 			otelaws.AppendMiddlewares(
-				&options.APIOptions, otelaws.WithAttributeBuilder(otelaws.DynamoDBAttributeBuilder, mycustomsetter), otelaws.WithTracerProvider(provider))
+				&options.APIOptions, otelaws.WithAttributeBuilder(otelaws.DynamoDBAttributeBuilder, mycustomsetter), otelaws.WithTracerProvider(provider),
+			)
 		})
 
 		if cases.expectedError == codes.Unset {

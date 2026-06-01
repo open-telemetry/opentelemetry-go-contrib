@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/env"
 	"go.opentelemetry.io/contrib/detectors/gcp"
+	"go.opentelemetry.io/contrib/detectors/hetzner"
 )
 
 var (
@@ -48,6 +49,10 @@ var (
 	// Google Cloud Platform (GCP) environments (see gcp.NewDetector for
 	// details).
 	IDGCP = ID("gcp")
+	// IDHetzner is the ID for the Hetzner Cloud detector that detects resource
+	// attributes on Hetzner Cloud servers (see hetzner.NewResourceDetector for
+	// details).
+	IDHetzner = ID("hetzner")
 	// IDHost is the ID for the host detector. This detector detects the
 	// "host.name" attribute from the os.Hostname function.
 	IDHost = ID("host")
@@ -134,6 +139,8 @@ var (
 
 		IDEnv: env.NewResourceDetector,
 		IDGCP: gcp.NewDetector,
+
+		IDHetzner: func() resource.Detector { return hetzner.NewResourceDetector() },
 
 		IDHost:   optFactory(resource.WithHost()),
 		IDHostID: optFactory(resource.WithHostID()),

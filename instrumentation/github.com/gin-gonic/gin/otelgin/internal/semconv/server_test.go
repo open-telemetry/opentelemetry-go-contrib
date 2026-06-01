@@ -110,15 +110,21 @@ func TestNewMethod(t *testing.T) {
 			want:   attribute.String("http.request.method", "POST"),
 		},
 		{
-			method:   "Put",
+			method:   "",
 			n:        2,
+			want:     attribute.String("http.request.method", "_OTHER"),
+			wantOrig: attribute.KeyValue{},
+		},
+		{
+			method:   "Put",
+			n:        3,
 			want:     attribute.String("http.request.method", "PUT"),
 			wantOrig: attribute.String("http.request.method_original", "Put"),
 		},
 		{
 			method:   "Unknown",
-			n:        2,
-			want:     attribute.String("http.request.method", "GET"),
+			n:        4,
+			want:     attribute.String("http.request.method", "_OTHER"),
 			wantOrig: attribute.String("http.request.method_original", "Unknown"),
 		},
 	}
@@ -221,6 +227,60 @@ func TestRequestTraceAttrs_ClientIP(t *testing.T) {
 				assert.Equal(t, tt.wantClientIP, attr.Value.AsString())
 			}
 			require.True(t, found)
+		})
+	}
+}
+
+func TestHTTPServer_SpanName(t *testing.T) {
+	tests := []struct {
+		name     string
+		method   string
+		pattern  string
+		wantName string
+	}{
+		{
+			name:     "standard method, no pattern",
+			method:   http.MethodGet,
+			wantName: "GET",
+		},
+		{
+			name:     "standard method, path-only pattern",
+			method:   http.MethodGet,
+			pattern:  "/foo/{id}",
+			wantName: "GET /foo/{id}",
+		},
+		{
+			name:     "standard method, pattern with method prefix",
+			method:   http.MethodGet,
+			pattern:  "GET /foo/{id}",
+			wantName: "GET /foo/{id}",
+		},
+		{
+			name:     "standard method, pattern with host prefix",
+			method:   http.MethodGet,
+			pattern:  "example.com/foo/{id}",
+			wantName: "GET /foo/{id}",
+		},
+		{
+			name:     "nonstandard method, no pattern",
+			method:   "CUSTOM",
+			wantName: "HTTP",
+		},
+		{
+			name:     "nonstandard method, with pattern",
+			method:   "CUSTOM",
+			pattern:  "/foo/{id}",
+			wantName: "HTTP /foo/{id}",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequestWithContext(t.Context(), tt.method, "/foo/123", http.NoBody)
+			req.Pattern = tt.pattern
+
+			got := HTTPServer{}.SpanName(req)
+			assert.Equal(t, tt.wantName, got)
 		})
 	}
 }
