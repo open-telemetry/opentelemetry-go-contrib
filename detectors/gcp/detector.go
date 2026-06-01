@@ -150,7 +150,7 @@ func (r *resourceBuilder) addZoneOrRegion(detect func() (string, gcp.LocationTyp
 func (r *resourceBuilder) build() (*resource.Resource, error) {
 	var err error
 	if len(r.errs) > 0 {
-		err = fmt.Errorf("%w: %v", resource.ErrPartialResource, errors.Join(r.errs...))
+		err = fmt.Errorf("%w: %w", resource.ErrPartialResource, errors.Join(r.errs...))
 	}
 	return resource.NewWithAttributes(semconv.SchemaURL, r.attrs...), err
 }
