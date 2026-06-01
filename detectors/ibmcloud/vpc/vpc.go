@@ -93,11 +93,14 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 		opt.apply(&cfg)
 	}
 
+	transport := http.DefaultTransport.(*http.Transport).Clone()
+	transport.Proxy = nil
+
 	return &ResourceDetector{
 		endpoint: cfg.protocol + "://" + metadataHost,
 		client: &http.Client{
 			Timeout:   5 * time.Second,
-			Transport: http.DefaultTransport.(*http.Transport).Clone(),
+			Transport: transport,
 		},
 		filter: cfg.filter,
 		err:    cfg.err,

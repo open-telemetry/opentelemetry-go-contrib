@@ -40,6 +40,17 @@ func TestNewResourceDetectorWithHTTPSProtocol(t *testing.T) {
 	assert.Equal(t, "https://"+metadataHost, detector.endpoint)
 }
 
+func TestNewResourceDetectorDisablesProxy(t *testing.T) {
+	t.Setenv("HTTP_PROXY", "http://127.0.0.1:1")
+	t.Setenv("HTTPS_PROXY", "http://127.0.0.1:1")
+
+	detector := NewResourceDetector()
+
+	transport, ok := detector.client.Transport.(*http.Transport)
+	require.True(t, ok)
+	assert.Nil(t, transport.Proxy)
+}
+
 func TestDetect(t *testing.T) {
 	var tokenRequests atomic.Int32
 	srv := newMetadataServer(t, &tokenRequests, http.StatusOK, testInstanceJSON)
