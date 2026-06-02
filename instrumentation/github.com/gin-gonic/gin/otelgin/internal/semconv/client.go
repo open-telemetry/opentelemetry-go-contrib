@@ -20,8 +20,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/httpconv"
+	"go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/httpconv"
 )
 
 type HTTPClient struct {
@@ -167,7 +167,7 @@ func (n HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue
 
 func (n HTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValue) {
 	if method == "" {
-		return semconv.HTTPRequestMethodGet, attribute.KeyValue{}
+		return semconv.HTTPRequestMethodOther, attribute.KeyValue{}
 	}
 	if attr, ok := methodLookup[method]; ok {
 		return attr, attribute.KeyValue{}
@@ -177,7 +177,7 @@ func (n HTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValu
 	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
 		return attr, orig
 	}
-	return semconv.HTTPRequestMethodGet, orig
+	return semconv.HTTPRequestMethodOther, orig
 }
 
 func (n HTTPClient) MetricAttributes(req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {

@@ -61,10 +61,10 @@ linters:
           list-mode: lax
           deny:
             - pkg: go.opentelemetry.io/otel/semconv
-              desc: Use go.opentelemetry.io/otel/semconv/v1.40.0 instead. If a newer semconv version has been released, update the depguard rule.
+              desc: Use go.opentelemetry.io/otel/semconv/v1.41.0 instead. If a newer semconv version has been released, update the depguard rule.
           allow:
             - go.opentelemetry.io/otel/semconv/v1.21.0 # still used by otelmongo
-            - go.opentelemetry.io/otel/semconv/v1.40.0
+            - go.opentelemetry.io/otel/semconv/v1.41.0
     forbidigo:
       forbid:
         - pattern: '^trace\.Span\.RecordError$'
@@ -109,11 +109,9 @@ linters:
         - name: blank-imports
         - name: bool-literal-in-expr
         - name: constant-logical-expr
-        # TODO (#2877) re-enable linter when it is compatible. https://github.com/golangci/golangci-lint/issues/3280
         - name: context-as-argument
-          disabled: true
           arguments:
-            - allow-types-before: "*testing.T"
+            - allow-types-before: "*testing.T,*testing.B"
         - name: context-keys-type
         - name: deep-exit
         - name: defer
@@ -172,8 +170,6 @@ linters:
             - ["Otel", "Aws", "Gcp"] # DenyList
             - - skip-initialism-name-checks: true
                 upper-case-const: true
-                skip-package-name-checks: true
-                skip-package-name-collision-with-go-std: true
         - name: waitgroup-by-value
     testifylint:
       enable-all: true

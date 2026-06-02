@@ -168,7 +168,7 @@ func TestSDKIntegration(t *testing.T) {
 			path:         "/book/bar",
 			reqFunc:      func(r *http.Request) { r.Pattern = "/book/{custom}" },
 			wantSpanName: "HTTP /book/{custom}",
-			wantMethod:   http.MethodGet,
+			wantMethod:   "_OTHER",
 			wantRoute:    "/book/{custom}",
 		},
 	}
@@ -187,7 +187,8 @@ func TestSDKIntegration(t *testing.T) {
 			spans := sr.Ended()
 
 			require.Len(t, spans, 1)
-			assertSpan(t, sr.Ended()[0],
+			assertSpan(
+				t, sr.Ended()[0],
 				tt.wantSpanName,
 				trace.SpanKindServer,
 				attribute.String("server.address", "foobar"),
@@ -213,7 +214,8 @@ func TestNotFoundIsNotError(t *testing.T) {
 	router.ServeHTTP(w, r0)
 
 	require.Len(t, sr.Ended(), 1)
-	assertSpan(t, sr.Ended()[0],
+	assertSpan(
+		t, sr.Ended()[0],
 		"GET /does/not/exist",
 		trace.SpanKindServer,
 		attribute.String("server.address", "foobar"),
@@ -255,7 +257,8 @@ func TestWithPublicEndpoint(t *testing.T) {
 	prop := propagation.TraceContext{}
 
 	router := mux.NewRouter()
-	router.Use(otelmux.Middleware("foobar",
+	router.Use(otelmux.Middleware(
+		"foobar",
 		otelmux.WithPublicEndpoint(),
 		otelmux.WithPropagators(prop),
 		otelmux.WithTracerProvider(provider),
@@ -345,7 +348,8 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			provider.RegisterSpanProcessor(sr)
 
 			router := mux.NewRouter()
-			router.Use(otelmux.Middleware("foobar",
+			router.Use(otelmux.Middleware(
+				"foobar",
 				otelmux.WithPublicEndpointFn(tt.fn),
 				otelmux.WithPropagators(prop),
 				otelmux.WithTracerProvider(provider),
@@ -383,7 +387,8 @@ func TestDefaultMetricAttributes(t *testing.T) {
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 	router := mux.NewRouter()
-	router.Use(otelmux.Middleware("foobar",
+	router.Use(otelmux.Middleware(
+		"foobar",
 		otelmux.WithMeterProvider(meterProvider),
 	))
 
@@ -451,7 +456,8 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 		router := mux.NewRouter()
-		router.Use(otelmux.Middleware("foobar",
+		router.Use(otelmux.Middleware(
+			"foobar",
 			otelmux.WithMeterProvider(meterProvider),
 			otelmux.WithMetricAttributesFn(tc.fn),
 		))

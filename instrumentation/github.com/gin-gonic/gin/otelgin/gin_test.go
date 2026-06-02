@@ -275,7 +275,8 @@ func TestWithSpanOptions_CustomAttributesAndSpanKind(t *testing.T) {
 	customAttr := attribute.String("custom.key", "custom.value")
 
 	router := gin.New()
-	router.Use(otelgin.Middleware("foobar",
+	router.Use(otelgin.Middleware(
+		"foobar",
 		otelgin.WithTracerProvider(provider),
 		otelgin.WithSpanStartOptions(trace.WithAttributes(customAttr)),
 	))
@@ -343,12 +344,14 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
 	router := gin.New()
-	router.Use(otelgin.Middleware("foobar",
-		otelgin.WithTracerProvider(provider),
-		otelgin.WithSpanNameFormatter(func(c *gin.Context) string {
-			return c.Request.URL.Path
-		}),
-	),
+	router.Use(
+		otelgin.Middleware(
+			"foobar",
+			otelgin.WithTracerProvider(provider),
+			otelgin.WithSpanNameFormatter(func(c *gin.Context) string {
+				return c.Request.URL.Path
+			}),
+		),
 	)
 	router.GET("/user/:id", func(c *gin.Context) {
 		id := c.Param("id")
@@ -531,7 +534,8 @@ func TestMetrics(t *testing.T) {
 			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 			router := gin.New()
-			router.Use(otelgin.Middleware("foobar",
+			router.Use(otelgin.Middleware(
+				"foobar",
 				otelgin.WithMeterProvider(meterProvider),
 				otelgin.WithMetricAttributeFn(tt.metricAttributeExtractor),
 				otelgin.WithGinMetricAttributeFn(tt.ginMetricAttributeExtractor),

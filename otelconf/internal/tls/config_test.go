@@ -5,13 +5,16 @@ package tls
 
 import (
 	"crypto/tls"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/testtls"
 )
 
 func TestCreateConfig(t *testing.T) {
+	material := testtls.Write(t)
+
 	tests := []struct {
 		name            string
 		caCertFile      *string
@@ -29,7 +32,7 @@ func TestCreateConfig(t *testing.T) {
 		},
 		{
 			name:       "only-cacert-provided",
-			caCertFile: ptr(filepath.Join("..", "..", "testdata", "ca.crt")),
+			caCertFile: ptr(material.CACertPath),
 			want: func(result *tls.Config, t *testing.T) {
 				require.Nil(t, result.Certificates)
 				require.NotNil(t, result.RootCAs)
@@ -53,7 +56,7 @@ func TestCreateConfig(t *testing.T) {
 		},
 		{
 			name:            "bad-cacert-file",
-			caCertFile:      ptr(filepath.Join("..", "..", "testdata", "bad_cert.crt")),
+			caCertFile:      ptr(material.BadCertPath),
 			wantErrContains: "could not create certificate authority chain from certificate",
 		},
 	}

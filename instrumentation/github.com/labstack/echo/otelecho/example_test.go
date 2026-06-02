@@ -35,7 +35,8 @@ func ExampleMiddleware() {
 	e := echo.New()
 
 	// Use the otelecho middleware with options
-	e.Use(otelecho.Middleware("server",
+	e.Use(otelecho.Middleware(
+		"server",
 		otelecho.WithSkipper(func(c echo.Context) bool {
 			// Skip tracing for health check endpoints
 			return c.Path() == "/health"
@@ -107,7 +108,8 @@ func ExampleMiddleware_withMetrics() {
 	e := echo.New()
 
 	// Use the otelecho middleware with metrics and custom attributes
-	e.Use(otelecho.Middleware("api-server",
+	e.Use(otelecho.Middleware(
+		"api-server",
 		otelecho.WithMetricAttributeFn(func(r *http.Request) []attribute.KeyValue {
 			// Add custom attributes from HTTP request
 			return []attribute.KeyValue{

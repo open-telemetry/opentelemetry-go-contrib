@@ -18,9 +18,9 @@
                         "otlp_http": {
                             "endpoint": "http://localhost:4318/v1/logs",
                             "tls": {
-                                "ca_file": "testdata/ca.crt",
-                                "key_file": "testdata/client.key",
-                                "cert_file": "testdata/client.crt"
+                                "ca_file": "<CA_CERT>",
+                                "key_file": "<CLIENT_KEY>",
+                                "cert_file": "<CLIENT_CERT>"
                             },
                             "headers": [
                                 {
@@ -42,9 +42,9 @@
                         "otlp_grpc": {
                             "endpoint": "http://localhost:4317",
                             "tls": {
-                                "ca_file": "testdata/ca.crt",
-                                "key_file": "testdata/client.key",
-                                "cert_file": "testdata/client.crt",
+                                "ca_file": "<CA_CERT>",
+                                "key_file": "<CLIENT_KEY>",
+                                "cert_file": "<CLIENT_CERT>",
                                 "insecure": false
                             },
                             "headers": [
@@ -149,9 +149,9 @@
                         "otlp_http": {
                             "endpoint": "http://localhost:4318/v1/metrics",
                             "tls": {
-                                "ca_file": "testdata/ca.crt",
-                                "key_file": "testdata/client.key",
-                                "cert_file": "testdata/client.crt"
+                                "ca_file": "<CA_CERT>",
+                                "key_file": "<CLIENT_KEY>",
+                                "cert_file": "<CLIENT_CERT>"
                             },
                             "headers": [
                                 {
@@ -190,9 +190,9 @@
                         "otlp_grpc": {
                             "endpoint": "http://localhost:4317",
                             "tls": {
-                                "ca_file": "testdata/ca.crt",
-                                "key_file": "testdata/client.key",
-                                "cert_file": "testdata/client.crt",
+                                "ca_file": "<CA_CERT>",
+                                "key_file": "<CLIENT_KEY>",
+                                "cert_file": "<CLIENT_CERT>",
                                 "insecure": false
                             },
                             "headers": [
@@ -338,9 +338,9 @@
                         "otlp_http": {
                             "endpoint": "http://localhost:4318/v1/traces",
                             "tls": {
-                                "ca_file": "testdata/ca.crt",
-                                "key_file": "testdata/client.key",
-                                "cert_file": "testdata/client.crt"
+                                "ca_file": "<CA_CERT>",
+                                "key_file": "<CLIENT_KEY>",
+                                "cert_file": "<CLIENT_CERT>"
                             },
                             "headers": [
                                 {
@@ -362,9 +362,9 @@
                         "otlp_grpc": {
                             "endpoint": "http://localhost:4317",
                             "tls": {
-                                "ca_file": "testdata/ca.crt",
-                                "key_file": "testdata/client.key",
-                                "cert_file": "testdata/client.crt",
+                                "ca_file": "<CA_CERT>",
+                                "key_file": "<CLIENT_KEY>",
+                                "cert_file": "<CLIENT_CERT>",
                                 "insecure": false
                             },
                             "headers": [

@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -1030,7 +1030,8 @@ func TestDefaultAttributesHandling(t *testing.T) {
 		http.DefaultTransport, WithMeterProvider(provider),
 		WithMetricAttributesFn(func(_ *http.Request) []attribute.KeyValue {
 			return defaultAttributes
-		}))
+		}),
+	)
 	client := http.Client{Transport: transport}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
