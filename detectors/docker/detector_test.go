@@ -20,8 +20,7 @@ import (
 type mockProvider struct {
 	info             system.Info
 	infoErr          error
-	containerName    string
-	containerImage   string
+	containerInfo    container.InspectResponse
 	containerInfoErr error
 }
 
@@ -30,13 +29,7 @@ func (m *mockProvider) Info(_ context.Context) (system.Info, error) {
 }
 
 func (m *mockProvider) ContainerInfo(_ context.Context) (container.InspectResponse, error) {
-	if m.containerInfoErr != nil {
-		return container.InspectResponse{}, m.containerInfoErr
-	}
-	return container.InspectResponse{
-		Name:   m.containerName,
-		Config: &container.Config{Image: m.containerImage},
-	}, nil
+	return m.containerInfo, m.containerInfoErr
 }
 
 func newMockDetector(m *mockProvider) *resourceDetector {
@@ -59,9 +52,8 @@ func TestDockerResourceDetectorNotDockerEnvironment(t *testing.T) {
 
 func TestDockerResourceDetectorSuccess(t *testing.T) {
 	detector := newMockDetector(&mockProvider{
-		info:           system.Info{Name: "docker-host", OSType: "linux"},
-		containerName:  "my-container",
-		containerImage: "golang:1.25",
+		info:          system.Info{Name: "docker-host", OSType: "linux"},
+		containerInfo: container.InspectResponse{Name: "my-container", Config: &container.Config{Image: "golang:1.25"}},
 	})
 
 	res, err := detector.Detect(context.Background())
@@ -83,9 +75,8 @@ func TestDockerResourceDetectorSuccess(t *testing.T) {
 
 func TestDockerResourceDetectorInfoError(t *testing.T) {
 	detector := newMockDetector(&mockProvider{
-		infoErr:        errors.New("daemon unavailable"),
-		containerName:  "my-container",
-		containerImage: "golang:1.25",
+		infoErr:       errors.New("daemon unavailable"),
+		containerInfo: container.InspectResponse{Name: "my-container", Config: &container.Config{Image: "golang:1.25"}},
 	})
 
 	res, err := detector.Detect(context.Background())
@@ -100,6 +91,9 @@ func TestDockerResourceDetectorInfoError(t *testing.T) {
 
 	containerName, _ := attrs.Value(semconv.ContainerNameKey)
 	assert.Equal(t, "my-container", containerName.AsString())
+
+	containerImage, _ := attrs.Value(semconv.ContainerImageNameKey)
+	assert.Equal(t, "golang:1.25", containerImage.AsString())
 }
 
 func TestDockerResourceDetectorContainerInfoError(t *testing.T) {
@@ -109,15 +103,6 @@ func TestDockerResourceDetectorContainerInfoError(t *testing.T) {
 	})
 
 	res, err := detector.Detect(context.Background())
-	require.ErrorIs(t, err, resource.ErrPartialResource)
-
-	attrs := res.Set()
-	_, hasContainerName := attrs.Value(semconv.ContainerNameKey)
-	assert.False(t, hasContainerName)
-
-	osType, _ := attrs.Value(semconv.OSTypeKey)
-	assert.Equal(t, "linux", osType.AsString())
-
-	hostname, _ := attrs.Value(semconv.HostNameKey)
-	assert.Equal(t, "docker-host", hostname.AsString())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
 }
