@@ -22,6 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Validate `encoding` configuration for OTLP HTTP exporters in `go.opentelemetry.io/contrib/otelconf`. (#8772)
+- Copy the parsed multipart form back onto the original request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` so net/http cleans up temporary files when the request is recycled. (#8851)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
