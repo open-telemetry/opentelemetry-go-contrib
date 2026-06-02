@@ -9,9 +9,10 @@ import (
 	"fmt"
 
 	"github.com/moby/moby/client"
+	"go.opentelemetry.io/contrib/detectors/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
 type resourceDetector struct {
@@ -37,30 +38,23 @@ func (r *resourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		errs  []error
 	)
 
-	osType, err := dockerProvider.OSType(ctx)
+	sysInfo, err := dockerProvider.Info(ctx)
 	if err != nil {
-		errs = append(errs, fmt.Errorf("os type: %w", err))
+		errs = append(errs, fmt.Errorf("docker info: %w", err))
 	} else {
-		attrs = append(attrs, semconv.OSTypeKey.String(osType))
-	}
-
-	hostname, err := dockerProvider.Hostname(ctx)
-	if err != nil {
-		errs = append(errs, fmt.Errorf("hostname: %w", err))
-	} else {
-		attrs = append(attrs, semconv.HostName(hostname))
+		attrs = append(attrs, semconv.HostName(sysInfo.Name))
+		attrs = append(attrs, semconv.OSTypeKey.String(internal.GOOSToOSType(sysInfo.OSType)))
 	}
 
 	containerInfo, err := dockerProvider.ContainerInfo(ctx)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("container info: %w", err))
 	} else {
-		attrs = append(attrs, semconv.ContainerName(containerInfo.Name))
-		if containerInfo.Config != nil {
-			attrs = append(attrs, semconv.ContainerImageName(containerInfo.Config.Image))
-		} else {
-			errs = append(errs, fmt.Errorf("container image name: config is nil"))
-		}
+		containerName := containerInfo.Name
+		containerImage := containerInfo.Config.Image
+
+		attrs = append(attrs, semconv.ContainerName(containerName))
+		attrs = append(attrs, semconv.ContainerImageName(containerImage))
 	}
 
 	res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
