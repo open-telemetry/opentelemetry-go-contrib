@@ -57,7 +57,7 @@ func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (container.Inspe
 }
 
 func newProvider(opts ...client.Opt) (provider, error) {
-	opts = append(opts, client.FromEnv)
+	opts = append([]client.Opt{client.FromEnv}, opts...)
 	cli, err := client.New(opts...)
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize Docker client: %w", err)
