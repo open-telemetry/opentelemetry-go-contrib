@@ -79,9 +79,19 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			}
 		}
 		c.Set(tracerKey, tracer)
-		savedCtx := c.Request.Context()
+		origReq := c.Request
+		savedCtx := origReq.Context()
 		defer func() {
-			c.Request = c.Request.WithContext(savedCtx)
+			// net/http's finishRequest cleans up MultipartForm temp files
+			// on the exact *http.Request it handed us in ServeHTTP, not on
+			// the context-carrying copy we substituted below. Propagate
+			// any MultipartForm gin populated on the shadow request back
+			// onto the original so that cleanup reaches the temp files
+			// instead of leaking them (#5946).
+			if c.Request != nil && c.Request.MultipartForm != nil {
+				origReq.MultipartForm = c.Request.MultipartForm
+			}
+			c.Request = origReq
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 
