@@ -50,6 +50,19 @@ func TestNewTextMapPropagatorSingleNoOverhead(t *testing.T) {
 	assert.Same(t, p, NewTextMapPropagator(p))
 }
 
+func TestTextMapPropagatorEmptyNoError(t *testing.T) {
+	// Empty input should return a no-op propagator, not nil.
+	// See https://github.com/open-telemetry/opentelemetry-go-contrib/issues/9057
+	p, err := TextMapPropagator()
+	assert.NoError(t, err)
+	assert.NotNil(t, p, "empty TextMapPropagator should return a non-nil no-op propagator")
+
+	// Verify it is safe to call methods on the returned propagator.
+	ctx := p.Inject(context.Background(), nil)
+	assert.NotNil(t, ctx)
+	assert.Empty(t, p.Fields())
+}
+
 func TestNewTextMapPropagatorMultiEnvNone(t *testing.T) {
 	t.Setenv(otelPropagatorsEnvKey, "b3,none,tracecontext")
 	assert.Equal(t, noop, NewTextMapPropagator())
