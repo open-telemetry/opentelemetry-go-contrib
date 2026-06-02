@@ -215,3 +215,33 @@ func TestHTTPClient_ErrorType(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTPClientNewMethod(t *testing.T) {
+	testCases := []struct {
+		method   string
+		n        int
+		want     attribute.KeyValue
+		wantOrig attribute.KeyValue
+	}{
+		{
+			method:   "",
+			n:        1,
+			want:     attribute.String("http.request.method", "_OTHER"),
+			wantOrig: attribute.KeyValue{},
+		},
+		{
+			method:   "Unknown",
+			n:        2,
+			want:     attribute.String("http.request.method", "_OTHER"),
+			wantOrig: attribute.String("http.request.method_original", "Unknown"),
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.method, func(t *testing.T) {
+			got, gotOrig := HTTPClient{}.method(tt.method)
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.wantOrig, gotOrig)
+		})
+	}
+}

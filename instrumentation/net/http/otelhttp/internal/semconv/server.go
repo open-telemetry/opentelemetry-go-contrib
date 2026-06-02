@@ -20,8 +20,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/httpconv"
+	"go.opentelemetry.io/otel/semconv/v1.41.0"
+	"go.opentelemetry.io/otel/semconv/v1.41.0/httpconv"
 )
 
 type RequestTraceAttrsOpts struct {
@@ -269,9 +269,27 @@ func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	metricRecordOptionPool.Put(recordOpts)
 }
 
+// SpanName returns the span name for an HTTP request following the
+// OpenTelemetry HTTP semantic conventions.
+// It returns "{method} {route}" when the request has a pattern,
+// or just "{method}" when no route is available.
+// Non-standard HTTP methods are replaced by "HTTP".
+func (n HTTPServer) SpanName(r *http.Request) string {
+	method := strings.ToUpper(r.Method)
+	if _, ok := methodLookup[method]; !ok {
+		method = "HTTP"
+	}
+
+	route := httpRoute(r.Pattern)
+	if route != "" {
+		return method + " " + route
+	}
+	return method
+}
+
 func (n HTTPServer) method(method string) (attribute.KeyValue, attribute.KeyValue) {
 	if method == "" {
-		return semconv.HTTPRequestMethodGet, attribute.KeyValue{}
+		return semconv.HTTPRequestMethodOther, attribute.KeyValue{}
 	}
 	if attr, ok := methodLookup[method]; ok {
 		return attr, attribute.KeyValue{}
@@ -281,7 +299,7 @@ func (n HTTPServer) method(method string) (attribute.KeyValue, attribute.KeyValu
 	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
 		return attr, orig
 	}
-	return semconv.HTTPRequestMethodGet, orig
+	return semconv.HTTPRequestMethodOther, orig
 }
 
 func (n HTTPServer) scheme(https bool) attribute.KeyValue { //nolint:revive // ignore linter

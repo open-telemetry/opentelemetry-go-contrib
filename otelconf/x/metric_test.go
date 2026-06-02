@@ -14,9 +14,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"reflect"
-	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -156,6 +154,7 @@ func TestMeterProviderOptions(t *testing.T) {
 }
 
 func TestReader(t *testing.T) {
+	material := testtls.Write(t)
 	consoleExporter, err := stdoutmetric.New(
 		stdoutmetric.WithPrettyPrint(),
 	)
@@ -295,7 +294,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
+								CaFile: ptr(material.CACertPath),
 							},
 						},
 					},
@@ -313,7 +312,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								CaFile: ptr(material.BadCertPath),
 							},
 						},
 					},
@@ -331,8 +330,8 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &GrpcTls{
-								KeyFile:  ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-								CertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								KeyFile:  ptr(material.BadCertPath),
+								CertFile: ptr(material.BadCertPath),
 							},
 						},
 					},
@@ -567,7 +566,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "ca.crt")),
+								CaFile: ptr(material.CACertPath),
 							},
 						},
 					},
@@ -585,7 +584,7 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								CaFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								CaFile: ptr(material.BadCertPath),
 							},
 						},
 					},
@@ -603,8 +602,8 @@ func TestReader(t *testing.T) {
 							Compression: ptr("gzip"),
 							Timeout:     ptr(1000),
 							Tls: &HttpTls{
-								KeyFile:  ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-								CertFile: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+								KeyFile:  ptr(material.BadCertPath),
+								CertFile: ptr(material.BadCertPath),
 							},
 						},
 					},
@@ -835,6 +834,66 @@ func TestReader(t *testing.T) {
 			wantErrT: newErrInvalid("no valid metric exporter"),
 		},
 		{
+			name: "periodic/console-exporter-with-cardinality-limits",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					CardinalityLimits: &CardinalityLimits{
+						Counter:                 ptr(100),
+						UpDownCounter:           ptr(200),
+						Histogram:               ptr(300),
+						ObservableCounter:       ptr(400),
+						ObservableUpDownCounter: ptr(500),
+						ObservableGauge:         ptr(600),
+						Gauge:                   ptr(700),
+					},
+					Exporter: PushMetricExporter{
+						Console: &ConsoleMetricExporter{},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(
+				consoleExporter,
+				sdkmetric.WithCardinalityLimitSelector(func(ik sdkmetric.InstrumentKind) (int, bool) {
+					switch ik {
+					case sdkmetric.InstrumentKindCounter:
+						return 100, false
+					case sdkmetric.InstrumentKindUpDownCounter:
+						return 200, false
+					case sdkmetric.InstrumentKindHistogram:
+						return 300, false
+					case sdkmetric.InstrumentKindObservableCounter:
+						return 400, false
+					case sdkmetric.InstrumentKindObservableUpDownCounter:
+						return 500, false
+					case sdkmetric.InstrumentKindObservableGauge:
+						return 600, false
+					case sdkmetric.InstrumentKindGauge:
+						return 700, false
+					}
+					return 0, true
+				}),
+			),
+		},
+		{
+			name: "periodic/console-exporter-with-default-cardinality-limit",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					CardinalityLimits: &CardinalityLimits{
+						Default: ptr(50),
+					},
+					Exporter: PushMetricExporter{
+						Console: &ConsoleMetricExporter{},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(
+				consoleExporter,
+				sdkmetric.WithCardinalityLimitSelector(func(sdkmetric.InstrumentKind) (int, bool) {
+					return 50, false
+				}),
+			),
+		},
+		{
 			name: "periodic/console-exporter",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
@@ -898,6 +957,127 @@ func TestReader(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCardinalityLimitSelector(t *testing.T) {
+	allKinds := []sdkmetric.InstrumentKind{
+		sdkmetric.InstrumentKindCounter,
+		sdkmetric.InstrumentKindUpDownCounter,
+		sdkmetric.InstrumentKindHistogram,
+		sdkmetric.InstrumentKindObservableCounter,
+		sdkmetric.InstrumentKindObservableUpDownCounter,
+		sdkmetric.InstrumentKindObservableGauge,
+		sdkmetric.InstrumentKindGauge,
+	}
+
+	t.Run("per-kind limits", func(t *testing.T) {
+		cl := &CardinalityLimits{
+			Counter:                 ptr(100),
+			UpDownCounter:           ptr(200),
+			Histogram:               ptr(300),
+			ObservableCounter:       ptr(400),
+			ObservableUpDownCounter: ptr(500),
+			ObservableGauge:         ptr(600),
+			Gauge:                   ptr(700),
+		}
+		sel := cardinalityLimitSelector(cl)
+		expected := map[sdkmetric.InstrumentKind]int{
+			sdkmetric.InstrumentKindCounter:                 100,
+			sdkmetric.InstrumentKindUpDownCounter:           200,
+			sdkmetric.InstrumentKindHistogram:               300,
+			sdkmetric.InstrumentKindObservableCounter:       400,
+			sdkmetric.InstrumentKindObservableUpDownCounter: 500,
+			sdkmetric.InstrumentKindObservableGauge:         600,
+			sdkmetric.InstrumentKindGauge:                   700,
+		}
+		for _, ik := range allKinds {
+			limit, fallback := sel(ik)
+			assert.Equal(t, expected[ik], limit)
+			assert.False(t, fallback)
+		}
+	})
+
+	t.Run("default limit used when kind not set", func(t *testing.T) {
+		cl := &CardinalityLimits{
+			Default: ptr(50),
+		}
+		sel := cardinalityLimitSelector(cl)
+		for _, ik := range allKinds {
+			limit, fallback := sel(ik)
+			assert.Equal(t, 50, limit)
+			assert.False(t, fallback)
+		}
+	})
+
+	t.Run("per-kind overrides default", func(t *testing.T) {
+		cl := &CardinalityLimits{
+			Default: ptr(50),
+			Counter: ptr(100),
+		}
+		sel := cardinalityLimitSelector(cl)
+		limit, fallback := sel(sdkmetric.InstrumentKindCounter)
+		assert.Equal(t, 100, limit)
+		assert.False(t, fallback)
+
+		limit, fallback = sel(sdkmetric.InstrumentKindGauge)
+		assert.Equal(t, 50, limit)
+		assert.False(t, fallback)
+	})
+
+	t.Run("fallback to provider when no limit set", func(t *testing.T) {
+		cl := &CardinalityLimits{}
+		sel := cardinalityLimitSelector(cl)
+		for _, ik := range allKinds {
+			limit, fallback := sel(ik)
+			assert.Equal(t, 0, limit)
+			assert.True(t, fallback)
+		}
+	})
+}
+
+// TestMetricReaderCardinalityLimitsWired verifies that CardinalityLimits set on
+// a PeriodicMetricReader are actually wired into the returned SDK reader.
+// It records 3 distinct attribute sets with a per-kind limit of 1; the SDK
+// must produce exactly 1 data point (only the overflow bucket) rather than
+// 3, which would happen if the selector were never registered. With limit=1
+// the overflow slot consumes the entire limit, so no normal data points fit.
+func TestMetricReaderCardinalityLimitsWired(t *testing.T) {
+	ctx := t.Context()
+
+	reader, err := metricReader(ctx, MetricReader{
+		Periodic: &PeriodicMetricReader{
+			CardinalityLimits: &CardinalityLimits{
+				Counter: ptr(1),
+			},
+			Exporter: PushMetricExporter{
+				Console: &ConsoleMetricExporter{},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	defer func() { assert.NoError(t, mp.Shutdown(t.Context())) }()
+
+	counter, err := mp.Meter("test").Int64Counter("cardinality.wiring.test")
+	require.NoError(t, err)
+
+	// Record 3 distinct attribute sets; with limit=1 the SDK must emit only
+	// 1 data point: the overflow bucket (the limit counts the overflow slot
+	// itself, so no "normal" data points fit alongside it).
+	counter.Add(ctx, 1, metric.WithAttributes(attribute.Int("k", 1)))
+	counter.Add(ctx, 1, metric.WithAttributes(attribute.Int("k", 2)))
+	counter.Add(ctx, 1, metric.WithAttributes(attribute.Int("k", 3)))
+
+	pr := reader.(*sdkmetric.PeriodicReader)
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, pr.Collect(ctx, &rm))
+
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	dataPoints := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints
+	// limit=1: all measurements overflow into 1 overflow bucket (not 3 unconstrained).
+	assert.Len(t, dataPoints, 1)
 }
 
 func TestView(t *testing.T) {
@@ -1458,10 +1638,6 @@ func TestPrometheusIPv6(t *testing.T) {
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// TODO (#7446): Fix the flakiness on Windows.
-		t.Skip("Test is flaky on Windows.")
-	}
 	material := testtls.Write(t)
 	type args struct {
 		ctx        context.Context
@@ -1478,7 +1654,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcMetricExporter{
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Tls: &GrpcTls{
 						Insecure: ptr(true),
 					},
@@ -1497,7 +1673,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcMetricExporter{
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Tls: &GrpcTls{
 						CaFile: ptr(material.CACertPath),
 					},
@@ -1522,7 +1698,7 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 				ctx: t.Context(),
 				otlpConfig: &OTLPGrpcMetricExporter{
 					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
+					Timeout:     ptr(50000),
 					Tls: &GrpcTls{
 						CaFile:   ptr(material.CACertPath),
 						KeyFile:  ptr(material.ClientKeyPath),
@@ -1557,17 +1733,14 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp4", "localhost:0")
+			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 			require.NoError(t, err)
 
-			// We need to manually construct the endpoint using the port on which the server is listening.
-			//
-			// n.Addr() always returns 127.0.0.1 instead of localhost.
-			// But our certificate is created with CN as 'localhost', not '127.0.0.1'.
-			// So we have to manually form the endpoint as "localhost:<port>".
-			_, port, err := net.SplitHostPort(n.Addr().String())
-			require.NoError(t, err)
-			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
+			scheme := "https"
+			if tt.args.otlpConfig.Tls != nil && tt.args.otlpConfig.Tls.Insecure != nil && *tt.args.otlpConfig.Tls.Insecure {
+				scheme = "http"
+			}
+			tt.args.otlpConfig.Endpoint = ptr(scheme + "://" + n.Addr().String())
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
@@ -1580,27 +1753,25 @@ func Test_otlpGRPCMetricExporter(t *testing.T) {
 			res, err := resource.New(t.Context())
 			require.NoError(t, err)
 
-			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(context.Background(), &metricdata.ResourceMetrics{ //nolint:usetesting // required to avoid getting a canceled context.
-					Resource: res,
-					ScopeMetrics: []metricdata.ScopeMetrics{
-						{
-							Metrics: []metricdata.Metrics{
-								{
-									Name: "test-metric",
-									Data: metricdata.Gauge[int64]{
-										DataPoints: []metricdata.DataPoint[int64]{
-											{
-												Value: 1,
-											},
+			assert.NoError(t, exporter.Export(t.Context(), &metricdata.ResourceMetrics{
+				Resource: res,
+				ScopeMetrics: []metricdata.ScopeMetrics{
+					{
+						Metrics: []metricdata.Metrics{
+							{
+								Name: "test-metric",
+								Data: metricdata.Gauge[int64]{
+									DataPoints: []metricdata.DataPoint[int64]{
+										{
+											Value: 1,
 										},
 									},
 								},
 							},
 						},
 					},
-				}))
-			}, 10*time.Second, 1*time.Second)
+				},
+			}))
 		})
 	}
 }
@@ -1627,7 +1798,7 @@ func startGRPCMetricCollector(t *testing.T, listener net.Listener, serverOptions
 	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.GracefulStop()
+		srv.Stop()
 		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			assert.NoError(t, err)
 		}

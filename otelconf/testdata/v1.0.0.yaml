@@ -55,15 +55,15 @@ logger_provider:
               # Configure certificate used to verify a server's TLS credentials. 
               # Absolute path to certificate file in PEM format.
               # If omitted or null, system default certificate verification is used for secure connections.
-              ca_file: testdata/ca.crt
+              ca_file: <CA_CERT>
               # Configure mTLS private client key. 
               # Absolute path to client key file in PEM format. If set, .client_certificate must also be set.
               # If omitted or null, mTLS is not used.
-              key_file: testdata/client.key
+              key_file: <CLIENT_KEY>
               # Configure mTLS client certificate. 
               # Absolute path to client certificate file in PEM format. If set, .client_key must also be set.
               # If omitted or null, mTLS is not used.
-              cert_file: testdata/client.crt
+              cert_file: <CLIENT_CERT>
             # Configure headers. Entries have higher priority than entries from .headers_list.
             # If an entry's .value is null, the entry is ignored.
             headers:
@@ -98,15 +98,15 @@ logger_provider:
               # Configure certificate used to verify a server's TLS credentials. 
               # Absolute path to certificate file in PEM format.
               # If omitted or null, system default certificate verification is used for secure connections.
-              ca_file: testdata/ca.crt
+              ca_file: <CA_CERT>
               # Configure mTLS private client key. 
               # Absolute path to client key file in PEM format. If set, .client_certificate must also be set.
               # If omitted or null, mTLS is not used.
-              key_file: testdata/client.key
+              key_file: <CLIENT_KEY>
               # Configure mTLS client certificate. 
               # Absolute path to client certificate file in PEM format. If set, .client_key must also be set.
               # If omitted or null, mTLS is not used.
-              cert_file: testdata/client.crt
+              cert_file: <CLIENT_CERT>
               # Configure client transport security for the exporter's connection. 
               # Only applicable when .endpoint is provided without http or https scheme. Implementations may choose to ignore .insecure.
               # If omitted or null, false is used.
@@ -282,15 +282,15 @@ meter_provider:
               # Configure certificate used to verify a server's TLS credentials. 
               # Absolute path to certificate file in PEM format.
               # If omitted or null, system default certificate verification is used for secure connections.
-              ca_file: testdata/ca.crt
+              ca_file: <CA_CERT>
               # Configure mTLS private client key. 
               # Absolute path to client key file in PEM format. If set, .client_certificate must also be set.
               # If omitted or null, mTLS is not used.
-              key_file: testdata/client.key
+              key_file: <CLIENT_KEY>
               # Configure mTLS client certificate. 
               # Absolute path to client certificate file in PEM format. If set, .client_key must also be set.
               # If omitted or null, mTLS is not used.
-              cert_file: testdata/client.crt
+              cert_file: <CLIENT_CERT>
             # Configure headers. Entries have higher priority than entries from .headers_list.
             # If an entry's .value is null, the entry is ignored.
             headers:
@@ -364,15 +364,15 @@ meter_provider:
               # Configure certificate used to verify a server's TLS credentials. 
               # Absolute path to certificate file in PEM format.
               # If omitted or null, system default certificate verification is used for secure connections.
-              ca_file: testdata/ca.crt
+              ca_file: <CA_CERT>
               # Configure mTLS private client key. 
               # Absolute path to client key file in PEM format. If set, .client_certificate must also be set.
               # If omitted or null, mTLS is not used.
-              key_file: testdata/client.key
+              key_file: <CLIENT_KEY>
               # Configure mTLS client certificate. 
               # Absolute path to client certificate file in PEM format. If set, .client_key must also be set.
               # If omitted or null, mTLS is not used.
-              cert_file: testdata/client.crt
+              cert_file: <CLIENT_CERT>
               # Configure client transport security for the exporter's connection. 
               # Only applicable when .endpoint is provided without http or https scheme. Implementations may choose to ignore .insecure.
               # If omitted or null, false is used.
@@ -596,15 +596,15 @@ tracer_provider:
               # Configure certificate used to verify a server's TLS credentials. 
               # Absolute path to certificate file in PEM format.
               # If omitted or null, system default certificate verification is used for secure connections.
-              ca_file: testdata/ca.crt
+              ca_file: <CA_CERT>
               # Configure mTLS private client key. 
               # Absolute path to client key file in PEM format. If set, .client_certificate must also be set.
               # If omitted or null, mTLS is not used.
-              key_file: testdata/client.key
+              key_file: <CLIENT_KEY>
               # Configure mTLS client certificate. 
               # Absolute path to client certificate file in PEM format. If set, .client_key must also be set.
               # If omitted or null, mTLS is not used.
-              cert_file: testdata/client.crt
+              cert_file: <CLIENT_CERT>
             # Configure headers. Entries have higher priority than entries from .headers_list.
             # If an entry's .value is null, the entry is ignored.
             headers:
@@ -639,15 +639,15 @@ tracer_provider:
               # Configure certificate used to verify a server's TLS credentials. 
               # Absolute path to certificate file in PEM format.
               # If omitted or null, system default certificate verification is used for secure connections.
-              ca_file: testdata/ca.crt
+              ca_file: <CA_CERT>
               # Configure mTLS private client key. 
               # Absolute path to client key file in PEM format. If set, .client_certificate must also be set.
               # If omitted or null, mTLS is not used.
-              key_file: testdata/client.key
+              key_file: <CLIENT_KEY>
               # Configure mTLS client certificate. 
               # Absolute path to client certificate file in PEM format. If set, .client_key must also be set.
               # If omitted or null, mTLS is not used.
-              cert_file: testdata/client.crt
+              cert_file: <CLIENT_CERT>
               # Configure client transport security for the exporter's connection. 
               # Only applicable when .endpoint is provided without http or https scheme. Implementations may choose to ignore .insecure.
               # If omitted or null, false is used.
