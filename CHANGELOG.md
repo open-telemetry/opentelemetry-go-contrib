@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add instrumentation for labstack echo v5. (#9088)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
