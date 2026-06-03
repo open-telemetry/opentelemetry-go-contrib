@@ -15,6 +15,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Read `cloud.account.id` from symlink created by the OTel Lambda Extension in `go.opentelemetry.io/contrib/detectors/aws/lambda`. (#8526)
+- `WithSpanKind` option in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to override the default span kind. (#8506)
 - Add `error.type` attribute to `http.client.request.duration` for transport failures in `otelhttp`. (#8801)
 - Add examples for prometheus compatibility document. (#8716)
 - Add support for `cardinality_limits` in `PeriodicMetricReader` in `otelconf`. (#8885)
