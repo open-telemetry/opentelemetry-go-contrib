@@ -403,10 +403,6 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 		if err := json.Unmarshal(sh.LogLevel, &sh.Plain.LogLevel); err != nil {
 			return errors.Join(newErrUnmarshal(j), err)
 		}
-	} else {
-		// Configure the log level of the internal logger used by the SDK.
-		// If omitted, info is used.
-		sh.Plain.LogLevel = ptr(SeverityNumberInfo)
 	}
 
 	*j = OpenTelemetryConfiguration(sh.Plain)

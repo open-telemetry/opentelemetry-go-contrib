@@ -3,6 +3,7 @@ module go.opentelemetry.io/contrib/otelconf
 go 1.25.0
 
 require (
+	github.com/go-logr/logr v1.4.3
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/stretchr/testify v1.11.1
@@ -36,7 +37,6 @@ require (
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.29.0 // indirect
