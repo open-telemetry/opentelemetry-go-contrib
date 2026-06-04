@@ -8,14 +8,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
 ## [1.44.0/2.5.1/0.69.0/0.37.1/0.24.0/0.19.0/0.16.1/0.16.0] - 2026-05-28
 
 ### Added
-
-- Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
 - Add `error.type` attribute to `http.client.request.duration` for transport failures in `otelhttp`. (#8801)
 - Add examples for prometheus compatibility document. (#8716)
 - Add support for `cardinality_limits` in `PeriodicMetricReader` in `otelconf`. (#8885)
