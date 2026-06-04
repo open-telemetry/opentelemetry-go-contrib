@@ -4,7 +4,6 @@
 package azurecontainerapps
 
 import (
-	"os"
 	"strings"
 	"testing"
 
@@ -29,7 +28,8 @@ func TestWithAttributeFilter(t *testing.T) {
 	res, err := detector.Detect(t.Context())
 
 	assert.NoError(t, err)
-	expected := resource.NewWithAttributes(semconv.SchemaURL,
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
 		semconv.ServiceName("my-app"),
 		semconv.ServiceInstanceID("my-app--abc123-0"),
 	)
@@ -59,7 +59,8 @@ func TestDetectSuccess(t *testing.T) {
 func TestDetectMissingReplicaName(t *testing.T) {
 	t.Setenv("CONTAINER_APP_NAME", "my-app")
 
-	expected := resource.NewWithAttributes(semconv.SchemaURL,
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
 		semconv.CloudProviderAzure,
 		semconv.CloudPlatformAzureContainerApps,
 		semconv.ServiceName("my-app"),
@@ -73,7 +74,8 @@ func TestDetectMissingReplicaName(t *testing.T) {
 
 // Return empty resource when not running in an Azure Container Apps environment.
 func TestReturnsIfNoEnvVars(t *testing.T) {
-	os.Clearenv()
+	t.Setenv(containerAppNameEnvVar, "")
+	t.Setenv(containerAppReplicaNameEnvVar, "")
 	detector := ResourceDetector{}
 	res, err := detector.Detect(t.Context())
 
