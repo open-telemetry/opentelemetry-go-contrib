@@ -1,7 +1,6 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package azurecontainerapps provides a resource detector for Azure Container Apps.
 package azurecontainerapps // import "go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 
 import (
@@ -11,7 +10,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
 // For a complete list of reserved environment variables in Azure Container Apps, see:
