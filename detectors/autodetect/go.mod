@@ -8,6 +8,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.44.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.44.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.69.0
+	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.16.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.16.0
@@ -93,6 +94,8 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.4.0 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+replace go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps => ../azure/azurecontainerapps
 
 replace go.opentelemetry.io/contrib/detectors/azure/azurevm => ../azure/azurevm
 
