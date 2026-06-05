@@ -7,6 +7,8 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -16,6 +18,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -1339,4 +1342,86 @@ func TestPrometheusReaderHostParsing(t *testing.T) {
 			assert.Contains(t, server.Addr, tt.wantAddr)
 		})
 	}
+}
+
+// TestPrometheusServerErrorHandling verifies the Prometheus metrics HTTP
+// server goroutine reports genuine Serve errors and stays quiet on a normal
+// shutdown. http.ErrServerClosed is the sentinel returned by Serve on a clean
+// Shutdown/Close, so it must NOT be treated as an unexpected error, while any
+// other error (bind/accept/runtime) must be surfaced through otel.Handle.
+func TestPrometheusServerErrorHandling(t *testing.T) {
+	t.Run("clean shutdown is not reported as an error", func(t *testing.T) {
+		handled := make(chan error, 1)
+		prev := otel.GetErrorHandler()
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			select {
+			case handled <- err:
+			default:
+			}
+		}))
+		t.Cleanup(func() { otel.SetErrorHandler(prev) })
+
+		host := "localhost"
+		port := 0
+		reader, err := prometheusReader(t.Context(), &Prometheus{
+			Host:                       &host,
+			Port:                       &port,
+			WithoutScopeInfo:           ptr(true),
+			WithoutTypeSuffix:          ptr(true),
+			WithoutUnits:               ptr(true),
+			WithResourceConstantLabels: &IncludeExclude{},
+		})
+		require.NoError(t, err)
+		require.NotNil(t, reader)
+
+		// A normal Shutdown causes Serve to return http.ErrServerClosed. That
+		// is the clean-shutdown sentinel and must not be reported.
+		//nolint:usetesting // required to avoid getting a canceled context at shutdown.
+		require.NoError(t, reader.Shutdown(context.Background()))
+
+		select {
+		case got := <-handled:
+			t.Fatalf("clean shutdown was reported as an error: %v", got)
+		case <-time.After(200 * time.Millisecond):
+			// No error handled, as expected.
+		}
+	})
+
+	t.Run("real serve error is reported", func(t *testing.T) {
+		// Reproduce the exact server goroutine used by prometheusReader and
+		// force a genuine (non-ErrServerClosed) Serve error by closing the
+		// listener out from under the running server. The error must be
+		// surfaced via otel.Handle, not swallowed.
+		handled := make(chan error, 1)
+		prev := otel.GetErrorHandler()
+		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+			select {
+			case handled <- err:
+			default:
+			}
+		}))
+		t.Cleanup(func() { otel.SetErrorHandler(prev) })
+
+		lis, err := net.Listen("tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+
+		server := http.Server{Handler: http.NewServeMux()}
+		go func() {
+			if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
+			}
+		}()
+
+		// Closing the listener makes the blocked Accept in Serve return a real
+		// error that is not http.ErrServerClosed.
+		require.NoError(t, lis.Close())
+
+		select {
+		case got := <-handled:
+			assert.ErrorContains(t, got, "the Prometheus HTTP server exited unexpectedly")
+			assert.NotErrorIs(t, got, http.ErrServerClosed)
+		case <-time.After(2 * time.Second):
+			t.Fatal("expected a real serve error to be reported, but none was")
+		}
+	})
 }
