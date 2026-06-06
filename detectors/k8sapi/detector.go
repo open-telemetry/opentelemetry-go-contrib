@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package k8snode
+package k8sapi
 
 import (
 	"context"
@@ -11,11 +11,10 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 const defaultNodeEnvVar = "K8S_NODE_NAME"
@@ -58,7 +57,7 @@ func WithAttributeFilter(filter attribute.Filter) Option {
 	return optionFunc(func(c *config) { c.filter = filter })
 }
 
-// ResourceDetector collects resource attributes from the Kubernetes node the
+// resourceDetector collects resource attributes from the Kubernetes node the
 // process is running on.
 type resourceDetector struct {
 	cfg config
@@ -83,23 +82,31 @@ func (rd *resourceDetector) Detect(ctx context.Context) (*resource.Resource, err
 			if errors.Is(err, rest.ErrNotInCluster) {
 				return resource.Empty(), nil
 			}
-			return nil, fmt.Errorf("k8snode detector: %w", err)
+			return nil, fmt.Errorf("k8sapi detector: %w", err)
 		}
 		var clientErr error
 		client, clientErr = kubernetes.NewForConfig(conf)
 		if clientErr != nil {
-			return nil, fmt.Errorf("k8snode detector: failed to create Kubernetes client: %w", clientErr)
+			return nil, fmt.Errorf("k8sapi detector: failed to create Kubernetes client: %w", clientErr)
 		}
 	}
 
 	node, err := client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("k8snode detector: failed to get node %q: %w", nodeName, err)
+		return nil, fmt.Errorf("k8sapi detector: failed to get node %q: %w", nodeName, err)
 	}
 
 	attrs := []attribute.KeyValue{
 		semconv.K8SNodeName(node.Name),
 		semconv.K8SNodeUID(string(node.UID)),
+	}
+
+	ns, err := client.CoreV1().Namespaces().Get(ctx, "kube-system", metav1.GetOptions{})
+	if err != nil {
+		res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
+		return res, fmt.Errorf("%w: %w", resource.ErrPartialResource, err)
+	} else if uid := string(ns.UID); uid != "" {
+		attrs = append(attrs, semconv.K8SClusterUID(uid))
 	}
 
 	if rd.cfg.filter != nil {
