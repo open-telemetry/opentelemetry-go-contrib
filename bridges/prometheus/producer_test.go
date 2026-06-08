@@ -11,6 +11,7 @@ import (
 	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -475,6 +476,14 @@ func TestProduce(t *testing.T) {
 // This is separate from TestProduce because the Prometheus Go SDK does not
 // provide a function that generates a gauge histogram metric.
 func TestProducePartialSuccess(t *testing.T) {
+	previousHandler := otel.GetErrorHandler()
+	t.Cleanup(func() { otel.SetErrorHandler(previousHandler) })
+
+	var handledErr error
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		handledErr = err
+	}))
+
 	p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
 		return []*dto.MetricFamily{
 			{
@@ -508,6 +517,8 @@ func TestProducePartialSuccess(t *testing.T) {
 
 	output, err := p.Produce(t.Context())
 	assert.NoError(t, err)
+	require.ErrorIs(t, handledErr, errUnsupportedType)
+	assert.Contains(t, handledErr.Error(), "test_gauge_histogram_metric")
 	require.Len(t, output, 1)
 
 	expected := metricdata.ScopeMetrics{
