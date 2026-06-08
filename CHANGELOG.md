@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix Prometheus reader ignoring standalone `without_units` and `without_type_suffix` options in `go.opentelemetry.io/contrib/otelconf/v0.3.0`. (#9107)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

@@ -394,6 +394,13 @@ func prometheusReaderOpts(prometheusConfig *Prometheus) ([]otelprom.Option, erro
 		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.NoTranslation))
 	} else {
 		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes))
+
+		if prometheusConfig.WithoutTypeSuffix != nil && *prometheusConfig.WithoutTypeSuffix {
+			opts = append(opts, otelprom.WithoutCounterSuffixes())
+		}
+		if prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
+			opts = append(opts, otelprom.WithoutUnits())
+		}
 	}
 
 	if prometheusConfig.WithResourceConstantLabels != nil {
