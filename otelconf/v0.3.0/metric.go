@@ -396,10 +396,10 @@ func prometheusReaderOpts(prometheusConfig *Prometheus) ([]otelprom.Option, erro
 		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes))
 
 		if prometheusConfig.WithoutTypeSuffix != nil && *prometheusConfig.WithoutTypeSuffix {
-			opts = append(opts, otelprom.WithoutCounterSuffixes())
+			opts = append(opts, otelprom.WithoutCounterSuffixes()) //nolint:staticcheck // no WithTranslationStrategy equivalent for per-suffix control
 		}
 		if prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
-			opts = append(opts, otelprom.WithoutUnits())
+			opts = append(opts, otelprom.WithoutUnits()) //nolint:staticcheck // no WithTranslationStrategy equivalent for per-suffix control
 		}
 	}
 

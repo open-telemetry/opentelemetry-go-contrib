@@ -1423,7 +1423,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 }
 
 // TestPrometheusReaderOptsStandaloneFlags verifies that a single without_* flag is
-// honoured even when the other is absent. Previously both had to be true simultaneously
+// honored even when the other is absent. Previously both had to be true simultaneously
 // before either took effect.
 func TestPrometheusReaderOptsStandaloneFlags(t *testing.T) {
 	// collectName creates a Prometheus exporter from opts, records one counter
@@ -1436,11 +1436,15 @@ func TestPrometheusReaderOptsStandaloneFlags(t *testing.T) {
 		exp, err := otelprom.New(opts...)
 		require.NoError(t, err)
 		mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exp))
-		t.Cleanup(func() { _ = mp.Shutdown(context.Background()) })
+		t.Cleanup(func() {
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+			_ = mp.Shutdown(ctx)
+		})
 
 		c, err := mp.Meter("test").Int64Counter("request_duration", metric.WithUnit("s"))
 		require.NoError(t, err)
-		c.Add(context.Background(), 1)
+		c.Add(t.Context(), 1)
 
 		mfs, err := reg.Gather()
 		require.NoError(t, err)
