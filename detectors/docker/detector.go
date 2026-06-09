@@ -9,10 +9,11 @@ import (
 	"fmt"
 
 	"github.com/moby/moby/client"
-	"go.opentelemetry.io/contrib/detectors/internal"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+
+	"go.opentelemetry.io/contrib/detectors/internal"
 )
 
 type resourceDetector struct {
@@ -43,15 +44,13 @@ func (r *resourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		errs  []error
 	)
 
-	attrs = append(attrs, semconv.ContainerName(containerInfo.Name))
-	attrs = append(attrs, semconv.ContainerImageName(containerInfo.Config.Image))
+	attrs = append(attrs, semconv.ContainerName(containerInfo.Name), semconv.ContainerImageName(containerInfo.Config.Image))
 
 	sysInfo, err := dockerProvider.Info(ctx)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("docker info: %w", err))
 	} else {
-		attrs = append(attrs, semconv.HostName(sysInfo.Name))
-		attrs = append(attrs, semconv.OSTypeKey.String(internal.GOOSToOSType(sysInfo.OSType)))
+		attrs = append(attrs, semconv.HostName(sysInfo.Name), semconv.OSTypeKey.String(internal.GOOSToOSType(sysInfo.OSType)))
 	}
 
 	res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)

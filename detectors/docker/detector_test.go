@@ -45,7 +45,7 @@ func TestDockerResourceDetectorNotDockerEnvironment(t *testing.T) {
 		},
 	}
 
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
 }
@@ -56,7 +56,7 @@ func TestDockerResourceDetectorSuccess(t *testing.T) {
 		containerInfo: container.InspectResponse{Name: "my-container", Config: &container.Config{Image: "golang:1.25"}},
 	})
 
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 	require.NoError(t, err)
 
 	attrs := res.Set()
@@ -79,7 +79,7 @@ func TestDockerResourceDetectorInfoError(t *testing.T) {
 		containerInfo: container.InspectResponse{Name: "my-container", Config: &container.Config{Image: "golang:1.25"}},
 	})
 
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 	require.ErrorIs(t, err, resource.ErrPartialResource)
 
 	attrs := res.Set()
@@ -102,7 +102,7 @@ func TestDockerResourceDetectorContainerInfoError(t *testing.T) {
 		containerInfoErr: errors.New("no such container"),
 	})
 
-	res, err := detector.Detect(context.Background())
+	res, err := detector.Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
 }
