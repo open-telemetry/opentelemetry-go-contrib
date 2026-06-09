@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package k8sapi
+package k8sapi // import "go.opentelemetry.io/contrib/detectors/k8sapi"
 
 import (
 	"context"
