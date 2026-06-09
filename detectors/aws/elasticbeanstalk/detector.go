@@ -88,7 +88,7 @@ func (detector *ResourceDetector) Detect(context.Context) (*resource.Resource, e
 	conf.Close()
 
 	if err != nil {
-		// TODO: Log a more specific error with zap
+		// TODO: Think of long term logging, previously zap
 		return resource.Empty(), err
 	}
 

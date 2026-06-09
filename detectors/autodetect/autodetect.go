@@ -137,7 +137,7 @@ var (
 		IDAWSECS:              ecs.NewResourceDetector,
 		IDAWSEKS:              eks.NewResourceDetector,
 		IDAWSLambda:           lambda.NewResourceDetector,
-		IDAWSElasticBeanstalk: elasticbeanstalk.NewResourceDetector,
+		IDAWSElasticBeanstalk: func() resource.Detector { return elasticbeanstalk.NewResourceDetector() },
 		IDAWSEC2:              ec2.NewResourceDetector,
 		IDAWSECS:              ecs.NewResourceDetector,
 		IDAWSEKS:              eks.NewResourceDetector,
