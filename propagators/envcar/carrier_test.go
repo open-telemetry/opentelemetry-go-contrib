@@ -76,6 +76,10 @@ func TestExtractValidTraceContextEnvCarrier(t *testing.T) {
 }
 
 func TestExtractIgnoresNonNormalizedEnvNames(t *testing.T) {
+	// Guard against TRACEPARENT/TRACESTATE being set in the outer test environment.
+	t.Setenv("TRACEPARENT", "")
+	t.Setenv("TRACESTATE", "")
+
 	t.Setenv("traceparent", "00-000000000000007b00000000000001c8-000000000000007b-00")
 	t.Setenv("tracestate", "key1=value1,key2=value2")
 
