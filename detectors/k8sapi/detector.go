@@ -57,19 +57,19 @@ func WithAttributeFilter(filter attribute.Filter) Option {
 	return optionFunc(func(c *config) { c.filter = filter })
 }
 
-// resourceDetector collects resource attributes from the Kubernetes node the
+// ResourceDetector collects resource attributes from the Kubernetes node the
 // process is running on.
-type resourceDetector struct {
+type ResourceDetector struct {
 	cfg config
 }
 
 // Compile-time interface assertion.
-var _ resource.Detector = (*resourceDetector)(nil)
+var _ resource.Detector = (*ResourceDetector)(nil)
 
 // Detect returns a [*resource.Resource] describing the Kubernetes node. If the
 // node-name environment variable is not set or the process is not running
 // inside a cluster, an empty resource and no error are returned.
-func (rd *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	nodeName := os.Getenv(rd.cfg.nodeEnvVar)
 	if nodeName == "" {
 		return resource.Empty(), nil
@@ -134,10 +134,10 @@ func (rd *resourceDetector) Detect(ctx context.Context) (*resource.Resource, err
 //	    valueFrom:
 //	      fieldRef:
 //	        fieldPath: spec.nodeName
-func NewResourceDetector(opts ...Option) resource.Detector {
+func NewResourceDetector(opts ...Option) *ResourceDetector {
 	cfg := config{nodeEnvVar: defaultNodeEnvVar}
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
-	return &resourceDetector{cfg: cfg}
+	return &ResourceDetector{cfg: cfg}
 }
