@@ -126,7 +126,7 @@ func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, err
 // attributes on the Kubernetes node the process is running on.
 //
 // The node name is read from the K8S_NODE_NAME environment variable by
-// default. Use [WithNodeEnvVar] to customise the variable name. The variable
+// default. Use [WithNodeEnvVar] to customize the variable name. The variable
 // is typically populated via the Kubernetes downward API:
 //
 //	env:

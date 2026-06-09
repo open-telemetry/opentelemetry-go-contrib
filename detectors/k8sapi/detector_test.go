@@ -39,10 +39,10 @@ func newFakeNamespace(uid types.UID) *corev1.Namespace {
 const testNodeName = "my-node"
 
 func TestDetect(t *testing.T) {
-	nodeUID    := uuid.NewUUID()
+	nodeUID := uuid.NewUUID()
 	clusterUID := uuid.NewUUID()
 
-	client := k8sfake.NewSimpleClientset(
+	client := k8sfake.NewClientset(
 		newFakeNode(testNodeName, nodeUID),
 		newFakeNamespace(clusterUID),
 	)
@@ -51,7 +51,8 @@ func TestDetect(t *testing.T) {
 	res, err := NewResourceDetector(WithKubeClient(client)).Detect(t.Context())
 	require.NoError(t, err)
 
-	expected := resource.NewWithAttributes(semconv.SchemaURL,
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
 		semconv.K8SNodeName(testNodeName),
 		semconv.K8SNodeUID(string(nodeUID)),
 		semconv.K8SClusterUID(string(clusterUID)),
@@ -60,10 +61,10 @@ func TestDetect(t *testing.T) {
 }
 
 func TestDetectWithFilter(t *testing.T) {
-	nodeUID    := uuid.NewUUID()
+	nodeUID := uuid.NewUUID()
 	clusterUID := uuid.NewUUID()
 
-	client := k8sfake.NewSimpleClientset(
+	client := k8sfake.NewClientset(
 		newFakeNode(testNodeName, nodeUID),
 		newFakeNamespace(clusterUID),
 	)
@@ -73,7 +74,8 @@ func TestDetectWithFilter(t *testing.T) {
 	res, err := NewResourceDetector(WithKubeClient(client), WithAttributeFilter(filter)).Detect(t.Context())
 	require.NoError(t, err)
 
-	expected := resource.NewWithAttributes(semconv.SchemaURL,
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
 		semconv.K8SClusterUID(string(clusterUID)),
 	)
 	assert.Equal(t, expected, res)
@@ -82,13 +84,14 @@ func TestDetectWithFilter(t *testing.T) {
 func TestDetectClusterUIDError(t *testing.T) {
 	nodeUID := uuid.NewUUID()
 
-	client := k8sfake.NewSimpleClientset(newFakeNode(testNodeName, nodeUID))
+	client := k8sfake.NewClientset(newFakeNode(testNodeName, nodeUID))
 	t.Setenv("K8S_NODE_NAME", testNodeName)
 
 	res, err := NewResourceDetector(WithKubeClient(client)).Detect(t.Context())
 	require.ErrorIs(t, err, resource.ErrPartialResource)
 
-	expected := resource.NewWithAttributes(semconv.SchemaURL,
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
 		semconv.K8SNodeName(testNodeName),
 		semconv.K8SNodeUID(string(nodeUID)),
 	)
