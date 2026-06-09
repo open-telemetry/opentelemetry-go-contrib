@@ -84,9 +84,9 @@ func TestNewResource(t *testing.T) {
 			assert.Truef(t, got.Set().HasValue(semconv.TelemetrySDKLanguageKey), "should have %q attribute", semconv.TelemetrySDKLanguageKey)
 			assert.Truef(t, got.Set().HasValue(semconv.TelemetrySDKVersionKey), "should have %q attribute", semconv.TelemetrySDKVersionKey)
 			for _, want := range tt.wantAttrs {
-				got, ok := got.Set().Value(want.Key)
+				gotValue, ok := got.Set().Value(want.Key)
 				if assert.Truef(t, ok, "should have %q attribute", want.Key) {
-					assert.Equalf(t, want.Value, got, "%q attribute value mismatch", want.Key)
+					assert.Equalf(t, want.Value, gotValue, "%q attribute value mismatch", want.Key)
 				}
 			}
 		})
