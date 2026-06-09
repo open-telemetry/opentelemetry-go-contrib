@@ -4,8 +4,6 @@ go 1.25.0
 
 require github.com/moby/moby/client v0.4.1
 
-require go.opentelemetry.io/contrib/detectors/internal v0.16.0
-
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
@@ -40,5 +38,3 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.0 // indirect
 	golang.org/x/sys v0.42.0 // indirect
 )
-
-replace go.opentelemetry.io/contrib/detectors/internal => ../internal

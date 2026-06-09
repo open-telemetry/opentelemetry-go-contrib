@@ -13,7 +13,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 
-	"go.opentelemetry.io/contrib/detectors/internal"
+	"go.opentelemetry.io/contrib/detectors/docker/internal"
 )
 
 type resourceDetector struct {
