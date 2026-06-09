@@ -9,6 +9,7 @@ import (
 	"io"
 	"strconv"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
 )
@@ -18,12 +19,35 @@ const (
 	windowsPath = "C:\\Program Files\\Amazon\\XRay\\environment.conf"
 )
 
-type resourceDetector struct {
-	fs fileSystem
+// Compile-time interface assertion.
+var _ resource.Detector = (*ResourceDetector)(nil)
+
+type config struct {
+	filter attribute.Filter
 }
 
-// compile time assertion that resource detector implements the resource.Detector interface.
-var _ resource.Detector = (*resourceDetector)(nil)
+// Option configures a [ResourceDetector].
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (f optionFunc) apply(c *config) { f(c) }
+
+// WithAttributeFilter sets a filter that controls which detected attributes are
+// included in the returned resource. Only attributes for which filter returns
+// true are included. By default all attributes are included.
+func WithAttributeFilter(filter attribute.Filter) Option {
+	return optionFunc(func(c *config) { c.filter = filter })
+}
+
+// ResourceDetector reads the AWS X-Ray daemon configuration file to detect
+// Elastic Beanstalk resource attributes.
+type ResourceDetector struct {
+	fs  fileSystem
+	cfg config
+}
 
 // NewResourceDetector returns a resource detector that reads the AWS X-Ray daemon
 // configuration file to detect Elastic Beanstalk resource attributes.
@@ -31,8 +55,12 @@ var _ resource.Detector = (*resourceDetector)(nil)
 // If the configuration file is absent (i.e. the process is not running on an
 // Elastic Beanstalk environment, or X-Ray integration is disabled), the detector
 // returns an empty resource without an error.
-func NewResourceDetector() resource.Detector {
-	return &resourceDetector{fs: &ebFileSystem{}}
+func NewResourceDetector(opts ...Option) *ResourceDetector {
+	var cfg config
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+	return &ResourceDetector{fs: &ebFileSystem{}, cfg: cfg}
 }
 
 type ebMetaData struct {
@@ -41,7 +69,7 @@ type ebMetaData struct {
 	VersionLabel    string `json:"version_label"`
 }
 
-func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, error) {
+func (detector *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	var conf io.ReadCloser
 	var err error
 	if detector.fs.IsWindows() {
@@ -64,12 +92,23 @@ func (detector *resourceDetector) Detect(context.Context) (*resource.Resource, e
 		return resource.Empty(), err
 	}
 
-	return resource.NewWithAttributes(
-		semconv.SchemaURL,
+	attrs := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSElasticBeanstalk,
 		semconv.DeploymentID(strconv.Itoa(ebmd.DeploymentID)),
 		semconv.DeploymentEnvironmentName(ebmd.EnvironmentName),
 		semconv.ServiceVersion(ebmd.VersionLabel),
-	), nil
+	}
+
+	if detector.cfg.filter != nil {
+		filtered := attrs[:0]
+		for _, kv := range attrs {
+			if detector.cfg.filter(kv) {
+				filtered = append(filtered, kv)
+			}
+		}
+		attrs = filtered
+	}
+
+	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), nil
 }

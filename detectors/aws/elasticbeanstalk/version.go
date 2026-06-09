@@ -4,4 +4,4 @@
 package elasticbeanstalk // import "go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk"
 
 // Version is the current release version of the Amazon Elastic Beanstalk resource detector.
-const Version = "0.15.0"
+const Version = "0.16.0"
