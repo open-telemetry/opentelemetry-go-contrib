@@ -79,13 +79,14 @@ func TestNewResource(t *testing.T) {
 			require.ErrorIs(t, err, tt.wantErrT)
 
 			assert.Equal(t, tt.wantSchemaURL, got.SchemaURL())
-			assert.True(t, got.Set().HasValue(semconv.TelemetrySDKNameKey))
-			assert.True(t, got.Set().HasValue(semconv.TelemetrySDKLanguageKey))
-			assert.True(t, got.Set().HasValue(semconv.TelemetrySDKVersionKey))
+			assert.Truef(t, got.Set().HasValue(semconv.ServiceNameKey), "should have %q attribute", semconv.ServiceNameKey)
+			assert.Truef(t, got.Set().HasValue(semconv.TelemetrySDKNameKey), "should have %q attribute", semconv.TelemetrySDKNameKey)
+			assert.Truef(t, got.Set().HasValue(semconv.TelemetrySDKLanguageKey), "should have %q attribute", semconv.TelemetrySDKLanguageKey)
+			assert.Truef(t, got.Set().HasValue(semconv.TelemetrySDKVersionKey), "should have %q attribute", semconv.TelemetrySDKVersionKey)
 			for _, want := range tt.wantAttrs {
 				got, ok := got.Set().Value(want.Key)
-				if assert.True(t, ok) {
-					assert.Equal(t, want.Value, got)
+				if assert.Truef(t, ok, "should have %q attribute", want.Key) {
+					assert.Equalf(t, want.Value, got, "%q attribute value mismatch", want.Key)
 				}
 			}
 		})
