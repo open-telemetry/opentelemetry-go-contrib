@@ -21,6 +21,12 @@ typically via the Kubernetes downward API:
 	      fieldRef:
 	        fieldPath: spec.nodeName
 
+Node attributes (k8s.node.name, k8s.node.uid) require the following RBAC:
+
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["get"]
+
 The cluster UID is derived from the kube-system namespace UID and requires
 the following RBAC:
 
