@@ -20,6 +20,14 @@ import (
 func ExampleCarrier_extractFromParent() {
 	// Simulate environment variables set by a parent process.
 	// In practice, these would already be set when this process starts.
+	orig, ok := os.LookupEnv("TRACEPARENT")
+	defer func() {
+		if ok {
+			_ = os.Setenv("TRACEPARENT", orig)
+			return
+		}
+		_ = os.Unsetenv("TRACEPARENT")
+	}()
 	_ = os.Setenv("TRACEPARENT", "00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01")
 
 	// Create a carrier to read trace context from environment variables.
@@ -34,6 +42,10 @@ func ExampleCarrier_extractFromParent() {
 	fmt.Printf("Trace ID: %s\n", spanCtx.TraceID())
 	fmt.Printf("Span ID: %s\n", spanCtx.SpanID())
 	fmt.Printf("Sampled: %t\n", spanCtx.IsSampled())
+	// Output:
+	// Trace ID: 0102030405060708090a0b0c0d0e0f10
+	// Span ID: 0102030405060708
+	// Sampled: true
 }
 
 // This example is a go program where we have a trace and we'd like to inject it
@@ -73,4 +85,5 @@ func ExampleCarrier_childProcess() {
 		return
 	}
 	fmt.Print(string(out))
+	// Output: 00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01
 }
