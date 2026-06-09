@@ -13,6 +13,7 @@ import (
 	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
@@ -32,14 +33,14 @@ func (m *mockProvider) ContainerInfo(_ context.Context) (container.InspectRespon
 	return m.containerInfo, m.containerInfoErr
 }
 
-func newMockDetector(m *mockProvider) *resourceDetector {
-	return &resourceDetector{
-		createProvider: func(...client.Opt) (provider, error) { return m, nil },
-	}
+func newMockDetector(m *mockProvider, opts ...Option) *ResourceDetector {
+	d := NewResourceDetector(opts...)
+	d.createProvider = func(...client.Opt) (provider, error) { return m, nil }
+	return d
 }
 
-func TestDockerResourceDetectorNotDockerEnvironment(t *testing.T) {
-	detector := &resourceDetector{
+func TestNotDockerEnvironment(t *testing.T) {
+	detector := &ResourceDetector{
 		createProvider: func(...client.Opt) (provider, error) {
 			return nil, errors.New("cannot connect to Docker daemon")
 		},
@@ -50,7 +51,7 @@ func TestDockerResourceDetectorNotDockerEnvironment(t *testing.T) {
 	assert.Equal(t, resource.Empty(), res)
 }
 
-func TestDockerResourceDetectorSuccess(t *testing.T) {
+func TestSuccess(t *testing.T) {
 	detector := newMockDetector(&mockProvider{
 		info:          system.Info{Name: "docker-host", OSType: "linux"},
 		containerInfo: container.InspectResponse{Name: "my-container", Config: &container.Config{Image: "golang:1.25"}},
@@ -73,7 +74,7 @@ func TestDockerResourceDetectorSuccess(t *testing.T) {
 	assert.Equal(t, "golang:1.25", containerImage.AsString())
 }
 
-func TestDockerResourceDetectorInfoError(t *testing.T) {
+func TestInfoError(t *testing.T) {
 	detector := newMockDetector(&mockProvider{
 		infoErr:       errors.New("daemon unavailable"),
 		containerInfo: container.InspectResponse{Name: "my-container", Config: &container.Config{Image: "golang:1.25"}},
@@ -96,7 +97,7 @@ func TestDockerResourceDetectorInfoError(t *testing.T) {
 	assert.Equal(t, "golang:1.25", containerImage.AsString())
 }
 
-func TestDockerResourceDetectorContainerInfoError(t *testing.T) {
+func TestContainerInfoError(t *testing.T) {
 	detector := newMockDetector(&mockProvider{
 		info:             system.Info{Name: "docker-host", OSType: "linux"},
 		containerInfoErr: errors.New("no such container"),
@@ -105,4 +106,33 @@ func TestDockerResourceDetectorContainerInfoError(t *testing.T) {
 	res, err := detector.Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
+}
+
+func TestWithAttributeFilter(t *testing.T) {
+	detector := newMockDetector(
+		&mockProvider{
+			info:          system.Info{Name: "docker-host", OSType: "linux"},
+			containerInfo: container.InspectResponse{Name: "my-container", Config: &container.Config{Image: "golang:1.25"}},
+		},
+		WithAttributeFilter(attribute.NewDenyKeysFilter(semconv.HostNameKey)),
+	)
+
+	res, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+
+	// host.name must be absent.
+	_, ok := res.Set().Value(semconv.HostNameKey)
+	assert.False(t, ok, "expected host.name to be absent")
+
+	// The other three attributes must be present.
+	presentAttrs := []attribute.KeyValue{
+		semconv.OSTypeKey.String("linux"),
+		semconv.ContainerName("my-container"),
+		semconv.ContainerImageName("golang:1.25"),
+	}
+	for _, kv := range presentAttrs {
+		val, ok := res.Set().Value(kv.Key)
+		assert.True(t, ok, "expected attribute %s to be present", kv.Key)
+		assert.Equal(t, kv.Value, val)
+	}
 }
