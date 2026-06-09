@@ -18,10 +18,10 @@ import (
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
-func newFakeNode(name string, uid types.UID) *corev1.Node {
+func newFakeNode(uid types.UID) *corev1.Node {
 	return &corev1.Node{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
+			Name: testNodeName,
 			UID:  uid,
 		},
 	}
@@ -43,7 +43,7 @@ func TestDetect(t *testing.T) {
 	clusterUID := uuid.NewUUID()
 
 	client := k8sfake.NewClientset(
-		newFakeNode(testNodeName, nodeUID),
+		newFakeNode(nodeUID),
 		newFakeNamespace(clusterUID),
 	)
 	t.Setenv("K8S_NODE_NAME", testNodeName)
@@ -65,7 +65,7 @@ func TestDetectWithFilter(t *testing.T) {
 	clusterUID := uuid.NewUUID()
 
 	client := k8sfake.NewClientset(
-		newFakeNode(testNodeName, nodeUID),
+		newFakeNode(nodeUID),
 		newFakeNamespace(clusterUID),
 	)
 	t.Setenv("K8S_NODE_NAME", testNodeName)
@@ -84,7 +84,7 @@ func TestDetectWithFilter(t *testing.T) {
 func TestDetectClusterUIDError(t *testing.T) {
 	nodeUID := uuid.NewUUID()
 
-	client := k8sfake.NewClientset(newFakeNode(testNodeName, nodeUID))
+	client := k8sfake.NewClientset(newFakeNode(nodeUID))
 	t.Setenv("K8S_NODE_NAME", testNodeName)
 
 	res, err := NewResourceDetector(WithKubeClient(client)).Detect(t.Context())
@@ -96,4 +96,60 @@ func TestDetectClusterUIDError(t *testing.T) {
 		semconv.K8SNodeUID(string(nodeUID)),
 	)
 	assert.Equal(t, expected, res)
+}
+
+func TestDetectNodeError(t *testing.T) {
+	clusterUID := uuid.NewUUID()
+
+	client := k8sfake.NewClientset(newFakeNamespace(clusterUID))
+	t.Setenv("K8S_NODE_NAME", testNodeName)
+
+	res, err := NewResourceDetector(WithKubeClient(client)).Detect(t.Context())
+	require.ErrorIs(t, err, resource.ErrPartialResource)
+
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.K8SClusterUID(string(clusterUID)),
+	)
+	assert.Equal(t, expected, res)
+}
+
+func TestDetectNodeOnlyNoClusterRBAC(t *testing.T) {
+	nodeUID := uuid.NewUUID()
+
+	// no kube-system namespace — simulates missing RBAC for namespace GET
+	client := k8sfake.NewClientset(newFakeNode(nodeUID))
+	t.Setenv("K8S_NODE_NAME", testNodeName)
+
+	filter := attribute.NewAllowKeysFilter(semconv.K8SNodeNameKey, semconv.K8SNodeUIDKey)
+	res, err := NewResourceDetector(WithKubeClient(client), WithAttributeFilter(filter)).Detect(t.Context())
+	require.NoError(t, err)
+
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.K8SNodeName(testNodeName),
+		semconv.K8SNodeUID(string(nodeUID)),
+	)
+	assert.Equal(t, expected, res)
+}
+
+func TestDetectClusterUIDOnlyNoNodeEnv(t *testing.T) {
+	clusterUID := uuid.NewUUID()
+
+	client := k8sfake.NewClientset(newFakeNamespace(clusterUID))
+	// K8S_NODE_NAME intentionally not set
+
+	filter := attribute.NewAllowKeysFilter(semconv.K8SClusterUIDKey)
+	res, err := NewResourceDetector(WithKubeClient(client), WithAttributeFilter(filter)).Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
+}
+
+func TestDetectBothError(t *testing.T) {
+	client := k8sfake.NewClientset()
+	t.Setenv("K8S_NODE_NAME", testNodeName)
+
+	res, err := NewResourceDetector(WithKubeClient(client)).Detect(t.Context())
+	require.ErrorIs(t, err, resource.ErrPartialResource)
+	assert.Equal(t, resource.Empty(), res)
 }

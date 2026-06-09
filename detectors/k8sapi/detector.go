@@ -91,22 +91,32 @@ func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, err
 		}
 	}
 
-	node, err := client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
-	if err != nil {
-		return nil, fmt.Errorf("k8sapi detector: failed to get node %q: %w", nodeName, err)
+	var (
+		attrs []attribute.KeyValue
+		errs  []error
+	)
+
+	needsNode := rd.cfg.filter == nil ||
+		rd.cfg.filter(semconv.K8SNodeName("")) ||
+		rd.cfg.filter(semconv.K8SNodeUID(""))
+
+	if needsNode {
+		node, err := client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+		if err != nil {
+			errs = append(errs, fmt.Errorf("node %q: %w", nodeName, err))
+		} else {
+			attrs = append(attrs, semconv.K8SNodeName(node.Name), semconv.K8SNodeUID(string(node.UID)))
+		}
 	}
 
-	attrs := []attribute.KeyValue{
-		semconv.K8SNodeName(node.Name),
-		semconv.K8SNodeUID(string(node.UID)),
-	}
-
-	ns, err := client.CoreV1().Namespaces().Get(ctx, "kube-system", metav1.GetOptions{})
-	if err != nil {
-		res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
-		return res, fmt.Errorf("%w: %w", resource.ErrPartialResource, err)
-	} else if uid := string(ns.UID); uid != "" {
-		attrs = append(attrs, semconv.K8SClusterUID(uid))
+	needsCluster := rd.cfg.filter == nil || rd.cfg.filter(semconv.K8SClusterUID(""))
+	if needsCluster {
+		ns, err := client.CoreV1().Namespaces().Get(ctx, "kube-system", metav1.GetOptions{})
+		if err != nil {
+			errs = append(errs, fmt.Errorf("kube-system namespace: %w", err))
+		} else if uid := string(ns.UID); uid != "" {
+			attrs = append(attrs, semconv.K8SClusterUID(uid))
+		}
 	}
 
 	if rd.cfg.filter != nil {
@@ -119,6 +129,13 @@ func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, err
 		attrs = filtered
 	}
 
+	if len(errs) > 0 {
+		err := fmt.Errorf("%w: %w", resource.ErrPartialResource, errors.Join(errs...))
+		if len(attrs) == 0 {
+			return resource.Empty(), err
+		}
+		return resource.NewWithAttributes(semconv.SchemaURL, attrs...), err
+	}
 	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), nil
 }
 
