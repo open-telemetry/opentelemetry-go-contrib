@@ -11,9 +11,11 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
-// Carrier is a TextMapCarrier that uses the environment variables as a
-// storage medium for propagated key-value pairs. The keys are normalized
-// before being used to access the environment variables.
+// Carrier is a TextMapCarrier that uses environment variables as a storage
+// medium for propagated key-value pairs. Keys passed to [Carrier.Get] and
+// [Carrier.Set] are normalized before lookup or write. Environment variables
+// read from the current process are stored only when their names are already
+// normalized.
 // This is useful for propagating values that are set in the environment
 // and need to be accessed by different processes or services.
 // The keys are uppercased to avoid case sensitivity issues across different
@@ -25,6 +27,7 @@ import (
 // https://opentelemetry.io/docs/specs/otel/context/env-carriers/#environment-variable-immutability
 type Carrier struct {
 	// SetEnvFunc is the function that sets the environment variable.
+	// [Carrier.Set] calls SetEnvFunc with a normalized key.
 	// Usually, you want to set the environment variables for processes
 	// that are spawned by the current process.
 	SetEnvFunc func(key, value string)
@@ -35,24 +38,28 @@ type Carrier struct {
 // Compile time check that Carrier implements the TextMapCarrier.
 var _ propagation.TextMapCarrier = (*Carrier)(nil)
 
-// fetch runs once on first access, and stores the environment in the
-// carrier.
+// fetch runs once on first access, and stores environment variables with
+// already-normalized names in the carrier.
 func (c *Carrier) fetch() {
 	c.once.Do(func() {
 		environ := os.Environ()
 		c.values = make(map[string]string, len(environ))
 		for _, kv := range environ {
 			kvPair := strings.SplitN(kv, "=", 2)
-			key := normalize(kvPair[0])
+			key := kvPair[0]
+			if !normalized(key) {
+				continue
+			}
 			c.values[key] = kvPair[1]
 		}
 	})
 }
 
-// Get returns the value associated with the normalized passed key.
+// Get returns the value associated with the normalized key.
 // The first call to [Carrier.Get] or [Carrier.Keys] for a
-// given Carrier will read and store the values from the
-// environment and all future reads will be from that store.
+// given Carrier will read and store the values from environment variables
+// whose names are already normalized, and all future reads will be from that
+// store.
 func (c *Carrier) Get(key string) string {
 	c.fetch()
 	return c.values[normalize(key)]
@@ -70,12 +77,13 @@ func (c *Carrier) Set(key, value string) {
 	c.SetEnvFunc(k, value)
 }
 
-// Keys lists the keys stored in this carrier.
-// This returns all the keys in the environment variables.
+// Keys lists the normalized keys stored in this carrier.
+// This returns all keys from environment variables whose names are already
+// normalized.
 // The first call to [Carrier.Get] or [Carrier.Keys] for a
-// given Carrier will read and store the values from the
-// environment and all future reads will be from that store.
-// The keys are returned in their normalized form.
+// given Carrier will read and store the values from environment variables
+// whose names are already normalized, and all future reads will be from that
+// store.
 func (c *Carrier) Keys() []string {
 	c.fetch()
 	keys := make([]string, 0, len(c.values))

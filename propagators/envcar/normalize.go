@@ -46,3 +46,26 @@ func normalize(s string) string {
 	}
 	return string(b)
 }
+
+// normalized reports whether s is already a normalized environment variable
+// name.
+func normalized(s string) bool {
+	if s == "" {
+		return true
+	}
+	// Normalized names cannot start with a digit; normalize would prepend '_'.
+	if s[0] >= '0' && s[0] <= '9' {
+		return false
+	}
+
+	for _, r := range s {
+		switch {
+		// A-Z, 0-9, and _ are already normalized.
+		case r >= 'A' && r <= 'Z', r >= '0' && r <= '9', r == '_':
+		default:
+			// Lowercase letters and all other characters would be rewritten.
+			return false
+		}
+	}
+	return true
+}

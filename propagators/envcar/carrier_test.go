@@ -61,19 +61,6 @@ func TestExtractValidTraceContextEnvCarrier(t *testing.T) {
 				Remote:     true,
 			}),
 		},
-		{
-			name: "lowercase env names",
-			envs: map[string]string{
-				"traceparent": "00-000000000000007b00000000000001c8-000000000000007b-00",
-				"tracestate":  stateStr,
-			},
-			want: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID:    traceID,
-				SpanID:     spanID,
-				TraceState: state,
-				Remote:     true,
-			}),
-		},
 	}
 
 	for _, tc := range tests {
@@ -86,6 +73,15 @@ func TestExtractValidTraceContextEnvCarrier(t *testing.T) {
 			assert.Equal(t, tc.want, trace.SpanContextFromContext(ctx))
 		})
 	}
+}
+
+func TestExtractIgnoresNonNormalizedEnvNames(t *testing.T) {
+	t.Setenv("traceparent", "00-000000000000007b00000000000001c8-000000000000007b-00")
+	t.Setenv("tracestate", "key1=value1,key2=value2")
+
+	ctx := prop.Extract(t.Context(), &envcar.Carrier{})
+
+	assert.False(t, trace.SpanContextFromContext(ctx).IsValid())
 }
 
 func TestInjectTraceContextEnvCarrier(t *testing.T) {
@@ -147,13 +143,15 @@ func TestInjectTraceContextEnvCarrier(t *testing.T) {
 }
 
 func TestCarrierKeys(t *testing.T) {
-	t.Setenv("traceparent", "value")
+	t.Setenv("TRACEPARENT", "value")
+	t.Setenv("envcar_non_normalized_key", "ignored")
 
 	c := envcar.Carrier{}
 	keys := c.Keys()
 
 	assert.Contains(t, keys, "TRACEPARENT")
-	assert.NotContains(t, keys, "traceparent")
+	assert.NotContains(t, keys, "envcar_non_normalized_key")
+	assert.NotContains(t, keys, "ENVCAR_NON_NORMALIZED_KEY")
 }
 
 func TestCarrierSetNilFunc(_ *testing.T) {
@@ -162,11 +160,19 @@ func TestCarrierSetNilFunc(_ *testing.T) {
 }
 
 func TestCarrierGetNormalizesKey(t *testing.T) {
-	t.Setenv("traceparent", "myvalue")
+	t.Setenv("TRACEPARENT", "myvalue")
 
 	c := envcar.Carrier{}
 	assert.Equal(t, "myvalue", c.Get("traceparent"))
 	assert.Equal(t, "myvalue", c.Get("TRACEPARENT"))
+}
+
+func TestCarrierGetIgnoresNonNormalizedEnvNames(t *testing.T) {
+	t.Setenv("envcar_get_non_normalized_key", "ignored")
+
+	c := envcar.Carrier{}
+	assert.Empty(t, c.Get("envcar_get_non_normalized_key"))
+	assert.Empty(t, c.Get("ENVCAR_GET_NON_NORMALIZED_KEY"))
 }
 
 func TestCarrierSetUppercasesUnderscoresKey(t *testing.T) {

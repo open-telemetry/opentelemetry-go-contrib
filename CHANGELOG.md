@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
 
+### Changed
+
+- Ignore non-normalized environment variable names on `Carrier.Get` and `Carrier.Keys` in `go.opentelemetry.io/contrib/propagators/envcar`.
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
