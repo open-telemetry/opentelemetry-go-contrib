@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/aws/eks"
 	"go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk"
 	"go.opentelemetry.io/contrib/detectors/aws/lambda"
+	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
@@ -45,6 +46,10 @@ var (
 	// attributes on Amazon Web Services (AWS) AWS Elastic Beanstalk (see
 	// lambda.NewResourceDetector for details).
 	IDAWSElasticBeanstalk = ID("aws.elasticbeanstalk")
+	// IDAzureContainerApps is the ID for the Azure Container Apps detector
+	// that detects resource attributes on Microsoft Azure Container Apps (see
+	// azurecontainerapps.NewResourceDetector for details).
+	IDAzureContainerApps = ID("azure.container_apps")
 	// IDAzureVM is the ID for the Azure VM detector that detects resource
 	// attributes on Microsoft Azure virtual machines (see azurevm.New for
 	// details).
@@ -133,6 +138,12 @@ var (
 		IDAWSEKS:              eks.NewResourceDetector,
 		IDAWSLambda:           lambda.NewResourceDetector,
 		IDAWSElasticBeanstalk: elasticbeanstalk.NewResourceDetector,
+		IDAWSEC2:              ec2.NewResourceDetector,
+		IDAWSECS:              ecs.NewResourceDetector,
+		IDAWSEKS:              eks.NewResourceDetector,
+		IDAWSLambda:           lambda.NewResourceDetector,
+
+		IDAzureContainerApps: func() resource.Detector { return azurecontainerapps.NewResourceDetector() },
 
 		IDAzureVM: func() resource.Detector {
 			return azurevm.New()

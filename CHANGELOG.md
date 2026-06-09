@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
