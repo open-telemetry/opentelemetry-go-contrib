@@ -6,6 +6,7 @@ package envcar_test
 import (
 	"os"
 	"os/exec"
+	"runtime"
 	"slices"
 	"strings"
 	"sync"
@@ -76,6 +77,10 @@ func TestExtractValidTraceContextEnvCarrier(t *testing.T) {
 }
 
 func TestExtractIgnoresNonNormalizedEnvNames(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows environment variables are case-insensitive, so this test is not applicable.")
+	}
+
 	// Guard against TRACEPARENT/TRACESTATE being set in the outer test environment.
 	t.Setenv("TRACEPARENT", "")
 	t.Setenv("TRACESTATE", "")
@@ -172,6 +177,10 @@ func TestCarrierGetNormalizesKey(t *testing.T) {
 }
 
 func TestCarrierGetIgnoresNonNormalizedEnvNames(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows environment variables are case-insensitive, so this test is not applicable.")
+	}
+
 	t.Setenv("envcar_get_non_normalized_key", "ignored")
 
 	c := envcar.Carrier{}
