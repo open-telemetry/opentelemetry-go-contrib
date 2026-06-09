@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
-- Ignore non-normalized environment variable names on `Carrier.Get` and `Carrier.Keys` in `go.opentelemetry.io/contrib/propagators/envcar`.
+- Ignore non-normalized environment variable names on `Carrier.Get` and `Carrier.Keys` in `go.opentelemetry.io/contrib/propagators/envcar`. (#9112)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
