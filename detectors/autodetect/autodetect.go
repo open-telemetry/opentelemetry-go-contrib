@@ -167,7 +167,7 @@ var (
 
 		IDContainer: optFactory(resource.WithContainer()),
 
-		IDDocker: docker.NewResourceDetector,
+		IDDocker: func() resource.Detector { return docker.NewResourceDetector() },
 	}
 )
 
