@@ -153,3 +153,14 @@ func TestDetectBothError(t *testing.T) {
 	require.ErrorIs(t, err, resource.ErrPartialResource)
 	assert.Equal(t, resource.Empty(), res)
 }
+
+func TestDetectInClusterConfigError(t *testing.T) {
+	// Set the env vars that make InClusterConfig proceed past the ErrNotInCluster
+	// guard, so it fails on the missing token file instead.
+	t.Setenv("KUBERNETES_SERVICE_HOST", "fake-host")
+	t.Setenv("KUBERNETES_SERVICE_PORT", "443")
+	t.Setenv("K8S_NODE_NAME", testNodeName)
+
+	_, err := NewResourceDetector().Detect(t.Context())
+	require.ErrorContains(t, err, "k8sapi detector:")
+}
