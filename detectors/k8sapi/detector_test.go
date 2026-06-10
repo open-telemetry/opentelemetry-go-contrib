@@ -123,7 +123,7 @@ func TestDetectNodeOnlyNoClusterRBAC(t *testing.T) {
 
 	filter := attribute.NewAllowKeysFilter(semconv.K8SNodeNameKey, semconv.K8SNodeUIDKey)
 	res, err := NewResourceDetector(WithKubeClient(client), WithAttributeFilter(filter)).Detect(t.Context())
-	require.NoError(t, err)
+	require.ErrorIs(t, err, resource.ErrPartialResource)
 
 	expected := resource.NewWithAttributes(
 		semconv.SchemaURL,
@@ -137,12 +137,17 @@ func TestDetectClusterUIDOnlyNoNodeEnv(t *testing.T) {
 	clusterUID := uuid.NewUUID()
 
 	client := k8sfake.NewClientset(newFakeNamespace(clusterUID))
-	// K8S_NODE_NAME intentionally not set
+	// K8S_NODE_NAME intentionally not set — cluster UID is independently detectable
 
 	filter := attribute.NewAllowKeysFilter(semconv.K8SClusterUIDKey)
 	res, err := NewResourceDetector(WithKubeClient(client), WithAttributeFilter(filter)).Detect(t.Context())
 	require.NoError(t, err)
-	assert.Equal(t, resource.Empty(), res)
+
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.K8SClusterUID(string(clusterUID)),
+	)
+	assert.Equal(t, expected, res)
 }
 
 func TestDetectBothError(t *testing.T) {

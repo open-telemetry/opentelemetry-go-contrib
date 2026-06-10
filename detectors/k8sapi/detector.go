@@ -70,11 +70,6 @@ var _ resource.Detector = (*ResourceDetector)(nil)
 // node-name environment variable is not set or the process is not running
 // inside a cluster, an empty resource and no error are returned.
 func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	nodeName := os.Getenv(rd.cfg.nodeEnvVar)
-	if nodeName == "" {
-		return resource.Empty(), nil
-	}
-
 	client := rd.cfg.kubeClient
 	if client == nil {
 		conf, err := rest.InClusterConfig()
@@ -96,11 +91,7 @@ func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, err
 		errs  []error
 	)
 
-	needsNode := rd.cfg.filter == nil ||
-		rd.cfg.filter(semconv.K8SNodeName("")) ||
-		rd.cfg.filter(semconv.K8SNodeUID(""))
-
-	if needsNode {
+	if nodeName := os.Getenv(rd.cfg.nodeEnvVar); nodeName != "" {
 		node, err := client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
 		if err != nil {
 			errs = append(errs, fmt.Errorf("node %q: %w", nodeName, err))
@@ -109,14 +100,11 @@ func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, err
 		}
 	}
 
-	needsCluster := rd.cfg.filter == nil || rd.cfg.filter(semconv.K8SClusterUID(""))
-	if needsCluster {
-		ns, err := client.CoreV1().Namespaces().Get(ctx, "kube-system", metav1.GetOptions{})
-		if err != nil {
-			errs = append(errs, fmt.Errorf("kube-system namespace: %w", err))
-		} else if uid := string(ns.UID); uid != "" {
-			attrs = append(attrs, semconv.K8SClusterUID(uid))
-		}
+	ns, err := client.CoreV1().Namespaces().Get(ctx, "kube-system", metav1.GetOptions{})
+	if err != nil {
+		errs = append(errs, fmt.Errorf("kube-system namespace: %w", err))
+	} else if uid := string(ns.UID); uid != "" {
+		attrs = append(attrs, semconv.K8SClusterUID(uid))
 	}
 
 	if rd.cfg.filter != nil {
