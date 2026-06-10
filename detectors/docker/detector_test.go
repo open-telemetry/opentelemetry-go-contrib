@@ -47,7 +47,7 @@ func TestNotDockerEnvironment(t *testing.T) {
 	}
 
 	res, err := detector.Detect(t.Context())
-	require.Error(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
 }
 
@@ -104,7 +104,7 @@ func TestContainerInfoError(t *testing.T) {
 	})
 
 	res, err := detector.Detect(t.Context())
-	require.Error(t, err)
+	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
 }
 

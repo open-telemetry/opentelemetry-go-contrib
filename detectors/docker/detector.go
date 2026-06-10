@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/moby/moby/client"
 	"go.opentelemetry.io/otel/attribute"
@@ -67,13 +68,15 @@ func (r *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	// empty resource with no error so autodetect can continue with other detectors.
 	dockerProvider, err := r.createProvider()
 	if err != nil {
-		return resource.Empty(), fmt.Errorf("docker client: %w", err)
+		slog.Warn("docker client config", slog.Any("err", err))
+		return resource.Empty(), nil
 	}
 
 	// ContainerInfo is the primary detection mechanism
 	containerInfo, err := dockerProvider.ContainerInfo(ctx)
 	if err != nil {
-		return resource.Empty(), fmt.Errorf("docker container info: %w", err)
+		slog.Warn("docker container info", slog.Any("err", err))
+		return resource.Empty(), nil
 	}
 
 	var (
