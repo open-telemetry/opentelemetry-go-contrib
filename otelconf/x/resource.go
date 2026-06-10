@@ -41,7 +41,7 @@ func newResource(r *Resource) (*resource.Resource, error) {
 		attrs = append(attrs, kv.FromNameValue(v.Name, v.Value))
 	}
 
-	var schema string
+	schema := resource.Default().SchemaURL()
 	if r.SchemaUrl != nil {
 		schema = *r.SchemaUrl
 	}

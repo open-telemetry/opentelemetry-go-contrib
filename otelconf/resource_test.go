@@ -9,10 +9,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
 func TestNewResource(t *testing.T) {
+	defaultSchema := resource.Default().SchemaURL()
+	customSchema := "https://opentelemetry.io/schemas/example"
+
 	tests := []struct {
 		name          string
 		config        *Resource
@@ -22,19 +26,19 @@ func TestNewResource(t *testing.T) {
 	}{
 		{
 			name:          "no-resource-configuration",
-			wantSchemaURL: semconv.SchemaURL,
+			wantSchemaURL: defaultSchema,
 		},
 		{
 			name:          "resource-no-attributes",
 			config:        &Resource{},
-			wantSchemaURL: "",
+			wantSchemaURL: defaultSchema,
 		},
 		{
 			name: "resource-with-schema",
 			config: &Resource{
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: ptr(customSchema),
 			},
-			wantSchemaURL: semconv.SchemaURL,
+			wantSchemaURL: customSchema,
 		},
 		{
 			name: "resource-with-attributes",
@@ -43,7 +47,7 @@ func TestNewResource(t *testing.T) {
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
 			},
-			wantSchemaURL: "",
+			wantSchemaURL: defaultSchema,
 			wantAttrs:     []attribute.KeyValue{semconv.ServiceName("service-a")},
 		},
 		{
@@ -52,9 +56,9 @@ func TestNewResource(t *testing.T) {
 				Attributes: []AttributeNameValue{
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: ptr(customSchema),
 			},
-			wantSchemaURL: semconv.SchemaURL,
+			wantSchemaURL: customSchema,
 			wantAttrs:     []attribute.KeyValue{semconv.ServiceName("service-a")},
 		},
 		{
@@ -64,9 +68,9 @@ func TestNewResource(t *testing.T) {
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 					{Name: "attr-bool", Value: true},
 				},
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: ptr(customSchema),
 			},
-			wantSchemaURL: semconv.SchemaURL,
+			wantSchemaURL: customSchema,
 			wantAttrs: []attribute.KeyValue{
 				semconv.ServiceName("service-a"),
 				attribute.Bool("attr-bool", true),
