@@ -301,13 +301,12 @@ func createHeadersConfig(headers []NameStringValuePair, headersList *string) (ma
 	}
 	// Headers take precedence over HeadersList, so this has to be after HeadersList is processed.
 	for _, kv := range headers {
-		if kv.Value == nil {
-			continue
+		if kv.Value != nil {
+			if kv.Name == "" {
+				return nil, newErrInvalid("invalid header: empty name")
+			}
+			result[kv.Name] = *kv.Value
 		}
-		if kv.Name == "" {
-			return nil, newErrInvalid("invalid header: empty name")
-		}
-		result[kv.Name] = *kv.Value
 	}
 	return result, nil
 }
