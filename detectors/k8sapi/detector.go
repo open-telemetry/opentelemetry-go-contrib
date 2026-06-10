@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -75,6 +76,7 @@ func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, err
 		conf, err := rest.InClusterConfig()
 		if err != nil {
 			if errors.Is(err, rest.ErrNotInCluster) {
+				slog.Warn("k8sapi detector: not running in a Kubernetes cluster", "err", err)
 				return resource.Empty(), nil
 			}
 			return nil, fmt.Errorf("k8sapi detector: %w", err)

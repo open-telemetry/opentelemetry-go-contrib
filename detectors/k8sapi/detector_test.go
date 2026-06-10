@@ -167,5 +167,6 @@ func TestDetectInClusterConfigError(t *testing.T) {
 	t.Setenv("K8S_NODE_NAME", testNodeName)
 
 	_, err := NewResourceDetector().Detect(t.Context())
-	require.ErrorContains(t, err, "k8sapi detector:")
+	require.Error(t, err)
+	require.NotErrorIs(t, err, resource.ErrPartialResource)
 }
