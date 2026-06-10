@@ -43,8 +43,8 @@ var (
 	// lambda.NewResourceDetector for details).
 	IDAWSLambda = ID("aws.lambda")
 	// IDAWSElasticBeanstalk is the ID for the AWS Elastic Beanstalk detector that detects resource
-	// attributes on Amazon Web Services (AWS) AWS Elastic Beanstalk (see
-	// lambda.NewResourceDetector for details).
+	// attributes on Amazon Web Services (AWS) Elastic Beanstalk (see
+	// elasticbeanstalk.NewResourceDetector for details).
 	IDAWSElasticBeanstalk = ID("aws.elasticbeanstalk")
 	// IDAzureContainerApps is the ID for the Azure Container Apps detector
 	// that detects resource attributes on Microsoft Azure Container Apps (see
