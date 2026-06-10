@@ -67,12 +67,13 @@ func (r *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	// empty resource with no error so autodetect can continue with other detectors.
 	dockerProvider, err := r.createProvider()
 	if err != nil {
-		return resource.Empty(), nil
+		return resource.Empty(), fmt.Errorf("docker client: %w", err)
 	}
 
+	// ContainerInfo is the primary detection mechanism
 	containerInfo, err := dockerProvider.ContainerInfo(ctx)
 	if err != nil {
-		return resource.Empty(), nil
+		return resource.Empty(), fmt.Errorf("docker container info: %w", err)
 	}
 
 	var (
@@ -80,7 +81,12 @@ func (r *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		errs  []error
 	)
 
-	attrs = append(attrs, semconv.ContainerName(containerInfo.Name), semconv.ContainerImageName(containerInfo.Config.Image))
+	attrs = append(attrs, semconv.ContainerName(containerInfo.Name))
+	if containerInfo.Config != nil {
+		attrs = append(attrs, semconv.ContainerImageName(containerInfo.Config.Image))
+	} else {
+		errs = append(errs, fmt.Errorf("docker container info: container.image.name not present"))
+	}
 
 	sysInfo, err := dockerProvider.Info(ctx)
 	if err != nil {

@@ -8,7 +8,7 @@ attributes for processes running inside Docker containers.
 The detector queries the Docker daemon via its API and requires the daemon
 socket to be accessible to the process (e.g. /var/run/docker.sock mounted
 into the container). If the socket is unavailable or any daemon call fails,
-[resource.Detector.Detect] returns an empty resource and an error.
+[resource.Detector.Detect] returns an empty resource with error.
 
 According to semantic conventions for [container], [host], and [os] attributes,
 each of the following attributes is detected:
