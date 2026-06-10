@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"strconv"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -80,6 +81,7 @@ func (detector *ResourceDetector) Detect(context.Context) (*resource.Resource, e
 
 	// Do not want to return error so it fails silently on non-EB instances
 	if err != nil {
+		slog.Warn("elasticbeanstalk detection", slog.Any("err", err))
 		return resource.Empty(), nil
 	}
 
@@ -88,7 +90,7 @@ func (detector *ResourceDetector) Detect(context.Context) (*resource.Resource, e
 	conf.Close()
 
 	if err != nil {
-		// TODO: Think of long term logging, previously zap
+		slog.Warn("elasticbeanstalk metadata decode", slog.Any("err", err))
 		return resource.Empty(), err
 	}
 
