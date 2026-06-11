@@ -12,6 +12,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Fix incorrect (overestimated) sum calculation for runtime histograms in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#9063)
 
+### Added
+
+- Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+
+### Changed
+
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
