@@ -17,10 +17,12 @@ import (
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/smithy-go/logging"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
@@ -125,65 +127,145 @@ func TestAWSInvalidClient(t *testing.T) {
 
 func TestNewResourceDetector(t *testing.T) {
 	t.Run("uses newClient result", func(t *testing.T) {
-		oldLoadDefaultConfig := loadDefaultConfig
-		oldNewIMDSClient := newIMDSClient
-		t.Cleanup(func() {
-			loadDefaultConfig = oldLoadDefaultConfig
-			newIMDSClient = oldNewIMDSClient
-		})
-
 		fakeClient := new(mockClient)
-		loadDefaultConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
-			return aws.Config{}, nil
-		}
-		newIMDSClient = func(_ aws.Config) client {
-			return fakeClient
-		}
+		stubClientSeams(t,
+			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+				return aws.Config{}, nil
+			},
+			func(aws.Config) client { return fakeClient },
+		)
 
 		detector := NewResourceDetector()
 		assert.Same(t, fakeClient, detector.(*resourceDetector).c)
 	})
+
+	t.Run("drops client construction error", func(t *testing.T) {
+		stubClientSeams(t,
+			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+				return aws.Config{}, errors.New("load config failed")
+			},
+			func(aws.Config) client {
+				t.Fatal("newIMDSClient should not be called")
+				return nil
+			},
+		)
+
+		assert.NotNil(t, NewResourceDetector())
+	})
+}
+
+func TestNewResourceDetectorWithOptions(t *testing.T) {
+	logger := logging.NewStandardLogger(io.Discard)
+	errLoad := errors.New("load config failed")
+
+	testCases := []struct {
+		name           string
+		opts           []Option
+		loadErr        error
+		expectedErr    error
+		expectedLogger logging.Logger
+	}{
+		{
+			name: "no options",
+		},
+		{
+			name:           "with logger",
+			opts:           []Option{WithLogger(logger)},
+			expectedLogger: logger,
+		},
+		{
+			name:        "load config error",
+			loadErr:     errLoad,
+			expectedErr: errLoad,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var actualLogger logging.Logger
+			stubClientSeams(t,
+				func(_ context.Context, optFns ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+					if tc.loadErr != nil {
+						return aws.Config{}, tc.loadErr
+					}
+					var lo awsconfig.LoadOptions
+					for _, fn := range optFns {
+						require.NoError(t, fn(&lo))
+					}
+					actualLogger = lo.Logger
+					return aws.Config{}, nil
+				},
+				func(aws.Config) client { return new(mockClient) },
+			)
+
+			detector, err := NewResourceDetectorWithOptions(tc.opts...)
+			if tc.expectedErr != nil {
+				assert.ErrorIs(t, err, tc.expectedErr)
+				assert.Nil(t, detector)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.NotNil(t, detector)
+			if tc.expectedLogger == nil {
+				assert.Nil(t, actualLogger)
+			} else {
+				assert.Same(t, tc.expectedLogger, actualLogger)
+			}
+		})
+	}
 }
 
 func TestNewClient(t *testing.T) {
-	t.Run("returns nil when config load fails", func(t *testing.T) {
-		oldLoadDefaultConfig := loadDefaultConfig
-		oldNewIMDSClient := newIMDSClient
-		t.Cleanup(func() {
-			loadDefaultConfig = oldLoadDefaultConfig
-			newIMDSClient = oldNewIMDSClient
-		})
+	t.Run("returns error when config load fails", func(t *testing.T) {
+		stubClientSeams(t,
+			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+				return aws.Config{}, errors.New("load failed")
+			},
+			func(aws.Config) client {
+				t.Fatal("newIMDSClient should not be called")
+				return nil
+			},
+		)
 
-		loadDefaultConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
-			return aws.Config{}, errors.New("load failed")
-		}
-		newIMDSClient = func(_ aws.Config) client {
-			t.Fatal("newIMDSClient should not be called")
-			return nil
-		}
-
-		assert.Nil(t, newClient())
+		c, err := newClient(config{})
+		require.Error(t, err)
+		assert.Nil(t, c)
 	})
 
 	t.Run("returns created imds client when config load succeeds", func(t *testing.T) {
-		oldLoadDefaultConfig := loadDefaultConfig
-		oldNewIMDSClient := newIMDSClient
-		t.Cleanup(func() {
-			loadDefaultConfig = oldLoadDefaultConfig
-			newIMDSClient = oldNewIMDSClient
-		})
-
 		fakeClient := new(mockClient)
-		loadDefaultConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
-			return aws.Config{Region: "us-west-2"}, nil
-		}
-		newIMDSClient = func(cfg aws.Config) client {
-			assert.Equal(t, "us-west-2", cfg.Region)
-			return fakeClient
-		}
+		stubClientSeams(t,
+			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+				return aws.Config{Region: "us-west-2"}, nil
+			},
+			func(cfg aws.Config) client {
+				assert.Equal(t, "us-west-2", cfg.Region)
+				return fakeClient
+			},
+		)
 
-		assert.Same(t, fakeClient, newClient())
+		c, err := newClient(config{})
+		require.NoError(t, err)
+		assert.Same(t, fakeClient, c)
 	})
+}
+
+// stubClientSeams temporarily replaces the AWS client construction seams,
+// restoring them when the test completes.
+func stubClientSeams(
+	t *testing.T,
+	load func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error),
+	newIMDS func(aws.Config) client,
+) {
+	t.Helper()
+	origLoad, origNew := loadDefaultConfig, newIMDSClient
+	t.Cleanup(func() {
+		loadDefaultConfig = origLoad
+		newIMDSClient = origNew
+	})
+	loadDefaultConfig = load
+	newIMDSClient = newIMDS
 }
 
 func TestRecordErrors(t *testing.T) {
