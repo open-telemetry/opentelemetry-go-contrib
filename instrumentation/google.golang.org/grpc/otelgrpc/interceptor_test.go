@@ -84,6 +84,25 @@ func TestServerAddrAttrsFromCanonicalTarget(t *testing.T) {
 			canonicalTarget: "passthrough:///[::1]:8080",
 			want:            []attribute.KeyValue{semconv.ServerAddress("::1"), semconv.ServerPort(8080)},
 		},
+		// url.Parse error path: invalid percent-encoding makes url.Parse fail;
+		// too many colons cause SplitHostPort to fail first, so we reach url.Parse.
+		{
+			name:            "invalid url escape",
+			canonicalTarget: "dns:///example%zz.com:443",
+			want:            []attribute.KeyValue{semconv.ServerAddress("dns:///example%zz.com:443")},
+		},
+		// Fast path: bare host:port with no scheme — SplitHostPort succeeds directly.
+		{
+			name:            "bare host:port",
+			canonicalTarget: "127.0.0.1:7777",
+			want:            []attribute.KeyValue{semconv.ServerAddress("127.0.0.1"), semconv.ServerPort(7777)},
+		},
+		// Fast path: bare IPv6 address with numeric port.
+		{
+			name:            "bare ipv6:port",
+			canonicalTarget: "[::1]:8080",
+			want:            []attribute.KeyValue{semconv.ServerAddress("::1"), semconv.ServerPort(8080)},
+		},
 	}
 
 	for _, tt := range tests {
