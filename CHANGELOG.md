@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `NewResourceDetectorWithOptions` and the `WithLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom `logging.Logger` to be supplied to the EC2 resource detector. (#XXXX)
+
 ### Removed
 
 - Drop support for [Go 1.25]. (#9584)
