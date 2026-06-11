@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+- Add `NewResourceDetectorWithOptions` and the `WithLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom `logging.Logger` to be supplied to the EC2 resource detector. (#XXXX)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
