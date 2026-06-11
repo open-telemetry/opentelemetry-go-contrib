@@ -4,6 +4,7 @@
 package x
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,6 +28,13 @@ func TestNewResource(t *testing.T) {
 		{
 			name:         "resource-no-attributes",
 			config:       &Resource{},
+			wantResource: resource.NewSchemaless(),
+		},
+		{
+			name: "resource-with-empty-detection",
+			config: &Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{},
+			},
 			wantResource: resource.NewSchemaless(),
 		},
 		{
@@ -149,4 +157,78 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			assert.Equal(t, tt.wantServiceAttribute, attrSet[semconv.ServiceInstanceIDKey], "should have service.instance.id attribute")
 		})
 	}
+}
+
+func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
+	tests := []struct {
+		name       string
+		attrs      *IncludeExclude
+		wantHost   bool
+		wantOS     bool
+		wantCustom bool
+	}{
+		{
+			name:       "no-filter",
+			wantHost:   true,
+			wantOS:     true,
+			wantCustom: true,
+		},
+		{
+			name: "include-host-only",
+			attrs: &IncludeExclude{
+				Included: []string{string(semconv.HostNameKey)},
+			},
+			wantHost:   true,
+			wantCustom: true,
+		},
+		{
+			name: "exclude-os",
+			attrs: &IncludeExclude{
+				Excluded: []string{string(semconv.OSTypeKey)},
+			},
+			wantHost:   true,
+			wantCustom: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := newResource(&Resource{
+				Attributes: []AttributeNameValue{
+					{Name: "custom", Value: "value"},
+				},
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{Host: ExperimentalHostResourceDetector{}},
+					},
+					Attributes: tt.attrs,
+				},
+			})
+			require.NoError(t, err)
+
+			attrs := got.Attributes()
+			attrSet := make(map[attribute.Key]bool)
+			for _, attr := range attrs {
+				attrSet[attr.Key] = true
+			}
+
+			assert.Equal(t, tt.wantHost, attrSet[semconv.HostNameKey])
+			assert.Equal(t, tt.wantOS, attrSet[semconv.OSTypeKey])
+			assert.Equal(t, tt.wantCustom, attrSet[attribute.Key("custom")])
+		})
+	}
+}
+
+func TestNewResourceWithDetectionAttributesFilterError(t *testing.T) {
+	_, err := newResource(&Resource{
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Host: ExperimentalHostResourceDetector{}},
+			},
+			Attributes: &IncludeExclude{
+				Included: []string{"foo"},
+				Excluded: []string{"foo"},
+			},
+		},
+	})
+	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
 }

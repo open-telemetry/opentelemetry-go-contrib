@@ -50,9 +50,46 @@ func newResource(r *Resource) (*resource.Resource, error) {
 		resource.WithSchemaURL(schema),
 	}
 
-	if r.DetectionDevelopment != nil {
-		opts = append(opts, resourceOpts(r.DetectionDevelopment.Detectors)...)
+	base, err := resource.New(context.Background(), opts...)
+	if err != nil {
+		return nil, err
 	}
 
-	return resource.New(context.Background(), opts...)
+	if r.DetectionDevelopment == nil {
+		return base, nil
+	}
+
+	detected, err := newDetectedResource(r.DetectionDevelopment)
+	if err != nil {
+		return nil, err
+	}
+
+	return resource.Merge(base, detected)
+}
+
+func newDetectedResource(detection *ExperimentalResourceDetection) (*resource.Resource, error) {
+	filter, err := newIncludeExcludeFilter(detection.Attributes)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := resourceOpts(detection.Detectors)
+	if len(opts) == 0 {
+		return resource.NewSchemaless(), nil
+	}
+
+	detected, err := resource.New(context.Background(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	attrs := detected.Attributes()
+	filtered := make([]attribute.KeyValue, 0, len(attrs))
+	for _, attr := range attrs {
+		if filter(attr) {
+			filtered = append(filtered, attr)
+		}
+	}
+
+	return resource.NewWithAttributes(detected.SchemaURL(), filtered...), nil
 }
