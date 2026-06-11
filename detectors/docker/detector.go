@@ -88,7 +88,7 @@ func (r *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	if containerInfo.Config != nil {
 		attrs = append(attrs, semconv.ContainerImageName(containerInfo.Config.Image))
 	} else {
-		errs = append(errs, fmt.Errorf("docker container info: container.image.name not present"))
+		errs = append(errs, errors.New("docker container info: container.image.name not present"))
 	}
 
 	sysInfo, err := dockerProvider.Info(ctx)
