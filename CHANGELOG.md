@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
-- Add `NewResourceDetectorWithOptions` and the `WithLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom `logging.Logger` to be supplied to the EC2 resource detector. (#XXXX)
+- Add `NewResourceDetectorWithOptions` and the `WithLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
 
 ### Changed
 
