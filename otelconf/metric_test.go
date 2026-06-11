@@ -766,6 +766,66 @@ func TestReader(t *testing.T) {
 			wantErrT: newErrInvalid("no valid metric exporter"),
 		},
 		{
+			name: "periodic/console-exporter-with-cardinality-limits",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					CardinalityLimits: &CardinalityLimits{
+						Counter:                 ptr(100),
+						UpDownCounter:           ptr(200),
+						Histogram:               ptr(300),
+						ObservableCounter:       ptr(400),
+						ObservableUpDownCounter: ptr(500),
+						ObservableGauge:         ptr(600),
+						Gauge:                   ptr(700),
+					},
+					Exporter: PushMetricExporter{
+						Console: &ConsoleMetricExporter{},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(
+				consoleExporter,
+				sdkmetric.WithCardinalityLimitSelector(func(ik sdkmetric.InstrumentKind) (int, bool) {
+					switch ik {
+					case sdkmetric.InstrumentKindCounter:
+						return 100, false
+					case sdkmetric.InstrumentKindUpDownCounter:
+						return 200, false
+					case sdkmetric.InstrumentKindHistogram:
+						return 300, false
+					case sdkmetric.InstrumentKindObservableCounter:
+						return 400, false
+					case sdkmetric.InstrumentKindObservableUpDownCounter:
+						return 500, false
+					case sdkmetric.InstrumentKindObservableGauge:
+						return 600, false
+					case sdkmetric.InstrumentKindGauge:
+						return 700, false
+					}
+					return 0, true
+				}),
+			),
+		},
+		{
+			name: "periodic/console-exporter-with-default-cardinality-limit",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					CardinalityLimits: &CardinalityLimits{
+						Default: ptr(50),
+					},
+					Exporter: PushMetricExporter{
+						Console: &ConsoleMetricExporter{},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(
+				consoleExporter,
+				sdkmetric.WithCardinalityLimitSelector(func(sdkmetric.InstrumentKind) (int, bool) {
+					return 50, false
+				}),
+			),
+		},
+		{
 			name: "periodic/console-exporter",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
@@ -818,6 +878,126 @@ func TestReader(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestCardinalityLimitSelector(t *testing.T) {
+	allKinds := []sdkmetric.InstrumentKind{
+		sdkmetric.InstrumentKindCounter,
+		sdkmetric.InstrumentKindUpDownCounter,
+		sdkmetric.InstrumentKindHistogram,
+		sdkmetric.InstrumentKindObservableCounter,
+		sdkmetric.InstrumentKindObservableUpDownCounter,
+		sdkmetric.InstrumentKindObservableGauge,
+		sdkmetric.InstrumentKindGauge,
+	}
+
+	t.Run("per-kind limits", func(t *testing.T) {
+		cl := &CardinalityLimits{
+			Counter:                 ptr(100),
+			UpDownCounter:           ptr(200),
+			Histogram:               ptr(300),
+			ObservableCounter:       ptr(400),
+			ObservableUpDownCounter: ptr(500),
+			ObservableGauge:         ptr(600),
+			Gauge:                   ptr(700),
+		}
+		sel := cardinalityLimitSelector(cl)
+		expected := map[sdkmetric.InstrumentKind]int{
+			sdkmetric.InstrumentKindCounter:                 100,
+			sdkmetric.InstrumentKindUpDownCounter:           200,
+			sdkmetric.InstrumentKindHistogram:               300,
+			sdkmetric.InstrumentKindObservableCounter:       400,
+			sdkmetric.InstrumentKindObservableUpDownCounter: 500,
+			sdkmetric.InstrumentKindObservableGauge:         600,
+			sdkmetric.InstrumentKindGauge:                   700,
+		}
+		for _, ik := range allKinds {
+			limit, fallback := sel(ik)
+			assert.Equal(t, expected[ik], limit)
+			assert.False(t, fallback)
+		}
+	})
+
+	t.Run("default limit used when kind not set", func(t *testing.T) {
+		cl := &CardinalityLimits{
+			Default: ptr(50),
+		}
+		sel := cardinalityLimitSelector(cl)
+		for _, ik := range allKinds {
+			limit, fallback := sel(ik)
+			assert.Equal(t, 50, limit)
+			assert.False(t, fallback)
+		}
+	})
+
+	t.Run("per-kind overrides default", func(t *testing.T) {
+		cl := &CardinalityLimits{
+			Default: ptr(50),
+			Counter: ptr(100),
+		}
+		sel := cardinalityLimitSelector(cl)
+		limit, fallback := sel(sdkmetric.InstrumentKindCounter)
+		assert.Equal(t, 100, limit)
+		assert.False(t, fallback)
+
+		limit, fallback = sel(sdkmetric.InstrumentKindGauge)
+		assert.Equal(t, 50, limit)
+		assert.False(t, fallback)
+	})
+
+	t.Run("fallback to provider when no limit set", func(t *testing.T) {
+		cl := &CardinalityLimits{}
+		sel := cardinalityLimitSelector(cl)
+		for _, ik := range allKinds {
+			limit, fallback := sel(ik)
+			assert.Equal(t, 0, limit)
+			assert.True(t, fallback)
+		}
+	})
+}
+
+// TestMetricReaderCardinalityLimitsWired verifies that CardinalityLimits set on
+// a PeriodicMetricReader are actually wired into the returned SDK reader.
+// It records 3 distinct attribute sets with a per-kind limit of 1; the SDK
+// must produce exactly 1 data point (only the overflow bucket) rather than
+// 3, which would happen if the selector were never registered. With limit=1
+// the overflow slot consumes the entire limit, so no normal data points fit.
+func TestMetricReaderCardinalityLimitsWired(t *testing.T) {
+	ctx := t.Context()
+
+	reader, err := metricReader(ctx, MetricReader{
+		Periodic: &PeriodicMetricReader{
+			CardinalityLimits: &CardinalityLimits{
+				Counter: ptr(1),
+			},
+			Exporter: PushMetricExporter{
+				Console: &ConsoleMetricExporter{},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	defer func() { assert.NoError(t, mp.Shutdown(t.Context())) }()
+
+	counter, err := mp.Meter("test").Int64Counter("cardinality.wiring.test")
+	require.NoError(t, err)
+
+	// Record 3 distinct attribute sets; with limit=1 the SDK must emit only
+	// 1 data point: the overflow bucket (the limit counts the overflow slot
+	// itself, so no "normal" data points fit alongside it).
+	counter.Add(ctx, 1, metric.WithAttributes(attribute.Int("k", 1)))
+	counter.Add(ctx, 1, metric.WithAttributes(attribute.Int("k", 2)))
+	counter.Add(ctx, 1, metric.WithAttributes(attribute.Int("k", 3)))
+
+	pr := reader.(*sdkmetric.PeriodicReader)
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, pr.Collect(ctx, &rm))
+
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 1)
+	dataPoints := rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Sum[int64]).DataPoints
+	assert.Len(t, dataPoints, 1)
 }
 
 func TestView(t *testing.T) {
