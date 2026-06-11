@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"google.golang.org/grpc/stats"
 )
 
@@ -29,7 +29,7 @@ func newClientHandlerForAddrTest(t *testing.T) (*clientHandler, *tracetest.SpanR
 	return h, sr
 }
 
-func runRPC(t *testing.T, h *clientHandler, ctx context.Context, remoteAddr net.Addr) {
+func runRPC(ctx context.Context, t *testing.T, h *clientHandler, remoteAddr net.Addr) {
 	t.Helper()
 	ctx = h.TagRPC(ctx, &stats.RPCTagInfo{FullMethodName: "pkg/Method"})
 	h.HandleRPC(ctx, &stats.Begin{Client: true})
@@ -46,7 +46,7 @@ func TestClientHandlerFallsBackToRemoteAddr(t *testing.T) {
 	h, sr := newClientHandlerForAddrTest(t)
 
 	remoteAddr := &net.TCPAddr{IP: net.ParseIP("192.0.2.1"), Port: 9090}
-	runRPC(t, h, t.Context(), remoteAddr)
+	runRPC(t.Context(), t, h, remoteAddr)
 
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
@@ -86,7 +86,7 @@ func TestClientHandlerUsesDialTargetWhenPresent(t *testing.T) {
 			h, sr := newClientHandlerForAddrTest(t)
 			ctx := context.WithValue(t.Context(), dialTargetContextKey{}, tt.dialTarget)
 
-			runRPC(t, h, ctx, nil)
+			runRPC(ctx, t, h, nil)
 
 			spans := sr.Ended()
 			require.Len(t, spans, 1)
@@ -99,7 +99,7 @@ func TestClientHandlerUsesDialTargetWhenPresent(t *testing.T) {
 			h, sr := newClientHandlerForAddrTest(t)
 			ctx := context.WithValue(t.Context(), dialTargetContextKey{}, tt.dialTarget)
 
-			runRPC(t, h, ctx, remoteAddr)
+			runRPC(ctx, t, h, remoteAddr)
 
 			spans := sr.Ended()
 			require.Len(t, spans, 1)
