@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `go.opentelemetry.io/contrib/detectors/heroku` — a new resource detector for Heroku dynos, ported from `processor/resourcedetectionprocessor/internal/heroku` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `heroku.app.id`, `service.name`, `service.instance.id`, `service.version`, `heroku.release.creation_timestamp`, and `heroku.release.commit`. (#9036)
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -20,7 +23,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support for `cardinality_limits` in `PeriodicMetricReader` in `otelconf`. (#8885)
 - Add `Resource` method to `SDK` in `go.opentelemetry.io/contrib/otelconf/x` to expose the resolved SDK resource from declarative configuration. (#8913)
 - Add `go.opentelemetry.io/contrib/detectors/hetzner`, a new resource detector for Hetzner Cloud servers, ported from `github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/hetzner`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `cloud.availability_zone`, `host.id`, and `host.name`. (#8979)
-- Add `go.opentelemetry.io/contrib/detectors/heroku` — a new resource detector for Heroku dynos, ported from `processor/resourcedetectionprocessor/internal/heroku` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `heroku.app.id`, `service.name`, `service.instance.id`, `service.version`, `heroku.release.creation_timestamp`, and `heroku.release.commit`. (#9036)
 
 ### Changed
 

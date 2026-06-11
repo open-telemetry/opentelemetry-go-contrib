@@ -5,7 +5,7 @@
 Package heroku provides a [resource.Detector] which supports detecting
 attributes specific to Heroku dynos.
 
-According to semantic conventions for [cloud], [heroku], and [service]
+According to semantic conventions for [cloud] and [service]
 attributes, each of the following attributes is added if it is available:
 
   - cloud.provider
@@ -17,7 +17,6 @@ attributes, each of the following attributes is added if it is available:
   - service.version
 
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
-[heroku]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/heroku.md
 [service]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/service.md
 */
 package heroku // import "go.opentelemetry.io/contrib/detectors/heroku"
