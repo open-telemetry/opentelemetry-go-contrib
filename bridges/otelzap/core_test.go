@@ -642,3 +642,41 @@ func TestConvertLevel(t *testing.T) {
 		}
 	}
 }
+
+func TestCoreMalformedErrorFieldDoesNotPanic(t *testing.T) {
+	tests := []struct {
+		name       string
+		fieldValue any
+	}{
+		{
+			name:       "NilError",
+			fieldValue: nil,
+		},
+		{
+			name:       "InvalidErrorType",
+			fieldValue: "not-an-error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newCaptureProvider()
+			logger := zap.New(NewCore(loggerName, WithLoggerProvider(p)))
+
+			ce := logger.Check(zap.ErrorLevel, testMessage)
+			require.NotNil(t, ce)
+
+			require.NotPanics(t, func() {
+				ce.Write(zapcore.Field{
+					Key:       "error",
+					Type:      zapcore.ErrorType,
+					Interface: tt.fieldValue,
+				})
+			})
+
+			r := p.logger.lastRecord(t)
+			require.NoError(t, r.err)
+			require.Empty(t, r.attrs)
+		})
+	}
+}
