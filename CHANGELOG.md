@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Ignore non-normalized environment variable names on `Carrier.Get` and `Carrier.Keys` in `go.opentelemetry.io/contrib/propagators/envcar`. (#9112)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
