@@ -14,9 +14,6 @@ import (
 )
 
 func TestNewResource(t *testing.T) {
-	defaultSchemaURL := resource.Default().SchemaURL()
-	customSchemaURL := "https://example.com/otel/schema"
-
 	tests := []struct {
 		name          string
 		config        *Resource
@@ -26,19 +23,19 @@ func TestNewResource(t *testing.T) {
 	}{
 		{
 			name:          "no-resource-configuration",
-			wantSchemaURL: defaultSchemaURL,
+			wantSchemaURL: resource.Default().SchemaURL(),
 		},
 		{
 			name:          "resource-no-attributes",
 			config:        &Resource{},
-			wantSchemaURL: defaultSchemaURL,
+			wantSchemaURL: "",
 		},
 		{
 			name: "resource-with-schema",
 			config: &Resource{
-				SchemaUrl: ptr(customSchemaURL),
+				SchemaUrl: ptr(semconv.SchemaURL),
 			},
-			wantSchemaURL: customSchemaURL,
+			wantSchemaURL: semconv.SchemaURL,
 		},
 		{
 			name: "resource-with-attributes",
@@ -47,7 +44,7 @@ func TestNewResource(t *testing.T) {
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
 			},
-			wantSchemaURL: defaultSchemaURL,
+			wantSchemaURL: "",
 			wantAttrs:     []attribute.KeyValue{semconv.ServiceName("service-a")},
 		},
 		{
@@ -56,9 +53,9 @@ func TestNewResource(t *testing.T) {
 				Attributes: []AttributeNameValue{
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
-				SchemaUrl: ptr(customSchemaURL),
+				SchemaUrl: ptr(semconv.SchemaURL),
 			},
-			wantSchemaURL: customSchemaURL,
+			wantSchemaURL: semconv.SchemaURL,
 			wantAttrs:     []attribute.KeyValue{semconv.ServiceName("service-a")},
 		},
 		{
@@ -68,9 +65,9 @@ func TestNewResource(t *testing.T) {
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 					{Name: "attr-bool", Value: true},
 				},
-				SchemaUrl: ptr(customSchemaURL),
+				SchemaUrl: ptr(semconv.SchemaURL),
 			},
-			wantSchemaURL: customSchemaURL,
+			wantSchemaURL: semconv.SchemaURL,
 			wantAttrs: []attribute.KeyValue{
 				semconv.ServiceName("service-a"),
 				attribute.Bool("attr-bool", true),
