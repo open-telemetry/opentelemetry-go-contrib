@@ -85,3 +85,5 @@ replace go.opentelemetry.io/contrib/propagators/autoprop => ../propagators/autop
 replace go.opentelemetry.io/contrib/propagators/ot => ../propagators/ot
 
 replace go.opentelemetry.io/contrib/propagators/jaeger => ../propagators/jaeger
+
+replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../detectors/aws/ec2/v2
