@@ -123,6 +123,21 @@ func (j *TraceContextPropagator) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalAWSEC2ResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalAWSEC2ResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if p == nil {
+		*j = ExperimentalAWSEC2ResourceDetector{}
+	} else {
+		*j = ExperimentalAWSEC2ResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *ExperimentalContainerResourceDetector) UnmarshalJSON(b []byte) error {
 	type plain ExperimentalContainerResourceDetector
 	var p plain
@@ -192,6 +207,7 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	type Plain ExperimentalResourceDetector
 	type shadow struct {
 		Plain
+		AWSEC2    json.RawMessage `json:"aws.ec2"`
 		Container json.RawMessage `json:"container"`
 		Host      json.RawMessage `json:"host"`
 		Process   json.RawMessage `json:"process"`
@@ -200,6 +216,17 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	var sh shadow
 	if err := json.Unmarshal(b, &sh); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if sh.AWSEC2 != nil {
+		var c ExperimentalAWSEC2ResourceDetector
+		if err := json.Unmarshal(sh.AWSEC2, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		if c == nil {
+			c = ExperimentalAWSEC2ResourceDetector{}
+		}
+		sh.Plain.AWSEC2 = c
 	}
 
 	if sh.Container != nil {
