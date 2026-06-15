@@ -6,6 +6,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/stretchr/testify v1.11.1
+	go.opentelemetry.io/contrib/detectors/gcp v1.42.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.69.0
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.20.0
@@ -32,6 +33,8 @@ require (
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.9.0 // indirect
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.31.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect

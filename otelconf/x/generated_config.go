@@ -976,6 +976,11 @@ type ExperimentalResourceDetection struct {
 }
 
 type ExperimentalResourceDetector struct {
+	// Enable the GCP resource detector.
+	// If omitted, ignore.
+	//
+	GCP ExperimentalGCPResourceDetector `json:"gcp,omitempty,omitzero" yaml:"gcp,omitempty" mapstructure:"gcp,omitempty"`
+
 	// Enable the container resource detector, which populates container.* attributes.
 	// If omitted, ignore.
 	//
@@ -999,6 +1004,8 @@ type ExperimentalResourceDetector struct {
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
+
+type ExperimentalGCPResourceDetector map[string]interface{}
 
 type ExperimentalServiceResourceDetector map[string]interface{}
 

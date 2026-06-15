@@ -2284,11 +2284,14 @@ func TestUnmarshalResourceJson(t *testing.T) {
 	}{
 		{
 			name:       "valid with all detectors",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - container:\n    - host:\n    - process:\n    - service:"),
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"gcp": null},{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - gcp:\n    - container:\n    - host:\n    - process:\n    - service:"),
 			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
+						{
+							GCP: ExperimentalGCPResourceDetector{},
+						},
 						{
 							Container: ExperimentalContainerResourceDetector{},
 						},
@@ -2307,11 +2310,14 @@ func TestUnmarshalResourceJson(t *testing.T) {
 		},
 		{
 			name:       "valid non-nil with all detectors",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"gcp": {}},{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - gcp: {}\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
 			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
+						{
+							GCP: ExperimentalGCPResourceDetector{},
+						},
 						{
 							Container: ExperimentalContainerResourceDetector{},
 						},
@@ -2327,6 +2333,19 @@ func TestUnmarshalResourceJson(t *testing.T) {
 					},
 				},
 			},
+		},
+		{
+			name:       "invalid gcp detector",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"gcp": 1}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - gcp: 1"),
+			wantResource: Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{},
+					},
+				},
+			},
+			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
 		},
 		{
 			name:       "invalid container detector",
