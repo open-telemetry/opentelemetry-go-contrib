@@ -46,6 +46,7 @@ func newResource(r *Resource) (*resource.Resource, error) {
 		schema = *r.SchemaUrl
 	}
 	opts := []resource.Option{
+		resource.WithAttributes(resource.Default().Attributes()...),
 		resource.WithAttributes(attrs...),
 		resource.WithSchemaURL(schema),
 	}
