@@ -125,6 +125,7 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 		{
 			name: "all-detectors",
 			detectors: []ExperimentalResourceDetector{
+				{AWSECS: ExperimentalAWSECSResourceDetector{}},
 				{Container: ExperimentalContainerResourceDetector{}},
 				{Host: ExperimentalHostResourceDetector{}},
 				{Process: ExperimentalProcessResourceDetector{}},
@@ -159,4 +160,24 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			assert.Equal(t, tt.wantServiceAttribute, attrSet[semconv.ServiceInstanceIDKey], "should have service.instance.id attribute")
 		})
 	}
+}
+
+func TestNewResourceConfiguredAttributesOverrideDetectors(t *testing.T) {
+	t.Setenv("OTEL_SERVICE_NAME", "detected-service")
+
+	got, err := newResource(&Resource{
+		Attributes: []AttributeNameValue{
+			{Name: string(semconv.ServiceNameKey), Value: "configured-service"},
+		},
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Service: ExperimentalServiceResourceDetector{}},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	value, ok := got.Set().Value(semconv.ServiceNameKey)
+	require.True(t, ok)
+	assert.Equal(t, "configured-service", value.AsString())
 }
