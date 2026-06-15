@@ -9,12 +9,17 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
+	eksdetector "go.opentelemetry.io/contrib/detectors/aws/eks"
+
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
 
 func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 	opts := []resource.Option{}
 	for _, d := range detectors {
+		if d.AWSEKS != nil {
+			opts = append(opts, resource.WithDetectors(eksdetector.NewResourceDetector()))
+		}
 		if d.Container != nil {
 			opts = append(opts, resource.WithContainer())
 		}
@@ -45,15 +50,21 @@ func newResource(r *Resource) (*resource.Resource, error) {
 	if r.SchemaUrl != nil {
 		schema = *r.SchemaUrl
 	}
-	opts := []resource.Option{
+	opts := []resource.Option{}
+	opts = append(
+		opts,
 		resource.WithAttributes(resource.Default().Attributes()...),
-		resource.WithAttributes(attrs...),
-		resource.WithSchemaURL(schema),
-	}
+	)
 
 	if r.DetectionDevelopment != nil {
 		opts = append(opts, resourceOpts(r.DetectionDevelopment.Detectors)...)
 	}
+
+	opts = append(
+		opts,
+		resource.WithAttributes(attrs...),
+		resource.WithSchemaURL(schema),
+	)
 
 	return resource.New(context.Background(), opts...)
 }
