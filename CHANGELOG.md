@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
+- The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#9137)
 - Add support for the `gcp` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9137)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
 
