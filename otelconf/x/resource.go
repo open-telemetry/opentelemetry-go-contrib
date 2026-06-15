@@ -5,6 +5,7 @@ package x // import "go.opentelemetry.io/contrib/otelconf/x"
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -61,11 +62,12 @@ func newResource(r *Resource) (*resource.Resource, error) {
 	}
 
 	detected, err := newDetectedResource(r.DetectionDevelopment)
-	if err != nil {
+	if detected == nil {
 		return nil, err
 	}
 
-	return resource.Merge(base, detected)
+	merged, mergeErr := resource.Merge(detected, base)
+	return merged, errors.Join(err, mergeErr)
 }
 
 func newDetectedResource(detection *ExperimentalResourceDetection) (*resource.Resource, error) {
@@ -80,7 +82,7 @@ func newDetectedResource(detection *ExperimentalResourceDetection) (*resource.Re
 	}
 
 	detected, err := resource.New(context.Background(), opts...)
-	if err != nil {
+	if detected == nil {
 		return nil, err
 	}
 
@@ -92,5 +94,5 @@ func newDetectedResource(detection *ExperimentalResourceDetection) (*resource.Re
 		}
 	}
 
-	return resource.NewWithAttributes(detected.SchemaURL(), filtered...), nil
+	return resource.NewWithAttributes(detected.SchemaURL(), filtered...), err
 }

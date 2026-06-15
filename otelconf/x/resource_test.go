@@ -36,7 +36,7 @@ func TestNewResource(t *testing.T) {
 			config: &Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{},
 			},
-			wantResource: resource.NewSchemaless(),
+			wantSchemaURL: "",
 		},
 		{
 			name: "resource-with-schema",
@@ -228,6 +228,24 @@ func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
 	}
 }
 
+func TestNewResourceWithDetectionDoesNotOverrideConfiguredAttributes(t *testing.T) {
+	got, err := newResource(&Resource{
+		Attributes: []AttributeNameValue{
+			{Name: string(semconv.ServiceNameKey), Value: "configured-service"},
+		},
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Service: ExperimentalServiceResourceDetector{}},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	gotAttrs := attrMap(got.Attributes())
+	assert.Equal(t, "configured-service", gotAttrs[semconv.ServiceNameKey].AsString())
+	assert.Contains(t, gotAttrs, semconv.ServiceInstanceIDKey)
+}
+
 func TestNewResourceWithDetectionAttributesFilterError(t *testing.T) {
 	_, err := newResource(&Resource{
 		DetectionDevelopment: &ExperimentalResourceDetection{
@@ -241,4 +259,12 @@ func TestNewResourceWithDetectionAttributesFilterError(t *testing.T) {
 		},
 	})
 	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
+}
+
+func attrMap(attrs []attribute.KeyValue) map[attribute.Key]attribute.Value {
+	attrSet := make(map[attribute.Key]attribute.Value, len(attrs))
+	for _, attr := range attrs {
+		attrSet[attr.Key] = attr.Value
+	}
+	return attrSet
 }
