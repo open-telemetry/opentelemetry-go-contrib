@@ -4,24 +4,26 @@
 package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 
 import (
-	"context"
-	"strconv"
-	"time"
+"context"
+"strconv"
+"sync/atomic"
+"time"
 
-	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/codes"
-	"go.opentelemetry.io/otel/metric"
-	oldrpcconv "go.opentelemetry.io/otel/semconv/v1.37.0/rpcconv" //nolint:depguard // Use of v1.37.0 is required for backward compatibility stability opt-in.
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/rpcconv"
-	"go.opentelemetry.io/otel/trace"
+"go.opentelemetry.io/otel"
+"go.opentelemetry.io/otel/attribute"
+"go.opentelemetry.io/otel/codes"
+"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
+oldrpcconv "go.opentelemetry.io/otel/semconv/v1.37.0/rpcconv" //nolint:depguard // Use of v1.37.0 is required for backward compatibility stability opt-in.
+semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+"go.opentelemetry.io/otel/semconv/v1.41.0/rpcconv"
+"go.opentelemetry.io/otel/trace"
 
-	grpc_codes "google.golang.org/grpc/codes"
-	"google.golang.org/grpc/stats"
-	"google.golang.org/grpc/status"
+grpc_codes "google.golang.org/grpc/codes"
+"google.golang.org/grpc/stats"
+"google.golang.org/grpc/status"
 
-	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
+"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal"
 )
 
 type gRPCContextKey struct{}
@@ -29,6 +31,13 @@ type gRPCContextKey struct{}
 type gRPCContext struct {
 	metricAttrs []attribute.KeyValue
 	record      bool
+
+	// sentCompressedBytes accumulates the wire bytes sent across all OutPayload
+	// events during the RPC, recorded as rpc.{client,server}.call.sent_compressed_length at End.
+	sentCompressedBytes atomic.Int64
+	// rcvdCompressedBytes accumulates the wire bytes received across all InPayload
+	// events during the RPC, recorded as rpc.{client,server}.call.rcvd_compressed_length at End.
+	rcvdCompressedBytes atomic.Int64
 }
 
 type serverHandler struct {
@@ -38,6 +47,15 @@ type serverHandler struct {
 
 	duration    rpcconv.ServerCallDuration
 	oldDuration oldrpcconv.ServerDuration
+
+	// callStarted counts server calls started (rpc.server.call.started).
+	callStarted metric.Int64Counter
+	// sentCompressedLength records total compressed bytes sent per server call
+	// (rpc.server.call.sent_compressed_length).
+	sentCompressedLength metric.Int64Histogram
+	// rcvdCompressedLength records total compressed bytes received per server call
+	// (rpc.server.call.rcvd_compressed_length).
+	rcvdCompressedLength metric.Int64Histogram
 }
 
 // NewServerHandler creates a stats.Handler for a gRPC server.
@@ -50,15 +68,15 @@ func NewServerHandler(opts ...Option) stats.Handler {
 	h := &serverHandler{config: c}
 
 	h.tracer = c.TracerProvider.Tracer(
-		ScopeName,
-		trace.WithInstrumentationVersion(Version),
-	)
+ScopeName,
+trace.WithInstrumentationVersion(Version),
+)
 
 	meter := c.MeterProvider.Meter(
-		ScopeName,
-		metric.WithInstrumentationVersion(Version),
-		metric.WithSchemaURL(semconv.SchemaURL),
-	)
+ScopeName,
+metric.WithInstrumentationVersion(Version),
+metric.WithSchemaURL(semconv.SchemaURL),
+)
 
 	var err error
 	if c.semconvMode == semconvModeOld || c.semconvMode == semconvModeDup {
@@ -72,16 +90,54 @@ func NewServerHandler(opts ...Option) stats.Handler {
 
 	if c.semconvMode == semconvModeNew || c.semconvMode == semconvModeDup {
 		h.duration, err = rpcconv.NewServerCallDuration(
-			meter,
-			metric.WithExplicitBucketBoundaries(
-				0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
-				0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
-			),
-		)
+meter,
+metric.WithExplicitBucketBoundaries(
+0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
+0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
+),
+)
 		if err != nil {
 			otel.Handle(err)
 		}
 	}
+
+	h.callStarted, err = meter.Int64Counter(
+"rpc.server.call.started",
+metric.WithDescription("The number of server calls started."),
+metric.WithUnit("{call}"),
+)
+	if err != nil {
+		otel.Handle(err)
+	}
+		h.callStarted = noop.Int64Counter{}
+
+	h.sentCompressedLength, err = meter.Int64Histogram(
+"rpc.server.call.sent_compressed_length",
+metric.WithDescription("Compressed bytes sent across all response messages per RPC."),
+metric.WithUnit("By"),
+metric.WithExplicitBucketBoundaries(
+0, 1024, 2048, 4096, 16384, 65536, 262144,
+1048576, 4194304, 16777216, 67108864,
+),
+)
+	if err != nil {
+		otel.Handle(err)
+	}
+		h.sentCompressedLength = noop.Int64Histogram{}
+
+	h.rcvdCompressedLength, err = meter.Int64Histogram(
+"rpc.server.call.rcvd_compressed_length",
+metric.WithDescription("Compressed bytes received across all request messages per RPC."),
+metric.WithUnit("By"),
+metric.WithExplicitBucketBoundaries(
+0, 1024, 2048, 4096, 16384, 65536, 262144,
+1048576, 4194304, 16777216, 67108864,
+),
+)
+	if err != nil {
+		otel.Handle(err)
+	}
+		h.rcvdCompressedLength = noop.Int64Histogram{}
 
 	return h
 }
@@ -109,9 +165,8 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		var attrsNew, attrsOld []attribute.KeyValue
 		name, attrsNew = internal.ParseFullMethod(info.FullMethodName)
 		_, attrsOld = internal.ParseFullMethodOld(info.FullMethodName)
-		// Combine both. We append New last so its rpc.method (fully qualified) wins when deduplicated.
 		attrs = append(append([]attribute.KeyValue{}, attrsOld...), attrsNew...)
-		attrs = append(attrs, semconv.RPCSystemNameGRPC) // New convention
+		attrs = append(attrs, semconv.RPCSystemNameGRPC)
 	default: // semconvModeNew
 		name, attrs = internal.ParseFullMethod(info.FullMethodName)
 		attrs = append(attrs, semconv.RPCSystemNameGRPC)
@@ -123,7 +178,6 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 
 	if record {
-		// Make a new slice to avoid aliasing into the same attrs slice used by metrics.
 		spanAttributes := make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
 		spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
 		opts := []trace.SpanStartOption{
@@ -132,16 +186,15 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		}
 		if h.PublicEndpoint || (h.PublicEndpointFn != nil && h.PublicEndpointFn(ctx, info)) {
 			opts = append(opts, trace.WithNewRoot())
-			// Linking incoming span context if any for public endpoint.
 			if s := trace.SpanContextFromContext(ctx); s.IsValid() && s.IsRemote() {
 				opts = append(opts, trace.WithLinks(trace.Link{SpanContext: s}))
 			}
 		}
 		ctx, _ = h.tracer.Start(
-			trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
-			name,
-			opts...,
-		)
+trace.ContextWithRemoteSpanContext(ctx, trace.SpanContextFromContext(ctx)),
+name,
+opts...,
+)
 	}
 
 	gctx := gRPCContext{
@@ -168,12 +221,16 @@ func (h *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 		oldDur = h.oldDuration.Inst()
 	}
 	h.handleRPC(
-		ctx,
-		rs,
-		dur,
-		oldDur,
-		serverStatus,
-	)
+ctx,
+rs,
+dur,
+oldDur,
+h.callStarted,
+nil, // no per-attempt duration on server side
+h.sentCompressedLength,
+h.rcvdCompressedLength,
+serverStatus,
+)
 }
 
 type clientHandler struct {
@@ -183,6 +240,17 @@ type clientHandler struct {
 
 	duration    rpcconv.ClientCallDuration
 	oldDuration oldrpcconv.ClientDuration
+
+	// attemptStarted counts client call attempts started (rpc.client.attempt.started).
+	attemptStarted metric.Int64Counter
+	// attemptDuration records per-attempt latency (rpc.client.attempt.duration).
+	attemptDuration metric.Float64Histogram
+	// sentCompressedLength records total compressed bytes sent per attempt
+	// (rpc.client.attempt.sent_compressed_length).
+	sentCompressedLength metric.Int64Histogram
+	// rcvdCompressedLength records total compressed bytes received per attempt
+	// (rpc.client.attempt.rcvd_compressed_length).
+	rcvdCompressedLength metric.Int64Histogram
 }
 
 // NewClientHandler creates a stats.Handler for a gRPC client.
@@ -195,15 +263,15 @@ func NewClientHandler(opts ...Option) stats.Handler {
 	h := &clientHandler{config: c}
 
 	h.tracer = c.TracerProvider.Tracer(
-		ScopeName,
-		trace.WithInstrumentationVersion(Version),
-	)
+ScopeName,
+trace.WithInstrumentationVersion(Version),
+)
 
 	meter := c.MeterProvider.Meter(
-		ScopeName,
-		metric.WithInstrumentationVersion(Version),
-		metric.WithSchemaURL(semconv.SchemaURL),
-	)
+ScopeName,
+metric.WithInstrumentationVersion(Version),
+metric.WithSchemaURL(semconv.SchemaURL),
+)
 
 	var err error
 	if c.semconvMode == semconvModeOld || c.semconvMode == semconvModeDup {
@@ -217,16 +285,68 @@ func NewClientHandler(opts ...Option) stats.Handler {
 
 	if c.semconvMode == semconvModeNew || c.semconvMode == semconvModeDup {
 		h.duration, err = rpcconv.NewClientCallDuration(
-			meter,
-			metric.WithExplicitBucketBoundaries(
-				0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
-				0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
-			),
-		)
+meter,
+metric.WithExplicitBucketBoundaries(
+0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
+0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
+),
+)
 		if err != nil {
 			otel.Handle(err)
 		}
 	}
+
+	h.attemptStarted, err = meter.Int64Counter(
+"rpc.client.attempt.started",
+metric.WithDescription("The number of client call attempts started."),
+metric.WithUnit("{attempt}"),
+)
+	if err != nil {
+		otel.Handle(err)
+	}
+		h.attemptStarted = noop.Int64Counter{}
+
+	h.attemptDuration, err = meter.Float64Histogram(
+"rpc.client.attempt.duration",
+metric.WithDescription("Measures the duration of an individual attempt of an outgoing RPC."),
+metric.WithUnit("s"),
+metric.WithExplicitBucketBoundaries(
+0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
+0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
+),
+)
+	if err != nil {
+		otel.Handle(err)
+	}
+		h.attemptDuration = noop.Float64Histogram{}
+
+	h.sentCompressedLength, err = meter.Int64Histogram(
+"rpc.client.attempt.sent_compressed_length",
+metric.WithDescription("Compressed bytes sent across all request messages per RPC attempt."),
+metric.WithUnit("By"),
+metric.WithExplicitBucketBoundaries(
+0, 1024, 2048, 4096, 16384, 65536, 262144,
+1048576, 4194304, 16777216, 67108864,
+),
+)
+	if err != nil {
+		otel.Handle(err)
+	}
+		h.sentCompressedLength = noop.Int64Histogram{}
+
+	h.rcvdCompressedLength, err = meter.Int64Histogram(
+"rpc.client.attempt.rcvd_compressed_length",
+metric.WithDescription("Compressed bytes received across all response messages per RPC attempt."),
+metric.WithUnit("By"),
+metric.WithExplicitBucketBoundaries(
+0, 1024, 2048, 4096, 16384, 65536, 262144,
+1048576, 4194304, 16777216, 67108864,
+),
+)
+	if err != nil {
+		otel.Handle(err)
+	}
+		h.rcvdCompressedLength = noop.Int64Histogram{}
 
 	return h
 }
@@ -243,9 +363,8 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		var attrsNew, attrsOld []attribute.KeyValue
 		name, attrsNew = internal.ParseFullMethod(info.FullMethodName)
 		_, attrsOld = internal.ParseFullMethodOld(info.FullMethodName)
-		// Combine both. We append New last so its rpc.method (fully qualified) wins when deduplicated.
 		attrs = append(append([]attribute.KeyValue{}, attrsOld...), attrsNew...)
-		attrs = append(attrs, semconv.RPCSystemNameGRPC) // New convention
+		attrs = append(attrs, semconv.RPCSystemNameGRPC)
 	default: // semconvModeNew
 		name, attrs = internal.ParseFullMethod(info.FullMethodName)
 		attrs = append(attrs, semconv.RPCSystemNameGRPC)
@@ -257,15 +376,14 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 
 	if record {
-		// Make a new slice to avoid aliasing into the same attrs slice used by metrics.
 		spanAttributes := make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
 		spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
 		ctx, _ = h.tracer.Start(
-			ctx,
-			name,
-			trace.WithSpanKind(h.SpanKind),
-			trace.WithAttributes(spanAttributes...),
-		)
+ctx,
+name,
+trace.WithSpanKind(h.SpanKind),
+trace.WithAttributes(spanAttributes...),
+)
 	}
 
 	gctx := gRPCContext{
@@ -292,12 +410,16 @@ func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 		oldDur = h.oldDuration.Inst()
 	}
 	h.handleRPC(
-		ctx,
-		rs,
-		dur,
-		oldDur,
-		func(s *status.Status) (codes.Code, string) {
-			return codes.Error, s.Message()
+ctx,
+rs,
+dur,
+oldDur,
+h.attemptStarted,
+h.attemptDuration,
+h.sentCompressedLength,
+h.rcvdCompressedLength,
+func(s *status.Status) (codes.Code, string) {
+return codes.Error, s.Message()
 		},
 	)
 }
@@ -313,11 +435,15 @@ func (*clientHandler) HandleConn(context.Context, stats.ConnStats) {
 }
 
 func (*config) handleRPC(
-	ctx context.Context,
-	rs stats.RPCStats,
-	duration metric.Float64Histogram,
-	oldDuration metric.Float64Histogram,
-	recordStatus func(*status.Status) (codes.Code, string),
+ctx context.Context,
+rs stats.RPCStats,
+duration metric.Float64Histogram,
+oldDuration metric.Float64Histogram,
+startedCounter metric.Int64Counter,
+attemptDuration metric.Float64Histogram,
+sentCompressedLength metric.Int64Histogram,
+rcvdCompressedLength metric.Int64Histogram,
+recordStatus func(*status.Status) (codes.Code, string),
 ) {
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
 	if gctx != nil && !gctx.record {
@@ -328,7 +454,19 @@ func (*config) handleRPC(
 
 	switch rs := rs.(type) {
 	case *stats.Begin:
+		// Record a new call/attempt started.
+		if startedCounter != nil {
+			var metricAttrs []attribute.KeyValue
+			if gctx != nil {
+				metricAttrs = gctx.metricAttrs
+			}
+			startedCounter.Add(ctx, 1, metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
+		}
 	case *stats.InPayload:
+		// Accumulate compressed bytes received; recorded in total at End.
+		if gctx != nil {
+			gctx.rcvdCompressedBytes.Add(int64(rs.WireLength))
+		}
 	case *stats.InHeader:
 		if !rs.Client && rs.LocalAddr != nil {
 			if span.IsRecording() {
@@ -337,6 +475,10 @@ func (*config) handleRPC(
 			// TODO: add server.address and server.port to metrics once the API supports opt-in attributes.
 		}
 	case *stats.OutPayload:
+		// Accumulate compressed bytes sent; recorded in total at End.
+		if gctx != nil {
+			gctx.sentCompressedBytes.Add(int64(rs.WireLength))
+		}
 	case *stats.OutTrailer:
 	case *stats.OutHeader:
 		if rs.Client && rs.RemoteAddr != nil && (span.IsRecording() || gctx != nil) {
@@ -377,28 +519,41 @@ func (*config) handleRPC(
 			oldDurationEnabled = oldDuration.Enabled(ctx)
 		}
 
-		if durationEnabled || oldDurationEnabled {
-			var metricAttrs []attribute.KeyValue
-			if gctx != nil {
-				// Don't use gctx.metricAttrSet here, because it requires passing
-				// multiple RecordOptions, which would call metric.mergeSets and
-				// allocate a new set for each Record call.
-				metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
-				metricAttrs = append(metricAttrs, gctx.metricAttrs...)
-			}
-			metricAttrs = append(metricAttrs, rpcStatusAttr)
-			// Allocate vararg slice once.
-			recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
+		var metricAttrs []attribute.KeyValue
+		if gctx != nil {
+			metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
+			metricAttrs = append(metricAttrs, gctx.metricAttrs...)
+		}
+		metricAttrs = append(metricAttrs, rpcStatusAttr)
 
-			// Use floating point division here for higher precision (instead of Millisecond method).
-			// Measure right before calling Record() to capture as much elapsed time as possible.
-			elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Second)
+		// Allocate option slices once and reuse.
+		recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
+		addOpts := []metric.AddOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
+		_ = addOpts // used below for int64 histograms via Record
 
-			if durationEnabled {
-				duration.Record(ctx, elapsedTime, recordOpts...)
+		// Use floating point division for higher precision.
+		// Measure right before Record() to capture as much elapsed time as possible.
+		elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Second)
+
+		if durationEnabled {
+			duration.Record(ctx, elapsedTime, recordOpts...)
+		}
+		if oldDurationEnabled {
+			oldDuration.Record(ctx, elapsedTime*1000.0, recordOpts...)
+		}
+
+		// Record per-attempt duration (client side only; nil on server side).
+		if attemptDuration != nil && attemptDuration.Enabled(ctx) {
+			attemptDuration.Record(ctx, elapsedTime, recordOpts...)
+		}
+
+		// Record accumulated compressed message sizes.
+		if gctx != nil {
+			if sentCompressedLength != nil && sentCompressedLength.Enabled(ctx) {
+				sentCompressedLength.Record(ctx, gctx.sentCompressedBytes.Load(), recordOpts...)
 			}
-			if oldDurationEnabled {
-				oldDuration.Record(ctx, elapsedTime*1000.0, recordOpts...)
+			if rcvdCompressedLength != nil && rcvdCompressedLength.Enabled(ctx) {
+				rcvdCompressedLength.Record(ctx, gctx.rcvdCompressedBytes.Load(), recordOpts...)
 			}
 		}
 

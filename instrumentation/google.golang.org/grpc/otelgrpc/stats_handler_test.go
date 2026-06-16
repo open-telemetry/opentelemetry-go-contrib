@@ -325,6 +325,10 @@ func (meter) Int64Histogram(string, ...metric.Int64HistogramOption) (metric.Int6
 	return nil, assert.AnError
 }
 
+func (meter) Int64Counter(string, ...metric.Int64CounterOption) (metric.Int64Counter, error) {
+	return nil, assert.AnError
+}
+
 func (meter) Float64Histogram(string, ...metric.Float64HistogramOption) (metric.Float64Histogram, error) {
 	return nil, assert.AnError
 }
