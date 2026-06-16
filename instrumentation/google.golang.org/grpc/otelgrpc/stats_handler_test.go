@@ -321,6 +321,10 @@ type meter struct {
 	metric.Meter
 }
 
+func (meter) Int64Counter(string, ...metric.Int64CounterOption) (metric.Int64Counter, error) {
+	return nil, assert.AnError
+}
+
 func (meter) Int64Histogram(string, ...metric.Int64HistogramOption) (metric.Int64Histogram, error) {
 	return nil, assert.AnError
 }
