@@ -11,7 +11,7 @@ import (
 	hcloudmeta "github.com/hetznercloud/hcloud-go/v2/hcloud/metadata"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 )
 
 // Compile-time interface assertion.
@@ -64,8 +64,8 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 // a Hetzner Cloud server. If the process is running on a Hetzner Cloud server
 // but some attributes cannot be retrieved, a partial resource is returned
 // together with [resource.ErrPartialResource].
-func (d *ResourceDetector) Detect(_ context.Context) (*resource.Resource, error) {
-	if !d.client.IsHcloudServer() {
+func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
+	if !d.client.IsHcloudServerWithContext(ctx) {
 		return resource.Empty(), nil
 	}
 
@@ -76,28 +76,28 @@ func (d *ResourceDetector) Detect(_ context.Context) (*resource.Resource, error)
 
 	var errs []error
 
-	id, err := d.client.InstanceID()
+	id, err := d.client.InstanceIDWithContext(ctx)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("instance ID: %w", err))
 	} else {
 		attrs = append(attrs, semconv.HostID(strconv.FormatInt(id, 10)))
 	}
 
-	hostname, err := d.client.Hostname()
+	hostname, err := d.client.HostnameWithContext(ctx)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("hostname: %w", err))
 	} else {
 		attrs = append(attrs, semconv.HostName(hostname))
 	}
 
-	region, err := d.client.Region()
+	region, err := d.client.RegionWithContext(ctx)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("region: %w", err))
 	} else {
 		attrs = append(attrs, semconv.CloudRegion(region))
 	}
 
-	az, err := d.client.AvailabilityZone()
+	az, err := d.client.AvailabilityZoneWithContext(ctx)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("availability zone: %w", err))
 	} else {

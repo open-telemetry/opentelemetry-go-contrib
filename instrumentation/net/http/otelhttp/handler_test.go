@@ -25,6 +25,8 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
+
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
 )
 
 func TestHandler(t *testing.T) {
@@ -96,6 +98,8 @@ func TestHandler(t *testing.T) {
 			rr := httptest.NewRecorder()
 			tc.handler(t).ServeHTTP(rr, r)
 			assert.Equal(t, tc.expectedStatusCode, rr.Result().StatusCode)
+			_, ok := r.Body.(*request.BodyWrapper)
+			assert.Falsef(t, ok, "body should not be wrapped after request is processed")
 		})
 	}
 }

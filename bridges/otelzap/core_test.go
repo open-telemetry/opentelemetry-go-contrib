@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -31,6 +31,7 @@ var (
 		Level:   zap.InfoLevel,
 		Message: testMessage,
 	}
+	errTest = errors.New("test error")
 )
 
 type capturedRecord struct {
@@ -118,12 +119,13 @@ func TestCore(t *testing.T) {
 	t.Run("WriteError", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 
-		logger.Error(testMessage, zap.Error(errors.New("test error")))
+		logger.Error(testMessage, zap.Error(errTest))
 
 		want := logtest.Recording{
 			logtest.Scope{Name: loggerName}: {
 				{
 					Body:         log.StringValue(testMessage),
+					Error:        errTest,
 					Severity:     log.SeverityError,
 					SeverityText: zap.ErrorLevel.String(),
 					Attributes:   []log.KeyValue{},
@@ -506,12 +508,13 @@ func TestCoreWithExceptionStacktrace(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
-	logger.Error(testMessage, zap.Error(errors.New("test error")))
+	logger.Error(testMessage, zap.Error(errTest))
 
 	want := logtest.Recording{
 		logtest.Scope{Name: "name"}: {
 			{
 				Body:         log.StringValue(testMessage),
+				Error:        errTest,
 				Severity:     log.SeverityError,
 				SeverityText: zap.ErrorLevel.String(),
 				Attributes: []log.KeyValue{
@@ -586,12 +589,13 @@ func TestCoreWithErrorStacktraceDefault(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
-	logger.Error(testMessage, zap.Error(errors.New("test error")))
+	logger.Error(testMessage, zap.Error(errTest))
 
 	want := logtest.Recording{
 		logtest.Scope{Name: "name"}: {
 			{
 				Body:         log.StringValue(testMessage),
+				Error:        errTest,
 				Severity:     log.SeverityError,
 				SeverityText: zap.ErrorLevel.String(),
 				Attributes: []log.KeyValue{
@@ -636,5 +640,43 @@ func TestConvertLevel(t *testing.T) {
 		if result != test.expectedSev {
 			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
 		}
+	}
+}
+
+func TestCoreMalformedErrorFieldDoesNotPanic(t *testing.T) {
+	tests := []struct {
+		name       string
+		fieldValue any
+	}{
+		{
+			name:       "NilError",
+			fieldValue: nil,
+		},
+		{
+			name:       "InvalidErrorType",
+			fieldValue: "not-an-error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newCaptureProvider()
+			logger := zap.New(NewCore(loggerName, WithLoggerProvider(p)))
+
+			ce := logger.Check(zap.ErrorLevel, testMessage)
+			require.NotNil(t, ce)
+
+			require.NotPanics(t, func() {
+				ce.Write(zapcore.Field{
+					Key:       "error",
+					Type:      zapcore.ErrorType,
+					Interface: tt.fieldValue,
+				})
+			})
+
+			r := p.logger.lastRecord(t)
+			require.NoError(t, r.err)
+			require.Empty(t, r.attrs)
+		})
 	}
 }
