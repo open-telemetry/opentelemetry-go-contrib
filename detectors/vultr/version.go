@@ -5,7 +5,7 @@ package vultr // import "go.opentelemetry.io/contrib/detectors/vultr"
 
 // Version is the current release version of the Vultr resource detector.
 func Version() string {
-	return "0.15.0"
+	return "0.16.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
