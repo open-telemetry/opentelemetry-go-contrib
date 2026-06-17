@@ -52,7 +52,7 @@ func newResourceWithBuilder(ctx context.Context, r *Resource, build resourceBuil
 		schema = *r.SchemaUrl
 	}
 	opts := []resource.Option{
-		resource.WithAttributes(resource.Default().Attributes()...),
+		resource.WithAttributes(resource.DefaultWithContext(ctx).Attributes()...),
 		resource.WithAttributes(attrs...),
 		resource.WithSchemaURL(schema),
 	}
