@@ -93,6 +93,9 @@ func newDetectedResource(detection *ExperimentalResourceDetection) (*resource.Re
 			filtered = append(filtered, attr)
 		}
 	}
+	if len(filtered) == 0 {
+		return resource.NewSchemaless(), err
+	}
 
 	return resource.NewWithAttributes(detected.SchemaURL(), filtered...), err
 }

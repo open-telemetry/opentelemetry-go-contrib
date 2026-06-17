@@ -228,6 +228,26 @@ func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
 	}
 }
 
+func TestNewResourceWithDetectionAttributesFilterRemovesDetectedSchema(t *testing.T) {
+	schemaURL := "https://example.com/schema"
+	got, err := newResource(&Resource{
+		SchemaUrl: ptr(schemaURL),
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Host: ExperimentalHostResourceDetector{}},
+			},
+			Attributes: &IncludeExclude{
+				Included: []string{"unmatched.attribute"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, schemaURL, got.SchemaURL())
+	assert.NotContains(t, attrMap(got.Attributes()), semconv.HostNameKey)
+	assert.NotContains(t, attrMap(got.Attributes()), semconv.OSTypeKey)
+}
+
 func TestNewResourceWithDetectionDoesNotOverrideConfiguredAttributes(t *testing.T) {
 	got, err := newResource(&Resource{
 		Attributes: []AttributeNameValue{
