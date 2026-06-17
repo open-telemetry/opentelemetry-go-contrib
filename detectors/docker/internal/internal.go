@@ -3,7 +3,7 @@
 
 // Package internal provides helpers for mapping Go runtime OS/arch identifiers
 // to OpenTelemetry semantic convention values.
-package internal
+package internal // import "go.opentelemetry.io/contrib/detectors/docker/internal"
 
 // GOOSToOSType maps a runtime.GOOS-like value to os.type style.
 func GOOSToOSType(goos string) string {
