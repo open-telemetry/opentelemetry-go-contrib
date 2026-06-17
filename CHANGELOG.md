@@ -7,10 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
 - Add `go.opentelemetry.io/contrib/detectors/docker`, a resource detector for docker, from `processor/resourcedetectionprocessor/internal/docker`. (#8951)
 
 ### Added
 
+- The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
 
 ### Changed
