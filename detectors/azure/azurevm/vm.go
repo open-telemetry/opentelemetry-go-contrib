@@ -9,6 +9,7 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"regexp"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -17,24 +18,69 @@ import (
 
 const defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
 
+// Azure-specific resource attribute keys that are not (yet) part of the
+// semantic conventions package.
+const (
+	azureVMNameKey            = attribute.Key("azure.vm.name")
+	azureVMSizeKey            = attribute.Key("azure.vm.size")
+	azureVMScaleSetNameKey    = attribute.Key("azure.vm.scaleset.name")
+	azureResourceGroupNameKey = attribute.Key("azure.resourcegroup.name")
+	azureTagPrefix            = "azure.tag."
+)
+
 // ResourceDetector collects resource information of Azure VMs.
 type ResourceDetector struct {
 	endpoint string
+	// tagKeyRegexps, when non-empty, selects which VM tags are emitted as
+	// azure.tag.<name> attributes. A tag is emitted if its key matches any
+	// of the regular expressions.
+	tagKeyRegexps []*regexp.Regexp
 }
 
 type vmMetadata struct {
-	VMId       *string `json:"vmId"`
-	Location   *string `json:"location"`
-	ResourceId *string `json:"resourceId"`
-	Name       *string `json:"name"`
-	VMSize     *string `json:"vmSize"`
-	OsType     *string `json:"osType"`
-	Version    *string `json:"version"`
+	VMId              *string      `json:"vmId"`
+	Location          *string      `json:"location"`
+	ResourceId        *string      `json:"resourceId"`
+	Name              *string      `json:"name"`
+	VMSize            *string      `json:"vmSize"`
+	OsType            *string      `json:"osType"`
+	Version           *string      `json:"version"`
+	SubscriptionId    *string      `json:"subscriptionId"`
+	ResourceGroupName *string      `json:"resourceGroupName"`
+	VMScaleSetName    *string      `json:"vmScaleSetName"`
+	Zone              *string      `json:"zone"`
+	OsProfile         *osProfile   `json:"osProfile"`
+	TagsList          []computeTag `json:"tagsList"`
+}
+
+type osProfile struct {
+	ComputerName *string `json:"computerName"`
+}
+
+type computeTag struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
+// Option configures a [ResourceDetector].
+type Option func(*ResourceDetector)
+
+// WithTagKeyRegexps configures the detector to emit an azure.tag.<name>
+// attribute for every VM tag whose key matches any of the provided regular
+// expressions. When no regexps are configured, VM tags are not emitted.
+func WithTagKeyRegexps(res ...*regexp.Regexp) Option {
+	return func(d *ResourceDetector) {
+		d.tagKeyRegexps = append(d.tagKeyRegexps, res...)
+	}
 }
 
 // New returns a [ResourceDetector] that will detect Azure VM resources.
-func New() *ResourceDetector {
-	return &ResourceDetector{defaultAzureVMMetadataEndpoint}
+func New(opts ...Option) *ResourceDetector {
+	d := &ResourceDetector{endpoint: defaultAzureVMMetadataEndpoint}
+	for _, opt := range opts {
+		opt(d)
+	}
+	return d
 }
 
 // Detect detects associated resources when running on an Azure VM.
@@ -68,7 +114,11 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	if metadata.ResourceId != nil {
 		attributes = append(attributes, semconv.CloudResourceID(*metadata.ResourceId))
 	}
-	if metadata.Name != nil {
+	// Prefer osProfile.computerName for host.name, falling back to the VM name
+	// if it is unavailable (e.g., VMs created from specialized disks).
+	if metadata.OsProfile != nil && metadata.OsProfile.ComputerName != nil && *metadata.OsProfile.ComputerName != "" {
+		attributes = append(attributes, semconv.HostName(*metadata.OsProfile.ComputerName))
+	} else if metadata.Name != nil {
 		attributes = append(attributes, semconv.HostName(*metadata.Name))
 	}
 	if metadata.VMSize != nil {
@@ -80,8 +130,43 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	if metadata.Version != nil {
 		attributes = append(attributes, semconv.OSVersion(*metadata.Version))
 	}
+	if metadata.SubscriptionId != nil {
+		attributes = append(attributes, semconv.CloudAccountID(*metadata.SubscriptionId))
+	}
+	if metadata.Zone != nil && *metadata.Zone != "" {
+		attributes = append(attributes, semconv.CloudAvailabilityZone(*metadata.Zone))
+	}
+	if metadata.Name != nil {
+		attributes = append(attributes, azureVMNameKey.String(*metadata.Name))
+	}
+	if metadata.VMSize != nil {
+		attributes = append(attributes, azureVMSizeKey.String(*metadata.VMSize))
+	}
+	if metadata.VMScaleSetName != nil && *metadata.VMScaleSetName != "" {
+		attributes = append(attributes, azureVMScaleSetNameKey.String(*metadata.VMScaleSetName))
+	}
+	if metadata.ResourceGroupName != nil {
+		attributes = append(attributes, azureResourceGroupNameKey.String(*metadata.ResourceGroupName))
+	}
+
+	for _, tag := range metadata.TagsList {
+		if detector.matchTagKey(tag.Name) {
+			attributes = append(attributes, attribute.String(azureTagPrefix+tag.Name, tag.Value))
+		}
+	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
+}
+
+// matchTagKey reports whether the given tag key matches any of the configured
+// tag-key regular expressions.
+func (detector *ResourceDetector) matchTagKey(key string) bool {
+	for _, re := range detector.tagKeyRegexps {
+		if re.MatchString(key) {
+			return true
+		}
+	}
+	return false
 }
 
 func (detector *ResourceDetector) getJSONMetadata(ctx context.Context) ([]byte, bool, error) {

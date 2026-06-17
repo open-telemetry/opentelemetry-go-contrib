@@ -12,11 +12,24 @@ each of the following attributes is added if it is available:
   - cloud.platform
   - cloud.region
   - cloud.resource_id
+  - cloud.account.id
+  - cloud.availability_zone
   - host.id
   - host.name
   - host.type
   - os.type
   - os.version
+
+The following Azure-specific attributes are also added if available:
+
+  - azure.vm.name
+  - azure.vm.size
+  - azure.vm.scaleset.name
+  - azure.resourcegroup.name
+
+When configured with [WithTagKeyRegexps], the detector additionally emits an
+azure.tag.<name> attribute for every VM tag whose key matches one of the
+provided regular expressions.
 
 [host]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/host.md
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
