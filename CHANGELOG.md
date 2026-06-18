@@ -11,6 +11,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `go.opentelemetry.io/contrib/detectors/heroku` — a new resource detector for Heroku dynos, ported from `processor/resourcedetectionprocessor/internal/heroku` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `heroku.app.id`, `service.name`, `service.instance.id`, `service.version`, `heroku.release.creation_timestamp`, and `heroku.release.commit`. (#9036)
+- The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
+- Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+
+### Changed
+
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
+- Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#8977)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
