@@ -12,7 +12,7 @@ import (
 var normalizeCases = []struct {
 	in, want string
 }{
-	{"", ""},
+	{"", "_"},
 	{"ABC", "ABC"},
 	{"abc", "ABC"},
 	{"01239", "_01239"},

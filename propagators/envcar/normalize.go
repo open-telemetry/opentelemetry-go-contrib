@@ -9,13 +9,14 @@ import (
 
 // normalize converts s to a valid POSIX environment variable name.
 // The conversion rules are:
+//   - Empty input is converted to _.
 //   - A–Z, 0–9, and _ are kept as-is.
 //   - a–z are uppercased.
 //   - All other characters are replaced with _.
 //   - If the result would start with a digit, an underscore is prepended.
 func normalize(s string) string {
 	if s == "" {
-		return ""
+		return "_"
 	}
 
 	// Pre-allocate the exact output length. If the first byte is a digit,
@@ -47,11 +48,11 @@ func normalize(s string) string {
 	return string(b)
 }
 
-// normalized reports whether s is already a normalized environment variable
-// name.
+// normalized reports whether s is already a non-empty normalized environment
+// variable name.
 func normalized(s string) bool {
 	if s == "" {
-		return true
+		return false
 	}
 	// Normalized names cannot start with a digit; normalize would prepend '_'.
 	if s[0] >= '0' && s[0] <= '9' {
