@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
-	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -211,6 +210,29 @@ func TestCarrierSetUppercasesUnderscoresKey(t *testing.T) {
 	assert.Equal(t, "🧳", gotValue)
 }
 
+func TestCarrierGetReadsDirectly(t *testing.T) {
+	t.Setenv("TRACEPARENT", "myvalue")
+	c := envcar.Carrier{}
+	require.Equal(t, "myvalue", c.Get("TRACEPARENT"))
+
+	t.Setenv("TRACEPARENT", "bad")
+	t.Setenv("ENVCAR_GET_READS_DIRECTLY_NEW", "value")
+
+	assert.Equal(t, "bad", c.Get("TRACEPARENT"))
+	assert.Contains(t, c.Keys(), "ENVCAR_GET_READS_DIRECTLY_NEW")
+}
+
+func TestCarrierKeysFetchOnce(t *testing.T) {
+	t.Setenv("TRACEPARENT", "myvalue")
+	c := envcar.Carrier{}
+	require.Contains(t, c.Keys(), "TRACEPARENT")
+
+	t.Setenv("ENVCAR_KEYS_FETCH_ONCE_NEW", "value")
+
+	assert.Contains(t, c.Keys(), "TRACEPARENT")
+	assert.NotContains(t, c.Keys(), "ENVCAR_KEYS_FETCH_ONCE_NEW")
+}
+
 func TestConcurrentChildProcesses(t *testing.T) {
 	// Test that concurrent goroutines can each spawn child processes
 	// with their own unique trace context.
@@ -278,18 +300,4 @@ func TestConcurrentChildProcesses(t *testing.T) {
 		assert.Equal(t, r.want, r.got,
 			"goroutine %d: child process received wrong trace context", r.index)
 	}
-}
-
-// Ensure Get and Keys to fetch from cache.
-func TestCarrierGetFetchOnce(t *testing.T) {
-	t.Setenv("TRACEPARENT", "myvalue")
-	c := envcar.Carrier{}
-	require.Equal(t, "myvalue", c.Get("TRACEPARENT"))
-	require.NotEqual(t, -1, slices.Index(c.Keys(), "TRACEPARENT"))
-	t.Setenv("TRACEPARENT", "bad")
-	t.Setenv("SOMETHINGNEW", "bad")
-	// Assert a carrier instance reads the env vars only once:
-	assert.Equal(t, "myvalue", c.Get("TRACEPARENT"))
-	assert.NotEqual(t, -1, slices.Index(c.Keys(), "TRACEPARENT"))
-	assert.Equal(t, -1, slices.Index(c.Keys(), "SOMETHINGNEW"))
 }
