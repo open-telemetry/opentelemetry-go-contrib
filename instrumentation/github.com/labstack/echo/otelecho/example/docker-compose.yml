@@ -3,7 +3,7 @@
 version: "3.7"
 services:
   echo-client:
-    image: golang:alpine
+    image: golang:alpine@sha256:7a3e50096189ad57c9f9f865e7e4aa8585ed1585248513dc5cda498e2f41812c
     networks:
       - example
     command:

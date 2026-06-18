@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/aws/ecs"
 	"go.opentelemetry.io/contrib/detectors/aws/eks"
 	"go.opentelemetry.io/contrib/detectors/aws/lambda"
+	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
@@ -41,6 +42,10 @@ var (
 	// attributes on Amazon Web Services (AWS) Lambda functions (see
 	// lambda.NewResourceDetector for details).
 	IDAWSLambda = ID("aws.lambda")
+	// IDAzureContainerApps is the ID for the Azure Container Apps detector
+	// that detects resource attributes on Microsoft Azure Container Apps (see
+	// azurecontainerapps.NewResourceDetector for details).
+	IDAzureContainerApps = ID("azure.container_apps")
 	// IDAzureVM is the ID for the Azure VM detector that detects resource
 	// attributes on Microsoft Azure virtual machines (see azurevm.New for
 	// details).
@@ -132,6 +137,8 @@ var (
 		IDAWSECS:    ecs.NewResourceDetector,
 		IDAWSEKS:    eks.NewResourceDetector,
 		IDAWSLambda: lambda.NewResourceDetector,
+
+		IDAzureContainerApps: func() resource.Detector { return azurecontainerapps.NewResourceDetector() },
 
 		IDAzureVM: func() resource.Detector {
 			return azurevm.New()
