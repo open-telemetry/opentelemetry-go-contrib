@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp
 go 1.25.0
 
 require (
-	github.com/felixge/httpsnoop v1.0.4
+	github.com/felixge/httpsnoop v1.1.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.44.0
 	go.opentelemetry.io/otel/metric v1.44.0

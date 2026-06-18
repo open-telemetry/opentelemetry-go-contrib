@@ -26,6 +26,11 @@ import (
 
 type gRPCContextKey struct{}
 
+// dialTargetContextKey carries the dial target seeded by client interceptors
+// so the stats handler can use the hostname for server.address instead of the
+// post-DNS IP from RemoteAddr.
+type dialTargetContextKey struct{}
+
 type gRPCContext struct {
 	metricAttrs []attribute.KeyValue
 	record      bool
@@ -328,6 +333,20 @@ func (*config) handleRPC(
 
 	switch rs := rs.(type) {
 	case *stats.Begin:
+		// Set server.address early from the dial target when available (upcoming
+		// interceptors will seed this). Covers both success and failure paths since Begin
+		// fires on every RPC regardless of outcome.
+		if rs.Client {
+			if target, ok := ctx.Value(dialTargetContextKey{}).(string); ok && target != "" {
+				attrs := serverAddrAttrsFromCanonicalTarget(target)
+				if span.IsRecording() {
+					span.SetAttributes(attrs...)
+				}
+				if gctx != nil {
+					gctx.metricAttrs = append(gctx.metricAttrs, attrs...)
+				}
+			}
+		}
 	case *stats.InPayload:
 	case *stats.InHeader:
 		if !rs.Client && rs.LocalAddr != nil {
@@ -339,13 +358,18 @@ func (*config) handleRPC(
 	case *stats.OutPayload:
 	case *stats.OutTrailer:
 	case *stats.OutHeader:
+		// Only use the resolved IP from RemoteAddr when no dial target was seeded
+		// (i.e. NewClientHandler callers without interceptors). When dialTargetContextKey
+		// is present, Begin already set server.address to the hostname.
 		if rs.Client && rs.RemoteAddr != nil && (span.IsRecording() || gctx != nil) {
-			attrs := serverAddrAttrs(rs.RemoteAddr.String())
-			if span.IsRecording() {
-				span.SetAttributes(attrs...)
-			}
-			if gctx != nil {
-				gctx.metricAttrs = append(gctx.metricAttrs, attrs...)
+			if target, ok := ctx.Value(dialTargetContextKey{}).(string); !ok || target == "" {
+				attrs := serverAddrAttrs(rs.RemoteAddr.String())
+				if span.IsRecording() {
+					span.SetAttributes(attrs...)
+				}
+				if gctx != nil {
+					gctx.metricAttrs = append(gctx.metricAttrs, attrs...)
+				}
 			}
 		}
 	case *stats.End:
