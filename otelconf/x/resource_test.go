@@ -4,7 +4,6 @@
 package x
 
 import (
-	"context"
 	"fmt"
 	"testing"
 
@@ -85,7 +84,7 @@ func TestNewResource(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newResource(context.Background(), tt.config)
+			got, err := newResource(t.Context(), tt.config)
 			require.ErrorIs(t, err, tt.wantErrT)
 
 			assert.Equal(t, tt.wantSchemaURL, got.SchemaURL())
@@ -152,7 +151,7 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 					Detectors: tt.detectors,
 				},
 			}
-			got, err := newResource(context.Background(), config)
+			got, err := newResource(t.Context(), config)
 			require.NoError(t, err)
 			require.NotNil(t, got)
 
@@ -203,7 +202,7 @@ func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newResource(context.Background(), &Resource{
+			got, err := newResource(t.Context(), &Resource{
 				Attributes: []AttributeNameValue{
 					{Name: "custom", Value: "value"},
 				},
@@ -231,7 +230,7 @@ func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
 
 func TestNewResourceWithDetectionAttributesFilterRemovesDetectedSchema(t *testing.T) {
 	schemaURL := "https://example.com/schema"
-	got, err := newResource(context.Background(), &Resource{
+	got, err := newResource(t.Context(), &Resource{
 		SchemaUrl: ptr(schemaURL),
 		DetectionDevelopment: &ExperimentalResourceDetection{
 			Detectors: []ExperimentalResourceDetector{
@@ -250,7 +249,7 @@ func TestNewResourceWithDetectionAttributesFilterRemovesDetectedSchema(t *testin
 }
 
 func TestNewResourceWithDetectionDoesNotOverrideConfiguredAttributes(t *testing.T) {
-	got, err := newResource(context.Background(), &Resource{
+	got, err := newResource(t.Context(), &Resource{
 		Attributes: []AttributeNameValue{
 			{Name: string(semconv.ServiceNameKey), Value: "configured-service"},
 		},
@@ -268,7 +267,7 @@ func TestNewResourceWithDetectionDoesNotOverrideConfiguredAttributes(t *testing.
 }
 
 func TestNewResourceWithDetectionAttributesFilterError(t *testing.T) {
-	_, err := newResource(context.Background(), &Resource{
+	_, err := newResource(t.Context(), &Resource{
 		DetectionDevelopment: &ExperimentalResourceDetection{
 			Detectors: []ExperimentalResourceDetector{
 				{Host: ExperimentalHostResourceDetector{}},
