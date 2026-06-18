@@ -18,8 +18,9 @@ import (
 // This example is a go program where the environment variables are carrying the
 // trace information, and we're going to pick them up into our context.
 func ExampleCarrier_extractFromParent() {
-	// Simulate environment variables set by a parent process.
-	// In practice, these would already be set when this process starts.
+	// Simulate an environment variable set by a parent process. In practice,
+	// this would already be set when this process starts, and the application
+	// would extract context during initialization.
 	orig, ok := os.LookupEnv("TRACEPARENT")
 	defer func() {
 		if ok {
@@ -62,6 +63,7 @@ func ExampleCarrier_childProcess() {
 	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
 
 	// Prepare a command that prints the TRACEPARENT environment variable.
+	// Each child process gets its own copy of the environment.
 	cmd := exec.CommandContext(context.Background(), "printenv", "TRACEPARENT")
 	cmd.Env = os.Environ()
 
@@ -73,7 +75,7 @@ func ExampleCarrier_childProcess() {
 		},
 	}
 
-	// Inject trace context into the child's environment.
+	// Inject trace context into the child's environment copy.
 	prop := propagation.TraceContext{}
 	prop.Inject(ctx, &carrier)
 
