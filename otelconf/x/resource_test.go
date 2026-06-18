@@ -4,6 +4,8 @@
 package x
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -139,6 +141,11 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			for _, detector := range tt.detectors {
+				if detector.AWSEC2 != nil {
+					stubIMDS(t)
+				}
+			}
 			config := &Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: tt.detectors,
@@ -180,4 +187,34 @@ func TestNewResourceConfiguredAttributesOverrideDetectors(t *testing.T) {
 	value, ok := got.Set().Value(semconv.ServiceNameKey)
 	require.True(t, ok)
 	assert.Equal(t, "configured-service", value.AsString())
+}
+
+func stubIMDS(t *testing.T) {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/latest/api/token":
+			_, _ = w.Write([]byte("token"))
+		case "/latest/dynamic/instance-identity/document":
+			_, _ = w.Write([]byte(`{
+				"accountId": "123456789012",
+				"architecture": "x86_64",
+				"availabilityZone": "us-west-2b",
+				"imageId": "ami-5fb8c835",
+				"instanceId": "i-1234567890abcdef0",
+				"instanceType": "t2.micro",
+				"pendingTime": "2016-11-19T16:32:11Z",
+				"privateIp": "10.158.112.84",
+				"region": "us-west-2",
+				"version": "2017-09-30"
+			}`))
+		case "/latest/meta-data/hostname":
+			_, _ = w.Write([]byte("ip-12-34-56-78.us-west-2.compute.internal"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+	t.Setenv("AWS_EC2_METADATA_SERVICE_ENDPOINT", server.URL)
 }
