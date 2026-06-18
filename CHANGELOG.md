@@ -19,7 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Apply `resource.detection/development.attributes.included` and `excluded` filtering to resource detector attributes in `go.opentelemetry.io/contrib/otelconf/x`. (#9131)
+- Apply `resource.detection/development.attributes.included` and `excluded` filtering to resource detector attributes and honor `WithContext` during resource detection in `go.opentelemetry.io/contrib/otelconf/x`. (#9131)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

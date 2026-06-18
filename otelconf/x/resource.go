@@ -32,7 +32,7 @@ func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 	return opts
 }
 
-func newResource(r *Resource) (*resource.Resource, error) {
+func newResource(ctx context.Context, r *Resource) (*resource.Resource, error) {
 	if r == nil {
 		return resource.Default(), nil
 	}
@@ -52,7 +52,7 @@ func newResource(r *Resource) (*resource.Resource, error) {
 		resource.WithSchemaURL(schema),
 	}
 
-	base, err := resource.New(context.Background(), opts...)
+	base, err := resource.New(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func newResource(r *Resource) (*resource.Resource, error) {
 		return base, nil
 	}
 
-	detected, err := newDetectedResource(r.DetectionDevelopment)
+	detected, err := newDetectedResource(ctx, r.DetectionDevelopment)
 	if detected == nil {
 		return nil, err
 	}
@@ -70,7 +70,7 @@ func newResource(r *Resource) (*resource.Resource, error) {
 	return merged, errors.Join(err, mergeErr)
 }
 
-func newDetectedResource(detection *ExperimentalResourceDetection) (*resource.Resource, error) {
+func newDetectedResource(ctx context.Context, detection *ExperimentalResourceDetection) (*resource.Resource, error) {
 	filter, err := newIncludeExcludeFilter(detection.Attributes)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func newDetectedResource(detection *ExperimentalResourceDetection) (*resource.Re
 		return resource.NewSchemaless(), nil
 	}
 
-	detected, err := resource.New(context.Background(), opts...)
+	detected, err := resource.New(ctx, opts...)
 	if detected == nil {
 		return nil, err
 	}
