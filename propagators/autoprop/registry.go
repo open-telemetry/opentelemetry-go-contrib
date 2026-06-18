@@ -149,7 +149,7 @@ func TextMapPropagator(names ...string) (propagation.TextMapPropagator, error) {
 
 	switch len(props) {
 	case 0:
-		return nil, err
+		return propagation.NewCompositeTextMapPropagator(), err
 	case 1:
 		// Do not return a composite of a single propagator.
 		return props[0], err

@@ -4,6 +4,7 @@
 package autoprop
 
 import (
+	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -76,5 +77,18 @@ func TestDuplicateRegisterTextMapPropagatorPanics(t *testing.T) {
 	errString := fmt.Sprintf("%s: %q", errDupReg, propName)
 	assert.PanicsWithError(t, errString, func() {
 		RegisterTextMapPropagator(propName, noop)
+	})
+}
+
+func TestTextMapPropagatorEmptyNoError(t *testing.T) {
+	p, err := TextMapPropagator()
+	require.NoError(t, err)
+	assert.Equal(t, noop, p)
+
+	carrier := propagation.MapCarrier{}
+	assert.NotPanics(t, func() {
+		p.Inject(context.Background(), carrier)
+		_ = p.Extract(context.Background(), carrier)
+		_ = p.Fields()
 	})
 }
