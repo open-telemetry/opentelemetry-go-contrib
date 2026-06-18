@@ -153,6 +153,7 @@ func TestInjectTraceContextEnvCarrier(t *testing.T) {
 func TestCarrierKeys(t *testing.T) {
 	t.Setenv("TRACEPARENT", "value")
 	t.Setenv("envcar_non_normalized_key", "ignored")
+	unsetenv(t, "ENVCAR_NON_NORMALIZED_KEY")
 
 	c := envcar.Carrier{}
 	keys := c.Keys()
@@ -181,6 +182,7 @@ func TestCarrierGetIgnoresNonNormalizedEnvNames(t *testing.T) {
 	}
 
 	t.Setenv("envcar_get_non_normalized_key", "ignored")
+	unsetenv(t, "ENVCAR_GET_NON_NORMALIZED_KEY")
 
 	c := envcar.Carrier{}
 	assert.Empty(t, c.Get("envcar_get_non_normalized_key"))
@@ -231,6 +233,20 @@ func TestCarrierKeysFetchOnce(t *testing.T) {
 
 	assert.Contains(t, c.Keys(), "TRACEPARENT")
 	assert.NotContains(t, c.Keys(), "ENVCAR_KEYS_FETCH_ONCE_NEW")
+}
+
+func unsetenv(t *testing.T, key string) {
+	t.Helper()
+
+	value, ok := os.LookupEnv(key)
+	require.NoError(t, os.Unsetenv(key))
+	t.Cleanup(func() {
+		if ok {
+			require.NoError(t, os.Setenv(key, value)) //nolint:usetesting // t.Setenv cannot restore after an explicit unset.
+			return
+		}
+		require.NoError(t, os.Unsetenv(key))
+	})
 }
 
 func TestConcurrentChildProcesses(t *testing.T) {
