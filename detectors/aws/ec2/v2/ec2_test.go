@@ -13,12 +13,16 @@ import (
 	"testing"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/smithy-go/logging"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
@@ -119,6 +123,81 @@ func TestAWSInvalidClient(t *testing.T) {
 	detector := &resourceDetector{c: nil}
 	_, err := detector.Detect(t.Context())
 	assert.ErrorIs(t, err, errClient)
+}
+
+func TestNewResourceDetector(t *testing.T) {
+	stubLoadConfig(t, func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+		return aws.Config{}, errors.New("load config failed") // error expected to be dropped
+	})
+
+	assert.NotNil(t, NewResourceDetector())
+}
+
+func TestNewResourceDetectorWithOptions(t *testing.T) {
+	logger := logging.NewStandardLogger(io.Discard)
+	errLoad := errors.New("load config failed")
+
+	testCases := []struct {
+		name           string
+		opts           []Option
+		loadErr        error
+		expectedErr    error
+		expectedLogger logging.Logger
+	}{
+		{
+			name: "no options",
+		},
+		{
+			name:           "with logger",
+			opts:           []Option{WithLogger(logger)},
+			expectedLogger: logger,
+		},
+		{
+			name:        "load config error",
+			loadErr:     errLoad,
+			expectedErr: errLoad,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var actualLogger logging.Logger
+			stubLoadConfig(t, func(_ context.Context, optFns ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+				if tc.loadErr != nil {
+					return aws.Config{}, tc.loadErr
+				}
+				var lo awsconfig.LoadOptions
+				for _, fn := range optFns {
+					require.NoError(t, fn(&lo))
+				}
+				actualLogger = lo.Logger
+				return aws.Config{}, nil
+			})
+
+			detector, err := NewResourceDetectorWithOptions(tc.opts...)
+			if tc.expectedErr != nil {
+				assert.ErrorIs(t, err, tc.expectedErr)
+				assert.Nil(t, detector)
+				return
+			}
+
+			require.NoError(t, err)
+			assert.NotNil(t, detector)
+			if tc.expectedLogger == nil {
+				assert.Nil(t, actualLogger)
+			} else {
+				assert.Same(t, tc.expectedLogger, actualLogger)
+			}
+		})
+	}
+}
+
+// stubLoadConfig temporarily replaces loadConfig until t.Cleanup.
+func stubLoadConfig(t *testing.T, fn func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error)) {
+	t.Helper()
+	orig := loadConfig
+	t.Cleanup(func() { loadConfig = orig })
+	loadConfig = fn
 }
 
 func TestRecordErrors(t *testing.T) {
