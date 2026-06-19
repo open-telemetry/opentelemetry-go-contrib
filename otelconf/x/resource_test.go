@@ -171,41 +171,34 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 
 func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
 	tests := []struct {
-		name       string
-		attrs      *IncludeExclude
-		wantHost   bool
-		wantOS     bool
-		wantCustom bool
+		name     string
+		attrs    *IncludeExclude
+		wantHost bool
+		wantOS   bool
 	}{
 		{
-			name:       "no-filter",
-			wantHost:   true,
-			wantOS:     true,
-			wantCustom: true,
+			name:     "no-filter",
+			wantHost: true,
+			wantOS:   true,
 		},
 		{
 			name: "include-host-only",
 			attrs: &IncludeExclude{
 				Included: []string{string(semconv.HostNameKey)},
 			},
-			wantHost:   true,
-			wantCustom: true,
+			wantHost: true,
 		},
 		{
 			name: "exclude-os",
 			attrs: &IncludeExclude{
 				Excluded: []string{string(semconv.OSTypeKey)},
 			},
-			wantHost:   true,
-			wantCustom: true,
+			wantHost: true,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := newResource(t.Context(), &Resource{
-				Attributes: []AttributeNameValue{
-					{Name: "custom", Value: "value"},
-				},
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
 						{Host: ExperimentalHostResourceDetector{}},
@@ -223,9 +216,30 @@ func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
 
 			assert.Equal(t, tt.wantHost, attrSet[semconv.HostNameKey])
 			assert.Equal(t, tt.wantOS, attrSet[semconv.OSTypeKey])
-			assert.Equal(t, tt.wantCustom, attrSet[attribute.Key("custom")])
 		})
 	}
+}
+
+func TestNewResourceWithDetectionAttributesFilterDoesNotApplyToConfiguredAttributes(t *testing.T) {
+	got, err := newResource(t.Context(), &Resource{
+		Attributes: []AttributeNameValue{
+			{Name: "custom", Value: "value"},
+		},
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Host: ExperimentalHostResourceDetector{}},
+			},
+			Attributes: &IncludeExclude{
+				Included: []string{string(semconv.HostNameKey)},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	gotAttrs := attrMap(got.Attributes())
+	assert.Contains(t, gotAttrs, attribute.Key("custom"))
+	assert.Contains(t, gotAttrs, semconv.HostNameKey)
+	assert.NotContains(t, gotAttrs, semconv.OSTypeKey)
 }
 
 func TestNewResourceWithDetectionAttributesFilterRemovesDetectedSchema(t *testing.T) {
