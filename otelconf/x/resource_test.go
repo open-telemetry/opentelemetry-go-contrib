@@ -281,7 +281,7 @@ func TestNewResourceWithDetectionDoesNotOverrideConfiguredAttributes(t *testing.
 }
 
 func TestNewResourceWithDetectionAttributesFilterError(t *testing.T) {
-	_, err := newResource(t.Context(), &Resource{
+	got, err := newResource(t.Context(), &Resource{
 		DetectionDevelopment: &ExperimentalResourceDetection{
 			Detectors: []ExperimentalResourceDetector{
 				{Host: ExperimentalHostResourceDetector{}},
@@ -293,6 +293,7 @@ func TestNewResourceWithDetectionAttributesFilterError(t *testing.T) {
 		},
 	})
 	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
+	assert.True(t, got.Set().HasValue(semconv.ServiceNameKey))
 }
 
 func attrMap(attrs []attribute.KeyValue) map[attribute.Key]attribute.Value {

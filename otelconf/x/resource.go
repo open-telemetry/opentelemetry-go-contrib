@@ -63,7 +63,7 @@ func newResource(ctx context.Context, r *Resource) (*resource.Resource, error) {
 
 	detected, err := newDetectedResource(ctx, r.DetectionDevelopment)
 	if detected == nil {
-		return nil, err
+		return base, err
 	}
 
 	merged, mergeErr := resource.Merge(detected, base)
