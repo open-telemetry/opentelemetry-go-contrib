@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+- Add `go.opentelemetry.io/contrib/detectors/vultr` — a new resource detector for Vultr Cloud Compute instances, ported from `processor/resourcedetectionprocessor/internal/vultr` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `host.id`, and `host.name`. (#8962)
 
 ### Changed
 
