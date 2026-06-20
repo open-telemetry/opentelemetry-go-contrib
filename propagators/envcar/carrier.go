@@ -13,9 +13,9 @@ import (
 
 // Carrier is a TextMapCarrier that uses environment variables as a storage
 // medium for propagated key-value pairs. Keys passed to [Carrier.Get] and
-// [Carrier.Set] are normalized before lookup or write. Environment variables
-// listed by [Carrier.Keys] are stored only when their names are already
-// normalized. [Carrier.Get] reads the normalized key directly.
+// [Carrier.Set] are normalized before lookup or write. [Carrier.Keys] only
+// lists environment variable names that are already normalized. [Carrier.Get]
+// reads the normalized key directly.
 // This is useful for propagating values that are set in the environment
 // and need to be accessed by different processes or services.
 // The keys are uppercased to avoid case sensitivity issues across different
@@ -38,8 +38,8 @@ type Carrier struct {
 // Compile time check that Carrier implements the TextMapCarrier.
 var _ propagation.TextMapCarrier = (*Carrier)(nil)
 
-// fetch runs once on first Keys access, and stores environment variables with
-// already-normalized names in the carrier.
+// fetch runs once on first Keys access, and stores the names of environment
+// variables that are already normalized.
 func (c *Carrier) fetch() {
 	c.once.Do(func() {
 		environ := os.Environ()
@@ -76,9 +76,9 @@ func (c *Carrier) Set(key, value string) {
 // Keys lists the normalized keys stored in this carrier.
 // This returns all keys from environment variables whose names are already
 // normalized.
-// The first call to [Carrier.Keys] for a given Carrier will read and store the
-// values from environment variables whose names are already normalized, and all
-// future reads will be from that store.
+// The first call to [Carrier.Keys] for a given Carrier will read the current
+// process environment and store the already-normalized environment variable
+// names. Future Keys reads return that cached name set.
 func (c *Carrier) Keys() []string {
 	c.fetch()
 	keys := make([]string, 0, len(c.keys))
