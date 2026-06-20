@@ -80,10 +80,8 @@ func TestExtractIgnoresNonNormalizedEnvNames(t *testing.T) {
 		t.Skip("Windows environment variables are case-insensitive, so this test is not applicable.")
 	}
 
-	// Guard against TRACEPARENT/TRACESTATE being set in the outer test environment.
-	t.Setenv("TRACEPARENT", "")
-	t.Setenv("TRACESTATE", "")
-
+	unsetenv(t, "TRACEPARENT")
+	unsetenv(t, "TRACESTATE")
 	t.Setenv("traceparent", "00-000000000000007b00000000000001c8-000000000000007b-00")
 	t.Setenv("tracestate", "key1=value1,key2=value2")
 
@@ -152,8 +150,8 @@ func TestInjectTraceContextEnvCarrier(t *testing.T) {
 
 func TestCarrierKeys(t *testing.T) {
 	t.Setenv("TRACEPARENT", "value")
-	t.Setenv("envcar_non_normalized_key", "ignored")
 	unsetenv(t, "ENVCAR_NON_NORMALIZED_KEY")
+	t.Setenv("envcar-non-normalized-key", "ignored")
 
 	c := envcar.Carrier{}
 	keys := c.Keys()
@@ -177,12 +175,8 @@ func TestCarrierGetNormalizesKey(t *testing.T) {
 }
 
 func TestCarrierGetIgnoresNonNormalizedEnvNames(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		t.Skip("Windows environment variables are case-insensitive, so this test is not applicable.")
-	}
-
-	t.Setenv("envcar_get_non_normalized_key", "ignored")
 	unsetenv(t, "ENVCAR_GET_NON_NORMALIZED_KEY")
+	t.Setenv("envcar-get-non-normalized-key", "ignored")
 
 	c := envcar.Carrier{}
 	assert.Empty(t, c.Get("envcar_get_non_normalized_key"))
@@ -233,20 +227,6 @@ func TestCarrierKeysFetchOnce(t *testing.T) {
 
 	assert.Contains(t, c.Keys(), "TRACEPARENT")
 	assert.NotContains(t, c.Keys(), "ENVCAR_KEYS_FETCH_ONCE_NEW")
-}
-
-func unsetenv(t *testing.T, key string) {
-	t.Helper()
-
-	value, ok := os.LookupEnv(key)
-	require.NoError(t, os.Unsetenv(key))
-	t.Cleanup(func() {
-		if ok {
-			require.NoError(t, os.Setenv(key, value)) //nolint:usetesting // t.Setenv cannot restore after an explicit unset.
-			return
-		}
-		require.NoError(t, os.Unsetenv(key))
-	})
 }
 
 func TestConcurrentChildProcesses(t *testing.T) {
@@ -316,4 +296,18 @@ func TestConcurrentChildProcesses(t *testing.T) {
 		assert.Equal(t, r.want, r.got,
 			"goroutine %d: child process received wrong trace context", r.index)
 	}
+}
+
+func unsetenv(t *testing.T, key string) {
+	t.Helper()
+
+	value, ok := os.LookupEnv(key)
+	require.NoError(t, os.Unsetenv(key))
+	t.Cleanup(func() {
+		if ok {
+			require.NoError(t, os.Setenv(key, value)) //nolint:usetesting // t.Setenv cannot restore after an explicit unset.
+			return
+		}
+		require.NoError(t, os.Unsetenv(key))
+	})
 }
