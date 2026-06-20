@@ -157,7 +157,7 @@ func TestCarrierKeys(t *testing.T) {
 	keys := c.Keys()
 
 	assert.Contains(t, keys, "TRACEPARENT")
-	assert.NotContains(t, keys, "envcar_non_normalized_key")
+	assert.NotContains(t, keys, "envcar-non-normalized-key")
 	assert.NotContains(t, keys, "ENVCAR_NON_NORMALIZED_KEY")
 }
 
