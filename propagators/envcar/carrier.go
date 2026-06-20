@@ -10,40 +10,48 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 )
 
-// Carrier is a TextMapCarrier that uses environment variables as a storage
-// medium for propagated key-value pairs. Keys passed to [Carrier.Get] and
-// [Carrier.Set] are normalized before lookup or write. [Carrier.Keys] only
-// lists environment variable names that are already normalized; on platforms
-// with case-insensitive environment variable lookup (e.g. Windows) [Carrier.Get] may still match non-normalized names.
-// This is useful for propagating values that are set in the environment
-// and need to be accessed by different processes or services.
-// The keys are uppercased to avoid case sensitivity issues across different
-// operating systems and environments.
+// Carrier is a [propagation.TextMapCarrier] for environment variables.
 //
-// If you do not set SetEnvFunc, [Carrier.Set] will do nothing.
-// Using [os.Setenv] here is discouraged as the environment should
-// be immutable:
-// https://opentelemetry.io/docs/specs/otel/context/env-carriers/#environment-variable-immutability
+// [Carrier.Get] and [Carrier.Keys] read from the current process environment.
+// [Carrier.Get] normalizes the key before lookup. [Carrier.Keys] only lists
+// environment variable names that are already normalized.
+//
+// [Carrier.Set] writes through [Carrier.SetEnvFunc] with a normalized key. If
+// SetEnvFunc is nil, [Carrier.Set] does nothing. This lets injection target the
+// environment of a child process without mutating the current process
+// environment. Using [os.Setenv] as SetEnvFunc is discouraged because
+// applications should not modify their own context-related environment
+// variables.
+//
+// Key name normalization is defined by the [OpenTelemetry specification].
+//
+// [OpenTelemetry specification]: https://opentelemetry.io/docs/specs/otel/context/env-carriers/#key-name-normalization
 type Carrier struct {
-	// SetEnvFunc is the function that sets the environment variable.
+	// SetEnvFunc sets an environment variable for injected context.
 	// [Carrier.Set] calls SetEnvFunc with a normalized key.
-	// Usually, you want to set the environment variables for processes
-	// that are spawned by the current process.
+	//
+	// Set this to update the environment that will be passed to a child
+	// process. Leave it nil for an extract-only carrier.
 	SetEnvFunc func(key, value string)
 }
 
 // Compile time check that Carrier implements the TextMapCarrier.
 var _ propagation.TextMapCarrier = (*Carrier)(nil)
 
-// Get returns the value associated with the normalized key.
-// It reads the normalized key directly from the current process environment.
+// Get normalizes key and returns the corresponding value from the current
+// process environment. It returns an empty string if the normalized
+// environment variable is unset or set to an empty value.
+//
+// On platforms with case-insensitive environment lookup, such as Windows, the
+// lookup may match an environment variable whose name differs from the
+// normalized key only by case.
 func (*Carrier) Get(key string) string {
 	return os.Getenv(normalize(key))
 }
 
-// Set stores the key-value pair in the environment variable.
-// The key is normalized before being used to set the
-// environment variable.
+// Set stores the key-value pair by calling [Carrier.SetEnvFunc].
+// The key is normalized before SetEnvFunc is called.
+//
 // If SetEnvFunc is not set, this method does nothing.
 func (c *Carrier) Set(key, value string) {
 	if c.SetEnvFunc == nil {
@@ -53,10 +61,7 @@ func (c *Carrier) Set(key, value string) {
 	c.SetEnvFunc(k, value)
 }
 
-// Keys lists the normalized keys stored in this carrier.
-// This returns all keys from environment variables whose names are already
-// normalized.
-// It reads directly from the current process environment.
+// Keys returns normalized environment variable names from the current process.
 func (*Carrier) Keys() []string {
 	environ := os.Environ()
 	keys := make([]string, 0, len(environ))
