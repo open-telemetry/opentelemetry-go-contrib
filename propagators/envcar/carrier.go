@@ -31,7 +31,7 @@ type Carrier struct {
 	// Usually, you want to set the environment variables for processes
 	// that are spawned by the current process.
 	SetEnvFunc func(key, value string)
-	values     map[string]struct{}
+	keys       map[string]struct{}
 	once       sync.Once
 }
 
@@ -43,14 +43,14 @@ var _ propagation.TextMapCarrier = (*Carrier)(nil)
 func (c *Carrier) fetch() {
 	c.once.Do(func() {
 		environ := os.Environ()
-		c.values = make(map[string]struct{}, len(environ))
+		c.keys = make(map[string]struct{}, len(environ))
 		for _, kv := range environ {
 			kvPair := strings.SplitN(kv, "=", 2)
 			key := kvPair[0]
 			if !normalized(key) {
 				continue
 			}
-			c.values[key] = struct{}{}
+			c.keys[key] = struct{}{}
 		}
 	})
 }
@@ -81,8 +81,8 @@ func (c *Carrier) Set(key, value string) {
 // future reads will be from that store.
 func (c *Carrier) Keys() []string {
 	c.fetch()
-	keys := make([]string, 0, len(c.values))
-	for key := range c.values {
+	keys := make([]string, 0, len(c.keys))
+	for key := range c.keys {
 		keys = append(keys, key)
 	}
 	return keys
