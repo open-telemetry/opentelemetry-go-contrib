@@ -14,8 +14,8 @@ import (
 // Carrier is a TextMapCarrier that uses environment variables as a storage
 // medium for propagated key-value pairs. Keys passed to [Carrier.Get] and
 // [Carrier.Set] are normalized before lookup or write. [Carrier.Keys] only
-// lists environment variable names that are already normalized. [Carrier.Get]
-// reads the normalized key directly.
+// lists environment variable names that are already normalized; on platforms
+// with case-insensitive environment variable lookup (e.g. Windows) [Carrier.Get] may still match non-normalized names.
 // This is useful for propagating values that are set in the environment
 // and need to be accessed by different processes or services.
 // The keys are uppercased to avoid case sensitivity issues across different
