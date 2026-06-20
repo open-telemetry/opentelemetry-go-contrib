@@ -38,7 +38,8 @@ func ExampleCarrier_extractFromParent() {
 	prop := propagation.TraceContext{}
 	ctx := prop.Extract(context.Background(), &carrier)
 
-	// The context now contains the span context from the parent.
+	// The context now contains the span context from the parent. Keep and pass
+	// this context instead of repeatedly extracting from the environment.
 	spanCtx := trace.SpanContextFromContext(ctx)
 	fmt.Printf("Trace ID: %s\n", spanCtx.TraceID())
 	fmt.Printf("Span ID: %s\n", spanCtx.SpanID())
