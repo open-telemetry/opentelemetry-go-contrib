@@ -6,7 +6,6 @@ package envcar // import "go.opentelemetry.io/contrib/propagators/envcar"
 import (
 	"os"
 	"strings"
-	"sync"
 
 	"go.opentelemetry.io/otel/propagation"
 )
@@ -31,28 +30,10 @@ type Carrier struct {
 	// Usually, you want to set the environment variables for processes
 	// that are spawned by the current process.
 	SetEnvFunc func(key, value string)
-	keys       map[string]struct{}
-	once       sync.Once
 }
 
 // Compile time check that Carrier implements the TextMapCarrier.
 var _ propagation.TextMapCarrier = (*Carrier)(nil)
-
-// fetch runs once on first Keys access, and stores the names of environment
-// variables that are already normalized.
-func (c *Carrier) fetch() {
-	c.once.Do(func() {
-		environ := os.Environ()
-		c.keys = make(map[string]struct{}, len(environ))
-		for _, kv := range environ {
-			key, _, _ := strings.Cut(kv, "=")
-			if !normalized(key) {
-				continue
-			}
-			c.keys[key] = struct{}{}
-		}
-	})
-}
 
 // Get returns the value associated with the normalized key.
 // It reads the normalized key directly from the current process environment.
@@ -75,13 +56,15 @@ func (c *Carrier) Set(key, value string) {
 // Keys lists the normalized keys stored in this carrier.
 // This returns all keys from environment variables whose names are already
 // normalized.
-// The first call to [Carrier.Keys] for a given Carrier will read the current
-// process environment and store the already-normalized environment variable
-// names. Future Keys reads return that cached name set.
-func (c *Carrier) Keys() []string {
-	c.fetch()
-	keys := make([]string, 0, len(c.keys))
-	for key := range c.keys {
+// It reads directly from the current process environment.
+func (*Carrier) Keys() []string {
+	environ := os.Environ()
+	keys := make([]string, 0, len(environ))
+	for _, kv := range environ {
+		key, _, _ := strings.Cut(kv, "=")
+		if !normalized(key) {
+			continue
+		}
 		keys = append(keys, key)
 	}
 	return keys

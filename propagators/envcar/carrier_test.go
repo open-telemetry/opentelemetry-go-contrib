@@ -218,7 +218,7 @@ func TestCarrierGetReadsDirectly(t *testing.T) {
 	assert.Contains(t, c.Keys(), "ENVCAR_GET_READS_DIRECTLY_NEW")
 }
 
-func TestCarrierKeysFetchOnce(t *testing.T) {
+func TestCarrierKeysReadsDirectly(t *testing.T) {
 	t.Setenv("TRACEPARENT", "myvalue")
 	c := envcar.Carrier{}
 	require.Contains(t, c.Keys(), "TRACEPARENT")
@@ -226,7 +226,7 @@ func TestCarrierKeysFetchOnce(t *testing.T) {
 	t.Setenv("ENVCAR_KEYS_FETCH_ONCE_NEW", "value")
 
 	assert.Contains(t, c.Keys(), "TRACEPARENT")
-	assert.NotContains(t, c.Keys(), "ENVCAR_KEYS_FETCH_ONCE_NEW")
+	assert.Contains(t, c.Keys(), "ENVCAR_KEYS_FETCH_ONCE_NEW")
 }
 
 func TestConcurrentChildProcesses(t *testing.T) {
