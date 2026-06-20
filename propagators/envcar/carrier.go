@@ -45,8 +45,7 @@ func (c *Carrier) fetch() {
 		environ := os.Environ()
 		c.keys = make(map[string]struct{}, len(environ))
 		for _, kv := range environ {
-			kvPair := strings.SplitN(kv, "=", 2)
-			key := kvPair[0]
+			key, _, _ := strings.Cut(kv, "=")
 			if !normalized(key) {
 				continue
 			}
