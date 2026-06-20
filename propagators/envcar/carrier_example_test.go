@@ -16,8 +16,8 @@ import (
 	"go.opentelemetry.io/contrib/propagators/envcar"
 )
 
-// This example is a go program where the environment variables are carrying the
-// trace information, and we're going to pick them up into our context.
+// An example where the environment variables are carrying the trace
+// information, and we're going to pick them up into our context.
 func ExampleCarrier_extractFromParent() {
 	// Simulate an environment variable set by a parent process. In practice,
 	// this would already be set when this process starts, and the application
@@ -51,8 +51,8 @@ func ExampleCarrier_extractFromParent() {
 	// Sampled: true
 }
 
-// This example is a go program where we have a trace and we'd like to inject it
-// into a command we're going to run.
+// An example where we have a trace and we'd like to inject it into a command
+// we're going to run.
 func ExampleCarrier_childProcess() {
 	// Create a tracer provider that starts spans with known IDs.
 	tp := sdktrace.NewTracerProvider(sdktrace.WithIDGenerator(fixedIDGenerator{}))
