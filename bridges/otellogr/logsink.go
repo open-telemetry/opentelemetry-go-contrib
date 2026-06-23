@@ -30,25 +30,25 @@
 // KeysAndValues values are transformed based on their type. The following types are
 // supported:
 //
-//   - [bool] are transformed to [attribute.BoolValue].
-//   - [string] are transformed to [attribute.StringValue].
-//   - [int], [int8], [int16], [int32], [int64] are transformed to
+//   - bool are transformed to [attribute.BoolValue].
+//   - string are transformed to [attribute.StringValue].
+//   - int, int8, int16, int32, int64 are transformed to
 //     [attribute.Int64Value].
-//   - [uint], [uint8], [uint16], [uint32], [uint64], [uintptr] are transformed
+//   - uint, uint8, uint16, uint32, uint64, uintptr are transformed
 //     to [attribute.Int64Value] or [attribute.StringValue] if the value is too large.
-//   - [float32], [float64] are transformed to [attribute.Float64Value].
+//   - float32, float64 are transformed to [attribute.Float64Value].
 //   - [time.Duration] are transformed to [attribute.Int64Value] with the nanoseconds.
-//   - [complex64], [complex128] are transformed to [attribute.MapValue] with the keys
+//   - complex64, complex128 are transformed to [attribute.MapValue] with the keys
 //     "r" and "i" for the real and imaginary parts. The values are
 //     [attribute.Float64Value].
 //   - [time.Time] are transformed to [attribute.Int64Value] with the nanoseconds.
-//   - [[]byte] are transformed to [attribute.ByteSliceValue].
-//   - [error] are transformed to [attribute.StringValue] with the error message.
-//   - [nil] are transformed to an empty [attribute.Value].
-//   - [struct] are transformed to [attribute.StringValue] with the struct fields.
-//   - [slice], [array] are transformed to [attribute.SliceValue] with the elements.
-//   - [map] are transformed to [attribute.MapValue] with the key-value pairs.
-//   - [pointer], [interface] are transformed to the dereferenced value.
+//   - []byte are transformed to [attribute.ByteSliceValue].
+//   - error are transformed to [attribute.StringValue] with the error message.
+//   - nil are transformed to an empty [attribute.Value].
+//   - struct are transformed to [attribute.StringValue] with the struct fields.
+//   - slice, array are transformed to [attribute.SliceValue] with the elements.
+//   - map are transformed to [attribute.MapValue] with the key-value pairs.
+//   - pointer, interface are transformed to the dereferenced value.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
 package otellogr // import "go.opentelemetry.io/contrib/bridges/otellogr"
