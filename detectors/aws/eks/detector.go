@@ -11,6 +11,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -29,6 +30,8 @@ const (
 	cwConfigmapName   = "cluster-info"
 	defaultCgroupPath = "/proc/self/cgroup"
 	containerIDLength = 64
+
+	defaultK8sAPICallTimeout = 10 * time.Second
 )
 
 // detectorUtils is used for testing the resourceDetector by abstracting functions that rely on external systems.
@@ -119,7 +122,7 @@ func isEKS(ctx context.Context, utils detectorUtils) (bool, error) {
 	}
 
 	// Make HTTP GET request
-	awsAuth, err := utils.getConfigMap(ctx, authConfigmapNS, authConfigmapName)
+	awsAuth, err := getConfigMapWithDeadline(ctx, utils, authConfigmapNS, authConfigmapName)
 	if err != nil {
 		return false, fmt.Errorf("isEks() error retrieving auth configmap: %w", err)
 	}
@@ -165,9 +168,24 @@ func (eksUtils eksDetectorUtils) getConfigMap(ctx context.Context, namespace, na
 	return cm.Data, nil
 }
 
+func getConfigMapWithDeadline(ctx context.Context, utils detectorUtils, namespace, name string) (map[string]string, error) {
+	ctx, cancel := contextWithK8sAPICallTimeout(ctx)
+	defer cancel()
+
+	return utils.getConfigMap(ctx, namespace, name)
+}
+
+func contextWithK8sAPICallTimeout(ctx context.Context) (context.Context, context.CancelFunc) {
+	if _, ok := ctx.Deadline(); ok {
+		return ctx, func() {}
+	}
+
+	return context.WithTimeout(ctx, defaultK8sAPICallTimeout)
+}
+
 // getClusterName retrieves the clusterName resource attribute.
 func getClusterName(ctx context.Context, utils detectorUtils) (string, error) {
-	resp, err := utils.getConfigMap(ctx, cwConfigmapNS, cwConfigmapName)
+	resp, err := getConfigMapWithDeadline(ctx, utils, cwConfigmapNS, cwConfigmapName)
 	if err != nil {
 		return "", fmt.Errorf("getClusterName() error: %w", err)
 	}
