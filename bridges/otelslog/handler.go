@@ -35,8 +35,8 @@
 //   - [slog.KindString] are transformed to [attribute.StringValue] directly.
 //   - [slog.KindTime] are transformed to [attribute.Int64Value] as nanoseconds since
 //     the Unix epoch.
-//   - [slog.KindUint64] are transformed to [attribute.Int64Value] using int64
-//     conversion.
+//   - [slog.KindUint64] are transformed to [attribute.Int64Value] when they fit
+//     in int64, otherwise to [attribute.Float64Value].
 //   - [slog.KindGroup] are transformed to [attribute.MapValue] using appropriate
 //     transforms for each group value.
 //   - [slog.KindLogValuer] the value is resolved and then transformed.

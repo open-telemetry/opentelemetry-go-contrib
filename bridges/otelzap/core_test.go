@@ -438,7 +438,7 @@ func TestCoreWithCaller(t *testing.T) {
 				Severity:     log.SeverityInfo,
 				SeverityText: zap.InfoLevel.String(),
 				Attributes: []attribute.KeyValue{
-					attribute.String(string(semconv.CodeFilePathKey), "core_test.go"), // The real filepth will vary based on the test environment. However, it should end with "core_test.go".
+					attribute.String(string(semconv.CodeFilePathKey), "core_test.go"), // The real filepath will vary based on the test environment. However, it should end with "core_test.go".
 					attribute.Int64(string(semconv.CodeLineNumberKey), 1),             // Line number will vary.
 					attribute.String(string(semconv.CodeFunctionNameKey), "go.opentelemetry.io/contrib/bridges/otelzap."+t.Name()),
 				},
