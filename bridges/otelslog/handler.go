@@ -368,7 +368,7 @@ func (g *group) NextNonEmpty() *group {
 	return g.next.NextNonEmpty()
 }
 
-// KeyValue returns group g containing kvs as a [attribute.KeyValue]. The value of
+// KeyValue returns group g containing kvs as an [attribute.KeyValue]. The value of
 // the returned KeyValue will be of type [attribute.MAP].
 //
 // The passed kvs are rendered in the returned value, but are not added to the
