@@ -6,6 +6,7 @@ package otelaws
 import (
 	"testing"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	awsMiddleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/smithy-go/middleware"
@@ -92,15 +93,18 @@ func TestDefaultAttributeBuilderNotSupportedService(t *testing.T) {
 
 func TestDefaultAttributeBuilderOnSupportedService(t *testing.T) {
 	testCtx := awsMiddleware.SetServiceID(t.Context(), sqs.ServiceID)
-	testQueueURL := "test-queue-url"
 
 	attr := DefaultAttributeBuilder(testCtx, middleware.InitializeInput{
 		Parameters: &sqs.SendMessageInput{
-			QueueUrl: &testQueueURL,
+			MessageBody: aws.String(""),
+			QueueUrl:    &queueUrl,
 		},
 	}, middleware.InitializeOutput{})
-	assert.ElementsMatch(t, []attribute.KeyValue{
-		semconv.MessagingSystemAWSSQS,
-		semconv.ServerAddress(testQueueURL),
-	}, attr)
+
+	assert.Contains(t, attr, semconv.AWSSQSQueueURL(queueUrl))
+	assert.Contains(t, attr, semconv.MessagingDestinationName(queueName))
+	assert.Contains(t, attr, semconv.MessagingMessageBodySize(0))
+	assert.Contains(t, attr, semconv.MessagingOperationTypeSend)
+	assert.Contains(t, attr, semconv.MessagingSystemAWSSQS)
+	assert.Contains(t, attr, semconv.ServerAddress(serverAddress))
 }
