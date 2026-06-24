@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Update log bridge conversions to use attribute key-values instead of the removed log key-values in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9180)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
 - Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#8977)
 
