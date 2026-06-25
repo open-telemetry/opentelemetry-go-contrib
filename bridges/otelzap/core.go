@@ -10,7 +10,7 @@
 // way:
 //
 //   - Time is set as the Timestamp.
-//   - Message is set as the Body using a [log.StringValue].
+//   - Message is set as the Body using an [attribute.StringValue].
 //   - Level is transformed and set as the Severity. The SeverityText is also
 //     set.
 //   - Fields are transformed and set as the Attributes.
@@ -47,8 +47,8 @@ import (
 )
 
 var (
-	exceptionMessageKey = string(semconv.ExceptionMessageKey)
-	exceptionTypeKey    = string(semconv.ExceptionTypeKey)
+	exceptionMessageKey = semconv.ExceptionMessageKey
+	exceptionTypeKey    = semconv.ExceptionTypeKey
 )
 
 type config struct {
@@ -126,7 +126,7 @@ type Core struct {
 	provider log.LoggerProvider
 	logger   log.Logger
 	opts     []log.LoggerOption
-	attr     []log.KeyValue
+	attr     []attribute.KeyValue
 	ctx      context.Context
 	err      error
 }
@@ -219,13 +219,13 @@ func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.Check
 func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r := log.Record{}
 	r.SetTimestamp(ent.Time)
-	r.SetBody(log.StringValue(ent.Message))
+	r.SetBody(attribute.StringValue(ent.Message))
 	r.SetSeverity(convertLevel(ent.Level))
 	r.SetSeverityText(ent.Level.String())
 
 	emitCtx := o.ctx
 	recErr := o.err
-	var attrbuf []log.KeyValue
+	var attrbuf []attribute.KeyValue
 	if len(fields) > 0 {
 		ctx, converted, err := convertField(fields)
 		if ctx != nil {
@@ -240,9 +240,9 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	r.AddAttributes(o.attr...)
 	if ent.Caller.Defined {
 		r.AddAttributes(
-			log.String(string(semconv.CodeFilePathKey), ent.Caller.File),
-			log.Int(string(semconv.CodeLineNumberKey), ent.Caller.Line),
-			log.String(string(semconv.CodeFunctionNameKey), ent.Caller.Function),
+			attribute.String(string(semconv.CodeFilePathKey), ent.Caller.File),
+			attribute.Int(string(semconv.CodeLineNumberKey), ent.Caller.Line),
+			attribute.String(string(semconv.CodeFunctionNameKey), ent.Caller.Function),
 		)
 	}
 	if ent.Stack != "" {
@@ -250,7 +250,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 		if recErr != nil || hasExceptionAttributes(o.attr) || hasExceptionAttributes(attrbuf) {
 			stacktraceKey = semconv.ExceptionStacktraceKey
 		}
-		r.AddAttributes(log.String(string(stacktraceKey), ent.Stack))
+		r.AddAttributes(attribute.String(string(stacktraceKey), ent.Stack))
 	}
 	r.AddAttributes(attrbuf...)
 	if recErr != nil {
@@ -265,7 +265,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	return nil
 }
 
-func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue, error) {
+func convertField(fields []zapcore.Field) (context.Context, []attribute.KeyValue, error) {
 	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
 	var errField error
@@ -287,7 +287,7 @@ func convertField(fields []zapcore.Field) (context.Context, []log.KeyValue, erro
 	return ctx, enc.root.attrs, errField
 }
 
-func hasExceptionAttributes(attrs []log.KeyValue) bool {
+func hasExceptionAttributes(attrs []attribute.KeyValue) bool {
 	if len(attrs) == 0 {
 		return false
 	}
