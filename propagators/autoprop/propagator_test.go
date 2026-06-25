@@ -24,8 +24,14 @@ func TestNewTextMapPropagatorInvalidEnvVal(t *testing.T) {
 
 	const name = "invalid-name"
 	t.Setenv(otelPropagatorsEnvKey, name)
-	_ = NewTextMapPropagator()
+	p := NewTextMapPropagator()
 	assert.ErrorIs(t, h.err, errUnknownPropagator)
+
+	// An unknown value must not disable propagation. The default TraceContext
+	// and Baggage propagators should be used as a fallback.
+	expect := []string{"traceparent", "tracestate", "baggage"}
+	assert.ElementsMatch(t, expect, p.Fields(),
+		"unknown OTEL_PROPAGATORS value should fall back to the default propagators")
 }
 
 func TestNewTextMapPropagatorDefault(t *testing.T) {
