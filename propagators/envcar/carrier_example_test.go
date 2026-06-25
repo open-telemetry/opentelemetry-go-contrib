@@ -10,7 +10,6 @@ import (
 	"os/exec"
 
 	"go.opentelemetry.io/otel/propagation"
-	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/propagators/envcar"
@@ -54,14 +53,15 @@ func ExampleCarrier_extractFromParent() {
 // An example where we have a trace and we'd like to inject it into a command
 // we're going to run.
 func ExampleCarrier_childProcess() {
-	// Create a tracer provider that starts spans with known IDs.
-	tp := sdktrace.NewTracerProvider(sdktrace.WithIDGenerator(fixedIDGenerator{}))
-	defer func() {
-		_ = tp.Shutdown(context.Background())
-	}()
-
-	ctx, span := tp.Tracer("example").Start(context.Background(), "parent")
-	defer span.End()
+	// Create a span context with a known trace ID.
+	traceID := trace.TraceID{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}
+	spanID := trace.SpanID{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
+	spanCtx := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    traceID,
+		SpanID:     spanID,
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
 
 	// Prepare a command that prints the TRACEPARENT environment variable.
 	// Each child process gets its own copy of the environment.
@@ -89,16 +89,4 @@ func ExampleCarrier_childProcess() {
 	}
 	fmt.Print(string(out))
 	// Output: 00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01
-}
-
-type fixedIDGenerator struct{}
-
-func (fixedIDGenerator) NewIDs(context.Context) (trace.TraceID, trace.SpanID) {
-	traceID := trace.TraceID{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}
-	spanID := trace.SpanID{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
-	return traceID, spanID
-}
-
-func (fixedIDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
-	return trace.SpanID{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08}
 }
