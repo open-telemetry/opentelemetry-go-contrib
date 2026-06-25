@@ -231,6 +231,7 @@ func TestNewResourceWithDetectionAttributesFilterDoesNotApplyToConfiguredAttribu
 			},
 			Attributes: &IncludeExclude{
 				Included: []string{string(semconv.HostNameKey)},
+				Excluded: []string{"custom"},
 			},
 		},
 	})
