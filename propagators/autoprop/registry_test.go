@@ -4,7 +4,6 @@
 package autoprop
 
 import (
-	"context"
 	"fmt"
 	"sync"
 	"testing"
@@ -83,12 +82,14 @@ func TestDuplicateRegisterTextMapPropagatorPanics(t *testing.T) {
 func TestTextMapPropagatorEmptyNoError(t *testing.T) {
 	p, err := TextMapPropagator()
 	require.NoError(t, err)
-	assert.Equal(t, noop, p)
+	assert.Equal(t, noopPropagator, p, "empty input should return the no-op propagator")
+}
 
-	carrier := propagation.MapCarrier{}
-	assert.NotPanics(t, func() {
-		p.Inject(context.Background(), carrier)
-		_ = p.Extract(context.Background(), carrier)
-		_ = p.Fields()
-	})
+func TestTextMapPropagatorAllUnknown(t *testing.T) {
+	// Names that do not match any registered propagator must return a nil
+	// propagator along with the error. NewTextMapPropagator relies on the nil
+	// to fall back to its default instead of disabling propagation.
+	p, err := TextMapPropagator("invalid")
+	require.ErrorIs(t, err, errUnknownPropagator)
+	assert.Nil(t, p, "all-unknown input should return a nil propagator")
 }
