@@ -5,6 +5,7 @@ package vpc
 
 import (
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"sync/atomic"
@@ -41,8 +42,9 @@ func TestNewResourceDetectorWithHTTPSProtocol(t *testing.T) {
 }
 
 func TestNewResourceDetectorDisablesProxy(t *testing.T) {
-	t.Setenv("HTTP_PROXY", "http://127.0.0.1:1")
-	t.Setenv("HTTPS_PROXY", "http://127.0.0.1:1")
+	proxy := "http://" + net.JoinHostPort("127.0.0.1", "1")
+	t.Setenv("HTTP_PROXY", proxy)
+	t.Setenv("HTTPS_PROXY", proxy)
 
 	detector := NewResourceDetector()
 
