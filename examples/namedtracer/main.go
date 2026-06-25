@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/examples/namedtracer/foo"
+	"go.opentelemetry.io/contrib/processors/baggagecopy"
 )
 
 var (
@@ -38,6 +39,7 @@ func initTracer() error {
 	tp = sdktrace.NewTracerProvider(
 		sdktrace.WithSampler(sdktrace.AlwaysSample()),
 		sdktrace.WithSpanProcessor(bsp),
+                sdktrace.WithSpanProcessor(baggagecopy.NewSpanProcessor(baggagecopy.AllowAllMembers)),
 	)
 	otel.SetTracerProvider(tp)
 	return nil
