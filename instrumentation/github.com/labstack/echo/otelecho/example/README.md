@@ -1,8 +1,10 @@
 # labstack echo instrumentation example
 
-> Deprecated: Use [Labstack Echo OpenTelemetry middleware] instead.
+> Deprecated: Use [Labstack Echo OpenTelemetry middleware] instead. See the
+> [migration guide] for known incompatibilities.
 
 [Labstack Echo OpenTelemetry middleware]: https://github.com/labstack/echo-opentelemetry
+[migration guide]: ../MIGRATION.md
 
 An HTTP server using labstack echo and instrumentation. The server has a
 `/users/:id` endpoint. The server generates span information to
