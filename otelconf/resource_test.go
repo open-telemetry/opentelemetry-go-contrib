@@ -4,6 +4,7 @@
 package otelconf
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -76,7 +77,7 @@ func TestNewResource(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newResource(tt.config)
+			got, err := newResource(t.Context(), tt.config)
 			require.ErrorIs(t, err, tt.wantErrT)
 
 			assert.Equal(t, tt.wantSchemaURL, got.SchemaURL())
@@ -93,3 +94,16 @@ func TestNewResource(t *testing.T) {
 		})
 	}
 }
+
+func TestNewResourceUsesContext(t *testing.T) {
+	wantCtx := context.WithValue(t.Context(), ctxKey{}, "resource")
+	want := resource.NewSchemaless(attribute.String("from", "builder"))
+	got, err := newResourceWithBuilder(wantCtx, &Resource{}, func(ctx context.Context, _ ...resource.Option) (*resource.Resource, error) {
+		assert.Same(t, wantCtx, ctx)
+		return want, nil
+	})
+	require.NoError(t, err)
+	assert.Same(t, want, got)
+}
+
+type ctxKey struct{}

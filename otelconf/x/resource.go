@@ -36,9 +36,15 @@ func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 	return opts
 }
 
-func newResource(r *Resource) (*resource.Resource, error) {
+type resourceBuilder func(context.Context, ...resource.Option) (*resource.Resource, error)
+
+func newResource(ctx context.Context, r *Resource) (*resource.Resource, error) {
+	return newResourceWithBuilder(ctx, r, resource.New)
+}
+
+func newResourceWithBuilder(ctx context.Context, r *Resource, build resourceBuilder) (*resource.Resource, error) {
 	if r == nil {
-		return resource.Default(), nil
+		return resource.DefaultWithContext(ctx), nil
 	}
 
 	attrs := make([]attribute.KeyValue, 0, len(r.Attributes))
@@ -51,7 +57,7 @@ func newResource(r *Resource) (*resource.Resource, error) {
 		schema = *r.SchemaUrl
 	}
 	opts := []resource.Option{
-		resource.WithAttributes(resource.Default().Attributes()...),
+		resource.WithAttributes(resource.DefaultWithContext(ctx).Attributes()...),
 	}
 
 	if r.DetectionDevelopment != nil {
@@ -64,5 +70,5 @@ func newResource(r *Resource) (*resource.Resource, error) {
 		resource.WithSchemaURL(schema),
 	)
 
-	return resource.New(context.Background(), opts...)
+	return build(ctx, opts...)
 }
