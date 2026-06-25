@@ -32,9 +32,15 @@ func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 	return opts
 }
 
+type resourceBuilder func(context.Context, ...resource.Option) (*resource.Resource, error)
+
 func newResource(ctx context.Context, r *Resource) (*resource.Resource, error) {
+	return newResourceWithBuilder(ctx, r, resource.New)
+}
+
+func newResourceWithBuilder(ctx context.Context, r *Resource, build resourceBuilder) (*resource.Resource, error) {
 	if r == nil {
-		return resource.Default(), nil
+		return resource.DefaultWithContext(ctx), nil
 	}
 
 	attrs := make([]attribute.KeyValue, 0, len(r.Attributes))
@@ -47,12 +53,12 @@ func newResource(ctx context.Context, r *Resource) (*resource.Resource, error) {
 		schema = *r.SchemaUrl
 	}
 	opts := []resource.Option{
-		resource.WithAttributes(resource.Default().Attributes()...),
+		resource.WithAttributes(resource.DefaultWithContext(ctx).Attributes()...),
 		resource.WithAttributes(attrs...),
 		resource.WithSchemaURL(schema),
 	}
 
-	base, err := resource.New(ctx, opts...)
+	base, err := build(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +67,7 @@ func newResource(ctx context.Context, r *Resource) (*resource.Resource, error) {
 		return base, nil
 	}
 
-	detected, err := newDetectedResource(ctx, r.DetectionDevelopment)
+	detected, err := newDetectedResource(ctx, r.DetectionDevelopment, build)
 	if detected == nil {
 		return base, err
 	}
@@ -70,7 +76,7 @@ func newResource(ctx context.Context, r *Resource) (*resource.Resource, error) {
 	return merged, errors.Join(err, mergeErr)
 }
 
-func newDetectedResource(ctx context.Context, detection *ExperimentalResourceDetection) (*resource.Resource, error) {
+func newDetectedResource(ctx context.Context, detection *ExperimentalResourceDetection, build resourceBuilder) (*resource.Resource, error) {
 	filter, err := newIncludeExcludeFilter(detection.Attributes)
 	if err != nil {
 		return nil, err
@@ -81,7 +87,7 @@ func newDetectedResource(ctx context.Context, detection *ExperimentalResourceDet
 		return resource.NewSchemaless(), nil
 	}
 
-	detected, err := resource.New(ctx, opts...)
+	detected, err := build(ctx, opts...)
 	if detected == nil {
 		return nil, err
 	}

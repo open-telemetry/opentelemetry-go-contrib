@@ -4,6 +4,7 @@
 package x
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -101,6 +102,19 @@ func TestNewResource(t *testing.T) {
 		})
 	}
 }
+
+func TestNewResourceUsesContext(t *testing.T) {
+	wantCtx := context.WithValue(t.Context(), ctxKey{}, "resource")
+	want := resource.NewSchemaless(attribute.String("from", "builder"))
+	got, err := newResourceWithBuilder(wantCtx, &Resource{}, func(ctx context.Context, _ ...resource.Option) (*resource.Resource, error) {
+		assert.Same(t, wantCtx, ctx)
+		return want, nil
+	})
+	require.NoError(t, err)
+	assert.Same(t, want, got)
+}
+
+type ctxKey struct{}
 
 func TestResourceOptsWithDetectors(t *testing.T) {
 	tests := []struct {
