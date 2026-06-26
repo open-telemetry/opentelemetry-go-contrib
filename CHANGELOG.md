@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix incorrect (overestimated) sum calculation for runtime histograms in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#9063)
+
 ### Added
 
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
