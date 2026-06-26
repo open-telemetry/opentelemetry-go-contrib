@@ -13,8 +13,8 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	oldrpcconv "go.opentelemetry.io/otel/semconv/v1.37.0/rpcconv" //nolint:depguard // Use of v1.37.0 is required for backward compatibility stability opt-in.
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/rpcconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	"go.opentelemetry.io/otel/semconv/v1.42.0/rpcconv"
 	"go.opentelemetry.io/otel/trace"
 
 	grpc_codes "google.golang.org/grpc/codes"
