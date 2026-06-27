@@ -40,6 +40,7 @@ func TestNewTraceRequest(t *testing.T) {
 			attribute.String("client.address", req.clientIP),
 			attribute.String("network.protocol.version", "1.1"),
 			attribute.String("url.path", "/"),
+			attribute.String("url.query", ""),
 		}
 	}
 	testTraceRequest(t, serv, want)
