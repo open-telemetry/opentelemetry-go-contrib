@@ -10,10 +10,12 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/stats"
+	"google.golang.org/grpc/status"
 )
 
 // ScopeName is the instrumentation scope name.
@@ -39,6 +41,16 @@ const (
 	semconvModeDup
 )
 
+// SpanStatusFn is a function that determines the OpenTelemetry span status
+// for a gRPC call. fullMethod is the full gRPC method name (e.g.
+// "/package.Service/Method"). grpcStatus is the parsed gRPC status returned
+// by the server; it is nil when the call succeeded (OK).
+//
+// This can be used to override the default status mapping, for example to
+// treat codes.NotFound as a non-error for specific methods, or to always
+// treat codes.Canceled as an error on the client side.
+type SpanStatusFn func(ctx context.Context, fullMethod string, grpcStatus *status.Status) (codes.Code, string)
+
 // config is a group of options for this instrumentation.
 type config struct {
 	Filter             Filter
@@ -51,6 +63,7 @@ type config struct {
 	MetricAttributes   []attribute.KeyValue
 	MetricAttributesFn func(ctx context.Context) []attribute.KeyValue
 
+	SpanStatusFn     SpanStatusFn
 	PublicEndpoint   bool
 	PublicEndpointFn func(ctx context.Context, info *stats.RPCTagInfo) bool
 
@@ -241,6 +254,22 @@ func WithMetricAttributesFn(fn func(ctx context.Context) []attribute.KeyValue) O
 	return optionFunc(func(c *config) {
 		if fn != nil {
 			c.MetricAttributesFn = fn
+		}
+	})
+}
+
+// WithSpanStatusFn sets a custom function to determine the span status code
+// and message for a gRPC call. When set, this function is called instead of
+// the default status mapping defined by the OpenTelemetry gRPC semantic
+// conventions. The grpcStatus argument is nil when the call succeeded (OK).
+//
+// This adheres to the semantic conventions, which use SHOULD rather than MUST,
+// allowing per-method customisation — for example, treating codes.NotFound as
+// a non-error for a lookup RPC while keeping it as an error for all other methods.
+func WithSpanStatusFn(fn SpanStatusFn) Option {
+	return optionFunc(func(c *config) {
+		if fn != nil {
+			c.SpanStatusFn = fn
 		}
 	})
 }

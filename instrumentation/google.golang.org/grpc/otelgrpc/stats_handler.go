@@ -34,6 +34,7 @@ type dialTargetContextKey struct{}
 type gRPCContext struct {
 	metricAttrs []attribute.KeyValue
 	record      bool
+	fullMethod  string
 }
 
 type serverHandler struct {
@@ -152,6 +153,7 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	gctx := gRPCContext{
 		metricAttrs: append(attrs, h.MetricAttributes...),
 		record:      record,
+		fullMethod:  info.FullMethodName,
 	}
 
 	if h.MetricAttributesFn != nil {
@@ -276,6 +278,7 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	gctx := gRPCContext{
 		metricAttrs: append(attrs, h.MetricAttributes...),
 		record:      record,
+		fullMethod:  info.FullMethodName,
 	}
 
 	if h.MetricAttributesFn != nil {
@@ -317,7 +320,7 @@ func (*clientHandler) HandleConn(context.Context, stats.ConnStats) {
 	// no-op
 }
 
-func (*config) handleRPC(
+func (c *config) handleRPC(
 	ctx context.Context,
 	rs stats.RPCStats,
 	duration metric.Float64Histogram,
@@ -383,10 +386,18 @@ func (*config) handleRPC(
 			rpcStatusAttr = semconv.RPCResponseStatusCode(canonicalString(grpc_codes.OK))
 		}
 		if span.IsRecording() {
-			if s != nil {
-				c, m := recordStatus(s)
-				span.SetStatus(c, m)
+			if c.SpanStatusFn != nil {
+				var fullMethod string
+				if gctx != nil {
+					fullMethod = gctx.fullMethod
+				}
+				code, msg := c.SpanStatusFn(ctx, fullMethod, s)
+				span.SetStatus(code, msg)
+			} else if s != nil {
+				code, msg := recordStatus(s)
+				span.SetStatus(code, msg)
 			}
+
 			span.SetAttributes(rpcStatusAttr)
 			span.End()
 		}
