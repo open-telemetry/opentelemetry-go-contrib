@@ -56,7 +56,7 @@ func TestDetect(t *testing.T) {
 					]
 				}`,
 				statusCode: http.StatusOK,
-				opts:       []Option{WithTagKeyRegexps(regexp.MustCompile("^env$"), regexp.MustCompile("^team$"))},
+				opts:       []Option{WithTagKeyFilter(regexp.MustCompile("^(env|team)$").MatchString)},
 			},
 			expected: expected{
 				resource: resource.NewWithAttributes(semconv.SchemaURL, []attribute.KeyValue{
@@ -112,7 +112,7 @@ func TestDetect(t *testing.T) {
 			},
 		},
 		{
-			// Tags are not emitted when no tag-key regexps are configured.
+			// Tags are not emitted when no tag-key filter is configured.
 			input: input{
 				jsonMetadata: `{
 					"location": "us-west3",

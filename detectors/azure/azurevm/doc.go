@@ -27,9 +27,9 @@ The following Azure-specific attributes are also added if available:
   - azure.vm.scaleset.name
   - azure.resourcegroup.name
 
-When configured with [WithTagKeyRegexps], the detector additionally emits an
-azure.tag.<name> attribute for every VM tag whose key matches one of the
-provided regular expressions.
+When configured with [WithTagKeyFilter], the detector additionally emits an
+azure.tag.<name> attribute for every VM tag whose key satisfies the configured
+filter.
 
 [host]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/host.md
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md

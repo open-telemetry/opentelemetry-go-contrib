@@ -9,7 +9,6 @@ import (
 	"errors"
 	"io"
 	"net/http"
-	"regexp"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -31,10 +30,9 @@ const (
 // ResourceDetector collects resource information of Azure VMs.
 type ResourceDetector struct {
 	endpoint string
-	// tagKeyRegexps, when non-empty, selects which VM tags are emitted as
-	// azure.tag.<name> attributes. A tag is emitted if its key matches any
-	// of the regular expressions.
-	tagKeyRegexps []*regexp.Regexp
+	// tagKeyFilter, when non-nil, selects which VM tags are emitted as
+	// azure.tag.<name> attributes by their key.
+	tagKeyFilter func(key string) bool
 }
 
 type vmMetadata struct {
@@ -65,12 +63,12 @@ type computeTag struct {
 // Option configures a [ResourceDetector].
 type Option func(*ResourceDetector)
 
-// WithTagKeyRegexps configures the detector to emit an azure.tag.<name>
-// attribute for every VM tag whose key matches any of the provided regular
-// expressions. When no regexps are configured, VM tags are not emitted.
-func WithTagKeyRegexps(res ...*regexp.Regexp) Option {
+// WithTagKeyFilter emits an azure.tag.<name> attribute for every VM tag whose
+// key satisfies filter. Without it, no VM tags are emitted. For regexp
+// matching, pass re.MatchString.
+func WithTagKeyFilter(filter func(key string) bool) Option {
 	return func(d *ResourceDetector) {
-		d.tagKeyRegexps = append(d.tagKeyRegexps, res...)
+		d.tagKeyFilter = filter
 	}
 }
 
@@ -149,24 +147,15 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		attributes = append(attributes, azureResourceGroupNameKey.String(*metadata.ResourceGroupName))
 	}
 
-	for _, tag := range metadata.TagsList {
-		if detector.matchTagKey(tag.Name) {
-			attributes = append(attributes, attribute.String(azureTagPrefix+tag.Name, tag.Value))
+	if detector.tagKeyFilter != nil {
+		for _, tag := range metadata.TagsList {
+			if detector.tagKeyFilter(tag.Name) {
+				attributes = append(attributes, attribute.String(azureTagPrefix+tag.Name, tag.Value))
+			}
 		}
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
-}
-
-// matchTagKey reports whether the given tag key matches any of the configured
-// tag-key regular expressions.
-func (detector *ResourceDetector) matchTagKey(key string) bool {
-	for _, re := range detector.tagKeyRegexps {
-		if re.MatchString(key) {
-			return true
-		}
-	}
-	return false
 }
 
 func (detector *ResourceDetector) getJSONMetadata(ctx context.Context) ([]byte, bool, error) {
