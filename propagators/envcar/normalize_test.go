@@ -12,7 +12,7 @@ import (
 var normalizeCases = []struct {
 	in, want string
 }{
-	{"", ""},
+	{"", "_"},
 	{"ABC", "ABC"},
 	{"abc", "ABC"},
 	{"01239", "_01239"},
@@ -37,12 +37,31 @@ func TestNormalize(t *testing.T) {
 	}
 }
 
+func TestNormalized(t *testing.T) {
+	for _, tc := range normalizeCases {
+		t.Run(tc.in, func(t *testing.T) {
+			assert.Equal(t, tc.in == tc.want, normalized(tc.in))
+		})
+	}
+}
+
 func BenchmarkNormalize(b *testing.B) {
 	for _, tc := range normalizeCases {
 		b.Run(tc.in, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
 				normalize(tc.in)
+			}
+		})
+	}
+}
+
+func BenchmarkNormalized(b *testing.B) {
+	for _, tc := range normalizeCases {
+		b.Run(tc.in, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				normalized(tc.in)
 			}
 		})
 	}
