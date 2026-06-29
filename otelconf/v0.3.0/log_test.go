@@ -870,7 +870,7 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			require.NoError(t, err)
 
 			logFactory := sdklogtest.RecordFactory{
-				Body: log.StringValue("test"),
+				Body: attribute.StringValue("test"),
 			}
 
 			assert.NoError(t, exporter.Export(t.Context(), []sdklog.Record{logFactory.NewRecord()}))
