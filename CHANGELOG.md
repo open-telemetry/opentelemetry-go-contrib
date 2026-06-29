@@ -12,7 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
-- `go.opentelemetry.io/contrib/detectors/azure/azurevm` now also detects `cloud.account.id`, `cloud.availability_zone`, `azure.vm.name`, `azure.vm.size`, `azure.vm.scaleset.name`, and `azure.resourcegroup.name`, prefers `osProfile.computerName` for `host.name` (falling back to the VM name), and can emit `azure.tag.<name>` attributes for VM tags whose keys match regexps configured via the new `WithTagKeyRegexps` option, reconciling it with the collector-contrib Azure resource detector. (#8947)
+- `go.opentelemetry.io/contrib/detectors/azure/azurevm` now also detects `cloud.account.id`, `cloud.availability_zone`, `azure.vm.name`, `azure.vm.size`, `azure.vm.scaleset.name`, and `azure.resourcegroup.name`, prefers `osProfile.computerName` for `host.name` (falling back to the VM name), and can emit `azure.tag.<name>` attributes for VM tags whose keys are selected via the new `WithTagKeyFilter` option (a `func(key string) bool` predicate), reconciling it with the collector-contrib Azure resource detector. (#8947)
 
 ### Changed
 
