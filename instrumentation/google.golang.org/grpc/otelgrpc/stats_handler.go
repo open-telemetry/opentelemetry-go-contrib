@@ -317,7 +317,7 @@ func (*clientHandler) HandleConn(context.Context, stats.ConnStats) {
 	// no-op
 }
 
-func (*config) handleRPC(
+func (c *config) handleRPC(
 	ctx context.Context,
 	rs stats.RPCStats,
 	duration metric.Float64Histogram,
@@ -384,6 +384,12 @@ func (*config) handleRPC(
 		}
 		if span.IsRecording() {
 			if s != nil {
+				if c.NonErrorCodes != nil {
+					if _, ok := c.NonErrorCodes[s.Code()]; ok {
+						// Override the status code to OK for non-error codes. This will take priority over any later span.SetStatus calls, including the default behavior below.
+						span.SetStatus(codes.Ok, "")
+					}
+				}
 				c, m := recordStatus(s)
 				span.SetStatus(c, m)
 			}
