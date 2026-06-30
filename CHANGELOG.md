@@ -7,8 +7,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-- Add new `elasticbeanstalk` resource detector for AWS Elastic Beanstalk, ported from `processor/resourcedetectionprocessor/internal/aws/elasticbeanstalk` in opentelemetry-collector-contrib. (#8952)
+
 ### Added
+
+- Add new `elasticbeanstalk` resource detector for AWS Elastic Beanstalk, ported from `processor/resourcedetectionprocessor/internal/aws/elasticbeanstalk` in opentelemetry-collector-contrib. (#8952)
 
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
