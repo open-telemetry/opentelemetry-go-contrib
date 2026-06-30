@@ -11,7 +11,7 @@ import (
 	hcloudmeta "github.com/hetznercloud/hcloud-go/v2/hcloud/metadata"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 )
 
 // Compile-time interface assertion.

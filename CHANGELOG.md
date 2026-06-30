@@ -10,7 +10,22 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add new `elasticbeanstalk` resource detector for AWS Elastic Beanstalk, ported from `processor/resourcedetectionprocessor/internal/aws/elasticbeanstalk` in opentelemetry-collector-contrib. (#8952)
 ### Added
 
+- The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+
+### Changed
+
+- Upgrade `go.opentelemetry.io/otel/semconv` to `v1.42.0`, including updates across instrumentation and detector modules.
+  See [semantic-conventions v1.42.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.42.0) for complete details. (#9196)
+- Use direct normalized-key lookups in `Carrier.Get` and `Carrier.Keys` in `go.opentelemetry.io/contrib/propagators/envcar`. (#9112)
+- Update log bridge conversions to use attribute key-values instead of the removed log key-values in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9180)
+- The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
+- Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#8977)
+
+### Fixed
+
+- Honor the context configured with `WithContext` when constructing resources in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`. (#9160)
+- Handle nil response bodies from custom `RoundTripper` implementations in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` without panicking. (#9184)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
