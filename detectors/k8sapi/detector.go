@@ -61,7 +61,8 @@ func WithAttributeFilter(filter attribute.Filter) Option {
 // ResourceDetector collects resource attributes from the Kubernetes node the
 // process is running on.
 type ResourceDetector struct {
-	cfg config
+	cfg            config
+	createProvider func(*rest.Config) (kubernetes.Interface, error)
 }
 
 // Compile-time interface assertion.
@@ -82,7 +83,7 @@ func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, err
 			return nil, fmt.Errorf("k8sapi detector: %w", err)
 		}
 		var clientErr error
-		client, clientErr = kubernetes.NewForConfig(conf)
+		client, clientErr = rd.createProvider(conf)
 		if clientErr != nil {
 			return nil, fmt.Errorf("k8sapi detector: failed to create Kubernetes client: %w", clientErr)
 		}
@@ -146,5 +147,11 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
-	return &ResourceDetector{cfg: cfg}
+
+	return &ResourceDetector{
+		cfg: cfg,
+		createProvider: func(c *rest.Config) (kubernetes.Interface, error) {
+			return kubernetes.NewForConfig(c)
+		},
+	}
 }

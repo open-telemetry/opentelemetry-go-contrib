@@ -4,6 +4,7 @@
 package k8sapi
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -15,6 +16,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
 )
 
@@ -159,6 +162,16 @@ func TestDetectBothError(t *testing.T) {
 	assert.Equal(t, resource.Empty(), res)
 }
 
+func TestDetectNotInCluster(t *testing.T) {
+	// Empty host/port makes rest.InClusterConfig return ErrNotInCluster.
+	t.Setenv("KUBERNETES_SERVICE_HOST", "")
+	t.Setenv("KUBERNETES_SERVICE_PORT", "")
+
+	res, err := NewResourceDetector().Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
+}
+
 func TestDetectInClusterConfigError(t *testing.T) {
 	// Set the env vars that make InClusterConfig proceed past the ErrNotInCluster
 	// guard, so it fails on the missing token file instead.
@@ -167,6 +180,20 @@ func TestDetectInClusterConfigError(t *testing.T) {
 	t.Setenv("K8S_NODE_NAME", testNodeName)
 
 	_, err := NewResourceDetector().Detect(t.Context())
+	require.Error(t, err)
+	require.NotErrorIs(t, err, resource.ErrPartialResource)
+}
+
+func TestDetectCreateProviderError(t *testing.T) {
+	t.Setenv("KUBERNETES_SERVICE_HOST", "fake-host")
+	t.Setenv("KUBERNETES_SERVICE_PORT", "443")
+
+	rd := NewResourceDetector()
+	rd.createProvider = func(*rest.Config) (kubernetes.Interface, error) {
+		return nil, errors.New("injected failure")
+	}
+
+	_, err := rd.Detect(t.Context())
 	require.Error(t, err)
 	require.NotErrorIs(t, err, resource.ErrPartialResource)
 }
