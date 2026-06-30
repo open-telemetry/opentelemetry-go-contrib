@@ -12,7 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 )
 
 const (
@@ -70,6 +70,7 @@ type ebMetaData struct {
 	VersionLabel    string `json:"version_label"`
 }
 
+// Detect collects resource attributes available when running on elasticbeanstalk.
 func (detector *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	var conf io.ReadCloser
 	var err error
@@ -84,11 +85,10 @@ func (detector *ResourceDetector) Detect(context.Context) (*resource.Resource, e
 		slog.Warn("elasticbeanstalk detection", slog.Any("err", err))
 		return resource.Empty(), nil
 	}
+	defer conf.Close()
 
 	ebmd := &ebMetaData{}
 	err = json.NewDecoder(conf).Decode(ebmd)
-	conf.Close()
-
 	if err != nil {
 		slog.Warn("elasticbeanstalk metadata decode", slog.Any("err", err))
 		return resource.Empty(), err
@@ -98,7 +98,7 @@ func (detector *ResourceDetector) Detect(context.Context) (*resource.Resource, e
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSElasticBeanstalk,
 		semconv.DeploymentID(strconv.Itoa(ebmd.DeploymentID)),
-		semconv.DeploymentEnvironmentName(ebmd.EnvironmentName),
+		semconv.DeploymentEnvironmentNameKey.String(ebmd.EnvironmentName),
 		semconv.ServiceVersion(ebmd.VersionLabel),
 	}
 

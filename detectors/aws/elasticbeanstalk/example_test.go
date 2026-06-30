@@ -23,9 +23,8 @@ func ExampleNewResourceDetector() {
 	}
 
 	tp := sdktrace.NewTracerProvider(sdktrace.WithResource(res))
-	defer func() {
-		if err := tp.Shutdown(context.Background()); err != nil {
-			log.Fatal(err)
-		}
-	}()
+
+	if err := tp.Shutdown(context.Background()); err != nil {
+		log.Fatal(err)
+	}
 }

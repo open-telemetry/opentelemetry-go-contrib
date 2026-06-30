@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 )
 
 const xrayConf = "{\"deployment_id\":23,\"version_label\":\"env-version-1234\",\"environment_name\":\"BETA\"}"
@@ -67,11 +67,12 @@ func TestFileMalformed(t *testing.T) {
 func TestAttributesDetectedSuccessfully(t *testing.T) {
 	d := &ResourceDetector{fs: &mockFileSystem{exists: true, contents: xrayConf}}
 
-	expected := resource.NewWithAttributes(semconv.SchemaURL,
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSElasticBeanstalk,
 		semconv.DeploymentID("23"),
-		semconv.DeploymentEnvironmentName("BETA"),
+		semconv.DeploymentEnvironmentNameKey.String("BETA"),
 		semconv.ServiceVersion("env-version-1234"),
 	)
 
@@ -99,7 +100,7 @@ func TestWithAttributeFilter(t *testing.T) {
 	presentAttrs := []attribute.KeyValue{
 		semconv.CloudPlatformAWSElasticBeanstalk,
 		semconv.DeploymentID("23"),
-		semconv.DeploymentEnvironmentName("BETA"),
+		semconv.DeploymentEnvironmentNameKey.String("BETA"),
 		semconv.ServiceVersion("env-version-1234"),
 	}
 	for _, kv := range presentAttrs {
