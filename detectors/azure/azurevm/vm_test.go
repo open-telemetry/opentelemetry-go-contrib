@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -19,6 +20,7 @@ func TestDetect(t *testing.T) {
 	type input struct {
 		jsonMetadata string
 		statusCode   int
+		opts         []Option
 	}
 	type expected struct {
 		resource *resource.Resource
@@ -31,17 +33,30 @@ func TestDetect(t *testing.T) {
 
 	testTable := []testCase{
 		{
+			// Full metadata payload exercising every emitted attribute,
+			// including the computerName host.name source and tag filtering.
 			input: input{
-				jsonMetadata: `{ 
+				jsonMetadata: `{
 					"location": "us-west3",
 					"resourceId": "/subscriptions/sid/resourceGroups/rid/providers/pname/name",
 					"vmId": "43f65c49-8715-4639-88a9-be6d7eb749a5",
 					"name": "localhost-3",
 					"vmSize": "Standard_D2s_v3",
 					"osType": "linux",
-					"version": "6.5.0-26-generic"
+					"version": "6.5.0-26-generic",
+					"subscriptionId": "sid",
+					"resourceGroupName": "rid",
+					"vmScaleSetName": "myScaleset",
+					"zone": "1",
+					"osProfile": { "computerName": "computer-name" },
+					"tagsList": [
+						{ "name": "env", "value": "prod" },
+						{ "name": "team", "value": "obs" },
+						{ "name": "secret", "value": "hidden" }
+					]
 				}`,
 				statusCode: http.StatusOK,
+				opts:       []Option{WithTagKeyFilter(regexp.MustCompile("^(env|team)$").MatchString)},
 			},
 			expected: expected{
 				resource: resource.NewWithAttributes(semconv.SchemaURL, []attribute.KeyValue{
@@ -50,10 +65,71 @@ func TestDetect(t *testing.T) {
 					semconv.CloudRegion("us-west3"),
 					semconv.CloudResourceID("/subscriptions/sid/resourceGroups/rid/providers/pname/name"),
 					semconv.HostID("43f65c49-8715-4639-88a9-be6d7eb749a5"),
-					semconv.HostName("localhost-3"),
+					semconv.HostName("computer-name"),
 					semconv.HostType("Standard_D2s_v3"),
 					semconv.OSTypeKey.String("linux"),
 					semconv.OSVersion("6.5.0-26-generic"),
+					semconv.CloudAccountID("sid"),
+					semconv.CloudAvailabilityZone("1"),
+					azureVMNameKey.String("localhost-3"),
+					azureVMSizeKey.String("Standard_D2s_v3"),
+					azureVMScaleSetNameKey.String("myScaleset"),
+					azureResourceGroupNameKey.String("rid"),
+					attribute.String("azure.tag.env", "prod"),
+					attribute.String("azure.tag.team", "obs"),
+				}...),
+				err: false,
+			},
+		},
+		{
+			// host.name falls back to the VM name when computerName is absent,
+			// and optional fields (zone, scaleset, tags) are omitted.
+			input: input{
+				jsonMetadata: `{
+					"location": "us-west3",
+					"vmId": "43f65c49-8715-4639-88a9-be6d7eb749a5",
+					"name": "localhost-3",
+					"vmSize": "Standard_D2s_v3",
+					"subscriptionId": "sid",
+					"resourceGroupName": "rid"
+				}`,
+				statusCode: http.StatusOK,
+			},
+			expected: expected{
+				resource: resource.NewWithAttributes(semconv.SchemaURL, []attribute.KeyValue{
+					semconv.CloudProviderAzure,
+					semconv.CloudPlatformAzureVM,
+					semconv.CloudRegion("us-west3"),
+					semconv.HostID("43f65c49-8715-4639-88a9-be6d7eb749a5"),
+					semconv.HostName("localhost-3"),
+					semconv.HostType("Standard_D2s_v3"),
+					semconv.CloudAccountID("sid"),
+					azureVMNameKey.String("localhost-3"),
+					azureVMSizeKey.String("Standard_D2s_v3"),
+					azureResourceGroupNameKey.String("rid"),
+				}...),
+				err: false,
+			},
+		},
+		{
+			// Tags are not emitted when no tag-key filter is configured.
+			input: input{
+				jsonMetadata: `{
+					"location": "us-west3",
+					"vmId": "43f65c49-8715-4639-88a9-be6d7eb749a5",
+					"name": "localhost-3",
+					"tagsList": [ { "name": "env", "value": "prod" } ]
+				}`,
+				statusCode: http.StatusOK,
+			},
+			expected: expected{
+				resource: resource.NewWithAttributes(semconv.SchemaURL, []attribute.KeyValue{
+					semconv.CloudProviderAzure,
+					semconv.CloudPlatformAzureVM,
+					semconv.CloudRegion("us-west3"),
+					semconv.HostID("43f65c49-8715-4639-88a9-be6d7eb749a5"),
+					semconv.HostName("localhost-3"),
+					azureVMNameKey.String("localhost-3"),
 				}...),
 				err: false,
 			},
@@ -99,7 +175,7 @@ func TestDetect(t *testing.T) {
 			}
 		}))
 
-		detector := New()
+		detector := New(tCase.input.opts...)
 		detector.endpoint = svr.URL
 
 		azureResource, err := detector.Detect(t.Context())
