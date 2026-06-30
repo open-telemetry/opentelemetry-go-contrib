@@ -39,6 +39,7 @@ detectors/aws/lambda                                                    @open-te
 detectors/azure/                                                        @open-telemetry/go-approvers @pyohannes
 detectors/azure/azurecontainerapps                                      @open-telemetry/go-approvers @iblancasa
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
+detectors/heroku/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/hetzner/                                                      @open-telemetry/go-approvers @paulojmdias
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
