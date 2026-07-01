@@ -8,8 +8,6 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/moby/moby/api/types/container"
-	"github.com/moby/moby/api/types/system"
 	"github.com/moby/moby/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -19,19 +17,21 @@ import (
 )
 
 type mockProvider struct {
-	info             system.Info
+	info             hostInfo
 	infoErr          error
-	containerInfo    container.InspectResponse
+	containerInfo    containerInfo
 	containerInfoErr error
 }
 
-func (m *mockProvider) Info(_ context.Context) (system.Info, error) {
+func (m *mockProvider) Info(_ context.Context) (hostInfo, error) {
 	return m.info, m.infoErr
 }
 
-func (m *mockProvider) ContainerInfo(_ context.Context) (container.InspectResponse, error) {
+func (m *mockProvider) ContainerInfo(_ context.Context) (containerInfo, error) {
 	return m.containerInfo, m.containerInfoErr
 }
+
+func ptr[T any](v T) *T { return &v }
 
 func newMockDetector(m *mockProvider, opts ...Option) *ResourceDetector {
 	d := NewResourceDetector(opts...)
@@ -53,8 +53,8 @@ func TestNotDockerEnvironment(t *testing.T) {
 
 func TestSuccess(t *testing.T) {
 	detector := newMockDetector(&mockProvider{
-		info:          system.Info{Name: "docker-host", OSType: "linux"},
-		containerInfo: container.InspectResponse{Name: "my-container", Config: &container.Config{Image: "golang:1.25"}},
+		info:          hostInfo{Name: "docker-host", OSType: "linux"},
+		containerInfo: containerInfo{Name: "my-container", Image: ptr("golang:1.25")},
 	})
 
 	res, err := detector.Detect(t.Context())
@@ -77,7 +77,7 @@ func TestSuccess(t *testing.T) {
 func TestInfoError(t *testing.T) {
 	detector := newMockDetector(&mockProvider{
 		infoErr:       errors.New("daemon unavailable"),
-		containerInfo: container.InspectResponse{Name: "my-container", Config: &container.Config{Image: "golang:1.25"}},
+		containerInfo: containerInfo{Name: "my-container", Image: ptr("golang:1.25")},
 	})
 
 	res, err := detector.Detect(t.Context())
@@ -99,7 +99,7 @@ func TestInfoError(t *testing.T) {
 
 func TestContainerInfoError(t *testing.T) {
 	detector := newMockDetector(&mockProvider{
-		info:             system.Info{Name: "docker-host", OSType: "linux"},
+		info:             hostInfo{Name: "docker-host", OSType: "linux"},
 		containerInfoErr: errors.New("no such container"),
 	})
 
@@ -111,8 +111,8 @@ func TestContainerInfoError(t *testing.T) {
 func TestWithAttributeFilter(t *testing.T) {
 	detector := newMockDetector(
 		&mockProvider{
-			info:          system.Info{Name: "docker-host", OSType: "linux"},
-			containerInfo: container.InspectResponse{Name: "my-container", Config: &container.Config{Image: "golang:1.25"}},
+			info:          hostInfo{Name: "docker-host", OSType: "linux"},
+			containerInfo: containerInfo{Name: "my-container", Image: ptr("golang:1.25")},
 		},
 		WithAttributeFilter(attribute.NewDenyKeysFilter(semconv.HostNameKey)),
 	)

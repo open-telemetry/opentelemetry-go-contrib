@@ -85,17 +85,17 @@ func (r *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	)
 
 	attrs = append(attrs, semconv.ContainerName(containerInfo.Name))
-	if containerInfo.Config != nil {
-		attrs = append(attrs, semconv.ContainerImageName(containerInfo.Config.Image))
+	if containerInfo.Image != nil {
+		attrs = append(attrs, semconv.ContainerImageName(*containerInfo.Image))
 	} else {
 		errs = append(errs, errors.New("docker container info: container.image.name not present"))
 	}
 
-	sysInfo, err := dockerProvider.Info(ctx)
+	hostInfo, err := dockerProvider.Info(ctx)
 	if err != nil {
 		errs = append(errs, fmt.Errorf("docker info: %w", err))
 	} else {
-		attrs = append(attrs, semconv.HostName(sysInfo.Name), semconv.OSTypeKey.String(internal.GOOSToOSType(sysInfo.OSType)))
+		attrs = append(attrs, semconv.HostName(hostInfo.Name), semconv.OSTypeKey.String(internal.GOOSToOSType(hostInfo.OSType)))
 	}
 
 	if r.cfg.filter != nil {

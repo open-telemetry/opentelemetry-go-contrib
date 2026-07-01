@@ -8,29 +8,37 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/moby/moby/api/types/container"
-	"github.com/moby/moby/api/types/system"
 	"github.com/moby/moby/client"
 )
 
+type hostInfo struct {
+	Name   string
+	OSType string
+}
+
+type containerInfo struct {
+	Name  string
+	Image *string // for nil check if absent
+}
+
 type provider interface {
-	Info(context.Context) (system.Info, error)
-	ContainerInfo(context.Context) (container.InspectResponse, error)
+	Info(context.Context) (hostInfo, error)
+	ContainerInfo(context.Context) (containerInfo, error)
 }
 
 type dockerProviderImpl struct {
 	dockerClient *client.Client
 }
 
-func (d *dockerProviderImpl) Info(ctx context.Context) (system.Info, error) {
+func (d *dockerProviderImpl) Info(ctx context.Context) (hostInfo, error) {
 	result, err := d.dockerClient.Info(ctx, client.InfoOptions{})
 	if err != nil {
-		return system.Info{}, err
+		return hostInfo{}, err
 	}
-	return result.Info, nil
+	return hostInfo{Name: result.Info.Name, OSType: result.Info.OSType}, nil
 }
 
-func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (container.InspectResponse, error) {
+func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (containerInfo, error) {
 	// Docker sets the container hostname to the first 12 characters of the
 	// container ID by default, which ContainerInspect can resolve. This breaks
 	// when a custom hostname is set via --hostname or an orchestrator (e.g.
@@ -38,13 +46,18 @@ func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (container.Inspe
 	// "no such container" and container attributes will not be detected.
 	hostname, err := os.Hostname()
 	if err != nil {
-		return container.InspectResponse{}, err
+		return containerInfo{}, err
 	}
-	containerInspectResult, err := d.dockerClient.ContainerInspect(ctx, hostname, client.ContainerInspectOptions{})
+	result, err := d.dockerClient.ContainerInspect(ctx, hostname, client.ContainerInspectOptions{})
 	if err != nil {
-		return container.InspectResponse{}, fmt.Errorf("failed to fetch container information: %w", err)
+		return containerInfo{}, fmt.Errorf("failed to fetch container information: %w", err)
 	}
-	return containerInspectResult.Container, nil
+
+	var image *string
+	if result.Container.Config != nil {
+		image = &result.Container.Config.Image
+	}
+	return containerInfo{Name: result.Container.Name, Image: image}, nil
 }
 
 func newProvider(opts ...client.Opt) (provider, error) {
