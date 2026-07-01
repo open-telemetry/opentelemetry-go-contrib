@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
+	"go.opentelemetry.io/contrib/detectors/docker"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
 )
@@ -123,6 +124,10 @@ var (
 	// identifying the container in which the process is running, especially in
 	// containerized environments like Kubernetes or Docker.
 	IDContainer = ID("container")
+	// IDDocker is the ID for the Docker detector that detects resource
+	// attributes on Docker containers (see docker.NewResourceDetector for
+	// details).
+	IDDocker = ID("docker")
 )
 
 var (
@@ -161,6 +166,8 @@ var (
 		IDProcessRuntimeDescription: optFactory(resource.WithProcessRuntimeDescription()),
 
 		IDContainer: optFactory(resource.WithContainer()),
+
+		IDDocker: func() resource.Detector { return docker.NewResourceDetector() },
 	}
 )
 

@@ -8,6 +8,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+- Add `go.opentelemetry.io/contrib/detectors/docker`, a resource detector for docker, from `processor/resourcedetectionprocessor/internal/docker`. (#8951)
+
 ### Added
 
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
