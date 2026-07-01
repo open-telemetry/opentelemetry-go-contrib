@@ -63,7 +63,7 @@ func TestDockerProviderImpl_Info(t *testing.T) {
 }
 
 func TestDockerProviderImpl_Info_Error(t *testing.T) {
-	p := newTestProvider(t, func(req *http.Request) (*http.Response, error) {
+	p := newTestProvider(t, func(_ *http.Request) (*http.Response, error) {
 		return jsonResponse(t, http.StatusInternalServerError, map[string]string{"message": "boom"}), nil
 	})
 
@@ -91,7 +91,7 @@ func TestDockerProviderImpl_ContainerInfo(t *testing.T) {
 }
 
 func TestDockerProviderImpl_ContainerInfo_NilConfig(t *testing.T) {
-	p := newTestProvider(t, func(req *http.Request) (*http.Response, error) {
+	p := newTestProvider(t, func(_ *http.Request) (*http.Response, error) {
 		return jsonResponse(t, http.StatusOK, container.InspectResponse{Name: "my-container"}), nil
 	})
 
@@ -102,7 +102,7 @@ func TestDockerProviderImpl_ContainerInfo_NilConfig(t *testing.T) {
 }
 
 func TestDockerProviderImpl_ContainerInfo_Error(t *testing.T) {
-	p := newTestProvider(t, func(req *http.Request) (*http.Response, error) {
+	p := newTestProvider(t, func(_ *http.Request) (*http.Response, error) {
 		return jsonResponse(t, http.StatusNotFound, map[string]string{"message": "no such container"}), nil
 	})
 
