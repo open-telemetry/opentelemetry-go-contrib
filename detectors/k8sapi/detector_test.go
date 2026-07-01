@@ -17,8 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/client-go/rest"
 	k8sfake "k8s.io/client-go/kubernetes/fake"
+	"k8s.io/client-go/rest"
 )
 
 func newFakeNode(uid types.UID) *corev1.Node {
@@ -173,22 +173,21 @@ func TestDetectNotInCluster(t *testing.T) {
 }
 
 func TestDetectInClusterConfigError(t *testing.T) {
-	// Set the env vars that make InClusterConfig proceed past the ErrNotInCluster
-	// guard, so it fails on the missing token file instead.
-	t.Setenv("KUBERNETES_SERVICE_HOST", "fake-host")
-	t.Setenv("KUBERNETES_SERVICE_PORT", "443")
-	t.Setenv("K8S_NODE_NAME", testNodeName)
+	rd := NewResourceDetector()
+	rd.inClusterConfig = func() (*rest.Config, error) {
+		return nil, errors.New("injected failure")
+	}
 
-	_, err := NewResourceDetector().Detect(t.Context())
+	_, err := rd.Detect(t.Context())
 	require.Error(t, err)
 	require.NotErrorIs(t, err, resource.ErrPartialResource)
 }
 
 func TestDetectCreateProviderError(t *testing.T) {
-	t.Setenv("KUBERNETES_SERVICE_HOST", "fake-host")
-	t.Setenv("KUBERNETES_SERVICE_PORT", "443")
-
 	rd := NewResourceDetector()
+	rd.inClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{}, nil
+	}
 	rd.createProvider = func(*rest.Config) (kubernetes.Interface, error) {
 		return nil, errors.New("injected failure")
 	}
@@ -196,4 +195,36 @@ func TestDetectCreateProviderError(t *testing.T) {
 	_, err := rd.Detect(t.Context())
 	require.Error(t, err)
 	require.NotErrorIs(t, err, resource.ErrPartialResource)
+}
+
+func TestDetectInClusterSuccess(t *testing.T) {
+	nodeUID := uuid.NewUUID()
+	clusterUID := uuid.NewUUID()
+	t.Setenv("K8S_NODE_NAME", testNodeName)
+
+	rd := NewResourceDetector()
+	rd.inClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{}, nil
+	}
+	rd.createProvider = func(*rest.Config) (kubernetes.Interface, error) {
+		return k8sfake.NewClientset(newFakeNode(nodeUID), newFakeNamespace(clusterUID)), nil
+	}
+
+	res, err := rd.Detect(t.Context())
+	require.NoError(t, err)
+
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.K8SNodeName(testNodeName),
+		semconv.K8SNodeUID(string(nodeUID)),
+		semconv.K8SClusterUID(string(clusterUID)),
+	)
+	assert.Equal(t, expected, res)
+}
+
+func TestDefaultCreateProvider(t *testing.T) {
+	rd := NewResourceDetector()
+	client, err := rd.createProvider(&rest.Config{Host: "https://example.com"})
+	require.NoError(t, err)
+	assert.NotNil(t, client)
 }

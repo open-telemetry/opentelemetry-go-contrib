@@ -61,8 +61,9 @@ func WithAttributeFilter(filter attribute.Filter) Option {
 // ResourceDetector collects resource attributes from the Kubernetes node the
 // process is running on.
 type ResourceDetector struct {
-	cfg            config
-	createProvider func(*rest.Config) (kubernetes.Interface, error)
+	cfg             config
+	createProvider  func(*rest.Config) (kubernetes.Interface, error)
+	inClusterConfig func() (*rest.Config, error)
 }
 
 // Compile-time interface assertion.
@@ -74,7 +75,7 @@ var _ resource.Detector = (*ResourceDetector)(nil)
 func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	client := rd.cfg.kubeClient
 	if client == nil {
-		conf, err := rest.InClusterConfig()
+		conf, err := rd.inClusterConfig()
 		if err != nil {
 			if errors.Is(err, rest.ErrNotInCluster) {
 				slog.Warn("k8sapi detector: not running in a Kubernetes cluster", "err", err)
@@ -153,5 +154,6 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 		createProvider: func(c *rest.Config) (kubernetes.Interface, error) {
 			return kubernetes.NewForConfig(c)
 		},
+		inClusterConfig: rest.InClusterConfig,
 	}
 }
