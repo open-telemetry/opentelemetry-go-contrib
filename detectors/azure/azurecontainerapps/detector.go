@@ -74,7 +74,7 @@ func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	var partialErr error
 	replicaName := os.Getenv(containerAppReplicaNameEnvVar)
 	if replicaName != "" {
-		attrs = append(attrs, semconv.ServiceInstanceID(replicaName))
+		attrs = append(attrs, semconv.FaaSInstance(replicaName))
 	} else {
 		partialErr = fmt.Errorf("%w: %s not set", resource.ErrPartialResource, containerAppReplicaNameEnvVar)
 	}
