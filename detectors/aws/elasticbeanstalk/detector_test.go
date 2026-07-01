@@ -37,6 +37,11 @@ func (mfs *mockFileSystem) IsWindows() bool {
 	return mfs.windows
 }
 
+func TestNewResourceDetector(t *testing.T) {
+	d := NewResourceDetector()
+	assert.IsType(t, &ebFileSystem{}, d.fs)
+}
+
 func TestWindowsPath(t *testing.T) {
 	mfs := &mockFileSystem{windows: true, exists: true, contents: xrayConf}
 	res, err := (&ResourceDetector{fs: mfs}).Detect(t.Context())
@@ -84,17 +89,15 @@ func TestAttributesDetectedSuccessfully(t *testing.T) {
 }
 
 func TestWithAttributeFilter(t *testing.T) {
-	d := &ResourceDetector{
-		fs:  &mockFileSystem{exists: true, contents: xrayConf},
-		cfg: config{filter: attribute.NewDenyKeysFilter(semconv.CloudProviderKey)},
-	}
+	d := NewResourceDetector(WithAttributeFilter(attribute.NewDenyKeysFilter(semconv.CloudProviderKey)))
+	d.fs = &mockFileSystem{exists: true, contents: xrayConf}
 
 	res, err := d.Detect(t.Context())
 	require.NoError(t, err)
 
 	// cloud.provider must be absent.
 	_, ok := res.Set().Value(semconv.CloudProviderKey)
-	assert.False(t, ok, "expected cloud.provider to be absent")
+	assert.False(t, ok, "expected cloud.provider to be filtered out")
 
 	// The other four attributes must be present.
 	presentAttrs := []attribute.KeyValue{
