@@ -6,6 +6,7 @@ package elasticbeanstalk
 import (
 	"errors"
 	"io"
+	"io/fs"
 	"strings"
 	"testing"
 
@@ -21,13 +22,17 @@ const xrayConf = "{\"deployment_id\":23,\"version_label\":\"env-version-1234\",\
 type mockFileSystem struct {
 	windows  bool
 	exists   bool
+	openErr  error
 	path     string
 	contents string
 }
 
 func (mfs *mockFileSystem) Open(path string) (io.ReadCloser, error) {
+	if mfs.openErr != nil {
+		return nil, mfs.openErr
+	}
 	if !mfs.exists {
-		return nil, errors.New("file not found")
+		return nil, &fs.PathError{Op: "open", Path: path, Err: fs.ErrNotExist}
 	}
 	mfs.path = path
 	return io.NopCloser(strings.NewReader(mfs.contents)), nil
@@ -57,6 +62,14 @@ func TestFileNotExists(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, res)
+	assert.Equal(t, resource.Empty(), res)
+}
+
+func TestFileOpenError(t *testing.T) {
+	mfs := &mockFileSystem{openErr: errors.New("permission denied")}
+	res, err := (&ResourceDetector{fs: mfs}).Detect(t.Context())
+
+	require.Error(t, err)
 	assert.Equal(t, resource.Empty(), res)
 }
 

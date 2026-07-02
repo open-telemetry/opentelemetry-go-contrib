@@ -6,8 +6,10 @@ package elasticbeanstalk // import "go.opentelemetry.io/contrib/detectors/aws/el
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"io"
-	"log/slog"
+	"io/fs"
 	"strconv"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -80,17 +82,18 @@ func (detector *ResourceDetector) Detect(context.Context) (*resource.Resource, e
 		conf, err = detector.fs.Open(linuxPath)
 	}
 
-	// Do not want to return error so it fails silently on non-EB instances
 	if err != nil {
-		slog.Warn("elasticbeanstalk detection", slog.Any("err", err))
-		return resource.Empty(), nil
+		if errors.Is(err, fs.ErrNotExist) {
+			return resource.Empty(), nil
+		}
+		return resource.Empty(), fmt.Errorf("elasticbeanstalk: %w", err)
 	}
+
 	defer conf.Close()
 
 	ebmd := &ebMetaData{}
 	err = json.NewDecoder(conf).Decode(ebmd)
 	if err != nil {
-		slog.Warn("elasticbeanstalk metadata decode", slog.Any("err", err))
 		return resource.Empty(), err
 	}
 
