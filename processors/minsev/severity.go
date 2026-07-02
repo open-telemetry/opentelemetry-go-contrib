@@ -205,10 +205,9 @@ func (s *Severity) UnmarshalText(data []byte) error {
 // they will be treated as an 1-based offset from the base severity level.
 //
 // For example, "ERROR3" will be parsed as "ERROR" with a fine-grained level of
-// 3, which corresponds to [SeverityError3], "FATAL+2" will be parsed as
-// "FATAL" with an offset of +2, which corresponds to [SeverityFatal2], and
-// "INFO2+1" is parsed as INFO with a fine-grained level of 2 and an offset of
-// +1, which corresponds to [SeverityInfo3].
+// 3, which corresponds to [SeverityError3], "FATAL+5" will be parsed as
+// [SeverityFatal4]+1, and "INFO2+1" is parsed as INFO with a fine-grained
+// level of 2 and an offset of +1, which corresponds to [SeverityInfo3].
 //
 // Fine-grained severity levels are based on counting numbers excluding zero.
 // If a fine-grained level of 0 is provided it is treaded as equivalent to the
@@ -238,6 +237,7 @@ func (s *Severity) parse(str string) (err error) {
 
 	name := str
 	offset := 0
+	hasPositiveOffset := false
 
 	// Parse +/- offset suffix, if present.
 	if i := strings.IndexAny(str, "+-"); i >= 0 {
@@ -246,6 +246,7 @@ func (s *Severity) parse(str string) (err error) {
 		if err != nil {
 			return err
 		}
+		hasPositiveOffset = str[i] == '+' && offset > 0
 	}
 
 	// Parse fine-grained severity level suffix, if present.
@@ -256,14 +257,16 @@ func (s *Severity) parse(str string) (err error) {
 		n += int(str[i-1]-'0') * multi
 		multi *= 10
 	}
-	if i < len(name) {
+	hasFineGrainedLevel := i < len(name)
+	if hasFineGrainedLevel {
 		name = name[:i]
 		if n != 0 {
 			offset += n - 1 // Convert 1-based to 0-based.
 		}
 	}
 
-	switch strings.ToUpper(name) {
+	name = strings.ToUpper(name)
+	switch name {
 	case "TRACE":
 		*s = SeverityTrace1
 	case "DEBUG":
@@ -278,6 +281,9 @@ func (s *Severity) parse(str string) (err error) {
 		*s = SeverityFatal1
 	default:
 		return errors.New("unknown name")
+	}
+	if name == "FATAL" && hasPositiveOffset && !hasFineGrainedLevel && offset > 4 {
+		offset--
 	}
 	*s += Severity(offset)
 	return nil
