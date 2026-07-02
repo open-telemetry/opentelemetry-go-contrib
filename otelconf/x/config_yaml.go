@@ -33,6 +33,9 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
+	if hasYAMLMapKey(node, "gcp") && plain.GCP == nil {
+		plain.GCP = ExperimentalGCPResourceDetector{}
+	}
 	// container can be nil, must check and set here
 	if hasYAMLMapKey(node, "container") && plain.Container == nil {
 		plain.Container = ExperimentalContainerResourceDetector{}
