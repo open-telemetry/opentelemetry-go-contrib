@@ -43,7 +43,7 @@ func WithNodeEnvVar(name string) Option {
 	return optionFunc(func(c *config) { c.nodeEnvVar = name })
 }
 
-// WithKubeClient sets the Kubernetes client used to query the node. If not
+// WithKubeClient sets the Kubernetes client used to query the node and the kube-system namespace. If not
 // set, an in-cluster client is created automatically during
 // [ResourceDetector.Detect]. This option is primarily useful for testing or
 // when running outside a cluster.
@@ -69,9 +69,10 @@ type ResourceDetector struct {
 // Compile-time interface assertion.
 var _ resource.Detector = (*ResourceDetector)(nil)
 
-// Detect returns a [*resource.Resource] describing the Kubernetes node. If the
-// node-name environment variable is not set or the process is not running
-// inside a cluster, an empty resource and no error are returned.
+// Detect returns a [*resource.Resource] describing the Kubernetes node and
+// cluster. If the node-name environment variable is not set, node attributes
+// are omitted but k8s.cluster.uid may still be detected. If the process is
+// not running inside a cluster, an empty resource and no error are returned.
 func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	client := rd.cfg.kubeClient
 	if client == nil {
