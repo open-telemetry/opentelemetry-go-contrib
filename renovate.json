@@ -17,6 +17,13 @@
       "enabled": true
     },
     {
+      "description": "Disable Go module major updates except v0 to v1",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["major"],
+      "matchCurrentVersion": "!/^v?0\\./",
+      "enabled": false
+    },
+    {
       "matchPackageNames": ["go.opentelemetry.io/build-tools/**"],
       "groupName": "build-tools"
     },
