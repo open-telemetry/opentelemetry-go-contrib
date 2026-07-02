@@ -22,6 +22,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
 - Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#8977)
 
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`.
+  Use `github.com/labstack/echo-opentelemetry` instead. (#9136)
+
 ### Fixed
 
 - Honor the context configured with `WithContext` when constructing resources in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`. (#9160)
