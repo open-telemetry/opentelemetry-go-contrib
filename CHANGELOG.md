@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`, a new resource detector for IBM Cloud VPC virtual server instances, ported from `github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/ibmcloud/vpc`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `cloud.availability_zone`, `cloud.account.id`, `cloud.resource_id`, `host.id`, `host.image.id`, `host.image.name`, `host.name`, and `host.type`. (#9011)
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
 
