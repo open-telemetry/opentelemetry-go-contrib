@@ -9,12 +9,17 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
+	azurevmdetector "go.opentelemetry.io/contrib/detectors/azure/azurevm"
+
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
 
 func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 	opts := []resource.Option{}
 	for _, d := range detectors {
+		if d.AzureVM != nil {
+			opts = append(opts, resource.WithDetectors(azurevmdetector.New()))
+		}
 		if d.Container != nil {
 			opts = append(opts, resource.WithContainer())
 		}
@@ -53,13 +58,17 @@ func newResourceWithBuilder(ctx context.Context, r *Resource, build resourceBuil
 	}
 	opts := []resource.Option{
 		resource.WithAttributes(resource.DefaultWithContext(ctx).Attributes()...),
-		resource.WithAttributes(attrs...),
-		resource.WithSchemaURL(schema),
 	}
 
 	if r.DetectionDevelopment != nil {
 		opts = append(opts, resourceOpts(r.DetectionDevelopment.Detectors)...)
 	}
+
+	opts = append(
+		opts,
+		resource.WithAttributes(attrs...),
+		resource.WithSchemaURL(schema),
+	)
 
 	return build(ctx, opts...)
 }
