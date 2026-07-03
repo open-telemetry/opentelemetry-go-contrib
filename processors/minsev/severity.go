@@ -202,7 +202,7 @@ func (s *Severity) UnmarshalText(data []byte) error {
 // Fine-grained severity levels are expected to be in the range of 1 to 4,
 // where 1 is the base severity level, and 2, 3, and 4 are more fine-grained
 // levels. However, fine-grained levels greater than 4 are also accepted, and
-// they will be treated as an 1-based offset from the base severity level.
+// they will be treated as a 1-based offset from the base severity level.
 //
 // For example, "ERROR3" will be parsed as "ERROR" with a fine-grained level of
 // 3, which corresponds to [SeverityError3], "FATAL+5" will be parsed as
@@ -210,7 +210,7 @@ func (s *Severity) UnmarshalText(data []byte) error {
 // level of 2 and an offset of +1, which corresponds to [SeverityInfo3].
 //
 // Fine-grained severity levels are based on counting numbers excluding zero.
-// If a fine-grained level of 0 is provided it is treaded as equivalent to the
+// If a fine-grained level of 0 is provided it is treated as equivalent to the
 // base severity level.  For example, "INFO0" is equivalent to [SeverityInfo1].
 func (s *Severity) parse(str string) (err error) {
 	if str == "" {
