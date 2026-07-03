@@ -120,7 +120,7 @@ func TestDetectNodeError(t *testing.T) {
 func TestDetectNodeOnlyNoClusterRBAC(t *testing.T) {
 	nodeUID := uuid.NewUUID()
 
-	// no kube-system namespace — simulates missing RBAC for namespace GET
+	// no kube-system namespace; simulates missing RBAC for namespace GET
 	client := k8sfake.NewClientset(newFakeNode(nodeUID))
 	t.Setenv("K8S_NODE_NAME", testNodeName)
 
@@ -139,8 +139,9 @@ func TestDetectNodeOnlyNoClusterRBAC(t *testing.T) {
 func TestDetectClusterUIDOnlyNoNodeEnv(t *testing.T) {
 	clusterUID := uuid.NewUUID()
 
+	t.Setenv("K8S_NODE_NAME", "")
 	client := k8sfake.NewClientset(newFakeNamespace(clusterUID))
-	// K8S_NODE_NAME intentionally not set — cluster UID is independently detectable
+	// K8S_NODE_NAME intentionally not set; cluster UID is independently detectable
 
 	filter := attribute.NewAllowKeysFilter(semconv.K8SClusterUIDKey)
 	res, err := NewResourceDetector(WithKubeClient(client), WithAttributeFilter(filter)).Detect(t.Context())
