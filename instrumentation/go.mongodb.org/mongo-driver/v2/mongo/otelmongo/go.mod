@@ -5,11 +5,11 @@ go 1.25.0
 require (
 	github.com/stretchr/testify v1.11.1
 	go.mongodb.org/mongo-driver/v2 v2.7.0
-	go.opentelemetry.io/otel v1.44.0
-	go.opentelemetry.io/otel/metric v1.44.0
-	go.opentelemetry.io/otel/sdk v1.44.0
-	go.opentelemetry.io/otel/sdk/metric v1.44.0
-	go.opentelemetry.io/otel/trace v1.44.0
+	go.opentelemetry.io/otel v1.44.1-0.20260626205805-41ff5ed18bec
+	go.opentelemetry.io/otel/metric v1.44.1-0.20260625150014-c84013202f01
+	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
+	go.opentelemetry.io/otel/sdk/metric v1.44.1-0.20260625150014-c84013202f01
+	go.opentelemetry.io/otel/trace v1.44.1-0.20260625150014-c84013202f01
 )
 
 require (
@@ -18,7 +18,7 @@ require (
 	github.com/go-logr/logr v1.4.3 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/klauspost/compress v1.18.6 // indirect
+	github.com/klauspost/compress v1.18.7 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect
 	github.com/xdg-go/scram v1.2.0 // indirect
