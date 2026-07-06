@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"reflect"
 	"runtime"
+	"sync"
 	"testing"
 	"testing/slogtest"
 	"time"
@@ -620,4 +621,42 @@ func TestHandlerErrorFieldSetErr(t *testing.T) {
 		assert.ErrorIs(t, got["error"].(error), recordErr)
 		assert.Equal(t, map[string]any{"value": "x"}, got["grp"])
 	})
+}
+
+func TestKVBufferKeyValuesDoesNotAliasBackingArray(t *testing.T) {
+	// A buffer with spare capacity is the condition under which appending kvs
+	// used to write into b.data's backing array and return an aliasing slice.
+	b := &kvBuffer{data: make([]attribute.KeyValue, 1, 4)}
+	b.data[0] = attribute.String("shared", "base")
+
+	first := b.KeyValues(attribute.String("id", "first"))
+	second := b.KeyValues(attribute.String("id", "second"))
+
+	// The second call must not have overwritten the slice returned by the first.
+	assert.Equal(t, "first", first[1].Value.AsString(),
+		"KeyValues returned a slice aliasing the shared buffer")
+	assert.Equal(t, "second", second[1].Value.AsString())
+	// The shared buffer itself must be untouched.
+	require.Len(t, b.data, 1)
+	assert.Equal(t, "base", b.data[0].Value.AsString())
+}
+
+func TestKVBufferKeyValuesConcurrent(t *testing.T) {
+	// Concurrent KeyValues calls on a buffer shared across Handle calls must not
+	// race on b.data's backing array. Run under -race to detect the regression.
+	b := &kvBuffer{data: make([]attribute.KeyValue, 1, 8)}
+	b.data[0] = attribute.String("shared", "base")
+
+	const goroutines = 100
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := range goroutines {
+		go func(i int) {
+			defer wg.Done()
+			got := b.KeyValues(attribute.Int("id", i))
+			// Each goroutine must observe the value it appended, not another's.
+			assert.Equal(t, int64(i), got[1].Value.AsInt64())
+		}(i)
+	}
+	wg.Wait()
 }
