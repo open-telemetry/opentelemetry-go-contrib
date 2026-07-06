@@ -71,10 +71,13 @@ func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 		semconv.ServiceName(appName),
 	}
 
+	// azure.container_app.instance.id is a platform-specific attribute for the replica name
+	// as there lacks an appropriate attribute in semantic conventions. This is planned
+	// to be added to semantic conventions.
 	var partialErr error
 	replicaName := os.Getenv(containerAppReplicaNameEnvVar)
 	if replicaName != "" {
-		attrs = append(attrs, semconv.FaaSInstance(replicaName))
+		attrs = append(attrs, attribute.String("azure.container_app.instance.id", replicaName))
 	} else {
 		partialErr = fmt.Errorf("%w: %s not set", resource.ErrPartialResource, containerAppReplicaNameEnvVar)
 	}

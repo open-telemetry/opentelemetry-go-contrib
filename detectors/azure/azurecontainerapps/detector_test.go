@@ -45,7 +45,7 @@ func TestDetectSuccess(t *testing.T) {
 		semconv.CloudProviderAzure,
 		semconv.CloudPlatformAzureContainerApps,
 		semconv.ServiceName("my-app"),
-		semconv.FaaSInstance("my-app--abc123-0"),
+		attribute.String("azure.container_app.instance.id", "my-app--abc123-0"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ResourceDetector{}
