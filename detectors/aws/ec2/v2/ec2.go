@@ -60,8 +60,9 @@ func NewResourceDetectorWithOptions(opts ...Option) resource.Detector {
 	return &resourceDetector{cfg: c}
 }
 
-// WithLogger passes the [logging.Logger] to the AWS SDK client.
-func WithLogger(logger logging.Logger) Option {
+// WithAWSLogger passes the AWS SDK [logging.Logger] to the AWS SDK client.
+// Note this is the AWS SDK's logger, not an OpenTelemetry logger.
+func WithAWSLogger(logger logging.Logger) Option {
 	return optionFunc(func(c *config) {
 		c.logger = logger
 	})

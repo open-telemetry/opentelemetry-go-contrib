@@ -135,7 +135,7 @@ func TestNewResourceDetectorWithOptions(t *testing.T) {
 		},
 		{
 			name:           "with logger",
-			opts:           []Option{WithLogger(logger)},
+			opts:           []Option{WithAWSLogger(logger)},
 			expectedLogger: logger,
 		},
 	}

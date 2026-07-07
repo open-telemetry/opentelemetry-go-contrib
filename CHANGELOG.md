@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add support for the `aws.ec2` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9139)
-- Add `NewResourceDetectorWithOptions` and the `WithLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
+- Add `NewResourceDetectorWithOptions` and the `WithAWSLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom AWS SDK `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
 
 ### Fixed
 
