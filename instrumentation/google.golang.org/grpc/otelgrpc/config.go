@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/stats"
 )
 
@@ -51,6 +52,7 @@ type config struct {
 	MetricAttributes   []attribute.KeyValue
 	MetricAttributesFn func(ctx context.Context) []attribute.KeyValue
 
+	NonErrorCodes    map[grpc_codes.Code]struct{}
 	PublicEndpoint   bool
 	PublicEndpointFn func(ctx context.Context, info *stats.RPCTagInfo) bool
 
@@ -241,6 +243,17 @@ func WithMetricAttributesFn(fn func(ctx context.Context) []attribute.KeyValue) O
 	return optionFunc(func(c *config) {
 		if fn != nil {
 			c.MetricAttributesFn = fn
+		}
+	})
+}
+
+// WithNonErrorCodes sets a custom map of gRPC codes that should be treated as non-errors.
+// This map is used to determine the span status code for a gRPC call.
+// When set, this map is used in addition to the default status mapping defined by the OpenTelemetry gRPC semantic conventions.
+func WithNonErrorCodes(nonErrorCodes map[grpc_codes.Code]struct{}) Option {
+	return optionFunc(func(c *config) {
+		if len(nonErrorCodes) > 0 {
+			c.NonErrorCodes = nonErrorCodes
 		}
 	})
 }

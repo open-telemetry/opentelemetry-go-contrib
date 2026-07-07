@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	grpc_codes "google.golang.org/grpc/codes"
 )
 
 func TestParseSemconvMode(t *testing.T) {
@@ -59,4 +60,30 @@ func TestParseSemconvMode(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+}
+
+func TestWithNonErrorCodes(t *testing.T) {
+	t.Run("configures map and wires it correctly", func(t *testing.T) {
+		nonErrorCodes := map[grpc_codes.Code]struct{}{
+			grpc_codes.NotFound: {},
+		}
+
+		c := newConfig([]Option{WithNonErrorCodes(nonErrorCodes)})
+
+		if c.NonErrorCodes == nil {
+			t.Fatal("expected NonErrorCodes to be configured, got nil")
+		}
+		assert.Len(t, c.NonErrorCodes, 1)
+		assert.Contains(t, c.NonErrorCodes, grpc_codes.NotFound)
+	})
+
+	t.Run("nil map is ignored", func(t *testing.T) {
+		c := newConfig([]Option{WithNonErrorCodes(nil)})
+		assert.Nil(t, c.NonErrorCodes)
+	})
+
+	t.Run("empty map is ignored", func(t *testing.T) {
+		c := newConfig([]Option{WithNonErrorCodes(map[grpc_codes.Code]struct{}{})})
+		assert.Nil(t, c.NonErrorCodes)
+	})
 }
