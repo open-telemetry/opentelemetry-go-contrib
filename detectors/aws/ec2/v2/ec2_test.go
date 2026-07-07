@@ -106,8 +106,7 @@ func TestAWSResourceDetection(t *testing.T) {
 			clientMock.On("GetMetadata", mock.Anything, mock.Anything, mock.Anything).
 				Return(tc.metadataOutput, tc.metadataErr)
 
-			detector := &resourceDetector{c: clientMock}
-			res, _ := detector.Detect(t.Context())
+			res, _ := detectWithClient(t, clientMock)
 
 			if tc.expectedAttrs == nil {
 				assert.Equal(t, resource.Empty(), res, "Resource should be empty")
@@ -119,50 +118,16 @@ func TestAWSResourceDetection(t *testing.T) {
 	}
 }
 
-func TestAWSInvalidClient(t *testing.T) {
-	detector := &resourceDetector{c: nil}
-	_, err := detector.Detect(t.Context())
-	assert.ErrorIs(t, err, errClient)
-}
-
 func TestNewResourceDetector(t *testing.T) {
-	t.Run("uses newClient result", func(t *testing.T) {
-		fakeClient := new(mockClient)
-		stubClientSeams(t,
-			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
-				return aws.Config{}, nil
-			},
-			func(aws.Config) client { return fakeClient },
-		)
-
-		detector := NewResourceDetector()
-		assert.Same(t, fakeClient, detector.(*resourceDetector).c)
-	})
-
-	t.Run("drops client construction error", func(t *testing.T) {
-		stubClientSeams(t,
-			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
-				return aws.Config{}, errors.New("load config failed")
-			},
-			func(aws.Config) client {
-				t.Fatal("newIMDSClient should not be called")
-				return nil
-			},
-		)
-
-		assert.NotNil(t, NewResourceDetector())
-	})
+	assert.NotNil(t, NewResourceDetector())
 }
 
 func TestNewResourceDetectorWithOptions(t *testing.T) {
 	logger := logging.NewStandardLogger(io.Discard)
-	errLoad := errors.New("load config failed")
 
 	testCases := []struct {
 		name           string
 		opts           []Option
-		loadErr        error
-		expectedErr    error
 		expectedLogger logging.Logger
 	}{
 		{
@@ -173,47 +138,33 @@ func TestNewResourceDetectorWithOptions(t *testing.T) {
 			opts:           []Option{WithLogger(logger)},
 			expectedLogger: logger,
 		},
-		{
-			name:        "load config error",
-			loadErr:     errLoad,
-			expectedErr: errLoad,
-		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			var actualLogger logging.Logger
-			stubClientSeams(t,
-				func(_ context.Context, optFns ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
-					if tc.loadErr != nil {
-						return aws.Config{}, tc.loadErr
-					}
-					var lo awsconfig.LoadOptions
-					for _, fn := range optFns {
-						require.NoError(t, fn(&lo))
-					}
-					actualLogger = lo.Logger
-					return aws.Config{}, nil
-				},
-				func(aws.Config) client { return new(mockClient) },
-			)
-
-			detector, err := NewResourceDetectorWithOptions(tc.opts...)
-			if tc.expectedErr != nil {
-				assert.ErrorIs(t, err, tc.expectedErr)
-				assert.Nil(t, detector)
-				return
-			}
-
-			require.NoError(t, err)
-			assert.NotNil(t, detector)
-			if tc.expectedLogger == nil {
-				assert.Nil(t, actualLogger)
-			} else {
-				assert.Same(t, tc.expectedLogger, actualLogger)
-			}
+			detector := NewResourceDetectorWithOptions(tc.opts...)
+			require.NotNil(t, detector)
+			assert.Equal(t, tc.expectedLogger, detector.(*resourceDetector).cfg.logger)
 		})
 	}
+}
+
+// TestDetectReturnsClientError verifies the client construction error is
+// surfaced from Detect rather than the constructor.
+func TestDetectReturnsClientError(t *testing.T) {
+	errLoad := errors.New("load config failed")
+	stubClientSeams(t,
+		func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			return aws.Config{}, errLoad
+		},
+		func(aws.Config) client {
+			t.Fatal("newIMDSClient should not be called")
+			return nil
+		},
+	)
+
+	_, err := NewResourceDetector().Detect(t.Context())
+	assert.ErrorIs(t, err, errLoad)
 }
 
 func TestNewClient(t *testing.T) {
@@ -231,6 +182,26 @@ func TestNewClient(t *testing.T) {
 		c, err := newClient(config{})
 		require.Error(t, err)
 		assert.Nil(t, c)
+	})
+
+	t.Run("passes configured logger to the AWS config", func(t *testing.T) {
+		logger := logging.NewStandardLogger(io.Discard)
+		var actualLogger logging.Logger
+		stubClientSeams(t,
+			func(_ context.Context, optFns ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+				var lo awsconfig.LoadOptions
+				for _, fn := range optFns {
+					require.NoError(t, fn(&lo))
+				}
+				actualLogger = lo.Logger
+				return aws.Config{}, nil
+			},
+			func(aws.Config) client { return new(mockClient) },
+		)
+
+		_, err := newClient(config{logger: logger})
+		require.NoError(t, err)
+		assert.Same(t, logger, actualLogger)
 	})
 
 	t.Run("returns created imds client when config load succeeds", func(t *testing.T) {
@@ -268,6 +239,19 @@ func stubClientSeams(
 	newIMDSClient = newIMDS
 }
 
+// detectWithClient runs Detect with c injected as the IMDS client via the
+// construction seams.
+func detectWithClient(t *testing.T, c client) (*resource.Resource, error) {
+	t.Helper()
+	stubClientSeams(t,
+		func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			return aws.Config{}, nil
+		},
+		func(aws.Config) client { return c },
+	)
+	return NewResourceDetector().Detect(t.Context())
+}
+
 func TestRecordErrors(t *testing.T) {
 	doc := validIdentityDocument()
 
@@ -294,8 +278,7 @@ func TestRecordErrors(t *testing.T) {
 			clientMock.On("GetMetadata", mock.Anything, mock.Anything, mock.Anything).
 				Return(tc.metadataOutput, tc.metadataErr)
 
-			detector := &resourceDetector{c: clientMock}
-			_, err := detector.Detect(t.Context())
+			_, err := detectWithClient(t, clientMock)
 			assert.ErrorIs(t, err, tc.expectedErr)
 		})
 	}

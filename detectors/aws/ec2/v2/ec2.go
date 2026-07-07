@@ -21,8 +21,6 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 )
 
-var errClient = errors.New("EC2 Client Error")
-
 var (
 	loadDefaultConfig = awsconfig.LoadDefaultConfig
 	newIMDSClient     = func(cfg aws.Config) client {
@@ -38,7 +36,7 @@ type client interface {
 
 // resource detector collects resource information from EC2 environment.
 type resourceDetector struct {
-	c client
+	cfg config
 }
 
 // compile time assertion that imds.Client implements client.
@@ -49,23 +47,17 @@ var _ resource.Detector = (*resourceDetector)(nil)
 
 // NewResourceDetector returns a resource detector that will detect AWS EC2 resources.
 func NewResourceDetector() resource.Detector {
-	// Drop error to preserve stable API.
-	client, _ := newClient(config{})
-	return &resourceDetector{c: client}
+	return &resourceDetector{}
 }
 
 // NewResourceDetectorWithOptions returns a resource detector that will detect
 // AWS EC2 resources. The options configure the AWS SDK client.
-func NewResourceDetectorWithOptions(opts ...Option) (resource.Detector, error) {
+func NewResourceDetectorWithOptions(opts ...Option) resource.Detector {
 	var c config
 	for _, opt := range opts {
 		opt.apply(&c)
 	}
-	client, err := newClient(c)
-	if err != nil {
-		return nil, err
-	}
-	return &resourceDetector{c: client}, nil
+	return &resourceDetector{cfg: c}
 }
 
 // WithLogger passes the [logging.Logger] to the AWS SDK client.
@@ -75,7 +67,7 @@ func WithLogger(logger logging.Logger) Option {
 	})
 }
 
-// Option represents a AWS SDK client configuration option function.
+// Option configures an AWS SDK client.
 type Option interface {
 	apply(*config)
 }
@@ -88,16 +80,11 @@ type config struct {
 	logger logging.Logger
 }
 
-func (detector *resourceDetector) getClient() client {
-	return detector.c
-}
-
 // Detect detects associated resources when running in AWS environment.
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	// Return nil if not able to establish valid client
-	client := detector.getClient()
-	if client == nil {
-		return nil, errClient
+	client, err := newClient(detector.cfg)
+	if err != nil {
+		return nil, err
 	}
 
 	// Available method removed in aws-sdk-go-v2, return empty resource if client returns error
