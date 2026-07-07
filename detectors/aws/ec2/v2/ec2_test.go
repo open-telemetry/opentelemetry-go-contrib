@@ -153,7 +153,8 @@ func TestNewResourceDetectorWithOptions(t *testing.T) {
 // surfaced from Detect rather than the constructor.
 func TestDetectReturnsClientError(t *testing.T) {
 	errLoad := errors.New("load config failed")
-	stubClientSeams(t,
+	stubClientSeams(
+		t,
 		func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 			return aws.Config{}, errLoad
 		},
@@ -169,7 +170,8 @@ func TestDetectReturnsClientError(t *testing.T) {
 
 func TestNewClient(t *testing.T) {
 	t.Run("returns error when config load fails", func(t *testing.T) {
-		stubClientSeams(t,
+		stubClientSeams(
+			t,
 			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 				return aws.Config{}, errors.New("load failed")
 			},
@@ -187,7 +189,8 @@ func TestNewClient(t *testing.T) {
 	t.Run("passes configured logger to the AWS config", func(t *testing.T) {
 		logger := logging.NewStandardLogger(io.Discard)
 		var actualLogger logging.Logger
-		stubClientSeams(t,
+		stubClientSeams(
+			t,
 			func(_ context.Context, optFns ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 				var lo awsconfig.LoadOptions
 				for _, fn := range optFns {
@@ -206,7 +209,8 @@ func TestNewClient(t *testing.T) {
 
 	t.Run("returns created imds client when config load succeeds", func(t *testing.T) {
 		fakeClient := new(mockClient)
-		stubClientSeams(t,
+		stubClientSeams(
+			t,
 			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 				return aws.Config{Region: "us-west-2"}, nil
 			},
@@ -243,7 +247,8 @@ func stubClientSeams(
 // construction seams.
 func detectWithClient(t *testing.T, c client) (*resource.Resource, error) {
 	t.Helper()
-	stubClientSeams(t,
+	stubClientSeams(
+		t,
 		func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 			return aws.Config{}, nil
 		},
