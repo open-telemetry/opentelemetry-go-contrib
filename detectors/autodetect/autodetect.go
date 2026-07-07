@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/gcp"
+	"go.opentelemetry.io/contrib/detectors/heroku"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
 )
 
@@ -53,6 +54,9 @@ var (
 	// Google Cloud Platform (GCP) environments (see gcp.NewDetector for
 	// details).
 	IDGCP = ID("gcp")
+	// IDHeroku is the ID for the Heroku detector that detects resource
+	// attributes on Heroku dynos (see heroku.NewResourceDetector for details).
+	IDHeroku = ID("heroku")
 	// IDHetzner is the ID for the Hetzner Cloud detector that detects resource
 	// attributes on Hetzner Cloud servers (see hetzner.NewResourceDetector for
 	// details).
@@ -141,6 +145,7 @@ var (
 
 		IDGCP: gcp.NewDetector,
 
+		IDHeroku:  func() resource.Detector { return heroku.NewResourceDetector() },
 		IDHetzner: func() resource.Detector { return hetzner.NewResourceDetector() },
 
 		IDHost:   optFactory(resource.WithHost()),
