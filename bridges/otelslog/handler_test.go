@@ -620,4 +620,32 @@ func TestHandlerErrorFieldSetErr(t *testing.T) {
 		assert.ErrorIs(t, got["error"].(error), recordErr)
 		assert.Equal(t, map[string]any{"value": "x"}, got["grp"])
 	})
+
+	t.Run("NestedGroupValueErrorPreserved", func(t *testing.T) {
+		r := new(recorder)
+		l := slog.New(NewHandler("", WithLoggerProvider(r)))
+		wantErr := errors.New("nested group error")
+
+		l.Info("msg", slog.Group("grp", slog.Any("err", wantErr), slog.String("keep", "yes")))
+
+		require.Len(t, r.Records, 1)
+		got := r.Results()[0]
+		_, isRecordErr := got["error"]
+		assert.False(t, isRecordErr, "a nested group error must not be promoted to the record error")
+		assert.Equal(t, map[string]any{"err": wantErr.Error(), "keep": "yes"}, got["grp"])
+	})
+
+	t.Run("NestedGroupValueErrorOnlyPreserved", func(t *testing.T) {
+		r := new(recorder)
+		l := slog.New(NewHandler("", WithLoggerProvider(r)))
+		wantErr := errors.New("only error")
+
+		l.Info("msg", slog.Group("grp", slog.Any("err", wantErr)))
+
+		require.Len(t, r.Records, 1)
+		got := r.Results()[0]
+		_, isRecordErr := got["error"]
+		assert.False(t, isRecordErr, "a nested group error must not be promoted to the record error")
+		assert.Equal(t, map[string]any{"err": wantErr.Error()}, got["grp"])
+	})
 }

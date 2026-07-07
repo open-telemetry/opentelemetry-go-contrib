@@ -412,6 +412,12 @@ func (g *group) AddAttrs(attrs []slog.Attr) {
 type kvBuffer struct {
 	data []attribute.KeyValue
 	err  error
+	// keepErr, when true, keeps an error-valued attribute as a normal
+	// attribute instead of promoting it to err. It is set when converting a
+	// group value, because a group maps to an attribute.MAP that has no
+	// dedicated error slot like a record does, so a promoted error would be
+	// silently dropped.
+	keepErr bool
 }
 
 func newKVBuffer(n int) *kvBuffer {
@@ -431,7 +437,7 @@ func (b *kvBuffer) Clone() *kvBuffer {
 	if b == nil {
 		return nil
 	}
-	return &kvBuffer{data: slices.Clone(b.data), err: b.err}
+	return &kvBuffer{data: slices.Clone(b.data), err: b.err, keepErr: b.keepErr}
 }
 
 // KeyValues returns kvs appended to the [attribute.KeyValue] held by b.
@@ -459,7 +465,7 @@ func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
 //
 // If attr is empty, it will be dropped.
 func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
-	if attr.Value.Kind() == slog.KindAny {
+	if !b.keepErr && attr.Value.Kind() == slog.KindAny {
 		if err, ok := attr.Value.Any().(error); ok {
 			b.err = err
 			return true
@@ -513,6 +519,7 @@ func convert(v slog.Value) attribute.Value {
 	case slog.KindGroup:
 		g := v.Group()
 		buf := newKVBuffer(len(g))
+		buf.keepErr = true
 		buf.AddAttrs(g)
 		return attribute.MapValue(buf.data...)
 	case slog.KindLogValuer:
