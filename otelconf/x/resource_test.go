@@ -5,6 +5,7 @@ package x
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -29,6 +30,13 @@ func TestNewResource(t *testing.T) {
 		{
 			name:          "resource-no-attributes",
 			config:        &Resource{},
+			wantSchemaURL: "",
+		},
+		{
+			name: "resource-with-empty-detection",
+			config: &Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{},
+			},
 			wantSchemaURL: "",
 		},
 		{
@@ -173,4 +181,140 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			assert.Equal(t, tt.wantServiceAttribute, attrSet[semconv.ServiceInstanceIDKey], "should have service.instance.id attribute")
 		})
 	}
+}
+
+func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
+	tests := []struct {
+		name     string
+		attrs    *IncludeExclude
+		wantHost bool
+		wantOS   bool
+	}{
+		{
+			name:     "no-filter",
+			wantHost: true,
+			wantOS:   true,
+		},
+		{
+			name: "include-host-only",
+			attrs: &IncludeExclude{
+				Included: []string{string(semconv.HostNameKey)},
+			},
+			wantHost: true,
+		},
+		{
+			name: "exclude-os",
+			attrs: &IncludeExclude{
+				Excluded: []string{string(semconv.OSTypeKey)},
+			},
+			wantHost: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := newResource(t.Context(), &Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{Host: ExperimentalHostResourceDetector{}},
+					},
+					Attributes: tt.attrs,
+				},
+			})
+			require.NoError(t, err)
+
+			attrs := got.Attributes()
+			attrSet := make(map[attribute.Key]bool)
+			for _, attr := range attrs {
+				attrSet[attr.Key] = true
+			}
+
+			assert.Equal(t, tt.wantHost, attrSet[semconv.HostNameKey])
+			assert.Equal(t, tt.wantOS, attrSet[semconv.OSTypeKey])
+		})
+	}
+}
+
+func TestNewResourceWithDetectionAttributesFilterDoesNotApplyToConfiguredAttributes(t *testing.T) {
+	got, err := newResource(t.Context(), &Resource{
+		Attributes: []AttributeNameValue{
+			{Name: "custom", Value: "value"},
+		},
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Host: ExperimentalHostResourceDetector{}},
+			},
+			Attributes: &IncludeExclude{
+				Included: []string{string(semconv.HostNameKey)},
+				Excluded: []string{"custom"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	gotAttrs := attrMap(got.Attributes())
+	assert.Contains(t, gotAttrs, attribute.Key("custom"))
+	assert.Contains(t, gotAttrs, semconv.HostNameKey)
+	assert.NotContains(t, gotAttrs, semconv.OSTypeKey)
+}
+
+func TestNewResourceWithDetectionAttributesFilterRemovesDetectedSchema(t *testing.T) {
+	schemaURL := "https://example.com/schema"
+	got, err := newResource(t.Context(), &Resource{
+		SchemaUrl: ptr(schemaURL),
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Host: ExperimentalHostResourceDetector{}},
+			},
+			Attributes: &IncludeExclude{
+				Included: []string{"unmatched.attribute"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, schemaURL, got.SchemaURL())
+	assert.NotContains(t, attrMap(got.Attributes()), semconv.HostNameKey)
+	assert.NotContains(t, attrMap(got.Attributes()), semconv.OSTypeKey)
+}
+
+func TestNewResourceWithDetectionDoesNotOverrideConfiguredAttributes(t *testing.T) {
+	got, err := newResource(t.Context(), &Resource{
+		Attributes: []AttributeNameValue{
+			{Name: string(semconv.ServiceNameKey), Value: "configured-service"},
+		},
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Service: ExperimentalServiceResourceDetector{}},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	gotAttrs := attrMap(got.Attributes())
+	assert.Equal(t, "configured-service", gotAttrs[semconv.ServiceNameKey].AsString())
+	assert.Contains(t, gotAttrs, semconv.ServiceInstanceIDKey)
+}
+
+func TestNewResourceWithDetectionAttributesFilterError(t *testing.T) {
+	got, err := newResource(t.Context(), &Resource{
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Host: ExperimentalHostResourceDetector{}},
+			},
+			Attributes: &IncludeExclude{
+				Included: []string{"foo"},
+				Excluded: []string{"foo"},
+			},
+		},
+	})
+	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
+	assert.True(t, got.Set().HasValue(semconv.ServiceNameKey))
+}
+
+func attrMap(attrs []attribute.KeyValue) map[attribute.Key]attribute.Value {
+	attrSet := make(map[attribute.Key]attribute.Value, len(attrs))
+	for _, attr := range attrs {
+		attrSet[attr.Key] = attr.Value
+	}
+	return attrSet
 }
