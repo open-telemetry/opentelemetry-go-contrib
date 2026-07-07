@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -808,4 +809,146 @@ func TestMetricsSemconvOptIn(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestSpanStatusFn(t *testing.T) {
+	end := func(err error) *stats.End {
+		now := time.Now()
+		return &stats.End{Error: err, BeginTime: now, EndTime: now}
+	}
+
+	t.Run("server: fn receives correct fullMethod and grpcStatus", func(t *testing.T) {
+		var (
+			gotMethod string
+			gotCode   codes.Code
+		)
+
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithSpanStatusFn(func(_ context.Context, fullMethod string, grpcStatus *status.Status) (otelcodes.Code, string) {
+				gotMethod = fullMethod
+				if grpcStatus != nil {
+					gotCode = grpcStatus.Code()
+				}
+				return otelcodes.Unset, ""
+			}),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Method"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "not found")))
+
+		require.Len(t, sr.Ended(), 1)
+		assert.Equal(t, "/pkg.Svc/Method", gotMethod)
+		assert.Equal(t, codes.NotFound, gotCode)
+	})
+
+	t.Run("server: fn promotes NotFound to error (overrides default non-error)", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithSpanStatusFn(func(_ context.Context, _ string, grpcStatus *status.Status) (otelcodes.Code, string) {
+				if grpcStatus != nil && grpcStatus.Code() == codes.NotFound {
+					return otelcodes.Error, grpcStatus.Message()
+				}
+				return otelcodes.Unset, ""
+			}),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Find"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "item not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Error, spans[0].Status().Code)
+		assert.Equal(t, "item not found", spans[0].Status().Description)
+	})
+
+	t.Run("server: fn suppresses INTERNAL error for a specific method", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		const silenced = "/pkg.Svc/IgnoreInternal"
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithSpanStatusFn(func(_ context.Context, fullMethod string, grpcStatus *status.Status) (otelcodes.Code, string) {
+				if fullMethod == silenced {
+					return otelcodes.Unset, ""
+				}
+				if grpcStatus != nil {
+					switch grpcStatus.Code() {
+					case codes.Unknown, codes.DeadlineExceeded, codes.Unimplemented,
+						codes.Internal, codes.Unavailable, codes.DataLoss:
+						return otelcodes.Error, grpcStatus.Message()
+					}
+				}
+				return otelcodes.Unset, ""
+			}),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: silenced})
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+	})
+
+	t.Run("client: fn treats NotFound as non-error (overrides default all-errors)", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewClientHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithSpanStatusFn(func(_ context.Context, _ string, grpcStatus *status.Status) (otelcodes.Code, string) {
+				if grpcStatus != nil && grpcStatus.Code() == codes.NotFound {
+					return otelcodes.Unset, ""
+				}
+				if grpcStatus != nil {
+					return otelcodes.Error, grpcStatus.Message()
+				}
+				return otelcodes.Unset, ""
+			}),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+	})
+
+	t.Run("server: no fn → default mapping (NotFound is NOT an error)", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(tp))
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+	})
+
+	t.Run("client: no fn → default mapping (NotFound IS an error)", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(tp))
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Error, spans[0].Status().Code)
+		assert.Equal(t, "not found", spans[0].Status().Description)
+	})
 }
