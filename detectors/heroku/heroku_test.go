@@ -104,6 +104,19 @@ func TestDetect_NotOnHeroku(t *testing.T) {
 	assert.Equal(t, resource.Empty(), res)
 }
 
+func TestDetect_EmptyEnvValues(t *testing.T) {
+	t.Setenv(envDynoID, "")
+	t.Setenv(envAppID, "")
+	t.Setenv(envAppName, "")
+	t.Setenv(envReleaseCreatedAt, "")
+	t.Setenv(envReleaseVersion, "")
+	t.Setenv(envSlugCommit, "")
+
+	res, err := NewResourceDetector().Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
+}
+
 func TestDetect_WithAttributeFilter(t *testing.T) {
 	t.Setenv(envDynoID, "foo")
 	t.Setenv(envAppID, "appid")

@@ -65,22 +65,22 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	var attrs []attribute.KeyValue
 
-	if dynoID, ok := os.LookupEnv(envDynoID); ok {
+	if dynoID, ok := os.LookupEnv(envDynoID); ok && dynoID != "" {
 		attrs = append(attrs, semconv.ServiceInstanceID(dynoID))
 	}
-	if v, ok := os.LookupEnv(envAppID); ok {
+	if v, ok := os.LookupEnv(envAppID); ok && v != "" {
 		attrs = append(attrs, semconv.CloudProviderHeroku, semconv.HerokuAppID(v))
 	}
-	if v, ok := os.LookupEnv(envAppName); ok {
+	if v, ok := os.LookupEnv(envAppName); ok && v != "" {
 		attrs = append(attrs, semconv.ServiceName(v))
 	}
-	if v, ok := os.LookupEnv(envReleaseCreatedAt); ok {
+	if v, ok := os.LookupEnv(envReleaseCreatedAt); ok && v != "" {
 		attrs = append(attrs, semconv.HerokuReleaseCreationTimestamp(v))
 	}
-	if v, ok := os.LookupEnv(envReleaseVersion); ok {
+	if v, ok := os.LookupEnv(envReleaseVersion); ok && v != "" {
 		attrs = append(attrs, semconv.ServiceVersion(v))
 	}
-	if v, ok := os.LookupEnv(envSlugCommit); ok {
+	if v, ok := os.LookupEnv(envSlugCommit); ok && v != "" {
 		attrs = append(attrs, semconv.HerokuReleaseCommit(v))
 	}
 
