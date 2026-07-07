@@ -976,6 +976,11 @@ type ExperimentalResourceDetection struct {
 }
 
 type ExperimentalResourceDetector struct {
+	// Enable the AWS EC2 resource detector.
+	// If omitted, ignore.
+	//
+	AWSEC2 ExperimentalAWSEC2ResourceDetector `json:"aws.ec2,omitempty,omitzero" yaml:"aws.ec2,omitempty" mapstructure:"aws.ec2,omitempty"`
+
 	// Enable the container resource detector, which populates container.* attributes.
 	// If omitted, ignore.
 	//
@@ -999,6 +1004,8 @@ type ExperimentalResourceDetector struct {
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
+
+type ExperimentalAWSEC2ResourceDetector map[string]interface{}
 
 type ExperimentalServiceResourceDetector map[string]interface{}
 
