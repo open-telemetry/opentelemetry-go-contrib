@@ -13,7 +13,9 @@ import (
 	"testing"
 	"time"
 
+	aws "github.com/aws/aws-sdk-go-v2/aws"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
@@ -21,7 +23,7 @@ import (
 	"github.com/stretchr/testify/mock"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 )
 
 type mockClient struct {
@@ -119,6 +121,69 @@ func TestAWSInvalidClient(t *testing.T) {
 	detector := &resourceDetector{c: nil}
 	_, err := detector.Detect(t.Context())
 	assert.ErrorIs(t, err, errClient)
+}
+
+func TestNewResourceDetector(t *testing.T) {
+	t.Run("uses newClient result", func(t *testing.T) {
+		oldLoadDefaultConfig := loadDefaultConfig
+		oldNewIMDSClient := newIMDSClient
+		t.Cleanup(func() {
+			loadDefaultConfig = oldLoadDefaultConfig
+			newIMDSClient = oldNewIMDSClient
+		})
+
+		fakeClient := new(mockClient)
+		loadDefaultConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			return aws.Config{}, nil
+		}
+		newIMDSClient = func(_ aws.Config) client {
+			return fakeClient
+		}
+
+		detector := NewResourceDetector()
+		assert.Same(t, fakeClient, detector.(*resourceDetector).c)
+	})
+}
+
+func TestNewClient(t *testing.T) {
+	t.Run("returns nil when config load fails", func(t *testing.T) {
+		oldLoadDefaultConfig := loadDefaultConfig
+		oldNewIMDSClient := newIMDSClient
+		t.Cleanup(func() {
+			loadDefaultConfig = oldLoadDefaultConfig
+			newIMDSClient = oldNewIMDSClient
+		})
+
+		loadDefaultConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			return aws.Config{}, errors.New("load failed")
+		}
+		newIMDSClient = func(_ aws.Config) client {
+			t.Fatal("newIMDSClient should not be called")
+			return nil
+		}
+
+		assert.Nil(t, newClient())
+	})
+
+	t.Run("returns created imds client when config load succeeds", func(t *testing.T) {
+		oldLoadDefaultConfig := loadDefaultConfig
+		oldNewIMDSClient := newIMDSClient
+		t.Cleanup(func() {
+			loadDefaultConfig = oldLoadDefaultConfig
+			newIMDSClient = oldNewIMDSClient
+		})
+
+		fakeClient := new(mockClient)
+		loadDefaultConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			return aws.Config{Region: "us-west-2"}, nil
+		}
+		newIMDSClient = func(cfg aws.Config) client {
+			assert.Equal(t, "us-west-2", cfg.Region)
+			return fakeClient
+		}
+
+		assert.Same(t, fakeClient, newClient())
+	})
 }
 
 func TestRecordErrors(t *testing.T) {
