@@ -7,7 +7,7 @@ require (
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/propagators/autoprop v0.69.0
-	go.opentelemetry.io/otel v1.44.1-0.20260626205805-41ff5ed18bec
+	go.opentelemetry.io/otel v1.44.1-0.20260709175035-4e0bf9f14df8
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.20.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.20.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.44.1-0.20260625150014-c84013202f01
