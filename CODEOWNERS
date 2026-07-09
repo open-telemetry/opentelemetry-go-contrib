@@ -35,6 +35,7 @@ detectors/autodetect                                                    @open-te
 detectors/aws/ec2/v2                                                    @open-telemetry/go-approvers @iblancasa
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes
 detectors/aws/eks                                                       @open-telemetry/go-approvers @pyohannes
+detectors/aws/elasticbeanstalk                                          @open-telemetry/go-approvers @iblancasa @paulojmdias
 detectors/aws/lambda                                                    @open-telemetry/go-approvers
 detectors/azure/                                                        @open-telemetry/go-approvers @pyohannes
 detectors/azure/azurecontainerapps                                      @open-telemetry/go-approvers @iblancasa
