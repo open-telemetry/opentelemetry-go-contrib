@@ -26,6 +26,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.44.1-0.20260625150014-c84013202f01 // indirect
 	golang.org/x/crypto v0.53.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/text v0.38.0 // indirect
+	golang.org/x/text v0.39.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
