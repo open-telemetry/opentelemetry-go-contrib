@@ -32,7 +32,7 @@ bridges/otelzap/                                                        @open-te
 bridges/otellogr/                                                       @open-telemetry/go-approvers @pellared
 
 detectors/autodetect                                                    @open-telemetry/go-approvers @MrAlias
-detectors/aws/ec2/v2                                                    @open-telemetry/go-approvers
+detectors/aws/ec2/v2                                                    @open-telemetry/go-approvers @iblancasa
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes
 detectors/aws/eks                                                       @open-telemetry/go-approvers @pyohannes
 detectors/aws/lambda                                                    @open-telemetry/go-approvers
