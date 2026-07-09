@@ -13,6 +13,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.16.0
+	go.opentelemetry.io/contrib/detectors/k8sapi v0.16.0
 	go.opentelemetry.io/otel v1.44.1-0.20260709175035-4e0bf9f14df8
 	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
 )
@@ -79,7 +80,7 @@ require (
 	golang.org/x/term v0.44.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	google.golang.org/protobuf v1.36.12-0.20260120151049-f2248ac996af // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
@@ -110,5 +111,7 @@ replace go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk => ../aws/ela
 replace go.opentelemetry.io/contrib/detectors/gcp => ../gcp
 
 replace go.opentelemetry.io/contrib/detectors/hetzner => ../hetzner
+
+replace go.opentelemetry.io/contrib/detectors/k8sapi => ../k8sapi
 
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
