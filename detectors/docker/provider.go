@@ -91,7 +91,8 @@ func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (containerInfo, 
 		refID := strings.TrimPrefix(strings.ToLower(ref), "sha256:")
 		isBareImageID := refID != "" && len(refID) >= 12 && len(refID) <= len(id) && strings.HasPrefix(id, refID)
 		for _, c := range refID {
-			if !(('0' <= c && c <= '9') || ('a' <= c && c <= 'f')) {
+			isHexDigit := ('0' <= c && c <= '9') || ('a' <= c && c <= 'f')
+			if !isHexDigit {
 				isBareImageID = false
 				break
 			}
