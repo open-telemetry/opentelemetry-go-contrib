@@ -32,14 +32,16 @@ bridges/otelzap/                                                        @open-te
 bridges/otellogr/                                                       @open-telemetry/go-approvers @pellared
 
 detectors/autodetect                                                    @open-telemetry/go-approvers @MrAlias
-detectors/aws/ec2/v2                                                    @open-telemetry/go-approvers
+detectors/aws/ec2/v2                                                    @open-telemetry/go-approvers @iblancasa
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes
 detectors/aws/eks                                                       @open-telemetry/go-approvers @pyohannes
+detectors/aws/elasticbeanstalk                                          @open-telemetry/go-approvers @iblancasa @paulojmdias
 detectors/aws/lambda                                                    @open-telemetry/go-approvers
 detectors/azure/                                                        @open-telemetry/go-approvers @pyohannes
 detectors/azure/azurecontainerapps                                      @open-telemetry/go-approvers @iblancasa
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 detectors/hetzner/                                                      @open-telemetry/go-approvers @paulojmdias
+detectors/k8sapi/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa @dashpole
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
 
