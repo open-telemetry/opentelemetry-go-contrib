@@ -4,37 +4,39 @@
 package otelconf
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 )
 
 func TestNewResource(t *testing.T) {
 	tests := []struct {
-		name         string
-		config       *Resource
-		wantResource *resource.Resource
-		wantErrT     error
+		name          string
+		config        *Resource
+		wantSchemaURL string
+		wantAttrs     []attribute.KeyValue
+		wantErrT      error
 	}{
 		{
-			name:         "no-resource-configuration",
-			wantResource: resource.Default(),
+			name:          "no-resource-configuration",
+			wantSchemaURL: resource.Default().SchemaURL(),
 		},
 		{
-			name:         "resource-no-attributes",
-			config:       &Resource{},
-			wantResource: resource.NewSchemaless(),
+			name:          "resource-no-attributes",
+			config:        &Resource{},
+			wantSchemaURL: "",
 		},
 		{
 			name: "resource-with-schema",
 			config: &Resource{
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
-			wantResource: resource.NewWithAttributes(semconv.SchemaURL),
+			wantSchemaURL: semconv.SchemaURL,
 		},
 		{
 			name: "resource-with-attributes",
@@ -43,9 +45,8 @@ func TestNewResource(t *testing.T) {
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
 			},
-			wantResource: resource.NewWithAttributes("",
-				semconv.ServiceName("service-a"),
-			),
+			wantSchemaURL: "",
+			wantAttrs:     []attribute.KeyValue{semconv.ServiceName("service-a")},
 		},
 		{
 			name: "resource-with-attributes-and-schema",
@@ -55,9 +56,8 @@ func TestNewResource(t *testing.T) {
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
-			wantResource: resource.NewWithAttributes(semconv.SchemaURL,
-				semconv.ServiceName("service-a"),
-			),
+			wantSchemaURL: semconv.SchemaURL,
+			wantAttrs:     []attribute.KeyValue{semconv.ServiceName("service-a")},
 		},
 		{
 			name: "resource-with-additional-attributes-and-schema",
@@ -68,16 +68,42 @@ func TestNewResource(t *testing.T) {
 				},
 				SchemaUrl: ptr(semconv.SchemaURL),
 			},
-			wantResource: resource.NewWithAttributes(semconv.SchemaURL,
+			wantSchemaURL: semconv.SchemaURL,
+			wantAttrs: []attribute.KeyValue{
 				semconv.ServiceName("service-a"),
-				attribute.Bool("attr-bool", true)),
+				attribute.Bool("attr-bool", true),
+			},
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := newResource(tt.config)
-			require.ErrorIs(t, tt.wantErrT, err)
-			assert.Equal(t, tt.wantResource, got)
+			got, err := newResource(t.Context(), tt.config)
+			require.ErrorIs(t, err, tt.wantErrT)
+
+			assert.Equal(t, tt.wantSchemaURL, got.SchemaURL())
+			assert.Truef(t, got.Set().HasValue(semconv.ServiceNameKey), "should have %q attribute", semconv.ServiceNameKey)
+			assert.Truef(t, got.Set().HasValue(semconv.TelemetrySDKNameKey), "should have %q attribute", semconv.TelemetrySDKNameKey)
+			assert.Truef(t, got.Set().HasValue(semconv.TelemetrySDKLanguageKey), "should have %q attribute", semconv.TelemetrySDKLanguageKey)
+			assert.Truef(t, got.Set().HasValue(semconv.TelemetrySDKVersionKey), "should have %q attribute", semconv.TelemetrySDKVersionKey)
+			for _, want := range tt.wantAttrs {
+				gotValue, ok := got.Set().Value(want.Key)
+				if assert.Truef(t, ok, "should have %q attribute", want.Key) {
+					assert.Equalf(t, want.Value, gotValue, "%q attribute value mismatch", want.Key)
+				}
+			}
 		})
 	}
 }
+
+func TestNewResourceUsesContext(t *testing.T) {
+	wantCtx := context.WithValue(t.Context(), ctxKey{}, "resource")
+	want := resource.NewSchemaless(attribute.String("from", "builder"))
+	got, err := newResourceWithBuilder(wantCtx, &Resource{}, func(ctx context.Context, _ ...resource.Option) (*resource.Resource, error) {
+		assert.Same(t, wantCtx, ctx)
+		return want, nil
+	})
+	require.NoError(t, err)
+	assert.Same(t, want, got)
+}
+
+type ctxKey struct{}

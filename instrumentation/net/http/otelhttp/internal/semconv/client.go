@@ -20,8 +20,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/httpconv"
+	"go.opentelemetry.io/otel/semconv/v1.42.0"
+	"go.opentelemetry.io/otel/semconv/v1.42.0/httpconv"
 )
 
 type HTTPClient struct {

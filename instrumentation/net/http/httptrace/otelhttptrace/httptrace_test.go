@@ -38,7 +38,7 @@ func TestRoundtrip(t *testing.T) {
 				if expectedAttrs[attr.Key] == "any" {
 					actualAttrs[attr.Key] = expectedAttrs[attr.Key]
 				} else {
-					actualAttrs[attr.Key] = attr.Value.Emit()
+					actualAttrs[attr.Key] = attr.Value.String()
 				}
 			}
 

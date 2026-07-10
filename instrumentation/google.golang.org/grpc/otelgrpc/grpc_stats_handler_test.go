@@ -22,8 +22,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
-	"go.opentelemetry.io/otel/semconv/v1.40.0/rpcconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	"go.opentelemetry.io/otel/semconv/v1.42.0/rpcconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -74,25 +74,30 @@ func TestStatsHandler(t *testing.T) {
 
 			listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 			require.NoError(t, err, "failed to open port")
-			client := newGrpcTest(t, listener,
+			client := newGrpcTest(
+				t, listener,
 				[]grpc.DialOption{
-					grpc.WithStatsHandler(otelgrpc.NewClientHandler(
-						otelgrpc.WithTracerProvider(clientTP),
-						otelgrpc.WithMeterProvider(clientMP),
-						otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-						otelgrpc.WithFilter(filters.ServiceName(tt.filterSvcName)),
-						otelgrpc.WithSpanAttributes(testSpanAttr),
-						otelgrpc.WithMetricAttributes(testMetricAttr)),
+					grpc.WithStatsHandler(
+						otelgrpc.NewClientHandler(
+							otelgrpc.WithTracerProvider(clientTP),
+							otelgrpc.WithMeterProvider(clientMP),
+							otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+							otelgrpc.WithFilter(filters.ServiceName(tt.filterSvcName)),
+							otelgrpc.WithSpanAttributes(testSpanAttr),
+							otelgrpc.WithMetricAttributes(testMetricAttr),
+						),
 					),
 				},
 				[]grpc.ServerOption{
-					grpc.StatsHandler(otelgrpc.NewServerHandler(
-						otelgrpc.WithTracerProvider(serverTP),
-						otelgrpc.WithMeterProvider(serverMP),
-						otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
-						otelgrpc.WithFilter(filters.ServiceName(tt.filterSvcName)),
-						otelgrpc.WithSpanAttributes(testSpanAttr),
-						otelgrpc.WithMetricAttributes(testMetricAttr)),
+					grpc.StatsHandler(
+						otelgrpc.NewServerHandler(
+							otelgrpc.WithTracerProvider(serverTP),
+							otelgrpc.WithMeterProvider(serverMP),
+							otelgrpc.WithMessageEvents(otelgrpc.ReceivedEvents, otelgrpc.SentEvents),
+							otelgrpc.WithFilter(filters.ServiceName(tt.filterSvcName)),
+							otelgrpc.WithSpanAttributes(testSpanAttr),
+							otelgrpc.WithMetricAttributes(testMetricAttr),
+						),
 					),
 				},
 			)
@@ -482,7 +487,8 @@ func checkServerMetrics(t *testing.T, reader metric.Reader, stabilityOptIn strin
 func TestStatsHandlerConcurrentSafeContextCancellation(t *testing.T) {
 	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err, "failed to open port")
-	client := newGrpcTest(t, listener,
+	client := newGrpcTest(
+		t, listener,
 		[]grpc.DialOption{
 			grpc.WithStatsHandler(otelgrpc.NewClientHandler()),
 		},
@@ -769,18 +775,23 @@ func TestMetricsSemconvOptIn(t *testing.T) {
 			listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 			require.NoError(t, err, "failed to open port")
 
-			client := newGrpcTest(t, listener,
+			client := newGrpcTest(
+				t, listener,
 				[]grpc.DialOption{
-					grpc.WithStatsHandler(otelgrpc.NewClientHandler(
-						otelgrpc.WithMeterProvider(clientMP),
-						otelgrpc.WithMetricAttributes(testMetricAttr)),
+					grpc.WithStatsHandler(
+						otelgrpc.NewClientHandler(
+							otelgrpc.WithMeterProvider(clientMP),
+							otelgrpc.WithMetricAttributes(testMetricAttr),
+						),
 					),
 				},
 				[]grpc.ServerOption{
-					grpc.StatsHandler(otelgrpc.NewServerHandler(
-						otelgrpc.WithTracerProvider(trace.NewTracerProvider()), // ensure we create one for testing
-						otelgrpc.WithMeterProvider(serverMP),
-						otelgrpc.WithMetricAttributes(testMetricAttr)),
+					grpc.StatsHandler(
+						otelgrpc.NewServerHandler(
+							otelgrpc.WithTracerProvider(trace.NewTracerProvider()), // ensure we create one for testing
+							otelgrpc.WithMeterProvider(serverMP),
+							otelgrpc.WithMetricAttributes(testMetricAttr),
+						),
 					),
 				},
 			)

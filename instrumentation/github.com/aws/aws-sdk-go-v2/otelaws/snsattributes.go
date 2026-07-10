@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/smithy-go/middleware"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 )
 
 // SNSAttributeBuilder sets SNS specific attributes depending on the SNS operation is being performed.
@@ -19,14 +19,16 @@ func SNSAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ mid
 
 	switch v := in.Parameters.(type) {
 	case *sns.PublishBatchInput:
-		snsAttributes = append(snsAttributes,
+		snsAttributes = append(
+			snsAttributes,
 			semconv.MessagingDestinationName(extractDestinationName(v.TopicArn, nil)),
 			semconv.MessagingOperationTypeSend,
 			semconv.MessagingOperationName("publish_batch_input"),
 			semconv.MessagingBatchMessageCount(len(v.PublishBatchRequestEntries)),
 		)
 	case *sns.PublishInput:
-		snsAttributes = append(snsAttributes,
+		snsAttributes = append(
+			snsAttributes,
 			semconv.MessagingDestinationName(extractDestinationName(v.TopicArn, v.TargetArn)),
 			semconv.MessagingOperationTypeSend,
 			semconv.MessagingOperationName("publish_input"),

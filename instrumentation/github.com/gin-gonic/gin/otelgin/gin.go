@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
@@ -120,8 +121,10 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 
 		if len(c.Errors) > 0 {
 			span.SetStatus(codes.Error, c.Errors.String())
-			for _, err := range c.Errors {
-				span.RecordError(err.Err) //nolint:forbidigo // TODO: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/8441
+			if len(c.Errors) == 1 {
+				span.SetAttributes(otelsemconv.ErrorType(c.Errors[0].Err))
+			} else {
+				span.SetAttributes(otelsemconv.ErrorTypeOther)
 			}
 		}
 

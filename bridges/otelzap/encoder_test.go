@@ -12,7 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 	"go.uber.org/zap/zapcore"
 )
 
@@ -234,7 +234,7 @@ func TestObjectEncoder(t *testing.T) {
 			tt.f(enc)
 			enc.calculate(enc.root)
 			require.Len(t, enc.root.attrs, 1)
-			assert.Equal(t, tt.expected, value2Result((enc.root.attrs[0].Value)), "Unexpected encoder output.")
+			assert.Equal(t, tt.expected, value2Result(enc.root.attrs[0].Value), "Unexpected encoder output.")
 		})
 	}
 }
@@ -398,28 +398,36 @@ func (m maybeNamespace) MarshalLogObject(enc zapcore.ObjectEncoder) error {
 	return nil
 }
 
-func value2Result(v log.Value) any {
-	switch v.Kind() {
-	case log.KindBool:
+func value2Result(v attribute.Value) any {
+	switch v.Type() {
+	case attribute.BOOL:
 		return v.AsBool()
-	case log.KindFloat64:
+	case attribute.FLOAT64:
 		return v.AsFloat64()
-	case log.KindInt64:
+	case attribute.INT64:
 		return v.AsInt64()
-	case log.KindString:
+	case attribute.STRING:
 		return v.AsString()
-	case log.KindBytes:
-		return v.AsBytes()
-	case log.KindSlice:
+	case attribute.BOOLSLICE:
+		return v.AsBoolSlice()
+	case attribute.INT64SLICE:
+		return v.AsInt64Slice()
+	case attribute.FLOAT64SLICE:
+		return v.AsFloat64Slice()
+	case attribute.STRINGSLICE:
+		return v.AsStringSlice()
+	case attribute.BYTESLICE:
+		return v.AsByteSlice()
+	case attribute.SLICE:
 		var s []any
 		for _, val := range v.AsSlice() {
 			s = append(s, value2Result(val))
 		}
 		return s
-	case log.KindMap:
+	case attribute.MAP:
 		m := make(map[string]any)
 		for _, val := range v.AsMap() {
-			m[val.Key] = value2Result(val.Value)
+			m[string(val.Key)] = value2Result(val.Value)
 		}
 		return m
 	}

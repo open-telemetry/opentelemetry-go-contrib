@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
@@ -202,15 +203,8 @@ func TestError(t *testing.T) {
 	assert.Contains(t, attr, attribute.String("server.address", "foobar"))
 	assert.Contains(t, attr, attribute.Int("http.response.status_code", http.StatusInternalServerError))
 
-	// verify the error events
-	events := span.Events()
-	require.Len(t, events, 2)
-	assert.Equal(t, "exception", events[0].Name)
-	assert.Contains(t, events[0].Attributes, attribute.String("exception.type", "*errors.errorString"))
-	assert.Contains(t, events[0].Attributes, attribute.String("exception.message", "oh no one"))
-	assert.Equal(t, "exception", events[1].Name)
-	assert.Contains(t, events[1].Attributes, attribute.String("exception.type", "*errors.errorString"))
-	assert.Contains(t, events[1].Attributes, attribute.String("exception.message", "oh no two"))
+	assert.Empty(t, span.Events())
+	assert.Contains(t, attr, semconv.ErrorTypeOther)
 
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
@@ -261,8 +255,8 @@ func TestSpanStatus(t *testing.T) {
 
 		require.Len(t, sr.Ended(), 1)
 		assert.Equal(t, codes.Error, sr.Ended()[0].Status().Code)
-		require.Len(t, sr.Ended()[0].Events(), 1)
-		assert.Contains(t, sr.Ended()[0].Events()[0].Attributes, attribute.String("exception.message", "something went wrong"))
+		assert.Empty(t, sr.Ended()[0].Events())
+		assert.Contains(t, sr.Ended()[0].Attributes(), semconv.ErrorType(errors.New("something went wrong")))
 	})
 }
 
@@ -273,7 +267,8 @@ func TestWithSpanOptions_CustomAttributesAndSpanKind(t *testing.T) {
 	customAttr := attribute.String("custom.key", "custom.value")
 
 	router := gin.New()
-	router.Use(otelgin.Middleware("foobar",
+	router.Use(otelgin.Middleware(
+		"foobar",
 		otelgin.WithTracerProvider(provider),
 		otelgin.WithSpanStartOptions(trace.WithAttributes(customAttr)),
 	))
@@ -341,12 +336,14 @@ func TestHTTPRouteWithSpanNameFormatter(t *testing.T) {
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
 	router := gin.New()
-	router.Use(otelgin.Middleware("foobar",
-		otelgin.WithTracerProvider(provider),
-		otelgin.WithSpanNameFormatter(func(c *gin.Context) string {
-			return c.Request.URL.Path
-		}),
-	),
+	router.Use(
+		otelgin.Middleware(
+			"foobar",
+			otelgin.WithTracerProvider(provider),
+			otelgin.WithSpanNameFormatter(func(c *gin.Context) string {
+				return c.Request.URL.Path
+			}),
+		),
 	)
 	router.GET("/user/:id", func(c *gin.Context) {
 		id := c.Param("id")
@@ -529,7 +526,8 @@ func TestMetrics(t *testing.T) {
 			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 			router := gin.New()
-			router.Use(otelgin.Middleware("foobar",
+			router.Use(otelgin.Middleware(
+				"foobar",
 				otelgin.WithMeterProvider(meterProvider),
 				otelgin.WithMetricAttributeFn(tt.metricAttributeExtractor),
 				otelgin.WithGinMetricAttributeFn(tt.ginMetricAttributeExtractor),
