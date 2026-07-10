@@ -82,15 +82,26 @@ func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (containerInfo, 
 		tags      []string
 	)
 	// Config.Image is the reference the operator supplied when creating the
-	// container; Container.Image is always the resolved image digest. When
-	// they are equal, the operator referenced the container by bare digest
-	// (e.g. "docker run sha256:<id>"), so there is no name/tag to report.
-	if result.Container.Config != nil && result.Container.Config.Image != "" &&
-		result.Container.Config.Image != result.Container.Image {
-		name, tag := splitImageRef(result.Container.Config.Image)
-		imageName = &name
-		if tag != "" {
-			tags = []string{tag}
+	// container; Container.Image is always the resolved image digest. Bare image
+	// ID references may be the full digest, the hex ID without the algorithm
+	// prefix, or a unique prefix, so suppress name/tag for those forms.
+	if result.Container.Config != nil && result.Container.Config.Image != "" {
+		ref := result.Container.Config.Image
+		id := strings.TrimPrefix(result.Container.Image, "sha256:")
+		refID := strings.TrimPrefix(strings.ToLower(ref), "sha256:")
+		isBareImageID := refID != "" && len(refID) >= 12 && len(refID) <= len(id) && strings.HasPrefix(id, refID)
+		for _, c := range refID {
+			if !(('0' <= c && c <= '9') || ('a' <= c && c <= 'f')) {
+				isBareImageID = false
+				break
+			}
+		}
+		if !isBareImageID {
+			name, tag := splitImageRef(ref)
+			imageName = &name
+			if tag != "" {
+				tags = []string{tag}
+			}
 		}
 	}
 	return containerInfo{
