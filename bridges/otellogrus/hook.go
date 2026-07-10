@@ -31,7 +31,7 @@
 // into a string value encoded using [fmt.Sprintf] if there is no matching type.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
-package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
+package otellogrus
 
 import (
 	"github.com/sirupsen/logrus"

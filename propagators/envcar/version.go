@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package envcar // import "go.opentelemetry.io/contrib/propagators/envcar"
+package envcar
 
 // Version is the current release version of the envcar propagator.
 func Version() string {

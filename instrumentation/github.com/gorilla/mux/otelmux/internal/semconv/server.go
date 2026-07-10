@@ -6,7 +6,7 @@
 
 // Package semconv provides OpenTelemetry semantic convention types and
 // functionality.
-package semconv // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/semconv"
+package semconv
 
 import (
 	"context"

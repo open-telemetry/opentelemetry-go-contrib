@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package otelconf provides an OpenTelemetry declarative configuration SDK.
-package otelconf // import "go.opentelemetry.io/contrib/otelconf"
+package otelconf
 
 import (
 	"context"

@@ -21,4 +21,4 @@
 //     conventions
 //
 // By default, otelmongo only emits v1.21.0.
-package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
+package otelmongo
