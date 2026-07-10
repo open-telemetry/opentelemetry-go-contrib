@@ -25,7 +25,7 @@ const otelPropagatorsEnvKey = "OTEL_PROPAGATORS"
 // default are: tracecontext, baggage, b3, b3multi, jaeger, xray, ottrace, and
 // none. Each of these values, and their combination, are supported in
 // conformance with the OpenTelemetry specification. See
-// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/sdk-environment-variables.md#general-sdk-configuration
+// https://github.com/open-telemetry/opentelemetry-specification/blob/main/specification/configuration/sdk-environment-variables.md#general-sdk-configuration
 // for more information.
 //
 // The supported environment variable propagators can be extended to include

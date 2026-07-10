@@ -141,7 +141,7 @@ func spanName(serviceID, operation string) string {
 
 // AppendMiddlewares attaches OTel middlewares to the AWS Go SDK V2 for instrumentation.
 // OTel middlewares can be appended to either all aws clients or a specific operation.
-// Please see more details in https://aws.github.io/aws-sdk-go-v2/docs/middleware/
+// Please see more details in https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/middleware.html
 func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Option) {
 	cfg := config{
 		TracerProvider:    otel.GetTracerProvider(),
