@@ -14,11 +14,11 @@
 //   - https://github.com/DataDog/dd-trace-go/tree/v1.23.3/ddtrace/ext
 //
 // The "OTEL_SEMCONV_STABILITY_OPT_IN" environment variable can be used to opt
-// into the latest semantic conventions:
-//   - "database": emit the latest semantic conventions
-//   - "": emit v1.21.0 (default) semantic conventions
-//   - "database/dup": emit v1.21.0 (default) and the latest semantic
+// into emitting the previous (v1.21.0) semantic conventions alongside the
+// current stable ones:
+//   - "": (default) emit the latest stable semantic conventions
+//   - "database/dup": emit both v1.21.0 and the latest stable semantic
 //     conventions
 //
-// By default, otelmongo only emits v1.21.0.
+// By default, otelmongo emits the latest stable semantic conventions.
 package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
