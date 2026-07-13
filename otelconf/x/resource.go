@@ -5,6 +5,7 @@ package x // import "go.opentelemetry.io/contrib/otelconf/x"
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -58,17 +59,54 @@ func newResourceWithBuilder(ctx context.Context, r *Resource, build resourceBuil
 	}
 	opts := []resource.Option{
 		resource.WithAttributes(resource.DefaultWithContext(ctx).Attributes()...),
-	}
-
-	if r.DetectionDevelopment != nil {
-		opts = append(opts, resourceOpts(r.DetectionDevelopment.Detectors)...)
-	}
-
-	opts = append(
-		opts,
 		resource.WithAttributes(attrs...),
 		resource.WithSchemaURL(schema),
-	)
+	}
 
-	return build(ctx, opts...)
+	base, err := build(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if r.DetectionDevelopment == nil {
+		return base, nil
+	}
+
+	detected, err := newDetectedResource(ctx, r.DetectionDevelopment, build)
+	if detected == nil {
+		return base, err
+	}
+
+	merged, mergeErr := resource.Merge(detected, base)
+	return merged, errors.Join(err, mergeErr)
+}
+
+func newDetectedResource(ctx context.Context, detection *ExperimentalResourceDetection, build resourceBuilder) (*resource.Resource, error) {
+	filter, err := newIncludeExcludeFilter(detection.Attributes)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := resourceOpts(detection.Detectors)
+	if len(opts) == 0 {
+		return resource.NewSchemaless(), nil
+	}
+
+	detected, err := build(ctx, opts...)
+	if detected == nil {
+		return nil, err
+	}
+
+	attrs := detected.Attributes()
+	filtered := make([]attribute.KeyValue, 0, len(attrs))
+	for _, attr := range attrs {
+		if filter(attr) {
+			filtered = append(filtered, attr)
+		}
+	}
+	if len(filtered) == 0 {
+		return resource.NewSchemaless(), err
+	}
+
+	return resource.NewWithAttributes(detected.SchemaURL(), filtered...), err
 }
