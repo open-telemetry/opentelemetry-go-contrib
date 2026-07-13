@@ -147,6 +147,7 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 		{
 			name: "all-detectors",
 			detectors: []ExperimentalResourceDetector{
+				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
 				{Container: ExperimentalContainerResourceDetector{}},
 				{Host: ExperimentalHostResourceDetector{}},
 				{Process: ExperimentalProcessResourceDetector{}},
