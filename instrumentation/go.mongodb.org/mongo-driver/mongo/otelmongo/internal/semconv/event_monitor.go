@@ -79,7 +79,7 @@ func (m EventMonitor) CommandStartedTraceAttrs(
 	evt *event.CommandStartedEvent,
 	opts ...AttributeOption,
 ) []attribute.KeyValue {
-	// Dup implies both v1.26.0 and v1.21.0
+	// Dup implies both the latest stable and v1.21.0 semantic conventions.
 	if hasOptIn(m.version, semconvOptInDup) {
 		return append(
 			commandStartedTraceAttrs(evt, opts...),
