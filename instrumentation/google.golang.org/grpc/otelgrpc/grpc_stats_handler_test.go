@@ -834,7 +834,7 @@ func TestNonErrorCodes(t *testing.T) {
 		spans := sr.Ended()
 		require.Len(t, spans, 1)
 		assert.Equal(t, otelcodes.Ok, spans[0].Status().Code)
-		assert.Equal(t, "", spans[0].Status().Description)
+		assert.Empty(t, spans[0].Status().Description)
 	})
 
 	t.Run("server: no mapping → default mapping", func(t *testing.T) {
@@ -868,7 +868,7 @@ func TestNonErrorCodes(t *testing.T) {
 		spans := sr.Ended()
 		require.Len(t, spans, 1)
 		assert.Equal(t, otelcodes.Ok, spans[0].Status().Code)
-		assert.Equal(t, "", spans[0].Status().Description)
+		assert.Empty(t, spans[0].Status().Description)
 	})
 
 	t.Run("client: no mapping → default mapping", func(t *testing.T) {
