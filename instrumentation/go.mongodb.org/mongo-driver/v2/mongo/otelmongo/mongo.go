@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -209,9 +210,38 @@ func NewMonitor(opts ...Option) *event.CommandMonitor {
 	}
 }
 
+// trimConnectionNumber removes the connection number that the driver appends to the
+// connection ID. The driver formats the ID as "<address>[-<connection number>]", for
+// example "127.0.0.1:27017[-13]".
+//
+// The suffix has to be removed before the address is parsed: net.SplitHostPort rejects
+// the trailing "]", so leaving it in place makes the parse in peerInfo fail and fall back
+// to using the whole connection ID as the peer address. The connection number is unique
+// per pooled connection, so that fallback gives network.peer.address a new value for every
+// connection the pool opens, growing the cardinality of the metrics recorded with it
+// without bound.
+//
+// Requiring the bracket to open after the final colon keeps a bracketed IPv6 literal such
+// as "[::1]" from being truncated.
+func trimConnectionNumber(connectionID string) string {
+	if !strings.HasSuffix(connectionID, "]") {
+		return connectionID
+	}
+
+	open := strings.LastIndexByte(connectionID, '[')
+	if open <= 0 || open < strings.LastIndexByte(connectionID, ':') {
+		return connectionID
+	}
+
+	return connectionID[:open]
+}
+
 // peerInfo will parse the hostname and port from the mongo connection ID.
 func peerInfo(connectionID string) (hostname string, port int) {
 	defaultMongoPort := 27017
+
+	connectionID = trimConnectionNumber(connectionID)
+
 	hostname, portStr, err := net.SplitHostPort(connectionID)
 	if err != nil {
 		// If parsing fails, assume default MongoDB port and return the entire ConnectionID as hostname

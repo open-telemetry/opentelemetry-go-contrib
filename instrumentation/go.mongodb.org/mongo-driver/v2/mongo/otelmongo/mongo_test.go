@@ -370,6 +370,30 @@ func TestPeerInfo(t *testing.T) {
 			expectedHost: "example.com",
 			expectedPort: 27017,
 		},
+		{
+			name:         "IPv4 with port and connection number",
+			connectionID: "127.0.0.1:27018[-13]",
+			expectedHost: "127.0.0.1",
+			expectedPort: 27018,
+		},
+		{
+			name:         "IPv6 with port and connection number",
+			connectionID: "[::1]:27019[-13]",
+			expectedHost: "::1",
+			expectedPort: 27019,
+		},
+		{
+			name:         "Hostname with port and connection number",
+			connectionID: "example.com:27020[-13]",
+			expectedHost: "example.com",
+			expectedPort: 27020,
+		},
+		{
+			name:         "Hostname without port with connection number",
+			connectionID: "example.com[-13]",
+			expectedHost: "example.com",
+			expectedPort: 27017,
+		},
 	}
 
 	for _, tc := range tests {
