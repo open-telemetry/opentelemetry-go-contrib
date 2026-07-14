@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/detectors/k8sapi
 go 1.25.0
 
 require (
-	go.opentelemetry.io/otel v1.44.1-0.20260626205805-41ff5ed18bec
+	go.opentelemetry.io/otel v1.44.1-0.20260713231842-9778affd47e2
 	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
 	k8s.io/apimachinery v0.35.0
 	k8s.io/client-go v0.35.0

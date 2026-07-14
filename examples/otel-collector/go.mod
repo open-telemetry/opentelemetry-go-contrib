@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/examples/otel-collector
 go 1.25.0
 
 require (
-	go.opentelemetry.io/otel v1.44.1-0.20260709175035-4e0bf9f14df8
+	go.opentelemetry.io/otel v1.44.1-0.20260713231842-9778affd47e2
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.44.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.44.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/metric v1.44.1-0.20260625150014-c84013202f01
@@ -26,7 +26,7 @@ require (
 	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 	golang.org/x/text v0.39.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260706201446-f0a921348800 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260713224248-f5fc221cf8c4 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260713224248-f5fc221cf8c4 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 )
