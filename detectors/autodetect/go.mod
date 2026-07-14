@@ -14,13 +14,13 @@ require (
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.16.0
 	go.opentelemetry.io/contrib/detectors/k8sapi v0.16.0
-	go.opentelemetry.io/otel v1.44.1-0.20260709175035-4e0bf9f14df8
+	go.opentelemetry.io/otel v1.44.1-0.20260713231842-9778affd47e2
 	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
 )
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.33.0 // indirect
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.34.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.42.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.32.30 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.29 // indirect
