@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/client-go/rest"
 )
 
@@ -40,7 +40,7 @@ type detectorUtils interface {
 
 // This struct will implement the detectorUtils interface.
 type eksDetectorUtils struct {
-	clientset *kubernetes.Clientset
+	coreV1Client corev1.CoreV1Interface
 }
 
 // resourceDetector for detecting resources running on Amazon EKS.
@@ -127,7 +127,7 @@ func isEKS(ctx context.Context, utils detectorUtils) (bool, error) {
 	return awsAuth != nil, nil
 }
 
-// newK8sDetectorUtils creates the Kubernetes clientset.
+// newK8sDetectorUtils creates the Kubernetes CoreV1 client.
 func newK8sDetectorUtils() (*eksDetectorUtils, error) {
 	// Get cluster configuration
 	confs, err := rest.InClusterConfig()
@@ -135,13 +135,13 @@ func newK8sDetectorUtils() (*eksDetectorUtils, error) {
 		return nil, fmt.Errorf("failed to create config: %w", err)
 	}
 
-	// Create clientset using generated configuration
-	clientset, err := kubernetes.NewForConfig(confs)
+	// Create CoreV1 client using generated configuration
+	coreV1Client, err := corev1.NewForConfig(confs)
 	if err != nil {
-		return nil, errors.New("failed to create clientset for Kubernetes client")
+		return nil, errors.New("failed to create CoreV1 client for Kubernetes")
 	}
 
-	return &eksDetectorUtils{clientset: clientset}, nil
+	return &eksDetectorUtils{coreV1Client: coreV1Client}, nil
 }
 
 // isK8s checks if the current environment is running in a Kubernetes environment.
@@ -157,7 +157,7 @@ func (eksDetectorUtils) fileExists(filename string) bool {
 
 // getConfigMap retrieves the configuration map from the k8s API.
 func (eksUtils eksDetectorUtils) getConfigMap(ctx context.Context, namespace, name string) (map[string]string, error) {
-	cm, err := eksUtils.clientset.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
+	cm, err := eksUtils.coreV1Client.ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("failed to retrieve ConfigMap %s/%s: %w", namespace, name, err)
 	}
