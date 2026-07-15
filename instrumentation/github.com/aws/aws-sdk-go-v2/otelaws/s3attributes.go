@@ -6,6 +6,7 @@ package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.co
 import (
 	"context"
 	"encoding/json"
+	"reflect"
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/smithy-go/middleware"
@@ -17,76 +18,50 @@ import (
 func S3AttributeBuilder(_ context.Context, in middleware.InitializeInput, _ middleware.InitializeOutput) []attribute.KeyValue {
 	s3Attributes := []attribute.KeyValue{semconv.RPCSystemNameKey.String(AWSSystemVal)}
 
+	if in.Parameters == nil {
+		return s3Attributes
+	}
+
+	// Extract aws.s3.bucket and aws.s3.key from any S3 input struct.
+	// The S3 semantic convention applies bucket to all operations except
+	// list-buckets and key to all object-related operations. Using
+	// reflection avoids enumerating 80+ S3 API input types.
+	if bucket, ok := stringPtrField(in.Parameters, "Bucket"); ok && bucket != "" {
+		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(bucket))
+	}
+	if key, ok := stringPtrField(in.Parameters, "Key"); ok && key != "" {
+		s3Attributes = append(s3Attributes, semconv.AWSS3Key(key))
+	}
+
+	// Operation-specific attributes.
 	switch v := in.Parameters.(type) {
 	case *s3.CopyObjectInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
 		if v.CopySource != nil {
 			s3Attributes = append(s3Attributes, semconv.AWSS3CopySource(*v.CopySource))
 		}
 
-	case *s3.DeleteObjectInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
-
 	case *s3.DeleteObjectsInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
 		if v.Delete != nil {
 			d, _ := json.Marshal(v.Delete)
 			s3Attributes = append(s3Attributes, semconv.AWSS3Delete(string(d)))
 		}
 
-	case *s3.GetObjectInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
-
-	case *s3.HeadObjectInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
-
-	case *s3.PutObjectInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
-
-	case *s3.RestoreObjectInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
-
-	case *s3.SelectObjectContentInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
-
-	case *s3.ListBucketsInput:
-		// No S3-specific attributes for list-buckets.
-
 	case *s3.AbortMultipartUploadInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
 		if v.UploadId != nil {
 			s3Attributes = append(s3Attributes, semconv.AWSS3UploadID(*v.UploadId))
 		}
 
 	case *s3.CompleteMultipartUploadInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
 		if v.UploadId != nil {
 			s3Attributes = append(s3Attributes, semconv.AWSS3UploadID(*v.UploadId))
 		}
 
-	case *s3.CreateMultipartUploadInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
-
 	case *s3.ListPartsInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
 		if v.UploadId != nil {
 			s3Attributes = append(s3Attributes, semconv.AWSS3UploadID(*v.UploadId))
 		}
 
 	case *s3.UploadPartInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
 		if v.UploadId != nil {
 			s3Attributes = append(s3Attributes, semconv.AWSS3UploadID(*v.UploadId))
 		}
@@ -95,8 +70,6 @@ func S3AttributeBuilder(_ context.Context, in middleware.InitializeInput, _ midd
 		}
 
 	case *s3.UploadPartCopyInput:
-		s3Attributes = append(s3Attributes, semconv.AWSS3Bucket(*v.Bucket))
-		s3Attributes = append(s3Attributes, semconv.AWSS3Key(*v.Key))
 		if v.CopySource != nil {
 			s3Attributes = append(s3Attributes, semconv.AWSS3CopySource(*v.CopySource))
 		}
@@ -109,4 +82,23 @@ func S3AttributeBuilder(_ context.Context, in middleware.InitializeInput, _ midd
 	}
 
 	return s3Attributes
+}
+
+// stringPtrField extracts a *string field by name from a struct pointer.
+// Returns the dereferenced string and true if the field exists, is a
+// non-nil *string, and the input is a pointer to a struct.
+func stringPtrField(v any, name string) (string, bool) {
+	rv := reflect.ValueOf(v)
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+	if rv.Kind() != reflect.Struct {
+		return "", false
+	}
+	f := rv.FieldByName(name)
+	if !f.IsValid() || f.Kind() != reflect.Ptr || f.IsNil() {
+		return "", false
+	}
+	s, ok := f.Elem().Interface().(string)
+	return s, ok
 }
