@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add support for the `aws.ec2` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9139)
+- Add `S3AttributeBuilder` to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` that sets S3-specific span attributes following the OpenTelemetry S3 semantic conventions. (#9292)
 
 ### Fixed
 
