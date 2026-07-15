@@ -1,3 +1,4 @@
 exclude_path = [
-  "zpages/internal/templates/summary.html" # This template's URLs are only expected to be valid on the compiled file
+  "zpages/internal/templates/summary.html", # This template's URLs are only expected to be valid on the compiled file
+  "samplers/jaegerremote/sampler_remote_test.go" # Contains a deliberately malformed "endpoint=..." test fixture that lychee mis-parses as a URL
 ]
