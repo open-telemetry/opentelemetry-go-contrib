@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `S3AttributeBuilder` to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` that sets S3-specific span attributes following the OpenTelemetry S3 semantic conventions. (#9292)
 - Add `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`, a new resource detector for IBM Cloud VPC virtual server instances, ported from `github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/ibmcloud/vpc`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `cloud.availability_zone`, `cloud.account.id`, `cloud.resource_id`, `host.id`, `host.image.id`, `host.image.name`, `host.name`, and `host.type`. (#9011)
 - Add `go.opentelemetry.io/contrib/detectors/k8sapi`, a new resource detector that queries the Kubernetes API. Detects `k8s.node.name` and `k8s.node.uid` when `K8S_NODE_NAME` is set via the downward API, and `k8s.cluster.uid` derived from the kube-system namespace UID (works on any Kubernetes distribution). (#9108)
 - Add new `elasticbeanstalk` resource detector for AWS Elastic Beanstalk, ported from `processor/resourcedetectionprocessor/internal/aws/elasticbeanstalk` in opentelemetry-collector-contrib. (#8993)
