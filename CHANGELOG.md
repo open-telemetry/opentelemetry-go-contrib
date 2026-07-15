@@ -34,6 +34,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix incorrect (overestimated) sum calculation for runtime histograms in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#9063)
 - Fix `Severity.UnmarshalText` round trip for positive `FATAL` offsets above the named range in `go.opentelemetry.io/contrib/processors/minsev`. (#9197)
 
+### Fixed
+
+- Convert Prometheus untyped metrics to OTLP Gauges in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9098)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
