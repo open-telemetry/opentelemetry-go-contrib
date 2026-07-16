@@ -111,6 +111,19 @@ func (w *requestBodyTracker) Closed() bool {
 	return w.closed.Load()
 }
 
+// finished reports whether the request body has reached its final size.
+//
+// Close is the authoritative signal, but for known ContentLength values the
+// transport may finish reading slightly before Close runs. Treat that as
+// complete so response finalization can record metrics without racing the
+// Close callback.
+func (w *requestBodyTracker) finished(contentLength int64) bool {
+	if w.Closed() {
+		return true
+	}
+	return contentLength >= 0 && w.BytesRead() >= contentLength
+}
+
 // RoundTrip creates a Span and propagates its context via the provided request's headers
 // before handing the request to the configured base RoundTripper. The created span will
 // end when the response body is closed or when a read from the body returns io.EOF.
@@ -249,9 +262,13 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		return res, err
 	}
 
+	contentLength := r.ContentLength
 	readRecordFunc := func(int64) {
 		lastTrackedBody := currentTrackedBody()
-		if lastTrackedBody == nil || lastTrackedBody.Closed() {
+		// Delay recording while the transport is still uploading a request
+		// body after RoundTrip returns. The request body Close callback will
+		// record the final size in that case.
+		if lastTrackedBody == nil || lastTrackedBody.finished(contentLength) {
 			callRecordMetrics()
 		}
 	}

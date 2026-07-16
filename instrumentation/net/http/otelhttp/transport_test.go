@@ -881,6 +881,26 @@ func TestTransportMetrics(t *testing.T) {
 	requestBody := []byte("john")
 	responseBody := []byte("Hello, world!")
 
+	collectClientMetrics := func(t *testing.T, reader sdkmetric.Reader) metricdata.ScopeMetrics {
+		t.Helper()
+		var sm metricdata.ScopeMetrics
+		// Request-body metrics may be recorded asynchronously when the
+		// transport continues uploading after RoundTrip returns. Wait until
+		// both the response body is finalized and the request body settles.
+		require.Eventually(t, func() bool {
+			var rm metricdata.ResourceMetrics
+			if err := reader.Collect(t.Context(), &rm); err != nil {
+				return false
+			}
+			if len(rm.ScopeMetrics) != 1 {
+				return false
+			}
+			sm = rm.ScopeMetrics[0]
+			return true
+		}, 2*time.Second, 5*time.Millisecond, "client metrics should be recorded after request/response bodies finish")
+		return sm
+	}
+
 	t.Run("make http request and read entire response at once", func(t *testing.T) {
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
@@ -927,10 +947,6 @@ func TestTransportMetrics(t *testing.T) {
 			port = 0
 		}
 
-		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(t.Context(), &rm)
-		require.NoError(t, err)
-		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
 			attribute.String("http.request.method", "GET"),
 			attribute.Int("http.response.status_code", 200),
@@ -940,7 +956,7 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.String("network.protocol.name", "http"),
 			attribute.String("network.protocol.version", "1.1"),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+		assertClientScopeMetrics(t, collectClientMetrics(t, reader), attrs)
 	})
 
 	t.Run("make http request and buffer response", func(t *testing.T) {
@@ -999,10 +1015,6 @@ func TestTransportMetrics(t *testing.T) {
 			port = 0
 		}
 
-		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(t.Context(), &rm)
-		require.NoError(t, err)
-		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
 			attribute.String("http.request.method", "GET"),
 			attribute.Int("http.response.status_code", 200),
@@ -1012,7 +1024,7 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.String("network.protocol.name", "http"),
 			attribute.String("network.protocol.version", "1.1"),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+		assertClientScopeMetrics(t, collectClientMetrics(t, reader), attrs)
 	})
 
 	t.Run("make http request and close body before reading completely", func(t *testing.T) {
@@ -1066,10 +1078,6 @@ func TestTransportMetrics(t *testing.T) {
 			port = 0
 		}
 
-		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(t.Context(), &rm)
-		require.NoError(t, err)
-		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
 			attribute.String("http.request.method", "GET"),
 			attribute.Int("http.response.status_code", 200),
@@ -1079,7 +1087,7 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.String("network.protocol.name", "http"),
 			attribute.String("network.protocol.version", "1.1"),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+		assertClientScopeMetrics(t, collectClientMetrics(t, reader), attrs)
 	})
 }
 
