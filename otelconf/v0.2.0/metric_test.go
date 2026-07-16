@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -1112,6 +1113,67 @@ func TestAttributeFilter(t *testing.T) {
 	}
 }
 
+func TestNewIncludeExcludeFilter(t *testing.T) {
+	testCases := []struct {
+		name          string
+		attributeKeys *IncludeExclude
+		wantPass      []string
+		wantFail      []string
+	}{
+		{
+			name:          "empty",
+			attributeKeys: nil,
+			wantPass:      []string{"foo", "bar"},
+			wantFail:      nil,
+		},
+		{
+			name: "filter-with-include",
+			attributeKeys: ptr(IncludeExclude{
+				Included: []string{"foo"},
+			}),
+			wantPass: []string{"foo"},
+			wantFail: []string{"bar"},
+		},
+		{
+			name: "filter-with-exclude",
+			attributeKeys: ptr(IncludeExclude{
+				Excluded: []string{"foo"},
+			}),
+			wantPass: []string{"bar"},
+			wantFail: []string{"foo"},
+		},
+		{
+			name: "filter-with-include-and-exclude",
+			attributeKeys: ptr(IncludeExclude{
+				Included: []string{"bar"},
+				Excluded: []string{"foo"},
+			}),
+			wantPass: []string{"bar"},
+			wantFail: []string{"foo"},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := newIncludeExcludeFilter(tt.attributeKeys)
+			require.NoError(t, err)
+			for _, pass := range tt.wantPass {
+				require.True(t, got(attribute.KeyValue{Key: attribute.Key(pass), Value: attribute.StringValue("")}))
+			}
+			for _, fail := range tt.wantFail {
+				require.False(t, got(attribute.KeyValue{Key: attribute.Key(fail), Value: attribute.StringValue("")}))
+			}
+		})
+	}
+}
+
+func TestNewIncludeExcludeFilterError(t *testing.T) {
+	_, err := newIncludeExcludeFilter(ptr(IncludeExclude{
+		Included: []string{"foo"},
+		Excluded: []string{"foo"},
+	}))
+	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
+}
+
 func TestPrometheusIPv6(t *testing.T) {
 	tests := []struct {
 		name string
@@ -1188,6 +1250,18 @@ func TestPrometheusReaderErrorCases(t *testing.T) {
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
 			errMsg: "binding address",
+		},
+		{
+			name: "invalid with_resource_constant_labels",
+			config: &Prometheus{
+				Host: ptr("localhost"),
+				Port: ptr(0),
+				WithResourceConstantLabels: &IncludeExclude{
+					Included: []string{"foo"},
+					Excluded: []string{"foo"},
+				},
+			},
+			errMsg: "attribute cannot be in both include and exclude list",
 		},
 	}
 

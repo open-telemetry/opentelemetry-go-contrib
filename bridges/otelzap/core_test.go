@@ -17,7 +17,7 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -31,11 +31,12 @@ var (
 		Level:   zap.InfoLevel,
 		Message: testMessage,
 	}
+	errTest = errors.New("test error")
 )
 
 type capturedRecord struct {
 	err   error
-	attrs []log.KeyValue
+	attrs []attribute.KeyValue
 }
 
 type captureLogger struct {
@@ -47,8 +48,8 @@ type captureLogger struct {
 func (*captureLogger) Enabled(context.Context, log.EnabledParameters) bool { return true }
 
 func (l *captureLogger) Emit(_ context.Context, record log.Record) {
-	attrs := make([]log.KeyValue, 0, record.AttributesLen())
-	record.WalkAttributes(func(kv log.KeyValue) bool {
+	attrs := make([]attribute.KeyValue, 0, record.AttributesLen())
+	record.WalkAttributes(func(kv attribute.KeyValue) bool {
 		attrs = append(attrs, kv)
 		return true
 	})
@@ -95,11 +96,11 @@ func TestCore(t *testing.T) {
 		want := logtest.Recording{
 			logtest.Scope{Name: loggerName}: {
 				{
-					Body:         log.StringValue(testMessage),
+					Body:         attribute.StringValue(testMessage),
 					Severity:     log.SeverityInfo,
 					SeverityText: zap.InfoLevel.String(),
-					Attributes: []log.KeyValue{
-						log.String(testKey, testValue),
+					Attributes: []attribute.KeyValue{
+						attribute.String(testKey, testValue),
 					},
 				},
 			},
@@ -118,15 +119,16 @@ func TestCore(t *testing.T) {
 	t.Run("WriteError", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 
-		logger.Error(testMessage, zap.Error(errors.New("test error")))
+		logger.Error(testMessage, zap.Error(errTest))
 
 		want := logtest.Recording{
 			logtest.Scope{Name: loggerName}: {
 				{
-					Body:         log.StringValue(testMessage),
+					Body:         attribute.StringValue(testMessage),
+					Error:        errTest,
 					Severity:     log.SeverityError,
 					SeverityText: zap.ErrorLevel.String(),
-					Attributes:   []log.KeyValue{},
+					Attributes:   []attribute.KeyValue{},
 				},
 			},
 		}
@@ -149,11 +151,11 @@ func TestCore(t *testing.T) {
 		want := logtest.Recording{
 			logtest.Scope{Name: loggerName}: {
 				{
-					Body:         log.StringValue(testMessage),
+					Body:         attribute.StringValue(testMessage),
 					Severity:     log.SeverityError,
 					SeverityText: zap.ErrorLevel.String(),
-					Attributes: []log.KeyValue{
-						log.String("db", "test error"),
+					Attributes: []attribute.KeyValue{
+						attribute.String("db", "test error"),
 					},
 				},
 			},
@@ -180,7 +182,7 @@ func TestCore(t *testing.T) {
 			logtest.Scope{Name: loggerName}: {
 				{
 					Context:      ctx,
-					Body:         log.StringValue(testMessage),
+					Body:         attribute.StringValue(testMessage),
 					Severity:     log.SeverityInfo,
 					SeverityText: zap.InfoLevel.String(),
 				},
@@ -208,7 +210,7 @@ func TestCore(t *testing.T) {
 			logtest.Scope{Name: loggerName}: {
 				{
 					Context:      ctx,
-					Body:         log.StringValue(testMessage),
+					Body:         attribute.StringValue(testMessage),
 					Severity:     log.SeverityInfo,
 					SeverityText: zap.InfoLevel.String(),
 				},
@@ -234,13 +236,13 @@ func TestCore(t *testing.T) {
 		want := logtest.Recording{
 			logtest.Scope{Name: loggerName}: {
 				{
-					Body:         log.StringValue(testMessage),
+					Body:         attribute.StringValue(testMessage),
 					Severity:     log.SeverityInfo,
 					SeverityText: zap.InfoLevel.String(),
-					Attributes: []log.KeyValue{
-						log.String("test1", "value1"),
-						log.String("test2", "value2"),
-						log.String("test3", "value3"),
+					Attributes: []attribute.KeyValue{
+						attribute.String("test1", "value1"),
+						attribute.String("test2", "value2"),
+						attribute.String("test3", "value3"),
 					},
 				},
 			},
@@ -267,11 +269,11 @@ func TestCore(t *testing.T) {
 			logtest.Scope{Name: loggerName}: {},
 			logtest.Scope{Name: name}: {
 				{
-					Body:         log.StringValue(testMessage),
+					Body:         attribute.StringValue(testMessage),
 					Severity:     log.SeverityInfo,
 					SeverityText: zap.InfoLevel.String(),
-					Attributes: []log.KeyValue{
-						log.String(testKey, testValue),
+					Attributes: []attribute.KeyValue{
+						attribute.String(testKey, testValue),
 					},
 				},
 			},
@@ -297,9 +299,9 @@ func TestCoreErrorFieldSetErrBehavior(t *testing.T) {
 
 		r := p.logger.lastRecord(t)
 		require.EqualError(t, r.err, "test error")
-		require.NotContains(t, r.attrs, log.String("error", "test error"))
-		require.NotContains(t, r.attrs, log.String(string(semconv.ExceptionMessageKey), "test error"))
-		require.NotContains(t, r.attrs, log.String(string(semconv.ExceptionTypeKey), "*errors.errorString"))
+		require.NotContains(t, r.attrs, attribute.String("error", "test error"))
+		require.NotContains(t, r.attrs, attribute.String(string(semconv.ExceptionMessageKey), "test error"))
+		require.NotContains(t, r.attrs, attribute.String(string(semconv.ExceptionTypeKey), "*errors.errorString"))
 	})
 
 	t.Run("NamedErrorDoesNotUseSetErr", func(t *testing.T) {
@@ -310,7 +312,7 @@ func TestCoreErrorFieldSetErrBehavior(t *testing.T) {
 
 		r := p.logger.lastRecord(t)
 		require.NoError(t, r.err)
-		require.Contains(t, r.attrs, log.String("db.error", "db failure"))
+		require.Contains(t, r.attrs, attribute.String("db.error", "db failure"))
 	})
 
 	t.Run("NamedErrorDoesNotOverrideErrorField", func(t *testing.T) {
@@ -325,8 +327,8 @@ func TestCoreErrorFieldSetErrBehavior(t *testing.T) {
 
 		r := p.logger.lastRecord(t)
 		require.EqualError(t, r.err, "top level error")
-		require.Contains(t, r.attrs, log.String("db.error", "db failure"))
-		require.NotContains(t, r.attrs, log.String("error", "top level error"))
+		require.Contains(t, r.attrs, attribute.String("db.error", "db failure"))
+		require.NotContains(t, r.attrs, attribute.String("error", "top level error"))
 	})
 }
 
@@ -351,13 +353,13 @@ func TestCoreWriteContextConcurrentSafe(t *testing.T) {
 		logtest.Scope{Name: loggerName}: {
 			{
 				Context:      ctx,
-				Body:         log.StringValue(testMessage),
+				Body:         attribute.StringValue(testMessage),
 				Severity:     log.SeverityDebug,
 				SeverityText: zap.DebugLevel.String(),
 			},
 			{
 				Context:      ctx,
-				Body:         log.StringValue(testMessage),
+				Body:         attribute.StringValue(testMessage),
 				Severity:     log.SeverityDebug,
 				SeverityText: zap.DebugLevel.String(),
 			},
@@ -405,10 +407,10 @@ func TestCoreEnabled(t *testing.T) {
 	want := logtest.Recording{
 		logtest.Scope{Name: loggerName}: {
 			{
-				Body:         log.StringValue(testMessage),
+				Body:         attribute.StringValue(testMessage),
 				Severity:     log.SeverityInfo,
 				SeverityText: zap.InfoLevel.String(),
-				Attributes:   []log.KeyValue{},
+				Attributes:   []attribute.KeyValue{},
 			},
 		},
 	}
@@ -432,13 +434,13 @@ func TestCoreWithCaller(t *testing.T) {
 	want := logtest.Recording{
 		logtest.Scope{Name: "name"}: {
 			{
-				Body:         log.StringValue(testMessage),
+				Body:         attribute.StringValue(testMessage),
 				Severity:     log.SeverityInfo,
 				SeverityText: zap.InfoLevel.String(),
-				Attributes: []log.KeyValue{
-					log.String(string(semconv.CodeFilePathKey), "core_test.go"), // The real filepth will vary based on the test environment. However, it should end with "core_test.go".
-					log.Int64(string(semconv.CodeLineNumberKey), 1),             // Line number will vary.
-					log.String(string(semconv.CodeFunctionNameKey), "go.opentelemetry.io/contrib/bridges/otelzap."+t.Name()),
+				Attributes: []attribute.KeyValue{
+					attribute.String(string(semconv.CodeFilePathKey), "core_test.go"), // The real filepath will vary based on the test environment. However, it should end with "core_test.go".
+					attribute.Int64(string(semconv.CodeLineNumberKey), 1),             // Line number will vary.
+					attribute.String(string(semconv.CodeFunctionNameKey), "go.opentelemetry.io/contrib/bridges/otelzap."+t.Name()),
 				},
 			},
 		},
@@ -451,13 +453,13 @@ func TestCoreWithCaller(t *testing.T) {
 			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
 
 			for i, attr := range cp.Attributes {
-				if attr.Key == string(semconv.CodeLineNumberKey) {
+				if attr.Key == semconv.CodeLineNumberKey {
 					// Adjust the line number to be non-zero, as it will vary based on the test environment.
-					cp.Attributes[i].Value = log.Int64Value(1) // Set to 1 for consistency in tests.
+					cp.Attributes[i].Value = attribute.Int64Value(1) // Set to 1 for consistency in tests.
 				}
-				if attr.Key == string(semconv.CodeFilePathKey) && strings.HasSuffix(attr.Value.AsString(), "core_test.go") {
+				if attr.Key == semconv.CodeFilePathKey && strings.HasSuffix(attr.Value.AsString(), "core_test.go") {
 					// Trim the prefix, as it will vary based on the test environment.
-					cp.Attributes[i].Value = log.StringValue("core_test.go")
+					cp.Attributes[i].Value = attribute.StringValue("core_test.go")
 				}
 			}
 			return cp
@@ -475,11 +477,11 @@ func TestCoreWithStacktrace(t *testing.T) {
 	want := logtest.Recording{
 		logtest.Scope{Name: "name"}: {
 			{
-				Body:         log.StringValue(testMessage),
+				Body:         attribute.StringValue(testMessage),
 				Severity:     log.SeverityError,
 				SeverityText: zap.ErrorLevel.String(),
-				Attributes: []log.KeyValue{
-					log.String(string(semconv.CodeStacktraceKey), "stacktrace"), // Stacktrace will vary based on the test environment.
+				Attributes: []attribute.KeyValue{
+					attribute.String(string(semconv.CodeStacktraceKey), "stacktrace"), // Stacktrace will vary based on the test environment.
 				},
 			},
 		},
@@ -491,9 +493,9 @@ func TestCoreWithStacktrace(t *testing.T) {
 			cp.Context = nil           // Ignore context for comparison.
 			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
 			for i, attr := range cp.Attributes {
-				if attr.Key == string(semconv.CodeStacktraceKey) {
+				if attr.Key == semconv.CodeStacktraceKey {
 					// Adjust the stacktrace to be non-empty, as it will vary based on the test environment.
-					cp.Attributes[i].Value = log.StringValue("stacktrace") // Set to a placeholder for consistency in tests.
+					cp.Attributes[i].Value = attribute.StringValue("stacktrace") // Set to a placeholder for consistency in tests.
 				}
 			}
 			return cp
@@ -506,16 +508,17 @@ func TestCoreWithExceptionStacktrace(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
-	logger.Error(testMessage, zap.Error(errors.New("test error")))
+	logger.Error(testMessage, zap.Error(errTest))
 
 	want := logtest.Recording{
 		logtest.Scope{Name: "name"}: {
 			{
-				Body:         log.StringValue(testMessage),
+				Body:         attribute.StringValue(testMessage),
+				Error:        errTest,
 				Severity:     log.SeverityError,
 				SeverityText: zap.ErrorLevel.String(),
-				Attributes: []log.KeyValue{
-					log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
+				Attributes: []attribute.KeyValue{
+					attribute.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
 				},
 			},
 		},
@@ -527,8 +530,8 @@ func TestCoreWithExceptionStacktrace(t *testing.T) {
 			cp.Context = nil
 			cp.Timestamp = time.Time{}
 			for i, attr := range cp.Attributes {
-				if attr.Key == string(semconv.ExceptionStacktraceKey) {
-					cp.Attributes[i].Value = log.StringValue("stacktrace")
+				if attr.Key == semconv.ExceptionStacktraceKey {
+					cp.Attributes[i].Value = attribute.StringValue("stacktrace")
 				}
 			}
 			return cp
@@ -586,16 +589,17 @@ func TestCoreWithErrorStacktraceDefault(t *testing.T) {
 	zc := NewCore(loggerName, WithLoggerProvider(rec))
 	logger := zap.New(zc, zap.AddStacktrace(zapcore.ErrorLevel))
 
-	logger.Error(testMessage, zap.Error(errors.New("test error")))
+	logger.Error(testMessage, zap.Error(errTest))
 
 	want := logtest.Recording{
 		logtest.Scope{Name: "name"}: {
 			{
-				Body:         log.StringValue(testMessage),
+				Body:         attribute.StringValue(testMessage),
+				Error:        errTest,
 				Severity:     log.SeverityError,
 				SeverityText: zap.ErrorLevel.String(),
-				Attributes: []log.KeyValue{
-					log.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
+				Attributes: []attribute.KeyValue{
+					attribute.String(string(semconv.ExceptionStacktraceKey), "stacktrace"),
 				},
 			},
 		},
@@ -607,8 +611,8 @@ func TestCoreWithErrorStacktraceDefault(t *testing.T) {
 			cp.Context = nil
 			cp.Timestamp = time.Time{}
 			for i, attr := range cp.Attributes {
-				if attr.Key == string(semconv.ExceptionStacktraceKey) {
-					cp.Attributes[i].Value = log.StringValue("stacktrace")
+				if attr.Key == semconv.ExceptionStacktraceKey {
+					cp.Attributes[i].Value = attribute.StringValue("stacktrace")
 				}
 			}
 			return cp
@@ -636,5 +640,43 @@ func TestConvertLevel(t *testing.T) {
 		if result != test.expectedSev {
 			t.Errorf("For level %v, expected %v but got %v", test.level, test.expectedSev, result)
 		}
+	}
+}
+
+func TestCoreMalformedErrorFieldDoesNotPanic(t *testing.T) {
+	tests := []struct {
+		name       string
+		fieldValue any
+	}{
+		{
+			name:       "NilError",
+			fieldValue: nil,
+		},
+		{
+			name:       "InvalidErrorType",
+			fieldValue: "not-an-error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := newCaptureProvider()
+			logger := zap.New(NewCore(loggerName, WithLoggerProvider(p)))
+
+			ce := logger.Check(zap.ErrorLevel, testMessage)
+			require.NotNil(t, ce)
+
+			require.NotPanics(t, func() {
+				ce.Write(zapcore.Field{
+					Key:       "error",
+					Type:      zapcore.ErrorType,
+					Interface: tt.fieldValue,
+				})
+			})
+
+			r := p.logger.lastRecord(t)
+			require.NoError(t, r.err)
+			require.Empty(t, r.attrs)
+		})
 	}
 }

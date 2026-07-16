@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/event"
 	"go.opentelemetry.io/otel/attribute"
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 )
 
 // Constants for environment variable keys and versions.
@@ -79,7 +79,7 @@ func (m EventMonitor) CommandStartedTraceAttrs(
 	evt *event.CommandStartedEvent,
 	opts ...AttributeOption,
 ) []attribute.KeyValue {
-	// Dup implies both v1.26.0 and v1.21.0
+	// Dup implies both the latest stable and v1.21.0 semantic conventions.
 	if hasOptIn(m.version, semconvOptInDup) {
 		return append(
 			commandStartedTraceAttrs(evt, opts...),

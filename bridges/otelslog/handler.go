@@ -10,7 +10,7 @@
 // way:
 //
 //   - Time is set as the Timestamp.
-//   - Message is set as the Body using a [log.StringValue].
+//   - Message is set as the Body using an [attribute.StringValue].
 //   - Level is transformed and set as the Severity. The SeverityText is also
 //     set.
 //   - PC is dropped.
@@ -28,16 +28,16 @@
 //
 //   - [slog.KindAny] values are transformed based on their type or
 //     into a string value encoded using [fmt.Sprintf] if there is no matching type.
-//   - [slog.KindBool] are transformed to [log.BoolValue] directly.
-//   - [slog.KindDuration] are transformed to [log.Int64Value] as nanoseconds.
-//   - [slog.KindFloat64] are transformed to [log.Float64Value] directly.
-//   - [slog.KindInt64] are transformed to [log.Int64Value] directly.
-//   - [slog.KindString] are transformed to [log.StringValue] directly.
-//   - [slog.KindTime] are transformed to [log.Int64Value] as nanoseconds since
+//   - [slog.KindBool] are transformed to [attribute.BoolValue] directly.
+//   - [slog.KindDuration] are transformed to [attribute.Int64Value] as nanoseconds.
+//   - [slog.KindFloat64] are transformed to [attribute.Float64Value] directly.
+//   - [slog.KindInt64] are transformed to [attribute.Int64Value] directly.
+//   - [slog.KindString] are transformed to [attribute.StringValue] directly.
+//   - [slog.KindTime] are transformed to [attribute.Int64Value] as nanoseconds since
 //     the Unix epoch.
-//   - [slog.KindUint64] are transformed to [log.Int64Value] using int64
-//     conversion.
-//   - [slog.KindGroup] are transformed to [log.MapValue] using appropriate
+//   - [slog.KindUint64] are transformed to [attribute.Int64Value] when they fit
+//     in int64, otherwise to [attribute.Float64Value].
+//   - [slog.KindGroup] are transformed to [attribute.MapValue] using appropriate
 //     transforms for each group value.
 //   - [slog.KindLogValuer] the value is resolved and then transformed.
 //
@@ -54,7 +54,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
 )
 
 // NewLogger returns a new [slog.Logger] backed by a new [Handler]. See
@@ -198,7 +198,7 @@ func (h *Handler) Handle(ctx context.Context, record slog.Record) error {
 func (h *Handler) convertRecord(r slog.Record) log.Record {
 	var record log.Record
 	record.SetTimestamp(r.Time)
-	record.SetBody(log.StringValue(r.Message))
+	record.SetBody(attribute.StringValue(r.Message))
 
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
 	record.SetSeverity(log.Severity(r.Level + sevOffset))
@@ -208,9 +208,9 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
 		f, _ := fs.Next()
 		record.AddAttributes(
-			log.String(string(semconv.CodeFilePathKey), f.File),
-			log.String(string(semconv.CodeFunctionNameKey), f.Function),
-			log.Int(string(semconv.CodeLineNumberKey), f.Line),
+			attribute.String(string(semconv.CodeFilePathKey), f.File),
+			attribute.String(string(semconv.CodeFunctionNameKey), f.Function),
+			attribute.Int(string(semconv.CodeLineNumberKey), f.Line),
 		)
 	}
 
@@ -368,8 +368,8 @@ func (g *group) NextNonEmpty() *group {
 	return g.next.NextNonEmpty()
 }
 
-// KeyValue returns group g containing kvs as a [log.KeyValue]. The value of
-// the returned KeyValue will be of type [log.KindMap].
+// KeyValue returns group g containing kvs as an [attribute.KeyValue]. The value of
+// the returned KeyValue will be of type [attribute.MAP].
 //
 // The passed kvs are rendered in the returned value, but are not added to the
 // group.
@@ -377,14 +377,14 @@ func (g *group) NextNonEmpty() *group {
 // This does not check g. It is the callers responsibility to ensure g is
 // non-empty or kvs is non-empty so as to return a valid group representation
 // (according to slog).
-func (g *group) KeyValue(kvs ...log.KeyValue) log.KeyValue {
+func (g *group) KeyValue(kvs ...attribute.KeyValue) attribute.KeyValue {
 	// Assumes checking of group g already performed (i.e. non-empty).
-	out := log.Map(g.name, g.attrs.KeyValues(kvs...)...)
+	out := attribute.Map(g.name, g.attrs.KeyValues(kvs...)...)
 	g = g.next
 	for g != nil {
 		// A Handler should not output groups if there are no attributes.
 		if g.attrs.Len() > 0 {
-			out = log.Map(g.name, g.attrs.KeyValues(out)...)
+			out = attribute.Map(g.name, g.attrs.KeyValues(out)...)
 		}
 		g = g.next
 	}
@@ -410,15 +410,15 @@ func (g *group) AddAttrs(attrs []slog.Attr) {
 }
 
 type kvBuffer struct {
-	data []log.KeyValue
+	data []attribute.KeyValue
 	err  error
 }
 
 func newKVBuffer(n int) *kvBuffer {
-	return &kvBuffer{data: make([]log.KeyValue, 0, n)}
+	return &kvBuffer{data: make([]attribute.KeyValue, 0, n)}
 }
 
-// Len returns the number of [log.KeyValue] held by b.
+// Len returns the number of [attribute.KeyValue] held by b.
 func (b *kvBuffer) Len() int {
 	if b == nil {
 		return 0
@@ -434,8 +434,8 @@ func (b *kvBuffer) Clone() *kvBuffer {
 	return &kvBuffer{data: slices.Clone(b.data), err: b.err}
 }
 
-// KeyValues returns kvs appended to the [log.KeyValue] held by b.
-func (b *kvBuffer) KeyValues(kvs ...log.KeyValue) []log.KeyValue {
+// KeyValues returns kvs appended to the [attribute.KeyValue] held by b.
+func (b *kvBuffer) KeyValues(kvs ...attribute.KeyValue) []attribute.KeyValue {
 	if b == nil {
 		return kvs
 	}
@@ -480,41 +480,41 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 			return true
 		}
 	}
-	b.data = append(b.data, log.KeyValue{
-		Key:   attr.Key,
+	b.data = append(b.data, attribute.KeyValue{
+		Key:   attribute.Key(attr.Key),
 		Value: convert(attr.Value),
 	})
 	return true
 }
 
-func convert(v slog.Value) log.Value {
+func convert(v slog.Value) attribute.Value {
 	switch v.Kind() {
 	case slog.KindAny:
 		return convertValue(v.Any())
 	case slog.KindBool:
-		return log.BoolValue(v.Bool())
+		return attribute.BoolValue(v.Bool())
 	case slog.KindDuration:
-		return log.Int64Value(v.Duration().Nanoseconds())
+		return attribute.Int64Value(v.Duration().Nanoseconds())
 	case slog.KindFloat64:
-		return log.Float64Value(v.Float64())
+		return attribute.Float64Value(v.Float64())
 	case slog.KindInt64:
-		return log.Int64Value(v.Int64())
+		return attribute.Int64Value(v.Int64())
 	case slog.KindString:
-		return log.StringValue(v.String())
+		return attribute.StringValue(v.String())
 	case slog.KindTime:
-		return log.Int64Value(v.Time().UnixNano())
+		return attribute.Int64Value(v.Time().UnixNano())
 	case slog.KindUint64:
 		const maxInt64 = ^uint64(0) >> 1
 		u := v.Uint64()
 		if u > maxInt64 {
-			return log.Float64Value(float64(u))
+			return attribute.Float64Value(float64(u))
 		}
-		return log.Int64Value(int64(u))
+		return attribute.Int64Value(int64(u))
 	case slog.KindGroup:
 		g := v.Group()
 		buf := newKVBuffer(len(g))
 		buf.AddAttrs(g)
-		return log.MapValue(buf.data...)
+		return attribute.MapValue(buf.data...)
 	case slog.KindLogValuer:
 		return convert(v.Resolve())
 	default:
@@ -525,6 +525,6 @@ func convert(v slog.Value) log.Value {
 		// this malformed attribute as well as a panic. However, it is
 		// preferable to have user's open issue asking why their attributes
 		// have a "unhandled: " prefix than say that their code is panicking.
-		return log.StringValue(fmt.Sprintf("unhandled: (%s) %+v", v.Kind(), v.Any()))
+		return attribute.StringValue(fmt.Sprintf("unhandled: (%s) %+v", v.Kind(), v.Any()))
 	}
 }

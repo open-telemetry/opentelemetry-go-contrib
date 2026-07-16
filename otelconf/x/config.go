@@ -121,7 +121,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, nil
 	}
 
-	r, err := newResource(o.opentelemetryConfig.Resource)
+	r, err := newResource(o.ctx, o.opentelemetryConfig.Resource)
 	if err != nil {
 		return noopSDK, err
 	}
