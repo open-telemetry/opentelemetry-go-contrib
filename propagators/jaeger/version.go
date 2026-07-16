@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package jaeger // import "go.opentelemetry.io/contrib/propagators/jaeger"
+package jaeger
 
 // Version is the current release version of the Jaeger propagator.
 func Version() string {
