@@ -980,7 +980,6 @@ type ExperimentalResourceDetector struct {
 	// If omitted, ignore.
 	//
 	GCP ExperimentalGCPResourceDetector `json:"gcp,omitempty,omitzero" yaml:"gcp,omitempty" mapstructure:"gcp,omitempty"`
-
 	// Enable the AWS EKS resource detector.
 	// If omitted, ignore.
 	//
