@@ -6,7 +6,7 @@ package envcar_test
 import (
 	"os"
 	"os/exec"
-	"slices"
+	"runtime"
 	"strings"
 	"sync"
 	"testing"
@@ -61,19 +61,6 @@ func TestExtractValidTraceContextEnvCarrier(t *testing.T) {
 				Remote:     true,
 			}),
 		},
-		{
-			name: "lowercase env names",
-			envs: map[string]string{
-				"traceparent": "00-000000000000007b00000000000001c8-000000000000007b-00",
-				"tracestate":  stateStr,
-			},
-			want: trace.NewSpanContext(trace.SpanContextConfig{
-				TraceID:    traceID,
-				SpanID:     spanID,
-				TraceState: state,
-				Remote:     true,
-			}),
-		},
 	}
 
 	for _, tc := range tests {
@@ -86,6 +73,21 @@ func TestExtractValidTraceContextEnvCarrier(t *testing.T) {
 			assert.Equal(t, tc.want, trace.SpanContextFromContext(ctx))
 		})
 	}
+}
+
+func TestExtractIgnoresNonNormalizedEnvNames(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("Windows environment variables are case-insensitive, so this test is not applicable.")
+	}
+
+	unsetenv(t, "TRACEPARENT")
+	unsetenv(t, "TRACESTATE")
+	t.Setenv("traceparent", "00-000000000000007b00000000000001c8-000000000000007b-00")
+	t.Setenv("tracestate", "key1=value1,key2=value2")
+
+	ctx := prop.Extract(t.Context(), &envcar.Carrier{})
+
+	assert.False(t, trace.SpanContextFromContext(ctx).IsValid())
 }
 
 func TestInjectTraceContextEnvCarrier(t *testing.T) {
@@ -147,13 +149,16 @@ func TestInjectTraceContextEnvCarrier(t *testing.T) {
 }
 
 func TestCarrierKeys(t *testing.T) {
-	t.Setenv("traceparent", "value")
+	t.Setenv("TRACEPARENT", "value")
+	unsetenv(t, "ENVCAR_NON_NORMALIZED_KEY")
+	t.Setenv("envcar-non-normalized-key", "ignored")
 
 	c := envcar.Carrier{}
 	keys := c.Keys()
 
 	assert.Contains(t, keys, "TRACEPARENT")
-	assert.NotContains(t, keys, "traceparent")
+	assert.NotContains(t, keys, "envcar-non-normalized-key")
+	assert.NotContains(t, keys, "ENVCAR_NON_NORMALIZED_KEY")
 }
 
 func TestCarrierSetNilFunc(_ *testing.T) {
@@ -162,11 +167,20 @@ func TestCarrierSetNilFunc(_ *testing.T) {
 }
 
 func TestCarrierGetNormalizesKey(t *testing.T) {
-	t.Setenv("traceparent", "myvalue")
+	t.Setenv("TRACEPARENT", "myvalue")
 
 	c := envcar.Carrier{}
 	assert.Equal(t, "myvalue", c.Get("traceparent"))
 	assert.Equal(t, "myvalue", c.Get("TRACEPARENT"))
+}
+
+func TestCarrierGetIgnoresNonNormalizedEnvNames(t *testing.T) {
+	unsetenv(t, "ENVCAR_GET_NON_NORMALIZED_KEY")
+	t.Setenv("envcar-get-non-normalized-key", "ignored")
+
+	c := envcar.Carrier{}
+	assert.Empty(t, c.Get("envcar_get_non_normalized_key"))
+	assert.Empty(t, c.Get("ENVCAR_GET_NON_NORMALIZED_KEY"))
 }
 
 func TestCarrierSetUppercasesUnderscoresKey(t *testing.T) {
@@ -190,6 +204,29 @@ func TestCarrierSetUppercasesUnderscoresKey(t *testing.T) {
 	c.Set("Mój Bagaż", "🧳")
 	assert.Equal(t, "M_J_BAGA_", gotKey)
 	assert.Equal(t, "🧳", gotValue)
+}
+
+func TestCarrierGetReadsDirectly(t *testing.T) {
+	t.Setenv("TRACEPARENT", "myvalue")
+	c := envcar.Carrier{}
+	require.Equal(t, "myvalue", c.Get("TRACEPARENT"))
+
+	t.Setenv("TRACEPARENT", "bad")
+	t.Setenv("ENVCAR_GET_READS_DIRECTLY_NEW", "value")
+
+	assert.Equal(t, "bad", c.Get("TRACEPARENT"))
+	assert.Contains(t, c.Keys(), "ENVCAR_GET_READS_DIRECTLY_NEW")
+}
+
+func TestCarrierKeysReadsDirectly(t *testing.T) {
+	t.Setenv("TRACEPARENT", "myvalue")
+	c := envcar.Carrier{}
+	require.Contains(t, c.Keys(), "TRACEPARENT")
+
+	t.Setenv("ENVCAR_KEYS_FETCH_ONCE_NEW", "value")
+
+	assert.Contains(t, c.Keys(), "TRACEPARENT")
+	assert.Contains(t, c.Keys(), "ENVCAR_KEYS_FETCH_ONCE_NEW")
 }
 
 func TestConcurrentChildProcesses(t *testing.T) {
@@ -261,16 +298,16 @@ func TestConcurrentChildProcesses(t *testing.T) {
 	}
 }
 
-// Ensure Get and Keys to fetch from cache.
-func TestCarrierGetFetchOnce(t *testing.T) {
-	t.Setenv("TRACEPARENT", "myvalue")
-	c := envcar.Carrier{}
-	require.Equal(t, "myvalue", c.Get("TRACEPARENT"))
-	require.NotEqual(t, -1, slices.Index(c.Keys(), "TRACEPARENT"))
-	t.Setenv("TRACEPARENT", "bad")
-	t.Setenv("SOMETHINGNEW", "bad")
-	// Assert a carrier instance reads the env vars only once:
-	assert.Equal(t, "myvalue", c.Get("TRACEPARENT"))
-	assert.NotEqual(t, -1, slices.Index(c.Keys(), "TRACEPARENT"))
-	assert.Equal(t, -1, slices.Index(c.Keys(), "SOMETHINGNEW"))
+func unsetenv(t *testing.T, key string) {
+	t.Helper()
+
+	value, ok := os.LookupEnv(key)
+	require.NoError(t, os.Unsetenv(key))
+	t.Cleanup(func() {
+		if ok {
+			require.NoError(t, os.Setenv(key, value)) //nolint:usetesting // t.Setenv cannot restore after an explicit unset.
+			return
+		}
+		require.NoError(t, os.Unsetenv(key))
+	})
 }
