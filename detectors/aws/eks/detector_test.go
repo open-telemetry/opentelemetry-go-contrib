@@ -5,6 +5,8 @@ package eks
 
 import (
 	"context"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -91,4 +93,33 @@ func TestNotK8S(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), r, "Resource object should be empty")
 	detectorUtils.AssertExpectations(t)
+}
+
+func TestGetConfigMapSuccess(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "/api/v1/namespaces/kube-system/configmaps/aws-auth", r.URL.Path)
+		assert.Equal(t, "application/json", r.Header.Get("Accept"))
+		w.Header().Set("Content-Type", "application/json")
+		_, err := w.Write([]byte(`{"data":{"mapRoles":"test-role"}}`))
+		assert.NoError(t, err)
+	}))
+	t.Cleanup(srv.Close)
+
+	utils := &eksDetectorUtils{host: srv.URL, client: srv.Client()}
+	data, err := utils.getConfigMap(t.Context(), authConfigmapNS, authConfigmapName)
+	require.NoError(t, err)
+	assert.Equal(t, map[string]string{"mapRoles": "test-role"}, data)
+}
+
+func TestGetConfigMapNon2xx(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(srv.Close)
+
+	utils := &eksDetectorUtils{host: srv.URL, client: srv.Client()}
+	_, err := utils.getConfigMap(t.Context(), authConfigmapNS, authConfigmapName)
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "unexpected status")
 }

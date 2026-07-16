@@ -33,7 +33,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Handle nil response bodies from custom `RoundTripper` implementations in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` without panicking. (#9184)
 - Fix incorrect (overestimated) sum calculation for runtime histograms in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#9063)
 - Fix `Severity.UnmarshalText` round trip for positive `FATAL` offsets above the named range in `go.opentelemetry.io/contrib/processors/minsev`. (#9197)
-- Reduce binary size by using typed CoreV1 client instead of full Kubernetes clientset in `go.opentelemetry.io/contrib/detectors/aws/eks`. (#9284)
+- Reduce binary size by fetching ConfigMaps via `rest.HTTPClientFor` instead of the Kubernetes clientset in `go.opentelemetry.io/contrib/detectors/aws/eks`. (#9284)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
