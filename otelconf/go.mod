@@ -8,7 +8,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.44.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.69.0
-	go.opentelemetry.io/otel v1.44.1-0.20260709175035-4e0bf9f14df8
+	go.opentelemetry.io/otel v1.44.1-0.20260713231842-9778affd47e2
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.20.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.20.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.44.1-0.20260625150014-c84013202f01
@@ -28,7 +28,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.44.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/proto/otlp v1.10.0
 	go.yaml.in/yaml/v3 v3.0.4
-	golang.org/x/exp v0.0.0-20260611194520-c48552f49976
+	golang.org/x/exp v0.0.0-20260709172345-9ea1abe57597
 	google.golang.org/grpc v1.82.0
 )
 
@@ -74,14 +74,14 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.44.1-0.20260625150014-c84013202f01 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	golang.org/x/net v0.56.0 // indirect
+	golang.org/x/net v0.57.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
-	golang.org/x/term v0.44.0 // indirect
-	golang.org/x/text v0.39.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/term v0.45.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260713194154-142c488ef3d3 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260713194154-142c488ef3d3 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260713224248-f5fc221cf8c4 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260713224248-f5fc221cf8c4 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect

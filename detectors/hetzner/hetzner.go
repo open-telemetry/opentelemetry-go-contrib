@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package hetzner // import "go.opentelemetry.io/contrib/detectors/hetzner"
+package hetzner
 
 import (
 	"context"
