@@ -33,7 +33,7 @@
 // into a string value encoded using [fmt.Sprintf] if there is no matching type.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
-package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
+package otelzap
 
 import (
 	"context"
