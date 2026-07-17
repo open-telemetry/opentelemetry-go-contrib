@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package azurecontainerapps // import "go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
+package azurecontainerapps
 
 import (
 	"context"

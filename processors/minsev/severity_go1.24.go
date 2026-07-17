@@ -3,7 +3,7 @@
 
 //go:build go1.24
 
-package minsev // import "go.opentelemetry.io/contrib/processors/minsev"
+package minsev
 
 import "encoding"
 
