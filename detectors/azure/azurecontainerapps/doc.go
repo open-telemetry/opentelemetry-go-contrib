@@ -18,4 +18,4 @@ the following attributes are added when running on Azure Container Apps:
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
 [service]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/service.md
 */
-package azurecontainerapps // import "go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
+package azurecontainerapps

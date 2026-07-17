@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package x provides an OpenTelemetry declarative configuration SDK.
-package x // import "go.opentelemetry.io/contrib/otelconf/x"
+package x
 
 import (
 	"context"
