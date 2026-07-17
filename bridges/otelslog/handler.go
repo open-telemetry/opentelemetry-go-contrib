@@ -42,7 +42,7 @@
 //   - [slog.KindLogValuer] the value is resolved and then transformed.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
-package otelslog // import "go.opentelemetry.io/contrib/bridges/otelslog"
+package otelslog
 
 import (
 	"context"

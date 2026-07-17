@@ -1,14 +1,16 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package x // import "go.opentelemetry.io/contrib/otelconf/x"
+package x
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
+	eksdetector "go.opentelemetry.io/contrib/detectors/aws/eks"
 	azurevmdetector "go.opentelemetry.io/contrib/detectors/azure/azurevm"
 
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
@@ -17,6 +19,9 @@ import (
 func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 	opts := []resource.Option{}
 	for _, d := range detectors {
+		if d.AWSEKS != nil {
+			opts = append(opts, resource.WithDetectors(eksdetector.NewResourceDetector()))
+		}
 		if d.AzureVM != nil {
 			opts = append(opts, resource.WithDetectors(azurevmdetector.New()))
 		}
@@ -58,17 +63,54 @@ func newResourceWithBuilder(ctx context.Context, r *Resource, build resourceBuil
 	}
 	opts := []resource.Option{
 		resource.WithAttributes(resource.DefaultWithContext(ctx).Attributes()...),
-	}
-
-	if r.DetectionDevelopment != nil {
-		opts = append(opts, resourceOpts(r.DetectionDevelopment.Detectors)...)
-	}
-
-	opts = append(
-		opts,
 		resource.WithAttributes(attrs...),
 		resource.WithSchemaURL(schema),
-	)
+	}
 
-	return build(ctx, opts...)
+	base, err := build(ctx, opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	if r.DetectionDevelopment == nil {
+		return base, nil
+	}
+
+	detected, err := newDetectedResource(ctx, r.DetectionDevelopment, build)
+	if detected == nil {
+		return base, err
+	}
+
+	merged, mergeErr := resource.Merge(detected, base)
+	return merged, errors.Join(err, mergeErr)
+}
+
+func newDetectedResource(ctx context.Context, detection *ExperimentalResourceDetection, build resourceBuilder) (*resource.Resource, error) {
+	filter, err := newIncludeExcludeFilter(detection.Attributes)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := resourceOpts(detection.Detectors)
+	if len(opts) == 0 {
+		return resource.NewSchemaless(), nil
+	}
+
+	detected, err := build(ctx, opts...)
+	if detected == nil {
+		return nil, err
+	}
+
+	attrs := detected.Attributes()
+	filtered := make([]attribute.KeyValue, 0, len(attrs))
+	for _, attr := range attrs {
+		if filter(attr) {
+			filtered = append(filtered, attr)
+		}
+	}
+	if len(filtered) == 0 {
+		return resource.NewSchemaless(), err
+	}
+
+	return resource.NewWithAttributes(detected.SchemaURL(), filtered...), err
 }

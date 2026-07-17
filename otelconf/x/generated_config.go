@@ -976,6 +976,11 @@ type ExperimentalResourceDetection struct {
 }
 
 type ExperimentalResourceDetector struct {
+	// Enable the AWS EKS resource detector.
+	// If omitted, ignore.
+	//
+	AWSEKS ExperimentalAWSEKSResourceDetector `json:"aws.eks,omitempty,omitzero" yaml:"aws.eks,omitempty" mapstructure:"aws.eks,omitempty"`
+
 	// Enable the Azure VM resource detector.
 	// If omitted, ignore.
 	//
@@ -1004,6 +1009,8 @@ type ExperimentalResourceDetector struct {
 
 	AdditionalProperties interface{} `mapstructure:",remain"`
 }
+
+type ExperimentalAWSEKSResourceDetector map[string]interface{}
 
 type ExperimentalAzureVMResourceDetector map[string]interface{}
 
