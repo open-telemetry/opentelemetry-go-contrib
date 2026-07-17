@@ -110,4 +110,5 @@ replace go.opentelemetry.io/contrib/propagators/ot => ../propagators/ot
 replace go.opentelemetry.io/contrib/propagators/jaeger => ../propagators/jaeger
 
 replace go.opentelemetry.io/contrib/detectors/aws/eks => ../detectors/aws/eks
+
 replace go.opentelemetry.io/contrib/detectors/azure/azurevm => ../detectors/azure/azurevm
