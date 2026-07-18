@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptrace"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -82,6 +83,47 @@ func defaultTransportFormatter(_ string, r *http.Request) string {
 	return "HTTP " + r.Method
 }
 
+type requestBodyTracker struct {
+	*request.BodyWrapper
+
+	onClose   func()
+	closeOnce sync.Once
+	closed    atomic.Bool
+}
+
+func newRequestBodyTracker(body io.ReadCloser, onClose func()) *requestBodyTracker {
+	return &requestBodyTracker{
+		BodyWrapper: request.NewBodyWrapper(body, func(int64) {}),
+		onClose:     onClose,
+	}
+}
+
+func (w *requestBodyTracker) Close() error {
+	err := w.BodyWrapper.Close()
+	w.closed.Store(true)
+	w.closeOnce.Do(func() {
+		w.onClose()
+	})
+	return err
+}
+
+func (w *requestBodyTracker) Closed() bool {
+	return w.closed.Load()
+}
+
+// finished reports whether the request body has reached its final size.
+//
+// Close is the authoritative signal, but for known ContentLength values the
+// transport may finish reading slightly before Close runs. Treat that as
+// complete so response finalization can record metrics without racing the
+// Close callback.
+func (w *requestBodyTracker) finished(contentLength int64) bool {
+	if w.Closed() {
+		return true
+	}
+	return contentLength >= 0 && w.BytesRead() >= contentLength
+}
+
 // RoundTrip creates a Span and propagates its context via the provided request's headers
 // before handing the request to the configured base RoundTripper. The created span will
 // end when the response body is closed or when a read from the body returns io.EOF.
@@ -117,14 +159,43 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	r = r.Clone(ctx) // According to RoundTripper spec, we shouldn't modify the origin request.
 
-	var lastBW *request.BodyWrapper // Records the last body wrapper. Can be nil.
+	// lastBodyMu protects both lastTrackedBody and recordMetrics from
+	// concurrent access. The request body tracker callback may fire on a
+	// different goroutine (e.g. during transport retries) while the main
+	// goroutine is still assigning recordMetrics after RoundTrip returns.
+	var (
+		lastBodyMu      sync.Mutex
+		lastTrackedBody *requestBodyTracker
+		recordMetrics   = func() {}
+	)
+	setLastTrackedBody := func(body *requestBodyTracker) {
+		lastBodyMu.Lock()
+		lastTrackedBody = body
+		lastBodyMu.Unlock()
+	}
+	currentTrackedBody := func() *requestBodyTracker {
+		lastBodyMu.Lock()
+		defer lastBodyMu.Unlock()
+		return lastTrackedBody
+	}
+	callRecordMetrics := func() {
+		lastBodyMu.Lock()
+		fn := recordMetrics
+		lastBodyMu.Unlock()
+		fn()
+	}
 	maybeWrapBody := func(body io.ReadCloser) io.ReadCloser {
 		if body == nil || body == http.NoBody {
 			return body
 		}
-		bw := request.NewBodyWrapper(body, func(int64) {})
-		lastBW = bw
-		return bw
+		var trackedBody *requestBodyTracker
+		trackedBody = newRequestBodyTracker(body, func() {
+			if currentTrackedBody() == trackedBody {
+				callRecordMetrics()
+			}
+		})
+		setLastTrackedBody(trackedBody)
+		return trackedBody
 	}
 	r.Body = maybeWrapBody(r.Body)
 	if r.GetBody != nil {
@@ -132,7 +203,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		r.GetBody = func() (io.ReadCloser, error) {
 			b, err := originalGetBody()
 			if err != nil {
-				lastBW = nil // The underlying transport will fail to make a retry request, hence, record no data.
+				setLastTrackedBody(nil) // The underlying transport will fail to make a retry request, hence, record no data.
 				return nil, err
 			}
 			return maybeWrapBody(b), nil
@@ -147,30 +218,43 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		res, err = ensureResponseBody(t.rt, r, res)
 	}
 
-	// Record the metrics on error or no error.
+	requestDuration := time.Since(requestStartTime)
 	statusCode := 0
 	if err == nil {
 		statusCode = res.StatusCode
 	}
-	var requestSize int64
-	if lastBW != nil {
-		requestSize = lastBW.BytesRead()
+	metricOptions := t.semconv.MetricOptions(semconv.MetricAttributes{
+		Req:                  r,
+		StatusCode:           statusCode,
+		Err:                  err,
+		AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
+	})
+
+	// Delay metric recording until the response body is finalized. The
+	// transport can continue reading the request body after RoundTrip returns.
+	var recordMetricsOnce sync.Once
+	fn := func() {
+		var requestSize int64
+		if lastTrackedBody := currentTrackedBody(); lastTrackedBody != nil {
+			requestSize = lastTrackedBody.BytesRead()
+		}
+		recordMetricsOnce.Do(func() {
+			t.semconv.RecordMetrics(
+				ctx,
+				semconv.MetricData{
+					RequestSize:     requestSize,
+					RequestDuration: requestDuration,
+				},
+				metricOptions,
+			)
+		})
 	}
-	t.semconv.RecordMetrics(
-		ctx,
-		semconv.MetricData{
-			RequestSize:     requestSize,
-			RequestDuration: time.Since(requestStartTime),
-		},
-		t.semconv.MetricOptions(semconv.MetricAttributes{
-			Req:                  r,
-			StatusCode:           statusCode,
-			Err:                  err,
-			AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
-		}),
-	)
+	lastBodyMu.Lock()
+	recordMetrics = fn
+	lastBodyMu.Unlock()
 
 	if err != nil {
+		callRecordMetrics()
 		span.SetAttributes(otelsemconv.ErrorType(err))
 		span.SetStatus(codes.Error, err.Error())
 		span.End()
@@ -178,7 +262,16 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		return res, err
 	}
 
-	readRecordFunc := func(int64) {}
+	contentLength := r.ContentLength
+	readRecordFunc := func(int64) {
+		lastTrackedBody := currentTrackedBody()
+		// Delay recording while the transport is still uploading a request
+		// body after RoundTrip returns. The request body Close callback will
+		// record the final size in that case.
+		if lastTrackedBody == nil || lastTrackedBody.finished(contentLength) {
+			callRecordMetrics()
+		}
+	}
 	res.Body = newWrappedBody(span, readRecordFunc, res.Body)
 	// traces
 	span.SetAttributes(t.semconv.ResponseTraceAttrs(res)...)
@@ -234,11 +327,14 @@ func newWrappedBody(span trace.Span, record func(n int64), body io.ReadCloser) i
 // If the response body implements the io.Writer interface (i.e. for
 // successful protocol switches), the wrapped body also will.
 type wrappedBody struct {
-	span     trace.Span
-	recorded atomic.Bool
-	record   func(n int64)
-	body     io.ReadCloser
-	read     atomic.Int64
+	span   trace.Span
+	record func(n int64)
+	body   io.ReadCloser
+	read   atomic.Int64
+
+	closeOnce    sync.Once
+	closeErr     error
+	finalizeOnce sync.Once
 }
 
 var _ io.ReadWriteCloser = &wrappedBody{}
@@ -262,8 +358,7 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 	case nil:
 		// nothing to do here but fall through to the return
 	case io.EOF:
-		wb.recordBytesRead()
-		wb.span.End()
+		wb.recordMetricsOnce()
 	default:
 		wb.span.SetAttributes(otelsemconv.ErrorType(err))
 		wb.span.SetStatus(codes.Error, err.Error())
@@ -271,23 +366,26 @@ func (wb *wrappedBody) Read(b []byte) (int, error) {
 	return n, err
 }
 
-// recordBytesRead is a function that ensures the number of bytes read is recorded once and only once.
-func (wb *wrappedBody) recordBytesRead() {
-	// note: it is more performant (and equally correct) to use atomic.Bool over sync.Once here. In the event that
-	// two goroutines are racing to call this method, the number of bytes read will no longer increase. Using
-	// CompareAndSwap allows later goroutines to return quickly and not block waiting for the race winner to finish
-	// calling wb.record(wb.read.Load()).
-	if wb.recorded.CompareAndSwap(false, true) {
-		// Record the total number of bytes read
+func (wb *wrappedBody) closeBody() error {
+	wb.closeOnce.Do(func() {
+		if wb.body != nil {
+			wb.closeErr = wb.body.Close()
+		}
+	})
+
+	return wb.closeErr
+}
+
+// recordMetricsOnce ensures the final number of bytes read is recorded once.
+func (wb *wrappedBody) recordMetricsOnce() {
+	wb.finalizeOnce.Do(func() {
 		wb.record(wb.read.Load())
-	}
+		wb.span.End()
+	})
 }
 
 func (wb *wrappedBody) Close() error {
-	wb.recordBytesRead()
-	wb.span.End()
-	if wb.body != nil {
-		return wb.body.Close()
-	}
-	return nil
+	err := wb.closeBody()
+	wb.recordMetricsOnce()
+	return err
 }
