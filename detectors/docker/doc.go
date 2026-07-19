@@ -33,4 +33,4 @@ container.image.id still identifies the image in that case.
 [host]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/host.md
 [os]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/os.md
 */
-package docker // import "go.opentelemetry.io/contrib/detectors/docker"
+package docker
