@@ -148,7 +148,6 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			name: "all-detectors",
 			detectors: []ExperimentalResourceDetector{
 				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
-				{AzureVM: ExperimentalAzureVMResourceDetector{}},
 				{Container: ExperimentalContainerResourceDetector{}},
 				{Host: ExperimentalHostResourceDetector{}},
 				{Process: ExperimentalProcessResourceDetector{}},
@@ -183,6 +182,13 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			assert.Equal(t, tt.wantServiceAttribute, attrSet[semconv.ServiceInstanceIDKey], "should have service.instance.id attribute")
 		})
 	}
+}
+
+func TestResourceOptsAzureVM(t *testing.T) {
+	opts := resourceOpts([]ExperimentalResourceDetector{
+		{AzureVM: ExperimentalAzureVMResourceDetector{}},
+	})
+	assert.Len(t, opts, 1)
 }
 
 func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
