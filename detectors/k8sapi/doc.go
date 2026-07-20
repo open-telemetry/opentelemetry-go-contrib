@@ -37,4 +37,4 @@ the following RBAC:
 
 [k8s]: https://opentelemetry.io/docs/specs/semconv/resource/k8s/
 */
-package k8sapi // import "go.opentelemetry.io/contrib/detectors/k8sapi"
+package k8sapi

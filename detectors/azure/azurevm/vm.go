@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package azurevm // import "go.opentelemetry.io/contrib/detectors/azure/azurevm"
+package azurevm
 
 import (
 	"context"
