@@ -6,7 +6,7 @@ require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/propagators/b3 v1.44.0
-	go.opentelemetry.io/otel v1.44.1-0.20260713231842-9778affd47e2
+	go.opentelemetry.io/otel v1.44.1-0.20260717185620-3f1e0cf6869a
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/metric v1.44.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
@@ -34,7 +34,7 @@ require (
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.4.0 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
-	github.com/mattn/go-isatty v0.0.22 // indirect
+	github.com/mattn/go-isatty v0.0.23 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
