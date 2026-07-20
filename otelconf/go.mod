@@ -6,7 +6,7 @@ require (
 	github.com/prometheus/client_golang v1.23.2
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/contrib/detectors/aws/eks v0.0.0-00010101000000-000000000000
+	go.opentelemetry.io/contrib/detectors/aws/eks v1.44.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.43.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.69.0
 	go.opentelemetry.io/otel v1.44.1-0.20260717185620-3f1e0cf6869a
