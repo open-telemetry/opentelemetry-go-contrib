@@ -145,22 +145,8 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			wantProcessAttribute: true,
 		},
 		{
-			name: "aws.ecs-detector-only",
+			name: "all-local-detectors",
 			detectors: []ExperimentalResourceDetector{
-				{AWSECS: ExperimentalAWSECSResourceDetector{}},
-			},
-		},
-		{
-			name: "aws.eks-detector-only",
-			detectors: []ExperimentalResourceDetector{
-				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
-			},
-		},
-		{
-			name: "all-detectors",
-			detectors: []ExperimentalResourceDetector{
-				{AWSECS: ExperimentalAWSECSResourceDetector{}},
-				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
 				{Container: ExperimentalContainerResourceDetector{}},
 				{Host: ExperimentalHostResourceDetector{}},
 				{Process: ExperimentalProcessResourceDetector{}},
@@ -193,6 +179,28 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			assert.Equal(t, tt.wantOSAttributes, attrSet[semconv.OSTypeKey], "should have os.type attribute (from WithOS()")
 			assert.Equal(t, tt.wantProcessAttribute, attrSet[semconv.ProcessPIDKey], "should have process.pid attribute")
 			assert.Equal(t, tt.wantServiceAttribute, attrSet[semconv.ServiceInstanceIDKey], "should have service.instance.id attribute")
+		})
+	}
+}
+
+func TestResourceOptsWithAWSDetectors(t *testing.T) {
+	tests := []struct {
+		name     string
+		detector ExperimentalResourceDetector
+	}{
+		{
+			name:     "aws.ecs",
+			detector: ExperimentalResourceDetector{AWSECS: ExperimentalAWSECSResourceDetector{}},
+		},
+		{
+			name:     "aws.eks",
+			detector: ExperimentalResourceDetector{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Len(t, resourceOpts([]ExperimentalResourceDetector{tt.detector}), 1)
 		})
 	}
 }
