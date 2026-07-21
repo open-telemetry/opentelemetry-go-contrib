@@ -33,6 +33,9 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
+	if hasYAMLMapKey(node, "aws.ecs") && plain.AWSECS == nil {
+		plain.AWSECS = ExperimentalAWSECSResourceDetector{}
+	}
 	if hasYAMLMapKey(node, "aws.eks") && plain.AWSEKS == nil {
 		plain.AWSEKS = ExperimentalAWSEKSResourceDetector{}
 	}

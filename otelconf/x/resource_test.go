@@ -145,8 +145,21 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			wantProcessAttribute: true,
 		},
 		{
+			name: "aws.ecs-detector-only",
+			detectors: []ExperimentalResourceDetector{
+				{AWSECS: ExperimentalAWSECSResourceDetector{}},
+			},
+		},
+		{
+			name: "aws.eks-detector-only",
+			detectors: []ExperimentalResourceDetector{
+				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
+			},
+		},
+		{
 			name: "all-detectors",
 			detectors: []ExperimentalResourceDetector{
+				{AWSECS: ExperimentalAWSECSResourceDetector{}},
 				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
 				{Container: ExperimentalContainerResourceDetector{}},
 				{Host: ExperimentalHostResourceDetector{}},
