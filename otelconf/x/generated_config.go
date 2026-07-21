@@ -981,6 +981,11 @@ type ExperimentalResourceDetector struct {
 	//
 	AWSECS ExperimentalAWSECSResourceDetector `json:"aws.ecs,omitempty,omitzero" yaml:"aws.ecs,omitempty" mapstructure:"aws.ecs,omitempty"`
 
+	// Enable the AWS EKS resource detector.
+	// If omitted, ignore.
+	//
+	AWSEKS ExperimentalAWSEKSResourceDetector `json:"aws.eks,omitempty,omitzero" yaml:"aws.eks,omitempty" mapstructure:"aws.eks,omitempty"`
+
 	// Enable the container resource detector, which populates container.* attributes.
 	// If omitted, ignore.
 	//
@@ -1006,6 +1011,8 @@ type ExperimentalResourceDetector struct {
 }
 
 type ExperimentalAWSECSResourceDetector map[string]interface{}
+
+type ExperimentalAWSEKSResourceDetector map[string]interface{}
 
 type ExperimentalServiceResourceDetector map[string]interface{}
 

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package x // import "go.opentelemetry.io/contrib/otelconf/x"
+package x
 
 import (
 	"errors"
@@ -35,6 +35,9 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	}
 	if hasYAMLMapKey(node, "aws.ecs") && plain.AWSECS == nil {
 		plain.AWSECS = ExperimentalAWSECSResourceDetector{}
+	}
+	if hasYAMLMapKey(node, "aws.eks") && plain.AWSEKS == nil {
+		plain.AWSEKS = ExperimentalAWSEKSResourceDetector{}
 	}
 	// container can be nil, must check and set here
 	if hasYAMLMapKey(node, "container") && plain.Container == nil {
