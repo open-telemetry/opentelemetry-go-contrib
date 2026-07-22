@@ -36,6 +36,9 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	if hasYAMLMapKey(node, "gcp") && plain.GCP == nil {
 		plain.GCP = ExperimentalGCPResourceDetector{}
 	}
+	if hasYAMLMapKey(node, "aws.ecs") && plain.AWSECS == nil {
+		plain.AWSECS = ExperimentalAWSECSResourceDetector{}
+	}
 	if hasYAMLMapKey(node, "aws.eks") && plain.AWSEKS == nil {
 		plain.AWSEKS = ExperimentalAWSEKSResourceDetector{}
 	}

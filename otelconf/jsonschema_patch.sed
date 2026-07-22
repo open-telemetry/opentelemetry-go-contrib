@@ -7,6 +7,12 @@ s+type Headers.*+type Headers map[string]string+g
 \	// If omitted, ignore.\
 \	//\
 \	GCP ExperimentalGCPResourceDetector `json:"gcp,omitempty,omitzero" yaml:"gcp,omitempty" mapstructure:"gcp,omitempty"`\
+\
+\	// Enable the AWS ECS resource detector.\
+\	// If omitted, ignore.\
+\	//\
+\	AWSECS ExperimentalAWSECSResourceDetector `json:"aws.ecs,omitempty,omitzero" yaml:"aws.ecs,omitempty" mapstructure:"aws.ecs,omitempty"`\
+\
 \	// Enable the AWS EKS resource detector.\
 \	// If omitted, ignore.\
 \	//\
@@ -14,5 +20,7 @@ s+type Headers.*+type Headers map[string]string+g
 
 /^type ExperimentalServiceResourceDetector map\[string\]interface{}$/i\
 type ExperimentalGCPResourceDetector map[string]interface{}\
+\
+type ExperimentalAWSECSResourceDetector map[string]interface{}\
 \
 type ExperimentalAWSEKSResourceDetector map[string]interface{}\
