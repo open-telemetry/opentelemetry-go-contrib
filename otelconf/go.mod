@@ -28,7 +28,7 @@ require (
 	go.opentelemetry.io/otel/sdk/log/logtest v0.20.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/sdk/metric v1.44.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/trace v1.44.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/proto/otlp v1.10.0
+	go.opentelemetry.io/proto/otlp v1.11.0
 	go.yaml.in/yaml/v3 v3.0.4
 	golang.org/x/exp v0.0.0-20260718201538-764159d718ef
 	google.golang.org/grpc v1.82.1
