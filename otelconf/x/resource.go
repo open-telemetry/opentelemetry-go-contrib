@@ -12,6 +12,7 @@ import (
 
 	ecsdetector "go.opentelemetry.io/contrib/detectors/aws/ecs"
 	eksdetector "go.opentelemetry.io/contrib/detectors/aws/eks"
+	gcpdetector "go.opentelemetry.io/contrib/detectors/gcp"
 
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
@@ -24,6 +25,9 @@ func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 		}
 		if d.AWSEKS != nil {
 			opts = append(opts, resource.WithDetectors(eksdetector.NewResourceDetector()))
+		}
+		if d.GCP != nil {
+			opts = append(opts, resource.WithDetectors(gcpdetector.NewDetector()))
 		}
 		if d.Container != nil {
 			opts = append(opts, resource.WithContainer())

@@ -8,6 +8,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.44.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.44.0
+	go.opentelemetry.io/contrib/detectors/gcp v1.43.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.69.0
 	go.opentelemetry.io/otel v1.44.1-0.20260717185620-3f1e0cf6869a
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.20.1-0.20260625150014-c84013202f01
@@ -34,6 +35,8 @@ require (
 )
 
 require (
+	cloud.google.com/go/compute/metadata v0.9.0 // indirect
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.34.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20221221133751-67e37ae746cd // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
@@ -114,3 +117,5 @@ replace go.opentelemetry.io/contrib/propagators/jaeger => ../propagators/jaeger
 replace go.opentelemetry.io/contrib/detectors/aws/ecs => ../detectors/aws/ecs
 
 replace go.opentelemetry.io/contrib/detectors/aws/eks => ../detectors/aws/eks
+
+replace go.opentelemetry.io/contrib/detectors/gcp => ../detectors/gcp
