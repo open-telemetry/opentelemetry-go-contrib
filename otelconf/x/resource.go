@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package x // import "go.opentelemetry.io/contrib/otelconf/x"
+package x
 
 import (
 	"context"
@@ -10,12 +10,21 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
+	ecsdetector "go.opentelemetry.io/contrib/detectors/aws/ecs"
+	eksdetector "go.opentelemetry.io/contrib/detectors/aws/eks"
+
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
 
 func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 	opts := []resource.Option{}
 	for _, d := range detectors {
+		if d.AWSECS != nil {
+			opts = append(opts, resource.WithDetectors(ecsdetector.NewResourceDetector()))
+		}
+		if d.AWSEKS != nil {
+			opts = append(opts, resource.WithDetectors(eksdetector.NewResourceDetector()))
+		}
 		if d.Container != nil {
 			opts = append(opts, resource.WithContainer())
 		}

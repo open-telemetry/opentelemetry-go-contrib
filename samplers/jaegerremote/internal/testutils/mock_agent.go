@@ -18,7 +18,7 @@
 
 // Package testutils provides testing utilities for the jaegerremote sampler
 // package.
-package testutils // import "go.opentelemetry.io/contrib/samplers/jaegerremote/internal/testutils"
+package testutils
 
 import (
 	"encoding/json"

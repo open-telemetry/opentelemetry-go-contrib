@@ -18,4 +18,4 @@ each of the following attributes is added if it is available:
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
 [host]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/host.md
 */
-package hetzner // import "go.opentelemetry.io/contrib/detectors/hetzner"
+package hetzner
