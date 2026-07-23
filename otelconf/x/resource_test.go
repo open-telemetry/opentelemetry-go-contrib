@@ -145,9 +145,23 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			wantProcessAttribute: true,
 		},
 		{
-			name: "all-detectors",
+			name: "aws.ecs-detector-only",
+			detectors: []ExperimentalResourceDetector{
+				{AWSECS: ExperimentalAWSECSResourceDetector{}},
+			},
+		},
+		{
+			name: "aws.eks-detector-only",
 			detectors: []ExperimentalResourceDetector{
 				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
+			},
+		},
+		{
+			name: "all-detectors",
+			detectors: []ExperimentalResourceDetector{
+				{AWSECS: ExperimentalAWSECSResourceDetector{}},
+				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
+				{GCP: ExperimentalGCPResourceDetector{}},
 				{Container: ExperimentalContainerResourceDetector{}},
 				{Host: ExperimentalHostResourceDetector{}},
 				{Process: ExperimentalProcessResourceDetector{}},
@@ -279,6 +293,8 @@ func TestNewResourceWithDetectionAttributesFilterRemovesDetectedSchema(t *testin
 }
 
 func TestNewResourceWithDetectionDoesNotOverrideConfiguredAttributes(t *testing.T) {
+	t.Setenv("OTEL_SERVICE_NAME", "detected-service")
+
 	got, err := newResource(t.Context(), &Resource{
 		Attributes: []AttributeNameValue{
 			{Name: string(semconv.ServiceNameKey), Value: "configured-service"},

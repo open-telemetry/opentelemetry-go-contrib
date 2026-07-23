@@ -10,7 +10,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
+	ecsdetector "go.opentelemetry.io/contrib/detectors/aws/ecs"
 	eksdetector "go.opentelemetry.io/contrib/detectors/aws/eks"
+	gcpdetector "go.opentelemetry.io/contrib/detectors/gcp"
 
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
@@ -18,8 +20,14 @@ import (
 func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 	opts := []resource.Option{}
 	for _, d := range detectors {
+		if d.AWSECS != nil {
+			opts = append(opts, resource.WithDetectors(ecsdetector.NewResourceDetector()))
+		}
 		if d.AWSEKS != nil {
 			opts = append(opts, resource.WithDetectors(eksdetector.NewResourceDetector()))
+		}
+		if d.GCP != nil {
+			opts = append(opts, resource.WithDetectors(gcpdetector.NewDetector()))
 		}
 		if d.Container != nil {
 			opts = append(opts, resource.WithContainer())

@@ -123,6 +123,36 @@ func (j *TraceContextPropagator) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalGCPResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalGCPResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if p == nil {
+		*j = ExperimentalGCPResourceDetector{}
+	} else {
+		*j = ExperimentalGCPResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalAWSECSResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalAWSECSResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if p == nil {
+		*j = ExperimentalAWSECSResourceDetector{}
+	} else {
+		*j = ExperimentalAWSECSResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *ExperimentalAWSEKSResourceDetector) UnmarshalJSON(b []byte) error {
 	type plain ExperimentalAWSEKSResourceDetector
 	var p plain
@@ -207,6 +237,8 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	type Plain ExperimentalResourceDetector
 	type shadow struct {
 		Plain
+		GCP       json.RawMessage `json:"gcp"`
+		AWSECS    json.RawMessage `json:"aws.ecs"`
 		AWSEKS    json.RawMessage `json:"aws.eks"`
 		Container json.RawMessage `json:"container"`
 		Host      json.RawMessage `json:"host"`
@@ -216,6 +248,28 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	var sh shadow
 	if err := json.Unmarshal(b, &sh); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if sh.GCP != nil {
+		var c ExperimentalGCPResourceDetector
+		if err := json.Unmarshal(sh.GCP, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		if c == nil {
+			c = ExperimentalGCPResourceDetector{}
+		}
+		sh.Plain.GCP = c
+	}
+
+	if sh.AWSECS != nil {
+		var c ExperimentalAWSECSResourceDetector
+		if err := json.Unmarshal(sh.AWSECS, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		if c == nil {
+			c = ExperimentalAWSECSResourceDetector{}
+		}
+		sh.Plain.AWSECS = c
 	}
 
 	if sh.AWSEKS != nil {
