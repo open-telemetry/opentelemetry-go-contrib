@@ -475,6 +475,55 @@ func TestWithGinFilter(t *testing.T) {
 		assert.Len(t, sr.Ended(), 1)
 	})
 }
+func TestWithFilterAndGinFilterCombined(t *testing.T) {
+	t.Run("http filter rejects, gin filter allows — should not trace", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+		router := gin.New()
+		httpFilter := func(req *http.Request) bool { return req.URL.Path != "/healthcheck" }
+		ginFilter := func(c *gin.Context) bool { return true }
+		router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider), otelgin.WithFilter(httpFilter), otelgin.WithGinFilter(ginFilter)))
+		router.GET("/healthcheck", func(*gin.Context) {})
+
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/healthcheck", http.NoBody)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
+		assert.Empty(t, sr.Ended())
+	})
+
+	t.Run("http filter allows, gin filter rejects — should not trace", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+		router := gin.New()
+		httpFilter := func(req *http.Request) bool { return true }
+		ginFilter := func(c *gin.Context) bool { return c.Request.URL.Path != "/healthcheck" }
+		router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider), otelgin.WithFilter(httpFilter), otelgin.WithGinFilter(ginFilter)))
+		router.GET("/healthcheck", func(*gin.Context) {})
+
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/healthcheck", http.NoBody)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
+		assert.Empty(t, sr.Ended())
+	})
+
+	t.Run("both filters allow — should trace", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+		router := gin.New()
+		httpFilter := func(req *http.Request) bool { return true }
+		ginFilter := func(c *gin.Context) bool { return true }
+		router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider), otelgin.WithFilter(httpFilter), otelgin.WithGinFilter(ginFilter)))
+		router.GET("/user/:id", func(*gin.Context) {})
+
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody)
+		w := httptest.NewRecorder()
+		router.ServeHTTP(w, r)
+		assert.Len(t, sr.Ended(), 1)
+	})
+}
 
 func TestMetrics(t *testing.T) {
 	tests := []struct {
