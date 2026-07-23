@@ -273,3 +273,15 @@ func TestConvertValueFloat32(t *testing.T) {
 
 	assert.InDelta(t, value.AsFloat64(), want.AsFloat64(), 0.0001)
 }
+
+func TestConvertValueMaxDepth(t *testing.T) {
+	m := map[string]any{}
+	m["self"] = m
+	assert.Equal(t, attribute.MAP, convertValue(m).Type())
+
+	var nested any = "leaf"
+	for i := 0; i < maxConvertDepth+5; i++ {
+		nested = []any{nested}
+	}
+	assert.Equal(t, attribute.SLICE, convertValue(nested).Type())
+}
