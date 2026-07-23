@@ -31,4 +31,4 @@ the resulting resource.
 [service]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/service.md
 [faas]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/faas.md
 */
-package azurefunctions // import "go.opentelemetry.io/contrib/detectors/azure/azurefunctions"
+package azurefunctions

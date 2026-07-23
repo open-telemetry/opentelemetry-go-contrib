@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package azurefunctions // import "go.opentelemetry.io/contrib/detectors/azure/azurefunctions"
+package azurefunctions
 
 import (
 	"context"
