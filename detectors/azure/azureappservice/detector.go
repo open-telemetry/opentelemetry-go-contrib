@@ -23,7 +23,7 @@ const (
 	instanceIDEnvVar    = "WEBSITE_INSTANCE_ID"
 
 	// Some Azure Functions run on the same App Service infrastructure.
-	// We need to distinguish AAS Functions from AAS apps.
+	// We need to distinguish Functions apps from App Service web apps.
 	functionsWorkerRuntimeEnvVar = "FUNCTIONS_WORKER_RUNTIME"
 
 	resourceGroupKey = attribute.Key("azure.resource_group.name")
@@ -82,8 +82,8 @@ func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	// WEBSITE_OWNER_NAME has the form "<subscription-id>+<resource-group>-<region>webspace";
 	// the subscription ID is the segment before the first '+'.
 	subscriptionID := ownerName
-	if i := strings.Index(ownerName, "+"); i >= 0 {
-		subscriptionID = ownerName[:i]
+	if sub, _, ok := strings.Cut(ownerName, "+"); ok {
+		subscriptionID = sub
 	}
 
 	attrs := []attribute.KeyValue{
