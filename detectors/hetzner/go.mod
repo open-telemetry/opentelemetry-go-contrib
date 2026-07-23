@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/detectors/hetzner
 go 1.25.0
 
 require (
-	github.com/hetznercloud/hcloud-go/v2 v2.45.0
+	github.com/hetznercloud/hcloud-go/v2 v2.46.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.44.1-0.20260717185620-3f1e0cf6869a
 	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
