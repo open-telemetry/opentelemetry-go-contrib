@@ -23,7 +23,7 @@ func TestPublishInput(t *testing.T) {
 
 	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
+	assert.Contains(t, attributes, semconv.MessagingSystemAWSSNS)
 	assert.Contains(t, attributes, semconv.MessagingDestinationName("my-topic"))
 	assert.Contains(t, attributes, semconv.MessagingOperationName("publish_input"))
 	assert.Contains(t, attributes, semconv.MessagingOperationTypeSend)
@@ -36,7 +36,7 @@ func TestPublishInputWithNoDestination(t *testing.T) {
 
 	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
+	assert.Contains(t, attributes, semconv.MessagingSystemAWSSNS)
 	assert.Contains(t, attributes, semconv.MessagingDestinationName(""))
 	assert.Contains(t, attributes, semconv.MessagingOperationName("publish_input"))
 	assert.Contains(t, attributes, semconv.MessagingOperationTypeSend)
@@ -52,7 +52,7 @@ func TestPublishBatchInput(t *testing.T) {
 
 	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
+	assert.Contains(t, attributes, semconv.MessagingSystemAWSSNS)
 	assert.Contains(t, attributes, semconv.MessagingDestinationName("my-topic-batch"))
 	assert.Contains(t, attributes, semconv.MessagingOperationName("publish_batch_input"))
 	assert.Contains(t, attributes, semconv.MessagingOperationTypeSend)
