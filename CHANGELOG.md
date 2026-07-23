@@ -21,6 +21,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Upgrade `go.opentelemetry.io/otel/semconv` to `v1.43.0`, including updates across instrumentation and detector modules.
+  See [semantic-conventions v1.43.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.43.0) for complete details. (#9337)
 - Upgrade `go.opentelemetry.io/otel/semconv` to `v1.42.0`, including updates across instrumentation and detector modules.
   See [semantic-conventions v1.42.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.42.0) for complete details. (#9196)
 - Use direct normalized-key lookups in `Carrier.Get` and `Carrier.Keys` in `go.opentelemetry.io/contrib/propagators/envcar`. (#9112)

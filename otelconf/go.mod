@@ -10,7 +10,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.44.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.69.0
-	go.opentelemetry.io/otel v1.44.1-0.20260717185620-3f1e0cf6869a
+	go.opentelemetry.io/otel v1.44.1-0.20260723093731-251b96b24897
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.20.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.20.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.44.1-0.20260625150014-c84013202f01
@@ -36,7 +36,7 @@ require (
 
 require (
 	cloud.google.com/go/compute/metadata v0.9.0 // indirect
-	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.34.0 // indirect
+	github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp v1.35.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20221221133751-67e37ae746cd // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect
@@ -86,8 +86,8 @@ require (
 	golang.org/x/term v0.45.0 // indirect
 	golang.org/x/text v0.40.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20260720211330-0afa2a65878a // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260720211330-0afa2a65878a // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20260723164925-7274b71286bd // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260723164925-7274b71286bd // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
