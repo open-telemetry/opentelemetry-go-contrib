@@ -29,4 +29,4 @@ Service:
 [service]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/service.md
 [deployment]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/deployment-environment.md
 */
-package azureappservice // import "go.opentelemetry.io/contrib/detectors/azure/azureappservice"
+package azureappservice

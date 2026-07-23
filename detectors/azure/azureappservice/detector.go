@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package azureappservice // import "go.opentelemetry.io/contrib/detectors/azure/azureappservice"
+package azureappservice
 
 import (
 	"context"
