@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support for the `aws.eks` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9138)
 - Add support for the `gcp` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9137)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+- Add `NewResourceDetectorWithOptions` and the `WithAWSLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom AWS SDK `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
 
 ### Changed
 
