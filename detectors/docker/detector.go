@@ -12,7 +12,7 @@ import (
 	"github.com/moby/moby/client"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 
 	"go.opentelemetry.io/contrib/detectors/docker/internal"
 )
