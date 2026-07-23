@@ -113,6 +113,24 @@ func TestExtract(t *testing.T) {
 			wantSpanID:  "1234567890abcdef",
 			wantSampled: true,
 		},
+		{
+			name:        "ALB header - Root only, no Parent or Sampled",
+			headerVal:   "Root=1-68ef9936-5f4df7cb590e654d2f659b2c",
+			wantValid:   false,
+			wantTraceID: "68ef99365f4df7cb590e654d2f659b2c",
+		},
+		{
+			name:        "ALB header - Root and Sampled, no Parent",
+			headerVal:   "Root=1-68ef9933-777af7c96b4ea44b68a0dca6;Sampled=1",
+			wantValid:   false,
+			wantTraceID: "68ef9933777af7c96b4ea44b68a0dca6",
+		},
+		{
+			name:        "ALB header - Root and Sampled=0, no Parent",
+			headerVal:   "Root=1-68ef992d-214de1ac64b26cc315325ee1;Sampled=0",
+			wantValid:   false,
+			wantTraceID: "68ef992d214de1ac64b26cc315325ee1",
+		},
 	}
 
 	for _, tc := range tests {
@@ -131,15 +149,19 @@ func TestExtract(t *testing.T) {
 				t.Fatalf("expected valid=%v, got %v", tc.wantValid, sc.IsValid())
 			}
 
-			if tc.wantValid {
+			// Check TraceID independently: ALB headers carry only Root (no Parent),
+			// so IsValid() is false but the TraceID must still be propagated.
+			if tc.wantTraceID != "" {
 				if got := sc.TraceID().String(); got != tc.wantTraceID {
 					t.Errorf("expected TraceID %q, got %q", tc.wantTraceID, got)
 				}
+			}
+
+			if tc.wantValid {
 				if got := sc.SpanID().String(); got != tc.wantSpanID {
 					t.Errorf("expected SpanID %q, got %q", tc.wantSpanID, got)
 				}
 				if got := sc.IsSampled(); got != tc.wantSampled {
-					t.Log("name-->> ", tc.name)
 					t.Errorf("expected sampled=%v, got %v", tc.wantSampled, got)
 				}
 			}
