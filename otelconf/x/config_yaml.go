@@ -42,6 +42,9 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	if hasYAMLMapKey(node, "aws.eks") && plain.AWSEKS == nil {
 		plain.AWSEKS = ExperimentalAWSEKSResourceDetector{}
 	}
+	if hasYAMLMapKey(node, "azure.vm") && plain.AzureVM == nil {
+		plain.AzureVM = ExperimentalAzureVMResourceDetector{}
+	}
 	// container can be nil, must check and set here
 	if hasYAMLMapKey(node, "container") && plain.Container == nil {
 		plain.Container = ExperimentalContainerResourceDetector{}
