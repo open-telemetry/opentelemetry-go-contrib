@@ -4,7 +4,7 @@ go 1.25.0
 
 require (
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/otel v1.44.1-0.20260717185620-3f1e0cf6869a
+	go.opentelemetry.io/otel v1.44.1-0.20260723093731-251b96b24897
 	go.opentelemetry.io/otel/log v0.20.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/log/logtest v0.20.1-0.20260625150014-c84013202f01
 	go.uber.org/zap v1.28.0

@@ -15,10 +15,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
 - Add support for the `aws.ecs` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#8915)
 - Add support for the `aws.eks` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9138)
+- Add support for the `azure.vm` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9074)
+- Add support for the `gcp` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9137)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
 
 ### Changed
 
+- Upgrade `go.opentelemetry.io/otel/semconv` to `v1.43.0`, including updates across instrumentation and detector modules.
+  See [semantic-conventions v1.43.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.43.0) for complete details. (#9337)
 - Upgrade `go.opentelemetry.io/otel/semconv` to `v1.42.0`, including updates across instrumentation and detector modules.
   See [semantic-conventions v1.42.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.42.0) for complete details. (#9196)
 - Use direct normalized-key lookups in `Carrier.Get` and `Carrier.Keys` in `go.opentelemetry.io/contrib/propagators/envcar`. (#9112)

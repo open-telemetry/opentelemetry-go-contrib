@@ -38,8 +38,8 @@ go.mongodb.org/mongo-driver v1.17.9 h1:IexDdCuuNJ3BHrELgBlyaH9p60JXAvdzWR128q+U5
 go.mongodb.org/mongo-driver v1.17.9/go.mod h1:LlOhpH5NUEfhxcAwG0UEkMqwYcc4JU18gtCdGudk/tQ=
 go.opentelemetry.io/auto/sdk v1.2.1 h1:jXsnJ4Lmnqd11kwkBV2LgLoFMZKizbCi5fNZ/ipaZ64=
 go.opentelemetry.io/auto/sdk v1.2.1/go.mod h1:KRTj+aOaElaLi+wW1kO/DZRXwkF4C5xPbEe3ZiIhN7Y=
-go.opentelemetry.io/otel v1.44.1-0.20260717185620-3f1e0cf6869a h1:aikJ+swDD11+qtjLHltPLySqMCx752Mk/J+HG7L0Puo=
-go.opentelemetry.io/otel v1.44.1-0.20260717185620-3f1e0cf6869a/go.mod h1:BMgjTHL9WPRlRjL2oZCBTL4whCGtXch2H4BhOPIAyYc=
+go.opentelemetry.io/otel v1.44.1-0.20260723093731-251b96b24897 h1:Bf9eZG1OchoLbYuOqbdlu4s+gizPJpJdTMBK5Q1p7eg=
+go.opentelemetry.io/otel v1.44.1-0.20260723093731-251b96b24897/go.mod h1:BMgjTHL9WPRlRjL2oZCBTL4whCGtXch2H4BhOPIAyYc=
 go.opentelemetry.io/otel/metric v1.44.1-0.20260625150014-c84013202f01 h1:7YEIP7LvULL1wRqY3BzYKIkgZg5zij+wqyQ56PusAQA=
 go.opentelemetry.io/otel/metric v1.44.1-0.20260625150014-c84013202f01/go.mod h1:8O7hanEPBNgEMmybD3s2VBKcgWOCsA6tzHBPODAiquo=
 go.opentelemetry.io/otel/trace v1.44.1-0.20260625150014-c84013202f01 h1:WSZa+PvVDW2VyJjwtUaU6fPr6/OrOKHkbClZWNezTv4=

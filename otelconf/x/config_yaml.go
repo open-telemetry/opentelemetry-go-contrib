@@ -33,11 +33,17 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
+	if hasYAMLMapKey(node, "gcp") && plain.GCP == nil {
+		plain.GCP = ExperimentalGCPResourceDetector{}
+	}
 	if hasYAMLMapKey(node, "aws.ecs") && plain.AWSECS == nil {
 		plain.AWSECS = ExperimentalAWSECSResourceDetector{}
 	}
 	if hasYAMLMapKey(node, "aws.eks") && plain.AWSEKS == nil {
 		plain.AWSEKS = ExperimentalAWSEKSResourceDetector{}
+	}
+	if hasYAMLMapKey(node, "azure.vm") && plain.AzureVM == nil {
+		plain.AzureVM = ExperimentalAzureVMResourceDetector{}
 	}
 	// container can be nil, must check and set here
 	if hasYAMLMapKey(node, "container") && plain.Container == nil {

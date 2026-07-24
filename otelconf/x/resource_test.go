@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 func TestNewResource(t *testing.T) {
@@ -205,6 +205,20 @@ func TestResourceOptsWithAWSDetectors(t *testing.T) {
 	}
 }
 
+func TestResourceOptsGCP(t *testing.T) {
+	opts := resourceOpts([]ExperimentalResourceDetector{
+		{GCP: ExperimentalGCPResourceDetector{}},
+	})
+	assert.Len(t, opts, 1)
+}
+
+func TestResourceOptsAzureVM(t *testing.T) {
+	opts := resourceOpts([]ExperimentalResourceDetector{
+		{AzureVM: ExperimentalAzureVMResourceDetector{}},
+	})
+	assert.Len(t, opts, 1)
+}
+
 func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -300,6 +314,8 @@ func TestNewResourceWithDetectionAttributesFilterRemovesDetectedSchema(t *testin
 }
 
 func TestNewResourceWithDetectionDoesNotOverrideConfiguredAttributes(t *testing.T) {
+	t.Setenv("OTEL_SERVICE_NAME", "detected-service")
+
 	got, err := newResource(t.Context(), &Resource{
 		Attributes: []AttributeNameValue{
 			{Name: string(semconv.ServiceNameKey), Value: "configured-service"},
