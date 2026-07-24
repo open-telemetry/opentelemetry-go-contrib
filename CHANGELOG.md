@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support for the `gcp` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9137)
 - Add `go.opentelemetry.io/contrib/detectors/azure/azureappservice`, a new resource detector for Azure App Service. Detects `cloud.*`, `service.name`, `azure.resource_group.name`, `azure.app_service.instance.id`, and `deployment.environment.name` from the `WEBSITE_*` and `REGION_NAME` environment variables. (#9289)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+- Add `go.opentelemetry.io/contrib/detectors/azure/azurefunctions`, a new resource detector for Azure Functions. Detects `cloud.*`, `service.name`, `azure.resource_group.name`, `faas.instance`, and `deployment.environment.name` from the `FUNCTIONS_*`, `WEBSITE_*`, `CONTAINER_NAME`, and `REGION_NAME` environment variables. (#9290)
 
 ### Changed
 
@@ -40,6 +41,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix incorrect (overestimated) sum calculation for runtime histograms in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#9063)
 - Fix `Severity.UnmarshalText` round trip for positive `FATAL` offsets above the named range in `go.opentelemetry.io/contrib/processors/minsev`. (#9197)
 - `TextMapPropagator` in `go.opentelemetry.io/contrib/propagators/autoprop` returns the no-op propagator for empty input, matching the behavior of `none`. An unknown `OTEL_PROPAGATORS` value still returns an error with a nil propagator so `NewTextMapPropagator` falls back to the default TraceContext and Baggage propagators instead of disabling propagation. (#9163)
+- Preserve error-valued attributes nested in a group as grouped attributes instead of silently dropping them in `go.opentelemetry.io/contrib/bridges/otelslog`. (#9238)
+- Fix a data race in `go.opentelemetry.io/contrib/bridges/otelslog` where concurrent `Handle` calls could corrupt each other's log attributes because `kvBuffer.KeyValues` returned a slice aliasing a shared buffer. (#9229)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
