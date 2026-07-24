@@ -198,6 +198,13 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 	}
 }
 
+func TestResourceOptsAzureVM(t *testing.T) {
+	opts := resourceOpts([]ExperimentalResourceDetector{
+		{AzureVM: ExperimentalAzureVMResourceDetector{}},
+	})
+	assert.Len(t, opts, 1)
+}
+
 func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
 	tests := []struct {
 		name     string
