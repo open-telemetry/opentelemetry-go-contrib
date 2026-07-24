@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"reflect"
 	"runtime"
+	"sync"
 	"testing"
 	"testing/slogtest"
 	"time"
@@ -620,4 +621,70 @@ func TestHandlerErrorFieldSetErr(t *testing.T) {
 		assert.ErrorIs(t, got["error"].(error), recordErr)
 		assert.Equal(t, map[string]any{"value": "x"}, got["grp"])
 	})
+
+	t.Run("NestedGroupValueErrorPreserved", func(t *testing.T) {
+		r := new(recorder)
+		l := slog.New(NewHandler("", WithLoggerProvider(r)))
+		wantErr := errors.New("nested group error")
+
+		l.Info("msg", slog.Group("grp", slog.Any("err", wantErr), slog.String("keep", "yes")))
+
+		require.Len(t, r.Records, 1)
+		got := r.Results()[0]
+		_, isRecordErr := got["error"]
+		assert.False(t, isRecordErr, "a nested group error must not be promoted to the record error")
+		assert.Equal(t, map[string]any{"err": wantErr.Error(), "keep": "yes"}, got["grp"])
+	})
+
+	t.Run("NestedGroupValueErrorOnlyPreserved", func(t *testing.T) {
+		r := new(recorder)
+		l := slog.New(NewHandler("", WithLoggerProvider(r)))
+		wantErr := errors.New("only error")
+
+		l.Info("msg", slog.Group("grp", slog.Any("err", wantErr)))
+
+		require.Len(t, r.Records, 1)
+		got := r.Results()[0]
+		_, isRecordErr := got["error"]
+		assert.False(t, isRecordErr, "a nested group error must not be promoted to the record error")
+		assert.Equal(t, map[string]any{"err": wantErr.Error()}, got["grp"])
+	})
+}
+
+func TestKVBufferKeyValuesDoesNotAliasBackingArray(t *testing.T) {
+	// A buffer with spare capacity is the condition under which appending kvs
+	// used to write into b.data's backing array and return an aliasing slice.
+	b := &kvBuffer{data: make([]attribute.KeyValue, 1, 4)}
+	b.data[0] = attribute.String("shared", "base")
+
+	first := b.KeyValues(attribute.String("id", "first"))
+	second := b.KeyValues(attribute.String("id", "second"))
+
+	// The second call must not have overwritten the slice returned by the first.
+	assert.Equal(t, "first", first[1].Value.AsString(),
+		"KeyValues returned a slice aliasing the shared buffer")
+	assert.Equal(t, "second", second[1].Value.AsString())
+	// The shared buffer itself must be untouched.
+	require.Len(t, b.data, 1)
+	assert.Equal(t, "base", b.data[0].Value.AsString())
+}
+
+func TestKVBufferKeyValuesConcurrent(t *testing.T) {
+	// Concurrent KeyValues calls on a buffer shared across Handle calls must not
+	// race on b.data's backing array. Run under -race to detect the regression.
+	b := &kvBuffer{data: make([]attribute.KeyValue, 1, 8)}
+	b.data[0] = attribute.String("shared", "base")
+
+	const goroutines = 100
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := range goroutines {
+		go func(i int) {
+			defer wg.Done()
+			got := b.KeyValues(attribute.Int("id", i))
+			// Each goroutine must observe the value it appended, not another's.
+			assert.Equal(t, int64(i), got[1].Value.AsInt64())
+		}(i)
+	}
+	wg.Wait()
 }
