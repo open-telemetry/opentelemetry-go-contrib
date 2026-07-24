@@ -30,15 +30,16 @@ import (
 )
 
 type config struct {
-	sampler                 trace.Sampler
-	samplingServerURL       string
-	samplingRefreshInterval time.Duration
-	samplingFetcher         SamplingStrategyFetcher
-	samplingParser          samplingStrategyParser
-	updaters                []samplerUpdater
-	posParams               perOperationSamplerParams
-	logger                  logr.Logger
-	attributesDisabled      bool
+	sampler                   trace.Sampler
+	samplingServerURL         string
+	samplingRefreshInterval   time.Duration
+	samplingFetcher           SamplingStrategyFetcher
+	samplingParser            samplingStrategyParser
+	updaters                  []samplerUpdater
+	posParams                 perOperationSamplerParams
+	logger                    logr.Logger
+	attributesDisabled        bool
+	traceStateSamplingEnabled bool
 }
 
 func getEnvOptions() ([]Option, []error) {
@@ -113,16 +114,17 @@ func newConfig(options ...Option) config {
 	}
 	c.updaters = []samplerUpdater{
 		&perOperationSamplerUpdater{
-			MaxOperations:            c.posParams.MaxOperations,
-			OperationNameLateBinding: c.posParams.OperationNameLateBinding,
-			attributesDisabled:       c.attributesDisabled,
+			MaxOperations:             c.posParams.MaxOperations,
+			OperationNameLateBinding:  c.posParams.OperationNameLateBinding,
+			attributesDisabled:        c.attributesDisabled,
+			traceStateSamplingEnabled: c.traceStateSamplingEnabled,
 		},
-		&probabilisticSamplerUpdater{attributesDisabled: c.attributesDisabled},
+		&probabilisticSamplerUpdater{attributesDisabled: c.attributesDisabled, traceStateSamplingEnabled: c.traceStateSamplingEnabled},
 		&rateLimitingSamplerUpdater{attributesDisabled: c.attributesDisabled},
 	}
 
 	if c.sampler == nil {
-		c.sampler = newProbabilisticSampler(0.001, c.attributesDisabled)
+		c.sampler = newProbabilisticSampler(0.001, c.attributesDisabled, c.traceStateSamplingEnabled)
 	}
 
 	return c
@@ -201,6 +203,35 @@ func WithSamplingStrategyFetcher(fetcher SamplingStrategyFetcher) Option {
 func WithAttributesDisabled() Option {
 	return optionFunc(func(c *config) {
 		c.attributesDisabled = true
+	})
+}
+
+// WithTraceStateSamplingEnabled configures the sampler to implement the
+// OpenTelemetry tracestate probability sampling specification (OTEP 235)
+// for its probabilistic sampling strategies, including the default and
+// per-operation override rates used by the "probabilistic" and "per
+// operation" Jaeger remote sampling strategy types.
+//
+// When enabled, a sampling decision is made by comparing a 56-bit
+// randomness value - taken from an explicit "rv" sub-key in the incoming
+// tracestate, or else presumed from the trace ID's least significant 56
+// bits - against a rejection threshold derived from the configured
+// sampling rate. On a positive decision, that threshold is published via
+// the "th" sub-key of the "ot" tracestate entry, so downstream consumers
+// (for example span-to-metrics extrapolation) can compute a reliable
+// adjusted count.
+//
+// Enabling this changes which trace IDs are sampled for a given rate (the
+// overall sampling rate itself is unaffected), so it defaults to disabled
+// for backwards compatibility. Rate-limiting strategies, including the
+// "guaranteed throughput" lower bound used by per-operation sampling, are
+// not probabilistic and never set "th".
+//
+// See https://opentelemetry.io/docs/specs/otel/trace/tracestate-probability-sampling/
+// for details.
+func WithTraceStateSamplingEnabled() Option {
+	return optionFunc(func(c *config) {
+		c.traceStateSamplingEnabled = true
 	})
 }
 

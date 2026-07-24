@@ -19,11 +19,15 @@
 package jaegerremote
 
 import (
+	"encoding/binary"
 	"fmt"
 	"math"
+	"strconv"
+	"strings"
 	"sync"
 
 	jaeger_api_v2 "github.com/jaegertracing/jaeger-idl/proto-gen/api_v2"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/trace"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -42,6 +46,23 @@ const (
 	samplerTypeValueRateLimiting  = "ratelimiting"
 )
 
+// Constants implementing the OpenTelemetry tracestate probability sampling
+// specification (OTEP 235), used by probabilisticSampler when
+// traceStateSamplingEnabled is set. See
+// https://opentelemetry.io/docs/specs/otel/trace/tracestate-probability-sampling/
+const (
+	// samplingPrecision is the default precision, in hex digits, used when
+	// encoding a sampling threshold into the tracestate "th" sub-key.
+	samplingPrecision = 4
+	// maxAdjustedCount is 2^56, the number of distinct 56-bit randomness
+	// values defined by the specification.
+	maxAdjustedCount = 1 << 56
+	// randomnessMask isolates the least significant 56 bits of a trace ID,
+	// the presumed source of randomness per W3C Trace Context Level 2 when
+	// no explicit "rv" tracestate value is present.
+	randomnessMask = maxAdjustedCount - 1
+)
+
 // -----------------------
 
 // probabilisticSampler is a sampler that randomly samples a certain percentage
@@ -51,13 +72,21 @@ type probabilisticSampler struct {
 	sampler            trace.Sampler
 	attributes         []attribute.KeyValue
 	attributesDisabled bool
+
+	// traceStateSamplingEnabled switches ShouldSample to the OTEP 235
+	// threshold/tracestate algorithm; threshold and thkv are derived from
+	// samplingRate in init and are only meaningful when it is set.
+	traceStateSamplingEnabled bool
+	threshold                 uint64
+	thkv                      string
 }
 
 // newProbabilisticSampler creates a sampler that randomly samples a certain percentage of traces specified by the
 // samplingRate, in the range between 0.0 and 1.0. it utilizes the SDK `trace.TraceIDRatioBased` sampler.
-func newProbabilisticSampler(samplingRate float64, attributesDisabled bool) *probabilisticSampler {
+func newProbabilisticSampler(samplingRate float64, attributesDisabled, traceStateSamplingEnabled bool) *probabilisticSampler {
 	s := &probabilisticSampler{
-		attributesDisabled: attributesDisabled,
+		attributesDisabled:        attributesDisabled,
+		traceStateSamplingEnabled: traceStateSamplingEnabled,
 	}
 	return s.init(samplingRate)
 }
@@ -65,11 +94,45 @@ func newProbabilisticSampler(samplingRate float64, attributesDisabled bool) *pro
 func (s *probabilisticSampler) init(samplingRate float64) *probabilisticSampler {
 	s.samplingRate = math.Max(0.0, math.Min(samplingRate, 1.0))
 	s.sampler = trace.TraceIDRatioBased(s.samplingRate)
+	if s.traceStateSamplingEnabled {
+		s.threshold, s.thkv = probabilityToThreshold(s.samplingRate)
+	}
 	if s.attributesDisabled {
 		return s
 	}
 	s.attributes = []attribute.KeyValue{attribute.String(samplerTypeKey, samplerTypeValueProbabilistic), attribute.Float64(samplerParamKey, s.samplingRate)}
 	return s
+}
+
+// probabilityToThreshold converts a sampling probability into its 56-bit
+// rejection threshold and the corresponding trimmed "th:<hex>" tracestate
+// key-value, following the OpenTelemetry tracestate probability sampling
+// specification.
+func probabilityToThreshold(probability float64) (threshold uint64, thkv string) {
+	const (
+		maxPrecision = 14
+		hexBits      = 4
+	)
+	if probability >= 1.0 {
+		return 0, "th:0"
+	}
+
+	_, expF := math.Frexp(probability)
+	_, expR := math.Frexp(1 - probability)
+	precision := min(maxPrecision, max(samplingPrecision+expF/-hexBits, samplingPrecision+expR/-hexBits))
+
+	scaled := uint64(math.Round(probability * float64(maxAdjustedCount)))
+	threshold = maxAdjustedCount - scaled
+
+	if shift := hexBits * (maxPrecision - precision); shift != 0 {
+		half := uint64(1) << (shift - 1)
+		threshold += half
+		threshold >>= shift
+		threshold <<= shift
+	}
+
+	tvalue := strings.TrimRight(strconv.FormatUint(maxAdjustedCount+threshold, 16)[1:], "0")
+	return threshold, "th:" + tvalue
 }
 
 // SamplingRate returns the sampling probability this sampled was constructed with.
@@ -78,18 +141,62 @@ func (s *probabilisticSampler) SamplingRate() float64 {
 }
 
 func (s *probabilisticSampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult {
-	r := s.sampler.ShouldSample(p)
-	if r.Decision == trace.Drop {
+	if !s.traceStateSamplingEnabled {
+		r := s.sampler.ShouldSample(p)
+		if r.Decision == trace.Drop {
+			return r
+		}
+		r.Attributes = s.attributes
 		return r
 	}
-	r.Attributes = s.attributes
-	return r
+	return s.shouldSampleWithTraceState(p)
+}
+
+// shouldSampleWithTraceState implements the OpenTelemetry tracestate
+// probability sampling specification (OTEP 235): it derives a 56-bit
+// randomness value from an explicit "rv" tracestate sub-key if present,
+// else presumes the trace ID's least significant 56 bits are random, and
+// compares it against the sampler's rejection threshold. On a positive
+// decision, it publishes the threshold via the "th" tracestate sub-key so
+// downstream consumers can compute an adjusted count.
+func (s *probabilisticSampler) shouldSampleWithTraceState(p trace.SamplingParameters) trace.SamplingResult {
+	psc := oteltrace.SpanContextFromContext(p.ParentContext)
+	state := psc.TraceState()
+	existingOtts := state.Get("ot")
+
+	var randomness uint64
+	var hasRandomness bool
+	if existingOtts != "" {
+		randomness, hasRandomness = tracestateRandomness(existingOtts)
+	}
+	if !hasRandomness {
+		randomness = binary.BigEndian.Uint64(p.TraceID[8:16]) & randomnessMask
+	}
+
+	if s.threshold > randomness {
+		return trace.SamplingResult{Decision: trace.Drop, Tracestate: state}
+	}
+
+	newOtts := insertOrUpdateTraceStateThKeyValue(existingOtts, s.thkv)
+	newState := state
+	if newOtts != existingOtts {
+		updated, err := state.Insert("ot", newOtts)
+		if err != nil {
+			// This should never happen in practice, but fall back to the
+			// unmodified state rather than dropping the span's tracestate.
+			otel.Handle(fmt.Errorf("jaegerremote: could not update tracestate: %w", err))
+		} else {
+			newState = updated
+		}
+	}
+	return trace.SamplingResult{Decision: trace.RecordAndSample, Tracestate: newState, Attributes: s.attributes}
 }
 
 // Equal compares with another sampler.
 func (s *probabilisticSampler) Equal(other trace.Sampler) bool {
 	if o, ok := other.(*probabilisticSampler); ok {
-		return math.Abs(s.samplingRate-o.samplingRate) < 1e-9 // consider equal if within 0.000001%
+		return math.Abs(s.samplingRate-o.samplingRate) < 1e-9 && // consider equal if within 0.000001%
+			s.traceStateSamplingEnabled == o.traceStateSamplingEnabled
 	}
 	return false
 }
@@ -188,18 +295,20 @@ func (*rateLimitingSampler) Description() string {
 // The probabilisticSampler is given higher priority when tags are emitted, ie. if IsSampled() for both
 // samplers return true, the tags for probabilisticSampler will be used.
 type guaranteedThroughputProbabilisticSampler struct {
-	probabilisticSampler *probabilisticSampler
-	lowerBoundSampler    *rateLimitingSampler
-	samplingRate         float64
-	lowerBound           float64
-	attributesDisabled   bool
+	probabilisticSampler      *probabilisticSampler
+	lowerBoundSampler         *rateLimitingSampler
+	samplingRate              float64
+	lowerBound                float64
+	attributesDisabled        bool
+	traceStateSamplingEnabled bool
 }
 
-func newGuaranteedThroughputProbabilisticSampler(lowerBound, samplingRate float64, attributesDisabled bool) *guaranteedThroughputProbabilisticSampler {
+func newGuaranteedThroughputProbabilisticSampler(lowerBound, samplingRate float64, attributesDisabled, traceStateSamplingEnabled bool) *guaranteedThroughputProbabilisticSampler {
 	s := &guaranteedThroughputProbabilisticSampler{
-		lowerBoundSampler:  newRateLimitingSampler(lowerBound, attributesDisabled),
-		lowerBound:         lowerBound,
-		attributesDisabled: attributesDisabled,
+		lowerBoundSampler:         newRateLimitingSampler(lowerBound, attributesDisabled),
+		lowerBound:                lowerBound,
+		attributesDisabled:        attributesDisabled,
+		traceStateSamplingEnabled: traceStateSamplingEnabled,
 	}
 	s.setProbabilisticSampler(samplingRate)
 	return s
@@ -207,7 +316,7 @@ func newGuaranteedThroughputProbabilisticSampler(lowerBound, samplingRate float6
 
 func (s *guaranteedThroughputProbabilisticSampler) setProbabilisticSampler(samplingRate float64) {
 	if s.probabilisticSampler == nil {
-		s.probabilisticSampler = newProbabilisticSampler(samplingRate, s.attributesDisabled)
+		s.probabilisticSampler = newProbabilisticSampler(samplingRate, s.attributesDisabled, s.traceStateSamplingEnabled)
 	} else if s.samplingRate != samplingRate {
 		s.probabilisticSampler.init(samplingRate)
 	}
@@ -220,6 +329,9 @@ func (s *guaranteedThroughputProbabilisticSampler) ShouldSample(p trace.Sampling
 		s.lowerBoundSampler.ShouldSample(p)
 		return result
 	}
+	// The lower-bound guarantee is a rate-limited decision, not a fixed
+	// probability, so it never sets a tracestate "th" value (rateLimitingSampler
+	// leaves Tracestate untouched); its adjusted count is not well defined.
 	result := s.lowerBoundSampler.ShouldSample(p)
 	return result
 }
@@ -250,8 +362,9 @@ type perOperationSampler struct {
 	maxOperations  int
 
 	// see description in perOperationSamplerParams
-	operationNameLateBinding bool
-	attributesDisabled       bool
+	operationNameLateBinding  bool
+	attributesDisabled        bool
+	traceStateSamplingEnabled bool
 }
 
 // perOperationSamplerParams defines parameters when creating perOperationSampler.
@@ -272,7 +385,7 @@ type perOperationSamplerParams struct {
 }
 
 // newPerOperationSampler returns a new perOperationSampler.
-func newPerOperationSampler(params perOperationSamplerParams, attributesDisabled bool) *perOperationSampler {
+func newPerOperationSampler(params perOperationSamplerParams, attributesDisabled, traceStateSamplingEnabled bool) *perOperationSampler {
 	if params.MaxOperations <= 0 {
 		params.MaxOperations = defaultMaxOperations
 	}
@@ -282,16 +395,18 @@ func newPerOperationSampler(params perOperationSamplerParams, attributesDisabled
 			params.Strategies.DefaultLowerBoundTracesPerSecond,
 			strategy.ProbabilisticSampling.SamplingRate,
 			attributesDisabled,
+			traceStateSamplingEnabled,
 		)
 		samplers[strategy.Operation] = sampler
 	}
 	return &perOperationSampler{
-		samplers:                 samplers,
-		defaultSampler:           newProbabilisticSampler(params.Strategies.DefaultSamplingProbability, attributesDisabled),
-		lowerBound:               params.Strategies.DefaultLowerBoundTracesPerSecond,
-		maxOperations:            params.MaxOperations,
-		operationNameLateBinding: params.OperationNameLateBinding,
-		attributesDisabled:       attributesDisabled,
+		samplers:                  samplers,
+		defaultSampler:            newProbabilisticSampler(params.Strategies.DefaultSamplingProbability, attributesDisabled, traceStateSamplingEnabled),
+		lowerBound:                params.Strategies.DefaultLowerBoundTracesPerSecond,
+		maxOperations:             params.MaxOperations,
+		operationNameLateBinding:  params.OperationNameLateBinding,
+		attributesDisabled:        attributesDisabled,
+		traceStateSamplingEnabled: traceStateSamplingEnabled,
 	}
 }
 
@@ -320,7 +435,7 @@ func (s *perOperationSampler) getSamplerForOperation(operation string) trace.Sam
 	if len(s.samplers) >= s.maxOperations {
 		return s.defaultSampler
 	}
-	newSampler := newGuaranteedThroughputProbabilisticSampler(s.lowerBound, s.defaultSampler.SamplingRate(), s.attributesDisabled)
+	newSampler := newGuaranteedThroughputProbabilisticSampler(s.lowerBound, s.defaultSampler.SamplingRate(), s.attributesDisabled, s.traceStateSamplingEnabled)
 	s.samplers[operation] = newSampler
 	return newSampler
 }
@@ -345,13 +460,14 @@ func (s *perOperationSampler) update(strategies *jaeger_api_v2.PerOperationSampl
 				lowerBound,
 				samplingRate,
 				s.attributesDisabled,
+				s.traceStateSamplingEnabled,
 			)
 			newSamplers[operation] = sampler
 		}
 	}
 	s.lowerBound = strategies.DefaultLowerBoundTracesPerSecond
 	if s.defaultSampler.SamplingRate() != strategies.DefaultSamplingProbability {
-		s.defaultSampler = newProbabilisticSampler(strategies.DefaultSamplingProbability, s.attributesDisabled)
+		s.defaultSampler = newProbabilisticSampler(strategies.DefaultSamplingProbability, s.attributesDisabled, s.traceStateSamplingEnabled)
 	}
 	s.samplers = newSamplers
 }
