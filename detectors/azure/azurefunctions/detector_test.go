@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 func TestNewResourceDetector(t *testing.T) {
@@ -66,7 +66,7 @@ func TestDetectFullAttributeSet(t *testing.T) {
 		semconv.CloudPlatformAzureFunctions,
 		semconv.CloudRegion("eastus"),
 		semconv.ServiceName("my-function-app"),
-		azureResourceGroupNameKey.String("my-rg"),
+		semconv.AzureResourceGroupName("my-rg"),
 		semconv.CloudAccountID("11111111-1111-1111-1111-111111111111"),
 		semconv.CloudResourceID("/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/my-rg/providers/Microsoft.Web/sites/my-function-app"),
 		semconv.FaaSInstance("a1b2c3"),
@@ -90,7 +90,7 @@ func TestDetectOwnerNameWithoutPlus(t *testing.T) {
 		semconv.CloudProviderAzure,
 		semconv.CloudPlatformAzureFunctions,
 		semconv.ServiceName("my-function-app"),
-		azureResourceGroupNameKey.String("my-rg"),
+		semconv.AzureResourceGroupName("my-rg"),
 		semconv.CloudAccountID("11111111-1111-1111-1111-111111111111"),
 		semconv.CloudResourceID("/subscriptions/11111111-1111-1111-1111-111111111111/resourceGroups/my-rg/providers/Microsoft.Web/sites/my-function-app"),
 	)

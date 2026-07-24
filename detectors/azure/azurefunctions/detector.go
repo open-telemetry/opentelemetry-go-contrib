@@ -11,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 const (
@@ -25,8 +25,6 @@ const (
 	websitePodNameEnvVar            = "WEBSITE_POD_NAME"
 	containerNameEnvVar             = "CONTAINER_NAME"
 	websiteSlotNameEnvVar           = "WEBSITE_SLOT_NAME"
-
-	azureResourceGroupNameKey = attribute.Key("azure.resource_group.name")
 )
 
 type config struct {
@@ -88,7 +86,7 @@ func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 
 	resourceGroup := os.Getenv(websiteResourceGroupEnvVar)
 	if resourceGroup != "" {
-		attrs = append(attrs, azureResourceGroupNameKey.String(resourceGroup))
+		attrs = append(attrs, semconv.AzureResourceGroupName(resourceGroup))
 	}
 
 	// WEBSITE_OWNER_NAME has the form "<subscription-id>+<resource-group>-<region>webspace";
