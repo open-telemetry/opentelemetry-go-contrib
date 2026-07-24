@@ -10,12 +10,35 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `go.opentelemetry.io/contrib/detectors/k8sapi`, a new resource detector that queries the Kubernetes API. Detects `k8s.node.name` and `k8s.node.uid` when `K8S_NODE_NAME` is set via the downward API, and `k8s.cluster.uid` derived from the kube-system namespace UID (works on any Kubernetes distribution). (#9108)
+- Add new `elasticbeanstalk` resource detector for AWS Elastic Beanstalk, ported from `processor/resourcedetectionprocessor/internal/aws/elasticbeanstalk` in opentelemetry-collector-contrib. (#8993)
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
+- Add support for the `aws.ecs` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#8915)
+- Add support for the `aws.eks` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9138)
+- Add support for the `azure.vm` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9074)
+- Add support for the `gcp` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9137)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
 
 ### Changed
 
+- Upgrade `go.opentelemetry.io/otel/semconv` to `v1.43.0`, including updates across instrumentation and detector modules.
+  See [semantic-conventions v1.43.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.43.0) for complete details. (#9337)
+- Upgrade `go.opentelemetry.io/otel/semconv` to `v1.42.0`, including updates across instrumentation and detector modules.
+  See [semantic-conventions v1.42.0 release](https://github.com/open-telemetry/semantic-conventions/releases/tag/v1.42.0) for complete details. (#9196)
+- Use direct normalized-key lookups in `Carrier.Get` and `Carrier.Keys` in `go.opentelemetry.io/contrib/propagators/envcar`. (#9112)
+- Update log bridge conversions to use attribute key-values instead of the removed log key-values in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9180)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
+- Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#8977)
+
+### Fixed
+
+- Fix Prometheus reader resource label filter configuration in `go.opentelemetry.io/contrib/otelconf/v0.2.0`. (#9045)
+- Apply `resource.detection/development.attributes.included` and `excluded` filtering to resource detector attributes in `go.opentelemetry.io/contrib/otelconf/x`. (#9131)
+- Honor the context configured with `WithContext` when constructing resources in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`. (#9160)
+- Handle nil response bodies from custom `RoundTripper` implementations in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` without panicking. (#9184)
+- Fix incorrect (overestimated) sum calculation for runtime histograms in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#9063)
+- Fix `Severity.UnmarshalText` round trip for positive `FATAL` offsets above the named range in `go.opentelemetry.io/contrib/processors/minsev`. (#9197)
+- `TextMapPropagator` in `go.opentelemetry.io/contrib/propagators/autoprop` returns the no-op propagator for empty input, matching the behavior of `none`. An unknown `OTEL_PROPAGATORS` value still returns an error with a nil propagator so `NewTextMapPropagator` falls back to the default TraceContext and Baggage propagators instead of disabling propagation. (#9163)
 
 ### Fixed
 

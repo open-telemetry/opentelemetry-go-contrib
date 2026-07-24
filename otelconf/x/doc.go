@@ -7,4 +7,4 @@
 // matches the version number of the schema. For example, the import
 // go.opentelemetry.io/contrib/otelconf/v0.3.0 includes code that supports the
 // v0.3.0 release of the configuration schema.
-package x // import "go.opentelemetry.io/contrib/otelconf/x"
+package x

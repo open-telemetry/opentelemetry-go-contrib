@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
+package runtime
 
 import (
 	"math"
@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/goconv"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/goconv"
 )
 
 func TestRefreshGoCollector(t *testing.T) {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package otelaws provides instrumentation for the AWS SDK.
-package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
+package otelaws
 
 import (
 	"context"
@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -141,7 +141,7 @@ func spanName(serviceID, operation string) string {
 
 // AppendMiddlewares attaches OTel middlewares to the AWS Go SDK V2 for instrumentation.
 // OTel middlewares can be appended to either all aws clients or a specific operation.
-// Please see more details in https://aws.github.io/aws-sdk-go-v2/docs/middleware/
+// Please see more details in https://docs.aws.amazon.com/sdk-for-go/v2/developer-guide/middleware.html
 func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Option) {
 	cfg := config{
 		TracerProvider:    otel.GetTracerProvider(),

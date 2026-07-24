@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package gcp // import "go.opentelemetry.io/contrib/detectors/gcp"
+package gcp
 
 import (
 	"fmt"
@@ -10,7 +10,7 @@ import (
 	"github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 func TestDetect(t *testing.T) {

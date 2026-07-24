@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
+package otelaws
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/smithy-go/middleware"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // DynamoDBAttributeBuilder sets DynamoDB specific attributes depending on the DynamoDB operation being performed.

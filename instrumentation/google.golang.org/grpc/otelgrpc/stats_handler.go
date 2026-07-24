@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+package otelgrpc
 
 import (
 	"context"
@@ -14,8 +14,8 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/metric/noop"
 	oldrpcconv "go.opentelemetry.io/otel/semconv/v1.37.0/rpcconv" //nolint:depguard // Use of v1.37.0 is required for backward compatibility stability opt-in.
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-	"go.opentelemetry.io/otel/semconv/v1.41.0/rpcconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/rpcconv"
 	"go.opentelemetry.io/otel/trace"
 
 	grpc_codes "google.golang.org/grpc/codes"
@@ -26,6 +26,11 @@ import (
 )
 
 type gRPCContextKey struct{}
+
+// dialTargetContextKey carries the dial target seeded by client interceptors
+// so the stats handler can use the hostname for server.address instead of the
+// post-DNS IP from RemoteAddr.
+type dialTargetContextKey struct{}
 
 type gRPCContext struct {
 	metricAttrs []attribute.KeyValue
@@ -346,9 +351,24 @@ func (*config) handleRPC(
 
 	span := trace.SpanFromContext(ctx)
 
-	switch rs := rs.(type) {
+switch rs := rs.(type) {
 	case *stats.Begin:
-		// Record that a new call/attempt has started.
+		// Set server.address early from the dial target when available (upcoming
+		// interceptors will seed this). Covers both success and failure paths since Begin
+		// fires on every RPC regardless of outcome.
+		if rs.Client {
+			if target, ok := ctx.Value(dialTargetContextKey{}).(string); ok && target != "" {
+				attrs := serverAddrAttrsFromCanonicalTarget(target)
+				if span.IsRecording() {
+					span.SetAttributes(attrs...)
+				}
+				if gctx != nil {
+					gctx.metricAttrs = append(gctx.metricAttrs, attrs...)
+				}
+			}
+		}
+
+		// Record that a new call has started.
 		if startedCounter != nil {
 			var metricAttrs []attribute.KeyValue
 			if gctx != nil {
@@ -356,6 +376,7 @@ func (*config) handleRPC(
 			}
 			startedCounter.Add(ctx, 1, metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
 		}
+		
 	case *stats.InPayload:
 	case *stats.InHeader:
 		if !rs.Client && rs.LocalAddr != nil {
@@ -367,13 +388,18 @@ func (*config) handleRPC(
 	case *stats.OutPayload:
 	case *stats.OutTrailer:
 	case *stats.OutHeader:
+		// Only use the resolved IP from RemoteAddr when no dial target was seeded
+		// (i.e. NewClientHandler callers without interceptors). When dialTargetContextKey
+		// is present, Begin already set server.address to the hostname.
 		if rs.Client && rs.RemoteAddr != nil && (span.IsRecording() || gctx != nil) {
-			attrs := serverAddrAttrs(rs.RemoteAddr.String())
-			if span.IsRecording() {
-				span.SetAttributes(attrs...)
-			}
-			if gctx != nil {
-				gctx.metricAttrs = append(gctx.metricAttrs, attrs...)
+			if target, ok := ctx.Value(dialTargetContextKey{}).(string); !ok || target == "" {
+				attrs := serverAddrAttrs(rs.RemoteAddr.String())
+				if span.IsRecording() {
+					span.SetAttributes(attrs...)
+				}
+				if gctx != nil {
+					gctx.metricAttrs = append(gctx.metricAttrs, attrs...)
+				}
 			}
 		}
 	case *stats.End:

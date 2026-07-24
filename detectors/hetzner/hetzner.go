@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package hetzner // import "go.opentelemetry.io/contrib/detectors/hetzner"
+package hetzner
 
 import (
 	"context"
@@ -11,7 +11,7 @@ import (
 	hcloudmeta "github.com/hetznercloud/hcloud-go/v2/hcloud/metadata"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // Compile-time interface assertion.

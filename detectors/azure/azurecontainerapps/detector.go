@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package azurecontainerapps // import "go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
+package azurecontainerapps
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // For a complete list of reserved environment variables in Azure Container Apps, see:
@@ -71,10 +71,13 @@ func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 		semconv.ServiceName(appName),
 	}
 
+	// azure.container_app.instance.id is a platform-specific attribute for the replica name
+	// as there lacks an appropriate attribute in semantic conventions. This is planned
+	// to be added to semantic conventions.
 	var partialErr error
 	replicaName := os.Getenv(containerAppReplicaNameEnvVar)
 	if replicaName != "" {
-		attrs = append(attrs, semconv.ServiceInstanceID(replicaName))
+		attrs = append(attrs, attribute.String("azure.container_app.instance.id", replicaName))
 	} else {
 		partialErr = fmt.Errorf("%w: %s not set", resource.ErrPartialResource, containerAppReplicaNameEnvVar)
 	}

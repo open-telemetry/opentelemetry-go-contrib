@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 var now = time.Now()
@@ -100,11 +100,11 @@ func (r *recorder) Results() []map[string]any {
 		if err := r.Err(); err != nil {
 			m["error"] = err
 		}
-		if body := r.Body(); body.Kind() != log.KindEmpty {
+		if body := r.Body(); body.Type() != attribute.EMPTY {
 			m[slog.MessageKey] = value2Result(body)
 		}
-		r.WalkAttributes(func(kv log.KeyValue) bool {
-			m[kv.Key] = value2Result(kv.Value)
+		r.WalkAttributes(func(kv attribute.KeyValue) bool {
+			m[string(kv.Key)] = value2Result(kv.Value)
 			return true
 		})
 
@@ -113,24 +113,32 @@ func (r *recorder) Results() []map[string]any {
 	return out
 }
 
-func value2Result(v log.Value) any {
-	switch v.Kind() {
-	case log.KindBool:
+func value2Result(v attribute.Value) any {
+	switch v.Type() {
+	case attribute.BOOL:
 		return v.AsBool()
-	case log.KindFloat64:
+	case attribute.FLOAT64:
 		return v.AsFloat64()
-	case log.KindInt64:
+	case attribute.INT64:
 		return v.AsInt64()
-	case log.KindString:
+	case attribute.STRING:
 		return v.AsString()
-	case log.KindBytes:
-		return v.AsBytes()
-	case log.KindSlice:
+	case attribute.BOOLSLICE:
+		return v.AsBoolSlice()
+	case attribute.INT64SLICE:
+		return v.AsInt64Slice()
+	case attribute.FLOAT64SLICE:
+		return v.AsFloat64Slice()
+	case attribute.STRINGSLICE:
+		return v.AsStringSlice()
+	case attribute.BYTESLICE:
+		return v.AsByteSlice()
+	case attribute.SLICE:
 		return v
-	case log.KindMap:
+	case attribute.MAP:
 		m := make(map[string]any)
 		for _, val := range v.AsMap() {
-			m[val.Key] = value2Result(val.Value)
+			m[string(val.Key)] = value2Result(val.Value)
 		}
 		return m
 	}
@@ -270,7 +278,7 @@ func TestSLogHandler(t *testing.T) {
 				hasAttr("time", now.UnixNano()),
 				hasAttr("uint64", int64(3)),
 				hasAttr("nil", nil),
-				hasAttr("slice", log.SliceValue(log.StringValue("foo"), log.StringValue("bar"))),
+				hasAttr("slice", attribute.SliceValue(attribute.StringValue("foo"), attribute.StringValue("bar"))),
 			}},
 		},
 		{
