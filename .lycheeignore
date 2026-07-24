@@ -8,3 +8,4 @@ file:///var/log/metrics.jsonl
 file:///var/log/traces.jsonl
 file:///path/to/file.jsonl
 https://raw.githubusercontent.com/open-telemetry/opentelemetry.io/main/content/en/registry
+https://github.com/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
