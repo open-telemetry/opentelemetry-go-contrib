@@ -18,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add support for the `azure.vm` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9074)
 - Add support for the `gcp` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9137)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+- Add `go.opentelemetry.io/contrib/detectors/azure/azurefunctions`, a new resource detector for Azure Functions. Detects `cloud.*`, `service.name`, `azure.resource_group.name`, `faas.instance`, and `deployment.environment.name` from the `FUNCTIONS_*`, `WEBSITE_*`, `CONTAINER_NAME`, and `REGION_NAME` environment variables. (#9290)
 
 ### Changed
 
