@@ -282,6 +282,22 @@ func checkClientMetrics(t *testing.T, reader metric.Reader, addr, stabilityOptIn
 	switch stabilityOptIn {
 	case "rpc/old":
 		expectedMetrics = append(expectedMetrics, metricdata.Metrics{
+			Name:        "rpc.client.attempt.started",
+			Description: "The number of client call attempts started.",
+			Unit:        "{attempt}",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: true,
+				DataPoints: []metricdata.DataPoint[int64]{
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "EmptyCall"), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "UnaryCall"), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "StreamingInputCall"), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "StreamingOutputCall"), testMetricAttr)},
+					{Attributes: attribute.NewSet(attribute.String("rpc.system", "grpc"), attribute.String("rpc.service", "grpc.testing.TestService"), attribute.String("rpc.method", "FullDuplexCall"), testMetricAttr)},
+				},
+			},
+		})
+		expectedMetrics = append(expectedMetrics, metricdata.Metrics{
 			Name:        "rpc.client.duration",
 			Description: "Measures the duration of outbound RPC.",
 			Unit:        "ms",
@@ -297,6 +313,22 @@ func checkClientMetrics(t *testing.T, reader metric.Reader, addr, stabilityOptIn
 			},
 		})
 	case "":
+		expectedMetrics = append(expectedMetrics, metricdata.Metrics{
+			Name:        "rpc.client.attempt.started",
+			Description: "The number of client call attempts started.",
+			Unit:        "{attempt}",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: true,
+				DataPoints: []metricdata.DataPoint[int64]{
+					{Attributes: attribute.NewSet(semconv.RPCMethod("grpc.testing.TestService/EmptyCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCMethod("grpc.testing.TestService/UnaryCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+					{Attributes: attribute.NewSet(semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+				},
+			},
+		})
 		expectedMetrics = append(expectedMetrics, metricdata.Metrics{
 			Name:        rpcconv.ClientCallDuration{}.Name(),
 			Description: rpcconv.ClientCallDuration{}.Description(),
@@ -325,7 +357,32 @@ func checkClientMetrics(t *testing.T, reader metric.Reader, addr, stabilityOptIn
 				testMetricAttr,
 			)
 		}
+		// dupStartedAttr: no status_code (Begin fires before End), no server addr (before OutHeader).
+		dupStartedAttr := func(method string) attribute.Set {
+			return attribute.NewSet(
+				attribute.String("rpc.service", "grpc.testing.TestService"),
+				attribute.String("rpc.system", "grpc"),
+				semconv.RPCMethod("grpc.testing.TestService/"+method),
+				semconv.RPCSystemNameGRPC,
+				testMetricAttr,
+			)
+		}
 		expectedMetrics = append(expectedMetrics, metricdata.Metrics{
+			Name:        "rpc.client.attempt.started",
+			Description: "The number of client call attempts started.",
+			Unit:        "{attempt}",
+			Data: metricdata.Sum[int64]{
+				Temporality: metricdata.CumulativeTemporality,
+				IsMonotonic: true,
+				DataPoints: []metricdata.DataPoint[int64]{
+					{Attributes: dupStartedAttr("EmptyCall")},
+					{Attributes: dupStartedAttr("UnaryCall")},
+					{Attributes: dupStartedAttr("StreamingInputCall")},
+					{Attributes: dupStartedAttr("StreamingOutputCall")},
+					{Attributes: dupStartedAttr("FullDuplexCall")},
+				},
+			},
+		}, metricdata.Metrics{
 			Name:        "rpc.client.duration",
 			Description: "Measures the duration of outbound RPC.",
 			Unit:        "ms",
@@ -808,4 +865,105 @@ func TestMetricsSemconvOptIn(t *testing.T) {
 			})
 		})
 	}
+}
+
+// TestStartedCounters verifies that rpc.client.attempt.started and
+// rpc.server.call.started are incremented exactly once per RPC, carry
+// the correct method attributes, and are not emitted when the Filter
+// drops the call.
+func TestStartedCounters(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+
+	clientReader := metric.NewManualReader()
+	clientMP := metric.NewMeterProvider(metric.WithReader(clientReader))
+	serverReader := metric.NewManualReader()
+	serverMP := metric.NewMeterProvider(metric.WithReader(serverReader))
+
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+
+	client := newGrpcTest(
+t, listener,
+[]grpc.DialOption{
+grpc.WithStatsHandler(otelgrpc.NewClientHandler(
+otelgrpc.WithMeterProvider(clientMP),
+)),
+},
+[]grpc.ServerOption{
+grpc.StatsHandler(otelgrpc.NewServerHandler(
+otelgrpc.WithMeterProvider(serverMP),
+)),
+},
+)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	// Make one unary call.
+	_, err = client.EmptyCall(ctx, &testpb.Empty{})
+	require.NoError(t, err)
+
+	t.Run("ClientAttemptStarted", func(t *testing.T) {
+var rm metricdata.ResourceMetrics
+require.NoError(t, clientReader.Collect(t.Context(), &rm))
+		require.Len(t, rm.ScopeMetrics, 1)
+
+		var found *metricdata.Metrics
+		for i := range rm.ScopeMetrics[0].Metrics {
+			if rm.ScopeMetrics[0].Metrics[i].Name == "rpc.client.attempt.started" {
+				found = &rm.ScopeMetrics[0].Metrics[i]
+				break
+			}
+		}
+		require.NotNil(t, found, "rpc.client.attempt.started metric not found")
+		assert.Equal(t, "The number of client call attempts started.", found.Description)
+		assert.Equal(t, "{attempt}", found.Unit)
+
+		sum, ok := found.Data.(metricdata.Sum[int64])
+		require.True(t, ok, "expected Sum[int64]")
+		assert.True(t, sum.IsMonotonic)
+		assert.Equal(t, metricdata.CumulativeTemporality, sum.Temporality)
+
+		require.Len(t, sum.DataPoints, 1)
+		assert.Equal(t, int64(1), sum.DataPoints[0].Value,
+"expected exactly 1 attempt for a single unary call")
+
+		// Verify the rpc.method attribute is set correctly.
+		method, ok := sum.DataPoints[0].Attributes.Value(semconv.RPCMethodKey)
+		require.True(t, ok, "rpc.method attribute missing")
+		assert.Equal(t, "grpc.testing.TestService/EmptyCall", method.AsString())
+	})
+
+
+	t.Run("FilteredCallNotRecorded", func(t *testing.T) {
+filteredReader := metric.NewManualReader()
+		filteredMP := metric.NewMeterProvider(metric.WithReader(filteredReader))
+
+		filteredListener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+		require.NoError(t, err)
+
+		filteredClient := newGrpcTest(
+t, filteredListener,
+[]grpc.DialOption{
+grpc.WithStatsHandler(otelgrpc.NewClientHandler(
+otelgrpc.WithMeterProvider(filteredMP),
+otelgrpc.WithFilter(filters.ServiceName("grpc.testing.OtherService")),
+)),
+},
+[]grpc.ServerOption{
+grpc.StatsHandler(otelgrpc.NewServerHandler(
+otelgrpc.WithMeterProvider(filteredMP),
+otelgrpc.WithFilter(filters.ServiceName("grpc.testing.OtherService")),
+)),
+},
+)
+
+		_, err = filteredClient.EmptyCall(ctx, &testpb.Empty{})
+		require.NoError(t, err)
+
+		var rm metricdata.ResourceMetrics
+		require.NoError(t, filteredReader.Collect(t.Context(), &rm))
+		// No scope metrics should be recorded since the filter drops this service.
+		assert.Empty(t, rm.ScopeMetrics, "no metrics expected for filtered call")
+	})
 }

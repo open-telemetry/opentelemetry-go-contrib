@@ -12,6 +12,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/metric/noop"
 	oldrpcconv "go.opentelemetry.io/otel/semconv/v1.37.0/rpcconv" //nolint:depguard // Use of v1.37.0 is required for backward compatibility stability opt-in.
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/semconv/v1.43.0/rpcconv"
@@ -43,6 +44,7 @@ type serverHandler struct {
 
 	duration    rpcconv.ServerCallDuration
 	oldDuration oldrpcconv.ServerDuration
+
 }
 
 // NewServerHandler creates a stats.Handler for a gRPC server.
@@ -87,6 +89,7 @@ func NewServerHandler(opts ...Option) stats.Handler {
 			otel.Handle(err)
 		}
 	}
+
 
 	return h
 }
@@ -177,6 +180,7 @@ func (h *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 		rs,
 		dur,
 		oldDur,
+		nil, // rpc.server.call.started not yet implemented
 		serverStatus,
 	)
 }
@@ -188,6 +192,10 @@ type clientHandler struct {
 
 	duration    rpcconv.ClientCallDuration
 	oldDuration oldrpcconv.ClientDuration
+
+	// attemptStarted counts the number of client call attempts started.
+	// Corresponds to rpc.client.attempt.started.
+	attemptStarted metric.Int64Counter
 }
 
 // NewClientHandler creates a stats.Handler for a gRPC client.
@@ -231,6 +239,16 @@ func NewClientHandler(opts ...Option) stats.Handler {
 		if err != nil {
 			otel.Handle(err)
 		}
+	}
+
+	h.attemptStarted, err = meter.Int64Counter(
+		"rpc.client.attempt.started",
+		metric.WithDescription("The number of client call attempts started."),
+		metric.WithUnit("{attempt}"),
+	)
+	if err != nil {
+		otel.Handle(err)
+		h.attemptStarted = noop.Int64Counter{}
 	}
 
 	return h
@@ -301,6 +319,7 @@ func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
 		rs,
 		dur,
 		oldDur,
+		h.attemptStarted,
 		func(s *status.Status) (codes.Code, string) {
 			return codes.Error, s.Message()
 		},
@@ -322,6 +341,7 @@ func (*config) handleRPC(
 	rs stats.RPCStats,
 	duration metric.Float64Histogram,
 	oldDuration metric.Float64Histogram,
+	startedCounter metric.Int64Counter,
 	recordStatus func(*status.Status) (codes.Code, string),
 ) {
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
@@ -331,7 +351,7 @@ func (*config) handleRPC(
 
 	span := trace.SpanFromContext(ctx)
 
-	switch rs := rs.(type) {
+switch rs := rs.(type) {
 	case *stats.Begin:
 		// Set server.address early from the dial target when available (upcoming
 		// interceptors will seed this). Covers both success and failure paths since Begin
@@ -347,6 +367,16 @@ func (*config) handleRPC(
 				}
 			}
 		}
+
+		// Record that a new call has started.
+		if startedCounter != nil {
+			var metricAttrs []attribute.KeyValue
+			if gctx != nil {
+				metricAttrs = gctx.metricAttrs
+			}
+			startedCounter.Add(ctx, 1, metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
+		}
+		
 	case *stats.InPayload:
 	case *stats.InHeader:
 		if !rs.Client && rs.LocalAddr != nil {
