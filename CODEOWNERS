@@ -38,6 +38,7 @@ detectors/aws/eks                                                       @open-te
 detectors/aws/elasticbeanstalk                                          @open-telemetry/go-approvers @iblancasa @paulojmdias
 detectors/aws/lambda                                                    @open-telemetry/go-approvers
 detectors/azure/                                                        @open-telemetry/go-approvers @pyohannes
+detectors/azure/azureappservice                                         @open-telemetry/go-approvers @Lewis-E
 detectors/azure/azurecontainerapps                                      @open-telemetry/go-approvers @iblancasa
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 detectors/hetzner/                                                      @open-telemetry/go-approvers @paulojmdias
