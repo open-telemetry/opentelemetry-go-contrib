@@ -434,12 +434,18 @@ func (b *kvBuffer) Clone() *kvBuffer {
 	return &kvBuffer{data: slices.Clone(b.data), err: b.err}
 }
 
-// KeyValues returns kvs appended to the [attribute.KeyValue] held by b.
+// KeyValues returns kvs appended to the [attribute.KeyValue] held by b. The
+// returned slice never shares spare capacity with b's backing array, so
+// appending to it (including a concurrent KeyValues call on the same shared
+// buffer) cannot corrupt b or a slice returned by a previous call.
 func (b *kvBuffer) KeyValues(kvs ...attribute.KeyValue) []attribute.KeyValue {
 	if b == nil {
 		return kvs
 	}
-	return append(b.data, kvs...)
+	// Clip forces append to allocate a new backing array rather than writing
+	// kvs into b.data's spare capacity, which is shared across concurrent
+	// Handle calls.
+	return append(slices.Clip(b.data), kvs...)
 }
 
 // AddAttrs adds attrs to b.
