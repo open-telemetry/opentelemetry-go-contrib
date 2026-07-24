@@ -39,6 +39,7 @@ detectors/aws/elasticbeanstalk                                          @open-te
 detectors/aws/lambda                                                    @open-telemetry/go-approvers
 detectors/azure/                                                        @open-telemetry/go-approvers @pyohannes
 detectors/azure/azurecontainerapps                                      @open-telemetry/go-approvers @iblancasa
+detectors/azure/azurefunctions                                          @open-telemetry/go-approvers @Lewis-E
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 detectors/hetzner/                                                      @open-telemetry/go-approvers @paulojmdias
 detectors/k8sapi/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa @dashpole
