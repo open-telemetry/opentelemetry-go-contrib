@@ -17,6 +17,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
 
+### Fixed
+
+- Strip connection number suffix from connection ID in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` to prevent unbounded metric cardinality.
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

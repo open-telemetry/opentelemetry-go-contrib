@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -212,6 +213,7 @@ func NewMonitor(opts ...Option) *event.CommandMonitor {
 // peerInfo will parse the hostname and port from the mongo connection ID.
 func peerInfo(connectionID string) (hostname string, port int) {
 	defaultMongoPort := 27017
+	connectionID = trimConnectionSuffix(connectionID)
 	hostname, portStr, err := net.SplitHostPort(connectionID)
 	if err != nil {
 		// If parsing fails, assume default MongoDB port and return the entire ConnectionID as hostname
@@ -227,4 +229,25 @@ func peerInfo(connectionID string) (hostname string, port int) {
 	}
 
 	return hostname, port
+}
+
+func trimConnectionSuffix(connectionID string) string {
+	if strings.HasSuffix(connectionID, "]") {
+		if idx := strings.LastIndex(connectionID, "[-"); idx != -1 {
+			digits := connectionID[idx+2 : len(connectionID)-1]
+			if len(digits) > 0 && isDigits(digits) {
+				return connectionID[:idx]
+			}
+		}
+	}
+	return connectionID
+}
+
+func isDigits(s string) bool {
+	for i := 0; i < len(s); i++ {
+		if s[i] < '0' || s[i] > '9' {
+			return false
+		}
+	}
+	return true
 }
