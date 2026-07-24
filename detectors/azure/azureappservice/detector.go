@@ -11,7 +11,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 const (
@@ -26,8 +26,7 @@ const (
 	// We need to distinguish Functions apps from App Service web apps.
 	functionsWorkerRuntimeEnvVar = "FUNCTIONS_WORKER_RUNTIME"
 
-	resourceGroupKey = attribute.Key("azure.resource_group.name")
-	instanceIDKey    = attribute.Key("azure.app_service.instance.id")
+	instanceIDKey = attribute.Key("azure.app_service.instance.id")
 )
 
 type config struct {
@@ -95,7 +94,7 @@ func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 			"/subscriptions/%s/resourceGroups/%s/providers/Microsoft.Web/sites/%s",
 			subscriptionID, resourceGroup, siteName,
 		)),
-		resourceGroupKey.String(resourceGroup),
+		semconv.AzureResourceGroupName(resourceGroup),
 	}
 
 	if region := os.Getenv(regionEnvVar); region != "" {

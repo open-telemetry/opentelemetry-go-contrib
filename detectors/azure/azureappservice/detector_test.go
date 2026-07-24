@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // setAppServiceEnv sets the full set of App Service environment variables a
@@ -35,7 +35,7 @@ func fullExpectedAttrs() []attribute.KeyValue {
 		semconv.ServiceName("example-app-name"),
 		semconv.CloudAccountID("8c56d827-5f07-45ce-8f2b-6c5001db5c6f"),
 		semconv.CloudResourceID("/subscriptions/8c56d827-5f07-45ce-8f2b-6c5001db5c6f/resourceGroups/my-rg/providers/Microsoft.Web/sites/example-app-name"),
-		resourceGroupKey.String("my-rg"),
+		semconv.AzureResourceGroupName("my-rg"),
 		semconv.CloudRegion("eastus"),
 		semconv.DeploymentEnvironmentNameKey.String("staging"),
 		instanceIDKey.String("a1b2c3d4e5f67890abcdef1234567890abcdef1234567890abcdef1234567890"),
@@ -79,7 +79,7 @@ func TestDetectMissingInstanceID(t *testing.T) {
 		semconv.ServiceName("example-app-name"),
 		semconv.CloudAccountID("8c56d827-5f07-45ce-8f2b-6c5001db5c6f"),
 		semconv.CloudResourceID("/subscriptions/8c56d827-5f07-45ce-8f2b-6c5001db5c6f/resourceGroups/my-rg/providers/Microsoft.Web/sites/example-app-name"),
-		resourceGroupKey.String("my-rg"),
+		semconv.AzureResourceGroupName("my-rg"),
 		semconv.CloudRegion("eastus"),
 		semconv.DeploymentEnvironmentNameKey.String("staging"),
 	)
