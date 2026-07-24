@@ -8,6 +8,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.44.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.44.0
+	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.69.0
 	go.opentelemetry.io/otel v1.44.1-0.20260723093731-251b96b24897
@@ -117,5 +118,7 @@ replace go.opentelemetry.io/contrib/propagators/jaeger => ../propagators/jaeger
 replace go.opentelemetry.io/contrib/detectors/aws/ecs => ../detectors/aws/ecs
 
 replace go.opentelemetry.io/contrib/detectors/aws/eks => ../detectors/aws/eks
+
+replace go.opentelemetry.io/contrib/detectors/azure/azurevm => ../detectors/azure/azurevm
 
 replace go.opentelemetry.io/contrib/detectors/gcp => ../detectors/gcp
