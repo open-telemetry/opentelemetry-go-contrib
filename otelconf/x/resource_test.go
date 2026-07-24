@@ -5,7 +5,6 @@ package x
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -312,20 +311,21 @@ func TestNewResourceWithDetectionDoesNotOverrideConfiguredAttributes(t *testing.
 	assert.Contains(t, gotAttrs, semconv.ServiceInstanceIDKey)
 }
 
-func TestNewResourceWithDetectionAttributesFilterError(t *testing.T) {
+func TestNewResourceWithDetectionAttributesFilterExclusionPrecedence(t *testing.T) {
 	got, err := newResource(t.Context(), &Resource{
 		DetectionDevelopment: &ExperimentalResourceDetection{
 			Detectors: []ExperimentalResourceDetector{
 				{Host: ExperimentalHostResourceDetector{}},
 			},
 			Attributes: &IncludeExclude{
-				Included: []string{"foo"},
-				Excluded: []string{"foo"},
+				Included: []string{"host.*"},
+				Excluded: []string{"host.name"},
 			},
 		},
 	})
-	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
+	require.NoError(t, err)
 	assert.True(t, got.Set().HasValue(semconv.ServiceNameKey))
+	assert.NotContains(t, attrMap(got.Attributes()), semconv.HostNameKey)
 }
 
 func attrMap(attrs []attribute.KeyValue) map[attribute.Key]attribute.Value {
