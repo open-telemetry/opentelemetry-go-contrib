@@ -341,6 +341,18 @@ func TestPeerInfo(t *testing.T) {
 			expectedPort: 27017,
 		},
 		{
+			name:         "IPv4 with port and connection number",
+			connectionID: "10.0.0.1:27017[-13]",
+			expectedHost: "10.0.0.1",
+			expectedPort: 27017,
+		},
+		{
+			name:         "IPv4 without port and connection number",
+			connectionID: "127.0.0.1[-3]",
+			expectedHost: "127.0.0.1",
+			expectedPort: 27017,
+		},
+		{
 			name:         "IPv6 with port",
 			connectionID: "[::1]:27019",
 			expectedHost: "::1",
@@ -359,6 +371,18 @@ func TestPeerInfo(t *testing.T) {
 			expectedPort: 27017,
 		},
 		{
+			name:         "IPv6 with port and connection number",
+			connectionID: "[::1]:27019[-42]",
+			expectedHost: "::1",
+			expectedPort: 27019,
+		},
+		{
+			name:         "IPv6 without port with square brackets and connection number",
+			connectionID: "[::1][-5]",
+			expectedHost: "[::1]",
+			expectedPort: 27017,
+		},
+		{
 			name:         "Hostname with port",
 			connectionID: "example.com:27020",
 			expectedHost: "example.com",
@@ -368,6 +392,30 @@ func TestPeerInfo(t *testing.T) {
 			name:         "Hostname without port",
 			connectionID: "example.com",
 			expectedHost: "example.com",
+			expectedPort: 27017,
+		},
+		{
+			name:         "Hostname with port and connection number",
+			connectionID: "example.com:27020[-1708]",
+			expectedHost: "example.com",
+			expectedPort: 27020,
+		},
+		{
+			name:         "Hostname without port and connection number",
+			connectionID: "example.com[-99]",
+			expectedHost: "example.com",
+			expectedPort: 27017,
+		},
+		{
+			name:         "Non-digit connection number suffix",
+			connectionID: "example.com[-abc]",
+			expectedHost: "example.com[-abc]",
+			expectedPort: 27017,
+		},
+		{
+			name:         "Empty connection number suffix",
+			connectionID: "example.com[-]",
+			expectedHost: "example.com[-]",
 			expectedPort: 27017,
 		},
 	}
