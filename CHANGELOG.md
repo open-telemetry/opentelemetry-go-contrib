@@ -12,6 +12,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
+- Add `go.opentelemetry.io/contrib/detectors/railway`, a new resource detector for Railway. Detects `cloud.provider`, `cloud.region`, `service.namespace`, `service.name`, `service.instance.id`, `deployment.environment.name`, `deployment.id`, `vcs.ref.head.revision`, `vcs.ref.head.name`, `vcs.ref.head.type`, `vcs.repository.name`, `vcs.owner.name`, `vcs.provider.name`, and the Railway-specific `railway.project.id`, `railway.environment.id`, and `railway.service.id`.
 
 ### Changed
 
