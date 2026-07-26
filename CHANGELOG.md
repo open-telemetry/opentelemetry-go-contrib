@@ -43,6 +43,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `TextMapPropagator` in `go.opentelemetry.io/contrib/propagators/autoprop` returns the no-op propagator for empty input, matching the behavior of `none`. An unknown `OTEL_PROPAGATORS` value still returns an error with a nil propagator so `NewTextMapPropagator` falls back to the default TraceContext and Baggage propagators instead of disabling propagation. (#9163)
 - Preserve error-valued attributes nested in a group as grouped attributes instead of silently dropping them in `go.opentelemetry.io/contrib/bridges/otelslog`. (#9238)
 - Fix a data race in `go.opentelemetry.io/contrib/bridges/otelslog` where concurrent `Handle` calls could corrupt each other's log attributes because `kvBuffer.KeyValues` returned a slice aliasing a shared buffer. (#9229)
+- Copy `MultipartForm` back to the request `otelmux.Middleware` was given after the wrapped handler returns, so `net/http` can find and remove the temp files `ParseMultipartForm` created on the context-derived request copy in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`.
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

@@ -5,7 +5,9 @@ package otelmux
 
 import (
 	"bufio"
+	"bytes"
 	"io"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +16,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -46,6 +49,42 @@ func TestRequestBodyWrapper(t *testing.T) {
 
 	_, ok := r.Body.(*request.BodyWrapper)
 	assert.Falsef(t, ok, "body should not be wrapped after request is processed")
+}
+
+// TestMultipartFormCopiedToOriginalRequest is a regression test for
+// https://github.com/open-telemetry/opentelemetry-go-contrib/issues/9070.
+// Middleware passes a context-derived copy of the request to the handler;
+// if ParseMultipartForm is called on that copy, the resulting MultipartForm
+// (and its temp files) must be copied back onto the request the middleware
+// received so net/http's finishRequest can clean them up.
+//
+// The middleware is applied directly, rather than through a mux.Router, so
+// that the request the middleware receives is the same one net/http would
+// hand to ServeHTTP. gorilla/mux's own router makes an additional,
+// unrelated context copy of its own when matching routes, which is outside
+// otelmux's control.
+func TestMultipartFormCopiedToOriginalRequest(t *testing.T) {
+	handler := Middleware("foobar")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.NoError(t, r.ParseMultipartForm(1<<20))
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/upload", &body)
+	r.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.NotNil(t, r.MultipartForm, "MultipartForm should be copied back to the original request so net/http can clean up its temp files")
 }
 
 func TestPassthroughSpanFromGlobalTracer(t *testing.T) {
