@@ -6,6 +6,7 @@ package xray
 import (
 	"bytes"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -87,4 +88,26 @@ func TestSpanIDIsNotNil(t *testing.T) {
 
 	assert.False(t, bytes.Equal(spanID1[:], nilSpanID[:]), "SpanID cannot be empty.")
 	assert.False(t, bytes.Equal(spanID2[:], nilSpanID[:]), "SpanID cannot be empty.")
+}
+
+// TestIDGeneratorConcurrentUse guards against reintroducing a shared,
+// unsynchronized random source: IDGenerator no longer holds a mutex, so this
+// only stays safe as long as ID generation goes through math/rand/v2's
+// top-level functions, which are documented as safe for concurrent use.
+// Run with -race to catch a regression.
+func TestIDGeneratorConcurrentUse(t *testing.T) {
+	idg := NewIDGenerator()
+	ctx := t.Context()
+
+	var wg sync.WaitGroup
+	for range 50 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			traceID, spanID := idg.NewIDs(ctx)
+			_ = idg.NewSpanID(ctx, traceID)
+			_ = spanID
+		}()
+	}
+	wg.Wait()
 }
