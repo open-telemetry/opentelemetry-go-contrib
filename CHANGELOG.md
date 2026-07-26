@@ -19,7 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Fix `go.opentelemetry.io/contrib/propagators/aws/xray` producing deterministic trace and span IDs when the seed read from `crypto/rand` silently failed, by switching to `math/rand/v2`'s securely auto-seeded top-level generator.
+- Fix `go.opentelemetry.io/contrib/propagators/aws/xray` producing deterministic trace and span IDs when the seed read from `crypto/rand` silently failed, by switching to `math/rand/v2`'s securely auto-seeded top-level generator. (#9359)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
