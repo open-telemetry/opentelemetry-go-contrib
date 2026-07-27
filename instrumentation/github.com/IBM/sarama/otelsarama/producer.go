@@ -5,7 +5,7 @@ package otelsarama
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 
 	"github.com/IBM/sarama"
 	"go.opentelemetry.io/otel/attribute"
@@ -86,9 +86,17 @@ type asyncProducer struct {
 	errors    chan *sarama.ProducerError
 }
 
-func (p *asyncProducer) Input() chan<- *sarama.ProducerMessage  { return p.input }
-func (p *asyncProducer) Successes() <-chan *sarama.ProducerMessage { return p.successes }
-func (p *asyncProducer) Errors() <-chan *sarama.ProducerError   { return p.errors }
+func (p *asyncProducer) Input() chan<- *sarama.ProducerMessage {
+	return p.input
+}
+
+func (p *asyncProducer) Successes() <-chan *sarama.ProducerMessage {
+	return p.successes
+}
+
+func (p *asyncProducer) Errors() <-chan *sarama.ProducerError {
+	return p.errors
+}
 
 func (p *asyncProducer) runInput(saramaConfig *sarama.Config) {
 	for msg := range p.input {
@@ -171,7 +179,7 @@ func startProducerSpan(cfg *config, version sarama.KafkaVersion, msg *sarama.Pro
 		trace.WithAttributes(attrs...),
 	}
 
-	ctx, span := cfg.Tracer.Start(ctx, fmt.Sprintf("send %s", msg.Topic), opts...)
+	ctx, span := cfg.Tracer.Start(ctx, "send "+msg.Topic, opts...)
 
 	// Inject trace context into message headers if Kafka version supports it.
 	if version.IsAtLeast(sarama.V0_11_0_0) {
@@ -183,12 +191,11 @@ func startProducerSpan(cfg *config, version sarama.KafkaVersion, msg *sarama.Pro
 
 func finishProducerSpan(span trace.Span, partition int32, offset int64, err error) {
 	span.SetAttributes(
-		semconv.MessagingDestinationPartitionIDKey.String(fmt.Sprintf("%d", partition)),
+		semconv.MessagingDestinationPartitionIDKey.String(strconv.Itoa(int(partition))),
 		semconv.MessagingKafkaOffsetKey.Int64(offset),
 	)
 	if err != nil {
 		span.SetStatus(codes.Error, err.Error())
-		span.RecordError(err)
 	}
 	span.End()
 }

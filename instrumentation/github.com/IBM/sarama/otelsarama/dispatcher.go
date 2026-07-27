@@ -5,7 +5,7 @@ package otelsarama
 
 import (
 	"context"
-	"fmt"
+	"strconv"
 
 	"github.com/IBM/sarama"
 	"go.opentelemetry.io/otel/attribute"
@@ -51,7 +51,7 @@ func (w *consumerMessagesDispatcherWrapper) Run() {
 		attrs := []attribute.KeyValue{
 			semconv.MessagingSystemKey.String("kafka"),
 			semconv.MessagingDestinationNameKey.String(msg.Topic),
-			semconv.MessagingDestinationPartitionIDKey.String(fmt.Sprintf("%d", msg.Partition)),
+			semconv.MessagingDestinationPartitionIDKey.String(strconv.Itoa(int(msg.Partition))),
 			semconv.MessagingKafkaOffsetKey.Int64(msg.Offset),
 			semconv.MessagingOperationNameKey.String("process"),
 			semconv.MessagingOperationTypeKey.String("process"),
@@ -66,7 +66,7 @@ func (w *consumerMessagesDispatcherWrapper) Run() {
 			trace.WithAttributes(attrs...),
 		}
 
-		newCtx, span := w.cfg.Tracer.Start(ctx, fmt.Sprintf("process %s", msg.Topic), opts...)
+		newCtx, span := w.cfg.Tracer.Start(ctx, "process "+msg.Topic, opts...)
 
 		// Re-inject updated context so downstream code can link to this span.
 		w.cfg.Propagators.Inject(newCtx, newConsumerMessageTextMapCarrierAdapter(msg))

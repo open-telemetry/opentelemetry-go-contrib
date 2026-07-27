@@ -17,24 +17,24 @@ import (
 // fakeConsumerGroupSession implements sarama.ConsumerGroupSession for tests.
 type fakeConsumerGroupSession struct{}
 
-func (s *fakeConsumerGroupSession) Claims() map[string][]int32          { return nil }
-func (s *fakeConsumerGroupSession) MemberID() string                    { return "" }
-func (s *fakeConsumerGroupSession) GenerationID() int32                 { return 0 }
-func (s *fakeConsumerGroupSession) MarkOffset(string, int32, int64, string) {}
-func (s *fakeConsumerGroupSession) ResetOffset(string, int32, int64, string) {}
-func (s *fakeConsumerGroupSession) MarkMessage(*sarama.ConsumerMessage, string) {}
-func (s *fakeConsumerGroupSession) Context() context.Context { return context.Background() }
-func (s *fakeConsumerGroupSession) Commit() {}
+func (*fakeConsumerGroupSession) Claims() map[string][]int32                  { return nil }
+func (*fakeConsumerGroupSession) MemberID() string                            { return "" }
+func (*fakeConsumerGroupSession) GenerationID() int32                         { return 0 }
+func (*fakeConsumerGroupSession) MarkOffset(string, int32, int64, string)     {}
+func (*fakeConsumerGroupSession) ResetOffset(string, int32, int64, string)    {}
+func (*fakeConsumerGroupSession) MarkMessage(*sarama.ConsumerMessage, string) {}
+func (*fakeConsumerGroupSession) Context() context.Context                    { return context.Background() }
+func (*fakeConsumerGroupSession) Commit()                                     {}
 
 // fakeConsumerGroupClaim implements sarama.ConsumerGroupClaim for tests.
 type fakeConsumerGroupClaim struct {
 	messages chan *sarama.ConsumerMessage
 }
 
-func (c *fakeConsumerGroupClaim) Topic() string                          { return "test-topic" }
-func (c *fakeConsumerGroupClaim) Partition() int32                       { return 0 }
-func (c *fakeConsumerGroupClaim) InitialOffset() int64                   { return 0 }
-func (c *fakeConsumerGroupClaim) HighWaterMarkOffset() int64             { return 0 }
+func (c *fakeConsumerGroupClaim) Topic() string                            { return "test-topic" }
+func (c *fakeConsumerGroupClaim) Partition() int32                         { return 0 }
+func (c *fakeConsumerGroupClaim) InitialOffset() int64                     { return 0 }
+func (c *fakeConsumerGroupClaim) HighWaterMarkOffset() int64               { return 0 }
 func (c *fakeConsumerGroupClaim) Messages() <-chan *sarama.ConsumerMessage { return c.messages }
 
 // recordingHandler captures the claim passed to ConsumeClaim.
