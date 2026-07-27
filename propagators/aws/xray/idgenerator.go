@@ -28,7 +28,12 @@ var _ sdktrace.IDGenerator = &IDGenerator{}
 // NewSpanID returns a non-zero span ID from a randomly-chosen sequence.
 func (gen *IDGenerator) NewSpanID(context.Context, trace.TraceID) trace.SpanID {
 	sid := trace.SpanID{}
-	binary.NativeEndian.PutUint64(sid[:], rand.Uint64())
+	for {
+		binary.NativeEndian.PutUint64(sid[:], rand.Uint64())
+		if sid.IsValid() {
+			break
+		}
+	}
 	return sid
 }
 
@@ -45,7 +50,12 @@ func (gen *IDGenerator) NewIDs(context.Context) (trace.TraceID, trace.SpanID) {
 	binary.NativeEndian.PutUint32(tid[12:16], rand.Uint32())
 
 	sid := trace.SpanID{}
-	binary.NativeEndian.PutUint64(sid[:], rand.Uint64())
+	for {
+		binary.NativeEndian.PutUint64(sid[:], rand.Uint64())
+		if sid.IsValid() {
+			break
+		}
+	}
 	return tid, sid
 }
 
