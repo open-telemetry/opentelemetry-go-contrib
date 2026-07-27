@@ -8,6 +8,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestProducerMessageCarrierGet(t *testing.T) {
@@ -68,4 +69,17 @@ func TestConsumerMessageCarrierKeys(t *testing.T) {
 	}
 	c := NewConsumerMessageCarrier(msg)
 	assert.Equal(t, []string{"a", "b"}, c.Keys())
+}
+
+func TestConsumerMessageCarrierSetIsNoOp(t *testing.T) {
+	msg := &sarama.ConsumerMessage{
+		Headers: []*sarama.RecordHeader{
+			{Key: []byte("k"), Value: []byte("v")},
+		},
+	}
+	c := NewConsumerMessageCarrier(msg)
+	c.Set("k", "new-val")   // existing key — no-op
+	c.Set("new-key", "val") // new key — no-op
+	require.Len(t, msg.Headers, 1)
+	assert.Equal(t, "v", string(msg.Headers[0].Value))
 }
