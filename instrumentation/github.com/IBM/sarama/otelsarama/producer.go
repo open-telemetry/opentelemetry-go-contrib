@@ -76,8 +76,6 @@ func WrapAsyncProducer(saramaConfig *sarama.Config, p sarama.AsyncProducer, opts
 	return wrapped
 }
 
-type asyncProducerSpanKey struct{}
-
 type asyncProducer struct {
 	sarama.AsyncProducer
 	cfg       *config

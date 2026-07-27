@@ -19,7 +19,7 @@ func TestProducerMessageCarrierGet(t *testing.T) {
 	}
 	c := NewProducerMessageCarrier(msg)
 	assert.Equal(t, "val1", c.Get("traceparent"))
-	assert.Equal(t, "", c.Get("missing"))
+	assert.Empty(t, c.Get("missing"))
 }
 
 func TestProducerMessageCarrierSet(t *testing.T) {
@@ -55,7 +55,7 @@ func TestConsumerMessageCarrierGet(t *testing.T) {
 	}
 	c := NewConsumerMessageCarrier(msg)
 	assert.Equal(t, "val1", c.Get("traceparent"))
-	assert.Equal(t, "", c.Get("missing"))
+	assert.Empty(t, c.Get("missing"))
 }
 
 func TestConsumerMessageCarrierKeys(t *testing.T) {

@@ -71,7 +71,7 @@ func TestWrapConsumerConsumePartitionCreatesSpan(t *testing.T) {
 	msg := <-pc.Messages()
 	assert.NotNil(t, msg)
 
-	pc.(*partitionConsumer).PartitionConsumer.AsyncClose()
+	pc.(*partitionConsumer).AsyncClose()
 	<-pc.Messages()
 
 	spans := sr.Ended()
