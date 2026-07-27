@@ -128,8 +128,8 @@ func TestSyncProducerWithClusterID(t *testing.T) {
 }
 
 // spanAttrs returns a map of attribute key→value for a recorded span.
-func spanAttrs(span sdktrace.ReadOnlySpan) map[string]interface{} {
-	m := make(map[string]interface{}, len(span.Attributes()))
+func spanAttrs(span sdktrace.ReadOnlySpan) map[string]any {
+	m := make(map[string]any, len(span.Attributes()))
 	for _, kv := range span.Attributes() {
 		m[string(kv.Key)] = kv.Value.AsInterface()
 	}

@@ -31,10 +31,10 @@ type fakeConsumerGroupClaim struct {
 	messages chan *sarama.ConsumerMessage
 }
 
-func (c *fakeConsumerGroupClaim) Topic() string                            { return "test-topic" }
-func (c *fakeConsumerGroupClaim) Partition() int32                         { return 0 }
-func (c *fakeConsumerGroupClaim) InitialOffset() int64                     { return 0 }
-func (c *fakeConsumerGroupClaim) HighWaterMarkOffset() int64               { return 0 }
+func (*fakeConsumerGroupClaim) Topic() string                              { return "test-topic" }
+func (*fakeConsumerGroupClaim) Partition() int32                           { return 0 }
+func (*fakeConsumerGroupClaim) InitialOffset() int64                       { return 0 }
+func (*fakeConsumerGroupClaim) HighWaterMarkOffset() int64                 { return 0 }
 func (c *fakeConsumerGroupClaim) Messages() <-chan *sarama.ConsumerMessage { return c.messages }
 
 // recordingHandler captures the claim passed to ConsumeClaim.
@@ -43,12 +43,13 @@ type recordingHandler struct {
 	done          chan struct{}
 }
 
-func (h *recordingHandler) Setup(sarama.ConsumerGroupSession) error   { return nil }
-func (h *recordingHandler) Cleanup(sarama.ConsumerGroupSession) error { return nil }
+func (*recordingHandler) Setup(sarama.ConsumerGroupSession) error   { return nil }
+func (*recordingHandler) Cleanup(sarama.ConsumerGroupSession) error { return nil }
 func (h *recordingHandler) ConsumeClaim(_ sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	h.receivedClaim = claim
 	// Drain all messages so the dispatcher goroutine can exit.
-	for range claim.Messages() {
+	for msg := range claim.Messages() {
+		_ = msg
 	}
 	close(h.done)
 	return nil

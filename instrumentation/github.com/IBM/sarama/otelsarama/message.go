@@ -72,7 +72,7 @@ func (c ConsumerMessageCarrier) Get(key string) string {
 
 // Set is a no-op for consumer messages; trace context propagation is
 // injected on the producer side.
-func (c ConsumerMessageCarrier) Set(string, string) {}
+func (ConsumerMessageCarrier) Set(string, string) {}
 
 // Keys lists the keys stored in this carrier.
 func (c ConsumerMessageCarrier) Keys() []string {

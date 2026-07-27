@@ -136,22 +136,22 @@ func (p *asyncProducer) runErrors() {
 
 // spanMetadata wraps the user's original metadata together with the span.
 type spanMetadata struct {
-	original interface{}
+	original any
 	span     trace.Span
 }
 
-func withSpan(original interface{}, span trace.Span) interface{} {
+func withSpan(original any, span trace.Span) any {
 	return &spanMetadata{original: original, span: span}
 }
 
-func withoutSpan(meta interface{}) interface{} {
+func withoutSpan(meta any) any {
 	if sm, ok := meta.(*spanMetadata); ok {
 		return sm.original
 	}
 	return meta
 }
 
-func spanFromMetadata(meta interface{}) trace.Span {
+func spanFromMetadata(meta any) trace.Span {
 	if sm, ok := meta.(*spanMetadata); ok {
 		return sm.span
 	}
