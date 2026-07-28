@@ -53,6 +53,18 @@ func TestNewResourceDetectorDisablesProxy(t *testing.T) {
 	assert.Nil(t, transport.Proxy)
 }
 
+func TestNewResourceDetectorWithCustomDefaultTransport(t *testing.T) {
+	defaultTransport := http.DefaultTransport
+	t.Cleanup(func() {
+		http.DefaultTransport = defaultTransport
+	})
+	http.DefaultTransport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return nil, errors.New("unexpected request")
+	})
+
+	assert.NotNil(t, NewResourceDetector())
+}
+
 func TestDetect(t *testing.T) {
 	var tokenRequests atomic.Int32
 	srv := newMetadataServer(t, &tokenRequests, http.StatusOK, testInstanceJSON)
