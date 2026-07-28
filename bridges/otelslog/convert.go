@@ -4,7 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelslog // import "go.opentelemetry.io/contrib/bridges/otelslog"
+package otelslog
 
 import (
 	"fmt"

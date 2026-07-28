@@ -3,7 +3,7 @@
 
 // Package autodetect provides functionality to configures and use a set of
 // resource detectors at runtime.
-package autodetect // import "go.opentelemetry.io/contrib/detectors/autodetect"
+package autodetect
 
 import (
 	"context"
