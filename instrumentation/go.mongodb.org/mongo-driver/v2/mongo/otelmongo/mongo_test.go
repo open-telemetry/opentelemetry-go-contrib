@@ -418,6 +418,12 @@ func TestPeerInfo(t *testing.T) {
 			expectedHost: "example.com",
 			expectedPort: 27017,
 		},
+		{
+			name:         "Unix socket path containing bracket-dash",
+			connectionID: "/tmp/mongodb[-test].sock[-1]",
+			expectedHost: "/tmp/mongodb[-test].sock",
+			expectedPort: 27017,
+		},
 	}
 
 	for _, tc := range tests {
