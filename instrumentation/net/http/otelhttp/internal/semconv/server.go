@@ -239,7 +239,11 @@ type ServerMetricData struct {
 }
 
 type MetricAttributes struct {
-	Req                  *http.Request
+	Req *http.Request
+	// Resp is the client response, if any. It is only consulted by
+	// HTTPClient.MetricAttributes to source the negotiated protocol version;
+	// server-side metric recording ignores it.
+	Resp                 *http.Response
 	StatusCode           int
 	Route                string
 	AdditionalAttributes []attribute.KeyValue

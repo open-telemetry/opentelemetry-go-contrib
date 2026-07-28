@@ -295,6 +295,13 @@ func TestNewTraceResponse_Client(t *testing.T) {
 	}{
 		{resp: http.Response{StatusCode: 200, ContentLength: 123}, want: []attribute.KeyValue{attribute.Int("http.response.status_code", 200)}},
 		{resp: http.Response{StatusCode: 404, ContentLength: 0}, want: []attribute.KeyValue{attribute.Int("http.response.status_code", 404), attribute.String("error.type", "404")}},
+		{
+			resp: http.Response{StatusCode: 200, Proto: "HTTP/2.0"},
+			want: []attribute.KeyValue{
+				attribute.Int("http.response.status_code", 200),
+				attribute.String("network.protocol.version", "2.0"),
+			},
+		},
 	}
 
 	for _, tt := range testcases {
