@@ -214,16 +214,11 @@ func NewMonitor(opts ...Option) *event.CommandMonitor {
 //
 // ConnectionID is always formatted by the driver as "<address>[-<connection
 // number>]", so the pooled connection number suffix can be stripped by
-// cutting at the last "[-". The last occurrence is used, rather than the
-// first, so that an address containing "[-" (for example a Unix socket path)
-// is not truncated early.
+// cutting at the first "[-".
 // See https://github.com/open-telemetry/opentelemetry-go-contrib/issues/9370.
 func peerInfo(connectionID string) (hostname string, port int) {
 	defaultMongoPort := 27017
-	host := connectionID
-	if idx := strings.LastIndex(connectionID, "[-"); idx != -1 {
-		host = connectionID[:idx]
-	}
+	host, _, _ := strings.Cut(connectionID, "[-")
 	hostname, portStr, err := net.SplitHostPort(host)
 	if err != nil {
 		// If parsing fails, assume default MongoDB port and return the entire host as hostname
