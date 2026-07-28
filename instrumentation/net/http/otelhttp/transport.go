@@ -116,12 +116,14 @@ func (w *requestBodyTracker) Closed() bool {
 // Close is the authoritative signal, but for known ContentLength values the
 // transport may finish reading slightly before Close runs. Treat that as
 // complete so response finalization can record metrics without racing the
-// Close callback.
+// Close callback. A non-positive contentLength means the length is unknown
+// (e.g. ContentLength == 0 with a non-nil streaming body), so only Close is
+// authoritative in that case.
 func (w *requestBodyTracker) finished(contentLength int64) bool {
 	if w.Closed() {
 		return true
 	}
-	return contentLength >= 0 && w.BytesRead() >= contentLength
+	return contentLength > 0 && w.BytesRead() >= contentLength
 }
 
 // RoundTrip creates a Span and propagates its context via the provided request's headers
@@ -253,8 +255,18 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	recordMetrics = fn
 	lastBodyMu.Unlock()
 
-	if err != nil {
+	// Record immediately when there is no request body or it already reached
+	// a final state; the transport will not read it any further. Otherwise
+	// the transport may still be uploading the body after RoundTrip returns
+	// (including on errors, since RoundTrippers may close the request body
+	// asynchronously), and the request body Close callback records the final
+	// size instead.
+	contentLength := r.ContentLength
+	if trackedBody := currentTrackedBody(); trackedBody == nil || trackedBody.finished(contentLength) {
 		callRecordMetrics()
+	}
+
+	if err != nil {
 		span.SetAttributes(otelsemconv.ErrorType(err))
 		span.SetStatus(codes.Error, err.Error())
 		span.End()
@@ -262,7 +274,6 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		return res, err
 	}
 
-	contentLength := r.ContentLength
 	readRecordFunc := func(int64) {
 		lastTrackedBody := currentTrackedBody()
 		// Delay recording while the transport is still uploading a request

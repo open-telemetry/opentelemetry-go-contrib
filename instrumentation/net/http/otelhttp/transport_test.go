@@ -1168,6 +1168,183 @@ func TestTransportMetricsReportFinalRequestBodySize(t *testing.T) {
 	assert.Equal(t, actualBytesRead, requestBodySizeMetricValue(t, rm))
 }
 
+func TestTransportMetricsReportFinalRequestBodySizeUnknownLength(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, listener.Close()) })
+
+	serverErr := make(chan error, 1)
+	go func() {
+		var serverErrValue error
+		defer func() { serverErr <- serverErrValue }()
+
+		conn, err := listener.Accept()
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+		defer func() {
+			if err := conn.Close(); serverErrValue == nil {
+				serverErrValue = err
+			}
+		}()
+
+		req, err := http.ReadRequest(bufio.NewReader(conn))
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+		_ = req
+
+		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: keep-alive\r\n\r\nok"))
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+
+		time.Sleep(250 * time.Millisecond)
+	}()
+
+	// Do not set req.ContentLength: a non-nil streaming body with
+	// ContentLength == 0 means the length is unknown, so only the request
+	// body Close callback may publish the final size.
+	body := newSlowRequestBody(256*1024, 1024, 20*time.Millisecond)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://"+listener.Addr().String(), body)
+	require.NoError(t, err)
+	require.Equal(t, int64(0), req.ContentLength)
+
+	client := http.Client{Transport: NewTransport(http.DefaultTransport, WithMeterProvider(meterProvider))}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+
+	bytesWhenResponseReturned := body.bytesRead.Load()
+	require.Eventually(t, func() bool {
+		return body.bytesRead.Load() > bytesWhenResponseReturned
+	}, 5*time.Second, 10*time.Millisecond, "request body bytes should continue increasing after the response is returned")
+
+	require.NoError(t, resp.Body.Close())
+
+	select {
+	case <-body.closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("request body was not closed")
+	}
+
+	select {
+	case err := <-serverErr:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("server did not finish")
+	}
+
+	actualBytesRead := body.bytesRead.Load()
+	require.Greater(t, actualBytesRead, bytesWhenResponseReturned)
+	require.Eventually(t, func() bool {
+		var rm metricdata.ResourceMetrics
+		if err := reader.Collect(t.Context(), &rm); err != nil {
+			return false
+		}
+		for _, sm := range rm.ScopeMetrics {
+			for _, metric := range sm.Metrics {
+				if metric.Name != "http.client.request.body.size" {
+					continue
+				}
+				data, ok := metric.Data.(metricdata.Histogram[int64])
+				if !ok || len(data.DataPoints) != 1 {
+					return false
+				}
+				return data.DataPoints[0].Sum == actualBytesRead
+			}
+		}
+		return false
+	}, 5*time.Second, 10*time.Millisecond, "metric should report the final request body size, not a partial read")
+}
+
+func TestTransportMetricsRecordedBeforeResponseBodyFinalized(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	release := make(chan struct{})
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		<-release
+	}))
+	t.Cleanup(func() {
+		close(release)
+		ts.Close()
+	})
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	client := http.Client{Transport: NewTransport(http.DefaultTransport, WithMeterProvider(meterProvider))}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, resp.Body.Close()) })
+
+	// The request has no body, so metrics must be recorded when RoundTrip
+	// returns instead of being deferred for the lifetime of a long-lived
+	// response body.
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+}
+
+// errAsyncBodyCloseTransport fails RoundTrip after a partial request body
+// read and finishes reading and closing the body on another goroutine,
+// mimicking RoundTrippers that close the request body asynchronously.
+type errAsyncBodyCloseTransport struct {
+	roundTripErr error
+	done         chan struct{}
+}
+
+func (tr *errAsyncBodyCloseTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	buf := make([]byte, 1024)
+	_, _ = r.Body.Read(buf)
+	go func() {
+		defer close(tr.done)
+		_, _ = io.Copy(io.Discard, r.Body)
+		_ = r.Body.Close()
+	}()
+	return nil, tr.roundTripErr
+}
+
+func TestTransportErrorReportsFinalRequestBodySize(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	body := newSlowRequestBody(16*1024, 1024, time.Millisecond)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://localhost", body)
+	require.NoError(t, err)
+	req.ContentLength = body.totalBytes
+
+	base := &errAsyncBodyCloseTransport{
+		roundTripErr: errors.New("round trip failed"),
+		done:         make(chan struct{}),
+	}
+	tr := NewTransport(base, WithMeterProvider(meterProvider))
+
+	resp, err := tr.RoundTrip(req) //nolint:bodyclose // no response is returned on error
+	require.ErrorIs(t, err, base.roundTripErr)
+	require.Nil(t, resp)
+
+	select {
+	case <-base.done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("request body was not closed")
+	}
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, body.totalBytes, body.bytesRead.Load())
+	assert.Equal(t, body.totalBytes, requestBodySizeMetricValue(t, rm))
+}
+
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
