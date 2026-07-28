@@ -396,7 +396,8 @@ func (wb *wrappedBody) recordMetricsOnce() {
 }
 
 func (wb *wrappedBody) Close() error {
-	err := wb.closeBody()
+	// Finalize telemetry before delegating to the underlying Close, which
+	// may block (e.g. upgraded streams or custom RoundTripper bodies).
 	wb.recordMetricsOnce()
-	return err
+	return wb.closeBody()
 }
