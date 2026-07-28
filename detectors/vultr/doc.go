@@ -14,7 +14,10 @@ each of the following attributes is added if it is available:
   - host.id
   - host.name
 
+The cloud.region value is the Vultr region code normalized to lower case: the
+metadata value "EWR" is reported as "ewr".
+
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
 [host]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/host.md
 */
-package vultr // import "go.opentelemetry.io/contrib/detectors/vultr"
+package vultr

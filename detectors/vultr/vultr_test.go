@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package vultr_test
+package vultr
 
 import (
 	"encoding/json"
@@ -13,24 +13,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
-
-	"go.opentelemetry.io/contrib/detectors/vultr"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
-
-// vultrMetadata mirrors the JSON shape returned by the Vultr metadata service.
-type vultrMetadata struct {
-	Hostname     string `json:"hostname"`
-	InstanceID   string `json:"instanceid"`
-	InstanceV2ID string `json:"instance-v2-id"`
-	Region       struct {
-		RegionCode string `json:"regioncode"`
-	} `json:"region"`
-}
 
 // newFakeServer starts an httptest server serving meta as JSON and returns its
 // URL. The server is closed via t.Cleanup.
-func newFakeServer(t *testing.T, meta vultrMetadata) string {
+func newFakeServer(t *testing.T, meta metadataResponse) string {
 	t.Helper()
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -40,22 +28,29 @@ func newFakeServer(t *testing.T, meta vultrMetadata) string {
 	return srv.URL
 }
 
+// newTestDetector returns a detector pointed at url instead of the real
+// link-local metadata endpoint.
+func newTestDetector(url string, opts ...Option) *ResourceDetector {
+	d := NewResourceDetector(opts...)
+	d.endpoint = url
+	return d
+}
+
 func TestNewResourceDetector(t *testing.T) {
-	d := vultr.NewResourceDetector()
-	assert.NotNil(t, d)
+	d := NewResourceDetector()
+	require.NotNil(t, d)
+	assert.Equal(t, defaultEndpoint, d.endpoint)
 }
 
 func TestDetect_OK(t *testing.T) {
-	url := newFakeServer(t, vultrMetadata{
+	url := newFakeServer(t, metadataResponse{
 		Hostname:     "srv-abc",
 		InstanceID:   "legacy-id",
 		InstanceV2ID: "550e8400-e29b-41d4-a716-446655440000",
-		Region: struct {
-			RegionCode string `json:"regioncode"`
-		}{RegionCode: "ewr"},
+		Region:       metadataRegion{RegionCode: "ewr"},
 	})
 
-	res, err := vultr.NewResourceDetector(vultr.WithEndpoint(url)).Detect(t.Context())
+	res, err := newTestDetector(url).Detect(t.Context())
 	require.NoError(t, err)
 
 	expected := resource.NewWithAttributes(
@@ -71,15 +66,13 @@ func TestDetect_OK(t *testing.T) {
 
 func TestDetect_OK_LegacyInstanceID(t *testing.T) {
 	// instance-v2-id absent — should fall back to instanceid.
-	url := newFakeServer(t, vultrMetadata{
+	url := newFakeServer(t, metadataResponse{
 		Hostname:   "srv-legacy",
 		InstanceID: "legacy-only-id",
-		Region: struct {
-			RegionCode string `json:"regioncode"`
-		}{RegionCode: "sjc"},
+		Region:     metadataRegion{RegionCode: "sjc"},
 	})
 
-	res, err := vultr.NewResourceDetector(vultr.WithEndpoint(url)).Detect(t.Context())
+	res, err := newTestDetector(url).Detect(t.Context())
 	require.NoError(t, err)
 
 	val, ok := res.Set().Value(semconv.HostIDKey)
@@ -87,30 +80,60 @@ func TestDetect_OK_LegacyInstanceID(t *testing.T) {
 	assert.Equal(t, attribute.StringValue("legacy-only-id"), val)
 }
 
+func TestDetect_UppercaseRegionIsNormalized(t *testing.T) {
+	// The metadata service reports region codes in upper case.
+	url := newFakeServer(t, metadataResponse{
+		Hostname:     "srv-upper",
+		InstanceV2ID: "550e8400-e29b-41d4-a716-446655440000",
+		Region:       metadataRegion{RegionCode: "EWR"},
+	})
+
+	res, err := newTestDetector(url).Detect(t.Context())
+	require.NoError(t, err)
+
+	val, ok := res.Set().Value(semconv.CloudRegionKey)
+	require.True(t, ok)
+	assert.Equal(t, attribute.StringValue("ewr"), val)
+}
+
 func TestDetect_NotOnVultr(t *testing.T) {
-	// Non-200 response → not on Vultr → empty resource, no error.
+	// A client error means something other than the Vultr metadata service
+	// answered the request: not on Vultr, so no error is reported.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "not found", http.StatusNotFound)
 	}))
 	t.Cleanup(srv.Close)
 
-	res, err := vultr.NewResourceDetector(vultr.WithEndpoint(srv.URL)).Detect(t.Context())
+	res, err := newTestDetector(srv.URL).Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
 }
 
+func TestDetect_ServerError(t *testing.T) {
+	// The metadata service answered but failed: surface the error instead of
+	// silently reporting "not on Vultr".
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "boom", http.StatusInternalServerError)
+	}))
+	t.Cleanup(srv.Close)
+
+	res, err := newTestDetector(srv.URL).Detect(t.Context())
+	require.Error(t, err)
+	assert.Nil(t, res)
+}
+
 func TestDetect_MalformedJSON(t *testing.T) {
-	// 200 OK with a body that isn't valid JSON. The detector treats this the
-	// same as any other fetch failure: empty resource, no error.
+	// 200 OK with a body that isn't valid JSON. The metadata service responded,
+	// so this is a failure rather than "not on Vultr".
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte("not json"))
 	}))
 	t.Cleanup(srv.Close)
 
-	res, err := vultr.NewResourceDetector(vultr.WithEndpoint(srv.URL)).Detect(t.Context())
-	require.NoError(t, err)
-	assert.Equal(t, resource.Empty(), res)
+	res, err := newTestDetector(srv.URL).Detect(t.Context())
+	require.Error(t, err)
+	assert.Nil(t, res)
 }
 
 func TestDetect_ConnectionRefused(t *testing.T) {
@@ -119,16 +142,16 @@ func TestDetect_ConnectionRefused(t *testing.T) {
 	url := srv.URL
 	srv.Close()
 
-	res, err := vultr.NewResourceDetector(vultr.WithEndpoint(url)).Detect(t.Context())
+	res, err := newTestDetector(url).Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
 }
 
 func TestDetect_PartialFailure(t *testing.T) {
 	// Serve JSON with hostname, instanceid, instance-v2-id, and regioncode all absent.
-	url := newFakeServer(t, vultrMetadata{})
+	url := newFakeServer(t, metadataResponse{})
 
-	res, err := vultr.NewResourceDetector(vultr.WithEndpoint(url)).Detect(t.Context())
+	res, err := newTestDetector(url).Detect(t.Context())
 	require.Error(t, err)
 	assert.ErrorIs(t, err, resource.ErrPartialResource)
 
@@ -154,19 +177,14 @@ func TestDetect_PartialFailure(t *testing.T) {
 }
 
 func TestDetect_WithAttributeFilter(t *testing.T) {
-	url := newFakeServer(t, vultrMetadata{
+	url := newFakeServer(t, metadataResponse{
 		Hostname:     "srv-filter",
 		InstanceV2ID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-		Region: struct {
-			RegionCode string `json:"regioncode"`
-		}{RegionCode: "lax"},
+		Region:       metadataRegion{RegionCode: "lax"},
 	})
 
 	filter := attribute.NewDenyKeysFilter(semconv.CloudPlatformKey)
-	res, err := vultr.NewResourceDetector(
-		vultr.WithEndpoint(url),
-		vultr.WithAttributeFilter(filter),
-	).Detect(t.Context())
+	res, err := newTestDetector(url, WithAttributeFilter(filter)).Detect(t.Context())
 	require.NoError(t, err)
 
 	_, ok := res.Set().Value(semconv.CloudPlatformKey)

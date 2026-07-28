@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package vultr // import "go.opentelemetry.io/contrib/detectors/vultr"
+package vultr
 
 import (
 	"context"
@@ -10,11 +10,12 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 const defaultEndpoint = "http://169.254.169.254/v1.json"
@@ -24,17 +25,18 @@ var _ resource.Detector = (*ResourceDetector)(nil)
 
 // metadataResponse is the JSON response from the Vultr instance metadata service.
 type metadataResponse struct {
-	Hostname     string `json:"hostname"`
-	InstanceID   string `json:"instanceid"`
-	InstanceV2ID string `json:"instance-v2-id"`
-	Region       struct {
-		RegionCode string `json:"regioncode"`
-	} `json:"region"`
+	Hostname     string         `json:"hostname"`
+	InstanceID   string         `json:"instanceid"`
+	InstanceV2ID string         `json:"instance-v2-id"`
+	Region       metadataRegion `json:"region"`
+}
+
+type metadataRegion struct {
+	RegionCode string `json:"regioncode"`
 }
 
 type config struct {
-	filter   attribute.Filter
-	endpoint string
+	filter attribute.Filter
 }
 
 // Option configures a [ResourceDetector].
@@ -53,21 +55,17 @@ func WithAttributeFilter(filter attribute.Filter) Option {
 	return optionFunc(func(c *config) { c.filter = filter })
 }
 
-// WithEndpoint overrides the metadata service endpoint. Intended for testing.
-func WithEndpoint(endpoint string) Option {
-	return optionFunc(func(c *config) { c.endpoint = endpoint })
-}
-
 // ResourceDetector collects resource information of Vultr Cloud Compute instances.
 type ResourceDetector struct {
-	cfg    config
-	client *http.Client
+	endpoint string
+	cfg      config
+	client   *http.Client
 }
 
 // NewResourceDetector returns a [resource.Detector] that detects resource
 // attributes on Vultr Cloud Compute instances.
 func NewResourceDetector(opts ...Option) *ResourceDetector {
-	cfg := config{endpoint: defaultEndpoint}
+	var cfg config
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
@@ -78,7 +76,8 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	// traffic.
 	transport := &http.Transport{Proxy: nil}
 	return &ResourceDetector{
-		cfg: cfg,
+		endpoint: defaultEndpoint,
+		cfg:      cfg,
 		client: &http.Client{
 			Timeout:   2 * time.Second,
 			Transport: transport,
@@ -86,45 +85,57 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	}
 }
 
-// fetchMetadata queries the Vultr instance metadata endpoint.
-func (d *ResourceDetector) fetchMetadata(ctx context.Context) (*metadataResponse, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, d.cfg.endpoint, http.NoBody)
+// fetchMetadata queries the Vultr instance metadata endpoint. The returned
+// boolean reports whether the process appears to be running on a Vultr
+// instance: it is false when the metadata service cannot be reached or when
+// something other than the Vultr metadata service answered the request.
+func (d *ResourceDetector) fetchMetadata(ctx context.Context) (*metadataResponse, bool, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, d.endpoint, http.NoBody)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return nil, err
+		// The metadata service is unreachable: not running on Vultr.
+		return nil, false, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("metadata request returned status %d", resp.StatusCode)
+		// A client error means the link-local address was answered by
+		// something that is not the Vultr metadata service. Any other status
+		// is a failure of the metadata service itself.
+		onVultr := resp.StatusCode < 400 || resp.StatusCode > 499
+		return nil, onVultr, fmt.Errorf("metadata request returned status %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return nil, true, err
 	}
 
 	var meta metadataResponse
 	if err := json.Unmarshal(body, &meta); err != nil {
-		return nil, err
+		return nil, true, err
 	}
-	return &meta, nil
+	return &meta, true, nil
 }
 
 // Detect detects resource attributes of the Vultr Cloud Compute instance the
 // process is running on. It returns an empty resource and no error when not
-// running on a Vultr instance. If the process is running on a Vultr instance
-// but some attributes cannot be retrieved, a partial resource is returned
-// together with [resource.ErrPartialResource].
+// running on a Vultr instance, and an error when the metadata service is
+// reachable but does not return usable metadata. If the process is running on
+// a Vultr instance but some attributes cannot be retrieved, a partial resource
+// is returned together with [resource.ErrPartialResource].
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	meta, err := d.fetchMetadata(ctx)
+	meta, onVultr, err := d.fetchMetadata(ctx)
 	if err != nil {
-		// Not on Vultr or metadata service unreachable — return empty, no error.
-		return resource.Empty(), nil
+		if !onVultr {
+			return resource.Empty(), nil
+		}
+
+		return nil, err
 	}
 
 	attrs := []attribute.KeyValue{
@@ -154,7 +165,10 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	if meta.Region.RegionCode == "" {
 		errs = append(errs, errors.New("region: not present in metadata"))
 	} else {
-		attrs = append(attrs, semconv.CloudRegion(meta.Region.RegionCode))
+		// The metadata service reports region codes in upper case (e.g. "EWR").
+		// Normalize to lower case so cloud.region matches the value the
+		// collector's Vultr detector reports for the same instance.
+		attrs = append(attrs, semconv.CloudRegion(strings.ToLower(meta.Region.RegionCode)))
 	}
 
 	if d.cfg.filter != nil {
