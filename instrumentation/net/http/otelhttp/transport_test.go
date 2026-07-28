@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -203,7 +203,85 @@ func TestNilTransport(t *testing.T) {
 	}
 }
 
+func TestTransportNilResponse(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return nil, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	if res != nil {
+		defer func() {
+			assert.NoError(t, res.Body.Close())
+		}()
+	}
+	require.Error(t, err)
+	assert.Nil(t, res)
+	assert.Contains(t, err.Error(), "returned a nil *Response with a nil error")
+}
+
+func TestTransportNilResponseBody(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK}, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	require.NoError(t, err)
+	require.NotNil(t, res.Body)
+
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	assert.Empty(t, body)
+	assert.NoError(t, res.Body.Close())
+}
+
+func TestTransportNilResponseBodyWithContentLength(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			ContentLength: 1,
+		}, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	if res != nil {
+		defer func() {
+			assert.NoError(t, res.Body.Close())
+		}()
+	}
+	require.Error(t, err)
+	assert.Nil(t, res)
+	assert.Contains(t, err.Error(), "returned a *Response with content length 1 but a nil Body")
+}
+
+func TestTransportNilResponseBodyWithHeadContentLength(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			ContentLength: 1,
+		}, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodHead, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	require.NoError(t, err)
+	require.NotNil(t, res.Body)
+	assert.NoError(t, res.Body.Close())
+}
+
 const readSize = 42
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (fn roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return fn(r)
+}
 
 type readCloser struct {
 	readErr, closeErr error
