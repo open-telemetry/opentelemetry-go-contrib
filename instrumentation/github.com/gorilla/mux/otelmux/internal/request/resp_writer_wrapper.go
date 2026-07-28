@@ -4,7 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package request // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
+package request
 
 import (
 	"net/http"
