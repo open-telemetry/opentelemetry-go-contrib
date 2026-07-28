@@ -179,17 +179,14 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	})
 
 	rCtx := r.WithContext(ctx)
+	tw.handler.ServeHTTP(w, rCtx)
 	// Copy MultipartForm back to the original request so net/http's
 	// finishRequest can find and remove any temp files ParseMultipartForm
-	// created on the context-derived request copy. Deferred so the copy-back
-	// still runs if the wrapped handler panics.
+	// created on the context-derived request copy.
 	// See https://github.com/open-telemetry/opentelemetry-go-contrib/issues/9070
-	defer func() {
-		if rCtx.MultipartForm != nil {
-			r.MultipartForm = rCtx.MultipartForm
-		}
-	}()
-	tw.handler.ServeHTTP(w, rCtx)
+	if rCtx.MultipartForm != nil {
+		r.MultipartForm = rCtx.MultipartForm
+	}
 	statusCode := rww.StatusCode()
 	span.SetStatus(tw.semconv.Status(statusCode))
 	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{

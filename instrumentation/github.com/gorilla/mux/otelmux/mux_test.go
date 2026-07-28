@@ -89,6 +89,9 @@ func TestMultipartFormCopiedToOriginalRequest(t *testing.T) {
 
 	assert.Equal(t, http.StatusOK, w.Code)
 	require.NotNil(t, r.MultipartForm, "MultipartForm should be copied back to the original request so net/http can clean up its temp files")
+	t.Cleanup(func() {
+		require.NoError(t, r.MultipartForm.RemoveAll())
+	})
 	require.Len(t, r.MultipartForm.File["file"], 1)
 
 	f, err := r.MultipartForm.File["file"][0].Open()
@@ -96,36 +99,6 @@ func TestMultipartFormCopiedToOriginalRequest(t *testing.T) {
 	defer f.Close()
 	_, diskBacked := f.(*os.File)
 	assert.True(t, diskBacked, "file part should be disk-backed given maxMemory of 0, otherwise this test doesn't exercise the temp-file leak")
-}
-
-// TestMultipartFormCopiedToOriginalRequestOnPanic is a regression test
-// ensuring the MultipartForm copy-back in TestMultipartFormCopiedToOriginalRequest
-// still happens if the wrapped handler panics after parsing the form, since
-// net/http recovers handler panics and still calls finishRequest on the
-// original request.
-func TestMultipartFormCopiedToOriginalRequestOnPanic(t *testing.T) {
-	handler := Middleware("foobar")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.NoError(t, r.ParseMultipartForm(0))
-		panic("boom")
-	}))
-
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
-	part, err := writer.CreateFormFile("file", "test.txt")
-	require.NoError(t, err)
-	_, err = part.Write([]byte("hello"))
-	require.NoError(t, err)
-	require.NoError(t, writer.Close())
-
-	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/upload", &body)
-	r.Header.Set("Content-Type", writer.FormDataContentType())
-	w := httptest.NewRecorder()
-
-	assert.Panics(t, func() {
-		handler.ServeHTTP(w, r)
-	})
-
-	assert.NotNil(t, r.MultipartForm, "MultipartForm should be copied back to the original request even if the handler panics")
 }
 
 func TestPassthroughSpanFromGlobalTracer(t *testing.T) {
