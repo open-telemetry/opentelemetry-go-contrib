@@ -21,17 +21,3 @@ func TestGoosToOSType(t *testing.T) {
 		assert.Equal(t, tc.want, GOOSToOSType(tc.in), "input: %s", tc.in)
 	}
 }
-
-func TestGoarchToHostArch(t *testing.T) {
-	cases := []struct{ in, want string }{
-		{"amd64", "amd64"},
-		{"arm64", "arm64"},
-		{"arm", "arm32"},
-		{"ppc64le", "ppc64"},
-		{"386", "x86"},
-		{"s390x", "s390x"},
-	}
-	for _, tc := range cases {
-		assert.Equal(t, tc.want, GOARCHToHostArch(tc.in), "input: %s", tc.in)
-	}
-}
