@@ -823,9 +823,7 @@ func TestNonErrorCodes(t *testing.T) {
 
 		h := otelgrpc.NewServerHandler(
 			otelgrpc.WithTracerProvider(tp),
-			otelgrpc.WithNonErrorCodes(map[codes.Code]struct{}{
-				codes.NotFound: {},
-			}),
+			otelgrpc.WithNonErrorCodes(codes.NotFound),
 		)
 
 		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Find"})
@@ -837,7 +835,25 @@ func TestNonErrorCodes(t *testing.T) {
 		assert.Empty(t, spans[0].Status().Description)
 	})
 
-	t.Run("server: no mapping → default mapping", func(t *testing.T) {
+	t.Run("server: promotes Internal to OK (overrides default error)", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.Internal),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Find"})
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Ok, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("server: no mapping → default mapping for NotFound", func(t *testing.T) {
 		sr := tracetest.NewSpanRecorder()
 		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
 
@@ -849,6 +865,22 @@ func TestNonErrorCodes(t *testing.T) {
 		spans := sr.Ended()
 		require.Len(t, spans, 1)
 		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("server: no mapping → default mapping for Internal", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(tp))
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Error, spans[0].Status().Code)
+		assert.Equal(t, "internal error", spans[0].Status().Description)
 	})
 
 	t.Run("client: promotes NotFound to OK (overrides default error)", func(t *testing.T) {
@@ -857,9 +889,7 @@ func TestNonErrorCodes(t *testing.T) {
 
 		h := otelgrpc.NewClientHandler(
 			otelgrpc.WithTracerProvider(tp),
-			otelgrpc.WithNonErrorCodes(map[codes.Code]struct{}{
-				codes.NotFound: {},
-			}),
+			otelgrpc.WithNonErrorCodes(codes.NotFound),
 		)
 
 		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})

@@ -250,10 +250,13 @@ func WithMetricAttributesFn(fn func(ctx context.Context) []attribute.KeyValue) O
 // WithNonErrorCodes sets a custom map of gRPC codes that should be treated as non-errors.
 // This map is used to determine the span status code for a gRPC call.
 // When set, this map is used in addition to the default status mapping defined by the OpenTelemetry gRPC semantic conventions.
-func WithNonErrorCodes(nonErrorCodes map[grpc_codes.Code]struct{}) Option {
+func WithNonErrorCodes(nonErrorCodes ...grpc_codes.Code) Option {
 	return optionFunc(func(c *config) {
 		if len(nonErrorCodes) > 0 {
-			c.NonErrorCodes = nonErrorCodes
+			c.NonErrorCodes = make(map[grpc_codes.Code]struct{})
+			for _, code := range nonErrorCodes {
+				c.NonErrorCodes[code] = struct{}{}
+			}
 		}
 	})
 }
