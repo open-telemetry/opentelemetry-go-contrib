@@ -9,4 +9,4 @@
 // TextMapPropagator with useful defaults (a combined TraceContext and Baggage
 // TextMapPropagator), and supports environment overrides using the
 // OTEL_PROPAGATORS environment variable.
-package autoprop // import "go.opentelemetry.io/contrib/propagators/autoprop"
+package autoprop

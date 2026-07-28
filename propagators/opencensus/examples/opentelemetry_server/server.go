@@ -3,7 +3,7 @@
 
 // Opentelemetry_server exemplifies the use of the OpenCensus propagator in an
 // OpenTelemetry server.
-package main // import "go.opentelemetry.io/otel/bridge/opencensus/examples/grpc/server"
+package main
 
 import (
 	"context"
