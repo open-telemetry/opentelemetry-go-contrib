@@ -211,13 +211,18 @@ func NewMonitor(opts ...Option) *event.CommandMonitor {
 }
 
 // peerInfo will parse the hostname and port from the mongo connection ID.
+//
+// ConnectionID is always formatted by the driver as "<address>[-<connection
+// number>]", so the pooled connection number suffix can be stripped by
+// cutting at the first "[-".
+// See https://github.com/open-telemetry/opentelemetry-go-contrib/issues/9370.
 func peerInfo(connectionID string) (hostname string, port int) {
 	defaultMongoPort := 27017
-	connectionID = trimConnectionSuffix(connectionID)
-	hostname, portStr, err := net.SplitHostPort(connectionID)
+	host, _, _ := strings.Cut(connectionID, "[-")
+	hostname, portStr, err := net.SplitHostPort(host)
 	if err != nil {
-		// If parsing fails, assume default MongoDB port and return the entire ConnectionID as hostname
-		hostname = connectionID
+		// If parsing fails, assume default MongoDB port and return the entire host as hostname
+		hostname = host
 		port = defaultMongoPort
 		return hostname, port
 	}
@@ -229,25 +234,4 @@ func peerInfo(connectionID string) (hostname string, port int) {
 	}
 
 	return hostname, port
-}
-
-func trimConnectionSuffix(connectionID string) string {
-	if strings.HasSuffix(connectionID, "]") {
-		if idx := strings.LastIndex(connectionID, "[-"); idx != -1 {
-			digits := connectionID[idx+2 : len(connectionID)-1]
-			if len(digits) > 0 && isDigits(digits) {
-				return connectionID[:idx]
-			}
-		}
-	}
-	return connectionID
-}
-
-func isDigits(s string) bool {
-	for i := 0; i < len(s); i++ {
-		if s[i] < '0' || s[i] > '9' {
-			return false
-		}
-	}
-	return true
 }

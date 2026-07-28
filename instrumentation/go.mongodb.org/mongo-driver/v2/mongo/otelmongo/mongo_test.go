@@ -407,15 +407,15 @@ func TestPeerInfo(t *testing.T) {
 			expectedPort: 27017,
 		},
 		{
-			name:         "Non-digit connection number suffix",
+			name:         "Non-digit connection number suffix is still stripped",
 			connectionID: "example.com[-abc]",
-			expectedHost: "example.com[-abc]",
+			expectedHost: "example.com",
 			expectedPort: 27017,
 		},
 		{
-			name:         "Empty connection number suffix",
+			name:         "Empty connection number suffix is still stripped",
 			connectionID: "example.com[-]",
-			expectedHost: "example.com[-]",
+			expectedHost: "example.com",
 			expectedPort: 27017,
 		},
 	}
