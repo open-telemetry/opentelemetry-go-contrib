@@ -43,7 +43,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `TextMapPropagator` in `go.opentelemetry.io/contrib/propagators/autoprop` returns the no-op propagator for empty input, matching the behavior of `none`. An unknown `OTEL_PROPAGATORS` value still returns an error with a nil propagator so `NewTextMapPropagator` falls back to the default TraceContext and Baggage propagators instead of disabling propagation. (#9163)
 - Preserve error-valued attributes nested in a group as grouped attributes instead of silently dropping them in `go.opentelemetry.io/contrib/bridges/otelslog`. (#9238)
 - Fix a data race in `go.opentelemetry.io/contrib/bridges/otelslog` where concurrent `Handle` calls could corrupt each other's log attributes because `kvBuffer.KeyValues` returned a slice aliasing a shared buffer. (#9229)
-- Fix `go.opentelemetry.io/contrib/propagators/aws/xray` producing deterministic trace and span IDs when the seed read from `crypto/rand` silently failed, by switching to `math/rand/v2`'s securely auto-seeded top-level generator. (#9359)
+- Fix `go.opentelemetry.io/contrib/propagators/aws/xray` producing deterministic trace and span IDs when the seed read from `crypto/rand` silently failed, by switching to `math/rand/v2`'s concurrency-safe top-level generator. (#9359)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

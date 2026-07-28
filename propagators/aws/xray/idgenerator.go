@@ -9,6 +9,7 @@ import (
 	"encoding/hex"
 	"math/rand/v2"
 	"strconv"
+	"sync"
 	"time"
 
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
@@ -21,7 +22,10 @@ import (
 // math/rand.Rand seeded from crypto/rand: the former is safe for concurrent
 // use without a mutex and, unlike a locally seeded math/rand.Rand, has no
 // seed-read step that can silently fail and leave it deterministic.
-type IDGenerator struct{}
+type IDGenerator struct {
+	// Mutex is embedded for backward compatibility but is not used internally.
+	sync.Mutex
+}
 
 var _ sdktrace.IDGenerator = &IDGenerator{}
 
