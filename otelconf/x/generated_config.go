@@ -991,6 +991,11 @@ type ExperimentalResourceDetector struct {
 	//
 	AWSEKS ExperimentalAWSEKSResourceDetector `json:"aws.eks,omitempty,omitzero" yaml:"aws.eks,omitempty" mapstructure:"aws.eks,omitempty"`
 
+	// Enable the Azure VM resource detector.
+	// If omitted, ignore.
+	//
+	AzureVM ExperimentalAzureVMResourceDetector `json:"azure.vm,omitempty,omitzero" yaml:"azure.vm,omitempty" mapstructure:"azure.vm,omitempty"`
+
 	// Enable the container resource detector, which populates container.* attributes.
 	// If omitted, ignore.
 	//
@@ -1020,6 +1025,8 @@ type ExperimentalGCPResourceDetector map[string]interface{}
 type ExperimentalAWSECSResourceDetector map[string]interface{}
 
 type ExperimentalAWSEKSResourceDetector map[string]interface{}
+
+type ExperimentalAzureVMResourceDetector map[string]interface{}
 
 type ExperimentalServiceResourceDetector map[string]interface{}
 

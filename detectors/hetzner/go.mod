@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/detectors/hetzner
 go 1.25.0
 
 require (
-	github.com/hetznercloud/hcloud-go/v2 v2.45.0
+	github.com/hetznercloud/hcloud-go/v2 v2.47.0
 	github.com/stretchr/testify v1.11.1
 	go.opentelemetry.io/otel v1.44.1-0.20260723093731-251b96b24897
 	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
@@ -18,7 +18,7 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
-	github.com/prometheus/client_golang v1.24.0 // indirect
+	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/prometheus/client_model v0.6.2 // indirect
 	github.com/prometheus/common v0.70.1 // indirect
 	github.com/prometheus/procfs v0.21.1 // indirect
