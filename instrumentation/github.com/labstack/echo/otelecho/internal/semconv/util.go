@@ -4,7 +4,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package semconv // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconv"
+package semconv
 
 import (
 	"net"
@@ -15,7 +15,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	semconvNew "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconvNew "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // SplitHostPort splits a network address hostport of the form "host",

@@ -195,7 +195,7 @@ func TestRemotelyControlledSampler(t *testing.T) {
 	c := make(chan time.Time)
 	ticker := &time.Ticker{C: c}
 	// reset closed so the next call to Close() correctly stops the polling goroutine
-	remoteSampler.closed = 0
+	remoteSampler.closed.Store(0)
 	done := make(chan struct{})
 	go func() {
 		defer close(done)

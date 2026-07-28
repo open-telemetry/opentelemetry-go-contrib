@@ -22,4 +22,4 @@ each of the following attributes is added if it is available:
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
 [os]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/os.md
 */
-package azurevm // import "go.opentelemetry.io/contrib/detectors/azure/azurevm"
+package azurevm
