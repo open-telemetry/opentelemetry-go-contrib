@@ -20,20 +20,11 @@ const defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance
 // Azure-specific resource attribute keys that are not (yet) part of the
 // semantic conventions package.
 const (
-	azureVMNameKey            = attribute.Key("azure.vm.name")
-	azureVMSizeKey            = attribute.Key("azure.vm.size")
-	azureVMScaleSetNameKey    = attribute.Key("azure.vm.scaleset.name")
-	azureResourceGroupNameKey = attribute.Key("azure.resourcegroup.name")
-	azureTagPrefix            = "azure.tag."
+	azureVMNameKey         = attribute.Key("azure.vm.name")
+	azureVMSizeKey         = attribute.Key("azure.vm.size")
+	azureVMScaleSetNameKey = attribute.Key("azure.vm.scaleset.name")
+	azureTagPrefix         = "azure.tag."
 )
-
-// ResourceDetector collects resource information of Azure VMs.
-type ResourceDetector struct {
-	endpoint string
-	// tagKeyFilter, when non-nil, selects which VM tags are emitted as
-	// azure.tag.<name> attributes by their key.
-	tagKeyFilter func(key string) bool
-}
 
 type vmMetadata struct {
 	VMId              *string      `json:"vmId"`
@@ -60,25 +51,61 @@ type computeTag struct {
 	Value string `json:"value"`
 }
 
-// Option configures a [ResourceDetector].
-type Option func(*ResourceDetector)
-
-// WithTagKeyFilter emits an azure.tag.<name> attribute for every VM tag whose
-// key satisfies filter. Without it, no VM tags are emitted. For regexp
-// matching, pass re.MatchString.
-func WithTagKeyFilter(filter func(key string) bool) Option {
-	return func(d *ResourceDetector) {
-		d.tagKeyFilter = filter
-	}
+type config struct {
+	filter       attribute.Filter
+	tagKeyFilter func(key string) bool
 }
 
+// Option configures a [ResourceDetector].
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (f optionFunc) apply(c *config) { f(c) }
+
+// WithAttributeFilter sets a filter that controls which detected attributes are
+// included in the returned resource. Only attributes for which filter returns
+// true are included. By default all attributes are included.
+func WithAttributeFilter(filter attribute.Filter) Option {
+	return optionFunc(func(c *config) { c.filter = filter })
+}
+
+// WithTagKeyFilter emits an azure.tag.<name> attribute for every VM tag whose
+// key satisfies filter. The filter receives the raw Azure tag name, without the
+// "azure.tag." prefix. Without this option no VM tags are emitted. For regexp
+// matching, pass re.MatchString.
+//
+// Tag attributes are subject to [WithAttributeFilter] like any other attribute.
+func WithTagKeyFilter(filter func(key string) bool) Option {
+	return optionFunc(func(c *config) { c.tagKeyFilter = filter })
+}
+
+// ResourceDetector collects resource information of Azure VMs.
+type ResourceDetector struct {
+	endpoint string
+	cfg      config
+}
+
+// Compile time assertion that ResourceDetector implements the resource.Detector interface.
+var _ resource.Detector = (*ResourceDetector)(nil)
+
 // New returns a [ResourceDetector] that will detect Azure VM resources.
-func New(opts ...Option) *ResourceDetector {
-	d := &ResourceDetector{endpoint: defaultAzureVMMetadataEndpoint}
+//
+// It is equivalent to [NewResourceDetector] called with no options.
+func New() *ResourceDetector {
+	return NewResourceDetector()
+}
+
+// NewResourceDetector returns a [ResourceDetector] that will detect Azure VM
+// resources.
+func NewResourceDetector(opts ...Option) *ResourceDetector {
+	var cfg config
 	for _, opt := range opts {
-		opt(d)
+		opt.apply(&cfg)
 	}
-	return d
+	return &ResourceDetector{endpoint: defaultAzureVMMetadataEndpoint, cfg: cfg}
 }
 
 // Detect detects associated resources when running on an Azure VM.
@@ -144,15 +171,25 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		attributes = append(attributes, azureVMScaleSetNameKey.String(*metadata.VMScaleSetName))
 	}
 	if metadata.ResourceGroupName != nil {
-		attributes = append(attributes, azureResourceGroupNameKey.String(*metadata.ResourceGroupName))
+		attributes = append(attributes, semconv.AzureResourceGroupName(*metadata.ResourceGroupName))
 	}
 
-	if detector.tagKeyFilter != nil {
+	if detector.cfg.tagKeyFilter != nil {
 		for _, tag := range metadata.TagsList {
-			if detector.tagKeyFilter(tag.Name) {
+			if detector.cfg.tagKeyFilter(tag.Name) {
 				attributes = append(attributes, attribute.String(azureTagPrefix+tag.Name, tag.Value))
 			}
 		}
+	}
+
+	if detector.cfg.filter != nil {
+		filtered := attributes[:0]
+		for _, kv := range attributes {
+			if detector.cfg.filter(kv) {
+				filtered = append(filtered, kv)
+			}
+		}
+		attributes = filtered
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
