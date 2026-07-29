@@ -1345,6 +1345,75 @@ func TestTransportErrorReportsFinalRequestBodySize(t *testing.T) {
 	assert.Equal(t, body.totalBytes, requestBodySizeMetricValue(t, rm))
 }
 
+// overDeclaredBodyTransport reads the request body through its declared
+// ContentLength, returns a response, and then drains and closes the body on
+// another goroutine, mimicking RoundTrippers that keep reading a body that
+// yields more bytes than it declared.
+type overDeclaredBodyTransport struct {
+	declared int64
+	done     chan struct{}
+}
+
+func (tr *overDeclaredBodyTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if _, err := io.CopyN(io.Discard, r.Body, tr.declared); err != nil {
+		return nil, err
+	}
+	go func() {
+		defer close(tr.done)
+		_, _ = io.Copy(io.Discard, r.Body)
+		_ = r.Body.Close()
+	}()
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Status:     "200 OK",
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Header:     http.Header{},
+		Body:       io.NopCloser(strings.NewReader("ok")),
+		Request:    r,
+	}, nil
+}
+
+func TestTransportMetricsReportActualSizeOverDeclaredContentLength(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	// The body yields more bytes than the declared ContentLength, so a read
+	// count reaching the declared length is not proof of completion; only
+	// the request body Close callback may publish the final size.
+	body := newSlowRequestBody(16*1024, 1024, time.Millisecond)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://localhost", body)
+	require.NoError(t, err)
+	req.ContentLength = 4 * 1024
+
+	base := &overDeclaredBodyTransport{
+		declared: req.ContentLength,
+		done:     make(chan struct{}),
+	}
+	tr := NewTransport(base, WithMeterProvider(meterProvider))
+
+	resp, err := tr.RoundTrip(req)
+	require.NoError(t, err)
+
+	// Finalize the response body while the request body is still being
+	// drained; this must not publish the declared-length prefix.
+	_, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	select {
+	case <-base.done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("request body was not closed")
+	}
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Equal(t, body.totalBytes, body.bytesRead.Load())
+	assert.Equal(t, body.totalBytes, requestBodySizeMetricValue(t, rm))
+}
+
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
