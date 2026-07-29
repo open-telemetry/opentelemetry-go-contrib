@@ -90,7 +90,7 @@ func TestWithNonErrorCodes(t *testing.T) {
 		assert.Len(t, c.NonErrorCodes, 1)
 		assert.Contains(t, c.NonErrorCodes, grpc_codes.NotFound)
 
-		_ = append(slice, grpc_codes.Internal)
+		slice[0] = grpc_codes.Internal // Attempt to mutate the input slice after the config has been created
 		assert.Len(t, c.NonErrorCodes, 1)
 		assert.Contains(t, c.NonErrorCodes, grpc_codes.NotFound)
 		assert.NotContains(t, c.NonErrorCodes, grpc_codes.Internal)

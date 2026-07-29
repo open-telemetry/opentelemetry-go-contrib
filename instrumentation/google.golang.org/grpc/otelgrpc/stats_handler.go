@@ -384,14 +384,15 @@ func (c *config) handleRPC(
 		}
 		if span.IsRecording() {
 			if s != nil {
+				code, m := recordStatus(s)
 				if c.NonErrorCodes != nil {
 					if _, ok := c.NonErrorCodes[s.Code()]; ok {
-						// Override the status code to OK for non-error codes. This will take priority over any later span.SetStatus calls, including the default behavior below.
-						span.SetStatus(codes.Ok, "")
+						// Override the status code to Unset for non-error codes. This will allow callers to override the server-defaults.
+						code = codes.Unset
+						m = ""
 					}
 				}
-				c, m := recordStatus(s)
-				span.SetStatus(c, m)
+				span.SetStatus(code, m)
 			}
 			span.SetAttributes(rpcStatusAttr)
 			span.End()
