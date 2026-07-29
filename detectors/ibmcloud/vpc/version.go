@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package vpc // import "go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
+package vpc
 
 // Version is the current release version of the IBM Cloud VPC resource detector.
 func Version() string {

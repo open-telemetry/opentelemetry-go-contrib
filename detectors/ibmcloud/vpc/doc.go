@@ -23,4 +23,4 @@ following attributes is added if it is available:
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
 [host]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/host.md
 */
-package vpc // import "go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
+package vpc
