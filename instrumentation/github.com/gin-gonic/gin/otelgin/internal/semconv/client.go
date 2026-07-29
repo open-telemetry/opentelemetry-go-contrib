@@ -143,7 +143,7 @@ func (n HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue
 	 below attributes are returned:
 	 - http.response.status_code
 	 - error.type
-	 - network.protocol.name
+	 - network.protocol.name (only when it is not "http")
 	 - network.protocol.version
 	*/
 	var count int
@@ -159,7 +159,9 @@ func (n HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue
 	// arrives: req.Proto reflects what the caller asked for, but the
 	// transport may negotiate a different version (for example HTTP/2 via
 	// ALPN). Report resp.Proto here so it overrides the request-time value
-	// on the span.
+	// on the span. As in RequestTraceAttrs, network.protocol.name is omitted
+	// when it is "http": the spec only requires it when the name differs from
+	// the protocol implied by http.request.method.
 	protoName, protoVersion := netProtocol(resp.Proto)
 	if protoName != "" && protoName != "http" {
 		count++
