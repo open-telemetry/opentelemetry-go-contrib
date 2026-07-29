@@ -233,8 +233,15 @@ func TestClientDisconnect(t *testing.T) {
 		cancel()
 	}()
 
-	_, _ = client.Do(req)
+	resp, _ := client.Do(req)
+	if resp != nil {
+		resp.Body.Close()
+	}
 	<-handlerDone
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, 1*time.Second, 10*time.Millisecond)
 
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
