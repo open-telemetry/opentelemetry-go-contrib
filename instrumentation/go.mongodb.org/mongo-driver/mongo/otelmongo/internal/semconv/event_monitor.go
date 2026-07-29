@@ -91,22 +91,26 @@ func (m EventMonitor) CommandStartedTraceAttrs(
 }
 
 // peerInfo extracts the hostname and port from a CommandStartedEvent.
+//
+// ConnectionID is formatted as "<address>[-<connection number>]" for pooled
+// connections, so the "[-<connection number>]" suffix is stripped before
+// parsing to avoid unbounded network.peer.address cardinality.
 func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
-	hostname = evt.ConnectionID
 	port = 27017 // Default MongoDB port
 
-	host, portStr, err := net.SplitHostPort(hostname)
+	host, _, _ := strings.Cut(evt.ConnectionID, "[-")
+	hostname, portStr, err := net.SplitHostPort(host)
 	if err != nil {
 		// If there's an error (likely because there's no port), assume default port
-		// and use ConnectionID as hostname
-		return hostname, port
+		// and use the stripped host as hostname
+		return host, port
 	}
 
 	if parsedPort, err := strconv.Atoi(portStr); err == nil {
 		port = parsedPort
 	}
 
-	return host, port
+	return hostname, port
 }
 
 // sanitizeCommand converts a BSON command to a sanitized JSON string.
