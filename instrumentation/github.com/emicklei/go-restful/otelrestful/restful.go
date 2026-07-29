@@ -75,7 +75,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		status := resp.StatusCode()
 		err := req.Request.Context().Err()
 		if err != nil {
-			span.SetStatus(codes.Error, "")
+			span.SetStatus(codes.Error, err.Error())
 			span.SetAttributes(otelsemconv.ErrorType(err))
 		} else {
 			stCode, stMsg := semconvServer.Status(status)
