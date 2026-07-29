@@ -88,10 +88,12 @@ func TestMultipartFormCopiedToOriginalRequest(t *testing.T) {
 	handler.ServeHTTP(w, r)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	require.NotNil(t, r.MultipartForm, "MultipartForm should be copied back to the original request so net/http can clean up its temp files")
 	t.Cleanup(func() {
-		require.NoError(t, r.MultipartForm.RemoveAll())
+		if r.MultipartForm != nil {
+			require.NoError(t, r.MultipartForm.RemoveAll())
+		}
 	})
+	require.NotNil(t, r.MultipartForm, "MultipartForm should be copied back to the original request so net/http can clean up its temp files")
 	require.Len(t, r.MultipartForm.File["file"], 1)
 
 	f, err := r.MultipartForm.File["file"][0].Open()
