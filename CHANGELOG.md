@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`, a new resource detector for IBM Cloud VPC virtual server instances, ported from `github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/ibmcloud/vpc`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `cloud.availability_zone`, `cloud.account.id`, `cloud.resource_id`, `host.id`, `host.image.id`, `host.image.name`, `host.name`, and `host.type`. (#9011)
 - Add `go.opentelemetry.io/contrib/detectors/k8sapi`, a new resource detector that queries the Kubernetes API. Detects `k8s.node.name` and `k8s.node.uid` when `K8S_NODE_NAME` is set via the downward API, and `k8s.cluster.uid` derived from the kube-system namespace UID (works on any Kubernetes distribution). (#9108)
 - Add new `elasticbeanstalk` resource detector for AWS Elastic Beanstalk, ported from `processor/resourcedetectionprocessor/internal/aws/elasticbeanstalk` in opentelemetry-collector-contrib. (#8993)
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
@@ -21,6 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
 - Add `go.opentelemetry.io/contrib/detectors/azure/azurefunctions`, a new resource detector for Azure Functions. Detects `cloud.*`, `service.name`, `azure.resource_group.name`, `faas.instance`, and `deployment.environment.name` from the `FUNCTIONS_*`, `WEBSITE_*`, `CONTAINER_NAME`, and `REGION_NAME` environment variables. (#9290)
 - Add `NewResourceDetector` along with the `WithAttributeFilter` and `WithTagKeyFilter` options in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. `WithAttributeFilter` restricts the returned resource to the attributes the filter accepts. `WithTagKeyFilter` opts in to `azure.tag.<name>` attributes for the VM tags whose keys satisfy the provided predicate; no VM tags are emitted without it. (#9162)
+- Add `go.opentelemetry.io/contrib/detectors/vultr` — a new resource detector for Vultr Cloud Compute instances, ported from `processor/resourcedetectionprocessor/internal/vultr` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `host.id`, and `host.name`. (#8995)
 - Add `go.opentelemetry.io/contrib/detectors/docker`, a resource detector for Docker, ported from `processor/resourcedetectionprocessor/internal/docker` in opentelemetry-collector-contrib. (#9001)
 
 ### Changed
