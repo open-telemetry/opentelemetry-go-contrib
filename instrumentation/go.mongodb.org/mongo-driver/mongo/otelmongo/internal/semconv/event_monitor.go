@@ -94,7 +94,8 @@ func (m EventMonitor) CommandStartedTraceAttrs(
 //
 // ConnectionID is formatted as "<address>[-<connection number>]" for pooled
 // connections, so the "[-<connection number>]" suffix is stripped before
-// parsing to avoid unbounded network.peer.address cardinality.
+// parsing; otherwise net.SplitHostPort fails on it and the span's peer
+// address attributes fall back to the raw, connection-specific ConnectionID.
 func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
 	port = 27017 // Default MongoDB port
 
