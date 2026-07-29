@@ -41,6 +41,7 @@ detectors/azure/                                                        @open-te
 detectors/azure/azureappservice                                         @open-telemetry/go-approvers @Lewis-E
 detectors/azure/azurecontainerapps                                      @open-telemetry/go-approvers @iblancasa
 detectors/azure/azurefunctions                                          @open-telemetry/go-approvers @Lewis-E
+detectors/azure/azurevm                                                 @open-telemetry/go-approvers @pyohannes @paulojmdias @iblancasa
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 detectors/hetzner/                                                      @open-telemetry/go-approvers @paulojmdias
 detectors/k8sapi/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa @dashpole
