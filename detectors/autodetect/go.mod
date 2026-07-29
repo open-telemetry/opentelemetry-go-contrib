@@ -11,6 +11,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.69.0
 	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.16.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0
+	go.opentelemetry.io/contrib/detectors/consul v0.16.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.16.0
 	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.16.0
@@ -18,6 +19,25 @@ require (
 	go.opentelemetry.io/contrib/detectors/vultr v0.16.0
 	go.opentelemetry.io/otel v1.44.1-0.20260723093731-251b96b24897
 	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
+)
+
+require (
+	github.com/armon/go-metrics v0.4.1 // indirect
+	github.com/fatih/color v1.16.0 // indirect
+	github.com/hashicorp/consul/api v1.32.1 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/hashicorp/go-hclog v1.5.0 // indirect
+	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/hashicorp/serf v0.10.1 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
 )
 
 require (
@@ -122,3 +142,5 @@ replace go.opentelemetry.io/contrib/detectors/k8sapi => ../k8sapi
 replace go.opentelemetry.io/contrib/detectors/vultr => ../vultr
 
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
+
+replace go.opentelemetry.io/contrib/detectors/consul => ../consul

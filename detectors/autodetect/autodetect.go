@@ -21,6 +21,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
+	"go.opentelemetry.io/contrib/detectors/consul"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
@@ -57,6 +58,11 @@ var (
 	// attributes on Microsoft Azure virtual machines (see azurevm.New for
 	// details).
 	IDAzureVM = ID("azure.vm")
+	// IDConsul is the ID for the Consul detector that detects resource
+	// attributes from a Consul agent (see consul.NewResourceDetector for
+	// details). Unlike the cloud platform detectors, it returns an error when
+	// no Consul agent can be reached.
+	IDConsul = ID("consul")
 	// IDGCP is the ID for the GCP detector that detects resource attributes on
 	// Google Cloud Platform (GCP) environments (see gcp.NewDetector for
 	// details).
@@ -159,6 +165,8 @@ var (
 		IDAzureVM: func() resource.Detector {
 			return azurevm.New()
 		},
+
+		IDConsul: func() resource.Detector { return consul.NewResourceDetector() },
 
 		IDGCP: gcp.NewDetector,
 
