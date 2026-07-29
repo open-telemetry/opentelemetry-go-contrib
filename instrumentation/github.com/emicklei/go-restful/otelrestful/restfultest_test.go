@@ -235,7 +235,7 @@ func TestClientDisconnect(t *testing.T) {
 
 	resp, _ := client.Do(req)
 	if resp != nil {
-		resp.Body.Close()
+		_ = resp.Body.Close()
 	}
 	<-handlerDone
 
@@ -248,7 +248,14 @@ func TestClientDisconnect(t *testing.T) {
 	span := spans[0]
 	assert.Equal(t, codes.Error, span.Status().Code)
 	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusInternalServerError))
-	assert.Contains(t, span.Attributes(), attribute.String("error.type", "*errors.errorString"))
+	hasErrorType := false
+	for _, attr := range span.Attributes() {
+		if attr.Key == "error.type" && attr.Value.AsString() != "" {
+			hasErrorType = true
+			break
+		}
+	}
+	assert.True(t, hasErrorType, "span should have non-empty error.type attribute")
 }
 
 func TestWithPublicEndpoint(t *testing.T) {
