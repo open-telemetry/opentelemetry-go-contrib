@@ -4,10 +4,12 @@
 package otelrestful_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/stretchr/testify/assert"
@@ -165,10 +167,11 @@ func TestSpanStatus(t *testing.T) {
 	testCases := []struct {
 		httpStatusCode int
 		wantSpanStatus codes.Code
+		wantErrorType  string
 	}{
-		{http.StatusOK, codes.Unset},
-		{http.StatusBadRequest, codes.Unset},
-		{http.StatusInternalServerError, codes.Error},
+		{http.StatusOK, codes.Unset, ""},
+		{http.StatusBadRequest, codes.Unset, ""},
+		{http.StatusInternalServerError, codes.Error, "500"},
 	}
 	for _, tc := range testCases {
 		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {
@@ -188,8 +191,57 @@ func TestSpanStatus(t *testing.T) {
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
 			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
+
+			if tc.wantErrorType != "" {
+				assert.Contains(t, sr.Ended()[0].Attributes(), attribute.String("error.type", tc.wantErrorType))
+			} else {
+				for _, attr := range sr.Ended()[0].Attributes() {
+					assert.NotEqual(t, attribute.Key("error.type"), attr.Key)
+				}
+			}
 		})
 	}
+}
+
+func TestClientDisconnect(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	handlerDone := make(chan struct{})
+	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+		<-req.Request.Context().Done()
+		resp.WriteHeader(http.StatusInternalServerError)
+		close(handlerDone)
+	}
+
+	ws := &restful.WebService{}
+	ws.Route(ws.GET("/hello").To(handlerFunc))
+	container := restful.NewContainer()
+	container.Filter(otelrestful.OTelFilter("srv", otelrestful.WithTracerProvider(provider)))
+	container.Add(ws)
+
+	ts := httptest.NewServer(container)
+	defer ts.Close()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	client := ts.Client()
+	go func() {
+		time.Sleep(50 * time.Millisecond)
+		cancel()
+	}()
+
+	_, _ = client.Do(req)
+	<-handlerDone
+
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusInternalServerError))
+	assert.Contains(t, span.Attributes(), attribute.String("error.type", "*errors.errorString"))
 }
 
 func TestWithPublicEndpoint(t *testing.T) {
