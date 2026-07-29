@@ -15,11 +15,20 @@ import (
 	"go.opentelemetry.io/contrib/propagators/envcar"
 )
 
-// This example is a go program where the environment variables are carrying the
-// trace information, and we're going to pick them up into our context.
+// An example where the environment variables are carrying the trace
+// information, and we're going to pick them up into our context.
 func ExampleCarrier_extractFromParent() {
-	// Simulate environment variables set by a parent process.
-	// In practice, these would already be set when this process starts.
+	// Simulate an environment variable set by a parent process. In practice,
+	// this would already be set when this process starts, and the application
+	// would extract context during initialization.
+	orig, ok := os.LookupEnv("TRACEPARENT")
+	defer func() {
+		if ok {
+			_ = os.Setenv("TRACEPARENT", orig)
+			return
+		}
+		_ = os.Unsetenv("TRACEPARENT")
+	}()
 	_ = os.Setenv("TRACEPARENT", "00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01")
 
 	// Create a carrier to read trace context from environment variables.
@@ -29,7 +38,8 @@ func ExampleCarrier_extractFromParent() {
 	prop := propagation.TraceContext{}
 	ctx := prop.Extract(context.Background(), &carrier)
 
-	// The context now contains the span context from the parent.
+	// The context now contains the span context from the parent. Keep and pass
+	// this context instead of repeatedly extracting from the environment.
 	spanCtx := trace.SpanContextFromContext(ctx)
 	fmt.Printf("Trace ID: %s\n", spanCtx.TraceID())
 	fmt.Printf("Span ID: %s\n", spanCtx.SpanID())
@@ -40,8 +50,8 @@ func ExampleCarrier_extractFromParent() {
 	// Sampled: true
 }
 
-// This example is a go program where we have a trace and we'd like to inject it
-// into a command we're going to run.
+// An example where we have a trace and we'd like to inject it into a command
+// we're going to run.
 func ExampleCarrier_childProcess() {
 	// Create a span context with a known trace ID.
 	traceID := trace.TraceID{0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10}
@@ -54,6 +64,7 @@ func ExampleCarrier_childProcess() {
 	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
 
 	// Prepare a command that prints the TRACEPARENT environment variable.
+	// Each child process gets its own copy of the environment.
 	cmd := exec.CommandContext(context.Background(), "printenv", "TRACEPARENT")
 	cmd.Env = os.Environ()
 
@@ -65,7 +76,7 @@ func ExampleCarrier_childProcess() {
 		},
 	}
 
-	// Inject trace context into the child's environment.
+	// Inject trace context into the child's environment copy.
 	prop := propagation.TraceContext{}
 	prop.Inject(ctx, &carrier)
 

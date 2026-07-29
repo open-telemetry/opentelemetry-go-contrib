@@ -195,7 +195,7 @@ func TestRemotelyControlledSampler(t *testing.T) {
 	c := make(chan time.Time)
 	ticker := &time.Ticker{C: c}
 	// reset closed so the next call to Close() correctly stops the polling goroutine
-	remoteSampler.closed = 0
+	remoteSampler.closed.Store(0)
 	done := make(chan struct{})
 	go func() {
 		defer close(done)
@@ -274,7 +274,8 @@ func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
 				},
 			}
 			for opName, prob := range test.probabilities {
-				res.OperationSampling.PerOperationStrategies = append(res.OperationSampling.PerOperationStrategies,
+				res.OperationSampling.PerOperationStrategies = append(
+					res.OperationSampling.PerOperationStrategies,
 					&jaeger_api_v2.OperationSamplingStrategy{
 						Operation: opName,
 						ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{

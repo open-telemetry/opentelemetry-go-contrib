@@ -16,189 +16,188 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"go.opentelemetry.io/otel/attribute"
-	"go.opentelemetry.io/otel/log"
 )
 
 func TestConvertValue(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
 		value     any
-		wantValue log.Value
+		wantValue attribute.Value
 	}{
 		{
 			name:      "bool",
 			value:     true,
-			wantValue: log.BoolValue(true),
+			wantValue: attribute.BoolValue(true),
 		},
 		{
 			name:      "string",
 			value:     "value",
-			wantValue: log.StringValue("value"),
+			wantValue: attribute.StringValue("value"),
 		},
 		{
 			name:      "int",
 			value:     10,
-			wantValue: log.Int64Value(10),
+			wantValue: attribute.Int64Value(10),
 		},
 		{
 			name:      "int8",
 			value:     int8(127),
-			wantValue: log.Int64Value(127),
+			wantValue: attribute.Int64Value(127),
 		},
 		{
 			name:      "int16",
 			value:     int16(32767),
-			wantValue: log.Int64Value(32767),
+			wantValue: attribute.Int64Value(32767),
 		},
 		{
 			name:      "int32",
 			value:     int32(2147483647),
-			wantValue: log.Int64Value(2147483647),
+			wantValue: attribute.Int64Value(2147483647),
 		},
 		{
 			name:      "int64",
 			value:     int64(9223372036854775807),
-			wantValue: log.Int64Value(9223372036854775807),
+			wantValue: attribute.Int64Value(9223372036854775807),
 		},
 		{
 			name:      "uint",
 			value:     uint(42),
-			wantValue: log.Int64Value(42),
+			wantValue: attribute.Int64Value(42),
 		},
 		{
 			name:      "uint8",
 			value:     uint8(255),
-			wantValue: log.Int64Value(255),
+			wantValue: attribute.Int64Value(255),
 		},
 		{
 			name:      "uint16",
 			value:     uint16(65535),
-			wantValue: log.Int64Value(65535),
+			wantValue: attribute.Int64Value(65535),
 		},
 		{
 			name:      "uint32",
 			value:     uint32(4294967295),
-			wantValue: log.Int64Value(4294967295),
+			wantValue: attribute.Int64Value(4294967295),
 		},
 		{
 			name:      "uint64",
 			value:     uint64(9223372036854775807),
-			wantValue: log.Int64Value(9223372036854775807),
+			wantValue: attribute.Int64Value(9223372036854775807),
 		},
 		{
 			name:      "uint64-max",
 			value:     uint64(18446744073709551615),
-			wantValue: log.StringValue("18446744073709551615"),
+			wantValue: attribute.StringValue("18446744073709551615"),
 		},
 		{
 			name:      "uintptr",
 			value:     uintptr(12345),
-			wantValue: log.Int64Value(12345),
+			wantValue: attribute.Int64Value(12345),
 		},
 		{
 			name:      "float64",
 			value:     float64(3.14159),
-			wantValue: log.Float64Value(3.14159),
+			wantValue: attribute.Float64Value(3.14159),
 		},
 		{
 			name:      "time.Duration",
 			value:     time.Second,
-			wantValue: log.Int64Value(1_000_000_000),
+			wantValue: attribute.Int64Value(1_000_000_000),
 		},
 		{
 			name:      "complex64",
 			value:     complex64(complex(float32(1), float32(2))),
-			wantValue: log.MapValue(log.Float64("r", 1), log.Float64("i", 2)),
+			wantValue: attribute.MapValue(attribute.Float64("r", 1), attribute.Float64("i", 2)),
 		},
 		{
 			name:      "complex128",
 			value:     complex(float64(3), float64(4)),
-			wantValue: log.MapValue(log.Float64("r", 3), log.Float64("i", 4)),
+			wantValue: attribute.MapValue(attribute.Float64("r", 3), attribute.Float64("i", 4)),
 		},
 		{
 			name:      "time.Time",
 			value:     time.Unix(1000, 1000),
-			wantValue: log.Int64Value(time.Unix(1000, 1000).UnixNano()),
+			wantValue: attribute.Int64Value(time.Unix(1000, 1000).UnixNano()),
 		},
 		{
 			name:      "[]byte",
 			value:     []byte("hello"),
-			wantValue: log.BytesValue([]byte("hello")),
+			wantValue: attribute.ByteSliceValue([]byte("hello")),
 		},
 		{
 			name:      "error",
 			value:     errors.New("test error"),
-			wantValue: log.StringValue("test error"),
+			wantValue: attribute.StringValue("test error"),
 		},
 		{
 			name:      "error",
 			value:     errors.New("test error"),
-			wantValue: log.StringValue("test error"),
+			wantValue: attribute.StringValue("test error"),
 		},
 		{
 			name:      "error-nested",
 			value:     fmt.Errorf("test error: %w", errors.New("nested error")),
-			wantValue: log.StringValue("test error: nested error"),
+			wantValue: attribute.StringValue("test error: nested error"),
 		},
 		{
 			name:      "nil",
 			value:     nil,
-			wantValue: log.Value{},
+			wantValue: attribute.Value{},
 		},
 		{
 			name:      "nil_ptr",
 			value:     (*int)(nil),
-			wantValue: log.Value{},
+			wantValue: attribute.Value{},
 		},
 		{
 			name:      "int_ptr",
 			value:     func() *int { i := 93; return &i }(),
-			wantValue: log.Int64Value(93),
+			wantValue: attribute.Int64Value(93),
 		},
 		{
 			name:      "string_ptr",
 			value:     func() *string { s := "hello"; return &s }(),
-			wantValue: log.StringValue("hello"),
+			wantValue: attribute.StringValue("hello"),
 		},
 		{
 			name:      "bool_ptr",
 			value:     func() *bool { b := true; return &b }(),
-			wantValue: log.BoolValue(true),
+			wantValue: attribute.BoolValue(true),
 		},
 		{
 			name:      "int_empty_array",
 			value:     []int{},
-			wantValue: log.SliceValue([]log.Value{}...),
+			wantValue: attribute.SliceValue([]attribute.Value{}...),
 		},
 		{
 			name:  "int_array",
 			value: []int{1, 2, 3},
-			wantValue: log.SliceValue([]log.Value{
-				log.Int64Value(1),
-				log.Int64Value(2),
-				log.Int64Value(3),
+			wantValue: attribute.SliceValue([]attribute.Value{
+				attribute.Int64Value(1),
+				attribute.Int64Value(2),
+				attribute.Int64Value(3),
 			}...),
 		},
 		{
 			name:  "key_value_map",
 			value: map[string]int{"one": 1},
-			wantValue: log.MapValue(
-				log.Int64("one", 1),
+			wantValue: attribute.MapValue(
+				attribute.Int64("one", 1),
 			),
 		},
 		{
 			name:  "int_string_map",
 			value: map[int]string{1: "one"},
-			wantValue: log.MapValue(
-				log.String("1", "one"),
+			wantValue: attribute.MapValue(
+				attribute.String("1", "one"),
 			),
 		},
 		{
 			name:  "nested_map",
 			value: map[string]map[string]int{"nested": {"one": 1}},
-			wantValue: log.MapValue(
-				log.Map("nested",
-					log.Int64("one", 1),
+			wantValue: attribute.MapValue(
+				attribute.Map("nested",
+					attribute.Int64("one", 1),
 				),
 			),
 		},
@@ -207,8 +206,8 @@ func TestConvertValue(t *testing.T) {
 			value: map[struct{ Name string }]int{
 				{Name: "John"}: 42,
 			},
-			wantValue: log.MapValue(
-				log.Int64("{Name:John}", 42),
+			wantValue: attribute.MapValue(
+				attribute.Int64("{Name:John}", 42),
 			),
 		},
 		{
@@ -220,7 +219,7 @@ func TestConvertValue(t *testing.T) {
 				Name: "John",
 				Age:  42,
 			},
-			wantValue: log.StringValue("{Name:John Age:42}"),
+			wantValue: attribute.StringValue("{Name:John Age:42}"),
 		},
 		{
 			name: "struct_ptr",
@@ -231,7 +230,7 @@ func TestConvertValue(t *testing.T) {
 				Name: "John",
 				Age:  42,
 			},
-			wantValue: log.StringValue("{Name:John Age:42}"),
+			wantValue: attribute.StringValue("{Name:John Age:42}"),
 		},
 		{
 			name: "nil_struct_ptr",
@@ -239,27 +238,27 @@ func TestConvertValue(t *testing.T) {
 				Name string
 				Age  int
 			})(nil),
-			wantValue: log.Value{},
+			wantValue: attribute.Value{},
 		},
 		{
 			name:      "ctx",
 			value:     context.Background(),
-			wantValue: log.StringValue("context.Background"),
+			wantValue: attribute.StringValue("context.Background"),
 		},
 		{
 			name:      "standard attribute",
 			value:     attribute.StringSliceValue([]string{"foo", "bar"}),
-			wantValue: log.SliceValue(log.StringValue("foo"), log.StringValue("bar")),
+			wantValue: attribute.StringSliceValue([]string{"foo", "bar"}),
 		},
 		{
-			name:      "log attribute",
-			value:     log.SliceValue(log.StringValue("foo"), log.Int64Value(123)),
-			wantValue: log.SliceValue(log.StringValue("foo"), log.Int64Value(123)),
+			name:      "attribute value",
+			value:     attribute.SliceValue(attribute.StringValue("foo"), attribute.Int64Value(123)),
+			wantValue: attribute.SliceValue(attribute.StringValue("foo"), attribute.Int64Value(123)),
 		},
 		{
 			name:      "unhandled type",
 			value:     chan int(nil),
-			wantValue: log.StringValue("unhandled: (chan int) <nil>"),
+			wantValue: attribute.StringValue("unhandled: (chan int) <nil>"),
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -270,7 +269,7 @@ func TestConvertValue(t *testing.T) {
 
 func TestConvertValueFloat32(t *testing.T) {
 	value := convertValue(float32(3.14))
-	want := log.Float64Value(3.14)
+	want := attribute.Float64Value(3.14)
 
 	assert.InDelta(t, value.AsFloat64(), want.AsFloat64(), 0.0001)
 }

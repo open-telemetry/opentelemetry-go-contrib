@@ -1,11 +1,11 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package ecs // import "go.opentelemetry.io/contrib/detectors/aws/ecs"
+package ecs
 
 // Version is the current release version of the ECS resource detector.
 func Version() string {
-	return "1.43.0"
+	return "1.44.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

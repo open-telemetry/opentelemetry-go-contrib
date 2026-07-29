@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package b3 // import "go.opentelemetry.io/contrib/propagators/b3"
+package b3
 
 import (
 	"context"
@@ -89,7 +89,7 @@ func (b3 propagator) Inject(ctx context.Context, carrier propagation.TextMapCarr
 
 		if debugFromContext(ctx) {
 			header = append(header, "d")
-		} else if !(deferredFromContext(ctx)) {
+		} else if !deferredFromContext(ctx) {
 			if sc.IsSampled() {
 				header = append(header, "1")
 			} else {
@@ -109,7 +109,7 @@ func (b3 propagator) Inject(ctx context.Context, carrier propagation.TextMapCarr
 		if debugFromContext(ctx) {
 			// Since Debug implies deferred, don't also send "X-B3-Sampled".
 			carrier.Set(b3DebugFlagHeader, "1")
-		} else if !(deferredFromContext(ctx)) {
+		} else if !deferredFromContext(ctx) {
 			if sc.IsSampled() {
 				carrier.Set(b3SampledHeader, "1")
 			} else {

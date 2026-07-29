@@ -10,6 +10,7 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -175,7 +176,8 @@ func TestMetricAttributesFn_ServerSide_Baggage(t *testing.T) {
 		}
 	}
 
-	lis, server := startTestServerWithOptions(t, mp,
+	lis, server := startTestServerWithOptions(
+		t, mp,
 		otelgrpc.WithMetricAttributesFn(metricFunc),
 		otelgrpc.WithPropagators(propagation.NewCompositeTextMapPropagator(
 			propagation.Baggage{},
@@ -610,7 +612,8 @@ func createTestClient(t *testing.T, addr string, mp *metric.MeterProvider, metri
 	}
 
 	if mp != nil && metricFunc != nil {
-		opts = append(opts,
+		opts = append(
+			opts,
 			grpc.WithStatsHandler(
 				otelgrpc.NewClientHandler(
 					otelgrpc.WithMeterProvider(mp),
@@ -635,23 +638,24 @@ type dpWithAttrs struct {
 func assertAllMetricsHaveLabels(t *testing.T, reader metric.Reader, direction int, expectedLabels map[string]string) {
 	t.Helper()
 
-	rm := metricdata.ResourceMetrics{}
-	err := reader.Collect(t.Context(), &rm)
-	require.NoError(t, err)
+	assert.EventuallyWithT(t, func(c *assert.CollectT) {
+		rm := metricdata.ResourceMetrics{}
+		err := reader.Collect(t.Context(), &rm)
+		assert.NoError(c, err)
 
-	datapoints := collectDataPointsByMetric(rm, direction)
-	assert.NotEmpty(t, datapoints, "no metrics instrumented")
+		datapoints := collectDataPointsByMetric(rm, direction)
+		assert.NotEmpty(c, datapoints, "no metrics instrumented")
 
-	for _, dp := range datapoints {
-		for key, val := range expectedLabels {
-			attr, ok := dp.attrs[key]
-			t.Logf("metric %q has label %q", dp.metricName, attr)
-			assert.Truef(t, ok, "metric %q missing label %q", dp.metricName, key)
-			if ok {
-				assert.Equalf(t, val, attr, "metric %q has incorrect value for label %q: %s", dp.metricName, key, attr)
+		for _, dp := range datapoints {
+			for key, val := range expectedLabels {
+				attr, ok := dp.attrs[key]
+				assert.Truef(c, ok, "metric %q missing label %q", dp.metricName, key)
+				if ok {
+					assert.Equalf(c, val, attr, "metric %q has incorrect value for label %q: %s", dp.metricName, key, attr)
+				}
 			}
 		}
-	}
+	}, 5*time.Second, 10*time.Millisecond, "metrics did not get expected labels in time")
 }
 
 func assertAllMetricsDoNotHaveLabels(t *testing.T, reader metric.Reader, direction int, notExpectedLabels map[string]string) {

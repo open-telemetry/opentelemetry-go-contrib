@@ -16,12 +16,14 @@ func TestNewResource(t *testing.T) {
 	schemaURL := resource.Default().SchemaURL()
 
 	res, err := resource.Merge(resource.Default(),
-		resource.NewWithAttributes(schemaURL,
+		resource.NewWithAttributes(
+			schemaURL,
 			attribute.String("service.name", "service-a"),
 		))
 	require.NoError(t, err)
 	resWithAttrs, err := resource.Merge(resource.Default(),
-		resource.NewWithAttributes(schemaURL,
+		resource.NewWithAttributes(
+			schemaURL,
 			attribute.String("service.name", "service-a"),
 			attribute.Bool("attr-bool", true),
 		))
