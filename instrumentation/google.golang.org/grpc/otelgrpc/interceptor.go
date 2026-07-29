@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelgrpc // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+package otelgrpc
 
 // gRPC tracing middleware
 // https://opentelemetry.io/docs/specs/semconv/rpc/
@@ -13,7 +13,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )

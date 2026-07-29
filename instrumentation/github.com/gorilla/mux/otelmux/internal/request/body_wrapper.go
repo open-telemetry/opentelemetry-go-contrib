@@ -6,7 +6,7 @@
 
 // Package request provides types and functionality to handle HTTP request
 // handling.
-package request // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
+package request
 
 import (
 	"io"

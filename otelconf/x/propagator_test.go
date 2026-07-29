@@ -57,7 +57,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    []string{"x-b3-traceid", "x-b3-spanid", "x-b3-sampled", "x-b3-flags"},
+			want:    []string{"b3"},
 			wantErr: false,
 		},
 		{
@@ -111,7 +111,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    []string{"tracestate", "baggage", "x-b3-traceid", "x-b3-spanid", "x-b3-sampled", "x-b3-flags", "traceparent"},
+			want:    []string{"tracestate", "baggage", "b3", "traceparent"},
 			wantErr: false,
 		},
 		{
@@ -129,7 +129,7 @@ func TestPropagator(t *testing.T) {
 			cfg: &Propagator{
 				CompositeList: ptr("tracecontext,baggage,b3"),
 			},
-			want:    []string{"tracestate", "baggage", "x-b3-traceid", "x-b3-spanid", "x-b3-sampled", "x-b3-flags", "traceparent"},
+			want:    []string{"tracestate", "baggage", "b3", "traceparent"},
 			wantErr: false,
 		},
 		{

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package handler provides an HTTP handler.
-package handler // import "go.opentelemetry.io/contrib/examples/passthrough/handler"
+package handler
 
 import (
 	"context"

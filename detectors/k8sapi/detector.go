@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package k8sapi // import "go.opentelemetry.io/contrib/detectors/k8sapi"
+package k8sapi
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
