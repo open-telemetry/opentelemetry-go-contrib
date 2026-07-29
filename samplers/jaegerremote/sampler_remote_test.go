@@ -38,7 +38,7 @@ import (
 )
 
 func TestRemotelyControlledSampler_updateConcurrentSafe(*testing.T) {
-	initSampler := newProbabilisticSampler(0.123, false)
+	initSampler := newProbabilisticSampler(0.123, false, false)
 	fetcher := &testSamplingStrategyFetcher{response: []byte("probabilistic")}
 	parser := new(testSamplingStrategyParser)
 	sampler := New(
@@ -101,7 +101,7 @@ func (*testSamplingStrategyParser) Parse(response []byte) (any, error) {
 }
 
 func TestRemoteSamplerOptions(t *testing.T) {
-	initSampler := newProbabilisticSampler(0.123, false)
+	initSampler := newProbabilisticSampler(0.123, false, false)
 	fetcher := new(fakeSamplingFetcher)
 	parser := new(samplingStrategyParserImpl)
 	logger := testr.New(t)
@@ -144,7 +144,7 @@ func initAgent(t *testing.T) (*testutils.MockAgent, *Sampler) {
 	agent, err := testutils.StartMockAgent()
 	require.NoError(t, err)
 
-	initialSampler := newProbabilisticSampler(0.001, false)
+	initialSampler := newProbabilisticSampler(0.001, false, false)
 	sampler := New(
 		"client app",
 		WithSamplingServerURL("http://"+agent.SamplingServerAddr()),
@@ -171,7 +171,7 @@ func TestRemotelyControlledSampler(t *testing.T) {
 	agent, remoteSampler := initAgent(t)
 	defer agent.Close()
 
-	defaultSampler := newProbabilisticSampler(0.001, false)
+	defaultSampler := newProbabilisticSampler(0.001, false, false)
 	remoteSampler.setSampler(defaultSampler)
 
 	agent.AddSamplingStrategy("client app",
@@ -304,7 +304,7 @@ func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
 }
 
 func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
-	initSampler := newProbabilisticSampler(0.123, false)
+	initSampler := newProbabilisticSampler(0.123, false, false)
 	fetcher := &testSamplingStrategyFetcher{response: []byte("rateLimiting")}
 	parser := new(testSamplingStrategyParser)
 	sampler := New(
@@ -402,7 +402,7 @@ func TestRemotelyControlledSampler_updateSamplerFromAdaptiveSampler(t *testing.T
 	adaptiveSampler := newPerOperationSampler(perOperationSamplerParams{
 		MaxOperations: testDefaultMaxOperations,
 		Strategies:    strategies,
-	}, false)
+	}, false, false)
 
 	// Overwrite the sampler with an adaptive sampler
 	remoteSampler.setSampler(adaptiveSampler)
@@ -435,9 +435,9 @@ func TestRemotelyControlledSampler_updateSamplerFromAdaptiveSampler(t *testing.T
 }
 
 func TestRemotelyControlledSampler_updateRateLimitingOrProbabilisticSampler(t *testing.T) {
-	probabilisticSampler := newProbabilisticSampler(0.002, false)
-	otherProbabilisticSampler := newProbabilisticSampler(0.003, false)
-	maxProbabilisticSampler := newProbabilisticSampler(1.0, false)
+	probabilisticSampler := newProbabilisticSampler(0.002, false, false)
+	otherProbabilisticSampler := newProbabilisticSampler(0.003, false, false)
+	maxProbabilisticSampler := newProbabilisticSampler(1.0, false, false)
 
 	rateLimitingSampler := newRateLimitingSampler(2, false)
 	otherRateLimitingSampler := newRateLimitingSampler(3, false)

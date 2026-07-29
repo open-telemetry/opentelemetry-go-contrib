@@ -191,7 +191,8 @@ func (s *Sampler) updateSamplerViaUpdaters(strategy any) error {
 
 // probabilisticSamplerUpdater is used by Sampler to parse sampling configuration.
 type probabilisticSamplerUpdater struct {
-	attributesDisabled bool
+	attributesDisabled        bool
+	traceStateSamplingEnabled bool
 }
 
 // Update implements Update of samplerUpdater.
@@ -208,7 +209,7 @@ func (u *probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy any
 				}
 				return sampler, nil
 			}
-			return newProbabilisticSampler(probabilistic.SamplingRate, u.attributesDisabled), nil
+			return newProbabilisticSampler(probabilistic.SamplingRate, u.attributesDisabled, u.traceStateSamplingEnabled), nil
 		}
 	}
 	return nil, nil
@@ -245,9 +246,10 @@ func (u *rateLimitingSamplerUpdater) Update(sampler trace.Sampler, strategy any)
 // perOperationSamplerUpdater is used by Sampler to parse sampling configuration.
 // Fields have the same meaning as in perOperationSamplerParams.
 type perOperationSamplerUpdater struct {
-	MaxOperations            int
-	OperationNameLateBinding bool
-	attributesDisabled       bool
+	MaxOperations             int
+	OperationNameLateBinding  bool
+	attributesDisabled        bool
+	traceStateSamplingEnabled bool
 }
 
 // Update implements Update of samplerUpdater.
@@ -266,7 +268,7 @@ func (u *perOperationSamplerUpdater) Update(sampler trace.Sampler, strategy any)
 				MaxOperations:            u.MaxOperations,
 				OperationNameLateBinding: u.OperationNameLateBinding,
 				Strategies:               operations,
-			}, u.attributesDisabled), nil
+			}, u.attributesDisabled, u.traceStateSamplingEnabled), nil
 		}
 	}
 	return nil, nil
