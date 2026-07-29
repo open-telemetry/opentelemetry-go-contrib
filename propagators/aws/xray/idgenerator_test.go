@@ -95,8 +95,12 @@ func TestSpanIDIsNotNil(t *testing.T) {
 // Unlock, and TryLock remain part of the public API for existing callers.
 func TestIDGeneratorLockUnlockCompat(t *testing.T) {
 	idg := NewIDGenerator()
+
 	idg.Lock()
+	stillLocked := !idg.TryLock()
 	idg.Unlock()
+
+	assert.True(t, stillLocked, "TryLock should fail while the mutex is held")
 }
 
 // TestIDGeneratorConcurrentUse guards against reintroducing a shared,
@@ -110,13 +114,11 @@ func TestIDGeneratorConcurrentUse(t *testing.T) {
 
 	var wg sync.WaitGroup
 	for range 50 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			traceID, spanID := idg.NewIDs(ctx)
 			_ = idg.NewSpanID(ctx, traceID)
 			_ = spanID
-		}()
+		})
 	}
 	wg.Wait()
 }
