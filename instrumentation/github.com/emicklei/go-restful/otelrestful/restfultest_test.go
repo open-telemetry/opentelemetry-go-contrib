@@ -237,7 +237,11 @@ func TestClientDisconnect(t *testing.T) {
 	if resp != nil {
 		_ = resp.Body.Close()
 	}
-	<-handlerDone
+	select {
+	case <-handlerDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for handler")
+	}
 
 	require.Eventually(t, func() bool {
 		return len(sr.Ended()) == 1
