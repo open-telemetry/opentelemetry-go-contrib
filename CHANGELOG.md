@@ -20,6 +20,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/contrib/detectors/azure/azureappservice`, a new resource detector for Azure App Service. Detects `cloud.*`, `service.name`, `azure.resource_group.name`, `azure.app_service.instance.id`, and `deployment.environment.name` from the `WEBSITE_*` and `REGION_NAME` environment variables. (#9289)
 - Add `azurecontainerapps` resource detector for Azure Container Apps. (#8939)
 - Add `go.opentelemetry.io/contrib/detectors/azure/azurefunctions`, a new resource detector for Azure Functions. Detects `cloud.*`, `service.name`, `azure.resource_group.name`, `faas.instance`, and `deployment.environment.name` from the `FUNCTIONS_*`, `WEBSITE_*`, `CONTAINER_NAME`, and `REGION_NAME` environment variables. (#9290)
+- Add `NewResourceDetector` along with the `WithAttributeFilter` and `WithTagKeyFilter` options in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. `WithAttributeFilter` restricts the returned resource to the attributes the filter accepts. `WithTagKeyFilter` opts in to `azure.tag.<name>` attributes for the VM tags whose keys satisfy the provided predicate; no VM tags are emitted without it. (#9162)
 
 ### Changed
 
@@ -31,6 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Update log bridge conversions to use attribute key-values instead of the removed log key-values in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9180)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
 - Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#8977)
+- The detector in `go.opentelemetry.io/contrib/detectors/azure/azurevm` now also detects `cloud.account.id`, `cloud.availability_zone`, `azure.vm.name`, `azure.vm.size`, `azure.vm.scaleset.name`, and `azure.resource_group.name`, and prefers `osProfile.computerName` for `host.name` (falling back to the VM name), reconciling it with the collector-contrib Azure resource detector. (#9162)
 
 ### Fixed
 
