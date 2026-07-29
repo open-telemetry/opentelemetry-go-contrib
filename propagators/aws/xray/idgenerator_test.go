@@ -90,6 +90,15 @@ func TestSpanIDIsNotNil(t *testing.T) {
 	assert.False(t, bytes.Equal(spanID2[:], nilSpanID[:]), "SpanID cannot be empty.")
 }
 
+// TestIDGeneratorLockUnlockCompat guards against removing the embedded
+// sync.Mutex, which is unused internally but kept so IDGenerator.Lock,
+// Unlock, and TryLock remain part of the public API for existing callers.
+func TestIDGeneratorLockUnlockCompat(t *testing.T) {
+	idg := NewIDGenerator()
+	idg.Lock()
+	idg.Unlock()
+}
+
 // TestIDGeneratorConcurrentUse guards against reintroducing a shared,
 // unsynchronized random source: IDGenerator no longer holds a mutex, so this
 // only stays safe as long as ID generation goes through math/rand/v2's
