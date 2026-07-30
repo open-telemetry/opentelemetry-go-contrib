@@ -8,14 +8,18 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // TestResourceMergeWithSDKHostDetector is a regression test for a schema URL
 // mismatch between this package and go.opentelemetry.io/otel/sdk's own
 // built-in detectors.
 func TestResourceMergeWithSDKDetector(t *testing.T) {
-	dockerRes := resource.NewWithAttributes(semconv.SchemaURL, semconv.ContainerName("test-container"))
+	detector := newMockDetector(&mockProvider{
+		info:          hostInfo{Name: "docker-host", OSType: "linux"},
+		containerInfo: containerInfo{Name: "my-container", ImageID: "sha256:deadbeef"},
+	})
+	dockerRes, err := detector.Detect(t.Context())
+	require.NoError(t, err)
 
 	// Host detector has no env dependency and always succeeds
 	hostRes, err := resource.New(t.Context(), resource.WithHost())
