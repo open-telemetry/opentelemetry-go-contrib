@@ -21,4 +21,4 @@
 //     conventions
 //
 // By default, otelmongo emits the latest stable semantic conventions.
-package otelmongo // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo"
+package otelmongo
