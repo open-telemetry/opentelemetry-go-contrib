@@ -5,6 +5,8 @@ package xray
 
 import (
 	"bytes"
+	crand "crypto/rand"
+	"errors"
 	"strconv"
 	"sync"
 	"testing"
@@ -88,6 +90,33 @@ func TestSpanIDIsNotNil(t *testing.T) {
 
 	assert.False(t, bytes.Equal(spanID1[:], nilSpanID[:]), "SpanID cannot be empty.")
 	assert.False(t, bytes.Equal(spanID2[:], nilSpanID[:]), "SpanID cannot be empty.")
+}
+
+// failingReader stands in for a crypto/rand.Reader that always errors.
+type failingReader struct{}
+
+func (failingReader) Read([]byte) (int, error) {
+	return 0, errors.New("read failed")
+}
+
+// TestIDGeneratorSeedReadFailure is the regression test for the bug this
+// package originally had: NewIDGenerator seeded a per-instance math/rand.Rand
+// from crypto/rand and discarded the read error, so a failing read left every
+// generator seeded with 0 and emitting an identical, predictable ID sequence.
+//
+// ID generation no longer consults crypto/rand at all, so independently
+// constructed generators must still diverge while that read would fail.
+func TestIDGeneratorSeedReadFailure(t *testing.T) {
+	orig := crand.Reader
+	t.Cleanup(func() { crand.Reader = orig })
+	crand.Reader = failingReader{}
+
+	ctx := t.Context()
+	traceID1, spanID1 := NewIDGenerator().NewIDs(ctx)
+	traceID2, spanID2 := NewIDGenerator().NewIDs(ctx)
+
+	assert.NotEqual(t, traceID1, traceID2, "TraceIDs must not repeat when the crypto/rand seed read fails")
+	assert.NotEqual(t, spanID1, spanID2, "SpanIDs must not repeat when the crypto/rand seed read fails")
 }
 
 // TestIDGeneratorLockUnlockCompat guards against removing the embedded
