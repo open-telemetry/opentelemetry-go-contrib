@@ -54,6 +54,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Strip connection number suffix from connection ID in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` to prevent unbounded metric cardinality. (#9352)
 - Strip connection number suffix from connection ID in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` so the `network.peer.address` and `net.peer.name` span attributes reflect the actual host instead of the raw connection ID. (#9352)
 - Record `network.protocol.version` (and `network.protocol.name`) from the response's negotiated protocol instead of the request's stamped `Proto` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, so an HTTP/1.1-shaped request that gets upgraded to HTTP/2 via ALPN is no longer misreported as HTTP/1.1 on the client span and request metrics. (#9371)
+- Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, using the request context's cancellation error as the classification source when the handler has not already recorded an error via `c.Error`. Previously a disconnect was recorded with span status `Error` and no `error.type`, indistinguishable from a genuine server fault.
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

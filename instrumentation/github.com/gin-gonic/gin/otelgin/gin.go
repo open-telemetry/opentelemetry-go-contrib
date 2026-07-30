@@ -113,18 +113,30 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Next()
 
 		status := c.Writer.Status()
-		span.SetStatus(sc.Status(status))
+		spanCode, spanMsg := sc.Status(status)
+		span.SetStatus(spanCode, spanMsg)
 		span.SetAttributes(sc.ResponseTraceAttrs(semconv.ResponseTelemetry{
 			StatusCode: status,
 			WriteBytes: int64(c.Writer.Size()),
 		})...)
 
-		if len(c.Errors) > 0 {
+		var errorTypeAttr attribute.KeyValue
+		switch {
+		case len(c.Errors) > 0:
 			span.SetStatus(codes.Error, c.Errors.String())
 			if len(c.Errors) == 1 {
-				span.SetAttributes(otelsemconv.ErrorType(c.Errors[0].Err))
+				errorTypeAttr = otelsemconv.ErrorType(c.Errors[0].Err)
 			} else {
-				span.SetAttributes(otelsemconv.ErrorTypeOther)
+				errorTypeAttr = otelsemconv.ErrorTypeOther
+			}
+			span.SetAttributes(errorTypeAttr)
+		case spanCode == codes.Error:
+			// No explicit c.Errors entry, but the response is a server
+			// error. If the client disconnected mid-request, the request
+			// context carries the real cause instead of a generic 5xx.
+			if reqErr := c.Request.Context().Err(); reqErr != nil {
+				errorTypeAttr = otelsemconv.ErrorType(reqErr)
+				span.SetAttributes(errorTypeAttr)
 			}
 		}
 
@@ -135,6 +147,9 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}
 		if cfg.GinMetricAttributeFn != nil {
 			additionalAttributes = append(additionalAttributes, cfg.GinMetricAttributeFn(c)...)
+		}
+		if errorTypeAttr != (attribute.KeyValue{}) {
+			additionalAttributes = append(additionalAttributes, errorTypeAttr)
 		}
 
 		sc.RecordMetrics(ctx, semconv.ServerMetricData{
