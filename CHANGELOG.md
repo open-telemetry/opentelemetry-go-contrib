@@ -50,6 +50,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix a data race in `go.opentelemetry.io/contrib/bridges/otelslog` where concurrent `Handle` calls could corrupt each other's log attributes because `kvBuffer.KeyValues` returned a slice aliasing a shared buffer. (#9229)
 - Copy `MultipartForm` back to the request `otelmux.Middleware` was given after the wrapped handler returns, so `net/http` can find and remove the temp files `ParseMultipartForm` created on the context-derived request copy, when `otelmux.Middleware` wraps a handler directly, in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. This does not cover a handler panic, nor the common `router.Use(...)` integration, where `gorilla/mux`'s own routing step makes an additional request copy the middleware cannot write back through; see [gorilla/mux#777](https://github.com/gorilla/mux/pull/777). (#9361)
 - Report the `b3` header from `Fields()` for the default `B3Unspecified` single-header injection encoding, matching what `Inject` writes, in `go.opentelemetry.io/contrib/propagators/b3`. (#9273)
+- Strip connection number suffix from connection ID in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` to prevent unbounded metric cardinality. (#9352)
+- Strip connection number suffix from connection ID in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` so the `network.peer.address` and `net.peer.name` span attributes reflect the actual host instead of the raw connection ID. (#9352)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
