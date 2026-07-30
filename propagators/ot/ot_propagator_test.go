@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -132,6 +133,21 @@ func TestOT_Extract(t *testing.T) {
 
 		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
 	}
+}
+
+func TestExtractBagsAggregateLimitError(t *testing.T) {
+	// baggage.New enforces a 64-member limit. Each member below parses
+	// individually without error, so the aggregate limit error is only
+	// surfaced by baggage.New itself.
+	carrier := propagation.MapCarrier{}
+	for i := range 65 {
+		carrier.Set(fmt.Sprintf("%sk%d", baggageHeaderPrefix, i), "v")
+	}
+
+	bags, err := extractBags(carrier)
+
+	require.Error(t, err)
+	assert.LessOrEqual(t, len(bags.Members()), 64)
 }
 
 func TestOT_Fields(t *testing.T) {

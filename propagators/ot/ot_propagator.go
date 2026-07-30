@@ -113,10 +113,7 @@ func extractBags(carrier propagation.TextMapCarrier) (baggage.Baggage, error) {
 		members = append(members, member)
 	}
 	bags, e := baggage.New(members...)
-	if err != nil {
-		return bags, multierr.Append(err, e)
-	}
-	return bags, err
+	return bags, multierr.Append(err, e)
 }
 
 // extract reconstructs a SpanContext from header values based on OT
