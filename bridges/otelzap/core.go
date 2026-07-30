@@ -33,7 +33,7 @@
 // into a string value encoded using [fmt.Sprintf] if there is no matching type.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
-package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
+package otelzap
 
 import (
 	"context"
@@ -42,7 +42,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.uber.org/zap/zapcore"
 )
 

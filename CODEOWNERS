@@ -35,11 +35,18 @@ detectors/autodetect                                                    @open-te
 detectors/aws/ec2/v2                                                    @open-telemetry/go-approvers @iblancasa
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes
 detectors/aws/eks                                                       @open-telemetry/go-approvers @pyohannes
+detectors/aws/elasticbeanstalk                                          @open-telemetry/go-approvers @iblancasa @paulojmdias
 detectors/aws/lambda                                                    @open-telemetry/go-approvers
 detectors/azure/                                                        @open-telemetry/go-approvers @pyohannes
+detectors/azure/azureappservice                                         @open-telemetry/go-approvers @Lewis-E
 detectors/azure/azurecontainerapps                                      @open-telemetry/go-approvers @iblancasa
+detectors/azure/azurefunctions                                          @open-telemetry/go-approvers @Lewis-E
+detectors/azure/azurevm                                                 @open-telemetry/go-approvers @pyohannes @paulojmdias @iblancasa
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 detectors/hetzner/                                                      @open-telemetry/go-approvers @paulojmdias
+detectors/ibmcloud/vpc/                                                 @open-telemetry/go-approvers @paulojmdias @iblancasa
+detectors/k8sapi/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa @dashpole
+detectors/vultr/                                                        @open-telemetry/go-approvers @paulojmdias @iblancasa
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
 

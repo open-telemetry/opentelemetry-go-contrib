@@ -3,7 +3,7 @@
 
 // Package filters provides a set of filters useful with the
 // otelhttp.WithFilter() option to control which inbound requests are traced.
-package filters // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/filters"
+package filters
 
 import (
 	"net/http"

@@ -6,4 +6,4 @@
 //
 // Currently only the routing of a received message can be instrumented. To do
 // so, use the Middleware function.
-package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+package otelecho
