@@ -5,15 +5,15 @@ go 1.25.0
 require (
 	go.opentelemetry.io/contrib/bridges/otelslog v0.19.0
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.69.0
-	go.opentelemetry.io/otel v1.44.1-0.20260625150014-c84013202f01
+	go.opentelemetry.io/otel v1.44.1-0.20260626205805-41ff5ed18bec
 	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.20.1-0.20260623111333-65f30a1ab958
 	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.44.1-0.20260623111333-65f30a1ab958
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.1-0.20260623111333-65f30a1ab958
-	go.opentelemetry.io/otel/log v0.20.1-0.20260623111333-65f30a1ab958
-	go.opentelemetry.io/otel/metric v1.44.1-0.20260623111333-65f30a1ab958
-	go.opentelemetry.io/otel/sdk v1.44.1-0.20260623111333-65f30a1ab958
+	go.opentelemetry.io/otel/log v0.20.1-0.20260625150014-c84013202f01
+	go.opentelemetry.io/otel/metric v1.44.1-0.20260625150014-c84013202f01
+	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/sdk/log v0.20.1-0.20260623111333-65f30a1ab958
-	go.opentelemetry.io/otel/sdk/metric v1.44.1-0.20260623111333-65f30a1ab958
+	go.opentelemetry.io/otel/sdk/metric v1.44.1-0.20260625150014-c84013202f01
 )
 
 require (
@@ -23,7 +23,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/trace v1.44.1-0.20260623111333-65f30a1ab958 // indirect
+	go.opentelemetry.io/otel/trace v1.44.1-0.20260625150014-c84013202f01 // indirect
 	golang.org/x/sys v0.46.0 // indirect
 )
 
