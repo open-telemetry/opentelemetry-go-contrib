@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"time"
 
 	"github.com/hashicorp/consul/api"
@@ -100,6 +101,9 @@ func WithMetaKeyFilter(filter func(key string) bool) Option {
 // the CONSUL_* environment variables. When set, the [WithAddress],
 // [WithDatacenter], [WithNamespace], [WithToken], [WithTokenFile], and
 // [WithTimeout] options are ignored.
+//
+// Give the client a timeout. [ResourceDetector.Detect] queries from its own
+// goroutine, so without one a canceled context leaves that goroutine blocked.
 func WithClient(client *api.Client) Option {
 	return optionFunc(func(c *config) { c.client = client })
 }
@@ -195,10 +199,16 @@ func self(ctx context.Context, client *api.Client) (map[string]map[string]any, e
 	}
 }
 
-// Detect detects resource attributes of the Consul agent. It returns an error
-// when the agent cannot be reached or does not report its configuration. If the
-// agent is reachable but some attributes cannot be retrieved, a partial
-// resource is returned together with [resource.ErrPartialResource].
+// isDialFailure reports whether err is a failure to connect to the agent.
+func isDialFailure(err error) bool {
+	var opErr *net.OpError
+	return errors.As(err, &opErr) && opErr.Op == "dial"
+}
+
+// Detect detects resource attributes of the Consul agent. It returns an empty
+// resource and no error when no agent can be reached, and an error when the
+// agent answers without a usable configuration. Missing individual attributes
+// yield a partial resource with [resource.ErrPartialResource].
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	client := d.cfg.client
 	if client == nil {
@@ -210,6 +220,10 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 
 	agent, err := self(ctx, client)
 	if err != nil {
+		if isDialFailure(err) {
+			// Nothing answered: no Consul agent here.
+			return resource.Empty(), nil
+		}
 		return nil, fmt.Errorf("failed to get local agent information: %w", err)
 	}
 

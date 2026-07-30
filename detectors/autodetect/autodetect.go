@@ -60,8 +60,7 @@ var (
 	IDAzureVM = ID("azure.vm")
 	// IDConsul is the ID for the Consul detector that detects resource
 	// attributes from a Consul agent (see consul.NewResourceDetector for
-	// details). Unlike the cloud platform detectors, it returns an error when
-	// no Consul agent can be reached.
+	// details).
 	IDConsul = ID("consul")
 	// IDGCP is the ID for the GCP detector that detects resource attributes on
 	// Google Cloud Platform (GCP) environments (see gcp.NewDetector for

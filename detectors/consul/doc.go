@@ -15,6 +15,9 @@ is added if it is available:
 
 The cloud.region value is the Consul datacenter the agent belongs to.
 
+When no agent can be reached, an empty resource and no error are returned. An
+agent that answers without a usable configuration is an error.
+
 When configured with [WithMetaKeyFilter], the detector additionally emits an
 attribute for every [node meta] entry whose key satisfies the configured
 predicate. Consul is not a cloud provider and has no namespace reserved in the

@@ -6,8 +6,11 @@ package consul
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
@@ -59,10 +62,10 @@ func newRawFakeAgent(t *testing.T, h http.HandlerFunc) string {
 	return srv.URL
 }
 
-// newTestDetector returns a detector pointed at the agent listening on url.
-func newTestDetector(t *testing.T, url string, opts ...Option) *ResourceDetector {
+// newTestDetector returns a detector pointed at the agent listening on addr.
+func newTestDetector(t *testing.T, addr string, opts ...Option) *ResourceDetector {
 	t.Helper()
-	d := NewResourceDetector(append([]Option{WithAddress(url)}, opts...)...)
+	d := NewResourceDetector(append([]Option{WithAddress(addr)}, opts...)...)
 	client, err := d.newClient()
 	require.NoError(t, err)
 	d.cfg.client = client
@@ -78,9 +81,9 @@ func TestNewResourceDetector(t *testing.T) {
 }
 
 func TestDetect_OK(t *testing.T) {
-	url := newFakeAgent(t, agentSelf())
+	addr := newFakeAgent(t, agentSelf())
 
-	res, err := newTestDetector(t, url).Detect(t.Context())
+	res, err := newTestDetector(t, addr).Detect(t.Context())
 	require.NoError(t, err)
 
 	expected := resource.NewWithAttributes(
@@ -151,35 +154,64 @@ func TestDetect_NonStringMetaValue(t *testing.T) {
 	assert.Equal(t, attribute.StringValue("z1"), val)
 }
 
-func TestDetect_AgentUnreachable(t *testing.T) {
-	// Closed server: unlike the platform metadata detectors, an unreachable
-	// agent is an error rather than "not running here".
+func TestDetect_ConnectionRefused(t *testing.T) {
+	// Closed server → connection refused → empty resource, no error.
 	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	url := srv.URL
+	addr := srv.URL
 	srv.Close()
 
-	res, err := newTestDetector(t, url).Detect(t.Context())
-	require.Error(t, err)
-	assert.Nil(t, res)
+	res, err := newTestDetector(t, addr).Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
+}
+
+func TestIsDialFailure(t *testing.T) {
+	// Errors are constructed, not provoked, so the test does not depend on DNS.
+	dial := func(err error) error {
+		return &url.Error{
+			Op:  "Get",
+			URL: "http://consul.example:8500/v1/agent/self",
+			Err: &net.OpError{Op: "dial", Net: "tcp", Err: err},
+		}
+	}
+
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{"connection refused", dial(errors.New("connect: connection refused")), true},
+		{"no such host", dial(&net.DNSError{Err: "no such host", IsNotFound: true}), true},
+		{"read timeout", &url.Error{Op: "Get", Err: &net.OpError{Op: "read"}}, false},
+		{"status error", api.StatusError{Code: 500, Body: "boom"}, false},
+		{"context canceled", context.Canceled, false},
+		{"nil", nil, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isDialFailure(tt.err))
+		})
+	}
 }
 
 func TestDetect_ServerError(t *testing.T) {
-	url := newRawFakeAgent(t, func(w http.ResponseWriter, _ *http.Request) {
+	addr := newRawFakeAgent(t, func(w http.ResponseWriter, _ *http.Request) {
 		http.Error(w, "boom", http.StatusInternalServerError)
 	})
 
-	res, err := newTestDetector(t, url).Detect(t.Context())
+	res, err := newTestDetector(t, addr).Detect(t.Context())
 	require.Error(t, err)
 	assert.Nil(t, res)
 }
 
 func TestDetect_MalformedJSON(t *testing.T) {
-	url := newRawFakeAgent(t, func(w http.ResponseWriter, _ *http.Request) {
+	addr := newRawFakeAgent(t, func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte("not json"))
 	})
 
-	res, err := newTestDetector(t, url).Detect(t.Context())
+	res, err := newTestDetector(t, addr).Detect(t.Context())
 	require.Error(t, err)
 	assert.Nil(t, res)
 }
@@ -225,14 +257,14 @@ func TestDetect_NonStringConfigValue(t *testing.T) {
 }
 
 func TestDetect_ContextCanceled(t *testing.T) {
-	url := newRawFakeAgent(t, func(_ http.ResponseWriter, r *http.Request) {
+	addr := newRawFakeAgent(t, func(_ http.ResponseWriter, r *http.Request) {
 		<-r.Context().Done()
 	})
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	res, err := newTestDetector(t, url).Detect(ctx)
+	res, err := newTestDetector(t, addr).Detect(ctx)
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Nil(t, res)
 }
@@ -240,14 +272,14 @@ func TestDetect_ContextCanceled(t *testing.T) {
 func TestDetect_Timeout(t *testing.T) {
 	released := make(chan struct{})
 	t.Cleanup(func() { close(released) })
-	url := newRawFakeAgent(t, func(_ http.ResponseWriter, r *http.Request) {
+	addr := newRawFakeAgent(t, func(_ http.ResponseWriter, r *http.Request) {
 		select {
 		case <-released:
 		case <-r.Context().Done():
 		}
 	})
 
-	res, err := newTestDetector(t, url, WithTimeout(10*time.Millisecond)).Detect(t.Context())
+	res, err := newTestDetector(t, addr, WithTimeout(10*time.Millisecond)).Detect(t.Context())
 	require.Error(t, err)
 	assert.Nil(t, res)
 }
