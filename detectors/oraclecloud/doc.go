@@ -13,6 +13,7 @@ available:
   - cloud.platform
   - cloud.region
   - cloud.availability_zone
+  - cloud.resource_id
   - host.id
   - host.name
   - host.type

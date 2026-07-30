@@ -50,6 +50,7 @@ func TestDetectOKComputeUsesHostname(t *testing.T) {
 		semconv.CloudPlatformOracleCloudCompute,
 		semconv.CloudRegion("us-phoenix-1"),
 		semconv.CloudAvailabilityZone("Uocm:PHX-AD-1"),
+		semconv.CloudResourceID("ocid1.instance.oc1.phx.example"),
 		semconv.HostID("ocid1.instance.oc1.phx.example"),
 		semconv.HostName("instance-hostname"),
 		semconv.HostType("VM.Standard.E3.Flex"),
@@ -58,8 +59,7 @@ func TestDetectOKComputeUsesHostname(t *testing.T) {
 	assert.Equal(t, expected, res)
 	_, ok := res.Set().Value(semconv.CloudAccountIDKey)
 	assert.False(t, ok)
-	_, ok = res.Set().Value(semconv.CloudResourceIDKey)
-	assert.False(t, ok)
+	assertKV(t, res, semconv.CloudResourceID("ocid1.instance.oc1.phx.example"))
 }
 
 func TestDetectOKOKEAddsClusterName(t *testing.T) {
@@ -117,6 +117,19 @@ func TestDetectWithAttributeFilterAppliesBeforeReturningPartial(t *testing.T) {
 	_, ok := res.Set().Value(semconv.HostNameKey)
 	assert.False(t, ok)
 	assertKV(t, res, semconv.CloudProviderOracleCloud)
+}
+
+func TestDetectWithAttributeFilterSelectsResourceIDRepresentation(t *testing.T) {
+	d := newTestDetector(t, http.StatusOK, `{
+		"id":"ocid1.instance.oc1.phx.example"
+	}`, WithAttributeFilter(attribute.NewDenyKeysFilter(semconv.HostIDKey)))
+
+	res, err := d.Detect(t.Context())
+	require.NoError(t, err)
+
+	_, ok := res.Set().Value(semconv.HostIDKey)
+	assert.False(t, ok)
+	assertKV(t, res, semconv.CloudResourceID("ocid1.instance.oc1.phx.example"))
 }
 
 func TestDetectUnreachableReturnsEmpty(t *testing.T) {

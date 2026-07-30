@@ -134,7 +134,7 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
 		return res, fmt.Errorf("%w: instance ID is not present in metadata", resource.ErrPartialResource)
 	}
-	attrs = append(attrs, semconv.HostID(meta.ID))
+	attrs = append(attrs, semconv.HostID(meta.ID), semconv.CloudResourceID(meta.ID))
 
 	attrs = filterAttributes(attrs, d.cfg.filter)
 	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), nil
