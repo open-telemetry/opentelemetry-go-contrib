@@ -23,7 +23,9 @@ import (
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
+	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
 	"go.opentelemetry.io/contrib/detectors/k8sapi"
+	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
 var (
@@ -63,10 +65,18 @@ var (
 	// attributes on Hetzner Cloud servers (see hetzner.NewResourceDetector for
 	// details).
 	IDHetzner = ID("hetzner")
+	// IDIBMCloudVPC is the ID for the IBM Cloud VPC detector that detects
+	// resource attributes on IBM Cloud VPC virtual server instances (see
+	// vpc.NewResourceDetector for details).
+	IDIBMCloudVPC = ID("ibmcloud.vpc")
 	// IDK8sAPI is the ID for the Kubernetes API detector that detects resource
 	// attributes from the Kubernetes API (see k8sapi.NewResourceDetector for
 	// details).
 	IDK8sAPI = ID("k8sapi")
+	// IDVultr is the ID for the Vultr detector that detects resource attributes
+	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
+	// details).
+	IDVultr = ID("vultr")
 	// IDHost is the ID for the host detector. This detector detects the
 	// "host.name" attribute from the os.Hostname function.
 	IDHost = ID("host")
@@ -154,7 +164,11 @@ var (
 
 		IDHetzner: func() resource.Detector { return hetzner.NewResourceDetector() },
 
+		IDIBMCloudVPC: func() resource.Detector { return vpc.NewResourceDetector() },
+
 		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
+
+		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 
 		IDHost:   optFactory(resource.WithHost()),
 		IDHostID: optFactory(resource.WithHostID()),
