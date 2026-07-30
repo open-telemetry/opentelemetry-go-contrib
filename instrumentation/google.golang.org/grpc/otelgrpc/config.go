@@ -247,9 +247,10 @@ func WithMetricAttributesFn(fn func(ctx context.Context) []attribute.KeyValue) O
 	})
 }
 
-// WithNonErrorCodes accepts a set of gRPC codes that should be treated as non-errors.
-// These codes are used to determine the span status code for a gRPC call.
-// When set, these codes are used to prevent the SDK from treating them as errors.
+// WithNonErrorCodes returns an Option that prevents [NewClientHandler] and
+// [NewServerHandler] from setting an error span status for the provided gRPC
+// codes. The codes apply to every RPC. An existing span status set by the
+// application is left unchanged.
 func WithNonErrorCodes(nonErrorCodes ...grpc_codes.Code) Option {
 	return optionFunc(func(c *config) {
 		if len(nonErrorCodes) > 0 {
