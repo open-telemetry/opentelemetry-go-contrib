@@ -207,8 +207,10 @@ func TestClientDisconnect(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
 
+	handlerStarted := make(chan struct{})
 	handlerDone := make(chan struct{})
 	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+		close(handlerStarted)
 		<-req.Request.Context().Done()
 		resp.WriteHeader(http.StatusInternalServerError)
 		close(handlerDone)
@@ -229,8 +231,11 @@ func TestClientDisconnect(t *testing.T) {
 
 	client := ts.Client()
 	go func() {
-		time.Sleep(50 * time.Millisecond)
-		cancel()
+		select {
+		case <-handlerStarted:
+			cancel()
+		case <-time.After(5 * time.Second):
+		}
 	}()
 
 	resp, _ := client.Do(req)
