@@ -227,8 +227,9 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		return nil, fmt.Errorf("failed to get local agent information: %w", err)
 	}
 
+	// The key can be present with a null value, so check both.
 	agentCfg, ok := agent["Config"]
-	if !ok {
+	if !ok || agentCfg == nil {
 		return nil, errors.New("consul agent did not report a Config section")
 	}
 

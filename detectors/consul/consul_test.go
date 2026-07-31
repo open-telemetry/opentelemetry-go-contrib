@@ -217,10 +217,25 @@ func TestDetect_MalformedJSON(t *testing.T) {
 }
 
 func TestDetect_MissingConfigSection(t *testing.T) {
-	res, err := newTestDetector(t, newFakeAgent(t, selfResponse{})).Detect(t.Context())
-	require.Error(t, err)
-	assert.NotErrorIs(t, err, resource.ErrPartialResource)
-	assert.Nil(t, res)
+	// A null Config is served raw: selfResponse cannot encode a null value.
+	tests := map[string]string{
+		"absent": `{}`,
+		"null":   `{"Config": null}`,
+	}
+
+	for name, body := range tests {
+		t.Run(name, func(t *testing.T) {
+			addr := newRawFakeAgent(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.Header().Set("Content-Type", "application/json")
+				_, _ = w.Write([]byte(body))
+			})
+
+			res, err := newTestDetector(t, addr).Detect(t.Context())
+			require.Error(t, err)
+			assert.NotErrorIs(t, err, resource.ErrPartialResource)
+			assert.Nil(t, res)
+		})
+	}
 }
 
 func TestDetect_PartialFailure(t *testing.T) {
