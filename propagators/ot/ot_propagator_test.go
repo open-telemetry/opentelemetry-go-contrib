@@ -136,7 +136,7 @@ func TestOT_Extract(t *testing.T) {
 }
 
 func TestExtractBagsAggregateLimitError(t *testing.T) {
-	// baggage.New enforces a 64-member limit. Each member below parses
+	// Test depends on 64 member limit enforced by `baggage.maxMembers`. Each member below parses
 	// individually without error, so the aggregate limit error is only
 	// surfaced by baggage.New itself.
 	carrier := propagation.MapCarrier{}
