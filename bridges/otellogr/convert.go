@@ -16,9 +16,11 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// maxConvertDepth is the maximum recursion depth for convertValue.
-// Recursive structures beyond this depth are truncated to prevent stack exhaustion.
-const maxConvertDepth = 32
+const (
+	// DefaultAttributeValueDepthLimit is the maximum depth for nested attribute values
+	// as defined by the OpenTelemetry specification.
+	DefaultAttributeValueDepthLimit = 64
+)
 
 // convertValue converts various types to attribute.Value.
 func convertValue(v any) attribute.Value {
@@ -28,8 +30,8 @@ func convertValue(v any) attribute.Value {
 // convertValueDepth converts various types to attribute.Value with depth tracking
 // to prevent unbounded recursion on cyclic or deeply nested values.
 func convertValueDepth(v any, depth int) attribute.Value {
-	if depth > maxConvertDepth {
-		return attribute.StringValue("truncated: max depth exceeded")
+	if depth > DefaultAttributeValueDepthLimit {
+		return attribute.Value{}
 	}
 
 	// Handling the most common types without reflect is a small perf win.
@@ -94,7 +96,7 @@ func convertValueDepth(v any, depth int) attribute.Value {
 		return attribute.StringValue(fmt.Sprintf("%+v", v))
 	case reflect.Slice, reflect.Array:
 		items := make([]attribute.Value, 0, val.Len())
-		for i := 0; i < val.Len(); i++ {
+		for i := range val.Len() {
 			items = append(items, convertValueDepth(val.Index(i).Interface(), depth+1))
 		}
 		return attribute.SliceValue(items...)

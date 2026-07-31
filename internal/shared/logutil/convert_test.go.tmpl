@@ -280,7 +280,7 @@ func TestConvertValueMaxDepth(t *testing.T) {
 	assert.Equal(t, attribute.MAP, convertValue(m).Type())
 
 	var nested any = "leaf"
-	for i := 0; i < maxConvertDepth+5; i++ {
+	for i := 0; i < DefaultAttributeValueDepthLimit+5; i++ {
 		nested = []any{nested}
 	}
 	assert.Equal(t, attribute.SLICE, convertValue(nested).Type())
