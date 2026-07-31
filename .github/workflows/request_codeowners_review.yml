@@ -16,6 +16,7 @@ jobs:
   request_codeowners_review:
     runs-on: ubuntu-latest
     permissions:
+      contents: read # job-level permissions replace the workflow defaults
       pull-requests: write
     if: ${{ github.repository_owner == 'open-telemetry' && github.event.pull_request.draft == false }}
     steps:
