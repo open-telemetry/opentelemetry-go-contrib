@@ -474,10 +474,10 @@ type slowRequestBody struct {
 	closed    chan struct{}
 }
 
-func newSlowRequestBody(totalBytes, chunkSize int64, delay time.Duration) *slowRequestBody {
+func newSlowRequestBody(totalBytes int64, delay time.Duration) *slowRequestBody {
 	return &slowRequestBody{
 		totalBytes: totalBytes,
-		chunkSize:  chunkSize,
+		chunkSize:  1024,
 		delay:      delay,
 		closed:     make(chan struct{}),
 	}
@@ -1157,7 +1157,7 @@ func TestTransportMetricsReportFinalRequestBodySize(t *testing.T) {
 		time.Sleep(250 * time.Millisecond)
 	}()
 
-	body := newSlowRequestBody(256*1024, 1024, 20*time.Millisecond)
+	body := newSlowRequestBody(256*1024, 20*time.Millisecond)
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://"+listener.Addr().String(), body)
 	require.NoError(t, err)
 	req.ContentLength = body.totalBytes
@@ -1237,7 +1237,7 @@ func TestTransportMetricsReportFinalRequestBodySizeUnknownLength(t *testing.T) {
 	// Do not set req.ContentLength: a non-nil streaming body with
 	// ContentLength == 0 means the length is unknown, so only the request
 	// body Close callback may publish the final size.
-	body := newSlowRequestBody(256*1024, 1024, 20*time.Millisecond)
+	body := newSlowRequestBody(256*1024, 20*time.Millisecond)
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://"+listener.Addr().String(), body)
 	require.NoError(t, err)
 	require.Equal(t, int64(0), req.ContentLength)
@@ -1326,7 +1326,7 @@ func TestTransportErrorReportsFinalRequestBodySize(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
-	body := newSlowRequestBody(16*1024, 1024, time.Millisecond)
+	body := newSlowRequestBody(16*1024, time.Millisecond)
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://localhost", body)
 	require.NoError(t, err)
 	req.ContentLength = body.totalBytes
@@ -1388,7 +1388,7 @@ func TestTransportMetricsReportActualSizeOverDeclaredContentLength(t *testing.T)
 	// The body yields more bytes than the declared ContentLength, so a read
 	// count reaching the declared length is not proof of completion; only
 	// the request body Close callback may publish the final size.
-	body := newSlowRequestBody(16*1024, 1024, time.Millisecond)
+	body := newSlowRequestBody(16*1024, time.Millisecond)
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://localhost", body)
 	require.NoError(t, err)
 	req.ContentLength = 4 * 1024
