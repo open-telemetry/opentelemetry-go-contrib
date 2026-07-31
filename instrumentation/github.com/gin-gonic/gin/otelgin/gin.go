@@ -148,7 +148,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		if cfg.GinMetricAttributeFn != nil {
 			additionalAttributes = append(additionalAttributes, cfg.GinMetricAttributeFn(c)...)
 		}
-		if errorTypeAttr != (attribute.KeyValue{}) {
+		if errorTypeAttr.Valid() {
 			additionalAttributes = append(additionalAttributes, errorTypeAttr)
 		}
 

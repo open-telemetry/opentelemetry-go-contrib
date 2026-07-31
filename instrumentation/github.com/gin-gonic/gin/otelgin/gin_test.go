@@ -675,9 +675,20 @@ func TestClientDisconnect(t *testing.T) {
 	rm := metricdata.ResourceMetrics{}
 	require.NoError(t, reader.Collect(t.Context(), &rm))
 	require.Len(t, rm.ScopeMetrics, 1)
-	durationMetric, ok := rm.ScopeMetrics[0].Metrics[2].Data.(metricdata.Histogram[float64])
+
+	var durationMetric *metricdata.Metrics
+	for i, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == "http.server.request.duration" {
+			durationMetric = &rm.ScopeMetrics[0].Metrics[i]
+			break
+		}
+	}
+	require.NotNil(t, durationMetric, "expected to find the http.server.request.duration metric")
+
+	histogram, ok := durationMetric.Data.(metricdata.Histogram[float64])
 	require.True(t, ok)
-	require.Len(t, durationMetric.DataPoints, 1)
-	_, ok = durationMetric.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
-	assert.True(t, ok, "expected error.type attribute on the request duration metric")
+	require.Len(t, histogram.DataPoints, 1)
+	errorType, ok := histogram.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
+	require.True(t, ok, "expected error.type attribute on the request duration metric")
+	assert.Equal(t, semconv.ErrorType(context.Canceled).Value.AsString(), errorType.AsString())
 }
