@@ -80,7 +80,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		} else {
 			stCode, stMsg := semconvServer.Status(status)
 			span.SetStatus(stCode, stMsg)
-			if stCode == codes.Error {
+			if status >= 500 && status < 600 {
 				span.SetAttributes(otelsemconv.ErrorTypeKey.String(strconv.Itoa(status)))
 			}
 		}
