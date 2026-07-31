@@ -1492,6 +1492,94 @@ func TestTransportMetricsRecordedWhenRequestBodyCloseBlocks(t *testing.T) {
 	requireEventuallyRequestBodySize(t, reader, int64(len(payload)))
 }
 
+func TestTransportFilterPassThrough(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	tr := NewTransport(
+		http.DefaultTransport,
+		WithMeterProvider(meterProvider),
+		WithFilter(func(*http.Request) bool { return false }),
+	)
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := (&http.Client{Transport: tr}).Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	// A rejected request passes through to the base RoundTripper without
+	// recording any metrics.
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Empty(t, rm.ScopeMetrics)
+}
+
+func TestRequestTrackerGetBody(t *testing.T) {
+	newTrackedRequest := func(t *testing.T, getBody func() (io.ReadCloser, error)) (*http.Request, *requestTracker) {
+		t.Helper()
+		req, err := http.NewRequestWithContext(
+			t.Context(),
+			http.MethodPost,
+			"http://localhost",
+			io.NopCloser(strings.NewReader("body")),
+		)
+		require.NoError(t, err)
+		req.GetBody = getBody
+		tracker := newRequestTracker(NewTransport(http.DefaultTransport), req)
+		return req, tracker
+	}
+
+	t.Run("wraps replayed body", func(t *testing.T) {
+		replay := io.NopCloser(strings.NewReader("replayed"))
+		req, tracker := newTrackedRequest(t, func() (io.ReadCloser, error) {
+			return replay, nil
+		})
+
+		b, err := req.GetBody()
+		require.NoError(t, err)
+		tb, ok := b.(*trackedRequestBody)
+		require.True(t, ok, "replayed body should be tracked")
+
+		tracker.mu.Lock()
+		current := tracker.body
+		tracker.mu.Unlock()
+		assert.Same(t, tb, current, "tracker should follow the replayed body")
+	})
+
+	t.Run("propagates error and records no data", func(t *testing.T) {
+		getBodyErr := errors.New("GetBody error")
+		req, tracker := newTrackedRequest(t, func() (io.ReadCloser, error) {
+			return nil, getBodyErr
+		})
+
+		b, err := req.GetBody()
+		require.ErrorIs(t, err, getBodyErr)
+		require.Nil(t, b)
+
+		tracker.mu.Lock()
+		current := tracker.body
+		tracker.mu.Unlock()
+		assert.Nil(t, current, "tracker should record no data after a GetBody error")
+	})
+
+	t.Run("passes through NoBody untracked", func(t *testing.T) {
+		req, _ := newTrackedRequest(t, func() (io.ReadCloser, error) {
+			return http.NoBody, nil
+		})
+
+		b, err := req.GetBody()
+		require.NoError(t, err)
+		assert.Equal(t, http.NoBody, b)
+	})
+}
+
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
