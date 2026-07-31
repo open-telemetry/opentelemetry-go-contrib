@@ -337,6 +337,32 @@ func TestConvertValue(t *testing.T) {
 				attribute.Map("right", attribute.Int64("one", 1)),
 			),
 		},
+		{
+			name: "branching_cyclic_map",
+			value: func() any {
+				m := map[string]any{}
+				m["a"] = m
+				m["b"] = m
+				return m
+			}(),
+			wantValue: attribute.MapValue(
+				attribute.String("a", "<cycle>"),
+				attribute.String("b", "<cycle>"),
+			),
+		},
+		{
+			name: "branching_cyclic_slice",
+			value: func() any {
+				s := make([]any, 2)
+				s[0] = s
+				s[1] = s
+				return s
+			}(),
+			wantValue: attribute.SliceValue(
+				attribute.StringValue("<cycle>"),
+				attribute.StringValue("<cycle>"),
+			),
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.wantValue, convertValue(tt.value))
