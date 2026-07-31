@@ -20,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
@@ -257,14 +258,7 @@ func TestClientDisconnect(t *testing.T) {
 	span := spans[0]
 	assert.Equal(t, codes.Error, span.Status().Code)
 	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusInternalServerError))
-	hasErrorType := false
-	for _, attr := range span.Attributes() {
-		if attr.Key == "error.type" && attr.Value.AsString() != "" {
-			hasErrorType = true
-			break
-		}
-	}
-	assert.True(t, hasErrorType, "span should have non-empty error.type attribute")
+	assert.Contains(t, span.Attributes(), otelsemconv.ErrorType(context.Canceled))
 }
 
 func TestWithPublicEndpoint(t *testing.T) {
