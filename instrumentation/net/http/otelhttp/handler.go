@@ -5,13 +5,20 @@ package otelhttp
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io"
 	"net/http"
+	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/felixge/httpsnoop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
@@ -224,18 +231,40 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if capturedRoute == "" && rCtx.Pattern != "" {
 		span.SetName(h.spanNameFormatter(h.operation, rCtx))
 	}
-
 	statusCode := rww.StatusCode()
 	bytesWritten := rww.BytesWritten()
-	span.SetStatus(h.semconv.Status(statusCode))
 	bytesRead := bw.BytesRead()
-	span.SetAttributes(h.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
+
+	spanCode, spanMsg := h.semconv.Status(statusCode)
+
+	writeErr := rww.Error()
+	readErr := bw.Error()
+	cause := serverCause(writeErr, readErr, ctx.Err())
+
+	if cause != nil {
+		spanCode = codes.Error
+	}
+	span.SetStatus(spanCode, spanMsg)
+
+	errorType, hasErrorType := serverErrorType(statusCode, cause)
+
+	attrs := h.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: statusCode,
 		ReadBytes:  bytesRead,
-		ReadError:  bw.Error(),
+		ReadError:  readErr,
 		WriteBytes: bytesWritten,
-		WriteError: rww.Error(),
-	})...)
+		WriteError: writeErr,
+	})
+	if hasErrorType {
+		attrs = append(attrs, errorType)
+	}
+	span.SetAttributes(attrs...)
+
+	additionalAttributes := labeler.Get()
+	if hasErrorType {
+		additionalAttributes = append([]attribute.KeyValue{errorType}, additionalAttributes...)
+	}
+	additionalAttributes = append(additionalAttributes, h.metricAttributesFromRequest(rCtx)...)
 
 	h.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
 		ServerName:   h.server,
@@ -244,7 +273,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 			Req:                  rCtx,
 			StatusCode:           statusCode,
 			Route:                capturedRoute,
-			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(rCtx)...),
+			AdditionalAttributes: additionalAttributes,
 		},
 		MetricData: semconv.MetricData{
 			RequestSize:     bytesRead,
@@ -259,4 +288,86 @@ func (h *middleware) metricAttributesFromRequest(r *http.Request) []attribute.Ke
 		attributeForRequest = h.metricAttributesFn(r)
 	}
 	return attributeForRequest
+}
+
+// serverCause selects the failure cause in priority order: an observed response
+// write error, a non-EOF request-body read error, or the request context's error
+// (e.g. client disconnect). Reading a request body to completion reports io.EOF
+// as the last read error, which is the success path and is ignored.
+func serverCause(writeErr, readErr, ctxErr error) error {
+	if writeErr != nil {
+		return writeErr
+	}
+	if readErr != nil && !errors.Is(readErr, io.EOF) {
+		return readErr
+	}
+	return ctxErr
+}
+
+// serverErrorType returns the error.type attribute for a server request and
+// whether one applies.
+//
+// If cause is non-nil, it classifies the failure cause:
+//   - context.Canceled and context.DeadlineExceeded are normalized to
+//     "context_canceled" and "context_deadline_exceeded", which are the
+//     well-known values recommended by the OpenTelemetry semantic conventions
+//     for canceled and timed-out requests (intentional, not Go type names).
+//   - Other errors fall back to pkg.Type matching HTTPClient.ErrorType in
+//     internal/semconv (stripping pointer indirection and returning _OTHER if
+//     unresolvable).
+//
+// If cause is nil and statusCode is 5xx, it falls back to the status-code string.
+func serverErrorType(statusCode int, cause error) (attribute.KeyValue, bool) {
+	if cause != nil {
+		switch {
+		case errors.Is(cause, context.Canceled):
+			return otelsemconv.ErrorTypeKey.String("context_canceled"), true
+		case errors.Is(cause, context.DeadlineExceeded):
+			return otelsemconv.ErrorTypeKey.String("context_deadline_exceeded"), true
+		default:
+			return classifyErrorType(cause), true
+		}
+	}
+	if statusCode >= http.StatusInternalServerError {
+		return otelsemconv.ErrorTypeKey.String(strconv.Itoa(statusCode)), true
+	}
+	return attribute.KeyValue{}, false
+}
+
+func classifyErrorType(err error) attribute.KeyValue {
+	if et, ok := err.(interface{ ErrorType() string }); ok {
+		if s := et.ErrorType(); s != "" {
+			return otelsemconv.ErrorTypeKey.String(s)
+		}
+	} else {
+		var et interface{ ErrorType() string }
+		if errors.As(err, &et) {
+			if s := et.ErrorType(); s != "" {
+				return otelsemconv.ErrorTypeKey.String(s)
+			}
+		}
+	}
+
+	t := reflect.TypeOf(err)
+	if t == nil {
+		return otelsemconv.ErrorTypeOther
+	}
+	if t.Kind() == reflect.Pointer {
+		t = t.Elem()
+	}
+	var value string
+	if t.PkgPath() == "" || t.Name() == "" {
+		// t.PkgPath() == "" covers builtin and unnamed types.
+		// t.Name() == "" covers anonymous struct types that implement error,
+		// which are uncommon but possible. Fall back to t.String() for both.
+		value = t.String()
+	} else {
+		value = fmt.Sprintf("%s.%s", t.PkgPath(), t.Name())
+	}
+
+	if value == "" {
+		return otelsemconv.ErrorTypeOther
+	}
+
+	return otelsemconv.ErrorTypeKey.String(value)
 }
