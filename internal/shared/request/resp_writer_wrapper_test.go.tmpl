@@ -7,11 +7,15 @@
 package request
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRespWriterWriteHeader(t *testing.T) {
@@ -75,4 +79,37 @@ func TestConcurrentRespWriterWrapper(t *testing.T) {
 	assert.NotNil(t, rw.BytesWritten())
 	assert.NotNil(t, rw.StatusCode())
 	assert.NoError(t, rw.Error())
+}
+
+func TestRespWriterReadFrom(t *testing.T) {
+	rw := NewRespWriterWrapper(&httptest.ResponseRecorder{}, func(int64) {})
+
+	n, err := rw.ReadFrom(strings.NewReader("hello world"))
+	require.NoError(t, err)
+	assert.Equal(t, int64(11), n)
+	assert.Equal(t, int64(11), rw.BytesWritten())
+	assert.Equal(t, http.StatusOK, rw.StatusCode())
+	assert.NoError(t, rw.Error())
+}
+
+type errReaderFrom struct {
+	http.ResponseWriter
+	err error
+}
+
+func (e errReaderFrom) ReadFrom(io.Reader) (int64, error) {
+	return 0, e.err
+}
+
+func TestRespWriterReadFromError(t *testing.T) {
+	want := errors.New("readfrom failed")
+	rw := NewRespWriterWrapper(errReaderFrom{
+		ResponseWriter: &httptest.ResponseRecorder{},
+		err:            want,
+	}, func(int64) {})
+
+	_, err := rw.ReadFrom(strings.NewReader("hello"))
+	assert.Equal(t, want, err)
+	assert.Equal(t, want, rw.Error())
+	assert.Equal(t, http.StatusOK, rw.StatusCode())
 }
