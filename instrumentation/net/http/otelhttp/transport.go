@@ -16,7 +16,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	otelsemconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
@@ -164,6 +164,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		},
 		t.semconv.MetricOptions(semconv.MetricAttributes{
 			Req:                  r,
+			Resp:                 res,
 			StatusCode:           statusCode,
 			Err:                  err,
 			AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
