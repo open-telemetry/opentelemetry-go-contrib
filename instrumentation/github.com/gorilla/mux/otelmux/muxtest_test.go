@@ -4,11 +4,13 @@
 package otelmux_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
@@ -493,6 +496,99 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 			}
 		}
 	}
+}
+
+// TestClientDisconnect reproduces a real HTTP/1.1 client disconnect: the
+// handler observes the cancelled request context and writes a 500, mirroring
+// how a genuine server fault would look. The span and metrics must carry
+// error.type so the disconnect is distinguishable from a real server error.
+func TestClientDisconnect(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	handlerStarted := make(chan struct{})
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware(
+		"foobar",
+		otelmux.WithTracerProvider(provider),
+		otelmux.WithMeterProvider(meterProvider),
+	))
+	router.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+		close(handlerStarted)
+		<-r.Context().Done()
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte("cancelled"))
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	<-handlerStarted
+	cancel()
+	<-requestDone
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusInternalServerError))
+
+	// The disconnect may surface either as a response-write failure (if the
+	// client tore down the connection before the handler's write completed)
+	// or, more commonly, as the request context's cancellation error (if the
+	// write completed first, as in the reported reproduction). Either is a
+	// correct classification of "the client disconnected", so assert that
+	// some error.type was set rather than pinning down which cause won the
+	// race, and that the span and metric attributes agree.
+	var spanErrorTypeAttr attribute.KeyValue
+	var foundSpanErrorType bool
+	for _, attr := range span.Attributes() {
+		if attr.Key == otelsemconv.ErrorTypeKey {
+			spanErrorTypeAttr = attr
+			foundSpanErrorType = true
+			break
+		}
+	}
+	require.True(t, foundSpanErrorType, "expected an error.type attribute on the span")
+	assert.NotEmpty(t, spanErrorTypeAttr.Value.AsString())
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var durationMetric *metricdata.Metrics
+	for i, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == "http.server.request.duration" {
+			durationMetric = &rm.ScopeMetrics[0].Metrics[i]
+			break
+		}
+	}
+	require.NotNil(t, durationMetric, "expected to find the http.server.request.duration metric")
+
+	histogram, ok := durationMetric.Data.(metricdata.Histogram[float64])
+	require.True(t, ok)
+	require.Len(t, histogram.DataPoints, 1)
+	metricErrorType, ok := histogram.DataPoints[0].Attributes.Value(otelsemconv.ErrorTypeKey)
+	require.True(t, ok, "expected error.type attribute on the request duration metric")
+	assert.Equal(t, spanErrorTypeAttr.Value.AsString(), metricErrorType.AsString())
 }
 
 func containsAttributes(t *testing.T, attrSet attribute.Set, expected []attribute.KeyValue) {
