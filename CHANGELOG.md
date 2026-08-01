@@ -45,6 +45,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics for failed server requests in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Classify an observed response-write error, non-EOF request-body read error, or request-context error (in that order), falling back to the status-code string for a 5xx response. (#9404)
 - Omit source attributes in `go.opentelemetry.io/contrib/bridges/otelslog` when `WithSource(true)` is enabled but no caller frame is available. (#9991)
 - Redact the values of the `X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, `sig`, and `X-Goog-Signature` query parameters from the `url.full` attribute recorded on client spans by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, as required by the semantic conventions. (#9950)
 - Resolve the Docker container ID from cgroup data, with a `/proc/self/mountinfo` fallback for private cgroup namespaces, so custom hostnames do not disable detection. Fall back to hostname lookup when neither source provides an ID or the Docker daemon does not recognize it. (`go.opentelemetry.io/contrib/detectors/docker`) (#10019)
