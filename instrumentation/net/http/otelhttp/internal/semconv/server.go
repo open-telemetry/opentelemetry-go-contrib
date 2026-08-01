@@ -16,6 +16,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"errors"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -35,6 +36,7 @@ type ResponseTelemetry struct {
 	ReadError  error
 	WriteBytes int64
 	WriteError error
+	RequestError error
 }
 
 type HTTPServer struct {
@@ -75,6 +77,30 @@ func (HTTPServer) Status(code int) (codes.Code, string) {
 		return codes.Error, ""
 	}
 	return codes.Unset, ""
+}
+
+// errorTypeAttr returns a low-cardinality "error.type" attribute derived
+// from the first non-nil error in errs, in priority order. If all errs are
+// nil and statusCode is a server error, the status code itself is used as
+// the error.type value. ok is false when no error.type should be recorded.
+func (n HTTPServer) errorTypeAttr(errs []error, statusCode int) (attribute.KeyValue, bool) {
+	for _, err := range errs {
+		if err == nil {
+			continue
+		}
+		switch {
+		case errors.Is(err, context.Canceled):
+			return attribute.String("error.type", "context_canceled"), true
+		case errors.Is(err, context.DeadlineExceeded):
+			return attribute.String("error.type", "context_deadline_exceeded"), true
+		default:
+			return attribute.String("error.type", fmt.Sprintf("%T", err)), true
+		}
+	}
+	if statusCode >= 500 {
+		return attribute.String("error.type", fmt.Sprintf("%d", statusCode)), true
+	}
+	return attribute.KeyValue{}, false
 }
 
 // RequestTraceAttrs returns trace attributes for an HTTP request received by a
@@ -263,7 +289,7 @@ var metricRecordOptionPool = &sync.Pool{
 }
 
 func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
-	attributes := n.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.Route, md.AdditionalAttributes)
+	attributes := n.MetricAttributes(md.ServerName, md.Req, md.StatusCode, md.Route, md.AdditionalAttributes, md.Err)
 	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 	recordOpts := metricRecordOptionPool.Get().(*[]metric.RecordOption)
 	*recordOpts = append(*recordOpts, o)
@@ -331,6 +357,10 @@ func (HTTPServer) ResponseTraceAttrs(resp ResponseTelemetry) []attribute.KeyValu
 	if resp.StatusCode > 0 {
 		count++
 	}
+	errAttr, hasErr := n.errorTypeAttr([]error{resp.WriteError, resp.ReadError, resp.RequestError}, resp.StatusCode)
+	if hasErr {
+		count++
+	}
 
 	attributes := make([]attribute.KeyValue, 0, count)
 
@@ -353,6 +383,10 @@ func (HTTPServer) ResponseTraceAttrs(resp ResponseTelemetry) []attribute.KeyValu
 		)
 	}
 
+	if hasErr {
+		attributes = append(attributes, errAttr)
+	}
+
 	return attributes
 }
 
@@ -361,7 +395,7 @@ func (HTTPServer) Route(route string) attribute.KeyValue {
 	return semconv.HTTPRoute(route)
 }
 
-func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCode int, route string, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
+func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCode int, route string, additionalAttributes []attribute.KeyValue, err error) []attribute.KeyValue {
 	num := len(additionalAttributes) + 3
 	var host string
 	var p int
@@ -396,6 +430,11 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 		num++
 	}
 
+	errAttr, hasErr := n.errorTypeAttr([]error{err}, statusCode)
+	if hasErr {
+		num++
+	}
+
 	attributes := slices.Grow(additionalAttributes, num)
 	attributes = append(attributes,
 		semconv.HTTPRequestMethodKey.String(standardizeHTTPMethod(req.Method)),
@@ -418,6 +457,10 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 
 	if route != "" {
 		attributes = append(attributes, semconv.HTTPRoute(route))
+	}
+
+	if hasErr {
+		attributes = append(attributes, errAttr)
 	}
 	return attributes
 }

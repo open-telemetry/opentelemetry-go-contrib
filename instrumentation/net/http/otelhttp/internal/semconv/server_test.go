@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"context"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -27,6 +28,7 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 		server               string
 		req                  *http.Request
 		statusCode           int
+		err                  error
 		route                string
 		additionalAttributes []attribute.KeyValue
 		wantFunc             func(t *testing.T, attrs []attribute.KeyValue)
@@ -87,11 +89,28 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 				}, attrs)
 			},
 		},
+		{
+			name:       "server error with no specific cause uses status code",
+			req:        defaultRequest,
+			statusCode: 500,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				assert.Contains(t, attrs, attribute.String("error.type", "500"))
+			},
+		},
+		{
+			name:       "context canceled takes priority over status code",
+			req:        defaultRequest,
+			statusCode: 500,
+			err:        context.Canceled,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				assert.Contains(t, attrs, attribute.String("error.type", "context_canceled"))
+			},
+		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := HTTPServer{}.MetricAttributes(tt.server, tt.req, tt.statusCode, tt.route, tt.additionalAttributes)
+			got := HTTPServer{}.MetricAttributes(tt.server, tt.req, tt.statusCode, tt.route, tt.additionalAttributes, tt.err)
 			tt.wantFunc(t, got)
 		})
 	}
@@ -281,6 +300,49 @@ func TestHTTPServer_SpanName(t *testing.T) {
 
 			got := HTTPServer{}.SpanName(req)
 			assert.Equal(t, tt.wantName, got)
+		})
+	}
+}
+
+func TestHTTPServer_ResponseTraceAttrs_ErrorType(t *testing.T) {
+	tests := []struct {
+		name string
+		resp ResponseTelemetry
+		want attribute.KeyValue
+		none bool
+	}{
+		{
+			name: "read error used when no write error",
+			resp: ResponseTelemetry{StatusCode: 500, ReadError: context.DeadlineExceeded, RequestError: context.Canceled},
+			want: attribute.String("error.type", "context_deadline_exceeded"),
+		},
+		{
+			name: "request context error used when no write/read error",
+			resp: ResponseTelemetry{StatusCode: 500, RequestError: context.Canceled},
+			want: attribute.String("error.type", "context_canceled"),
+		},
+		{
+			name: "status code fallback when no cause observed",
+			resp: ResponseTelemetry{StatusCode: 503},
+			want: attribute.String("error.type", "503"),
+		},
+		{
+			name: "no error.type for a 2xx with no cause",
+			resp: ResponseTelemetry{StatusCode: 200},
+			none: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attrs := HTTPServer{}.ResponseTraceAttrs(tt.resp)
+			if tt.none {
+				for _, a := range attrs {
+					assert.NotEqual(t, attribute.Key("error.type"), a.Key)
+				}
+				return
+			}
+			assert.Contains(t, attrs, tt.want)
 		})
 	}
 }

@@ -7,6 +7,7 @@
 package semconv_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -23,7 +24,10 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+<<<<<<< HEAD
 
+=======
+>>>>>>> 82f55f881 (fix(otelhttp): set error.type on server spans for disconnects and errors)
 	"{{.pkg}}/internal/semconv"
 )
 
@@ -259,6 +263,18 @@ func TestNewTraceResponse(t *testing.T) {
 				attribute.Int("http.request.body.size", 701),
 				attribute.Int("http.response.body.size", 802),
 				attribute.Int("http.response.status_code", 200),
+				attribute.String("error.type", "*errors.errorString"),
+			},
+		},
+		{
+			name: "context canceled with no read/write error",
+			resp: semconv.ResponseTelemetry{
+				StatusCode:   500,
+				RequestError: context.Canceled,
+			},
+			want: []attribute.KeyValue{
+				attribute.Int("http.response.status_code", 500),
+				attribute.String("error.type", "context_canceled"),
 			},
 		},
 	}

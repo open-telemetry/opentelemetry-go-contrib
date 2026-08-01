@@ -187,17 +187,17 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if r.Pattern != "" {
 		span.SetName(h.spanNameFormatter(h.operation, r))
 	}
-
 	statusCode := rww.StatusCode()
 	bytesWritten := rww.BytesWritten()
 	span.SetStatus(h.semconv.Status(statusCode))
 	bytesRead := bw.BytesRead()
 	span.SetAttributes(h.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
-		StatusCode: statusCode,
-		ReadBytes:  bytesRead,
-		ReadError:  bw.Error(),
-		WriteBytes: bytesWritten,
-		WriteError: rww.Error(),
+		StatusCode:   statusCode,
+		ReadBytes:    bytesRead,
+		ReadError:    bw.Error(),
+		WriteBytes:   bytesWritten,
+		WriteError:   rww.Error(),
+		RequestError: r.Context().Err(),
 	})...)
 
 	h.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
