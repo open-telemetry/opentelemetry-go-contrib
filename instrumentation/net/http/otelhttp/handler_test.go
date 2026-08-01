@@ -4,6 +4,8 @@
 package otelhttp
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
@@ -839,6 +842,341 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 			b.ResetTimer()
 			for range b.N {
 				bb.handler.ServeHTTP(rr, r)
+			}
+		})
+	}
+}
+
+// reproducing a real HTTP/1.1 client disconnect.
+func TestServeHTTPClientDisconnect(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	handlerStarted := make(chan struct{})
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			close(handlerStarted)
+			<-r.Context().Done()
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("cancelled"))
+		}),
+		"test_handler",
+		WithTracerProvider(provider),
+		WithMeterProvider(meterProvider),
+	)
+
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL, http.NoBody)
+	require.NoError(t, err)
+
+	const waitTimeout = 5 * time.Second
+
+	requestDone := make(chan error, 1)
+	go func() {
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+		requestDone <- doErr
+	}()
+
+	select {
+	case <-handlerStarted:
+	case <-time.After(waitTimeout):
+		t.Fatal("timed out waiting for handler to start")
+	}
+	cancel()
+	select {
+	case doErr := <-requestDone:
+		if doErr != nil && !errors.Is(doErr, context.Canceled) {
+			t.Errorf("client request returned unexpected error: %v", doErr)
+		}
+	case <-time.After(waitTimeout):
+		t.Fatal("timed out waiting for client request to finish")
+	}
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusInternalServerError))
+
+	var spanErrorTypeAttr attribute.KeyValue
+	var foundSpanErrorType bool
+	for _, attr := range span.Attributes() {
+		if attr.Key == otelsemconv.ErrorTypeKey {
+			spanErrorTypeAttr = attr
+			foundSpanErrorType = true
+			break
+		}
+	}
+	require.True(t, foundSpanErrorType, "expected an error.type attribute on the span")
+	assert.Equal(t, "context_canceled", spanErrorTypeAttr.Value.AsString())
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var durationMetric *metricdata.Metrics
+	for i, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == "http.server.request.duration" {
+			durationMetric = &rm.ScopeMetrics[0].Metrics[i]
+			break
+		}
+	}
+	require.NotNil(t, durationMetric, "expected to find the http.server.request.duration metric")
+
+	histogram, ok := durationMetric.Data.(metricdata.Histogram[float64])
+	require.True(t, ok)
+	require.Len(t, histogram.DataPoints, 1)
+	metricErrorType, ok := histogram.DataPoints[0].Attributes.Value(otelsemconv.ErrorTypeKey)
+	require.True(t, ok, "expected error.type attribute on the request duration metric")
+	assert.Equal(t, spanErrorTypeAttr.Value.AsString(), metricErrorType.AsString())
+}
+
+func TestServeHTTPServerErrorSetsErrorType(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}),
+		"test_handler",
+		WithTracerProvider(tracerProvider),
+		WithMeterProvider(meterProvider),
+	)
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody))
+
+	require.Len(t, sr.Ended(), 1)
+	assert.Contains(t, sr.Ended()[0].Attributes(), otelsemconv.ErrorTypeKey.String(strconv.Itoa(http.StatusInternalServerError)))
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+	for _, metric := range rm.ScopeMetrics[0].Metrics {
+		var attrs attribute.Set
+		switch data := metric.Data.(type) {
+		case metricdata.Histogram[int64]:
+			require.Len(t, data.DataPoints, 1)
+			attrs = data.DataPoints[0].Attributes
+		case metricdata.Histogram[float64]:
+			require.Len(t, data.DataPoints, 1)
+			attrs = data.DataPoints[0].Attributes
+		default:
+			t.Fatalf("unexpected metric data type %T", data)
+		}
+		value, ok := attrs.Value(otelsemconv.ErrorTypeKey)
+		require.True(t, ok, metric.Name+" should include error.type")
+		assert.Equal(t, strconv.Itoa(http.StatusInternalServerError), value.AsString(), metric.Name)
+	}
+}
+
+func TestServeHTTPSuccessfulBodyReadNoErrorType(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, err := io.ReadAll(r.Body)
+			assert.NoError(t, err)
+			w.WriteHeader(http.StatusOK)
+		}),
+		"test_handler",
+		WithTracerProvider(tracerProvider),
+		WithMeterProvider(meterProvider),
+	)
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", strings.NewReader("request body"))
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	require.Len(t, sr.Ended(), 1)
+	span := sr.Ended()[0]
+	// Reading the request body to completion reports io.EOF, which must not be
+	// treated as a failure: the span stays Unset and carries no error.type.
+	assert.Equal(t, codes.Unset, span.Status().Code)
+	for _, attr := range span.Attributes() {
+		assert.NotEqual(t, otelsemconv.ErrorTypeKey, attr.Key, "successful request should not set error.type")
+	}
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+	for _, metric := range rm.ScopeMetrics[0].Metrics {
+		var attrs attribute.Set
+		switch data := metric.Data.(type) {
+		case metricdata.Histogram[int64]:
+			require.Len(t, data.DataPoints, 1)
+			attrs = data.DataPoints[0].Attributes
+		case metricdata.Histogram[float64]:
+			require.Len(t, data.DataPoints, 1)
+			attrs = data.DataPoints[0].Attributes
+		default:
+			t.Fatalf("unexpected metric data type %T", data)
+		}
+		_, ok := attrs.Value(otelsemconv.ErrorTypeKey)
+		assert.False(t, ok, metric.Name+" should not include error.type")
+	}
+}
+
+type writeFailError struct{}
+
+func (writeFailError) Error() string { return "write failed" }
+
+type readFailError struct{}
+
+func (readFailError) Error() string { return "read failed" }
+
+type errBody struct {
+	err error
+}
+
+func (b errBody) Read([]byte) (int, error) { return 0, b.err }
+func (errBody) Close() error               { return nil }
+
+type errWriter struct {
+	http.ResponseWriter
+	err error
+}
+
+func (w errWriter) Write(p []byte) (int, error) {
+	if w.err != nil {
+		return 0, w.err
+	}
+	return w.ResponseWriter.Write(p)
+}
+
+func TestServeHTTPErrorTypeCausePriority(t *testing.T) {
+	canceledCtx, cancel := context.WithCancel(t.Context())
+	cancel()
+	deadlineCtx, deadlineCancel := context.WithDeadline(t.Context(), time.Now().Add(-time.Second))
+	t.Cleanup(deadlineCancel)
+
+	tests := []struct {
+		name          string
+		ctx           context.Context
+		body          io.Reader
+		writeErr      error
+		wantErrorType string
+	}{
+		{
+			name:          "write error",
+			ctx:           t.Context(),
+			body:          http.NoBody,
+			writeErr:      writeFailError{},
+			wantErrorType: otelsemconv.ErrorType(writeFailError{}).Value.AsString(),
+		},
+		{
+			name:          "non-EOF body read error",
+			ctx:           t.Context(),
+			body:          errBody{err: readFailError{}},
+			wantErrorType: otelsemconv.ErrorType(readFailError{}).Value.AsString(),
+		},
+		{
+			name:          "write error wins over read and context",
+			ctx:           canceledCtx,
+			body:          errBody{err: readFailError{}},
+			writeErr:      writeFailError{},
+			wantErrorType: otelsemconv.ErrorType(writeFailError{}).Value.AsString(),
+		},
+		{
+			name:          "read error wins over context",
+			ctx:           canceledCtx,
+			body:          errBody{err: readFailError{}},
+			wantErrorType: otelsemconv.ErrorType(readFailError{}).Value.AsString(),
+		},
+		{
+			name:          "context canceled",
+			ctx:           canceledCtx,
+			body:          http.NoBody,
+			wantErrorType: "context_canceled",
+		},
+		{
+			name:          "context deadline exceeded",
+			ctx:           deadlineCtx,
+			body:          http.NoBody,
+			wantErrorType: "context_deadline_exceeded",
+		},
+	}
+
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Body != nil && r.Body != http.NoBody {
+			_, _ = io.ReadAll(r.Body)
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte("ok"))
+	})
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+			reader := sdkmetric.NewManualReader()
+			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			h := NewHandler(
+				handler,
+				"test_handler",
+				WithTracerProvider(tracerProvider),
+				WithMeterProvider(meterProvider),
+			)
+
+			var w http.ResponseWriter = httptest.NewRecorder()
+			if tt.writeErr != nil {
+				w = errWriter{ResponseWriter: w, err: tt.writeErr}
+			}
+			req := httptest.NewRequestWithContext(tt.ctx, http.MethodPost, "/", tt.body)
+			h.ServeHTTP(w, req)
+
+			require.Len(t, sr.Ended(), 1)
+			span := sr.Ended()[0]
+			assert.Equal(t, codes.Error, span.Status().Code)
+
+			var got string
+			var found bool
+			for _, attr := range span.Attributes() {
+				if attr.Key == otelsemconv.ErrorTypeKey {
+					got = attr.Value.AsString()
+					found = true
+					break
+				}
+			}
+			require.True(t, found, "expected error.type on the span")
+			assert.Equal(t, tt.wantErrorType, got)
+
+			rm := metricdata.ResourceMetrics{}
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+			require.Len(t, rm.ScopeMetrics, 1)
+			require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+			for _, metric := range rm.ScopeMetrics[0].Metrics {
+				var attrs attribute.Set
+				switch data := metric.Data.(type) {
+				case metricdata.Histogram[int64]:
+					require.Len(t, data.DataPoints, 1)
+					attrs = data.DataPoints[0].Attributes
+				case metricdata.Histogram[float64]:
+					require.Len(t, data.DataPoints, 1)
+					attrs = data.DataPoints[0].Attributes
+				default:
+					t.Fatalf("unexpected metric data type %T", data)
+				}
+				value, ok := attrs.Value(otelsemconv.ErrorTypeKey)
+				require.True(t, ok, metric.Name+" should include error.type")
+				assert.Equal(t, tt.wantErrorType, value.AsString(), metric.Name)
 			}
 		})
 	}
