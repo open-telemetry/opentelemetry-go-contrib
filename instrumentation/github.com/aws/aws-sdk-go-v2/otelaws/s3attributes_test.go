@@ -317,6 +317,17 @@ func TestS3NilParameters(t *testing.T) {
 	assert.Len(t, attributes, 1)
 }
 
+func TestS3TypedNilParameters(t *testing.T) {
+	input := middleware.InitializeInput{
+		Parameters: (*s3.GetObjectInput)(nil),
+	}
+
+	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
+
+	assert.Contains(t, attributes, semconv.RPCSystemNameKey.String(AWSSystemVal))
+	assert.Len(t, attributes, 1)
+}
+
 func TestS3NilMultipartFields(t *testing.T) {
 	input := middleware.InitializeInput{
 		Parameters: &s3.UploadPartInput{

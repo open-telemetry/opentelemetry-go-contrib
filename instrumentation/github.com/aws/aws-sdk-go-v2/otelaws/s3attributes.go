@@ -89,14 +89,17 @@ func S3AttributeBuilder(_ context.Context, in middleware.InitializeInput, _ midd
 // non-nil *string, and the input is a pointer to a struct.
 func stringPtrField(v any, name string) (string, bool) {
 	rv := reflect.ValueOf(v)
-	if rv.Kind() == reflect.Ptr {
+	if rv.Kind() == reflect.Pointer {
+		if rv.IsNil() {
+			return "", false
+		}
 		rv = rv.Elem()
 	}
 	if rv.Kind() != reflect.Struct {
 		return "", false
 	}
 	f := rv.FieldByName(name)
-	if !f.IsValid() || f.Kind() != reflect.Ptr || f.IsNil() {
+	if !f.IsValid() || f.Kind() != reflect.Pointer || f.IsNil() {
 		return "", false
 	}
 	s, ok := f.Elem().Interface().(string)
