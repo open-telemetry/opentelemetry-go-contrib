@@ -16,8 +16,24 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+const (
+	// DefaultAttributeValueDepthLimit is the maximum depth for nested attribute values
+	// as defined by the OpenTelemetry specification.
+	DefaultAttributeValueDepthLimit = 64
+)
+
 // convertValue converts various types to attribute.Value.
 func convertValue(v any) attribute.Value {
+	return convertValueDepth(v, 0)
+}
+
+// convertValueDepth converts various types to attribute.Value with depth tracking
+// to prevent unbounded recursion on cyclic or deeply nested values.
+func convertValueDepth(v any, depth int) attribute.Value {
+	if depth > DefaultAttributeValueDepthLimit {
+		return attribute.Value{}
+	}
+
 	// Handling the most common types without reflect is a small perf win.
 	switch val := v.(type) {
 	case bool:
@@ -81,7 +97,7 @@ func convertValue(v any) attribute.Value {
 	case reflect.Slice, reflect.Array:
 		items := make([]attribute.Value, 0, val.Len())
 		for i := range val.Len() {
-			items = append(items, convertValue(val.Index(i).Interface()))
+			items = append(items, convertValueDepth(val.Index(i).Interface(), depth+1))
 		}
 		return attribute.SliceValue(items...)
 	case reflect.Map:
@@ -96,7 +112,7 @@ func convertValue(v any) attribute.Value {
 			}
 			kvs = append(kvs, attribute.KeyValue{
 				Key:   attribute.Key(key),
-				Value: convertValue(val.MapIndex(k).Interface()),
+				Value: convertValueDepth(val.MapIndex(k).Interface(), depth+1),
 			})
 		}
 		return attribute.MapValue(kvs...)
@@ -104,7 +120,7 @@ func convertValue(v any) attribute.Value {
 		if val.IsNil() {
 			return attribute.Value{}
 		}
-		return convertValue(val.Elem().Interface())
+		return convertValueDepth(val.Elem().Interface(), depth+1)
 	}
 
 	// Try to handle this as gracefully as possible.
