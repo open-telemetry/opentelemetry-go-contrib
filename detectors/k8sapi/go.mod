@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/detectors/k8sapi
 go 1.25.0
 
 require (
-	go.opentelemetry.io/otel v1.44.1-0.20260803145922-48db2c659c3b
+	go.opentelemetry.io/otel v1.45.0
 	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
 	k8s.io/apimachinery v0.35.0
 	k8s.io/client-go v0.35.0
@@ -43,8 +43,8 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.44.1-0.20260623111333-65f30a1ab958 // indirect
-	go.opentelemetry.io/otel/trace v1.44.1-0.20260623111333-65f30a1ab958 // indirect
+	go.opentelemetry.io/otel/metric v1.45.0 // indirect
+	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/net v0.57.0 // indirect
