@@ -18,7 +18,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/k8sapi v0.16.0
 	go.opentelemetry.io/contrib/detectors/vultr v0.16.0
 	go.opentelemetry.io/otel v1.44.1-0.20260803145922-48db2c659c3b
-	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
+	go.opentelemetry.io/otel/sdk v1.44.1-0.20260730203235-08c5de4cbe6a
 )
 
 require (
