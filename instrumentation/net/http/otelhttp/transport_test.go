@@ -936,6 +936,66 @@ func TestTransportMetrics(t *testing.T) {
 	})
 }
 
+func TestTransportNetworkProtocolVersionFromResponse(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	ts.EnableHTTP2 = true
+	ts.StartTLS()
+	defer ts.Close()
+
+	tr := NewTransport(
+		ts.Client().Transport,
+		WithTracerProvider(tracerProvider),
+		WithMeterProvider(meterProvider),
+	)
+	c := http.Client{Transport: tr}
+
+	// http.NewRequestWithContext always stamps Proto as "HTTP/1.1", regardless
+	// of what the transport ends up negotiating over ALPN.
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	res, err := c.Do(r)
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+	require.Equal(t, "HTTP/2.0", res.Proto)
+
+	spans := spanRecorder.Ended()
+	require.Len(t, spans, 1)
+
+	var gotVersion string
+	for _, kv := range spans[0].Attributes() {
+		if kv.Key == "network.protocol.version" {
+			gotVersion = kv.Value.AsString()
+		}
+	}
+	assert.Equal(t, "2.0", gotVersion, "span should report the negotiated wire protocol, not req.Proto")
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.NotEmpty(t, rm.ScopeMetrics[0].Metrics)
+
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		hist, ok := m.Data.(metricdata.Histogram[int64])
+		if !ok {
+			continue
+		}
+		require.NotEmpty(t, hist.DataPoints)
+		_, ok = hist.DataPoints[0].Attributes.Value(attribute.Key("network.protocol.version"))
+		require.True(t, ok, "metric %s missing network.protocol.version", m.Name)
+		version, _ := hist.DataPoints[0].Attributes.Value(attribute.Key("network.protocol.version"))
+		assert.Equal(t, "2.0", version.AsString(), "metric %s should report the negotiated wire protocol, not req.Proto", m.Name)
+	}
+}
+
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
