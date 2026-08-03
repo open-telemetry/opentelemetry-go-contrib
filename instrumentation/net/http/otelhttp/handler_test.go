@@ -4,6 +4,7 @@
 package otelhttp
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -790,4 +791,42 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestServeHTTPClientDisconnectSetsErrorType(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Mirrors a real world handler, the context is already
+			// dead and surface it as a generic failure, exactly like a
+			// downstream call returning ctx.Err() would.
+			if r.Context().Err() != nil {
+				http.Error(w, "canceled", http.StatusInternalServerError)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		}), "test_handler",
+		WithTracerProvider(tp),
+	)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel() // already canceled before the request is even served
+
+	r := httptest.NewRequestWithContext(ctx, http.MethodGet, "/", http.NoBody)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, r)
+
+	require.NoError(t, sr.ForceFlush(context.Background()))
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+
+	var found bool
+	for _, a := range spans[0].Attributes() {
+		if a.Key == "error.type" && a.Value.AsString() == "context_canceled" {
+			found = true
+		}
+	}
+	require.True(t, found, "expected error.type=context_canceled, got %v", spans[0].Attributes())
 }

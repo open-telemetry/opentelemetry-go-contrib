@@ -13,6 +13,7 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"context"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -259,6 +260,18 @@ func TestNewTraceResponse(t *testing.T) {
 				attribute.Int("http.request.body.size", 701),
 				attribute.Int("http.response.body.size", 802),
 				attribute.Int("http.response.status_code", 200),
+				attribute.String("error.type", "*errors.errorString"),
+			},
+		},
+		{
+			name: "context canceled with no read/write error",
+			resp: semconv.ResponseTelemetry{
+				StatusCode:   500,
+				RequestError: context.Canceled,
+			},
+			want: []attribute.KeyValue{
+				attribute.Int("http.response.status_code", 500),
+				attribute.String("error.type", "context_canceled"),
 			},
 		},
 	}
