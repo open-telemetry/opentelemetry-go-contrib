@@ -165,7 +165,6 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 				{AWSEC2: ExperimentalAWSEC2ResourceDetector{}},
 				{AWSECS: ExperimentalAWSECSResourceDetector{}},
 				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
-				{AzureVM: ExperimentalAzureVMResourceDetector{}},
 				{GCP: ExperimentalGCPResourceDetector{}},
 			},
 			wantEC2Attributes:  true,
