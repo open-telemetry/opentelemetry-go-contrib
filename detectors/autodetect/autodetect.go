@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/hetzner"
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
 	"go.opentelemetry.io/contrib/detectors/k8sapi"
+	"go.opentelemetry.io/contrib/detectors/oraclecloud"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -73,6 +74,10 @@ var (
 	// attributes from the Kubernetes API (see k8sapi.NewResourceDetector for
 	// details).
 	IDK8sAPI = ID("k8sapi")
+	// IDOracleCloud is the ID for the Oracle Cloud Infrastructure detector that
+	// detects resource attributes on Oracle Cloud Infrastructure (OCI) instances
+	// (see oraclecloud.NewResourceDetector for details).
+	IDOracleCloud = ID("oraclecloud")
 	// IDVultr is the ID for the Vultr detector that detects resource attributes
 	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
 	// details).
@@ -167,6 +172,8 @@ var (
 		IDIBMCloudVPC: func() resource.Detector { return vpc.NewResourceDetector() },
 
 		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
+
+		IDOracleCloud: func() resource.Detector { return oraclecloud.NewResourceDetector() },
 
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 
