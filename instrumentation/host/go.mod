@@ -3,9 +3,9 @@ module go.opentelemetry.io/contrib/instrumentation/host
 go 1.25.0
 
 require (
-	github.com/shirou/gopsutil/v4 v4.26.6
+	github.com/shirou/gopsutil/v4 v4.26.7
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/otel v1.44.1-0.20260723093731-251b96b24897
+	go.opentelemetry.io/otel v1.44.1-0.20260803145922-48db2c659c3b
 	go.opentelemetry.io/otel/metric v1.44.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
 	go.opentelemetry.io/otel/sdk/metric v1.44.1-0.20260625150014-c84013202f01
@@ -19,7 +19,7 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/lufia/plan9stats v0.0.0-20260627054121-477a66015f15 // indirect
+	github.com/lufia/plan9stats v0.0.0-20260802145828-341c2f0c90b5 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20240221224432-82ca36839d55 // indirect
 	github.com/tklauser/go-sysconf v0.4.0 // indirect
