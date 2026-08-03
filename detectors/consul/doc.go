@@ -18,13 +18,14 @@ The cloud.region value is the Consul datacenter the agent belongs to.
 When no agent can be reached, an empty resource and no error are returned. An
 agent that answers without a usable configuration is an error.
 
-When configured with [WithMetaKeyFilter], the detector additionally emits an
-attribute for every [node meta] entry whose key satisfies the configured
-predicate. Consul is not a cloud provider and has no namespace reserved in the
-semantic conventions, so node meta keys are emitted verbatim, matching the
-Consul detector of the OpenTelemetry Collector. A node meta key that collides
-with a detected attribute, for example "host.name", overrides it. Without
-[WithMetaKeyFilter] no node meta entries are emitted.
+When configured with [WithMetaKeyFilter], the detector additionally emits a
+consul.meta.<key> attribute for every [node meta] entry whose key satisfies the
+configured predicate. Consul is not a cloud provider and has no namespace
+reserved in the semantic conventions, so node meta is namespaced under
+consul.meta, in the same way the Azure VM detector namespaces VM tags under
+azure.tag. The prefix also keeps a node meta entry from colliding with a
+detected attribute. Without [WithMetaKeyFilter] no node meta entries are
+emitted.
 
 [Consul agent]: https://developer.hashicorp.com/consul/docs/agent
 [configuration endpoint]: https://developer.hashicorp.com/consul/api-docs/agent#read-configuration

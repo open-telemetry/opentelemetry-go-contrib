@@ -102,29 +102,36 @@ func TestDetect_NoMetaWithoutFilter(t *testing.T) {
 	res, err := newTestDetector(t, newFakeAgent(t, self)).Detect(t.Context())
 	require.NoError(t, err)
 
-	_, ok := res.Set().Value("rack")
-	assert.False(t, ok, "expected rack to be absent without WithMetaKeyFilter")
+	for _, k := range []attribute.Key{"rack", metaPrefix + "rack"} {
+		_, ok := res.Set().Value(k)
+		assert.False(t, ok, "expected %s to be absent without WithMetaKeyFilter", k)
+	}
 }
 
 func TestDetect_MetaFiltered(t *testing.T) {
 	self := agentSelf()
 	self["Meta"] = map[string]any{"rack": "r1", "environment": "prod"}
 
+	// The filter receives the raw Consul meta key, without the prefix.
 	filter := func(key string) bool { return key == "rack" }
 	res, err := newTestDetector(t, newFakeAgent(t, self), WithMetaKeyFilter(filter)).Detect(t.Context())
 	require.NoError(t, err)
 
-	val, ok := res.Set().Value("rack")
-	require.True(t, ok, "expected rack to be present")
+	val, ok := res.Set().Value(metaPrefix + "rack")
+	require.True(t, ok, "expected consul.meta.rack to be present")
 	assert.Equal(t, attribute.StringValue("r1"), val)
 
-	_, ok = res.Set().Value("environment")
-	assert.False(t, ok, "expected environment to be absent")
+	_, ok = res.Set().Value("rack")
+	assert.False(t, ok, "expected the unprefixed rack to be absent")
+
+	_, ok = res.Set().Value(metaPrefix + "environment")
+	assert.False(t, ok, "expected consul.meta.environment to be absent")
 }
 
-func TestDetect_MetaOverridesDetectedAttribute(t *testing.T) {
-	// Node meta keys are emitted verbatim, so a colliding key wins. This
-	// matches the collector's Consul detector.
+func TestDetect_MetaDoesNotOverrideDetectedAttribute(t *testing.T) {
+	// Node meta keys are namespaced, so they cannot collide with a detected
+	// attribute. Consul itself rejects a meta key like this one; it is used
+	// here only to exercise the collision the prefix rules out.
 	self := agentSelf()
 	self["Meta"] = map[string]any{"host.name": "from-meta"}
 
@@ -134,6 +141,10 @@ func TestDetect_MetaOverridesDetectedAttribute(t *testing.T) {
 
 	val, ok := res.Set().Value(semconv.HostNameKey)
 	require.True(t, ok)
+	assert.Equal(t, attribute.StringValue("node-1"), val)
+
+	val, ok = res.Set().Value(metaPrefix + "host.name")
+	require.True(t, ok, "expected consul.meta.host.name to be present")
 	assert.Equal(t, attribute.StringValue("from-meta"), val)
 }
 
@@ -146,10 +157,10 @@ func TestDetect_NonStringMetaValue(t *testing.T) {
 	res, err := newTestDetector(t, newFakeAgent(t, self), WithMetaKeyFilter(filter)).Detect(t.Context())
 	require.NoError(t, err)
 
-	_, ok := res.Set().Value("rack")
+	_, ok := res.Set().Value(metaPrefix + "rack")
 	assert.False(t, ok, "expected non-string rack to be absent")
 
-	val, ok := res.Set().Value("zone")
+	val, ok := res.Set().Value(metaPrefix + "zone")
 	require.True(t, ok)
 	assert.Equal(t, attribute.StringValue("z1"), val)
 }

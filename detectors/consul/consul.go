@@ -20,6 +20,9 @@ import (
 // defaultTimeout bounds a single request to the Consul agent.
 const defaultTimeout = 2 * time.Second
 
+// metaPrefix namespaces the Consul node meta keys emitted as attributes.
+const metaPrefix = "consul.meta."
+
 // Compile-time interface assertion.
 var _ resource.Detector = (*ResourceDetector)(nil)
 
@@ -86,12 +89,14 @@ func WithTimeout(timeout time.Duration) Option {
 	return optionFunc(func(c *config) { c.timeout = timeout })
 }
 
-// WithMetaKeyFilter emits an attribute for every Consul node meta entry whose
-// key satisfies filter. The attribute key is the Consul meta key verbatim, so a
-// meta key that collides with a detected attribute (for example "host.name")
-// overrides it. Without this option no node meta entries are emitted. For
-// regexp based selection pass the MatchString method of a compiled
-// [regexp.Regexp].
+// WithMetaKeyFilter emits a consul.meta.<key> attribute for every Consul node
+// meta entry whose key satisfies filter. The filter receives the raw Consul
+// meta key, without the "consul.meta." prefix. Without this option no node meta
+// entries are emitted. For regexp based selection pass the MatchString method
+// of a compiled [regexp.Regexp].
+//
+// Meta attributes are subject to [WithAttributeFilter] like any other
+// attribute.
 func WithMetaKeyFilter(filter func(key string) bool) Option {
 	return optionFunc(func(c *config) { c.metaKeyFilter = filter })
 }
@@ -254,15 +259,14 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		attrs = append(attrs, a.attr(v))
 	}
 
-	// Node meta is appended last so a meta key that collides with a detected
-	// attribute overrides it, matching the collector's Consul detector.
+	// Node meta is namespaced, so it cannot collide with a detected attribute.
 	if d.cfg.metaKeyFilter != nil {
 		for k, v := range agent["Meta"] {
 			s, ok := v.(string)
 			if !ok || !d.cfg.metaKeyFilter(k) {
 				continue
 			}
-			attrs = append(attrs, attribute.String(k, s))
+			attrs = append(attrs, attribute.String(metaPrefix+k, s))
 		}
 	}
 

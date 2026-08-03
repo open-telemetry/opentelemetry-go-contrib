@@ -30,7 +30,7 @@ func ExampleNewResourceDetector() {
 
 func ExampleWithMetaKeyFilter() {
 	// Of the node meta entries reported by the agent, only "rack" is emitted,
-	// as an attribute with the key "rack".
+	// as an attribute with the key "consul.meta.rack".
 	detector := consul.NewResourceDetector(
 		consul.WithMetaKeyFilter(regexp.MustCompile("^rack$").MatchString),
 	)
