@@ -7,7 +7,7 @@ package contrib
 
 // Version is the current release version of OpenTelemetry Contrib in use.
 func Version() string {
-	return "1.44.0"
+	return "1.45.0"
 	// This string is updated by the pre_release.sh script during release
 }
 
