@@ -4,4 +4,4 @@
 package otelaws
 
 // Version is the current release version of the AWS SDKv2 instrumentation.
-const Version = "0.69.0"
+const Version = "0.70.0"
