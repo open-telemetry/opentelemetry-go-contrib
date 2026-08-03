@@ -11,24 +11,24 @@ require (
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.44.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.69.0
-	go.opentelemetry.io/otel v1.44.1-0.20260803145922-48db2c659c3b
-	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.20.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.20.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.44.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.44.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.44.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.44.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/exporters/prometheus v0.66.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.20.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.44.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/log v0.20.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/metric v1.44.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/sdk/log v0.20.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/sdk/log/logtest v0.20.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/sdk/metric v1.44.1-0.20260625150014-c84013202f01
-	go.opentelemetry.io/otel/trace v1.44.1-0.20260625150014-c84013202f01
+	go.opentelemetry.io/otel v1.45.0
+	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.21.0
+	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.21.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.45.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.45.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.45.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.45.0
+	go.opentelemetry.io/otel/exporters/prometheus v0.67.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.21.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.45.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.45.0
+	go.opentelemetry.io/otel/log v0.21.0
+	go.opentelemetry.io/otel/metric v1.45.0
+	go.opentelemetry.io/otel/sdk v1.45.0
+	go.opentelemetry.io/otel/sdk/log v0.21.0
+	go.opentelemetry.io/otel/sdk/log/logtest v0.21.0
+	go.opentelemetry.io/otel/sdk/metric v1.45.0
+	go.opentelemetry.io/otel/trace v1.45.0
 	go.opentelemetry.io/proto/otlp v1.11.0
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/exp v0.0.0-20260727155853-b88d891fe743
@@ -62,7 +62,7 @@ require (
 	go.opentelemetry.io/contrib/propagators/b3 v1.44.0 // indirect
 	go.opentelemetry.io/contrib/propagators/jaeger v1.44.0 // indirect
 	go.opentelemetry.io/contrib/propagators/ot v1.44.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.44.1-0.20260625150014-c84013202f01 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.45.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	golang.org/x/net v0.57.0 // indirect
