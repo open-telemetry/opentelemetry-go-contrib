@@ -141,6 +141,8 @@ func (HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue {
 	 below attributes are returned:
 	 - http.response.status_code
 	 - error.type
+	 - network.protocol.name (only when it is not "http")
+	 - network.protocol.version
 	*/
 	var count int
 	if resp.StatusCode > 0 {
@@ -148,6 +150,21 @@ func (HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue {
 	}
 
 	if isErrorStatusCode(resp.StatusCode) {
+		count++
+	}
+
+	// The protocol version is only known for certain once the response
+	// arrives: req.Proto reflects what the caller asked for, but the
+	// transport may negotiate a different version (for example HTTP/2 via
+	// ALPN). Report resp.Proto here so it overrides the request-time value
+	// on the span. As in RequestTraceAttrs, network.protocol.name is omitted
+	// when it is "http": the spec only requires it when the name differs from
+	// the protocol implied by http.request.method.
+	protoName, protoVersion := netProtocol(resp.Proto)
+	if protoName != "" && protoName != "http" {
+		count++
+	}
+	if protoVersion != "" {
 		count++
 	}
 
@@ -159,6 +176,13 @@ func (HTTPClient) ResponseTraceAttrs(resp *http.Response) []attribute.KeyValue {
 	if isErrorStatusCode(resp.StatusCode) {
 		errorType := strconv.Itoa(resp.StatusCode)
 		attrs = append(attrs, semconv.ErrorTypeKey.String(errorType))
+	}
+
+	if protoName != "" && protoName != "http" {
+		attrs = append(attrs, semconv.NetworkProtocolName(protoName))
+	}
+	if protoVersion != "" {
+		attrs = append(attrs, semconv.NetworkProtocolVersion(protoVersion))
 	}
 	return attrs
 }
@@ -178,7 +202,7 @@ func (HTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValue)
 	return semconv.HTTPRequestMethodOther, orig
 }
 
-func (n HTTPClient) MetricAttributes(req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
+func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
 	num := len(additionalAttributes) + 2
 	var h string
 	if req.URL != nil {
@@ -198,7 +222,14 @@ func (n HTTPClient) MetricAttributes(req *http.Request, statusCode int, addition
 		num++
 	}
 
-	protoName, protoVersion := netProtocol(req.Proto)
+	// Prefer the negotiated protocol reported on the response: req.Proto is
+	// only what the caller asked for, and the transport may have upgraded
+	// the connection (for example HTTP/2 via ALPN).
+	proto := req.Proto
+	if resp != nil && resp.Proto != "" {
+		proto = resp.Proto
+	}
+	protoName, protoVersion := netProtocol(proto)
 	if protoName != "" {
 		num++
 	}
@@ -248,7 +279,7 @@ func (o MetricOpts) AddOptions() metric.AddOption {
 }
 
 func (n HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
-	attributes := n.MetricAttributes(ma.Req, ma.StatusCode, ma.AdditionalAttributes)
+	attributes := n.MetricAttributes(ma.Req, ma.Resp, ma.StatusCode, ma.AdditionalAttributes)
 	if ma.StatusCode == 0 && ma.Err != nil {
 		attributes = append(attributes, n.ErrorType(ma.Err))
 	}
