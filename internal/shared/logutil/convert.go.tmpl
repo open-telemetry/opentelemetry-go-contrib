@@ -18,6 +18,10 @@ import (
 
 // convertValue converts various types to attribute.Value.
 func convertValue(v any) attribute.Value {
+	return convertValueVisited(v, nil)
+}
+
+func convertValueVisited(v any, visited []uintptr) attribute.Value {
 	// Handling the most common types without reflect is a small perf win.
 	switch val := v.(type) {
 	case bool:
@@ -79,12 +83,44 @@ func convertValue(v any) attribute.Value {
 	case reflect.Struct:
 		return attribute.StringValue(fmt.Sprintf("%+v", v))
 	case reflect.Slice, reflect.Array:
+		if val.Len() == 0 {
+			return attribute.SliceValue()
+		}
+		if t.Kind() == reflect.Slice {
+			if val.IsNil() {
+				return attribute.Value{}
+			}
+			ptr := val.Pointer()
+			if ptr != 0 {
+				for _, p := range visited {
+					if p == ptr {
+						return attribute.StringValue("<cycle>")
+					}
+				}
+				visited = append(visited, ptr)
+			}
+		}
 		items := make([]attribute.Value, 0, val.Len())
 		for i := range val.Len() {
-			items = append(items, convertValue(val.Index(i).Interface()))
+			items = append(items, convertValueVisited(val.Index(i).Interface(), visited))
 		}
 		return attribute.SliceValue(items...)
 	case reflect.Map:
+		if val.IsNil() {
+			return attribute.Value{}
+		}
+		if val.Len() == 0 {
+			return attribute.MapValue()
+		}
+		ptr := val.Pointer()
+		if ptr != 0 {
+			for _, p := range visited {
+				if p == ptr {
+					return attribute.StringValue("<cycle>")
+				}
+			}
+			visited = append(visited, ptr)
+		}
 		kvs := make([]attribute.KeyValue, 0, val.Len())
 		for _, k := range val.MapKeys() {
 			var key string
@@ -96,15 +132,29 @@ func convertValue(v any) attribute.Value {
 			}
 			kvs = append(kvs, attribute.KeyValue{
 				Key:   attribute.Key(key),
-				Value: convertValue(val.MapIndex(k).Interface()),
+				Value: convertValueVisited(val.MapIndex(k).Interface(), visited),
 			})
 		}
 		return attribute.MapValue(kvs...)
-	case reflect.Pointer, reflect.Interface:
+	case reflect.Pointer:
 		if val.IsNil() {
 			return attribute.Value{}
 		}
-		return convertValue(val.Elem().Interface())
+		ptr := val.Pointer()
+		if ptr != 0 {
+			for _, p := range visited {
+				if p == ptr {
+					return attribute.StringValue("<cycle>")
+				}
+			}
+			visited = append(visited, ptr)
+		}
+		return convertValueVisited(val.Elem().Interface(), visited)
+	case reflect.Interface:
+		if val.IsNil() {
+			return attribute.Value{}
+		}
+		return convertValueVisited(val.Elem().Interface(), visited)
 	}
 
 	// Try to handle this as gracefully as possible.

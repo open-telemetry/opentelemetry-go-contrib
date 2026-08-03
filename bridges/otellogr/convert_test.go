@@ -261,6 +261,108 @@ func TestConvertValue(t *testing.T) {
 			value:     chan int(nil),
 			wantValue: attribute.StringValue("unhandled: (chan int) <nil>"),
 		},
+		{
+			name: "cyclic_map",
+			value: func() any {
+				m := map[string]any{}
+				m["self"] = m
+				return m
+			}(),
+			wantValue: attribute.MapValue(
+				attribute.String("self", "<cycle>"),
+			),
+		},
+		{
+			name: "cyclic_slice",
+			value: func() any {
+				s := make([]any, 1)
+				s[0] = s
+				return s
+			}(),
+			wantValue: attribute.SliceValue(
+				attribute.StringValue("<cycle>"),
+			),
+		},
+		{
+			name: "cyclic_pointer",
+			value: func() any {
+				var p1, p2 any
+				p1 = &p2
+				p2 = &p1
+				return p1
+			}(),
+			wantValue: attribute.StringValue("<cycle>"),
+		},
+		{
+			name: "indirect_cyclic_map",
+			value: func() any {
+				m1 := map[string]any{}
+				m2 := map[string]any{}
+				m1["next"] = m2
+				m2["next"] = m1
+				return m1
+			}(),
+			wantValue: attribute.MapValue(
+				attribute.Map("next",
+					attribute.String("next", "<cycle>"),
+				),
+			),
+		},
+		{
+			name: "indirect_cyclic_slice",
+			value: func() any {
+				s1 := make([]any, 1)
+				s2 := make([]any, 1)
+				s1[0] = s2
+				s2[0] = s1
+				return s1
+			}(),
+			wantValue: attribute.SliceValue(
+				attribute.SliceValue(
+					attribute.StringValue("<cycle>"),
+				),
+			),
+		},
+		{
+			name: "non_cyclic_dag",
+			value: func() any {
+				shared := map[string]int{"one": 1}
+				return map[string]any{
+					"left":  shared,
+					"right": shared,
+				}
+			}(),
+			wantValue: attribute.MapValue(
+				attribute.Map("left", attribute.Int64("one", 1)),
+				attribute.Map("right", attribute.Int64("one", 1)),
+			),
+		},
+		{
+			name: "branching_cyclic_map",
+			value: func() any {
+				m := map[string]any{}
+				m["a"] = m
+				m["b"] = m
+				return m
+			}(),
+			wantValue: attribute.MapValue(
+				attribute.String("a", "<cycle>"),
+				attribute.String("b", "<cycle>"),
+			),
+		},
+		{
+			name: "branching_cyclic_slice",
+			value: func() any {
+				s := make([]any, 2)
+				s[0] = s
+				s[1] = s
+				return s
+			}(),
+			wantValue: attribute.SliceValue(
+				attribute.StringValue("<cycle>"),
+				attribute.StringValue("<cycle>"),
+			),
+		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.wantValue, convertValue(tt.value))

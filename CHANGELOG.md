@@ -38,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Fix recursive log value conversion crash on cyclic data by adding path-local cycle detection in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`.(#9398)
 - Fix Prometheus reader resource label filter configuration in `go.opentelemetry.io/contrib/otelconf/v0.2.0`. (#9045)
 - Apply `resource.detection/development.attributes.included` and `excluded` filtering to resource detector attributes in `go.opentelemetry.io/contrib/otelconf/x`. (#9131)
 - Honor the context configured with `WithContext` when constructing resources in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`. (#9160)
