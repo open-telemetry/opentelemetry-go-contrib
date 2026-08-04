@@ -63,19 +63,15 @@ func newRawFakeAgent(t *testing.T, h http.HandlerFunc) string {
 }
 
 // newTestDetector returns a detector pointed at the agent listening on addr.
+// The client is built by Detect so that the context deadline applies.
 func newTestDetector(t *testing.T, addr string, opts ...Option) *ResourceDetector {
 	t.Helper()
-	d := NewResourceDetector(append([]Option{WithAddress(addr)}, opts...)...)
-	client, err := d.newClient()
-	require.NoError(t, err)
-	d.cfg.client = client
-	return d
+	return NewResourceDetector(append([]Option{WithAddress(addr)}, opts...)...)
 }
 
 func TestNewResourceDetector(t *testing.T) {
 	d := NewResourceDetector()
 	require.NotNil(t, d)
-	assert.Equal(t, defaultTimeout, d.cfg.timeout)
 	assert.Nil(t, d.cfg.client)
 	assert.Nil(t, d.cfg.metaKeyFilter)
 }
@@ -295,7 +291,8 @@ func TestDetect_ContextCanceled(t *testing.T) {
 	assert.Nil(t, res)
 }
 
-func TestDetect_Timeout(t *testing.T) {
+func TestDetect_ContextDeadline(t *testing.T) {
+	// The caller's deadline bounds the request: there is no separate timeout.
 	released := make(chan struct{})
 	t.Cleanup(func() { close(released) })
 	addr := newRawFakeAgent(t, func(_ http.ResponseWriter, r *http.Request) {
@@ -305,7 +302,10 @@ func TestDetect_Timeout(t *testing.T) {
 		}
 	})
 
-	res, err := newTestDetector(t, addr, WithTimeout(10*time.Millisecond)).Detect(t.Context())
+	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Millisecond)
+	t.Cleanup(cancel)
+
+	res, err := newTestDetector(t, addr).Detect(ctx)
 	require.Error(t, err)
 	assert.Nil(t, res)
 }

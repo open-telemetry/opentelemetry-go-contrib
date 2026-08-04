@@ -17,7 +17,8 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
-// defaultTimeout bounds a single request to the Consul agent.
+// defaultTimeout bounds a request to the Consul agent when the context passed
+// to [ResourceDetector.Detect] carries no deadline.
 const defaultTimeout = 2 * time.Second
 
 // metaPrefix namespaces the Consul node meta keys emitted as attributes.
@@ -32,7 +33,6 @@ type config struct {
 	namespace     string
 	token         string
 	tokenFile     string
-	timeout       time.Duration
 	metaKeyFilter func(key string) bool
 	client        *api.Client
 	filter        attribute.Filter
@@ -83,12 +83,6 @@ func WithTokenFile(path string) Option {
 	return optionFunc(func(c *config) { c.tokenFile = path })
 }
 
-// WithTimeout sets the timeout of a single request to the Consul agent.
-// Defaults to 2s. It is ignored when [WithClient] is used.
-func WithTimeout(timeout time.Duration) Option {
-	return optionFunc(func(c *config) { c.timeout = timeout })
-}
-
 // WithMetaKeyFilter emits a consul.meta.<key> attribute for every Consul node
 // meta entry whose key satisfies filter. The filter receives the raw Consul
 // meta key, without the "consul.meta." prefix. Without this option no node meta
@@ -104,8 +98,8 @@ func WithMetaKeyFilter(filter func(key string) bool) Option {
 // WithClient sets the Consul client used to query the agent. If not set, a
 // client is created during [ResourceDetector.Detect] from the other options and
 // the CONSUL_* environment variables. When set, the [WithAddress],
-// [WithDatacenter], [WithNamespace], [WithToken], [WithTokenFile], and
-// [WithTimeout] options are ignored.
+// [WithDatacenter], [WithNamespace], [WithToken], and [WithTokenFile] options
+// are ignored.
 //
 // Give the client a timeout. [ResourceDetector.Detect] queries from its own
 // goroutine, so without one a canceled context leaves that goroutine blocked.
@@ -128,7 +122,7 @@ type ResourceDetector struct {
 // NewResourceDetector returns a [resource.Detector] that detects resource
 // attributes from a Consul agent.
 func NewResourceDetector(opts ...Option) *ResourceDetector {
-	cfg := config{timeout: defaultTimeout}
+	var cfg config
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
@@ -161,8 +155,10 @@ func (d *ResourceDetector) apiConfig() *api.Config {
 	return cfg
 }
 
-// newClient returns a Consul client built from the detector configuration.
-func (d *ResourceDetector) newClient() (*api.Client, error) {
+// newClient returns a Consul client built from the detector configuration. The
+// request is bounded by the deadline of ctx, falling back to defaultTimeout so
+// a hung agent cannot block Detect forever.
+func (d *ResourceDetector) newClient(ctx context.Context) (*api.Client, error) {
 	cfg := d.apiConfig()
 
 	client, err := api.NewClient(cfg)
@@ -174,7 +170,11 @@ func (d *ResourceDetector) newClient() (*api.Client, error) {
 	// configuration, so the timeout can only be applied afterwards. It assigns
 	// the client back onto cfg, and the returned client holds the same pointer.
 	if cfg.HttpClient != nil {
-		cfg.HttpClient.Timeout = d.cfg.timeout
+		timeout := defaultTimeout
+		if deadline, ok := ctx.Deadline(); ok {
+			timeout = time.Until(deadline)
+		}
+		cfg.HttpClient.Timeout = timeout
 	}
 
 	return client, nil
@@ -214,11 +214,14 @@ func isDialFailure(err error) bool {
 // resource and no error when no agent can be reached, and an error when the
 // agent answers without a usable configuration. Missing individual attributes
 // yield a partial resource with [resource.ErrPartialResource].
+//
+// The deadline of ctx bounds the request. Without one the request is bounded by
+// an internal default.
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	client := d.cfg.client
 	if client == nil {
 		var err error
-		if client, err = d.newClient(); err != nil {
+		if client, err = d.newClient(ctx); err != nil {
 			return nil, fmt.Errorf("failed creating consul client: %w", err)
 		}
 	}

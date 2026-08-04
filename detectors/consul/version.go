@@ -4,4 +4,4 @@
 package consul
 
 // Version is the current release version of the Consul resource detector.
-const Version = "0.16.0"
+const Version = "0.17.0"
