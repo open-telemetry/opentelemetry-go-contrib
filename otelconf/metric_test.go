@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -1447,27 +1446,113 @@ func TestNewIncludeExcludeFilter(t *testing.T) {
 			wantPass: []string{"bar"},
 			wantFail: []string{"foo"},
 		},
+		{
+			name: "filter-with-wildcard-include",
+			attributeKeys: ptr(IncludeExclude{
+				Included: []string{"service.*", "process.?ommand_args"},
+			}),
+			wantPass: []string{"service.", "service.name", "process.command_args"},
+			wantFail: []string{"Service.name", "process.ommand_args", "process.xxommand_args", "host.name"},
+		},
+		{
+			name: "filter-with-wildcard-exclude",
+			attributeKeys: ptr(IncludeExclude{
+				Excluded: []string{"secret.*", "process.?ommand_args"},
+			}),
+			wantPass: []string{"service.name"},
+			wantFail: []string{"secret.", "secret.token", "process.command_args"},
+		},
+		{
+			name: "filter-with-exclusion-precedence",
+			attributeKeys: ptr(IncludeExclude{
+				Included: []string{"service.*"},
+				Excluded: []string{"service.name", "service.secret*"},
+			}),
+			wantPass: []string{"service.version"},
+			wantFail: []string{"service.name", "service.secret.token", "host.name"},
+		},
+		{
+			name: "filter-with-identical-include-and-exclude",
+			attributeKeys: ptr(IncludeExclude{
+				Included: []string{"service.name"},
+				Excluded: []string{"service.name"},
+			}),
+			wantFail: []string{"service.name"},
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := newIncludeExcludeFilter(tt.attributeKeys)
 			require.NoError(t, err)
 			for _, pass := range tt.wantPass {
-				require.True(t, got(attribute.KeyValue{Key: attribute.Key(pass), Value: attribute.StringValue("")}))
+				require.True(t, got(attribute.KeyValue{Key: attribute.Key(pass), Value: attribute.StringValue("")}),
+					"expected %q to pass", pass)
 			}
 			for _, fail := range tt.wantFail {
-				require.False(t, got(attribute.KeyValue{Key: attribute.Key(fail), Value: attribute.StringValue("")}))
+				require.False(t, got(attribute.KeyValue{Key: attribute.Key(fail), Value: attribute.StringValue("")}),
+					"expected %q to fail", fail)
 			}
 		})
 	}
 }
 
-func TestNewIncludeExcludeFilterError(t *testing.T) {
-	_, err := newIncludeExcludeFilter(ptr(IncludeExclude{
-		Included: []string{"foo"},
-		Excluded: []string{"foo"},
-	}))
-	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
+func BenchmarkIncludeExcludeFilter(b *testing.B) {
+	benchmarks := []struct {
+		name          string
+		attributeKeys *IncludeExclude
+		key           string
+		want          bool
+	}{
+		{
+			name:          "exact-match",
+			attributeKeys: ptr(IncludeExclude{Included: []string{"service.name", "service.version"}}),
+			key:           "service.name",
+			want:          true,
+		},
+		{
+			name:          "exact-no-match",
+			attributeKeys: ptr(IncludeExclude{Included: []string{"service.name", "service.version"}}),
+			key:           "host.name",
+			want:          false,
+		},
+		{
+			name:          "wildcard-match",
+			attributeKeys: ptr(IncludeExclude{Included: []string{"service.*", "process.?ommand_args"}}),
+			key:           "service.name",
+			want:          true,
+		},
+		{
+			name:          "wildcard-no-match",
+			attributeKeys: ptr(IncludeExclude{Included: []string{"service.*", "process.?ommand_args"}}),
+			key:           "host.name",
+			want:          false,
+		},
+		{
+			name: "wildcard-excluded",
+			attributeKeys: ptr(IncludeExclude{
+				Included: []string{"service.*"},
+				Excluded: []string{"service.secret*"},
+			}),
+			key:  "service.secret.token",
+			want: false,
+		},
+	}
+	for _, bm := range benchmarks {
+		b.Run(bm.name, func(b *testing.B) {
+			filter, err := newIncludeExcludeFilter(bm.attributeKeys)
+			require.NoError(b, err)
+			keyValue := attribute.String(bm.key, "")
+			var got bool
+			b.ReportAllocs()
+			b.ResetTimer()
+			for b.Loop() {
+				got = filter(keyValue)
+			}
+			if got != bm.want {
+				b.Fatalf("filter result = %v, want %v", got, bm.want)
+			}
+		})
+	}
 }
 
 func Test_otlpGRPCMetricExporter(t *testing.T) {

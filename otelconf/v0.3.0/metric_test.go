@@ -9,7 +9,6 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -1343,27 +1342,54 @@ func TestNewIncludeExcludeFilter(t *testing.T) {
 			wantPass: []string{"bar"},
 			wantFail: []string{"foo"},
 		},
+		{
+			name: "filter-with-wildcard-include",
+			attributeKeys: ptr(IncludeExclude{
+				Included: []string{"service.*", "process.?ommand_args"},
+			}),
+			wantPass: []string{"service.", "service.name", "process.command_args"},
+			wantFail: []string{"Service.name", "process.ommand_args", "process.xxommand_args", "host.name"},
+		},
+		{
+			name: "filter-with-wildcard-exclude",
+			attributeKeys: ptr(IncludeExclude{
+				Excluded: []string{"secret.*", "process.?ommand_args"},
+			}),
+			wantPass: []string{"service.name"},
+			wantFail: []string{"secret.", "secret.token", "process.command_args"},
+		},
+		{
+			name: "filter-with-exclusion-precedence",
+			attributeKeys: ptr(IncludeExclude{
+				Included: []string{"service.*"},
+				Excluded: []string{"service.name", "service.secret*"},
+			}),
+			wantPass: []string{"service.version"},
+			wantFail: []string{"service.name", "service.secret.token", "host.name"},
+		},
+		{
+			name: "filter-with-identical-include-and-exclude",
+			attributeKeys: ptr(IncludeExclude{
+				Included: []string{"service.name"},
+				Excluded: []string{"service.name"},
+			}),
+			wantFail: []string{"service.name"},
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := newIncludeExcludeFilter(tt.attributeKeys)
 			require.NoError(t, err)
 			for _, pass := range tt.wantPass {
-				require.True(t, got(attribute.KeyValue{Key: attribute.Key(pass), Value: attribute.StringValue("")}))
+				require.True(t, got(attribute.KeyValue{Key: attribute.Key(pass), Value: attribute.StringValue("")}),
+					"expected %q to pass", pass)
 			}
 			for _, fail := range tt.wantFail {
-				require.False(t, got(attribute.KeyValue{Key: attribute.Key(fail), Value: attribute.StringValue("")}))
+				require.False(t, got(attribute.KeyValue{Key: attribute.Key(fail), Value: attribute.StringValue("")}),
+					"expected %q to fail", fail)
 			}
 		})
 	}
-}
-
-func TestNewIncludeExcludeFilterError(t *testing.T) {
-	_, err := newIncludeExcludeFilter(ptr(IncludeExclude{
-		Included: []string{"foo"},
-		Excluded: []string{"foo"},
-	}))
-	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
 }
 
 func TestPrometheusReaderOpts(t *testing.T) {

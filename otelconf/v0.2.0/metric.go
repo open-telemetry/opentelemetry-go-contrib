@@ -31,6 +31,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/resource"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/wildcard"
 )
 
 var zeroScope instrumentation.Scope
@@ -262,39 +264,23 @@ func lowMemory(ik sdkmetric.InstrumentKind) metricdata.Temporality {
 	}
 }
 
-// newIncludeExcludeFilter returns a Filter that includes attributes
-// in the include list and excludes attributes in the excludes list.
-// It returns an error if an attribute is in both lists
+// newIncludeExcludeFilter returns a Filter that includes attributes matching
+// the include patterns and excludes attributes matching the exclude patterns.
+// Exclude patterns take precedence over include patterns.
 //
-// If IncludeExclude is empty an include-all filter is returned.
+// If IncludeExclude is empty, an include-all filter is returned.
+//
+//nolint:unparam // Keep the error result consistent across versioned config builders.
 func newIncludeExcludeFilter(lists *IncludeExclude) (attribute.Filter, error) {
-	if lists == nil {
-		return func(attribute.KeyValue) bool { return true }, nil
+	var included, excluded []string
+	if lists != nil {
+		included = lists.Included
+		excluded = lists.Excluded
 	}
 
-	included := make(map[attribute.Key]struct{})
-	for _, k := range lists.Included {
-		included[attribute.Key(k)] = struct{}{}
-	}
-	excluded := make(map[attribute.Key]struct{})
-	for _, k := range lists.Excluded {
-		if _, ok := included[attribute.Key(k)]; ok {
-			return nil, fmt.Errorf("attribute cannot be in both include and exclude list: %s", k)
-		}
-		excluded[attribute.Key(k)] = struct{}{}
-	}
+	matcher := wildcard.NewMatcher(included, excluded)
 	return func(kv attribute.KeyValue) bool {
-		// check if a value is excluded first
-		if _, ok := excluded[kv.Key]; ok {
-			return false
-		}
-
-		if len(included) == 0 {
-			return true
-		}
-
-		_, ok := included[kv.Key]
-		return ok
+		return matcher.Match(string(kv.Key))
 	}, nil
 }
 
