@@ -4,21 +4,20 @@ go 1.25.0
 
 require (
 	github.com/stretchr/testify v1.11.1
-	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.1
-	go.opentelemetry.io/contrib/detectors/aws/ecs v1.44.0
-	go.opentelemetry.io/contrib/detectors/aws/eks v1.44.0
-	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.16.0
-	go.opentelemetry.io/contrib/detectors/aws/lambda v0.69.0
-	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.16.0
-	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.16.0
-	go.opentelemetry.io/contrib/detectors/consul v0.16.0
-	go.opentelemetry.io/contrib/detectors/gcp v1.44.0
-	go.opentelemetry.io/contrib/detectors/hetzner v0.16.0
-	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.16.0
-	go.opentelemetry.io/contrib/detectors/k8sapi v0.16.0
-	go.opentelemetry.io/contrib/detectors/vultr v0.16.0
-	go.opentelemetry.io/otel v1.44.1-0.20260803145922-48db2c659c3b
-	go.opentelemetry.io/otel/sdk v1.44.1-0.20260730203235-08c5de4cbe6a
+	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.2
+	go.opentelemetry.io/contrib/detectors/aws/ecs v1.45.0
+	go.opentelemetry.io/contrib/detectors/aws/eks v1.45.0
+	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.17.0
+	go.opentelemetry.io/contrib/detectors/aws/lambda v0.70.0
+	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.17.0
+	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.17.0
+	go.opentelemetry.io/contrib/detectors/gcp v1.45.0
+	go.opentelemetry.io/contrib/detectors/hetzner v0.17.0
+	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.17.0
+	go.opentelemetry.io/contrib/detectors/k8sapi v0.17.0
+	go.opentelemetry.io/contrib/detectors/vultr v0.17.0
+	go.opentelemetry.io/otel v1.45.0
+	go.opentelemetry.io/otel/sdk v1.45.0
 )
 
 require (
@@ -93,8 +92,9 @@ require (
 	github.com/prometheus/procfs v0.21.1 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.44.1-0.20260625150014-c84013202f01 // indirect
-	go.opentelemetry.io/otel/trace v1.44.1-0.20260625150014-c84013202f01 // indirect
+	go.opentelemetry.io/contrib/detectors/consul v0.17.0
+	go.opentelemetry.io/otel/metric v1.45.0 // indirect
+	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/net v0.57.0 // indirect

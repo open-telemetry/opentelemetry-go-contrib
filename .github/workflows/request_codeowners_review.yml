@@ -1,6 +1,9 @@
 name: 'Request reviews from code owners of a PR'
 on:
-  pull_request_target:
+  # pull_request_target is required to request reviewers on pull requests from
+  # forks. This usage is safe: the checkout below takes no `ref`, so only base
+  # branch code runs, and the elevated token is used solely to add reviewers.
+  pull_request_target: # zizmor: ignore[dangerous-triggers]
     types:
       - opened
       - synchronize
@@ -13,10 +16,13 @@ jobs:
   request_codeowners_review:
     runs-on: ubuntu-latest
     permissions:
+      contents: read # job-level permissions replace the workflow defaults
       pull-requests: write
     if: ${{ github.repository_owner == 'open-telemetry' && github.event.pull_request.draft == false }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Run request_codeowners_review.sh
         run: ./tools/request_codeowners_review.sh

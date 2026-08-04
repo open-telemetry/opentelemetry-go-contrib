@@ -4,4 +4,4 @@
 package otelecho
 
 // Version is the current release version of the echo instrumentation.
-const Version = "0.69.0"
+const Version = "0.70.0"
