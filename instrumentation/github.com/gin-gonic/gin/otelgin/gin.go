@@ -135,6 +135,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			// error. If the client disconnected mid-request, the request
 			// context carries the real cause instead of a generic 5xx.
 			if reqErr := c.Request.Context().Err(); reqErr != nil {
+				span.SetStatus(codes.Error, reqErr.Error())
 				errorTypeAttr = otelsemconv.ErrorType(reqErr)
 				span.SetAttributes(errorTypeAttr)
 			}

@@ -676,19 +676,34 @@ func TestClientDisconnect(t *testing.T) {
 	require.NoError(t, reader.Collect(t.Context(), &rm))
 	require.Len(t, rm.ScopeMetrics, 1)
 
-	var durationMetric *metricdata.Metrics
-	for i, m := range rm.ScopeMetrics[0].Metrics {
-		if m.Name == "http.server.request.duration" {
-			durationMetric = &rm.ScopeMetrics[0].Metrics[i]
-			break
+	findMetric := func(name string) *metricdata.Metrics {
+		for i, m := range rm.ScopeMetrics[0].Metrics {
+			if m.Name == name {
+				return &rm.ScopeMetrics[0].Metrics[i]
+			}
 		}
+		return nil
 	}
-	require.NotNil(t, durationMetric, "expected to find the http.server.request.duration metric")
 
-	histogram, ok := durationMetric.Data.(metricdata.Histogram[float64])
+	assertErrorType := func(attrs attribute.Set, name string) {
+		errorType, ok := attrs.Value(semconv.ErrorTypeKey)
+		require.True(t, ok, "expected error.type attribute on the %s metric", name)
+		assert.Equal(t, semconv.ErrorType(context.Canceled).Value.AsString(), errorType.AsString())
+	}
+
+	durationMetric := findMetric("http.server.request.duration")
+	require.NotNil(t, durationMetric, "expected to find the http.server.request.duration metric")
+	durationHistogram, ok := durationMetric.Data.(metricdata.Histogram[float64])
 	require.True(t, ok)
-	require.Len(t, histogram.DataPoints, 1)
-	errorType, ok := histogram.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
-	require.True(t, ok, "expected error.type attribute on the request duration metric")
-	assert.Equal(t, semconv.ErrorType(context.Canceled).Value.AsString(), errorType.AsString())
+	require.Len(t, durationHistogram.DataPoints, 1)
+	assertErrorType(durationHistogram.DataPoints[0].Attributes, "http.server.request.duration")
+
+	for _, name := range []string{"http.server.request.body.size", "http.server.response.body.size"} {
+		metric := findMetric(name)
+		require.NotNil(t, metric, "expected to find the %s metric", name)
+		histogram, ok := metric.Data.(metricdata.Histogram[int64])
+		require.True(t, ok)
+		require.Len(t, histogram.DataPoints, 1)
+		assertErrorType(histogram.DataPoints[0].Attributes, name)
+	}
 }
