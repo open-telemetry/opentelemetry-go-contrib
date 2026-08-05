@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Bound Kubernetes ConfigMap requests in `go.opentelemetry.io/contrib/detectors/aws/eks` with a 10-second timeout so `Detect` cannot hang indefinitely when the caller-provided context has no deadline.
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
