@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Return the error from `baggage.New`'s aggregate limit validation in `go.opentelemetry.io/contrib/propagators/ot`, instead of discarding it when every individual `ot-baggage-*` member parsed successfully. (#9395)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -63,7 +67,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Strip connection number suffix from connection ID in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` to prevent unbounded metric cardinality. (#9352)
 - Strip connection number suffix from connection ID in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` so the `network.peer.address` and `net.peer.name` span attributes reflect the actual host instead of the raw connection ID. (#9352)
 - Record `network.protocol.version` (and `network.protocol.name`) from the response's negotiated protocol instead of the request's stamped `Proto` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, so an HTTP/1.1-shaped request that gets upgraded to HTTP/2 via ALPN is no longer misreported as HTTP/1.1 on the client span and request metrics. (#9371)
-- Return the error from `baggage.New`'s aggregate limit validation in `go.opentelemetry.io/contrib/propagators/ot`, instead of discarding it when every individual `ot-baggage-*` member parsed successfully. (#9395)
 
 ## [1.44.0/2.5.1/0.69.0/0.37.1/0.24.0/0.19.0/0.16.1/0.16.0] - 2026-05-28
 
