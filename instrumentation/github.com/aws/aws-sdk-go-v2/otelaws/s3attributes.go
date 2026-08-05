@@ -22,6 +22,11 @@ func S3AttributeBuilder(_ context.Context, in middleware.InitializeInput, _ midd
 		return s3Attributes
 	}
 
+	// Guard against typed nil pointers (e.g., (*s3.GetObjectInput)(nil)).
+	if rv := reflect.ValueOf(in.Parameters); rv.Kind() == reflect.Pointer && rv.IsNil() {
+		return s3Attributes
+	}
+
 	// Extract aws.s3.bucket and aws.s3.key from any S3 input struct.
 	// The S3 semantic convention applies bucket to all operations except
 	// list-buckets and key to all object-related operations. Using
