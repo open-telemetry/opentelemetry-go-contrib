@@ -8,6 +8,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+- Add `go.opentelemetry.io/contrib/detectors/docker`, a resource detector for Docker, ported from `processor/resourcedetectionprocessor/internal/docker` in opentelemetry-collector-contrib. (#9001)
+
 ### Fixed
 
 - Reject OTLP exporter headers with an empty `name` in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x`, and `go.opentelemetry.io/contrib/otelconf/v0.3.0`, instead of forwarding invalid header names to OTLP exporters. (#9102)
@@ -32,7 +35,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/contrib/detectors/azure/azurefunctions`, a new resource detector for Azure Functions. Detects `cloud.*`, `service.name`, `azure.resource_group.name`, `faas.instance`, and `deployment.environment.name` from the `FUNCTIONS_*`, `WEBSITE_*`, `CONTAINER_NAME`, and `REGION_NAME` environment variables. (#9290)
 - Add `NewResourceDetector` along with the `WithAttributeFilter` and `WithTagKeyFilter` options in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. `WithAttributeFilter` restricts the returned resource to the attributes the filter accepts. `WithTagKeyFilter` opts in to `azure.tag.<name>` attributes for the VM tags whose keys satisfy the provided predicate; no VM tags are emitted without it. (#9162)
 - Add `go.opentelemetry.io/contrib/detectors/vultr` — a new resource detector for Vultr Cloud Compute instances, ported from `processor/resourcedetectionprocessor/internal/vultr` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `host.id`, and `host.name`. (#8995)
-- Add `go.opentelemetry.io/contrib/detectors/docker`, a resource detector for Docker, ported from `processor/resourcedetectionprocessor/internal/docker` in opentelemetry-collector-contrib. (#9001)
 
 ### Changed
 
