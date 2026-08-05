@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 func TestNewResourceDetector(t *testing.T) {
@@ -22,7 +22,7 @@ func TestWithAttributeFilter(t *testing.T) {
 	t.Setenv("CONTAINER_APP_REPLICA_NAME", "my-app--abc123-0")
 
 	filter := func(kv attribute.KeyValue) bool {
-		return strings.HasPrefix(string(kv.Key), "service.")
+		return strings.HasPrefix(string(kv.Key), "cloud.")
 	}
 	detector := NewResourceDetector(WithAttributeFilter(filter))
 	res, err := detector.Detect(t.Context())
@@ -30,8 +30,8 @@ func TestWithAttributeFilter(t *testing.T) {
 	assert.NoError(t, err)
 	expected := resource.NewWithAttributes(
 		semconv.SchemaURL,
-		semconv.ServiceName("my-app"),
-		semconv.ServiceInstanceID("my-app--abc123-0"),
+		semconv.CloudProviderAzure,
+		semconv.CloudPlatformAzureContainerApps,
 	)
 	assert.Equal(t, expected, res)
 }
@@ -45,7 +45,7 @@ func TestDetectSuccess(t *testing.T) {
 		semconv.CloudProviderAzure,
 		semconv.CloudPlatformAzureContainerApps,
 		semconv.ServiceName("my-app"),
-		semconv.ServiceInstanceID("my-app--abc123-0"),
+		attribute.String("azure.container_app.instance.id", "my-app--abc123-0"),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := ResourceDetector{}

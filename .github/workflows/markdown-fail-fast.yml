@@ -5,7 +5,8 @@ on:
   pull_request:
 
 # Declare default permissions as read only.
-permissions: read-all
+permissions:
+  contents: read
 
 jobs:
   changedfiles:
@@ -15,13 +16,17 @@ jobs:
       md: ${{ steps.changes.outputs.md }}
     steps:
       - name: Checkout Repo
-        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          persist-credentials: false
           fetch-depth: 0
       - name: Get changed files
         id: changes
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref }}
+          PR_HEAD: ${{ github.event.pull_request.head.sha }}
         run: |
-          echo "md=$(git diff --name-only --diff-filter=ACMRTUXB origin/${{ github.event.pull_request.base.ref }} ${{ github.event.pull_request.head.sha }} | grep .md$ | xargs)" >> $GITHUB_OUTPUT
+          echo "md=$(git diff --name-only --diff-filter=ACMRTUXB "origin/$BASE_REF" "$PR_HEAD" | grep .md$ | xargs)" >> $GITHUB_OUTPUT
 
   lint:
     name: lint markdown files
@@ -30,7 +35,9 @@ jobs:
     if: ${{needs.changedfiles.outputs.md}}
     steps:
     - name: Checkout Repo
-      uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: Lint Markdown
       uses: docker://avtodev/markdown-lint:v1@sha256:6aeedc2f49138ce7a1cd0adffc1b1c0321b841dc2102408967d9301c031949ee
       with:
