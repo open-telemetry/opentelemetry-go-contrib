@@ -5,6 +5,7 @@ package otelmux_test
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -530,18 +531,34 @@ func TestClientDisconnect(t *testing.T) {
 	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
 	require.NoError(t, err)
 
-	requestDone := make(chan struct{})
+	const waitTimeout = 5 * time.Second
+
+	requestDone := make(chan error, 1)
 	go func() {
-		defer close(requestDone)
 		resp, doErr := srv.Client().Do(req)
 		if doErr == nil {
 			_ = resp.Body.Close()
 		}
+		requestDone <- doErr
 	}()
 
-	<-handlerStarted
+	select {
+	case <-handlerStarted:
+	case <-time.After(waitTimeout):
+		t.Fatal("timed out waiting for handler to start")
+	}
 	cancel()
-	<-requestDone
+	select {
+	case doErr := <-requestDone:
+		// A cancelled request is expected to fail client-side (e.g. with a
+		// context.Canceled wrapped error); only fail the test on an
+		// unexpected client error such as a connection setup failure.
+		if doErr != nil && !errors.Is(doErr, context.Canceled) {
+			t.Errorf("client request returned unexpected error: %v", doErr)
+		}
+	case <-time.After(waitTimeout):
+		t.Fatal("timed out waiting for client request to finish")
+	}
 
 	require.Eventually(t, func() bool {
 		return len(sr.Ended()) == 1
