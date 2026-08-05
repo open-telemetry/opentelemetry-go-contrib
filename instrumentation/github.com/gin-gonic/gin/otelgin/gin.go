@@ -130,12 +130,19 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 				errorTypeAttr = otelsemconv.ErrorTypeOther
 			}
 			span.SetAttributes(errorTypeAttr)
-		case spanCode == codes.Error:
-			// No explicit c.Errors entry, but the response is a server
-			// error. If the client disconnected mid-request, the request
-			// context carries the real cause instead of a generic 5xx.
+		default:
+			// No explicit c.Errors entry. If the client disconnected
+			// mid-request, the request context carries the real cause even
+			// when the handler never wrote a response that would surface
+			// it as a 5xx (e.g. the handler returned after observing
+			// cancellation without writing a status). Classify it
+			// independent of the response status, but only override the
+			// span status message when the status code already selected
+			// codes.Error so a successful-looking status is preserved.
 			if reqErr := c.Request.Context().Err(); reqErr != nil {
-				span.SetStatus(codes.Error, reqErr.Error())
+				if spanCode == codes.Error {
+					span.SetStatus(codes.Error, reqErr.Error())
+				}
 				errorTypeAttr = otelsemconv.ErrorType(reqErr)
 				span.SetAttributes(errorTypeAttr)
 			}
