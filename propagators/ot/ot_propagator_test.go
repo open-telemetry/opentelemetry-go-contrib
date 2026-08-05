@@ -147,7 +147,7 @@ func TestExtractBagsAggregateLimitError(t *testing.T) {
 	bags, err := extractBags(carrier)
 
 	require.Error(t, err)
-	assert.LessOrEqual(t, len(bags.Members()), 64)
+	assert.Len(t, bags.Members(), 64)
 }
 
 func TestOT_Fields(t *testing.T) {
