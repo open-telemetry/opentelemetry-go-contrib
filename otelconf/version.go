@@ -4,4 +4,4 @@
 package otelconf
 
 // Version is the current release version of the otelconf module.
-const Version = "0.24.0"
+const Version = "0.25.0"
