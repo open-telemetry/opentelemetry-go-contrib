@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.45.0/2.5.2/0.70.0/0.37.2/0.25.0/0.20.0/0.16.2/0.17.0] - 2026-08-03
+
 ### Added
 
 - Add `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`, a new resource detector for IBM Cloud VPC virtual server instances, ported from `github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/ibmcloud/vpc`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `cloud.availability_zone`, `cloud.account.id`, `cloud.resource_id`, `host.id`, `host.image.id`, `host.image.name`, `host.name`, and `host.type`. (#9011)
@@ -34,11 +39,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Update log bridge conversions to use attribute key-values instead of the removed log key-values in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9180)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
 - Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#8977)
+- Prefer the gRPC dial target over the resolved peer IP for the `server.address` and `server.port` attributes in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8904)
 - The detector in `go.opentelemetry.io/contrib/detectors/azure/azurevm` now also detects `cloud.account.id`, `cloud.availability_zone`, `azure.vm.name`, `azure.vm.size`, `azure.vm.scaleset.name`, and `azure.resource_group.name`, and prefers `osProfile.computerName` for `host.name` (falling back to the VM name), reconciling it with the collector-contrib Azure resource detector. (#9162)
 
 ### Fixed
 
-- Fix Prometheus reader resource label filter configuration in `go.opentelemetry.io/contrib/otelconf/v0.2.0`. (#9045)
+- Fix Prometheus reader resource label filter configuration in `go.opentelemetry.io/contrib/otelconf/v0.2.0`. (#9062)
 - Apply `resource.detection/development.attributes.included` and `excluded` filtering to resource detector attributes in `go.opentelemetry.io/contrib/otelconf/x`. (#9131)
 - Honor the context configured with `WithContext` when constructing resources in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`. (#9160)
 - Handle nil response bodies from custom `RoundTripper` implementations in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` without panicking. (#9184)
@@ -48,6 +54,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `TextMapPropagator` in `go.opentelemetry.io/contrib/propagators/autoprop` returns the no-op propagator for empty input, matching the behavior of `none`. An unknown `OTEL_PROPAGATORS` value still returns an error with a nil propagator so `NewTextMapPropagator` falls back to the default TraceContext and Baggage propagators instead of disabling propagation. (#9163)
 - Preserve error-valued attributes nested in a group as grouped attributes instead of silently dropping them in `go.opentelemetry.io/contrib/bridges/otelslog`. (#9238)
 - Fix a data race in `go.opentelemetry.io/contrib/bridges/otelslog` where concurrent `Handle` calls could corrupt each other's log attributes because `kvBuffer.KeyValues` returned a slice aliasing a shared buffer. (#9229)
+- Avoid a panic in `go.opentelemetry.io/contrib/bridges/otelzap` when a malformed error field contains a nil or non-error value. (#9068)
+- Use `azure.container_app.instance.id` instead of `service.instance.id` for the replica name detected by `go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps`. (#9208)
+- Preserve the underlying metadata errors returned with partial resources from `go.opentelemetry.io/contrib/detectors/gcp`. (#9069)
 - Copy `MultipartForm` back to the request `otelmux.Middleware` was given after the wrapped handler returns, so `net/http` can find and remove the temp files `ParseMultipartForm` created on the context-derived request copy, when `otelmux.Middleware` wraps a handler directly, in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. This does not cover a handler panic, nor the common `router.Use(...)` integration, where `gorilla/mux`'s own routing step makes an additional request copy the middleware cannot write back through; see [gorilla/mux#777](https://github.com/gorilla/mux/pull/777). (#9361)
 - Report the `b3` header from `Fields()` for the default `B3Unspecified` single-header injection encoding, matching what `Inject` writes, in `go.opentelemetry.io/contrib/propagators/b3`. (#9273)
 - Fix `go.opentelemetry.io/contrib/propagators/aws/xray` producing deterministic trace and span IDs when the seed read from `crypto/rand` silently failed, by switching to `math/rand/v2`'s concurrency-safe top-level generator. (#9359)
@@ -55,9 +64,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Strip connection number suffix from connection ID in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` so the `network.peer.address` and `net.peer.name` span attributes reflect the actual host instead of the raw connection ID. (#9352)
 - Record `network.protocol.version` (and `network.protocol.name`) from the response's negotiated protocol instead of the request's stamped `Proto` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, so an HTTP/1.1-shaped request that gets upgraded to HTTP/2 via ALPN is no longer misreported as HTTP/1.1 on the client span and request metrics. (#9371)
 - Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, using the request context's cancellation error as the classification source when the handler has not already recorded an error via `c.Error`. Previously a disconnect was recorded with span status `Error` and no `error.type`, indistinguishable from a genuine server fault. (#9394)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.44.0/2.5.1/0.69.0/0.37.1/0.24.0/0.19.0/0.16.1/0.16.0] - 2026-05-28
 
@@ -1837,7 +1843,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.44.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.45.0...HEAD
+[1.45.0/2.5.2/0.70.0/0.37.2/0.25.0/0.20.0/0.16.2/0.17.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.45.0
 [1.44.0/2.5.1/0.69.0/0.37.1/0.24.0/0.19.0/0.16.1/0.16.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.44.0
 [1.43.0/2.5.0/0.68.0/0.37.0/0.23.0/0.18.0/0.16.0/0.15.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.43.0
 [1.42.0/2.4.0/0.67.0/0.36.0/0.22.0/0.17.0/0.15.0/0.14.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.42.0
