@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, using the request context's cancellation error as the classification source when the handler has not already recorded an error via `c.Error`. This is classified independently of the response status code, so it is also captured when the handler returns without writing an error response. Previously a disconnect was recorded with no `error.type`, and when it did surface as a 5xx response, was indistinguishable from a genuine server fault. (#9394)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

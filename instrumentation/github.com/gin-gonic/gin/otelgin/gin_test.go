@@ -6,6 +6,7 @@
 package otelgin_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"html/template"
@@ -14,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -615,4 +617,168 @@ func TestMetrics(t *testing.T) {
 			}, sm.Metrics[2], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 		})
 	}
+}
+
+// TestClientDisconnect reproduces a real HTTP/1.1 client disconnect: the
+// handler observes the cancelled request context and writes a 500, mirroring
+// how a genuine server fault would look. The span and metrics must carry
+// error.type so the disconnect is distinguishable from a real server error.
+func TestClientDisconnect(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	handlerStarted := make(chan struct{})
+	router := gin.New()
+	router.Use(otelgin.Middleware(
+		"foobar",
+		otelgin.WithTracerProvider(provider),
+		otelgin.WithMeterProvider(meterProvider),
+	))
+	router.GET("/hello", func(c *gin.Context) {
+		close(handlerStarted)
+		<-c.Request.Context().Done()
+		c.String(http.StatusInternalServerError, "cancelled")
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	<-handlerStarted
+	cancel()
+	<-requestDone
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusInternalServerError))
+	assert.Contains(t, span.Attributes(), semconv.ErrorType(context.Canceled))
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	findMetric := func(name string) *metricdata.Metrics {
+		for i, m := range rm.ScopeMetrics[0].Metrics {
+			if m.Name == name {
+				return &rm.ScopeMetrics[0].Metrics[i]
+			}
+		}
+		return nil
+	}
+
+	assertErrorType := func(attrs attribute.Set, name string) {
+		errorType, ok := attrs.Value(semconv.ErrorTypeKey)
+		require.True(t, ok, "expected error.type attribute on the %s metric", name)
+		assert.Equal(t, semconv.ErrorType(context.Canceled).Value.AsString(), errorType.AsString())
+	}
+
+	durationMetric := findMetric("http.server.request.duration")
+	require.NotNil(t, durationMetric, "expected to find the http.server.request.duration metric")
+	durationHistogram, ok := durationMetric.Data.(metricdata.Histogram[float64])
+	require.True(t, ok)
+	require.Len(t, durationHistogram.DataPoints, 1)
+	assertErrorType(durationHistogram.DataPoints[0].Attributes, "http.server.request.duration")
+
+	for _, name := range []string{"http.server.request.body.size", "http.server.response.body.size"} {
+		metric := findMetric(name)
+		require.NotNil(t, metric, "expected to find the %s metric", name)
+		histogram, ok := metric.Data.(metricdata.Histogram[int64])
+		require.True(t, ok)
+		require.Len(t, histogram.DataPoints, 1)
+		assertErrorType(histogram.DataPoints[0].Attributes, name)
+	}
+}
+
+// TestClientDisconnectWithoutErrorStatus reproduces a client disconnect
+// where the handler observes the cancelled request context and returns
+// without writing an error response, leaving Gin's default 200 status in
+// place. error.type must still be classified from the request context
+// error even though the response status never surfaces the disconnect as
+// a server error.
+func TestClientDisconnectWithoutErrorStatus(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	handlerStarted := make(chan struct{})
+	router := gin.New()
+	router.Use(otelgin.Middleware(
+		"foobar",
+		otelgin.WithTracerProvider(provider),
+		otelgin.WithMeterProvider(meterProvider),
+	))
+	router.GET("/hello", func(c *gin.Context) {
+		close(handlerStarted)
+		<-c.Request.Context().Done()
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	<-handlerStarted
+	cancel()
+	<-requestDone
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.NotEqual(t, codes.Error, span.Status().Code, "the selected (non-error) status should be preserved")
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusOK))
+	assert.Contains(t, span.Attributes(), semconv.ErrorType(context.Canceled))
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var durationMetric *metricdata.Metrics
+	for i, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == "http.server.request.duration" {
+			durationMetric = &rm.ScopeMetrics[0].Metrics[i]
+			break
+		}
+	}
+	require.NotNil(t, durationMetric, "expected to find the http.server.request.duration metric")
+	durationHistogram, ok := durationMetric.Data.(metricdata.Histogram[float64])
+	require.True(t, ok)
+	require.Len(t, durationHistogram.DataPoints, 1)
+
+	errorType, ok := durationHistogram.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
+	require.True(t, ok, "expected error.type attribute on the http.server.request.duration metric")
+	assert.Equal(t, semconv.ErrorType(context.Canceled).Value.AsString(), errorType.AsString())
 }

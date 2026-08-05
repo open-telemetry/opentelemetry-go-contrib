@@ -113,18 +113,38 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Next()
 
 		status := c.Writer.Status()
-		span.SetStatus(sc.Status(status))
+		spanCode, spanMsg := sc.Status(status)
+		span.SetStatus(spanCode, spanMsg)
 		span.SetAttributes(sc.ResponseTraceAttrs(semconv.ResponseTelemetry{
 			StatusCode: status,
 			WriteBytes: int64(c.Writer.Size()),
 		})...)
 
-		if len(c.Errors) > 0 {
+		var errorTypeAttr attribute.KeyValue
+		switch {
+		case len(c.Errors) > 0:
 			span.SetStatus(codes.Error, c.Errors.String())
 			if len(c.Errors) == 1 {
-				span.SetAttributes(otelsemconv.ErrorType(c.Errors[0].Err))
+				errorTypeAttr = otelsemconv.ErrorType(c.Errors[0].Err)
 			} else {
-				span.SetAttributes(otelsemconv.ErrorTypeOther)
+				errorTypeAttr = otelsemconv.ErrorTypeOther
+			}
+			span.SetAttributes(errorTypeAttr)
+		default:
+			// No explicit c.Errors entry. If the client disconnected
+			// mid-request, the request context carries the real cause even
+			// when the handler never wrote a response that would surface
+			// it as a 5xx (e.g. the handler returned after observing
+			// cancellation without writing a status). Classify it
+			// independent of the response status, but only override the
+			// span status message when the status code already selected
+			// codes.Error so a successful-looking status is preserved.
+			if reqErr := c.Request.Context().Err(); reqErr != nil {
+				if spanCode == codes.Error {
+					span.SetStatus(codes.Error, reqErr.Error())
+				}
+				errorTypeAttr = otelsemconv.ErrorType(reqErr)
+				span.SetAttributes(errorTypeAttr)
 			}
 		}
 
@@ -135,6 +155,9 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		}
 		if cfg.GinMetricAttributeFn != nil {
 			additionalAttributes = append(additionalAttributes, cfg.GinMetricAttributeFn(c)...)
+		}
+		if errorTypeAttr.Valid() {
+			additionalAttributes = append(additionalAttributes, errorTypeAttr)
 		}
 
 		sc.RecordMetrics(ctx, semconv.ServerMetricData{
