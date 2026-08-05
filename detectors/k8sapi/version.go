@@ -4,4 +4,4 @@
 package k8sapi
 
 // Version is the current release version of the Kubernetes API resource detector.
-const Version = "0.16.0"
+const Version = "0.17.0"
