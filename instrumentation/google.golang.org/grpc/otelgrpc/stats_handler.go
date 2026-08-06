@@ -420,30 +420,25 @@ func (*config) handleRPC(
 			// as errors. Use recordStatus so the client and server rules are applied
 			// independently (e.g. a client cancellation is not a server error).
 			// The legacy v1.37 rpc.*.duration conventions did not define error.type,
-			// so the compatibility instruments must preserve their telemetry shape
-			// and are recorded with the unmodified attribute set.
-			stableMetricAttrs := metricAttrs
-			if s != nil {
-				if c, _ := recordStatus(s); c == codes.Error {
-					stableMetricAttrs = make([]attribute.KeyValue, 0, len(metricAttrs)+1)
-					stableMetricAttrs = append(stableMetricAttrs, metricAttrs...)
-					stableMetricAttrs = append(stableMetricAttrs, semconv.ErrorTypeKey.String(canonicalString(s.Code())))
-				}
-			}
-
-			// Allocate vararg slices once.
-			stableRecordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(stableMetricAttrs...))}
-			legacyRecordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
+			// so the compatibility instruments keep the unmodified attribute set.
+			// Build each record option only in its enabled branch: single-mode
+			// configurations (rpc, rpc/old) must not allocate the other set, and
+			// error.type is only appended after the legacy instruments recorded.
 
 			// Use floating point division here for higher precision (instead of Millisecond method).
 			// Measure right before calling Record() to capture as much elapsed time as possible.
 			elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Second)
 
-			if durationEnabled {
-				duration.Record(ctx, elapsedTime, stableRecordOpts...)
-			}
 			if oldDurationEnabled {
-				oldDuration.Record(ctx, elapsedTime*1000.0, legacyRecordOpts...)
+				oldDuration.Record(ctx, elapsedTime*1000.0, metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
+			}
+			if durationEnabled {
+				if s != nil {
+					if c, _ := recordStatus(s); c == codes.Error {
+						metricAttrs = append(metricAttrs, semconv.ErrorTypeKey.String(canonicalString(s.Code())))
+					}
+				}
+				duration.Record(ctx, elapsedTime, metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
 			}
 		}
 
