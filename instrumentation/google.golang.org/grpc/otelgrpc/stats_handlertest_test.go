@@ -209,6 +209,17 @@ func assertServerSpan(t *testing.T, wantSpanCode otelcode.Code, wantSpanStatusDe
 }
 
 func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, serviceName, name, code string) {
+	attrs := []attribute.KeyValue{
+		semconv.RPCMethod(serviceName + "/" + name),
+		semconv.RPCSystemNameGRPC,
+		semconv.RPCResponseStatusCode(code),
+		testMetricAttr,
+	}
+	// error.type is Conditionally Required on the duration metric if and only
+	// if the RPC failed, and SHOULD be the canonical status code name.
+	if code != "OK" {
+		attrs = append(attrs, semconv.ErrorTypeKey.String(code))
+	}
 	want := metricdata.ScopeMetrics{
 		Scope: wantInstrumentationScope,
 		Metrics: []metricdata.Metrics{
@@ -220,12 +231,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod(serviceName+"/"+name),
-								semconv.RPCSystemNameGRPC,
-								semconv.RPCResponseStatusCode(code),
-								testMetricAttr,
-							),
+							Attributes: attribute.NewSet(attrs...),
 						},
 					},
 				},

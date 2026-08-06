@@ -81,6 +81,19 @@ func DoEmptyUnaryCall(ctx context.Context, tc testpb.TestServiceClient, args ...
 	}
 }
 
+// DoFailingUnaryCall performs a unary RPC that returns a non-OK status
+// (codes.Internal) and returns the resulting error.
+func DoFailingUnaryCall(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.CallOption) error {
+	req := &testpb.SimpleRequest{
+		ResponseStatus: &testpb.EchoStatus{
+			Code:    int32(codes.Internal),
+			Message: "forced failure",
+		},
+	}
+	_, err := tc.UnaryCall(ctx, req, args...)
+	return err
+}
+
 // DoLargeUnaryCall performs a unary RPC with large payload in the request and response.
 func DoLargeUnaryCall(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.CallOption) {
 	pl := ClientNewPayload(testpb.PayloadType_COMPRESSABLE, largeReqSize)

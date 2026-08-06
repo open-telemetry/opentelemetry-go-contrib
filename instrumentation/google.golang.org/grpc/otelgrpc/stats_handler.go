@@ -407,10 +407,17 @@ func (*config) handleRPC(
 				// Don't use gctx.metricAttrSet here, because it requires passing
 				// multiple RecordOptions, which would call metric.mergeSets and
 				// allocate a new set for each Record call.
-				metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+1)
+				metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+2)
 				metricAttrs = append(metricAttrs, gctx.metricAttrs...)
 			}
 			metricAttrs = append(metricAttrs, rpcStatusAttr)
+			// Per the RPC semantic conventions, error.type is Conditionally
+			// Required on the call duration metrics if and only if the
+			// operation failed, and SHOULD be set to the returned status code.
+			// Do not set it on successful calls.
+			if s != nil && s.Code() != grpc_codes.OK {
+				metricAttrs = append(metricAttrs, semconv.ErrorTypeKey.String(canonicalString(s.Code())))
+			}
 			// Allocate vararg slice once.
 			recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
 

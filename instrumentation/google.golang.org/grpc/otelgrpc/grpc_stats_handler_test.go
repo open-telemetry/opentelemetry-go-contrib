@@ -266,6 +266,103 @@ func checkServerSpans(t *testing.T, sr *tracetest.SpanRecorder, addr string) {
 	}
 }
 
+// TestStatsHandlerErrorType verifies that error.type is recorded on the
+// rpc.client.call.duration and rpc.server.call.duration metrics when the RPC
+// fails with a non-OK status, and is absent on successful calls (per the RPC
+// semantic conventions: Conditionally Required if and only if the operation
+// failed).
+func TestStatsHandlerErrorType(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+	clientMetricReader := metric.NewManualReader()
+	clientMP := metric.NewMeterProvider(metric.WithReader(clientMetricReader))
+	serverMetricReader := metric.NewManualReader()
+	serverMP := metric.NewMeterProvider(metric.WithReader(serverMetricReader))
+
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err, "failed to open port")
+	client := newGrpcTest(t, listener,
+		[]grpc.DialOption{
+			grpc.WithStatsHandler(otelgrpc.NewClientHandler(otelgrpc.WithMeterProvider(clientMP))),
+		},
+		[]grpc.ServerOption{
+			grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithMeterProvider(serverMP))),
+		},
+	)
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	// One successful and one failing call to the same method.
+	_, err = client.UnaryCall(ctx, &testpb.SimpleRequest{})
+	require.NoError(t, err)
+	require.Error(t, test.DoFailingUnaryCall(ctx, client))
+
+	checkDurationErrorType(t, clientMetricReader, rpcconv.ClientCallDuration{}.Name())
+	checkDurationErrorType(t, serverMetricReader, rpcconv.ServerCallDuration{}.Name())
+}
+
+// checkDurationErrorType finds the data points for the failing and successful
+// UnaryCall in the given duration metric and asserts error.type is only
+// present on the failed one.
+func checkDurationErrorType(t *testing.T, reader metric.Reader, metricName string) {
+	t.Helper()
+	const method = "grpc.testing.TestService/UnaryCall"
+
+	var rm metricdata.ResourceMetrics
+	require.Eventually(t, func() bool {
+		rm = metricdata.ResourceMetrics{}
+		if err := reader.Collect(t.Context(), &rm); err != nil {
+			return false
+		}
+		for _, sm := range rm.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				if m.Name != metricName {
+					continue
+				}
+				hist, ok := m.Data.(metricdata.Histogram[float64])
+				if !ok {
+					continue
+				}
+				for _, dp := range hist.DataPoints {
+					if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); ok && v.AsString() == method {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}, 3*time.Second, 10*time.Millisecond)
+
+	var okDP, errDP *metricdata.HistogramDataPoint[float64]
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != metricName {
+				continue
+			}
+			hist, ok := m.Data.(metricdata.Histogram[float64])
+			if !ok {
+				continue
+			}
+			for i := range hist.DataPoints {
+				dp := &hist.DataPoints[i]
+				if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); !ok || v.AsString() != method {
+					continue
+				}
+				if v, ok := dp.Attributes.Value(attribute.Key("error.type")); ok && v.AsString() == "INTERNAL" {
+					errDP = dp
+				} else {
+					okDP = dp
+				}
+			}
+		}
+	}
+
+	require.NotNil(t, errDP, "%s: expected a failed-call data point with error.type=INTERNAL", metricName)
+	require.NotNil(t, okDP, "%s: expected a successful-call data point without error.type", metricName)
+	statusCode, ok := errDP.Attributes.Value(attribute.Key("rpc.response.status_code"))
+	require.True(t, ok)
+	assert.Equal(t, "INTERNAL", statusCode.AsString())
+}
+
 func checkClientMetrics(t *testing.T, reader metric.Reader, addr, stabilityOptIn string) {
 	rm := metricdata.ResourceMetrics{}
 	err := reader.Collect(t.Context(), &rm)
