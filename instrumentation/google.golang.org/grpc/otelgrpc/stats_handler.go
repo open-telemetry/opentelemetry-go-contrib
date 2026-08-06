@@ -414,9 +414,16 @@ func (*config) handleRPC(
 			// Per the RPC semantic conventions, error.type is Conditionally
 			// Required on the call duration metrics if and only if the
 			// operation failed, and SHOULD be set to the returned status code.
-			// Do not set it on successful calls.
-			if s != nil && s.Code() != grpc_codes.OK {
-				metricAttrs = append(metricAttrs, semconv.ErrorTypeKey.String(canonicalString(s.Code())))
+			// The failure classification is role-specific: clients treat every
+			// non-OK status as an error, while servers only classify Unknown,
+			// DeadlineExceeded, Unimplemented, Internal, Unavailable and
+			// DataLoss as errors. Use recordStatus so the client and server
+			// rules are applied independently (e.g. a client cancellation is
+			// not a server error).
+			if s != nil {
+				if c, _ := recordStatus(s); c == codes.Error {
+					metricAttrs = append(metricAttrs, semconv.ErrorTypeKey.String(canonicalString(s.Code())))
+				}
 			}
 			// Allocate vararg slice once.
 			recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
