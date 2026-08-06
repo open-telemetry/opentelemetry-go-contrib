@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	oldrpcconv "go.opentelemetry.io/otel/semconv/v1.37.0/rpcconv" //nolint:depguard // Use of v1.37.0 is required for backward compatibility stability opt-in.
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/semconv/v1.43.0/rpcconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -266,11 +267,6 @@ func checkServerSpans(t *testing.T, sr *tracetest.SpanRecorder, addr string) {
 	}
 }
 
-// TestStatsHandlerErrorType verifies that error.type is recorded on the
-// rpc.client.call.duration and rpc.server.call.duration metrics when the RPC
-// fails with a non-OK status, and is absent on successful calls (per the RPC
-// semantic conventions: Conditionally Required if and only if the operation
-// failed).
 // doFailingUnaryCall performs a unary RPC that returns a non-OK status
 // (codes.Internal) and returns the resulting error.
 func doFailingUnaryCall(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.CallOption) error {
@@ -284,33 +280,66 @@ func doFailingUnaryCall(ctx context.Context, tc testpb.TestServiceClient, args .
 	return err
 }
 
+// TestStatsHandlerErrorType verifies that error.type is recorded on the
+// rpc.client.call.duration and rpc.server.call.duration metrics when the RPC
+// fails with a non-OK status, and is absent on successful calls (per the RPC
+// semantic conventions: Conditionally Required if and only if the operation
+// failed). It covers all semconv stability opt-in modes: the legacy v1.37
+// rpc.*.duration metrics must not carry error.type at all, so rpc/old and
+// rpc/dup keep the compatibility telemetry shape.
 func TestStatsHandlerErrorType(t *testing.T) {
-	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
-	clientMetricReader := metric.NewManualReader()
-	clientMP := metric.NewMeterProvider(metric.WithReader(clientMetricReader))
-	serverMetricReader := metric.NewManualReader()
-	serverMP := metric.NewMeterProvider(metric.WithReader(serverMetricReader))
+	for _, tt := range []struct {
+		name           string
+		stabilityOptIn string
+	}{
+		{name: "new"},
+		{name: "old", stabilityOptIn: "rpc/old"},
+		{name: "dup", stabilityOptIn: "rpc/dup"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+			if tt.stabilityOptIn != "" {
+				t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", tt.stabilityOptIn)
+			}
+			clientMetricReader := metric.NewManualReader()
+			clientMP := metric.NewMeterProvider(metric.WithReader(clientMetricReader))
+			serverMetricReader := metric.NewManualReader()
+			serverMP := metric.NewMeterProvider(metric.WithReader(serverMetricReader))
 
-	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
-	require.NoError(t, err, "failed to open port")
-	client := newGrpcTest(t, listener,
-		[]grpc.DialOption{
-			grpc.WithStatsHandler(otelgrpc.NewClientHandler(otelgrpc.WithMeterProvider(clientMP))),
-		},
-		[]grpc.ServerOption{
-			grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithMeterProvider(serverMP))),
-		},
-	)
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
+			listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+			require.NoError(t, err, "failed to open port")
+			client := newGrpcTest(t, listener,
+				[]grpc.DialOption{
+					grpc.WithStatsHandler(otelgrpc.NewClientHandler(otelgrpc.WithMeterProvider(clientMP))),
+				},
+				[]grpc.ServerOption{
+					grpc.StatsHandler(otelgrpc.NewServerHandler(otelgrpc.WithMeterProvider(serverMP))),
+				},
+			)
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
 
-	// One successful and one failing call to the same method.
-	_, err = client.UnaryCall(ctx, &testpb.SimpleRequest{})
-	require.NoError(t, err)
-	require.Error(t, doFailingUnaryCall(ctx, client))
+			// One successful and one failing call to the same method.
+			_, err = client.UnaryCall(ctx, &testpb.SimpleRequest{})
+			require.NoError(t, err)
+			require.Error(t, doFailingUnaryCall(ctx, client))
 
-	checkDurationErrorType(t, clientMetricReader, rpcconv.ClientCallDuration{}.Name())
-	checkDurationErrorType(t, serverMetricReader, rpcconv.ServerCallDuration{}.Name())
+			switch tt.stabilityOptIn {
+			case "rpc/old":
+				// Only the legacy v1.37 metrics exist; they must not carry error.type.
+				checkLegacyNoErrorType(t, clientMetricReader, oldrpcconv.ClientDuration{}.Name())
+				checkLegacyNoErrorType(t, serverMetricReader, oldrpcconv.ServerDuration{}.Name())
+			case "rpc/dup":
+				checkDurationErrorType(t, clientMetricReader, rpcconv.ClientCallDuration{}.Name())
+				checkDurationErrorType(t, serverMetricReader, rpcconv.ServerCallDuration{}.Name())
+				checkLegacyNoErrorType(t, clientMetricReader, oldrpcconv.ClientDuration{}.Name())
+				checkLegacyNoErrorType(t, serverMetricReader, oldrpcconv.ServerDuration{}.Name())
+			default:
+				checkDurationErrorType(t, clientMetricReader, rpcconv.ClientCallDuration{}.Name())
+				checkDurationErrorType(t, serverMetricReader, rpcconv.ServerCallDuration{}.Name())
+			}
+		})
+	}
 }
 
 // checkDurationErrorType finds the data points for the failing and successful
@@ -374,6 +403,75 @@ func checkDurationErrorType(t *testing.T, reader metric.Reader, metricName strin
 	statusCode, ok := errDP.Attributes.Value(attribute.Key("rpc.response.status_code"))
 	require.True(t, ok)
 	assert.Equal(t, "INTERNAL", statusCode.AsString())
+}
+
+// checkLegacyNoErrorType verifies that the legacy v1.37 rpc.*.duration metrics
+// do not carry error.type, even on failed calls. The failed data point is
+// identified by rpc.response.status_code=INTERNAL since error.type itself
+// cannot be used to distinguish it here.
+func checkLegacyNoErrorType(t *testing.T, reader metric.Reader, metricName string) {
+	t.Helper()
+	// The stable modes use the full method path as the rpc.method value, while
+	// the legacy rpc/old mode uses the short method name.
+	const (
+		fullMethod  = "grpc.testing.TestService/UnaryCall"
+		shortMethod = "UnaryCall"
+	)
+	isUnaryCall := func(v string) bool {
+		return v == fullMethod || v == shortMethod
+	}
+
+	var rm metricdata.ResourceMetrics
+	require.Eventually(t, func() bool {
+		rm = metricdata.ResourceMetrics{}
+		if err := reader.Collect(t.Context(), &rm); err != nil {
+			return false
+		}
+		for _, sm := range rm.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				if m.Name != metricName {
+					continue
+				}
+				hist, ok := m.Data.(metricdata.Histogram[float64])
+				if !ok {
+					continue
+				}
+				for _, dp := range hist.DataPoints {
+					if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); ok && isUnaryCall(v.AsString()) {
+						return true
+					}
+				}
+			}
+		}
+		return false
+	}, 3*time.Second, 10*time.Millisecond)
+
+	foundFailed := false
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != metricName {
+				continue
+			}
+			hist, ok := m.Data.(metricdata.Histogram[float64])
+			if !ok {
+				continue
+			}
+			for i := range hist.DataPoints {
+				dp := &hist.DataPoints[i]
+				if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); !ok || !isUnaryCall(v.AsString()) {
+					continue
+				}
+				statusCode, ok := dp.Attributes.Value(attribute.Key("rpc.response.status_code"))
+				if !ok || statusCode.AsString() != "INTERNAL" {
+					continue
+				}
+				foundFailed = true
+				_, hasErrType := dp.Attributes.Value(attribute.Key("error.type"))
+				assert.False(t, hasErrType, "%s: legacy metric must not carry error.type on failed calls", metricName)
+			}
+		}
+	}
+	require.True(t, foundFailed, "%s: expected a failed-call data point in the legacy metric", metricName)
 }
 
 func checkClientMetrics(t *testing.T, reader metric.Reader, addr, stabilityOptIn string) {

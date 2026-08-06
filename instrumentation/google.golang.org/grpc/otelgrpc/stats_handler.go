@@ -411,32 +411,39 @@ func (*config) handleRPC(
 				metricAttrs = append(metricAttrs, gctx.metricAttrs...)
 			}
 			metricAttrs = append(metricAttrs, rpcStatusAttr)
-			// Per the RPC semantic conventions, error.type is Conditionally
-			// Required on the call duration metrics if and only if the
-			// operation failed, and SHOULD be set to the returned status code.
-			// The failure classification is role-specific: clients treat every
+
+			// error.type is Conditionally Required on the stable rpc.*.call.duration
+			// metrics when the RPC failed, and SHOULD be set to the returned status
+			// code. The failure classification is role-specific: clients treat every
 			// non-OK status as an error, while servers only classify Unknown,
-			// DeadlineExceeded, Unimplemented, Internal, Unavailable and
-			// DataLoss as errors. Use recordStatus so the client and server
-			// rules are applied independently (e.g. a client cancellation is
-			// not a server error).
+			// DeadlineExceeded, Unimplemented, Internal, Unavailable and DataLoss
+			// as errors. Use recordStatus so the client and server rules are applied
+			// independently (e.g. a client cancellation is not a server error).
+			// The legacy v1.37 rpc.*.duration conventions did not define error.type,
+			// so the compatibility instruments must preserve their telemetry shape
+			// and are recorded with the unmodified attribute set.
+			stableMetricAttrs := metricAttrs
 			if s != nil {
 				if c, _ := recordStatus(s); c == codes.Error {
-					metricAttrs = append(metricAttrs, semconv.ErrorTypeKey.String(canonicalString(s.Code())))
+					stableMetricAttrs = make([]attribute.KeyValue, 0, len(metricAttrs)+1)
+					stableMetricAttrs = append(stableMetricAttrs, metricAttrs...)
+					stableMetricAttrs = append(stableMetricAttrs, semconv.ErrorTypeKey.String(canonicalString(s.Code())))
 				}
 			}
-			// Allocate vararg slice once.
-			recordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
+
+			// Allocate vararg slices once.
+			stableRecordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(stableMetricAttrs...))}
+			legacyRecordOpts := []metric.RecordOption{metric.WithAttributeSet(attribute.NewSet(metricAttrs...))}
 
 			// Use floating point division here for higher precision (instead of Millisecond method).
 			// Measure right before calling Record() to capture as much elapsed time as possible.
 			elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Second)
 
 			if durationEnabled {
-				duration.Record(ctx, elapsedTime, recordOpts...)
+				duration.Record(ctx, elapsedTime, stableRecordOpts...)
 			}
 			if oldDurationEnabled {
-				oldDuration.Record(ctx, elapsedTime*1000.0, recordOpts...)
+				oldDuration.Record(ctx, elapsedTime*1000.0, legacyRecordOpts...)
 			}
 		}
 
