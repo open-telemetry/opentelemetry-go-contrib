@@ -271,6 +271,19 @@ func checkServerSpans(t *testing.T, sr *tracetest.SpanRecorder, addr string) {
 // fails with a non-OK status, and is absent on successful calls (per the RPC
 // semantic conventions: Conditionally Required if and only if the operation
 // failed).
+// doFailingUnaryCall performs a unary RPC that returns a non-OK status
+// (codes.Internal) and returns the resulting error.
+func doFailingUnaryCall(ctx context.Context, tc testpb.TestServiceClient, args ...grpc.CallOption) error {
+	req := &testpb.SimpleRequest{
+		ResponseStatus: &testpb.EchoStatus{
+			Code:    int32(codes.Internal),
+			Message: "forced failure",
+		},
+	}
+	_, err := tc.UnaryCall(ctx, req, args...)
+	return err
+}
+
 func TestStatsHandlerErrorType(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 	clientMetricReader := metric.NewManualReader()
@@ -294,7 +307,7 @@ func TestStatsHandlerErrorType(t *testing.T) {
 	// One successful and one failing call to the same method.
 	_, err = client.UnaryCall(ctx, &testpb.SimpleRequest{})
 	require.NoError(t, err)
-	require.Error(t, test.DoFailingUnaryCall(ctx, client))
+	require.Error(t, doFailingUnaryCall(ctx, client))
 
 	checkDurationErrorType(t, clientMetricReader, rpcconv.ClientCallDuration{}.Name())
 	checkDurationErrorType(t, serverMetricReader, rpcconv.ServerCallDuration{}.Name())
