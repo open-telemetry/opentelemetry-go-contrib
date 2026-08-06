@@ -136,13 +136,12 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			// when the handler never wrote a response that would surface
 			// it as a 5xx (e.g. the handler returned after observing
 			// cancellation without writing a status). Classify it
-			// independent of the response status, but only override the
-			// span status message when the status code already selected
-			// codes.Error so a successful-looking status is preserved.
+			// independent of the response status: per the HTTP semantic
+			// conventions, span status is Error whenever a detected error
+			// exists, even if the response status itself is not an error
+			// (e.g. http.response.status_code stays 200).
 			if reqErr := c.Request.Context().Err(); reqErr != nil {
-				if spanCode == codes.Error {
-					span.SetStatus(codes.Error, reqErr.Error())
-				}
+				span.SetStatus(codes.Error, reqErr.Error())
 				errorTypeAttr = otelsemconv.ErrorType(reqErr)
 				span.SetAttributes(errorTypeAttr)
 			}

@@ -711,9 +711,9 @@ func TestClientDisconnect(t *testing.T) {
 // TestClientDisconnectWithoutErrorStatus reproduces a client disconnect
 // where the handler observes the cancelled request context and returns
 // without writing an error response, leaving Gin's default 200 status in
-// place. error.type must still be classified from the request context
-// error even though the response status never surfaces the disconnect as
-// a server error.
+// place. Per the HTTP semantic conventions, span status must still be
+// Error because a detected error (the disconnect) exists, even though
+// http.response.status_code itself stays 200.
 func TestClientDisconnectWithoutErrorStatus(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
@@ -758,8 +758,8 @@ func TestClientDisconnectWithoutErrorStatus(t *testing.T) {
 	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
 
 	span := sr.Ended()[0]
-	assert.NotEqual(t, codes.Error, span.Status().Code, "the selected (non-error) status should be preserved")
-	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusOK))
+	assert.Equal(t, codes.Error, span.Status().Code, "span status must be Error when the request context carries a detected error")
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusOK), "the selected response status code should be preserved")
 	assert.Contains(t, span.Attributes(), semconv.ErrorType(context.Canceled))
 
 	rm := metricdata.ResourceMetrics{}
