@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/smithy-go/middleware"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // S3AttributeBuilder sets S3 specific attributes depending on the S3 operation being performed.
@@ -107,6 +107,8 @@ func stringPtrField(v any, name string) (string, bool) {
 	if !f.IsValid() || f.Kind() != reflect.Pointer || f.IsNil() {
 		return "", false
 	}
-	s, ok := f.Elem().Interface().(string)
-	return s, ok
+	if f.Elem().Kind() != reflect.String {
+		return "", false
+	}
+	return f.Elem().String(), true
 }

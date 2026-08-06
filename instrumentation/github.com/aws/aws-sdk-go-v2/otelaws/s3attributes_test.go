@@ -12,333 +12,259 @@ import (
 	s3types "github.com/aws/aws-sdk-go-v2/service/s3/types"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
-func TestS3CopyObjectInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.CopyObjectInput{
-			Bucket:     aws.String("test-bucket"),
-			Key:        aws.String("test-key"),
-			CopySource: aws.String("src-bucket/src-key"),
+func TestS3AttributeBuilderBucketOperations(t *testing.T) {
+	tests := []struct {
+		name       string
+		params     interface{}
+		wantBucket string
+	}{
+		{
+			name:       "ListObjectsV2",
+			params:     &s3.ListObjectsV2Input{Bucket: aws.String("test-bucket")},
+			wantBucket: "test-bucket",
+		},
+		{
+			name:       "CreateBucket",
+			params:     &s3.CreateBucketInput{Bucket: aws.String("test-bucket")},
+			wantBucket: "test-bucket",
+		},
+		{
+			name:       "HeadBucket",
+			params:     &s3.HeadBucketInput{Bucket: aws.String("test-bucket")},
+			wantBucket: "test-bucket",
+		},
+		{
+			name:       "DeleteBucket",
+			params:     &s3.DeleteBucketInput{Bucket: aws.String("test-bucket")},
+			wantBucket: "test-bucket",
 		},
 	}
 
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := middleware.InitializeInput{Parameters: tt.params}
+			attrs := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-	assert.Contains(t, attributes, semconv.AWSS3CopySource("src-bucket/src-key"))
+			assert.Contains(t, attrs, semconv.RPCSystemNameKey.String(AWSSystemVal))
+			assert.Contains(t, attrs, semconv.AWSS3Bucket(tt.wantBucket))
+			assert.NotContains(t, attrs, semconv.AWSS3Key(""))
+		})
+	}
 }
 
-func TestS3DeleteObjectInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.DeleteObjectInput{
-			Bucket: aws.String("test-bucket"),
-			Key:    aws.String("test-key"),
+func TestS3AttributeBuilderObjectOperations(t *testing.T) {
+	tests := []struct {
+		name string
+		params interface{}
+	}{
+		{
+			name:   "GetObject",
+			params: &s3.GetObjectInput{Bucket: aws.String("test-bucket"), Key: aws.String("test-key")},
+		},
+		{
+			name:   "PutObject",
+			params: &s3.PutObjectInput{Bucket: aws.String("test-bucket"), Key: aws.String("test-key")},
+		},
+		{
+			name:   "DeleteObject",
+			params: &s3.DeleteObjectInput{Bucket: aws.String("test-bucket"), Key: aws.String("test-key")},
+		},
+		{
+			name:   "HeadObject",
+			params: &s3.HeadObjectInput{Bucket: aws.String("test-bucket"), Key: aws.String("test-key")},
+		},
+		{
+			name:   "RestoreObject",
+			params: &s3.RestoreObjectInput{Bucket: aws.String("test-bucket"), Key: aws.String("test-key")},
+		},
+		{
+			name:   "SelectObjectContent",
+			params: &s3.SelectObjectContentInput{Bucket: aws.String("test-bucket"), Key: aws.String("test-key")},
+		},
+		{
+			name:   "CreateMultipartUpload",
+			params: &s3.CreateMultipartUploadInput{Bucket: aws.String("test-bucket"), Key: aws.String("test-key")},
 		},
 	}
 
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := middleware.InitializeInput{Parameters: tt.params}
+			attrs := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
+			assert.Contains(t, attrs, semconv.RPCSystemNameKey.String(AWSSystemVal))
+			assert.Contains(t, attrs, semconv.AWSS3Bucket("test-bucket"))
+			assert.Contains(t, attrs, semconv.AWSS3Key("test-key"))
+		})
+	}
 }
 
-func TestS3DeleteObjectsInput(t *testing.T) {
+func TestS3AttributeBuilderSpecialOperations(t *testing.T) {
 	del := &s3types.Delete{
 		Objects: []s3types.ObjectIdentifier{
 			{Key: aws.String("key1")},
 			{Key: aws.String("key2")},
 		},
 	}
-	input := middleware.InitializeInput{
-		Parameters: &s3.DeleteObjectsInput{
-			Bucket: aws.String("test-bucket"),
-			Delete: del,
+	delJSON, _ := json.Marshal(del)
+
+	tests := []struct {
+		name string
+		params     interface{}
+		wantAttrs  []attribute.KeyValue
+	}{
+		{
+			name: "CopyObject",
+			params: &s3.CopyObjectInput{
+				Bucket:     aws.String("test-bucket"),
+				Key:        aws.String("test-key"),
+				CopySource: aws.String("src-bucket/src-key"),
+			},
+			wantAttrs: []attribute.KeyValue{
+				semconv.AWSS3Bucket("test-bucket"),
+				semconv.AWSS3Key("test-key"),
+				semconv.AWSS3CopySource("src-bucket/src-key"),
+			},
+		},
+		{
+			name: "DeleteObjects",
+			params: &s3.DeleteObjectsInput{
+				Bucket: aws.String("test-bucket"),
+				Delete: del,
+			},
+			wantAttrs: []attribute.KeyValue{
+				semconv.AWSS3Bucket("test-bucket"),
+				semconv.AWSS3Delete(string(delJSON)),
+			},
+		},
+		{
+			name: "AbortMultipartUpload",
+			params: &s3.AbortMultipartUploadInput{
+				Bucket:   aws.String("test-bucket"),
+				Key:      aws.String("test-key"),
+				UploadId: aws.String("upload-id-123"),
+			},
+			wantAttrs: []attribute.KeyValue{
+				semconv.AWSS3Bucket("test-bucket"),
+				semconv.AWSS3Key("test-key"),
+				semconv.AWSS3UploadID("upload-id-123"),
+			},
+		},
+		{
+			name: "CompleteMultipartUpload",
+			params: &s3.CompleteMultipartUploadInput{
+				Bucket:   aws.String("test-bucket"),
+				Key:      aws.String("test-key"),
+				UploadId: aws.String("upload-id-123"),
+			},
+			wantAttrs: []attribute.KeyValue{
+				semconv.AWSS3Bucket("test-bucket"),
+				semconv.AWSS3Key("test-key"),
+				semconv.AWSS3UploadID("upload-id-123"),
+			},
+		},
+		{
+			name: "ListParts",
+			params: &s3.ListPartsInput{
+				Bucket:   aws.String("test-bucket"),
+				Key:      aws.String("test-key"),
+				UploadId: aws.String("upload-id-123"),
+			},
+			wantAttrs: []attribute.KeyValue{
+				semconv.AWSS3Bucket("test-bucket"),
+				semconv.AWSS3Key("test-key"),
+				semconv.AWSS3UploadID("upload-id-123"),
+			},
+		},
+		{
+			name: "UploadPart",
+			params: &s3.UploadPartInput{
+				Bucket:     aws.String("test-bucket"),
+				Key:        aws.String("test-key"),
+				UploadId:   aws.String("upload-id-123"),
+				PartNumber: aws.Int32(5),
+			},
+			wantAttrs: []attribute.KeyValue{
+				semconv.AWSS3Bucket("test-bucket"),
+				semconv.AWSS3Key("test-key"),
+				semconv.AWSS3UploadID("upload-id-123"),
+				semconv.AWSS3PartNumber(5),
+			},
+		},
+		{
+			name: "UploadPartCopy",
+			params: &s3.UploadPartCopyInput{
+				Bucket:     aws.String("test-bucket"),
+				Key:        aws.String("test-key"),
+				CopySource: aws.String("src-bucket/src-key"),
+				UploadId:   aws.String("upload-id-123"),
+				PartNumber: aws.Int32(3),
+			},
+			wantAttrs: []attribute.KeyValue{
+				semconv.AWSS3Bucket("test-bucket"),
+				semconv.AWSS3Key("test-key"),
+				semconv.AWSS3CopySource("src-bucket/src-key"),
+				semconv.AWSS3UploadID("upload-id-123"),
+				semconv.AWSS3PartNumber(3),
+			},
 		},
 	}
 
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := middleware.InitializeInput{Parameters: tt.params}
+			attrs := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	d, _ := json.Marshal(del)
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Delete(string(d)))
+			assert.Contains(t, attrs, semconv.RPCSystemNameKey.String(AWSSystemVal))
+			for _, want := range tt.wantAttrs {
+				assert.Contains(t, attrs, want)
+			}
+		})
+	}
 }
 
-func TestS3GetObjectInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.GetObjectInput{
-			Bucket: aws.String("test-bucket"),
-			Key:    aws.String("test-key"),
-		},
-	}
+func TestS3AttributeBuilderEdgeCases(t *testing.T) {
+	rpcOnly := []attribute.KeyValue{semconv.RPCSystemNameKey.String(AWSSystemVal)}
 
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
+	t.Run("ListBuckets", func(t *testing.T) {
+		input := middleware.InitializeInput{Parameters: &s3.ListBucketsInput{}}
+		attrs := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
+		assert.Equal(t, rpcOnly, attrs)
+	})
 
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-}
+	t.Run("NilBucketAndKey", func(t *testing.T) {
+		input := middleware.InitializeInput{Parameters: &s3.GetObjectInput{}}
+		attrs := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
+		assert.Equal(t, rpcOnly, attrs)
+	})
 
-func TestS3HeadObjectInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.HeadObjectInput{
-			Bucket: aws.String("test-bucket"),
-			Key:    aws.String("test-key"),
-		},
-	}
+	t.Run("NilParameters", func(t *testing.T) {
+		input := middleware.InitializeInput{Parameters: nil}
+		attrs := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
+		assert.Equal(t, rpcOnly, attrs)
+	})
 
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
+	t.Run("TypedNilParameters", func(t *testing.T) {
+		input := middleware.InitializeInput{Parameters: (*s3.CopyObjectInput)(nil)}
+		attrs := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
+		assert.Equal(t, rpcOnly, attrs)
+	})
 
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-}
+	t.Run("NilMultipartFields", func(t *testing.T) {
+		input := middleware.InitializeInput{
+			Parameters: &s3.UploadPartInput{
+				Bucket: aws.String("test-bucket"),
+				Key:    aws.String("test-key"),
+			},
+		}
+		attrs := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-func TestS3PutObjectInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.PutObjectInput{
-			Bucket: aws.String("test-bucket"),
-			Key:    aws.String("test-key"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-}
-
-func TestS3RestoreObjectInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.RestoreObjectInput{
-			Bucket: aws.String("test-bucket"),
-			Key:    aws.String("test-key"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-}
-
-func TestS3SelectObjectContentInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.SelectObjectContentInput{
-			Bucket: aws.String("test-bucket"),
-			Key:    aws.String("test-key"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-}
-
-func TestS3ListBucketsInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.ListBucketsInput{},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.RPCSystemNameKey.String(AWSSystemVal))
-	assert.Len(t, attributes, 1)
-}
-
-func TestS3AbortMultipartUploadInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.AbortMultipartUploadInput{
-			Bucket:   aws.String("test-bucket"),
-			Key:      aws.String("test-key"),
-			UploadId: aws.String("upload-id-123"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-	assert.Contains(t, attributes, semconv.AWSS3UploadID("upload-id-123"))
-}
-
-func TestS3CompleteMultipartUploadInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.CompleteMultipartUploadInput{
-			Bucket:   aws.String("test-bucket"),
-			Key:      aws.String("test-key"),
-			UploadId: aws.String("upload-id-123"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-	assert.Contains(t, attributes, semconv.AWSS3UploadID("upload-id-123"))
-}
-
-func TestS3CreateMultipartUploadInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.CreateMultipartUploadInput{
-			Bucket: aws.String("test-bucket"),
-			Key:    aws.String("test-key"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-}
-
-func TestS3ListPartsInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.ListPartsInput{
-			Bucket:   aws.String("test-bucket"),
-			Key:      aws.String("test-key"),
-			UploadId: aws.String("upload-id-123"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-	assert.Contains(t, attributes, semconv.AWSS3UploadID("upload-id-123"))
-}
-
-func TestS3UploadPartInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.UploadPartInput{
-			Bucket:     aws.String("test-bucket"),
-			Key:        aws.String("test-key"),
-			UploadId:   aws.String("upload-id-123"),
-			PartNumber: aws.Int32(5),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-	assert.Contains(t, attributes, semconv.AWSS3UploadID("upload-id-123"))
-	assert.Contains(t, attributes, semconv.AWSS3PartNumber(5))
-}
-
-func TestS3UploadPartCopyInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.UploadPartCopyInput{
-			Bucket:     aws.String("test-bucket"),
-			Key:        aws.String("test-key"),
-			CopySource: aws.String("src-bucket/src-key"),
-			UploadId:   aws.String("upload-id-123"),
-			PartNumber: aws.Int32(3),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-	assert.Contains(t, attributes, semconv.AWSS3CopySource("src-bucket/src-key"))
-	assert.Contains(t, attributes, semconv.AWSS3UploadID("upload-id-123"))
-	assert.Contains(t, attributes, semconv.AWSS3PartNumber(3))
-}
-
-func TestS3ListObjectsV2Input(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.ListObjectsV2Input{
-			Bucket: aws.String("test-bucket"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-}
-
-func TestS3CreateBucketInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.CreateBucketInput{
-			Bucket: aws.String("test-bucket"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-}
-
-func TestS3HeadBucketInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.HeadBucketInput{
-			Bucket: aws.String("test-bucket"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-}
-
-func TestS3DeleteBucketInput(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.DeleteBucketInput{
-			Bucket: aws.String("test-bucket"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-}
-
-func TestS3NilBucketAndKey(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.GetObjectInput{},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.RPCSystemNameKey.String(AWSSystemVal))
-	assert.Len(t, attributes, 1)
-}
-
-func TestS3NilParameters(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: nil,
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.RPCSystemNameKey.String(AWSSystemVal))
-	assert.Len(t, attributes, 1)
-}
-
-func TestS3TypedNilParameters(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: (*s3.GetObjectInput)(nil),
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.RPCSystemNameKey.String(AWSSystemVal))
-	assert.Len(t, attributes, 1)
-}
-
-func TestS3NilMultipartFields(t *testing.T) {
-	input := middleware.InitializeInput{
-		Parameters: &s3.UploadPartInput{
-			Bucket: aws.String("test-bucket"),
-			Key:    aws.String("test-key"),
-		},
-	}
-
-	attributes := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
-
-	assert.Contains(t, attributes, semconv.AWSS3Bucket("test-bucket"))
-	assert.Contains(t, attributes, semconv.AWSS3Key("test-key"))
-	assert.Len(t, attributes, 3)
+		assert.Contains(t, attrs, semconv.AWSS3Bucket("test-bucket"))
+		assert.Contains(t, attrs, semconv.AWSS3Key("test-key"))
+		assert.Len(t, attrs, 3)
+	})
 }
