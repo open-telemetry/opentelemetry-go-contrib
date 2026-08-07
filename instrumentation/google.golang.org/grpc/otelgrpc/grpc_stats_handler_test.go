@@ -371,7 +371,7 @@ func checkDurationErrorType(t *testing.T, reader metric.Reader, metricName strin
 					if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); !ok || v.AsString() != method {
 						continue
 					}
-					if v, ok := dp.Attributes.Value(attribute.Key("error.type")); ok && v.AsString() == "INTERNAL" {
+					if statusCode, ok := dp.Attributes.Value(attribute.Key("rpc.response.status_code")); ok && statusCode.AsString() == "INTERNAL" {
 						errDP = dp
 					} else {
 						okDP = dp
@@ -382,8 +382,11 @@ func checkDurationErrorType(t *testing.T, reader metric.Reader, metricName strin
 		return okDP != nil && errDP != nil
 	}, 3*time.Second, 10*time.Millisecond)
 
-	require.NotNil(t, errDP, "%s: expected a failed-call data point with error.type=INTERNAL", metricName)
-	require.NotNil(t, okDP, "%s: expected a successful-call data point without error.type", metricName)
+	require.NotNil(t, errDP, "%s: expected a failed-call data point with status_code=INTERNAL", metricName)
+	require.NotNil(t, okDP, "%s: expected a successful-call data point", metricName)
+	errorType, ok := errDP.Attributes.Value(attribute.Key("error.type"))
+	require.True(t, ok, "%s: failed-call data point must carry error.type", metricName)
+	assert.Equal(t, "INTERNAL", errorType.AsString())
 	_, hasErrType := okDP.Attributes.Value(attribute.Key("error.type"))
 	assert.False(t, hasErrType, "%s: successful call data point must not contain error.type", metricName)
 	statusCode, ok := errDP.Attributes.Value(attribute.Key("rpc.response.status_code"))
