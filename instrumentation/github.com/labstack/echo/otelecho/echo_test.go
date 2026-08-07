@@ -7,6 +7,7 @@ package otelecho
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -611,6 +612,52 @@ func TestClientDisconnectWithHTTPErrorFallback(t *testing.T) {
 		close(handlerStarted)
 		<-c.Request().Context().Done()
 		return echo.NewHTTPError(http.StatusBadRequest, "client is gone")
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	<-handlerStarted
+	cancel()
+	<-requestDone
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), otelsemconv.ErrorTypeKey.String("context_canceled"))
+}
+
+// TestClientDisconnectWithServerError covers a client disconnect where the
+// handler returns an ordinary error that surfaces as a 5xx response: the
+// request-context cancellation must win over the handler error so error.type
+// is context_canceled rather than the concrete error type.
+func TestClientDisconnectWithServerError(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	handlerStarted := make(chan struct{})
+	router := echo.New()
+	router.Use(Middleware("srv", WithTracerProvider(provider)))
+	router.GET("/hello", func(c echo.Context) error {
+		close(handlerStarted)
+		<-c.Request().Context().Done()
+		return errors.New("boom")
 	})
 
 	srv := httptest.NewServer(router)

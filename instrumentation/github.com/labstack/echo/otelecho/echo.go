@@ -114,6 +114,12 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 				WriteBytes: c.Response().Size,
 			})...)
 
+			// Retain the historical echo.error attribute for existing consumers;
+			// deprecation and removal are tracked separately.
+			if err != nil {
+				span.SetAttributes(attribute.String("echo.error", err.Error()))
+			}
+
 			// Classify the failure cause with a low-cardinality error.type
 			// instead of recording the full error string as an unbounded
 			// "echo.error" attribute. A cancelled request context (client
@@ -123,23 +129,20 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 			// idiomatically return *echo.HTTPError for 4xx/3xx responses.
 			var errorTypeAttr attribute.KeyValue
 			switch {
-			case err != nil:
-				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || status >= 500 {
-					span.SetStatus(codes.Error, err.Error())
-					errorTypeAttr = errorTypeAttrFrom(err)
-				} else if reqErr := c.Request().Context().Err(); reqErr != nil {
-					// The handler returned an error that does not surface as a
-					// server error (e.g. an *echo.HTTPError for a 4xx/3xx
-					// response), but the request context may still be the actual
-					// failure cause: a client disconnect or deadline observed
-					// while the handler was running.
-					span.SetStatus(codes.Error, reqErr.Error())
-					errorTypeAttr = errorTypeAttrFrom(reqErr)
-				}
+			case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+				span.SetStatus(codes.Error, err.Error())
+				errorTypeAttr = errorTypeAttrFrom(err)
 			default:
+				// Prefer the request-context error over the handler error: a
+				// client disconnect or deadline observed while the handler is
+				// running is the actual failure cause, even when the handler
+				// returns an ordinary error that surfaces as a 5xx response.
 				if reqErr := c.Request().Context().Err(); reqErr != nil {
 					span.SetStatus(codes.Error, reqErr.Error())
 					errorTypeAttr = errorTypeAttrFrom(reqErr)
+				} else if err != nil && status >= 500 {
+					span.SetStatus(codes.Error, err.Error())
+					errorTypeAttr = errorTypeAttrFrom(err)
 				}
 			}
 			if errorTypeAttr.Valid() {
