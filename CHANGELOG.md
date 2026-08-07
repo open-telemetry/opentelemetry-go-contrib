@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Reject OTLP exporter headers with an empty `name` in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x`, and `go.opentelemetry.io/contrib/otelconf/v0.3.0`, instead of forwarding invalid header names to OTLP exporters. (#9102)
 
+### Fixed
+
+- Allow `endpoint` to be omitted or set to `null` for OTLP exporters in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`; the SDK exporter defaults are used in this case, matching the OpenTelemetry configuration schema. (#9052)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
