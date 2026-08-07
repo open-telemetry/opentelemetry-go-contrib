@@ -127,6 +127,14 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 				if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || status >= 500 {
 					span.SetStatus(codes.Error, err.Error())
 					errorTypeAttr = errorTypeAttrFrom(err)
+				} else if reqErr := c.Request().Context().Err(); reqErr != nil {
+					// The handler returned an error that does not surface as a
+					// server error (e.g. an *echo.HTTPError for a 4xx/3xx
+					// response), but the request context may still be the actual
+					// failure cause: a client disconnect or deadline observed
+					// while the handler was running.
+					span.SetStatus(codes.Error, reqErr.Error())
+					errorTypeAttr = errorTypeAttrFrom(reqErr)
 				}
 			default:
 				if reqErr := c.Request().Context().Err(); reqErr != nil {
