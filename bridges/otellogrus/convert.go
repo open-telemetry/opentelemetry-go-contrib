@@ -11,67 +11,34 @@ import (
 	"math"
 	"reflect"
 	"strconv"
+	"sync"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 )
 
-// convertValue converts various types to attribute.Value.
-func convertValue(v any) attribute.Value {
-	return convertValueVisited(v, nil)
+var visitedMapPool = sync.Pool{
+	New: func() any {
+		return make(map[uintptr]bool)
+	},
 }
 
-func convertValueVisited(v any, visited []uintptr) attribute.Value {
-	// Handling the most common types without reflect is a small perf win.
-	switch val := v.(type) {
-	case bool:
-		return attribute.BoolValue(val)
-	case string:
-		return attribute.StringValue(val)
-	case int:
-		return attribute.Int64Value(int64(val))
-	case int8:
-		return attribute.Int64Value(int64(val))
-	case int16:
-		return attribute.Int64Value(int64(val))
-	case int32:
-		return attribute.Int64Value(int64(val))
-	case int64:
-		return attribute.Int64Value(val)
-	case uint:
-		return convertUintValue(uint64(val))
-	case uint8:
-		return attribute.Int64Value(int64(val))
-	case uint16:
-		return attribute.Int64Value(int64(val))
-	case uint32:
-		return attribute.Int64Value(int64(val))
-	case uint64:
-		return convertUintValue(val)
-	case uintptr:
-		return convertUintValue(uint64(val))
-	case float32:
-		return attribute.Float64Value(float64(val))
-	case float64:
-		return attribute.Float64Value(val)
-	case time.Duration:
-		return attribute.Int64Value(val.Nanoseconds())
-	case complex64:
-		r := attribute.Float64("r", real(complex128(val)))
-		i := attribute.Float64("i", imag(complex128(val)))
-		return attribute.MapValue(r, i)
-	case complex128:
-		r := attribute.Float64("r", real(val))
-		i := attribute.Float64("i", imag(val))
-		return attribute.MapValue(r, i)
-	case time.Time:
-		return attribute.Int64Value(val.UnixNano())
-	case []byte:
-		return attribute.ByteSliceValue(val)
-	case error:
-		return attribute.StringValue(val.Error())
-	case attribute.Value:
-		return val
+// convertValue converts various types to attribute.Value.
+func convertValue(v any) attribute.Value {
+	if res, ok := fastConvertValue(v); ok {
+		return res
+	}
+
+	visited := visitedMapPool.Get().(map[uintptr]bool)
+	res := convertValueVisited(v, visited)
+	clear(visited)
+	visitedMapPool.Put(visited)
+	return res
+}
+
+func convertValueVisited(v any, visited map[uintptr]bool) attribute.Value {
+	if res, ok := fastConvertValue(v); ok {
+		return res
 	}
 
 	t := reflect.TypeOf(v)
@@ -83,21 +50,17 @@ func convertValueVisited(v any, visited []uintptr) attribute.Value {
 	case reflect.Struct:
 		return attribute.StringValue(fmt.Sprintf("%+v", v))
 	case reflect.Slice, reflect.Array:
-		if val.Len() == 0 {
-			return attribute.SliceValue()
-		}
 		if t.Kind() == reflect.Slice {
 			if val.IsNil() {
 				return attribute.Value{}
 			}
 			ptr := val.Pointer()
 			if ptr != 0 {
-				for _, p := range visited {
-					if p == ptr {
-						return attribute.StringValue("<cycle>")
-					}
+				if visited[ptr] {
+					return attribute.StringValue("<cycle>")
 				}
-				visited = append(visited, ptr)
+				visited[ptr] = true
+				defer delete(visited, ptr)
 			}
 		}
 		items := make([]attribute.Value, 0, val.Len())
@@ -109,17 +72,13 @@ func convertValueVisited(v any, visited []uintptr) attribute.Value {
 		if val.IsNil() {
 			return attribute.Value{}
 		}
-		if val.Len() == 0 {
-			return attribute.MapValue()
-		}
 		ptr := val.Pointer()
 		if ptr != 0 {
-			for _, p := range visited {
-				if p == ptr {
-					return attribute.StringValue("<cycle>")
-				}
+			if visited[ptr] {
+				return attribute.StringValue("<cycle>")
 			}
-			visited = append(visited, ptr)
+			visited[ptr] = true
+			defer delete(visited, ptr)
 		}
 		kvs := make([]attribute.KeyValue, 0, val.Len())
 		for _, k := range val.MapKeys() {
@@ -142,12 +101,11 @@ func convertValueVisited(v any, visited []uintptr) attribute.Value {
 		}
 		ptr := val.Pointer()
 		if ptr != 0 {
-			for _, p := range visited {
-				if p == ptr {
-					return attribute.StringValue("<cycle>")
-				}
+			if visited[ptr] {
+				return attribute.StringValue("<cycle>")
 			}
-			visited = append(visited, ptr)
+			visited[ptr] = true
+			defer delete(visited, ptr)
 		}
 		return convertValueVisited(val.Elem().Interface(), visited)
 	case reflect.Interface:
@@ -163,6 +121,61 @@ func convertValueVisited(v any, visited []uintptr) attribute.Value {
 	// asking why their attributes have a "unhandled: " prefix than
 	// say that their code is panicking.
 	return attribute.StringValue(fmt.Sprintf("unhandled: (%s) %+v", t, v))
+}
+
+// fastConvertValue handles common primitive types without reflection or pool overhead.
+func fastConvertValue(v any) (attribute.Value, bool) {
+	switch val := v.(type) {
+	case bool:
+		return attribute.BoolValue(val), true
+	case string:
+		return attribute.StringValue(val), true
+	case int:
+		return attribute.Int64Value(int64(val)), true
+	case int8:
+		return attribute.Int64Value(int64(val)), true
+	case int16:
+		return attribute.Int64Value(int64(val)), true
+	case int32:
+		return attribute.Int64Value(int64(val)), true
+	case int64:
+		return attribute.Int64Value(val), true
+	case uint:
+		return convertUintValue(uint64(val)), true
+	case uint8:
+		return attribute.Int64Value(int64(val)), true
+	case uint16:
+		return attribute.Int64Value(int64(val)), true
+	case uint32:
+		return attribute.Int64Value(int64(val)), true
+	case uint64:
+		return convertUintValue(val), true
+	case uintptr:
+		return convertUintValue(uint64(val)), true
+	case float32:
+		return attribute.Float64Value(float64(val)), true
+	case float64:
+		return attribute.Float64Value(val), true
+	case time.Duration:
+		return attribute.Int64Value(val.Nanoseconds()), true
+	case complex64:
+		r := attribute.Float64("r", real(complex128(val)))
+		i := attribute.Float64("i", imag(complex128(val)))
+		return attribute.MapValue(r, i), true
+	case complex128:
+		r := attribute.Float64("r", real(val))
+		i := attribute.Float64("i", imag(val))
+		return attribute.MapValue(r, i), true
+	case time.Time:
+		return attribute.Int64Value(val.UnixNano()), true
+	case []byte:
+		return attribute.ByteSliceValue(val), true
+	case error:
+		return attribute.StringValue(val.Error()), true
+	case attribute.Value:
+		return val, true
+	}
+	return attribute.Value{}, false
 }
 
 // convertUintValue converts a uint64 to an attribute.Value.
