@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"strings"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -84,9 +85,11 @@ func (OT) Extract(ctx context.Context, carrier propagation.TextMapCarrier) conte
 
 	bags, err := extractBags(carrier)
 	if err != nil {
-		return trace.ContextWithRemoteSpanContext(ctx, sc)
+		otel.Handle(err)
 	}
-	ctx = baggage.ContextWithBaggage(ctx, bags)
+	if bags.Len() != 0 {
+		ctx = baggage.ContextWithBaggage(ctx, bags)
+	}
 	return trace.ContextWithRemoteSpanContext(ctx, sc)
 }
 

@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Return the error from `baggage.New`'s aggregate limit validation in `go.opentelemetry.io/contrib/propagators/ot`, instead of discarding it when every individual `ot-baggage-*` member parsed successfully. (#9395)
+- Report `ot-baggage-*` extraction errors from `go.opentelemetry.io/contrib/propagators/ot` to `otel.Handle` instead of silently discarding them, while still attaching the successfully parsed baggage members to the context. (#9395)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
