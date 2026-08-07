@@ -98,7 +98,6 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 
 			// serve the request to the next middleware
 			err := next(c)
-
 			// Call the error hook before capturing the response status: the
 			// default OnError writes the error response via c.Error, which is
 			// what makes c.Response().Status reflect the error status code.

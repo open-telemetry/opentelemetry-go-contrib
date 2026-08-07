@@ -446,7 +446,6 @@ func TestWithOnError(t *testing.T) {
 	}
 }
 
-
 // TestClientDisconnect reproduces a real HTTP/1.1 client disconnect where the
 // handler observes the cancelled request context and returns the context
 // error (idiomatic Echo). The span and metrics must carry error.type so the
@@ -570,14 +569,17 @@ func TestClientDisconnectWithDeadline(t *testing.T) {
 		WithTracerProvider(provider),
 		WithMeterProvider(meterProvider),
 	))
-	router.GET("/hello", func(c echo.Context) error {
+	router.GET("/hello", func(_ echo.Context) error {
 		return context.DeadlineExceeded
 	})
 
 	srv := httptest.NewServer(router)
 	defer srv.Close()
 
-	resp, err := srv.Client().Get(srv.URL + "/hello")
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := srv.Client().Do(req)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
 
