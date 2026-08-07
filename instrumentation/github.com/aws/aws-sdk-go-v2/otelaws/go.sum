@@ -16,8 +16,8 @@ github.com/aws/aws-sdk-go-v2/service/sns v1.42.4 h1:cregOIHGsHahN/VX2Jd7oPjYSF0H
 github.com/aws/aws-sdk-go-v2/service/sns v1.42.4/go.mod h1:EfxXlpPsLpJfVw6ykt9dGnao+OaEDVU4p69UaJQlBHs=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.46.4 h1:Uqz9kiRjrhLwoVHEPt+ZT/n62UeAYxLHPetT6ImySBU=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.46.4/go.mod h1:5QpAlDsMzDn2GUBCgs+pw52OLZzS4Sf3jOQDe4KSoVI=
-github.com/aws/smithy-go v1.27.6 h1:0zjT8jgK3jbrTT7JJ3EE6JsMhX8JTrZ+f1sEndYDXrA=
-github.com/aws/smithy-go v1.27.6/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
+github.com/aws/smithy-go v1.27.7 h1:Zgj5z4LfcDYoQIVk+n/yGdTkP/2y6ZT5vYxe0fp7bqE=
+github.com/aws/smithy-go v1.27.7/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
