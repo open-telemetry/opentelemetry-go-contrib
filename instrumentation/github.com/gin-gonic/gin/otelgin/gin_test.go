@@ -616,3 +616,40 @@ func TestMetrics(t *testing.T) {
 		})
 	}
 }
+
+func TestUnknownContentLengthMetric(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar", otelgin.WithMeterProvider(meterProvider)))
+	router.POST("/chunked", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/chunked", strings.NewReader("hello"))
+	r.ContentLength = -1 // Simulate unknown / chunked content length
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	require.Len(t, rm.ScopeMetrics, 1)
+	sm := rm.ScopeMetrics[0]
+
+	// Verify that request.body.size is not recorded (or has no data points with negative values)
+	for _, m := range sm.Metrics {
+		if m.Name == "http.server.request.body.size" {
+			data, ok := m.Data.(metricdata.Histogram[int64])
+			if ok {
+				for _, dp := range data.DataPoints {
+					assert.GreaterOrEqual(t, dp.Sum, int64(0), "request.body.size should not be negative")
+				}
+			}
+		}
+	}
+}
+
