@@ -350,11 +350,13 @@ func checkDurationErrorType(t *testing.T, reader metric.Reader, metricName strin
 	const method = "grpc.testing.TestService/UnaryCall"
 
 	var rm metricdata.ResourceMetrics
+	var okDP, errDP *metricdata.HistogramDataPoint[float64]
 	require.Eventually(t, func() bool {
 		rm = metricdata.ResourceMetrics{}
 		if err := reader.Collect(t.Context(), &rm); err != nil {
 			return false
 		}
+		okDP, errDP = nil, nil
 		for _, sm := range rm.ScopeMetrics {
 			for _, m := range sm.Metrics {
 				if m.Name != metricName {
@@ -364,42 +366,26 @@ func checkDurationErrorType(t *testing.T, reader metric.Reader, metricName strin
 				if !ok {
 					continue
 				}
-				for _, dp := range hist.DataPoints {
-					if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); ok && v.AsString() == method {
-						return true
+				for i := range hist.DataPoints {
+					dp := &hist.DataPoints[i]
+					if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); !ok || v.AsString() != method {
+						continue
+					}
+					if v, ok := dp.Attributes.Value(attribute.Key("error.type")); ok && v.AsString() == "INTERNAL" {
+						errDP = dp
+					} else {
+						okDP = dp
 					}
 				}
 			}
 		}
-		return false
+		return okDP != nil && errDP != nil
 	}, 3*time.Second, 10*time.Millisecond)
-
-	var okDP, errDP *metricdata.HistogramDataPoint[float64]
-	for _, sm := range rm.ScopeMetrics {
-		for _, m := range sm.Metrics {
-			if m.Name != metricName {
-				continue
-			}
-			hist, ok := m.Data.(metricdata.Histogram[float64])
-			if !ok {
-				continue
-			}
-			for i := range hist.DataPoints {
-				dp := &hist.DataPoints[i]
-				if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); !ok || v.AsString() != method {
-					continue
-				}
-				if v, ok := dp.Attributes.Value(attribute.Key("error.type")); ok && v.AsString() == "INTERNAL" {
-					errDP = dp
-				} else {
-					okDP = dp
-				}
-			}
-		}
-	}
 
 	require.NotNil(t, errDP, "%s: expected a failed-call data point with error.type=INTERNAL", metricName)
 	require.NotNil(t, okDP, "%s: expected a successful-call data point without error.type", metricName)
+	_, hasErrType := okDP.Attributes.Value(attribute.Key("error.type"))
+	assert.False(t, hasErrType, "%s: successful call data point must not contain error.type", metricName)
 	statusCode, ok := errDP.Attributes.Value(attribute.Key("rpc.response.status_code"))
 	require.True(t, ok)
 	assert.Equal(t, "INTERNAL", statusCode.AsString())
@@ -422,11 +408,13 @@ func checkLegacyNoErrorType(t *testing.T, reader metric.Reader, metricName strin
 	}
 
 	var rm metricdata.ResourceMetrics
+	var failedDP *metricdata.HistogramDataPoint[float64]
 	require.Eventually(t, func() bool {
 		rm = metricdata.ResourceMetrics{}
 		if err := reader.Collect(t.Context(), &rm); err != nil {
 			return false
 		}
+		failedDP = nil
 		for _, sm := range rm.ScopeMetrics {
 			for _, m := range sm.Metrics {
 				if m.Name != metricName {
@@ -436,42 +424,25 @@ func checkLegacyNoErrorType(t *testing.T, reader metric.Reader, metricName strin
 				if !ok {
 					continue
 				}
-				for _, dp := range hist.DataPoints {
-					if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); ok && isUnaryCall(v.AsString()) {
-						return true
+				for i := range hist.DataPoints {
+					dp := &hist.DataPoints[i]
+					if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); !ok || !isUnaryCall(v.AsString()) {
+						continue
 					}
+					statusCode, ok := dp.Attributes.Value(attribute.Key("rpc.response.status_code"))
+					if !ok || statusCode.AsString() != "INTERNAL" {
+						continue
+					}
+					failedDP = dp
 				}
 			}
 		}
-		return false
+		return failedDP != nil
 	}, 3*time.Second, 10*time.Millisecond)
 
-	foundFailed := false
-	for _, sm := range rm.ScopeMetrics {
-		for _, m := range sm.Metrics {
-			if m.Name != metricName {
-				continue
-			}
-			hist, ok := m.Data.(metricdata.Histogram[float64])
-			if !ok {
-				continue
-			}
-			for i := range hist.DataPoints {
-				dp := &hist.DataPoints[i]
-				if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); !ok || !isUnaryCall(v.AsString()) {
-					continue
-				}
-				statusCode, ok := dp.Attributes.Value(attribute.Key("rpc.response.status_code"))
-				if !ok || statusCode.AsString() != "INTERNAL" {
-					continue
-				}
-				foundFailed = true
-				_, hasErrType := dp.Attributes.Value(attribute.Key("error.type"))
-				assert.False(t, hasErrType, "%s: legacy metric must not carry error.type on failed calls", metricName)
-			}
-		}
-	}
-	require.True(t, foundFailed, "%s: expected a failed-call data point in the legacy metric", metricName)
+	require.NotNil(t, failedDP, "%s: expected a failed-call data point in the legacy metric", metricName)
+	_, hasErrType := failedDP.Attributes.Value(attribute.Key("error.type"))
+	assert.False(t, hasErrType, "%s: legacy metric must not carry error.type on failed calls", metricName)
 }
 
 func checkClientMetrics(t *testing.T, reader metric.Reader, addr, stabilityOptIn string) {
