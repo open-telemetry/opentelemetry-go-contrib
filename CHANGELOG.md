@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Reject OTLP exporter headers with an empty `name` in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x`, and `go.opentelemetry.io/contrib/otelconf/v0.3.0`, instead of forwarding invalid header names to OTLP exporters. (#9102)
+- Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`, classified from the request context's cancellation error independently of the response status code. Previously a disconnect was recorded with no `error.type`, and when it surfaced as a 5xx response was indistinguishable from a genuine server fault. The unbounded-cardinality `echo.error` free-text attribute is replaced by the low-cardinality `error.type` attribute. (#9376)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

@@ -6,18 +6,22 @@
 package otelecho
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
@@ -26,6 +30,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 func TestGetSpanNotInstrumented(t *testing.T) {
@@ -437,4 +443,132 @@ func TestWithOnError(t *testing.T) {
 			assert.Equal(t, tt.wantHandlerCalled, handlerCalled, "handler called times mismatch")
 		})
 	}
+}
+
+
+// TestClientDisconnect reproduces a real HTTP/1.1 client disconnect where the
+// handler observes the cancelled request context and returns the context
+// error (idiomatic Echo). The span and metrics must carry error.type so the
+// disconnect is distinguishable from a genuine server fault.
+func TestClientDisconnect(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	handlerStarted := make(chan struct{})
+	router := echo.New()
+	router.Use(Middleware(
+		"srv",
+		WithTracerProvider(provider),
+		WithMeterProvider(meterProvider),
+	))
+	router.GET("/hello", func(c echo.Context) error {
+		close(handlerStarted)
+		<-c.Request().Context().Done()
+		return c.Request().Context().Err()
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	<-handlerStarted
+	cancel()
+	<-requestDone
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), otelsemconv.ErrorTypeKey.String("context_canceled"))
+
+	assertErrorTypeOnMetrics := func(rm metricdata.ResourceMetrics, metricName string) {
+		t.Helper()
+		for _, sm := range rm.ScopeMetrics {
+			for _, m := range sm.Metrics {
+				if m.Name != metricName {
+					continue
+				}
+				hist, ok := m.Data.(metricdata.Histogram[float64])
+				if !ok {
+					continue
+				}
+				for _, dp := range hist.DataPoints {
+					errorType, ok := dp.Attributes.Value(otelsemconv.ErrorTypeKey)
+					assert.True(t, ok, "%s: expected error.type attribute", metricName)
+					assert.Equal(t, "context_canceled", errorType.AsString())
+				}
+			}
+		}
+	}
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	for _, name := range []string{"http.server.request.duration", "http.server.request.body.size", "http.server.response.body.size"} {
+		assertErrorTypeOnMetrics(rm, name)
+	}
+}
+
+// TestClientDisconnectWithoutErrorStatus reproduces a client disconnect where
+// the handler observes the cancelled request context and returns without an
+// error, leaving the response status unset. Per the HTTP semantic
+// conventions, span status must still be Error and error.type must be set,
+// even though no 5xx response is recorded.
+func TestClientDisconnectWithoutErrorStatus(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	handlerStarted := make(chan struct{})
+	router := echo.New()
+	router.Use(Middleware("srv", WithTracerProvider(provider)))
+	router.GET("/hello", func(c echo.Context) error {
+		close(handlerStarted)
+		<-c.Request().Context().Done()
+		return nil
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	<-handlerStarted
+	cancel()
+	<-requestDone
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), otelsemconv.ErrorTypeKey.String("context_canceled"))
 }

@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
@@ -120,40 +121,39 @@ func TestError(t *testing.T) {
 	attrs := span.Attributes()
 	assert.Contains(t, attrs, attribute.String("server.address", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.response.status_code", http.StatusInternalServerError))
-	assert.Contains(t, attrs, attribute.String("echo.error", "oh no"))
+	assert.Contains(t, attrs, otelsemconv.ErrorType(wantErr))
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
 }
 
 func TestStatusError(t *testing.T) {
 	for _, tc := range []struct {
-		name       string
-		echoError  string
-		statusCode int
-		spanCode   codes.Code
-		handler    func(c echo.Context) error
+		name          string
+		wantErrorType attribute.KeyValue
+		statusCode    int
+		spanCode      codes.Code
+		handler       func(c echo.Context) error
 	}{
 		{
-			name:       "StandardError",
-			echoError:  "oh no",
-			statusCode: http.StatusInternalServerError,
-			spanCode:   codes.Error,
+			name:          "StandardError",
+			wantErrorType: otelsemconv.ErrorType(errors.New("oh no")),
+			statusCode:    http.StatusInternalServerError,
+			spanCode:      codes.Error,
 			handler: func(echo.Context) error {
 				return errors.New("oh no")
 			},
 		},
 		{
-			name:       "EchoHTTPServerError",
-			echoError:  "code=500, message=my error message",
-			statusCode: http.StatusInternalServerError,
-			spanCode:   codes.Error,
+			name:          "EchoHTTPServerError",
+			wantErrorType: otelsemconv.ErrorType(echo.NewHTTPError(http.StatusInternalServerError, "my error message")),
+			statusCode:    http.StatusInternalServerError,
+			spanCode:      codes.Error,
 			handler: func(echo.Context) error {
 				return echo.NewHTTPError(http.StatusInternalServerError, "my error message")
 			},
 		},
 		{
 			name:       "EchoHTTPClientError",
-			echoError:  "code=400, message=my error message",
 			statusCode: http.StatusBadRequest,
 			spanCode:   codes.Unset,
 			handler: func(echo.Context) error {
@@ -183,7 +183,13 @@ func TestStatusError(t *testing.T) {
 			assert.Contains(t, attrs, attribute.String("http.route", "/err"))
 			assert.Contains(t, attrs, attribute.String("http.request.method", "GET"))
 			assert.Contains(t, attrs, attribute.Int("http.response.status_code", tc.statusCode))
-			assert.Contains(t, attrs, attribute.String("echo.error", tc.echoError))
+			if tc.wantErrorType.Valid() {
+				assert.Contains(t, attrs, tc.wantErrorType)
+			} else {
+				for _, a := range attrs {
+					assert.NotEqual(t, otelsemconv.ErrorTypeKey, a.Key, "unexpected error.type on span")
+				}
+			}
 		})
 	}
 }
