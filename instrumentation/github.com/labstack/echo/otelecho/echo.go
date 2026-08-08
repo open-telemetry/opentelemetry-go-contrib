@@ -4,6 +4,8 @@
 package otelecho
 
 import (
+	"context"
+	"errors"
 	"net/http"
 	"slices"
 	"strings"
@@ -13,8 +15,10 @@ import (
 	"github.com/labstack/echo/v4/middleware"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/internal/semconv"
@@ -94,17 +98,55 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 
 			// serve the request to the next middleware
 			err := next(c)
+			// Call the error hook before capturing the response status: the
+			// default OnError writes the error response via c.Error, which is
+			// what makes c.Response().Status reflect the error status code.
 			if err != nil {
-				span.SetAttributes(attribute.String("echo.error", err.Error()))
 				cfg.OnError(c, err)
 			}
 
 			status := c.Response().Status
-			span.SetStatus(semconvSrv.Status(status))
+			spanCode, spanMsg := semconvSrv.Status(status)
+			span.SetStatus(spanCode, spanMsg)
 			span.SetAttributes(semconvSrv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 				StatusCode: status,
 				WriteBytes: c.Response().Size,
 			})...)
+
+			// Retain the historical echo.error attribute for existing consumers;
+			// deprecation and removal are tracked separately.
+			if err != nil {
+				span.SetAttributes(attribute.String("echo.error", err.Error()))
+			}
+
+			// Classify the failure cause with a low-cardinality error.type
+			// instead of recording the full error string as an unbounded
+			// "echo.error" attribute. A cancelled request context (client
+			// disconnect or deadline) is always an error, independent of the
+			// response status code; other handler errors are only classified
+			// when they surface as a server error, since Echo handlers
+			// idiomatically return *echo.HTTPError for 4xx/3xx responses.
+			var errorTypeAttr attribute.KeyValue
+			switch {
+			case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+				span.SetStatus(codes.Error, err.Error())
+				errorTypeAttr = errorTypeAttrFrom(err)
+			default:
+				// Prefer the request-context error over the handler error: a
+				// client disconnect or deadline observed while the handler is
+				// running is the actual failure cause, even when the handler
+				// returns an ordinary error that surfaces as a 5xx response.
+				if reqErr := c.Request().Context().Err(); reqErr != nil {
+					span.SetStatus(codes.Error, reqErr.Error())
+					errorTypeAttr = errorTypeAttrFrom(reqErr)
+				} else if err != nil && status >= 500 {
+					span.SetStatus(codes.Error, err.Error())
+					errorTypeAttr = errorTypeAttrFrom(err)
+				}
+			}
+			if errorTypeAttr.Valid() {
+				span.SetAttributes(errorTypeAttr)
+			}
 
 			// Record the server-side attributes.
 			var additionalAttributes []attribute.KeyValue
@@ -113,6 +155,9 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 			}
 			if cfg.EchoMetricAttributeFn != nil {
 				additionalAttributes = append(additionalAttributes, cfg.EchoMetricAttributeFn(c)...)
+			}
+			if errorTypeAttr.Valid() {
+				additionalAttributes = append(additionalAttributes, errorTypeAttr)
 			}
 
 			semconvSrv.RecordMetrics(ctx, semconv.ServerMetricData{
@@ -152,4 +197,19 @@ func spanNameFormatter(c echo.Context) string {
 	}
 
 	return method
+}
+
+// errorTypeAttrFrom returns a low-cardinality error.type attribute for err.
+// Context cancellation and deadline errors are classified with their
+// canonical values so a client disconnect is distinguishable from a genuine
+// server fault; other errors fall back to their concrete type.
+func errorTypeAttrFrom(err error) attribute.KeyValue {
+	switch {
+	case errors.Is(err, context.Canceled):
+		return otelsemconv.ErrorTypeKey.String("context_canceled")
+	case errors.Is(err, context.DeadlineExceeded):
+		return otelsemconv.ErrorTypeKey.String("context_deadline_exceeded")
+	default:
+		return otelsemconv.ErrorType(err)
+	}
 }

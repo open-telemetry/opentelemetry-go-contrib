@@ -6,18 +6,23 @@
 package otelecho
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 	"go.opentelemetry.io/otel/trace/noop"
 
@@ -26,6 +31,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 func TestGetSpanNotInstrumented(t *testing.T) {
@@ -437,4 +444,285 @@ func TestWithOnError(t *testing.T) {
 			assert.Equal(t, tt.wantHandlerCalled, handlerCalled, "handler called times mismatch")
 		})
 	}
+}
+
+// TestClientDisconnect reproduces a real HTTP/1.1 client disconnect where the
+// handler observes the cancelled request context and returns the context
+// error (idiomatic Echo). The span and metrics must carry error.type so the
+// disconnect is distinguishable from a genuine server fault.
+func TestClientDisconnect(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	handlerStarted := make(chan struct{})
+	router := echo.New()
+	router.Use(Middleware(
+		"srv",
+		WithTracerProvider(provider),
+		WithMeterProvider(meterProvider),
+	))
+	router.GET("/hello", func(c echo.Context) error {
+		close(handlerStarted)
+		<-c.Request().Context().Done()
+		return c.Request().Context().Err()
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	<-handlerStarted
+	cancel()
+	<-requestDone
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), otelsemconv.ErrorTypeKey.String("context_canceled"))
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	for _, name := range []string{"http.server.request.duration", "http.server.request.body.size", "http.server.response.body.size"} {
+		assertErrorTypeOnMetrics(t, rm, name, "context_canceled")
+	}
+}
+
+// TestClientDisconnectWithoutErrorStatus reproduces a client disconnect where
+// the handler observes the cancelled request context and returns without an
+// error, leaving the response status unset. Per the HTTP semantic
+// conventions, span status must still be Error and error.type must be set,
+// even though no 5xx response is recorded.
+func TestClientDisconnectWithoutErrorStatus(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	handlerStarted := make(chan struct{})
+	router := echo.New()
+	router.Use(Middleware("srv", WithTracerProvider(provider)))
+	router.GET("/hello", func(c echo.Context) error {
+		close(handlerStarted)
+		<-c.Request().Context().Done()
+		return nil
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	<-handlerStarted
+	cancel()
+	<-requestDone
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), otelsemconv.ErrorTypeKey.String("context_canceled"))
+}
+
+// TestClientDisconnectWithDeadline verifies that a handler error of
+// context.DeadlineExceeded is classified as error.type=context_deadline_exceeded
+// on both the span and the metrics.
+func TestClientDisconnectWithDeadline(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	router := echo.New()
+	router.Use(Middleware(
+		"srv",
+		WithTracerProvider(provider),
+		WithMeterProvider(meterProvider),
+	))
+	router.GET("/hello", func(_ echo.Context) error {
+		return context.DeadlineExceeded
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := srv.Client().Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), otelsemconv.ErrorTypeKey.String("context_deadline_exceeded"))
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	for _, name := range []string{"http.server.request.duration", "http.server.request.body.size", "http.server.response.body.size"} {
+		assertErrorTypeOnMetrics(t, rm, name, "context_deadline_exceeded")
+	}
+}
+
+// TestClientDisconnectWithHTTPErrorFallback covers a handler that returns a
+// 4xx *echo.HTTPError after observing a cancelled request context: the error
+// does not surface as a server error, so error.type must fall back to the
+// request context error.
+func TestClientDisconnectWithHTTPErrorFallback(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	handlerStarted := make(chan struct{})
+	router := echo.New()
+	router.Use(Middleware("srv", WithTracerProvider(provider)))
+	router.GET("/hello", func(c echo.Context) error {
+		close(handlerStarted)
+		<-c.Request().Context().Done()
+		return echo.NewHTTPError(http.StatusBadRequest, "client is gone")
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	<-handlerStarted
+	cancel()
+	<-requestDone
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), otelsemconv.ErrorTypeKey.String("context_canceled"))
+}
+
+// TestClientDisconnectWithServerError covers a client disconnect where the
+// handler returns an ordinary error that surfaces as a 5xx response: the
+// request-context cancellation must win over the handler error so error.type
+// is context_canceled rather than the concrete error type.
+func TestClientDisconnectWithServerError(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	handlerStarted := make(chan struct{})
+	router := echo.New()
+	router.Use(Middleware("srv", WithTracerProvider(provider)))
+	router.GET("/hello", func(c echo.Context) error {
+		close(handlerStarted)
+		<-c.Request().Context().Done()
+		return errors.New("boom")
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	<-handlerStarted
+	cancel()
+	<-requestDone
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), otelsemconv.ErrorTypeKey.String("context_canceled"))
+}
+
+// assertErrorTypeOnMetrics asserts that every data point of the given metric
+// carries the expected error.type attribute. Both float64 (request duration)
+// and int64 (body size) histograms are checked, and the check fails if no
+// data point was evaluated, so a type mismatch cannot silently skip a metric.
+func assertErrorTypeOnMetrics(t *testing.T, rm metricdata.ResourceMetrics, metricName, expectedErrorType string) {
+	t.Helper()
+	checked := 0
+	for _, sm := range rm.ScopeMetrics {
+		for _, m := range sm.Metrics {
+			if m.Name != metricName {
+				continue
+			}
+			switch hist := m.Data.(type) {
+			case metricdata.Histogram[float64]:
+				checked += assertErrorTypeOnDataPoints(t, metricName, expectedErrorType, hist.DataPoints)
+			case metricdata.Histogram[int64]:
+				checked += assertErrorTypeOnDataPoints(t, metricName, expectedErrorType, hist.DataPoints)
+			}
+		}
+	}
+	assert.Positive(t, checked, "%s: expected at least one data point carrying error.type", metricName)
+}
+
+func assertErrorTypeOnDataPoints[N int64 | float64](t *testing.T, metricName, expectedErrorType string, dataPoints []metricdata.HistogramDataPoint[N]) int {
+	t.Helper()
+	checked := 0
+	for i := range dataPoints {
+		dp := &dataPoints[i]
+		errorType, ok := dp.Attributes.Value(otelsemconv.ErrorTypeKey)
+		assert.True(t, ok, "%s: expected error.type attribute", metricName)
+		assert.Equal(t, expectedErrorType, errorType.AsString())
+		checked++
+	}
+	return checked
 }
