@@ -23,6 +23,7 @@ The next release will require at least [Go 1.26].
 - Reject OTLP exporter headers with an empty `name` in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x`, and `go.opentelemetry.io/contrib/otelconf/v0.3.0`, instead of forwarding invalid header names to OTLP exporters. (#9102)
 - `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer returns an error when run outside of an AWS Lambda environment, matching the no-op behavior of other resource detectors. (#9464)
 - Convert Prometheus untyped metrics to OTLP Gauges in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9099)
+- Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, using the request context's cancellation error as the classification source when the handler has not already recorded an error via `c.Error`. Previously a disconnect was recorded with span status `Error` and no `error.type`, indistinguishable from a genuine server fault. (#9394)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
