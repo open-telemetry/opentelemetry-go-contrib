@@ -91,6 +91,7 @@ func (d *ResourceDetector) fetchMetadata(ctx context.Context) (*computeMetadata,
 	if err != nil {
 		return nil, false, err
 	}
+	req.Header.Set("Authorization", authHeader)
 	resp, err := d.client.Do(req)
 	if err != nil {
 		return nil, false, err

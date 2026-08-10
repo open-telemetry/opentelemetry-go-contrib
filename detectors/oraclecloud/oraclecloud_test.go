@@ -96,6 +96,7 @@ func TestDetect_NonOKE(t *testing.T) {
 	expected := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.CloudProviderOracleCloud,
+		semconv.CloudPlatformOracleCloudCompute,
 		semconv.HostID("ocid1.instance.oc1..aaaaaaa"),
 		semconv.HostName("my-instance"),
 		semconv.HostType("VM.Standard.E4.Flex"),
@@ -108,10 +109,8 @@ func TestDetect_NonOKE(t *testing.T) {
 }
 
 func TestDetect_NotOracleCloud(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	}))
-	defer ts.Close()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	ts.Close() // Close server so connection fails
 
 	detector := NewResourceDetector()
 	detector.endpoint = ts.URL
@@ -119,6 +118,41 @@ func TestDetect_NotOracleCloud(t *testing.T) {
 	res, err := detector.Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
+}
+
+func TestDetect_ServerError(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	detector := NewResourceDetector()
+	detector.endpoint = ts.URL
+
+	res, err := detector.Detect(t.Context())
+	require.Error(t, err)
+	assert.Nil(t, res)
+	assert.Contains(t, err.Error(), "received non-OK response from Oracle Cloud IMDS")
+}
+
+func TestDetect_MalformedJSON(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodGet {
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{ invalid json `))
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}))
+	defer ts.Close()
+
+	detector := NewResourceDetector()
+	detector.endpoint = ts.URL
+
+	res, err := detector.Detect(t.Context())
+	require.Error(t, err)
+	assert.Nil(t, res)
+	assert.Contains(t, err.Error(), "failed to decode Oracle Cloud IMDS response")
 }
 
 func TestDetect_PartialResource(t *testing.T) {
@@ -129,12 +163,8 @@ func TestDetect_PartialResource(t *testing.T) {
 		}
 		if r.Method == http.MethodGet {
 			w.WriteHeader(http.StatusOK)
-			// Missing host.id and host.type
-			_, _ = w.Write([]byte(`{
-				"displayName": "my-instance",
-				"canonicalRegionName": "us-ashburn-1",
-				"availabilityDomain": "AD-1"
-			}`))
+			// Return empty JSON object so missing host.id, hostname, host.type, region, and availability domain branches are all covered
+			_, _ = w.Write([]byte(`{}`))
 			return
 		}
 	}))
@@ -149,9 +179,7 @@ func TestDetect_PartialResource(t *testing.T) {
 	expected := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.CloudProviderOracleCloud,
-		semconv.HostName("my-instance"),
-		semconv.CloudRegion("us-ashburn-1"),
-		semconv.CloudAvailabilityZone("AD-1"),
+		semconv.CloudPlatformOracleCloudCompute,
 	)
 
 	assert.Equal(t, expected, res)
