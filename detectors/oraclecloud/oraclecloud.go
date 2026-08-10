@@ -20,9 +20,6 @@ import (
 const (
 	defaultEndpoint = "http://169.254.169.254/opc/v2/instance/"
 	authHeader      = "Bearer Oracle"
-
-	// AttributeOracleCloudRealm is the resource attribute key for the OCI realm identifier.
-	AttributeOracleCloudRealm = attribute.Key("oracle_cloud.realm")
 )
 
 // Compile-time interface assertion.
@@ -32,7 +29,8 @@ type computeMetadata struct {
 	HostID             string           `json:"id"`
 	HostDisplayName    string           `json:"displayName"`
 	HostType           string           `json:"shape"`
-	RegionID           string           `json:"canonicalRegionName"`
+	CanonicalRegionID  string           `json:"canonicalRegionName"` // Primary
+	RegionID           string           `json:"region"`              // Fallback
 	AvailabilityDomain string           `json:"availabilityDomain"`
 	Metadata           instanceMetadata `json:"metadata"`
 }
@@ -87,52 +85,33 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	}
 }
 
-// isRunningOnOracleCloud performs a fast probe to verify if the process is running on Oracle Cloud.
-func (d *ResourceDetector) isRunningOnOracleCloud(ctx context.Context) bool {
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, d.endpoint, http.NoBody)
-	if err != nil {
-		return false
-	}
-	req.Header.Set("Authorization", authHeader)
-
-	resp, err := d.client.Do(req)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-
-	return resp.StatusCode == http.StatusOK
-}
-
 // fetchMetadata queries the OCI instance metadata endpoint.
-func (d *ResourceDetector) fetchMetadata(ctx context.Context) (*computeMetadata, error) {
+func (d *ResourceDetector) fetchMetadata(ctx context.Context) (*computeMetadata, bool, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, d.endpoint, http.NoBody)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create request: %w", err)
+		return nil, false, err
 	}
-	req.Header.Set("Authorization", authHeader)
-
 	resp, err := d.client.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query Oracle Cloud IMDS: %w", err)
+		return nil, false, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("received non-OK response from Oracle Cloud IMDS: %s", resp.Status)
+		return nil, true, fmt.Errorf("received non-OK response from Oracle Cloud IMDS: %s", resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read Oracle Cloud IMDS response: %w", err)
+		return nil, true, fmt.Errorf("failed to read Oracle Cloud IMDS response: %w", err)
 	}
 
 	var meta computeMetadata
 	if err := json.Unmarshal(body, &meta); err != nil {
-		return nil, fmt.Errorf("failed to decode Oracle Cloud IMDS response: %w", err)
+		return nil, true, fmt.Errorf("failed to decode Oracle Cloud IMDS response: %w", err)
 	}
 
-	return &meta, nil
+	return &meta, true, nil
 }
 
 // Detect detects resource attributes of the Oracle Cloud Infrastructure instance
@@ -141,13 +120,13 @@ func (d *ResourceDetector) fetchMetadata(ctx context.Context) (*computeMetadata,
 // attributes cannot be retrieved, a partial resource is returned together with
 // [resource.ErrPartialResource].
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	if !d.isRunningOnOracleCloud(ctx) {
-		return resource.Empty(), nil
-	}
 
-	meta, err := d.fetchMetadata(ctx)
+	meta, onOracleCloud, err := d.fetchMetadata(ctx)
 	if err != nil {
-		return resource.Empty(), err
+		if !onOracleCloud {
+			return resource.Empty(), nil
+		}
+		return nil, err
 	}
 
 	attrs := []attribute.KeyValue{
@@ -155,7 +134,9 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	}
 
 	if meta.Metadata.OKEClusterDisplayName != "" {
-		attrs = append(attrs, semconv.CloudPlatformOracleCloudOKE)
+		attrs = append(attrs, semconv.CloudPlatformOracleCloudOKE, semconv.K8SClusterName(meta.Metadata.OKEClusterDisplayName))
+	} else {
+		attrs = append(attrs, semconv.CloudPlatformOracleCloudCompute)
 	}
 
 	var errs []error
@@ -178,10 +159,14 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		attrs = append(attrs, semconv.HostType(meta.HostType))
 	}
 
-	if meta.RegionID == "" {
+	region := meta.CanonicalRegionID
+	if region == "" {
+		region = meta.RegionID
+	}
+	if region == "" {
 		errs = append(errs, errors.New("region: not present in metadata"))
 	} else {
-		attrs = append(attrs, semconv.CloudRegion(meta.RegionID))
+		attrs = append(attrs, semconv.CloudRegion(region))
 	}
 
 	if meta.AvailabilityDomain == "" {
@@ -190,12 +175,8 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		attrs = append(attrs, semconv.CloudAvailabilityZone(meta.AvailabilityDomain))
 	}
 
-	if meta.Metadata.OKEClusterDisplayName != "" {
-		attrs = append(attrs, semconv.K8SClusterName(meta.Metadata.OKEClusterDisplayName))
-	}
-
 	if meta.Metadata.Realm != "" {
-		attrs = append(attrs, AttributeOracleCloudRealm.String(meta.Metadata.Realm))
+		attrs = append(attrs, semconv.OracleCloudRealm(meta.Metadata.Realm))
 	}
 
 	if d.cfg.filter != nil {
