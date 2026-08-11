@@ -14,6 +14,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -197,13 +198,17 @@ func TestTracezHandler_FormatsAttributesUsingSpecString(t *testing.T) {
 	tracer := tp.Tracer("test-tracer")
 	ctx := t.Context()
 
+	// Use an error span rather than a latency-bucketed one: which latency
+	// bucket a near-instant span lands in is timing-dependent and flaky
+	// across environments, whereas error spans aren't bucketed.
 	_, span := tracer.Start(ctx, "nan-attribute-span")
 	span.SetAttributes(attribute.Float64Slice("nums", []float64{math.NaN(), 1.5}))
+	span.SetStatus(codes.Error, "boom")
 	span.End()
 
 	handler := NewTracezHandler(sp)
 
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/tracez?zspanname=nan-attribute-span&ztype=1&zlatencybucket=1", http.NoBody)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/tracez?zspanname=nan-attribute-span&ztype=2", http.NoBody)
 	w := httptest.NewRecorder()
 
 	handler.ServeHTTP(w, req)
