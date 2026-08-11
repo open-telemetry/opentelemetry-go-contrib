@@ -13,7 +13,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Report `ot-baggage-*` extraction errors from `go.opentelemetry.io/contrib/propagators/ot` to `otel.Handle` instead of silently discarding them, while still attaching the successfully parsed baggage members to the context. (#9395)
 - Set `error.type` on the `rpc.client.call.duration` and `rpc.server.call.duration` metrics in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` when the RPC fails with a non-OK status, per the RPC semantic conventions. (#9429)
 - Reject OTLP exporter headers with an empty `name` in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x`, and `go.opentelemetry.io/contrib/otelconf/v0.3.0`, instead of forwarding invalid header names to OTLP exporters. (#9102)
-- Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols.
+- Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
