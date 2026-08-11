@@ -1432,6 +1432,16 @@ func TestCreateHeadersConfig(t *testing.T) {
 			headersList: ptr("==="),
 			wantErr:     newErrInvalid("invalid headers_list"),
 		},
+		{
+			name: "empty header name",
+			headers: []NameStringValuePair{
+				{
+					Name:  "",
+					Value: ptr("token"),
+				},
+			},
+			wantErr: newErrInvalid("invalid header: empty name"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
