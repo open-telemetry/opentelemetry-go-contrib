@@ -122,6 +122,10 @@ func TestError(t *testing.T) {
 	assert.Contains(t, attrs, attribute.String("server.address", "foobar"))
 	assert.Contains(t, attrs, attribute.Int("http.response.status_code", http.StatusInternalServerError))
 	assert.Contains(t, attrs, otelsemconv.ErrorType(wantErr))
+	// echo.error is retained for backward compatibility, so it must stay
+	// covered by regression tests even though error.type is the preferred
+	// classification.
+	assert.Contains(t, attrs, attribute.String("echo.error", wantErr.Error()))
 	// server errors set the status
 	assert.Equal(t, codes.Error, span.Status().Code)
 }
