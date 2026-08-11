@@ -165,6 +165,25 @@ func TestConvertValue(t *testing.T) {
 			wantValue: attribute.BoolValue(true),
 		},
 		{
+			name:      "nil_slice",
+			value:     ([]int)(nil),
+			wantValue: attribute.SliceValue(),
+		},
+		{
+			name:      "nil_map",
+			value:     (map[string]int)(nil),
+			wantValue: attribute.MapValue(),
+		},
+		{
+			name: "empty_subslice_sharing_parent_array",
+			value: func() any {
+				parent := []any{1}
+				parent[0] = parent[:0]
+				return parent
+			}(),
+			wantValue: attribute.SliceValue(attribute.SliceValue()),
+		},
+		{
 			name:      "int_empty_array",
 			value:     []int{},
 			wantValue: attribute.SliceValue([]attribute.Value{}...),

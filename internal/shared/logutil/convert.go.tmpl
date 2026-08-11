@@ -50,10 +50,10 @@ func convertValueVisited(v any, visited map[uintptr]bool) attribute.Value {
 	case reflect.Struct:
 		return attribute.StringValue(fmt.Sprintf("%+v", v))
 	case reflect.Slice, reflect.Array:
+		if val.Len() == 0 {
+			return attribute.SliceValue()
+		}
 		if t.Kind() == reflect.Slice {
-			if val.IsNil() {
-				return attribute.Value{}
-			}
 			ptr := val.Pointer()
 			if ptr != 0 {
 				if visited[ptr] {
@@ -69,8 +69,8 @@ func convertValueVisited(v any, visited map[uintptr]bool) attribute.Value {
 		}
 		return attribute.SliceValue(items...)
 	case reflect.Map:
-		if val.IsNil() {
-			return attribute.Value{}
+		if val.Len() == 0 {
+			return attribute.MapValue()
 		}
 		ptr := val.Pointer()
 		if ptr != 0 {
