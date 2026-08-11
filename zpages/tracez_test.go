@@ -5,6 +5,7 @@ package zpages
 
 import (
 	"context"
+	"math"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -12,6 +13,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 )
 
@@ -172,6 +174,48 @@ func TestTracezHandler_ServeHTTP(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTracezHandler_FormatsAttributesUsingSpecString(t *testing.T) {
+	// attribute.Value.Emit is deprecated in favor of attribute.Value.String,
+	// which follows the OpenTelemetry AnyValue representation for non-OTLP
+	// protocols. For a float64 slice containing NaN, Emit produces invalid
+	// output ("invalid: [NaN 1.5]") while String produces a valid JSON array
+	// ("[\"NaN\",1.5]").
+	sp := NewSpanProcessor()
+	defer func() {
+		require.NoError(t, sp.Shutdown(t.Context()))
+	}()
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer func() {
+		require.NoError(t, tp.Shutdown(t.Context()))
+	}()
+
+	tracer := tp.Tracer("test-tracer")
+	ctx := t.Context()
+
+	_, span := tracer.Start(ctx, "nan-attribute-span")
+	span.SetAttributes(attribute.Float64Slice("nums", []float64{math.NaN(), 1.5}))
+	span.End()
+
+	handler := NewTracezHandler(sp)
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/tracez?zspanname=nan-attribute-span&ztype=1&zlatencybucket=1", http.NoBody)
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	body := w.Body.String()
+	assert.Contains(t, body, `nums=[&#34;NaN&#34;,1.5]`)
+	assert.NotContains(t, body, "invalid:")
 }
 
 func TestTracezHandler_ConcurrentSafe(t *testing.T) {
