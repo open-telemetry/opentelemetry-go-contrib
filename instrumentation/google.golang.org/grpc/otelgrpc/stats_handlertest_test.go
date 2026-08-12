@@ -208,7 +208,107 @@ func assertServerSpan(t *testing.T, wantSpanCode otelcode.Code, wantSpanStatusDe
 	assert.Equal(t, attribute.StringValue(wantGrpcCode), codeAttr.Value)
 }
 
+func TestStatsHandlerHandleRPCClientErrors(t *testing.T) {
+	for _, check := range serverChecks {
+		name := check.grpcCode.String()
+		t.Run(name, func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+			sr := tracetest.NewSpanRecorder()
+			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+			mr := metric.NewManualReader()
+			mp := metric.NewMeterProvider(metric.WithReader(mr))
+
+			clientHandler := otelgrpc.NewClientHandler(
+				otelgrpc.WithTracerProvider(tp),
+				otelgrpc.WithMeterProvider(mp),
+				otelgrpc.WithMetricAttributes(testMetricAttr),
+			)
+
+			serviceName := "TestGrpcService"
+			methodName := serviceName + "/" + name
+			fullMethodName := "/" + methodName
+			// call the client handler
+			ctx := clientHandler.TagRPC(t.Context(), &stats.RPCTagInfo{
+				FullMethodName: fullMethodName,
+			})
+
+			grpcErr := status.Error(check.grpcCode, check.grpcCode.String())
+			clientHandler.HandleRPC(ctx, &stats.End{
+				Error: grpcErr,
+			})
+
+			// validate span: clients treat every non-OK status as an error
+			// (a nil End error, i.e. a successful RPC, leaves the span Unset)
+			span, ok := getSpanFromRecorder(sr, methodName)
+			require.True(t, ok, "missing span %s", methodName)
+			wantSpanCode := otelcode.Unset
+			if check.grpcCode != grpc_codes.OK {
+				wantSpanCode = otelcode.Error
+			}
+			assert.Equal(t, wantSpanCode, span.Status().Code)
+
+			// validate metric
+			assertStatsHandlerClientMetrics(t, mr, serviceName, name, check.wantRPCResponseStatusCode)
+		})
+	}
+}
+
+func assertStatsHandlerClientMetrics(t *testing.T, reader metric.Reader, serviceName, name, code string) {
+	attrs := []attribute.KeyValue{
+		semconv.RPCMethod(serviceName + "/" + name),
+		semconv.RPCSystemNameGRPC,
+		semconv.RPCResponseStatusCode(code),
+		testMetricAttr,
+	}
+	// error.type is Conditionally Required on the duration metric if and only
+	// if the RPC failed, and SHOULD be the canonical status code name. The
+	// client-side failure classification treats every non-OK status as an
+	// error, unlike the server side (see assertStatsHandlerServerMetrics).
+	if code != "OK" {
+		attrs = append(attrs, semconv.ErrorTypeKey.String(code))
+	}
+	want := metricdata.ScopeMetrics{
+		Scope: wantInstrumentationScope,
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        rpcconv.ClientCallDuration{}.Name(),
+				Description: rpcconv.ClientCallDuration{}.Description(),
+				Unit:        rpcconv.ClientCallDuration{}.Unit(),
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
+				},
+			},
+		},
+	}
+	rm := metricdata.ResourceMetrics{}
+	err := reader.Collect(t.Context(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+}
+
 func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, serviceName, name, code string) {
+	attrs := []attribute.KeyValue{
+		semconv.RPCMethod(serviceName + "/" + name),
+		semconv.RPCSystemNameGRPC,
+		semconv.RPCResponseStatusCode(code),
+		testMetricAttr,
+	}
+	// error.type is Conditionally Required on the duration metric if and only
+	// if the RPC failed, and SHOULD be the canonical status code name. The
+	// server-side failure classification treats only Unknown, DeadlineExceeded,
+	// Unimplemented, Internal, Unavailable and DataLoss as errors; e.g. a
+	// client cancellation (CANCELLED) is not a server error.
+	switch code {
+	case "UNKNOWN", "DEADLINE_EXCEEDED", "UNIMPLEMENTED", "INTERNAL", "UNAVAILABLE", "DATA_LOSS":
+		attrs = append(attrs, semconv.ErrorTypeKey.String(code))
+	}
 	want := metricdata.ScopeMetrics{
 		Scope: wantInstrumentationScope,
 		Metrics: []metricdata.Metrics{
@@ -220,12 +320,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 					Temporality: metricdata.CumulativeTemporality,
 					DataPoints: []metricdata.HistogramDataPoint[float64]{
 						{
-							Attributes: attribute.NewSet(
-								semconv.RPCMethod(serviceName+"/"+name),
-								semconv.RPCSystemNameGRPC,
-								semconv.RPCResponseStatusCode(code),
-								testMetricAttr,
-							),
+							Attributes: attribute.NewSet(attrs...),
 						},
 					},
 				},
