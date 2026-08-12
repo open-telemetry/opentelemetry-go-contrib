@@ -170,6 +170,8 @@ func (r *resourceBuilder) addManagedInstanceGroup(detect func() (gcp.ManagedInst
 				r.attrs = append(r.attrs, attribute.String("gcp.gce.instance_group_manager.zone", mig.Location))
 			case gcp.Region:
 				r.attrs = append(r.attrs, attribute.String("gcp.gce.instance_group_manager.region", mig.Location))
+			default:
+				r.errs = append(r.errs, fmt.Errorf("managed instance group location must be zone or region. Got %v", mig.Type))
 			}
 		}
 	} else {
