@@ -36,7 +36,7 @@ type detector struct {
 func (d *detector) Detect(context.Context) (*resource.Resource, error) {
 	if d.detector.CloudPlatform() == gcp.BareMetalSolution {
 		b := &resourceBuilder{}
-		b.attrs = append(b.attrs, semconv.CloudProviderGCP, semconv.CloudPlatformKey.String("gcp_bare_metal_solution"))
+		b.attrs = append(b.attrs, semconv.CloudProviderGCP, semconv.CloudPlatformGCPBareMetalSolution)
 		b.add(semconv.CloudAccountIDKey, d.detector.BareMetalSolutionProjectID)
 		b.add(semconv.HostNameKey, d.detector.BareMetalSolutionInstanceID)
 		b.add(semconv.CloudRegionKey, d.detector.BareMetalSolutionCloudRegion)
