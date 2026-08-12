@@ -180,47 +180,100 @@ func TestTracezHandler_ServeHTTP(t *testing.T) {
 func TestTracezHandler_FormatsAttributesUsingSpecString(t *testing.T) {
 	// attribute.Value.Emit is deprecated in favor of attribute.Value.String,
 	// which follows the OpenTelemetry AnyValue representation for non-OTLP
-	// protocols. For a float64 slice containing NaN, Emit produces invalid
-	// output ("invalid: [NaN 1.5]") while String produces a valid JSON array
-	// ("[\"NaN\",1.5]").
-	sp := NewSpanProcessor()
-	defer func() {
-		require.NoError(t, sp.Shutdown(t.Context()))
-	}()
+	// protocols. The two representations disagree for:
+	//   - FLOAT64SLICE containing NaN or Inf: Emit produces invalid output
+	//     (e.g. "invalid: [NaN 1.5]") while String produces a valid JSON
+	//     array (e.g. ["NaN",1.5]).
+	//   - FLOAT64 containing +/-Inf: Emit renders "+Inf"/"-Inf" while String
+	//     renders the spec's "Infinity"/"-Infinity".
+	//   - BOOLSLICE: Emit space-separates elements (Go's %v on a slice)
+	//     while String comma-separates them as a JSON array.
+	testCases := []struct {
+		name    string
+		key     string
+		value   attribute.Value
+		want    string
+		wantNot string
+	}{
+		{
+			name:  "float64 slice with NaN",
+			key:   "nums",
+			value: attribute.Float64SliceValue([]float64{math.NaN(), 1.5}),
+			want:  `nums=[&#34;NaN&#34;,1.5]`,
+		},
+		{
+			name:  "float64 slice with +Inf",
+			key:   "nums",
+			value: attribute.Float64SliceValue([]float64{1.5, math.Inf(1)}),
+			want:  `nums=[1.5,&#34;Infinity&#34;]`,
+		},
+		{
+			name:  "float64 +Inf",
+			key:   "num",
+			value: attribute.Float64Value(math.Inf(1)),
+			want:  `num=Infinity`,
+		},
+		{
+			name:  "float64 -Inf",
+			key:   "num",
+			value: attribute.Float64Value(math.Inf(-1)),
+			want:  `num=-Infinity`,
+		},
+		{
+			name:    "bool slice",
+			key:     "flags",
+			value:   attribute.BoolSliceValue([]bool{true, false}),
+			want:    `flags=[true,false]`,
+			wantNot: `[true false]`,
+		},
+	}
 
-	tp := sdktrace.NewTracerProvider(
-		sdktrace.WithSpanProcessor(sp),
-	)
-	defer func() {
-		require.NoError(t, tp.Shutdown(t.Context()))
-	}()
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sp := NewSpanProcessor()
+			defer func() {
+				require.NoError(t, sp.Shutdown(t.Context()))
+			}()
 
-	tracer := tp.Tracer("test-tracer")
-	ctx := t.Context()
+			tp := sdktrace.NewTracerProvider(
+				sdktrace.WithSpanProcessor(sp),
+			)
+			defer func() {
+				require.NoError(t, tp.Shutdown(t.Context()))
+			}()
 
-	// Use an error span rather than a latency-bucketed one: which latency
-	// bucket a near-instant span lands in is timing-dependent and flaky
-	// across environments, whereas error spans aren't bucketed.
-	_, span := tracer.Start(ctx, "nan-attribute-span")
-	span.SetAttributes(attribute.Float64Slice("nums", []float64{math.NaN(), 1.5}))
-	span.SetStatus(codes.Error, "boom")
-	span.End()
+			tracer := tp.Tracer("test-tracer")
+			ctx := t.Context()
 
-	handler := NewTracezHandler(sp)
+			// Use an error span rather than a latency-bucketed one: which
+			// latency bucket a near-instant span lands in is
+			// timing-dependent and flaky across environments, whereas
+			// error spans aren't bucketed.
+			_, span := tracer.Start(ctx, "attribute-span")
+			span.SetAttributes(attribute.KeyValue{Key: attribute.Key(tc.key), Value: tc.value})
+			span.SetStatus(codes.Error, "boom")
+			span.End()
 
-	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/tracez?zspanname=nan-attribute-span&ztype=2", http.NoBody)
-	w := httptest.NewRecorder()
+			handler := NewTracezHandler(sp)
 
-	handler.ServeHTTP(w, req)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/tracez?zspanname=attribute-span&ztype=2", http.NoBody)
+			w := httptest.NewRecorder()
 
-	resp := w.Result()
-	defer resp.Body.Close()
+			handler.ServeHTTP(w, req)
 
-	require.Equal(t, http.StatusOK, resp.StatusCode)
+			resp := w.Result()
+			defer resp.Body.Close()
 
-	body := w.Body.String()
-	assert.Contains(t, body, `nums=[&#34;NaN&#34;,1.5]`)
-	assert.NotContains(t, body, "invalid:")
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			body := w.Body.String()
+			assert.Contains(t, body, tc.want)
+			assert.NotContains(t, body, "invalid:")
+			if tc.wantNot != "" {
+				assert.NotContains(t, body, tc.wantNot)
+			}
+		})
+	}
 }
 
 func TestTracezHandler_ConcurrentSafe(t *testing.T) {
