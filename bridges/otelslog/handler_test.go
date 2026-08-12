@@ -300,6 +300,7 @@ func TestSLogHandler(t *testing.T) {
 				hasAttr("severityText", "DEBUG"),
 				hasAttr(slog.MessageKey, "two"),
 			}},
+			options: []Option{WithLevel(slog.LevelDebug)},
 		},
 		{
 			name:        "multi-attrs",
@@ -523,7 +524,7 @@ func TestHandlerEnabled(t *testing.T) {
 	r := new(recorder)
 	r.MinSeverity = log.SeverityInfo
 
-	h := NewHandler("name", WithLoggerProvider(r))
+	h := NewHandler("name", WithLoggerProvider(r), WithLevel(slog.LevelDebug))
 
 	ctx := t.Context()
 	assert.False(t, h.Enabled(ctx, slog.LevelDebug), "level conversion: permissive")
@@ -531,6 +532,51 @@ func TestHandlerEnabled(t *testing.T) {
 
 	ctx = context.WithValue(ctx, enableKey, true)
 	assert.True(t, h.Enabled(ctx, slog.LevelDebug), "context not passed")
+}
+
+func TestHandlerLevel(t *testing.T) {
+	r := new(recorder)
+	r.MinSeverity = log.SeverityDebug
+
+	t.Run("DefaultLevel", func(t *testing.T) {
+		h := NewHandler("name", WithLoggerProvider(r))
+		ctx := context.Background()
+
+		assert.False(t, h.Enabled(ctx, slog.LevelDebug), "default level should be Info, filtering Debug")
+		assert.True(t, h.Enabled(ctx, slog.LevelInfo), "Info level should be enabled")
+		assert.True(t, h.Enabled(ctx, slog.LevelWarn), "Warn level should be enabled")
+		assert.True(t, h.Enabled(ctx, slog.LevelError), "Error level should be enabled")
+	})
+
+	t.Run("CustomLevel", func(t *testing.T) {
+		h := NewHandler("name", WithLoggerProvider(r), WithLevel(slog.LevelWarn))
+		ctx := context.Background()
+
+		assert.False(t, h.Enabled(ctx, slog.LevelDebug), "Debug should be filtered")
+		assert.False(t, h.Enabled(ctx, slog.LevelInfo), "Info should be filtered")
+		assert.True(t, h.Enabled(ctx, slog.LevelWarn), "Warn level should be enabled")
+		assert.True(t, h.Enabled(ctx, slog.LevelError), "Error level should be enabled")
+	})
+
+	t.Run("DebugLevel", func(t *testing.T) {
+		h := NewHandler("name", WithLoggerProvider(r), WithLevel(slog.LevelDebug))
+		ctx := context.Background()
+
+		assert.True(t, h.Enabled(ctx, slog.LevelDebug), "Debug level should be enabled")
+		assert.True(t, h.Enabled(ctx, slog.LevelInfo), "Info level should be enabled")
+		assert.True(t, h.Enabled(ctx, slog.LevelWarn), "Warn level should be enabled")
+		assert.True(t, h.Enabled(ctx, slog.LevelError), "Error level should be enabled")
+	})
+
+	t.Run("LevelWithContext", func(t *testing.T) {
+		h := NewHandler("name", WithLoggerProvider(r))
+		ctx := context.WithValue(context.Background(), enableKey, true)
+
+		assert.False(t, h.Enabled(ctx, slog.LevelDebug), "handler level filter applies even with context")
+
+		h2 := NewHandler("name", WithLoggerProvider(r), WithLevel(slog.LevelDebug))
+		assert.True(t, h2.Enabled(ctx, slog.LevelDebug), "context passed when handler allows debug level")
+	})
 }
 
 func TestHandlerErrorFieldSetErr(t *testing.T) {

@@ -69,6 +69,7 @@ type config struct {
 	schemaURL  string
 	attributes []attribute.KeyValue
 	source     bool
+	level      slog.Level
 }
 
 func newConfig(options []Option) config {
@@ -79,6 +80,10 @@ func newConfig(options []Option) config {
 
 	if c.provider == nil {
 		c.provider = global.GetLoggerProvider()
+	}
+
+	if c.level == 0 {
+		c.level = slog.LevelInfo
 	}
 
 	return c
@@ -157,6 +162,16 @@ func WithSource(source bool) Option {
 	})
 }
 
+// WithLevel returns an [Option] that configures the minimum log level for the [Handler].
+// Only log records with a level greater than or equal to the specified level will be processed.
+// If not provided, the default level is [slog.LevelInfo].
+func WithLevel(level slog.Level) Option {
+	return optFunc(func(c config) config {
+		c.level = level
+		return c
+	})
+}
+
 // Handler is an [slog.Handler] that sends all logging records it receives to
 // OpenTelemetry. See package documentation for how conversions are made.
 type Handler struct {
@@ -168,6 +183,7 @@ type Handler struct {
 	logger log.Logger
 
 	source bool
+	level  slog.Level
 }
 
 // Compile-time check *Handler implements slog.Handler.
@@ -186,6 +202,7 @@ func NewHandler(name string, options ...Option) *Handler {
 	return &Handler{
 		logger: cfg.logger(name),
 		source: cfg.source,
+		level:  cfg.level,
 	}
 }
 
@@ -264,6 +281,9 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 // Enabled returns true if the Handler is enabled to log for the provided
 // context and Level. Otherwise, false is returned if it is not enabled.
 func (h *Handler) Enabled(ctx context.Context, l slog.Level) bool {
+	if l < h.level {
+		return false
+	}
 	const sevOffset = slog.Level(log.SeverityDebug) - slog.LevelDebug
 	param := log.EnabledParameters{Severity: log.Severity(l + sevOffset)}
 	return h.logger.Enabled(ctx, param)
