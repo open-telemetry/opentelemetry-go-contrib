@@ -57,8 +57,8 @@ env:
   value: my-container-name
 - name: OTEL_RESOURCE_ATTRIBUTES
   value: k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(NAMESPACE_NAME),k8s.container.name=$(CONTAINER_NAME)
-
 ```
+
 To have a detector unpack the `OTEL_RESOURCE_ATTRIBUTES` envvar, use the `WithFromEnv` option:
 
 ```golang

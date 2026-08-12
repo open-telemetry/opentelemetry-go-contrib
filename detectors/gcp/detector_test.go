@@ -370,28 +370,28 @@ func TestDetect(t *testing.T) {
 
 // fakeGCPDetector implements gcpDetector and uses fake values.
 type fakeGCPDetector struct {
-	err                       error
-	projectID                 string
-	cloudPlatform             gcp.Platform
-	gkeAvailabilityZone       string
-	gkeRegion                 string
-	gkeClusterName            string
-	gkeHostID                 string
-	gkeHostName               string
-	faaSName                  string
-	faaSVersion               string
-	faaSID                    string
-	faaSCloudRegion           string
-	appEngineAvailabilityZone string
-	appEngineRegion           string
-	appEngineServiceName      string
-	appEngineServiceVersion   string
-	appEngineServiceInstance  string
-	gceAvailabilityZone       string
-	gceRegion                 string
-	gceHostType               string
-	gceHostID                 string
-	gceHostName               string
+	err                             error
+	projectID                       string
+	cloudPlatform                   gcp.Platform
+	gkeAvailabilityZone             string
+	gkeRegion                       string
+	gkeClusterName                  string
+	gkeHostID                       string
+	gkeHostName                     string
+	faaSName                        string
+	faaSVersion                     string
+	faaSID                          string
+	faaSCloudRegion                 string
+	appEngineAvailabilityZone       string
+	appEngineRegion                 string
+	appEngineServiceName            string
+	appEngineServiceVersion         string
+	appEngineServiceInstance        string
+	gceAvailabilityZone             string
+	gceRegion                       string
+	gceHostType                     string
+	gceHostID                       string
+	gceHostName                     string
 	gcpGceInstanceName              string
 	gcpGceInstanceHostname          string
 	gcpGceManagedInstanceGroup      gcp.ManagedInstanceGroup
