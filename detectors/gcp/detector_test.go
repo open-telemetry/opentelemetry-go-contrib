@@ -360,7 +360,7 @@ func TestDetect(t *testing.T) {
 			expectedResource: resource.NewWithAttributes(
 				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
-				semconv.CloudPlatformKey.String("gcp_bare_metal_solution"),
+				semconv.CloudPlatformGCPBareMetalSolution,
 				semconv.CloudAccountID("my-project"),
 				semconv.HostName("1472385723456792345"),
 				semconv.CloudRegion("us-central1"),
