@@ -8,6 +8,7 @@ The GCP resource detector supports detecting resources on:
 * Cloud Run
 * Cloud Run jobs
 * Cloud Functions
+* Bare Metal Solution (BMS)
 
 ## Usage
 
