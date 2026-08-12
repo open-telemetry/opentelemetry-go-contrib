@@ -164,12 +164,12 @@ func (r *resourceBuilder) addZoneOrRegion(detect func() (string, gcp.LocationTyp
 func (r *resourceBuilder) addManagedInstanceGroup(detect func() (gcp.ManagedInstanceGroup, error)) {
 	if mig, err := detect(); err == nil {
 		if mig.Name != "" {
-			r.attrs = append(r.attrs, attribute.String("gcp.gce.instance_group_manager.name", mig.Name))
+			r.attrs = append(r.attrs, semconv.GCPGCEInstanceGroupManagerName(mig.Name))
 			switch mig.Type {
 			case gcp.Zone:
-				r.attrs = append(r.attrs, attribute.String("gcp.gce.instance_group_manager.zone", mig.Location))
+				r.attrs = append(r.attrs, semconv.GCPGCEInstanceGroupManagerZone(mig.Location))
 			case gcp.Region:
-				r.attrs = append(r.attrs, attribute.String("gcp.gce.instance_group_manager.region", mig.Location))
+				r.attrs = append(r.attrs, semconv.GCPGCEInstanceGroupManagerRegion(mig.Location))
 			default:
 				r.errs = append(r.errs, fmt.Errorf("managed instance group location must be zone or region. Got %v", mig.Type))
 			}
