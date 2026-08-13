@@ -12,8 +12,8 @@ github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.12.13 h1:nAm
 github.com/aws/aws-sdk-go-v2/service/internal/endpoint-discovery v1.12.13/go.mod h1:wZqx4Cfe2bX1QRclO6kCX1ZX1fJf2qLmJ22bjbwm2iY=
 github.com/aws/aws-sdk-go-v2/service/route53 v1.65.7 h1:UOoL3uUHKk5LFMlaDN8SZa5IKMFPGrKI4ff5I77xLEw=
 github.com/aws/aws-sdk-go-v2/service/route53 v1.65.7/go.mod h1:Mr0ZxxRxQlWlr+iUu8ie9F4n6KUrwir5LdW9Txa88L8=
-github.com/aws/aws-sdk-go-v2/service/sns v1.42.4 h1:cregOIHGsHahN/VX2Jd7oPjYSF0HUnz9YUJDHKsZJMU=
-github.com/aws/aws-sdk-go-v2/service/sns v1.42.4/go.mod h1:EfxXlpPsLpJfVw6ykt9dGnao+OaEDVU4p69UaJQlBHs=
+github.com/aws/aws-sdk-go-v2/service/sns v1.42.5 h1:k+1z0Pz6TND5uLttJyXf06ao+8X1vevN15bIaa11wkE=
+github.com/aws/aws-sdk-go-v2/service/sns v1.42.5/go.mod h1:5r2Nsw6AeYMKtNpxujt9SBFoAKPC411QiyUO4zvAriE=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.46.5 h1:k/vdm0VvoLYjwCMXhfgFa0u93QygN//dIAud2m4w51g=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.46.5/go.mod h1:TCFydwE7dFonXP+kd641caqfCIXWVdh+tFAu5V5Seks=
 github.com/aws/smithy-go v1.27.7 h1:Zgj5z4LfcDYoQIVk+n/yGdTkP/2y6ZT5vYxe0fp7bqE=
