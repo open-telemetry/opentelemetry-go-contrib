@@ -51,6 +51,7 @@ func TestDetect(t *testing.T) {
 				projectID:      "my-project",
 				cloudPlatform:  gcp.GKE,
 				gkeHostID:      "1472385723456792345",
+				gceHostName:    "my-gke-node-1234",
 				gkeClusterName: "my-cluster",
 				gkeRegion:      "us-central1",
 			}},
@@ -62,6 +63,7 @@ func TestDetect(t *testing.T) {
 				semconv.K8SClusterName("my-cluster"),
 				semconv.CloudRegion("us-central1"),
 				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
 			),
 		},
 		{
