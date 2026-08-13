@@ -132,31 +132,39 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			span.SetAttributes(errorTypeAttr)
 		default:
 			// No explicit c.Errors entry. If the client disconnected
-			// mid-request, the request context carries the real cause even
-			// when the handler never wrote a response that would surface
-			// it as a 5xx (e.g. the handler returned after observing
+			// mid-request, the original request context carries the real
+			// cause even when the handler never wrote a response that would
+			// surface it as a 5xx (e.g. the handler returned after observing
 			// cancellation without writing a status). Classify it
 			// independent of the response status: per the HTTP semantic
 			// conventions, span status is Error whenever a detected error
 			// exists, even if the response status itself is not an error
 			// (e.g. http.response.status_code stays 200).
-			if reqErr := c.Request.Context().Err(); reqErr != nil {
+			//
+			// Use savedCtx, not c.Request.Context(): a handler may replace
+			// c.Request with one wrapping a differently-scoped context (e.g.
+			// its own cancelable child), whose Err() would reflect that
+			// handler's own lifecycle instead of an actual client disconnect.
+			if reqErr := savedCtx.Err(); reqErr != nil {
 				span.SetStatus(codes.Error, reqErr.Error())
 				errorTypeAttr = otelsemconv.ErrorType(reqErr)
 				span.SetAttributes(errorTypeAttr)
 			}
 		}
 
-		// Record the server-side attributes.
+		// Record the server-side attributes. errorTypeAttr is appended first
+		// so a caller-supplied error.type from MetricAttributeFn or
+		// GinMetricAttributeFn takes precedence over it, consistent with
+		// those options' existing last-write-wins precedence over each other.
 		var additionalAttributes []attribute.KeyValue
+		if errorTypeAttr.Valid() {
+			additionalAttributes = append(additionalAttributes, errorTypeAttr)
+		}
 		if cfg.MetricAttributeFn != nil {
 			additionalAttributes = append(additionalAttributes, cfg.MetricAttributeFn(c.Request)...)
 		}
 		if cfg.GinMetricAttributeFn != nil {
 			additionalAttributes = append(additionalAttributes, cfg.GinMetricAttributeFn(c)...)
-		}
-		if errorTypeAttr.Valid() {
-			additionalAttributes = append(additionalAttributes, errorTypeAttr)
 		}
 
 		sc.RecordMetrics(ctx, semconv.ServerMetricData{
