@@ -782,3 +782,110 @@ func TestClientDisconnectWithoutErrorStatus(t *testing.T) {
 	require.True(t, ok, "expected error.type attribute on the http.server.request.duration metric")
 	assert.Equal(t, semconv.ErrorType(context.Canceled).Value.AsString(), errorType.AsString())
 }
+
+// TestClientDisconnectHandlerReplacesContext ensures that a handler
+// replacing c.Request with one wrapping its own (non-client) cancelable
+// context does not cause a successful request to be misclassified as a
+// client disconnect: only the original request context's cancellation
+// should be treated as a disconnect signal.
+func TestClientDisconnectHandlerReplacesContext(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar", otelgin.WithTracerProvider(provider)))
+	router.GET("/hello", func(c *gin.Context) {
+		ctx, cancel := context.WithCancel(c.Request.Context())
+		defer cancel()
+		c.Request = c.Request.WithContext(ctx)
+		c.String(http.StatusOK, "ok")
+	})
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/hello", http.NoBody)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+	response := w.Result()
+	require.Equal(t, http.StatusOK, response.StatusCode)
+
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, codes.Unset, span.Status().Code, "a handler-local canceled context must not be mistaken for a client disconnect")
+	for _, attr := range span.Attributes() {
+		assert.NotEqual(t, semconv.ErrorTypeKey, attr.Key, "error.type must not be set when the client did not disconnect")
+	}
+}
+
+// customErrorTypeError has a distinct ErrorType() value from context.Canceled
+// so tests can tell whether a caller-supplied error.type survived.
+type customErrorTypeError struct{}
+
+func (customErrorTypeError) Error() string     { return "custom" }
+func (customErrorTypeError) ErrorType() string { return "custom_error_type" }
+
+// TestClientDisconnectCustomErrorTypeAttribute ensures that a caller-supplied
+// error.type from GinMetricAttributeFn takes precedence over the error.type
+// this package derives from a client disconnect, consistent with how
+// GinMetricAttributeFn already takes precedence over MetricAttributeFn.
+func TestClientDisconnectCustomErrorTypeAttribute(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	handlerStarted := make(chan struct{})
+	router := gin.New()
+	router.Use(otelgin.Middleware(
+		"foobar",
+		otelgin.WithMeterProvider(meterProvider),
+		otelgin.WithGinMetricAttributeFn(func(*gin.Context) []attribute.KeyValue {
+			return []attribute.KeyValue{semconv.ErrorType(customErrorTypeError{})}
+		}),
+	))
+	router.GET("/hello", func(c *gin.Context) {
+		close(handlerStarted)
+		<-c.Request.Context().Done()
+		c.String(http.StatusInternalServerError, "cancelled")
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	<-handlerStarted
+	cancel()
+	<-requestDone
+
+	var rm metricdata.ResourceMetrics
+	require.Eventually(t, func() bool {
+		rm = metricdata.ResourceMetrics{}
+		require.NoError(t, reader.Collect(t.Context(), &rm))
+		return len(rm.ScopeMetrics) == 1
+	}, time.Second, 10*time.Millisecond, "expected metrics to be recorded after the client disconnects")
+
+	var durationMetric *metricdata.Metrics
+	for i, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == "http.server.request.duration" {
+			durationMetric = &rm.ScopeMetrics[0].Metrics[i]
+			break
+		}
+	}
+	require.NotNil(t, durationMetric, "expected to find the http.server.request.duration metric")
+	durationHistogram, ok := durationMetric.Data.(metricdata.Histogram[float64])
+	require.True(t, ok)
+	require.Len(t, durationHistogram.DataPoints, 1)
+
+	errorType, ok := durationHistogram.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
+	require.True(t, ok, "expected error.type attribute on the http.server.request.duration metric")
+	assert.Equal(t, "custom_error_type", errorType.AsString(), "the caller-supplied error.type must take precedence over the disconnect-derived one")
+}
