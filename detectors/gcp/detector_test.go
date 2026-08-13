@@ -257,8 +257,8 @@ func TestDetect(t *testing.T) {
 				semconv.HostType("n1-standard1"),
 				semconv.CloudRegion("us-central1"),
 				semconv.CloudAvailabilityZone("us-central1-c"),
-				attribute.String("gcp.gce.instance_group_manager.name", "my-mig"),
-				attribute.String("gcp.gce.instance_group_manager.region", "us-central1"),
+				semconv.GCPGCEInstanceGroupManagerName("my-mig"),
+				semconv.GCPGCEInstanceGroupManagerRegion("us-central1"),
 			),
 		},
 		{
