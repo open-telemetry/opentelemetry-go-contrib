@@ -157,6 +157,15 @@ func TestStatusError(t *testing.T) {
 			},
 		},
 		{
+			name:          "NoContentServerError",
+			wantErrorType: otelsemconv.ErrorTypeKey.String("500"),
+			statusCode:    http.StatusInternalServerError,
+			spanCode:      codes.Error,
+			handler: func(c echo.Context) error {
+				return c.NoContent(http.StatusInternalServerError)
+			},
+		},
+		{
 			name:       "EchoHTTPClientError",
 			statusCode: http.StatusBadRequest,
 			spanCode:   codes.Unset,

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -120,12 +121,14 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 			}
 
 			// Classify the failure cause with a low-cardinality error.type
-			// instead of recording the full error string as an unbounded
-			// "echo.error" attribute. A cancelled request context (client
-			// disconnect or deadline) is always an error, independent of the
-			// response status code; other handler errors are only classified
-			// when they surface as a server error, since Echo handlers
-			// idiomatically return *echo.HTTPError for 4xx/3xx responses.
+			// alongside the retained unbounded-cardinality "echo.error"
+			// attribute. A cancelled request context (client disconnect or
+			// deadline) is always an error, independent of the response status
+			// code; other handler errors are only classified when they surface
+			// as a server error, since Echo handlers idiomatically return
+			// *echo.HTTPError for 4xx/3xx responses. A 5xx response committed
+			// without a handler error (e.g. c.NoContent(500)) falls back to the
+			// status code.
 			var errorTypeAttr attribute.KeyValue
 			switch {
 			case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
@@ -142,6 +145,8 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 				} else if err != nil && status >= 500 {
 					span.SetStatus(codes.Error, err.Error())
 					errorTypeAttr = errorTypeAttrFrom(err)
+				} else if status >= 500 {
+					errorTypeAttr = otelsemconv.ErrorTypeKey.String(strconv.Itoa(status))
 				}
 			}
 			if errorTypeAttr.Valid() {
