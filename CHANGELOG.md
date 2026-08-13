@@ -18,6 +18,7 @@ The next release will require at least [Go 1.26].
 
 ### Fixed
 
+- Record `error.type` attribute on server spans in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` when a request is cancelled or ends in a 5xx error. (#9387)
 - Report `ot-baggage-*` extraction errors from `go.opentelemetry.io/contrib/propagators/ot` to `otel.Handle` instead of silently discarding them, while still attaching the successfully parsed baggage members to the context. (#9395)
 - Set `error.type` on the `rpc.client.call.duration` and `rpc.server.call.duration` metrics in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` when the RPC fails with a non-OK status, per the RPC semantic conventions. (#9429)
 - Reject OTLP exporter headers with an empty `name` in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x`, and `go.opentelemetry.io/contrib/otelconf/v0.3.0`, instead of forwarding invalid header names to OTLP exporters. (#9102)
@@ -60,7 +61,6 @@ The next release will require at least [Go 1.26].
 
 ### Fixed
 
-- Record `error.type` attribute on server spans in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` when a request is cancelled or ends in a 5xx error. (#9387)
 - Fix Prometheus reader resource label filter configuration in `go.opentelemetry.io/contrib/otelconf/v0.2.0`. (#9062)
 - Apply `resource.detection/development.attributes.included` and `excluded` filtering to resource detector attributes in `go.opentelemetry.io/contrib/otelconf/x`. (#9131)
 - Honor the context configured with `WithContext` when constructing resources in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`. (#9160)
