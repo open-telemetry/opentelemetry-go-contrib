@@ -4,12 +4,12 @@ go 1.25.0
 
 require (
 	go.opencensus.io v0.24.0
-	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.69.0
-	go.opentelemetry.io/contrib/propagators/opencensus v0.69.0
-	go.opentelemetry.io/otel v1.44.1-0.20260723093731-251b96b24897
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.44.0
-	go.opentelemetry.io/otel/sdk v1.44.1-0.20260625150014-c84013202f01
-	google.golang.org/grpc v1.82.1
+	go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc v0.70.0
+	go.opentelemetry.io/contrib/propagators/opencensus v0.70.0
+	go.opentelemetry.io/otel v1.45.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.45.0
+	go.opentelemetry.io/otel/sdk v1.45.0
+	google.golang.org/grpc v1.83.0
 )
 
 require (
@@ -20,15 +20,15 @@ require (
 	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/bridge/opencensus v1.44.0 // indirect
-	go.opentelemetry.io/otel/metric v1.44.1-0.20260625150014-c84013202f01 // indirect
-	go.opentelemetry.io/otel/sdk/metric v1.44.1-0.20260625150014-c84013202f01 // indirect
-	go.opentelemetry.io/otel/trace v1.44.1-0.20260625150014-c84013202f01 // indirect
-	golang.org/x/net v0.57.0 // indirect
+	go.opentelemetry.io/otel/bridge/opencensus v1.45.0 // indirect
+	go.opentelemetry.io/otel/metric v1.45.0 // indirect
+	go.opentelemetry.io/otel/sdk/metric v1.45.0 // indirect
+	go.opentelemetry.io/otel/trace v1.45.0 // indirect
+	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sys v0.47.0 // indirect
-	golang.org/x/text v0.40.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260727163830-6c54dddc4772 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	golang.org/x/text v0.41.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260810153831-ec0a7760b754 // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 )
 
 replace (
