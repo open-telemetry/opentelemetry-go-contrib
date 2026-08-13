@@ -139,7 +139,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 				// client disconnect or deadline observed while the handler is
 				// running is the actual failure cause, even when the handler
 				// returns an ordinary error that surfaces as a 5xx response.
-				if reqErr := c.Request().Context().Err(); reqErr != nil {
+				if reqErr := savedCtx.Err(); reqErr != nil {
 					span.SetStatus(codes.Error, reqErr.Error())
 					errorTypeAttr = errorTypeAttrFrom(reqErr)
 				} else if err != nil && status >= 500 {

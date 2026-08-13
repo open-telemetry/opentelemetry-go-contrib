@@ -6,6 +6,7 @@
 package otelecho_test
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -273,5 +274,40 @@ func TestSpanNameFormatter(t *testing.T) {
 			require.Len(t, spans, 1)
 			assert.Equal(t, test.expected, spans[0].Name)
 		})
+	}
+}
+
+// TestDownstreamContextCancellationIgnored verifies that a downstream
+// middleware scoping the request context with its own cancel does not mark a
+// successful request as a client disconnect: the cancellation is scoped to
+// the child context, while the saved request context stays active.
+func TestDownstreamContextCancellationIgnored(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+	router := echo.New()
+	router.Use(otelecho.Middleware("srv", otelecho.WithTracerProvider(provider)))
+	router.Use(func(next echo.HandlerFunc) echo.HandlerFunc {
+		return func(c echo.Context) error {
+			ctx, cancel := context.WithCancel(c.Request().Context())
+			defer cancel()
+			c.SetRequest(c.Request().WithContext(ctx))
+			return next(c)
+		}
+	})
+	router.GET("/ok", func(echo.Context) error { return nil })
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/ok", http.NoBody)
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, r)
+
+	require.Equal(t, http.StatusOK, w.Result().StatusCode)
+
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, codes.Unset, span.Status().Code, "a successful request must not be marked Error")
+	for _, a := range span.Attributes() {
+		assert.NotEqual(t, otelsemconv.ErrorTypeKey, a.Key, "unexpected error.type on span")
 	}
 }
