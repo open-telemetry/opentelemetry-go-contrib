@@ -17,6 +17,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Report `ot-baggage-*` extraction errors from `go.opentelemetry.io/contrib/propagators/ot` to `otel.Handle` instead of silently discarding them, while still attaching the successfully parsed baggage members to the context. (#9395)
 - Set `error.type` on the `rpc.client.call.duration` and `rpc.server.call.duration` metrics in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` when the RPC fails with a non-OK status, per the RPC semantic conventions. (#9429)
 - Reject OTLP exporter headers with an empty `name` in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x`, and `go.opentelemetry.io/contrib/otelconf/v0.3.0`, instead of forwarding invalid header names to OTLP exporters. (#9102)
+- Fix `http.client.request.body.size` recording for streaming request bodies in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8684)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -60,7 +61,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Handle nil response bodies from custom `RoundTripper` implementations in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` without panicking. (#9184)
 - Fix incorrect (overestimated) sum calculation for runtime histograms in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#9063)
 - Fix `Severity.UnmarshalText` round trip for positive `FATAL` offsets above the named range in `go.opentelemetry.io/contrib/processors/minsev`. (#9197)
-- Fix `http.client.request.body.size` recording for streaming request bodies in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8684)
 - Reduce binary size by fetching ConfigMaps via `rest.HTTPClientFor` instead of the Kubernetes clientset in `go.opentelemetry.io/contrib/detectors/aws/eks`. (#9284)
 - `TextMapPropagator` in `go.opentelemetry.io/contrib/propagators/autoprop` returns the no-op propagator for empty input, matching the behavior of `none`. An unknown `OTEL_PROPAGATORS` value still returns an error with a nil propagator so `NewTextMapPropagator` falls back to the default TraceContext and Baggage propagators instead of disabling propagation. (#9163)
 - Preserve error-valued attributes nested in a group as grouped attributes instead of silently dropping them in `go.opentelemetry.io/contrib/bridges/otelslog`. (#9238)
