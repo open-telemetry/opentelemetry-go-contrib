@@ -72,7 +72,7 @@ func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handler
 	// convert return values into (any, error)
 	var err error
 	if len(response) > 0 {
-		if errVal, ok := response[len(response)-1].Interface().(error); ok {
+		if errVal, ok := reflect.TypeAssert[error](response[len(response)-1]); ok {
 			err = errVal
 		}
 	}
