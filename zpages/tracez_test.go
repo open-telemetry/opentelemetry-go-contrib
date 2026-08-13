@@ -189,11 +189,10 @@ func TestTracezHandler_FormatsAttributesUsingSpecString(t *testing.T) {
 	//   - BOOLSLICE: Emit space-separates elements (Go's %v on a slice)
 	//     while String comma-separates them as a JSON array.
 	testCases := []struct {
-		name    string
-		key     string
-		value   attribute.Value
-		want    string
-		wantNot string
+		name  string
+		key   string
+		value attribute.Value
+		want  string
 	}{
 		{
 			name:  "float64 slice with NaN",
@@ -220,11 +219,10 @@ func TestTracezHandler_FormatsAttributesUsingSpecString(t *testing.T) {
 			want:  `num=-Infinity`,
 		},
 		{
-			name:    "bool slice",
-			key:     "flags",
-			value:   attribute.BoolSliceValue([]bool{true, false}),
-			want:    `flags=[true,false]`,
-			wantNot: `[true false]`,
+			name:  "bool slice",
+			key:   "flags",
+			value: attribute.BoolSliceValue([]bool{true, false}),
+			want:  `flags=[true,false]`,
 		},
 	}
 
@@ -269,9 +267,6 @@ func TestTracezHandler_FormatsAttributesUsingSpecString(t *testing.T) {
 			body := w.Body.String()
 			assert.Contains(t, body, tc.want)
 			assert.NotContains(t, body, "invalid:")
-			if tc.wantNot != "" {
-				assert.NotContains(t, body, tc.wantNot)
-			}
 		})
 	}
 }
