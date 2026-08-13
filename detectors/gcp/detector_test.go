@@ -66,7 +66,7 @@ func TestDetect(t *testing.T) {
 			),
 		},
 		{
-			desc: "GCE",
+			desc: "GCE without MIG",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:              "my-project",
 				cloudPlatform:          gcp.GCE,
