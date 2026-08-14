@@ -73,7 +73,7 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 
 		out, metadata, err = next.HandleInitialize(ctx, in)
 		span.SetAttributes(m.buildAttributes(ctx, in, out)...)
-		if err != nil && !isNotModifiedResponseError(err) {
+		if err != nil && !isNotModifiedStatus(err) {
 			span.SetAttributes(semconv.ErrorType(err))
 			span.SetStatus(codes.Error, err.Error())
 		}
@@ -133,19 +133,26 @@ func (m otelMiddlewares) buildAttributes(ctx context.Context, in middleware.Init
 	return attributes
 }
 
-// isNotModifiedResponseError reports whether err wraps an HTTP response
-// error with a 304 Not Modified status code. This is returned, for example,
-// by a conditional S3 GetObject request whose precondition (such as
+// responseStatusCode reports the HTTP status code carried by err, if err
+// wraps a *smithyhttp.ResponseError.
+func responseStatusCode(err error) (code int, ok bool) {
+	var respErr *smithyhttp.ResponseError
+	if !errors.As(err, &respErr) {
+		return 0, false
+	}
+	return respErr.HTTPStatusCode(), true
+}
+
+// isNotModifiedStatus reports whether err wraps an HTTP response error with
+// a 304 Not Modified status code. This is returned, for example, by a
+// conditional S3 GetObject request whose precondition (such as
 // IfModifiedSince) was not satisfied. It indicates the precondition was not
 // met, not a failure of the request, and should not be recorded as a span
 // error. Other 3xx status codes (e.g. a 301 signaling a misconfigured
 // bucket region) can indicate a real problem and are still recorded.
-func isNotModifiedResponseError(err error) bool {
-	var respErr *smithyhttp.ResponseError
-	if !errors.As(err, &respErr) {
-		return false
-	}
-	return respErr.HTTPStatusCode() == http.StatusNotModified
+func isNotModifiedStatus(err error) bool {
+	code, ok := responseStatusCode(err)
+	return ok && code == http.StatusNotModified
 }
 
 func spanName(serviceID, operation string) string {
