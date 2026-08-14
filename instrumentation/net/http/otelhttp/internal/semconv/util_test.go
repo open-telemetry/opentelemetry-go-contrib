@@ -8,6 +8,7 @@ package semconv
 
 import (
 	"testing"
+	"unsafe"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -72,4 +73,17 @@ func TestStandardizeHTTPMethod(t *testing.T) {
 	for _, test := range tests {
 		assert.Equal(t, test.want, standardizeHTTPMethod(test.method))
 	}
+}
+
+func TestStandardizeHTTPMethodDoesNotRetainCallerBuffer(t *testing.T) {
+	// method is a substring of a larger buffer, similar to how
+	// net/http derives Request.Method from the underlying connection's
+	// read buffer via strings.Cut. The returned, standardized method
+	// must not keep that buffer alive by sharing its backing array.
+	buf := "GET / HTTP/1.1\r\nHost: example.com\r\n\r\n"
+	method := buf[:3]
+
+	got := standardizeHTTPMethod(method)
+	assert.Equal(t, "GET", got)
+	assert.NotSame(t, unsafe.StringData(buf), unsafe.StringData(got))
 }

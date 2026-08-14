@@ -117,14 +117,34 @@ func handleErr(err error) {
 	}
 }
 
+// standardizeHTTPMethod returns the canonical form of method, or "_OTHER" if
+// it does not match a known HTTP method. The returned string is always a
+// package-level constant or literal, never a derivative of method, so it
+// does not retain a reference to the buffer method may have been sliced
+// from (e.g. net/http's per-connection read buffer).
 func standardizeHTTPMethod(method string) string {
-	method = strings.ToUpper(method)
-	switch method {
-	case http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace:
+	switch strings.ToUpper(method) {
+	case http.MethodConnect:
+		return http.MethodConnect
+	case http.MethodDelete:
+		return http.MethodDelete
+	case http.MethodGet:
+		return http.MethodGet
+	case http.MethodHead:
+		return http.MethodHead
+	case http.MethodOptions:
+		return http.MethodOptions
+	case http.MethodPatch:
+		return http.MethodPatch
+	case http.MethodPost:
+		return http.MethodPost
+	case http.MethodPut:
+		return http.MethodPut
+	case http.MethodTrace:
+		return http.MethodTrace
 	default:
-		method = "_OTHER"
+		return "_OTHER"
 	}
-	return method
 }
 
 func durationToSeconds(d time.Duration) float64 {
