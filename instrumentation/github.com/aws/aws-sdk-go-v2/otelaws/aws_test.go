@@ -5,6 +5,7 @@ package otelaws
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -170,6 +171,49 @@ func Test_otelMiddlewares_presignedRequests(t *testing.T) {
 
 	assert.NotContains(t, input.Header, key)
 	assert.NotContains(t, input.Header[key], value)
+}
+
+func Test_isNotModifiedResponseError(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+		want bool
+	}{
+		{
+			name: "nil error",
+			err:  nil,
+			want: false,
+		},
+		{
+			name: "non-response error",
+			err:  errors.New("boom"),
+			want: false,
+		},
+		{
+			name: "304 response error",
+			err: &smithyhttp.ResponseError{
+				Response: &smithyhttp.Response{
+					Response: &http.Response{StatusCode: http.StatusNotModified},
+				},
+			},
+			want: true,
+		},
+		{
+			name: "301 response error",
+			err: &smithyhttp.ResponseError{
+				Response: &smithyhttp.Response{
+					Response: &http.Response{StatusCode: http.StatusMovedPermanently},
+				},
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, isNotModifiedResponseError(tt.err))
+		})
+	}
 }
 
 func Test_Span_name(t *testing.T) {
