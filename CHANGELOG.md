@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add support for the `aws.ec2` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9139)
+
 ### Fixed
 
 - Report `ot-baggage-*` extraction errors from `go.opentelemetry.io/contrib/propagators/ot` to `otel.Handle` instead of silently discarding them, while still attaching the successfully parsed baggage members to the context. (#9395)
