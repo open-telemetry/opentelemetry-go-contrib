@@ -538,10 +538,9 @@ func TestHandlerLevel(t *testing.T) {
 	r := new(recorder)
 	r.MinSeverity = log.SeverityDebug
 
+	ctx := t.Context()
 	t.Run("DefaultLevel", func(t *testing.T) {
 		h := NewHandler("name", WithLoggerProvider(r))
-		ctx := context.Background()
-
 		assert.False(t, h.Enabled(ctx, slog.LevelDebug), "default level should be Info, filtering Debug")
 		assert.True(t, h.Enabled(ctx, slog.LevelInfo), "Info level should be enabled")
 		assert.True(t, h.Enabled(ctx, slog.LevelWarn), "Warn level should be enabled")
@@ -550,8 +549,6 @@ func TestHandlerLevel(t *testing.T) {
 
 	t.Run("CustomLevel", func(t *testing.T) {
 		h := NewHandler("name", WithLoggerProvider(r), WithLevel(slog.LevelWarn))
-		ctx := context.Background()
-
 		assert.False(t, h.Enabled(ctx, slog.LevelDebug), "Debug should be filtered")
 		assert.False(t, h.Enabled(ctx, slog.LevelInfo), "Info should be filtered")
 		assert.True(t, h.Enabled(ctx, slog.LevelWarn), "Warn level should be enabled")
@@ -560,8 +557,6 @@ func TestHandlerLevel(t *testing.T) {
 
 	t.Run("DebugLevel", func(t *testing.T) {
 		h := NewHandler("name", WithLoggerProvider(r), WithLevel(slog.LevelDebug))
-		ctx := context.Background()
-
 		assert.True(t, h.Enabled(ctx, slog.LevelDebug), "Debug level should be enabled")
 		assert.True(t, h.Enabled(ctx, slog.LevelInfo), "Info level should be enabled")
 		assert.True(t, h.Enabled(ctx, slog.LevelWarn), "Warn level should be enabled")
