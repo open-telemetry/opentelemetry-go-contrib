@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
-	oldsemconv "go.opentelemetry.io/otel/semconv/v1.37.0" //nolint:depguard // Use of v1.37.0 is required for backward compatibility stability opt-in.
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
@@ -45,9 +44,10 @@ func ParseFullMethodOld(fullMethod string) (string, []attribute.KeyValue) {
 	}
 	service := parts[0]
 	method := parts[1]
+	// Attributes defined in semconv v1.37.0
 	return name, []attribute.KeyValue{
-		oldsemconv.RPCSystemKey.String("grpc"),
-		oldsemconv.RPCServiceKey.String(service),
-		oldsemconv.RPCMethodKey.String(method),
+		attribute.Key("rpc.system").String("grpc"),
+		attribute.Key("rpc.service").String(service),
+		attribute.Key("rpc.method").String(method),
 	}
 }
