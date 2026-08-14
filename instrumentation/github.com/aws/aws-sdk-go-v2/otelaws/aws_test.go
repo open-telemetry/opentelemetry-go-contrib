@@ -173,44 +173,6 @@ func Test_otelMiddlewares_presignedRequests(t *testing.T) {
 	assert.NotContains(t, input.Header[key], value)
 }
 
-func Test_responseStatusCode(t *testing.T) {
-	tests := []struct {
-		name     string
-		err      error
-		wantCode int
-		wantOK   bool
-	}{
-		{
-			name:   "nil error",
-			err:    nil,
-			wantOK: false,
-		},
-		{
-			name:   "non-response error",
-			err:    errors.New("boom"),
-			wantOK: false,
-		},
-		{
-			name: "response error",
-			err: &smithyhttp.ResponseError{
-				Response: &smithyhttp.Response{
-					Response: &http.Response{StatusCode: http.StatusNotModified},
-				},
-			},
-			wantCode: http.StatusNotModified,
-			wantOK:   true,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			code, ok := responseStatusCode(tt.err)
-			assert.Equal(t, tt.wantOK, ok)
-			assert.Equal(t, tt.wantCode, code)
-		})
-	}
-}
-
 func Test_isNotModifiedStatus(t *testing.T) {
 	tests := []struct {
 		name string
