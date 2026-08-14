@@ -181,7 +181,7 @@ func TestNewClient(t *testing.T) {
 			},
 		)
 
-		c, err := newClient(config{})
+		c, err := newClient(t.Context(), config{})
 		require.Error(t, err)
 		assert.Nil(t, c)
 	})
@@ -202,7 +202,7 @@ func TestNewClient(t *testing.T) {
 			func(aws.Config) client { return new(mockClient) },
 		)
 
-		_, err := newClient(config{logger: logger})
+		_, err := newClient(t.Context(), config{logger: logger})
 		require.NoError(t, err)
 		assert.Same(t, logger, actualLogger)
 	})
@@ -220,10 +220,112 @@ func TestNewClient(t *testing.T) {
 			},
 		)
 
-		c, err := newClient(config{})
+		c, err := newClient(t.Context(), config{})
 		require.NoError(t, err)
 		assert.Same(t, fakeClient, c)
 	})
+
+	t.Run("passes context to config load", func(t *testing.T) {
+		ctx := t.Context()
+		var gotCtx context.Context
+		stubClientSeams(
+			t,
+			func(c context.Context, _ ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+				gotCtx = c
+				return aws.Config{}, nil
+			},
+			func(aws.Config) client { return new(mockClient) },
+		)
+
+		_, err := newClient(ctx, config{})
+		require.NoError(t, err)
+		assert.Equal(t, ctx, gotCtx)
+	})
+}
+
+func TestDetectCachesClient(t *testing.T) {
+	var loadCalls, newCalls int
+	fake := new(mockClient)
+	fake.On("GetInstanceIdentityDocument", mock.Anything, mock.Anything, mock.Anything).
+		Return(validIdentityDocument(), nil)
+	fake.On("GetMetadata", mock.Anything, mock.Anything, mock.Anything).
+		Return(mockMetadataOutput("host"), nil)
+
+	stubClientSeams(
+		t,
+		func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			loadCalls++
+			return aws.Config{}, nil
+		},
+		func(aws.Config) client {
+			newCalls++
+			return fake
+		},
+	)
+
+	d := NewResourceDetector()
+	_, err := d.Detect(t.Context())
+	require.NoError(t, err)
+	_, err = d.Detect(t.Context())
+	require.NoError(t, err)
+
+	assert.Equal(t, 1, loadCalls)
+	assert.Equal(t, 1, newCalls)
+}
+
+func TestDetectRetriesFailedClientConstruction(t *testing.T) {
+	errLoad := errors.New("load config failed")
+	var loadCalls int
+	fake := new(mockClient)
+	fake.On("GetInstanceIdentityDocument", mock.Anything, mock.Anything, mock.Anything).
+		Return(validIdentityDocument(), nil)
+	fake.On("GetMetadata", mock.Anything, mock.Anything, mock.Anything).
+		Return(mockMetadataOutput("host"), nil)
+
+	stubClientSeams(
+		t,
+		func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			loadCalls++
+			if loadCalls == 1 {
+				return aws.Config{}, errLoad
+			}
+			return aws.Config{}, nil
+		},
+		func(aws.Config) client {
+			return fake
+		},
+	)
+
+	d := NewResourceDetector()
+	_, err := d.Detect(t.Context())
+	assert.ErrorIs(t, err, errLoad)
+
+	_, err = d.Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, 2, loadCalls)
+}
+
+func TestDetectPassesContextToConfigLoad(t *testing.T) {
+	ctx := t.Context()
+	var gotCtx context.Context
+	fake := new(mockClient)
+	fake.On("GetInstanceIdentityDocument", mock.Anything, mock.Anything, mock.Anything).
+		Return(validIdentityDocument(), nil)
+	fake.On("GetMetadata", mock.Anything, mock.Anything, mock.Anything).
+		Return(mockMetadataOutput("host"), nil)
+
+	stubClientSeams(
+		t,
+		func(c context.Context, _ ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			gotCtx = c
+			return aws.Config{}, nil
+		},
+		func(aws.Config) client { return fake },
+	)
+
+	_, err := NewResourceDetector().Detect(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, ctx, gotCtx)
 }
 
 // stubClientSeams temporarily replaces the AWS client construction seams,

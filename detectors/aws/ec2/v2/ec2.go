@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
 
 	aws "github.com/aws/aws-sdk-go-v2/aws"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
@@ -37,6 +38,9 @@ type client interface {
 // resource detector collects resource information from EC2 environment.
 type resourceDetector struct {
 	cfg config
+
+	mu sync.Mutex
+	c  client
 }
 
 // compile time assertion that imds.Client implements client.
@@ -81,9 +85,24 @@ type config struct {
 	logger logging.Logger
 }
 
+func (detector *resourceDetector) getClient(ctx context.Context) (client, error) {
+	detector.mu.Lock()
+	defer detector.mu.Unlock()
+	if detector.c != nil {
+		return detector.c, nil
+	}
+
+	c, err := newClient(ctx, detector.cfg)
+	if err != nil {
+		return nil, err
+	}
+	detector.c = c
+	return c, nil
+}
+
 // Detect detects associated resources when running in AWS environment.
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	client, err := newClient(detector.cfg)
+	client, err := detector.getClient(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -117,13 +136,13 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), err
 }
 
-func newClient(c config) (client, error) {
+func newClient(ctx context.Context, c config) (client, error) {
 	var optFns []func(*awsconfig.LoadOptions) error
 	if c.logger != nil {
 		optFns = append(optFns, awsconfig.WithLogger(c.logger))
 	}
 
-	cfg, err := loadDefaultConfig(context.Background(), optFns...)
+	cfg, err := loadDefaultConfig(ctx, optFns...)
 	if err != nil {
 		return nil, err
 	}
