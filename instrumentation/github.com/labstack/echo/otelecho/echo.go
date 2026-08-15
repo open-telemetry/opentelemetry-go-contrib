@@ -115,7 +115,7 @@ func Middleware(serverName string, opts ...Option) echo.MiddlewareFunc {
 			})...)
 
 			// Retain the historical echo.error attribute for existing consumers;
-			// deprecation and removal are tracked separately.
+			// deprecation and removal are tracked in #9485.
 			if err != nil {
 				span.SetAttributes(attribute.String("echo.error", err.Error()))
 			}
