@@ -88,8 +88,16 @@ func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (containerInfo, 
 	if result.Container.Config != nil && result.Container.Config.Image != "" {
 		ref := result.Container.Config.Image
 		id := strings.TrimPrefix(result.Container.Image, "sha256:")
+		hasSha256Prefix := strings.HasPrefix(strings.ToLower(ref), "sha256:")
 		refID := strings.TrimPrefix(strings.ToLower(ref), "sha256:")
-		isBareImageID := refID != "" && len(refID) >= 12 && len(refID) <= len(id) && strings.HasPrefix(id, refID)
+		// A ref explicitly prefixed with "sha256:" can only be an ID/digest
+		// reference: dockerd refuses to tag any image with "sha256" as the repository name,
+		// so there's no risk of misreading a real name:tag pair here, unlike an unprefixed bare hex string.
+		minIDLen := 12
+		if hasSha256Prefix {
+			minIDLen = 1
+		}
+		isBareImageID := refID != "" && len(refID) >= minIDLen && len(refID) <= len(id) && strings.HasPrefix(id, refID)
 		for _, c := range refID {
 			isHexDigit := ('0' <= c && c <= '9') || ('a' <= c && c <= 'f')
 			if !isHexDigit {

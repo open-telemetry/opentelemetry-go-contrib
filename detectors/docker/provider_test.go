@@ -151,6 +151,27 @@ func TestDockerProviderImpl_ContainerInfo_BareImageID(t *testing.T) {
 	assert.Equal(t, testImageID, info.ImageID)
 }
 
+func TestDockerProviderImpl_ContainerInfo_ShortBareImageID(t *testing.T) {
+	// e.g. "docker run sha256:e3b0c442", a short prefix of testImageID's hex
+	// digest, below the 12-char threshold used to recognize bare image IDs.
+	const shortImageID = "sha256:e3b0c442"
+
+	p := newTestProvider(t, func(_ *http.Request) (*http.Response, error) {
+		return jsonResponse(t, http.StatusOK, container.InspectResponse{
+			Name:   "my-container",
+			Image:  testImageID,
+			Config: &container.Config{Image: shortImageID},
+		}), nil
+	})
+
+	info, err := p.ContainerInfo(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "my-container", info.Name)
+	assert.Nil(t, info.ImageName, "a short bare image ID reference must not be reported as an image name")
+	assert.Nil(t, info.Tags)
+	assert.Equal(t, testImageID, info.ImageID)
+}
+
 func TestSplitImageRef(t *testing.T) {
 	tests := []struct {
 		name     string
