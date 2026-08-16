@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
+	"go.opentelemetry.io/contrib/detectors/ibmcloud/classic"
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
 	"go.opentelemetry.io/contrib/detectors/k8sapi"
 	"go.opentelemetry.io/contrib/detectors/vultr"
@@ -65,6 +66,10 @@ var (
 	// attributes on Hetzner Cloud servers (see hetzner.NewResourceDetector for
 	// details).
 	IDHetzner = ID("hetzner")
+	// IDIBMCloudClassic is the ID for the IBM Cloud Classic detector that
+	// detects resource attributes on IBM Cloud Classic Infrastructure
+	// (SoftLayer) instances (see classic.NewResourceDetector for details).
+	IDIBMCloudClassic = ID("ibmcloud.classic")
 	// IDIBMCloudVPC is the ID for the IBM Cloud VPC detector that detects
 	// resource attributes on IBM Cloud VPC virtual server instances (see
 	// vpc.NewResourceDetector for details).
@@ -163,6 +168,8 @@ var (
 		IDGCP: gcp.NewDetector,
 
 		IDHetzner: func() resource.Detector { return hetzner.NewResourceDetector() },
+
+		IDIBMCloudClassic: func() resource.Detector { return classic.NewResourceDetector() },
 
 		IDIBMCloudVPC: func() resource.Detector { return vpc.NewResourceDetector() },
 
