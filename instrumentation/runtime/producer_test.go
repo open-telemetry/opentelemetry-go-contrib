@@ -1,10 +1,12 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
+package runtime
 
 import (
+	"runtime/metrics"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -43,4 +45,14 @@ func TestNewProducer(t *testing.T) {
 		},
 	}
 	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+}
+
+func TestConvertRuntimeHistogram(t *testing.T) {
+	rh := &metrics.Float64Histogram{
+		Buckets: []float64{0, 1, 2, 3},
+		Counts:  []uint64{2, 3, 4},
+	}
+	dps := convertRuntimeHistogram(rh, time.Now())
+	require.Len(t, dps, 1)
+	assert.Equal(t, float64(11), dps[0].Sum)
 }

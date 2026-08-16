@@ -1,11 +1,11 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package hetzner // import "go.opentelemetry.io/contrib/detectors/hetzner"
+package hetzner
 
 // Version is the current release version of the Hetzner resource detector.
 func Version() string {
-	return "0.16.0"
+	return "0.17.0"
 	// This string is updated by the pre_release.sh script during release
 }
 

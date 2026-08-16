@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otellambda // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda"
+package otellambda
 
 import (
 	"context"
@@ -72,7 +72,7 @@ func (whf *wrappedHandlerFunction) wrapperInternals(ctx context.Context, handler
 	// convert return values into (any, error)
 	var err error
 	if len(response) > 0 {
-		if errVal, ok := response[len(response)-1].Interface().(error); ok {
+		if errVal, ok := reflect.TypeAssert[error](response[len(response)-1]); ok {
 			err = errVal
 		}
 	}

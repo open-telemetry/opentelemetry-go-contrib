@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+package otelmux
 
 import (
 	"fmt"
@@ -38,7 +38,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
+		trace.WithInstrumentationVersion(Version),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -51,7 +51,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	}
 	meter := cfg.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 	)
 	return func(handler http.Handler) http.Handler {
 		return traceware{
@@ -178,7 +178,15 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 
-	tw.handler.ServeHTTP(w, r.WithContext(ctx))
+	rCtx := r.WithContext(ctx)
+	tw.handler.ServeHTTP(w, rCtx)
+	// Copy MultipartForm back to the original request so net/http's
+	// finishRequest can find and remove any temp files ParseMultipartForm
+	// created on the context-derived request copy.
+	// See https://github.com/open-telemetry/opentelemetry-go-contrib/issues/9070
+	if rCtx.MultipartForm != nil {
+		r.MultipartForm = rCtx.MultipartForm
+	}
 	statusCode := rww.StatusCode()
 	span.SetStatus(tw.semconv.Status(statusCode))
 	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
