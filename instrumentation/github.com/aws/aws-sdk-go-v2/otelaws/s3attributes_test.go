@@ -49,8 +49,7 @@ func TestS3AttributeBuilderBucketOperations(t *testing.T) {
 			input := middleware.InitializeInput{Parameters: tt.params}
 			attrs := S3AttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-			assert.Contains(t, attrs, semconv.AWSS3Bucket(tt.wantBucket))
-			assert.NotContains(t, attrs, semconv.AWSS3Key(""))
+			assert.Equal(t, []attribute.KeyValue{semconv.AWSS3Bucket(tt.wantBucket)}, attrs)
 		})
 	}
 }
