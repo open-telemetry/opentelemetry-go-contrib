@@ -80,7 +80,7 @@ func TestDockerProviderImpl_ContainerInfo(t *testing.T) {
 	p := newTestProvider(t, func(req *http.Request) (*http.Response, error) {
 		assert.Equal(t, "/v"+client.MaxAPIVersion+"/containers/"+hostname+"/json", req.URL.Path)
 		return jsonResponse(t, http.StatusOK, container.InspectResponse{
-			Name:   "my-container",
+			Name:   "/my-container",
 			Image:  testImageID,
 			Config: &container.Config{Image: "golang:1.25"},
 		}), nil
@@ -97,7 +97,7 @@ func TestDockerProviderImpl_ContainerInfo(t *testing.T) {
 
 func TestDockerProviderImpl_ContainerInfo_NilConfig(t *testing.T) {
 	p := newTestProvider(t, func(_ *http.Request) (*http.Response, error) {
-		return jsonResponse(t, http.StatusOK, container.InspectResponse{Name: "my-container", Image: testImageID}), nil
+		return jsonResponse(t, http.StatusOK, container.InspectResponse{Name: "/my-container", Image: testImageID}), nil
 	})
 
 	info, err := p.ContainerInfo(t.Context())
@@ -120,7 +120,7 @@ func TestDockerProviderImpl_ContainerInfo_Error(t *testing.T) {
 func TestDockerProviderImpl_ContainerInfo_EmptyImage(t *testing.T) {
 	p := newTestProvider(t, func(_ *http.Request) (*http.Response, error) {
 		return jsonResponse(t, http.StatusOK, container.InspectResponse{
-			Name:   "my-container",
+			Name:   "/my-container",
 			Image:  testImageID,
 			Config: &container.Config{Image: ""},
 		}), nil
@@ -137,7 +137,7 @@ func TestDockerProviderImpl_ContainerInfo_EmptyImage(t *testing.T) {
 func TestDockerProviderImpl_ContainerInfo_BareImageID(t *testing.T) {
 	p := newTestProvider(t, func(_ *http.Request) (*http.Response, error) {
 		return jsonResponse(t, http.StatusOK, container.InspectResponse{
-			Name:   "my-container",
+			Name:   "/my-container",
 			Image:  testImageID,
 			Config: &container.Config{Image: testImageID}, // e.g. "docker run sha256:<id>"
 		}), nil
@@ -158,7 +158,7 @@ func TestDockerProviderImpl_ContainerInfo_ShortBareImageID(t *testing.T) {
 
 	p := newTestProvider(t, func(_ *http.Request) (*http.Response, error) {
 		return jsonResponse(t, http.StatusOK, container.InspectResponse{
-			Name:   "my-container",
+			Name:   "/my-container",
 			Image:  testImageID,
 			Config: &container.Config{Image: shortImageID},
 		}), nil
