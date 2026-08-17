@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add support for the `aws.ec2` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9139)
+- Add `go.opentelemetry.io/contrib/detectors/openshift`, a new resource detector for OpenShift 4 clusters, ported from `processor/resourcedetectionprocessor/internal/openshift` in `opentelemetry-collector-contrib`. Detects `k8s.cluster.name`, and `cloud.provider`, `cloud.platform` and `cloud.region` for clusters running on AWS, Azure, Google Cloud and IBM Cloud; OpenStack clusters report only `cloud.region`. (#9499)
 
 ### Fixed
 

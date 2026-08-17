@@ -1,0 +1,7 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package openshift
+
+// Version is the current release version of the OpenShift resource detector.
+const Version = "0.17.0"
