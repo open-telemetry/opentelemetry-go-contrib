@@ -38,6 +38,6 @@ on:
 Region values are normalized to lower case.
 
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
-[k8s]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/k8s.md
+[k8s]: https://opentelemetry.io/docs/specs/semconv/resource/k8s/
 */
 package openshift
