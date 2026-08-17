@@ -9,3 +9,5 @@ file:///var/log/traces.jsonl
 file:///path/to/file.jsonl
 https://raw.githubusercontent.com/open-telemetry/opentelemetry.io/main/content/en/registry
 http://169.254.169.254/v1.json
+http://100.100.100.200/latest/api/token
+http://100.100.100.200/latest/meta-data/
