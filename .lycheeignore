@@ -11,3 +11,4 @@ https://raw.githubusercontent.com/open-telemetry/opentelemetry.io/main/content/e
 http://169.254.169.254/v1.json
 http://100.100.100.200/latest/api/token
 http://100.100.100.200/latest/meta-data/
+http://100.100.100.200/
