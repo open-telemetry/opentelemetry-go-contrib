@@ -1436,8 +1436,6 @@ func TestPrometheusIPv6(t *testing.T) {
 			rs, err := prometheusReader(t.Context(), &cfg)
 			require.NoError(t, err)
 
-			// Register the reader with a MeterProvider so that scraping
-			// /metrics below does not log a "reader is not registered" error.
 			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(rs))
 			t.Cleanup(func() {
 				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
@@ -1576,8 +1574,6 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, reader)
 
-	// Register the reader with a MeterProvider so that scraping /metrics
-	// below does not log a "reader is not registered" error.
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	t.Cleanup(func() {
 		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
