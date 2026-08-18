@@ -76,6 +76,7 @@ module-sets:
     version: v0.17.0
     modules:
       - go.opentelemetry.io/contrib/detectors/autodetect
+      - go.opentelemetry.io/contrib/detectors/azure/azureaks
       - go.opentelemetry.io/contrib/detectors/azure/azureappservice
       - go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps
       - go.opentelemetry.io/contrib/detectors/azure/azurefunctions
