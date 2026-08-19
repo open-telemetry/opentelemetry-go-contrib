@@ -184,6 +184,30 @@ func TestConvertValue(t *testing.T) {
 			wantValue: attribute.SliceValue(attribute.SliceValue()),
 		},
 		{
+			name: "overlapping_subslice_non_cyclic",
+			value: func() any {
+				parent := []any{42, nil}
+				parent[1] = parent[:1]
+				return parent
+			}(),
+			wantValue: attribute.SliceValue(
+				attribute.Int64Value(42),
+				attribute.SliceValue(attribute.Int64Value(42)),
+			),
+		},
+		{
+			name: "overlapping_pointer_to_first_element_non_cyclic",
+			value: func() any {
+				parent := &[2]any{42, nil}
+				parent[1] = &parent[0]
+				return parent
+			}(),
+			wantValue: attribute.SliceValue(
+				attribute.Int64Value(42),
+				attribute.Int64Value(42),
+			),
+		},
+		{
 			name:      "int_empty_array",
 			value:     []int{},
 			wantValue: attribute.SliceValue([]attribute.Value{}...),

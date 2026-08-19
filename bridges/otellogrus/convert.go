@@ -17,9 +17,15 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
+type visitKey struct {
+	typ reflect.Type
+	ptr uintptr
+	len int
+}
+
 var visitedMapPool = sync.Pool{
 	New: func() any {
-		return make(map[uintptr]bool)
+		return make(map[visitKey]bool)
 	},
 }
 
@@ -29,14 +35,14 @@ func convertValue(v any) attribute.Value {
 		return res
 	}
 
-	visited := visitedMapPool.Get().(map[uintptr]bool)
+	visited := visitedMapPool.Get().(map[visitKey]bool)
 	res := convertValueVisited(v, visited)
 	clear(visited)
 	visitedMapPool.Put(visited)
 	return res
 }
 
-func convertValueVisited(v any, visited map[uintptr]bool) attribute.Value {
+func convertValueVisited(v any, visited map[visitKey]bool) attribute.Value {
 	if res, ok := fastConvertValue(v); ok {
 		return res
 	}
@@ -56,11 +62,12 @@ func convertValueVisited(v any, visited map[uintptr]bool) attribute.Value {
 		if t.Kind() == reflect.Slice {
 			ptr := val.Pointer()
 			if ptr != 0 {
-				if visited[ptr] {
+				key := visitKey{typ: t, ptr: ptr, len: val.Len()}
+				if visited[key] {
 					return attribute.StringValue("<cycle>")
 				}
-				visited[ptr] = true
-				defer delete(visited, ptr)
+				visited[key] = true
+				defer delete(visited, key)
 			}
 		}
 		items := make([]attribute.Value, 0, val.Len())
@@ -74,11 +81,12 @@ func convertValueVisited(v any, visited map[uintptr]bool) attribute.Value {
 		}
 		ptr := val.Pointer()
 		if ptr != 0 {
-			if visited[ptr] {
+			key := visitKey{typ: t, ptr: ptr}
+			if visited[key] {
 				return attribute.StringValue("<cycle>")
 			}
-			visited[ptr] = true
-			defer delete(visited, ptr)
+			visited[key] = true
+			defer delete(visited, key)
 		}
 		kvs := make([]attribute.KeyValue, 0, val.Len())
 		for _, k := range val.MapKeys() {
@@ -101,11 +109,12 @@ func convertValueVisited(v any, visited map[uintptr]bool) attribute.Value {
 		}
 		ptr := val.Pointer()
 		if ptr != 0 {
-			if visited[ptr] {
+			key := visitKey{typ: t, ptr: ptr}
+			if visited[key] {
 				return attribute.StringValue("<cycle>")
 			}
-			visited[ptr] = true
-			defer delete(visited, ptr)
+			visited[key] = true
+			defer delete(visited, key)
 		}
 		return convertValueVisited(val.Elem().Interface(), visited)
 	case reflect.Interface:
