@@ -18,10 +18,6 @@ import (
 func TestDetect_Success(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, authHeader, r.Header.Get("Authorization"))
-		if r.Method == http.MethodHead {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
 		if r.Method == http.MethodGet {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{
@@ -65,10 +61,6 @@ func TestDetect_Success(t *testing.T) {
 
 func TestDetect_NonOKE(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodHead {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
 		if r.Method == http.MethodGet {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{
@@ -120,6 +112,20 @@ func TestDetect_NotOracleCloud(t *testing.T) {
 	assert.Equal(t, resource.Empty(), res)
 }
 
+func TestDetect_ClientError404_NotOracleCloud(t *testing.T) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer ts.Close()
+
+	detector := NewResourceDetector()
+	detector.endpoint = ts.URL
+
+	res, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
+}
+
 func TestDetect_ServerError(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -157,10 +163,6 @@ func TestDetect_MalformedJSON(t *testing.T) {
 
 func TestDetect_PartialResource(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodHead {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
 		if r.Method == http.MethodGet {
 			w.WriteHeader(http.StatusOK)
 			// Return empty JSON object so missing host.id, hostname, host.type, region, and availability domain branches are all covered
@@ -187,10 +189,6 @@ func TestDetect_PartialResource(t *testing.T) {
 
 func TestDetect_WithAttributeFilter(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodHead {
-			w.WriteHeader(http.StatusOK)
-			return
-		}
 		if r.Method == http.MethodGet {
 			w.WriteHeader(http.StatusOK)
 			_, _ = w.Write([]byte(`{
@@ -298,4 +296,3 @@ func TestDetect_CanonicalRegionPrecedence(t *testing.T) {
 
 	assert.Equal(t, expected, res)
 }
-

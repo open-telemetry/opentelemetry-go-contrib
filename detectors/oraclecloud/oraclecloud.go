@@ -99,7 +99,8 @@ func (d *ResourceDetector) fetchMetadata(ctx context.Context) (*computeMetadata,
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, true, fmt.Errorf("received non-OK response from Oracle Cloud IMDS: %s", resp.Status)
+		onOracleCloud := resp.StatusCode < 400 || resp.StatusCode > 499
+		return nil, onOracleCloud, fmt.Errorf("received non-OK response from Oracle Cloud IMDS: %s", resp.Status)
 	}
 
 	body, err := io.ReadAll(resp.Body)
