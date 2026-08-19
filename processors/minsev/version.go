@@ -4,4 +4,4 @@
 package minsev
 
 // Version is the current release version of the minsev processor.
-const Version = "0.16.1"
+const Version = "0.16.2"
