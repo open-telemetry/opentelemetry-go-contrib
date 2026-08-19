@@ -85,6 +85,7 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/k8sapi
       - go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk
       - go.opentelemetry.io/contrib/detectors/vultr
+      - go.opentelemetry.io/contrib/detectors/akamai
 excluded-modules:
   - go.opentelemetry.io/contrib/examples/dice/instrumented
   - go.opentelemetry.io/contrib/examples/dice/uninstrumented
