@@ -17,7 +17,7 @@ These instructions assume you have
     ```sh
     docker-compose logs
     ```
-    
+
 3. After inspecting the client logs, the example can be cleaned up by running:
 
     ```sh
