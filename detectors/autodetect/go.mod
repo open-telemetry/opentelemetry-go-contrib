@@ -9,6 +9,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.45.0
 	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.17.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.70.0
+	go.opentelemetry.io/contrib/detectors/azure/azureaks v0.17.0
 	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.17.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.17.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.45.0
@@ -120,3 +121,5 @@ replace go.opentelemetry.io/contrib/detectors/k8sapi => ../k8sapi
 replace go.opentelemetry.io/contrib/detectors/vultr => ../vultr
 
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
+
+replace go.opentelemetry.io/contrib/detectors/azure/azureaks => ../azure/azureaks
