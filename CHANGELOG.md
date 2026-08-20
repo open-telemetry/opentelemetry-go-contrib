@@ -14,7 +14,7 @@ The next release will require at least [Go 1.26].
 ### Added
 
 - Add support for the `aws.ec2` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9139)
-- Support testing of [Go 1.27].
+- Support testing of [Go 1.27]. (#9524)
 
 ### Fixed
 
