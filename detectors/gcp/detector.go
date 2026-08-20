@@ -22,6 +22,7 @@ import (
 // * Google App Engine (GAE).
 // * Cloud Run.
 // * Cloud Functions.
+// * Bare Metal Solution (BMS).
 func NewDetector() resource.Detector {
 	return &detector{detector: gcp.NewDetector()}
 }
@@ -31,8 +32,18 @@ type detector struct {
 }
 
 // Detect detects associated resources when running on GCE, GKE, GAE,
-// Cloud Run, and Cloud functions.
+// Cloud Run, Cloud Functions, and Bare Metal Solution.
 func (d *detector) Detect(context.Context) (*resource.Resource, error) {
+	cp := d.detector.CloudPlatform()
+	if cp == gcp.BareMetalSolution {
+		b := &resourceBuilder{}
+		b.attrs = append(b.attrs, semconv.CloudProviderGCP, semconv.CloudPlatformGCPBareMetalSolution)
+		b.add(semconv.CloudAccountIDKey, d.detector.BareMetalSolutionProjectID)
+		b.add(semconv.HostNameKey, d.detector.BareMetalSolutionInstanceID)
+		b.add(semconv.CloudRegionKey, d.detector.BareMetalSolutionCloudRegion)
+		return b.build()
+	}
+
 	if !metadata.OnGCE() {
 		return nil, nil
 	}
@@ -40,13 +51,14 @@ func (d *detector) Detect(context.Context) (*resource.Resource, error) {
 	b.attrs = append(b.attrs, semconv.CloudProviderGCP)
 	b.add(semconv.CloudAccountIDKey, d.detector.ProjectID)
 
-	switch d.detector.CloudPlatform() {
+	switch cp {
 	case gcp.GKE:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPKubernetesEngine)
 		b.addZoneOrRegion(d.detector.GKEAvailabilityZoneOrRegion)
 		b.add(semconv.K8SClusterNameKey, d.detector.GKEClusterName)
 		b.add(semconv.HostIDKey, d.detector.GKEHostID)
-	case gcp.CloudRun:
+		b.add(semconv.HostNameKey, d.detector.GCEHostName)
+	case gcp.CloudRun, gcp.CloudRunWorkerPool:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
 		b.add(semconv.FaaSNameKey, d.detector.FaaSName)
 		b.add(semconv.FaaSVersionKey, d.detector.FaaSVersion)
@@ -86,6 +98,7 @@ func (d *detector) Detect(context.Context) (*resource.Resource, error) {
 		b.add(semconv.HostNameKey, d.detector.GCEHostName)
 		b.add(semconv.GCPGCEInstanceNameKey, d.detector.GCEInstanceName)
 		b.add(semconv.GCPGCEInstanceHostnameKey, d.detector.GCEInstanceHostname)
+		b.addManagedInstanceGroup(d.detector.GCEManagedInstanceGroup)
 	default:
 		// We don't support this platform yet, so just return with what we have
 	}
@@ -141,6 +154,24 @@ func (r *resourceBuilder) addZoneOrRegion(detect func() (string, gcp.LocationTyp
 			r.attrs = append(r.attrs, semconv.CloudRegion(v))
 		default:
 			r.errs = append(r.errs, fmt.Errorf("location must be zone or region. Got %v", locType))
+		}
+	} else {
+		r.errs = append(r.errs, err)
+	}
+}
+
+func (r *resourceBuilder) addManagedInstanceGroup(detect func() (gcp.ManagedInstanceGroup, error)) {
+	if mig, err := detect(); err == nil {
+		if mig.Name != "" {
+			r.attrs = append(r.attrs, semconv.GCPGCEInstanceGroupManagerName(mig.Name))
+			switch mig.Type {
+			case gcp.Zone:
+				r.attrs = append(r.attrs, semconv.GCPGCEInstanceGroupManagerZone(mig.Location))
+			case gcp.Region:
+				r.attrs = append(r.attrs, semconv.GCPGCEInstanceGroupManagerRegion(mig.Location))
+			default:
+				r.errs = append(r.errs, fmt.Errorf("managed instance group location must be zone or region. Got %v", mig.Type))
+			}
 		}
 	} else {
 		r.errs = append(r.errs, err)
