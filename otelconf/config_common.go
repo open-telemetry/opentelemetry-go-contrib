@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf // import "go.opentelemetry.io/contrib/otelconf"
+package otelconf
 
 import (
 	"context"
@@ -302,6 +302,9 @@ func createHeadersConfig(headers []NameStringValuePair, headersList *string) (ma
 	// Headers take precedence over HeadersList, so this has to be after HeadersList is processed.
 	for _, kv := range headers {
 		if kv.Value != nil {
+			if kv.Name == "" {
+				return nil, newErrInvalid("invalid header: empty name")
+			}
 			result[kv.Name] = *kv.Value
 		}
 	}

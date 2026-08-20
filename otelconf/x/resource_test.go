@@ -5,13 +5,16 @@ package x
 
 import (
 	"context"
+	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 func TestNewResource(t *testing.T) {
@@ -29,6 +32,13 @@ func TestNewResource(t *testing.T) {
 		{
 			name:          "resource-no-attributes",
 			config:        &Resource{},
+			wantSchemaURL: "",
+		},
+		{
+			name: "resource-with-empty-detection",
+			config: &Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{},
+			},
 			wantSchemaURL: "",
 		},
 		{
@@ -116,6 +126,7 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 		wantOSAttributes     bool
 		wantProcessAttribute bool
 		wantServiceAttribute bool
+		wantEC2Attributes    bool
 	}{
 		{
 			name:      "no-detectors",
@@ -137,8 +148,34 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			wantProcessAttribute: true,
 		},
 		{
+			name: "aws.ecs-detector-only",
+			detectors: []ExperimentalResourceDetector{
+				{AWSECS: ExperimentalAWSECSResourceDetector{}},
+			},
+		},
+		{
+			name: "aws.eks-detector-only",
+			detectors: []ExperimentalResourceDetector{
+				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
+			},
+		},
+		{
+			name: "all-cloud-detectors",
+			detectors: []ExperimentalResourceDetector{
+				{AWSEC2: ExperimentalAWSEC2ResourceDetector{}},
+				{AWSECS: ExperimentalAWSECSResourceDetector{}},
+				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
+				{GCP: ExperimentalGCPResourceDetector{}},
+			},
+			wantEC2Attributes:  true,
+			wantHostAttributes: true,
+		},
+		{
 			name: "all-detectors",
 			detectors: []ExperimentalResourceDetector{
+				{AWSECS: ExperimentalAWSECSResourceDetector{}},
+				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
+				{GCP: ExperimentalGCPResourceDetector{}},
 				{Container: ExperimentalContainerResourceDetector{}},
 				{Host: ExperimentalHostResourceDetector{}},
 				{Process: ExperimentalProcessResourceDetector{}},
@@ -152,6 +189,11 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			for _, detector := range tt.detectors {
+				if detector.AWSEC2 != nil {
+					stubIMDS(t)
+				}
+			}
 			config := &Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: tt.detectors,
@@ -171,6 +213,186 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			assert.Equal(t, tt.wantOSAttributes, attrSet[semconv.OSTypeKey], "should have os.type attribute (from WithOS()")
 			assert.Equal(t, tt.wantProcessAttribute, attrSet[semconv.ProcessPIDKey], "should have process.pid attribute")
 			assert.Equal(t, tt.wantServiceAttribute, attrSet[semconv.ServiceInstanceIDKey], "should have service.instance.id attribute")
+			if tt.wantEC2Attributes {
+				assert.True(t, attrSet[semconv.CloudProviderAWS.Key], "should have cloud.provider attribute")
+				assert.True(t, attrSet[semconv.CloudPlatformAWSEC2.Key], "should have cloud.platform attribute")
+				assert.True(t, attrSet[semconv.HostIDKey], "should have host.id attribute")
+			}
 		})
 	}
+}
+
+func TestResourceOptsAzureVM(t *testing.T) {
+	opts := resourceOpts([]ExperimentalResourceDetector{
+		{AzureVM: ExperimentalAzureVMResourceDetector{}},
+	})
+	assert.Len(t, opts, 1)
+}
+
+func TestNewResourceWithDetectionAttributesFilter(t *testing.T) {
+	tests := []struct {
+		name     string
+		attrs    *IncludeExclude
+		wantHost bool
+		wantOS   bool
+	}{
+		{
+			name:     "no-filter",
+			wantHost: true,
+			wantOS:   true,
+		},
+		{
+			name: "include-host-only",
+			attrs: &IncludeExclude{
+				Included: []string{string(semconv.HostNameKey)},
+			},
+			wantHost: true,
+		},
+		{
+			name: "exclude-os",
+			attrs: &IncludeExclude{
+				Excluded: []string{string(semconv.OSTypeKey)},
+			},
+			wantHost: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := newResource(t.Context(), &Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{Host: ExperimentalHostResourceDetector{}},
+					},
+					Attributes: tt.attrs,
+				},
+			})
+			require.NoError(t, err)
+
+			attrs := got.Attributes()
+			attrSet := make(map[attribute.Key]bool)
+			for _, attr := range attrs {
+				attrSet[attr.Key] = true
+			}
+
+			assert.Equal(t, tt.wantHost, attrSet[semconv.HostNameKey])
+			assert.Equal(t, tt.wantOS, attrSet[semconv.OSTypeKey])
+		})
+	}
+}
+
+func TestNewResourceWithDetectionAttributesFilterDoesNotApplyToConfiguredAttributes(t *testing.T) {
+	got, err := newResource(t.Context(), &Resource{
+		Attributes: []AttributeNameValue{
+			{Name: "custom", Value: "value"},
+		},
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Host: ExperimentalHostResourceDetector{}},
+			},
+			Attributes: &IncludeExclude{
+				Included: []string{string(semconv.HostNameKey)},
+				Excluded: []string{"custom"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	gotAttrs := attrMap(got.Attributes())
+	assert.Contains(t, gotAttrs, attribute.Key("custom"))
+	assert.Contains(t, gotAttrs, semconv.HostNameKey)
+	assert.NotContains(t, gotAttrs, semconv.OSTypeKey)
+}
+
+func TestNewResourceWithDetectionAttributesFilterRemovesDetectedSchema(t *testing.T) {
+	schemaURL := "https://example.com/schema"
+	got, err := newResource(t.Context(), &Resource{
+		SchemaUrl: ptr(schemaURL),
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Host: ExperimentalHostResourceDetector{}},
+			},
+			Attributes: &IncludeExclude{
+				Included: []string{"unmatched.attribute"},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	assert.Equal(t, schemaURL, got.SchemaURL())
+	assert.NotContains(t, attrMap(got.Attributes()), semconv.HostNameKey)
+	assert.NotContains(t, attrMap(got.Attributes()), semconv.OSTypeKey)
+}
+
+func TestNewResourceWithDetectionDoesNotOverrideConfiguredAttributes(t *testing.T) {
+	t.Setenv("OTEL_SERVICE_NAME", "detected-service")
+
+	got, err := newResource(t.Context(), &Resource{
+		Attributes: []AttributeNameValue{
+			{Name: string(semconv.ServiceNameKey), Value: "configured-service"},
+		},
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Service: ExperimentalServiceResourceDetector{}},
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	gotAttrs := attrMap(got.Attributes())
+	assert.Equal(t, "configured-service", gotAttrs[semconv.ServiceNameKey].AsString())
+	assert.Contains(t, gotAttrs, semconv.ServiceInstanceIDKey)
+}
+
+func TestNewResourceWithDetectionAttributesFilterError(t *testing.T) {
+	got, err := newResource(t.Context(), &Resource{
+		DetectionDevelopment: &ExperimentalResourceDetection{
+			Detectors: []ExperimentalResourceDetector{
+				{Host: ExperimentalHostResourceDetector{}},
+			},
+			Attributes: &IncludeExclude{
+				Included: []string{"foo"},
+				Excluded: []string{"foo"},
+			},
+		},
+	})
+	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
+	assert.True(t, got.Set().HasValue(semconv.ServiceNameKey))
+}
+
+func stubIMDS(t *testing.T) {
+	t.Helper()
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.URL.Path {
+		case "/latest/api/token":
+			_, _ = w.Write([]byte("token"))
+		case "/latest/dynamic/instance-identity/document":
+			_, _ = w.Write([]byte(`{
+				"accountId": "123456789012",
+				"architecture": "x86_64",
+				"availabilityZone": "us-west-2b",
+				"imageId": "ami-5fb8c835",
+				"instanceId": "i-1234567890abcdef0",
+				"instanceType": "t2.micro",
+				"pendingTime": "2016-11-19T16:32:11Z",
+				"privateIp": "10.158.112.84",
+				"region": "us-west-2",
+				"version": "2017-09-30"
+			}`))
+		case "/latest/meta-data/hostname":
+			_, _ = w.Write([]byte("ip-12-34-56-78.us-west-2.compute.internal"))
+		default:
+			http.NotFound(w, r)
+		}
+	}))
+	t.Cleanup(server.Close)
+	t.Setenv("AWS_EC2_METADATA_SERVICE_ENDPOINT", server.URL)
+}
+
+func attrMap(attrs []attribute.KeyValue) map[attribute.Key]attribute.Value {
+	attrSet := make(map[attribute.Key]attribute.Value, len(attrs))
+	for _, attr := range attrs {
+		attrSet[attr.Key] = attr.Value
+	}
+	return attrSet
 }

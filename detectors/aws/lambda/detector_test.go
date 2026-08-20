@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // successfully return resource when process is running on Amazon Lambda environment.
@@ -37,12 +37,12 @@ func TestDetectSuccess(t *testing.T) {
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
-// return empty resource when not running on lambda.
+// return empty resource and no error when not running on lambda.
 func TestReturnsIfNoEnvVars(t *testing.T) {
 	os.Clearenv()
 	detector := resourceDetector{}
 	res, err := detector.Detect(t.Context())
 
-	assert.Equal(t, errNotOnLambda, err)
+	assert.NoError(t, err, "Detector unexpectedly returned error when not running on Lambda")
 	assert.Empty(t, res.Attributes())
 }

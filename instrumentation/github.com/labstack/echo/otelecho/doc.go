@@ -12,4 +12,4 @@
 //
 // [github.com/labstack/echo-opentelemetry]: https://github.com/labstack/echo-opentelemetry
 // [MIGRATION.md]: https://github.com/open-telemetry/opentelemetry-go-contrib/blob/main/instrumentation/github.com/labstack/echo/otelecho/MIGRATION.md
-package otelecho // import "go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho"
+package otelecho

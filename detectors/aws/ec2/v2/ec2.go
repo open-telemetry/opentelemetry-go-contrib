@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package ec2 provides a resource detector for EC2 instances using aws-sdk-go-v2.
-package ec2 // import "go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
+package ec2
 
 import (
 	"context"
@@ -17,7 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 var errClient = errors.New("EC2 Client Error")

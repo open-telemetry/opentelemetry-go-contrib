@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package semconv provides semantic convention types and functionality.
-package semconv // import "go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/internal/semconv"
+package semconv
 
 import (
 	"net"
@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/event"
 	"go.opentelemetry.io/otel/attribute"
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.41.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // Constants for environment variable keys and versions.
@@ -79,7 +79,7 @@ func (m EventMonitor) CommandStartedTraceAttrs(
 	evt *event.CommandStartedEvent,
 	opts ...AttributeOption,
 ) []attribute.KeyValue {
-	// Dup implies both v1.26.0 and v1.21.0
+	// Dup implies both the latest stable and v1.21.0 semantic conventions.
 	if hasOptIn(m.version, semconvOptInDup) {
 		return append(
 			commandStartedTraceAttrs(evt, opts...),
@@ -91,22 +91,27 @@ func (m EventMonitor) CommandStartedTraceAttrs(
 }
 
 // peerInfo extracts the hostname and port from a CommandStartedEvent.
+//
+// ConnectionID is formatted as "<address>[-<connection number>]" for pooled
+// connections, so the "[-<connection number>]" suffix is stripped before
+// parsing; otherwise net.SplitHostPort fails on it and the span's peer
+// address attributes fall back to the raw, connection-specific ConnectionID.
 func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
-	hostname = evt.ConnectionID
 	port = 27017 // Default MongoDB port
 
-	host, portStr, err := net.SplitHostPort(hostname)
+	host, _, _ := strings.Cut(evt.ConnectionID, "[-")
+	hostname, portStr, err := net.SplitHostPort(host)
 	if err != nil {
 		// If there's an error (likely because there's no port), assume default port
-		// and use ConnectionID as hostname
-		return hostname, port
+		// and use the stripped host as hostname
+		return host, port
 	}
 
 	if parsedPort, err := strconv.Atoi(portStr); err == nil {
 		port = parsedPort
 	}
 
-	return host, port
+	return hostname, port
 }
 
 // sanitizeCommand converts a BSON command to a sanitized JSON string.
