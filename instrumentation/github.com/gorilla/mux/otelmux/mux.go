@@ -12,8 +12,10 @@ import (
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
@@ -188,7 +190,8 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.MultipartForm = rCtx.MultipartForm
 	}
 	statusCode := rww.StatusCode()
-	span.SetStatus(tw.semconv.Status(statusCode))
+	spanCode, spanMsg := tw.semconv.Status(statusCode)
+	span.SetStatus(spanCode, spanMsg)
 	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: statusCode,
 		ReadBytes:  bw.BytesRead(),
@@ -197,11 +200,36 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		WriteError: rww.Error(),
 	})...)
 
+	var errorTypeAttr attribute.KeyValue
+	if spanCode == codes.Error {
+		// Prefer an observed write or read failure as the error cause. If
+		// neither was observed, fall back to the request context's error
+		// (e.g. the client disconnected mid-request), so that case is
+		// distinguishable from a genuine server fault instead of being
+		// recorded as a bare error status with no error.type.
+		cause := rww.Error()
+		if cause == nil {
+			cause = bw.Error()
+		}
+		if cause == nil {
+			cause = ctx.Err()
+		}
+		if cause != nil {
+			errorTypeAttr = otelsemconv.ErrorType(cause)
+			span.SetAttributes(errorTypeAttr)
+		}
+	}
+
+	additionalAttributes := tw.metricAttributesFromRequest(r)
+	if errorTypeAttr.Valid() {
+		additionalAttributes = append(additionalAttributes, errorTypeAttr)
+	}
+
 	metricAttributes := semconv.MetricAttributes{
 		Req:                  r,
 		StatusCode:           statusCode,
 		Route:                routeStr,
-		AdditionalAttributes: tw.metricAttributesFromRequest(r),
+		AdditionalAttributes: additionalAttributes,
 	}
 
 	tw.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
