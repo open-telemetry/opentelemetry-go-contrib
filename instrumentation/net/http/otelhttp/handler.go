@@ -53,7 +53,7 @@ func NewMiddleware(operation string, opts ...Option) func(http.Handler) http.Han
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindServer)),
 	}
 
-	c := newConfig(append(defaultOpts, opts...)...)
+	c := newHandlerConfig(append(defaultOpts, opts...)...)
 	h.configure(c)
 
 	if h.spanNameFormatter == nil {
@@ -69,7 +69,7 @@ func NewMiddleware(operation string, opts ...Option) func(http.Handler) http.Han
 	}
 }
 
-func (h *middleware) configure(c *config) {
+func (h *middleware) configure(c *handlerConfig) {
 	h.tracer = c.Tracer
 	h.propagators = c.Propagators
 	h.spanStartOptions = c.SpanStartOptions
