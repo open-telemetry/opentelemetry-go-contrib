@@ -4,6 +4,8 @@
 package otelhttp
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -24,6 +26,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
@@ -789,5 +792,141 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 				bb.handler.ServeHTTP(rr, r)
 			}
 		})
+	}
+}
+
+// reproducing a real HTTP/1.1 client disconnect.
+func TestServeHTTPClientDisconnect(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	handlerStarted := make(chan struct{})
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			close(handlerStarted)
+			<-r.Context().Done()
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte("cancelled"))
+		}),
+		"test_handler",
+		WithTracerProvider(provider),
+		WithMeterProvider(meterProvider),
+	)
+
+	srv := httptest.NewServer(h)
+	defer srv.Close()
+
+	reqCtx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(reqCtx, http.MethodGet, srv.URL, http.NoBody)
+	require.NoError(t, err)
+
+	const waitTimeout = 5 * time.Second
+
+	requestDone := make(chan error, 1)
+	go func() {
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+		requestDone <- doErr
+	}()
+
+	select {
+	case <-handlerStarted:
+	case <-time.After(waitTimeout):
+		t.Fatal("timed out waiting for handler to start")
+	}
+	cancel()
+	select {
+	case doErr := <-requestDone:
+		if doErr != nil && !errors.Is(doErr, context.Canceled) {
+			t.Errorf("client request returned unexpected error: %v", doErr)
+		}
+	case <-time.After(waitTimeout):
+		t.Fatal("timed out waiting for client request to finish")
+	}
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, time.Second, 10*time.Millisecond, "handler should finish and end the span after the client disconnects")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusInternalServerError))
+
+	var spanErrorTypeAttr attribute.KeyValue
+	var foundSpanErrorType bool
+	for _, attr := range span.Attributes() {
+		if attr.Key == otelsemconv.ErrorTypeKey {
+			spanErrorTypeAttr = attr
+			foundSpanErrorType = true
+			break
+		}
+	}
+	require.True(t, foundSpanErrorType, "expected an error.type attribute on the span")
+	assert.NotEmpty(t, spanErrorTypeAttr.Value.AsString())
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var durationMetric *metricdata.Metrics
+	for i, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == "http.server.request.duration" {
+			durationMetric = &rm.ScopeMetrics[0].Metrics[i]
+			break
+		}
+	}
+	require.NotNil(t, durationMetric, "expected to find the http.server.request.duration metric")
+
+	histogram, ok := durationMetric.Data.(metricdata.Histogram[float64])
+	require.True(t, ok)
+	require.Len(t, histogram.DataPoints, 1)
+	metricErrorType, ok := histogram.DataPoints[0].Attributes.Value(otelsemconv.ErrorTypeKey)
+	require.True(t, ok, "expected error.type attribute on the request duration metric")
+	assert.Equal(t, spanErrorTypeAttr.Value.AsString(), metricErrorType.AsString())
+}
+
+func TestServeHTTPServerErrorSetsErrorType(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusInternalServerError)
+		}),
+		"test_handler",
+		WithTracerProvider(tracerProvider),
+		WithMeterProvider(meterProvider),
+	)
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody))
+
+	require.Len(t, sr.Ended(), 1)
+	assert.Contains(t, sr.Ended()[0].Attributes(), otelsemconv.ErrorTypeKey.String(strconv.Itoa(http.StatusInternalServerError)))
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+	for _, metric := range rm.ScopeMetrics[0].Metrics {
+		var attrs attribute.Set
+		switch data := metric.Data.(type) {
+		case metricdata.Histogram[int64]:
+			require.Len(t, data.DataPoints, 1)
+			attrs = data.DataPoints[0].Attributes
+		case metricdata.Histogram[float64]:
+			require.Len(t, data.DataPoints, 1)
+			attrs = data.DataPoints[0].Attributes
+		default:
+			t.Fatalf("unexpected metric data type %T", data)
+		}
+		value, ok := attrs.Value(otelsemconv.ErrorTypeKey)
+		require.True(t, ok, metric.Name+" should include error.type")
+		assert.Equal(t, strconv.Itoa(http.StatusInternalServerError), value.AsString(), metric.Name)
 	}
 }
