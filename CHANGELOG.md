@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add support for the `aws.ec2` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9139)
+- Add `go.opentelemetry.io/contrib/detectors/upcloud`, a new resource detector for UpCloud Cloud Servers, ported from `processor/resourcedetectionprocessor/internal/upcloud` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.region`, `host.id`, and `host.name`. (#9498)
 
 ### Fixed
 
