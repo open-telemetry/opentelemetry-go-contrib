@@ -4,10 +4,12 @@
 package otelrestful_test
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/emicklei/go-restful/v3"
 	"github.com/stretchr/testify/assert"
@@ -18,6 +20,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful"
@@ -165,10 +168,11 @@ func TestSpanStatus(t *testing.T) {
 	testCases := []struct {
 		httpStatusCode int
 		wantSpanStatus codes.Code
+		wantErrorType  string
 	}{
-		{http.StatusOK, codes.Unset},
-		{http.StatusBadRequest, codes.Unset},
-		{http.StatusInternalServerError, codes.Error},
+		{http.StatusOK, codes.Unset, ""},
+		{http.StatusBadRequest, codes.Unset, ""},
+		{http.StatusInternalServerError, codes.Error, "500"},
 	}
 	for _, tc := range testCases {
 		t.Run(strconv.Itoa(tc.httpStatusCode), func(t *testing.T) {
@@ -188,7 +192,121 @@ func TestSpanStatus(t *testing.T) {
 
 			require.Len(t, sr.Ended(), 1, "should emit a span")
 			assert.Equal(t, tc.wantSpanStatus, sr.Ended()[0].Status().Code, "should only set Error status for HTTP statuses >= 500")
+
+			if tc.wantErrorType != "" {
+				assert.Contains(t, sr.Ended()[0].Attributes(), attribute.String("error.type", tc.wantErrorType))
+			} else {
+				for _, attr := range sr.Ended()[0].Attributes() {
+					assert.NotEqual(t, attribute.Key("error.type"), attr.Key)
+				}
+			}
 		})
+	}
+}
+
+func TestClientDisconnect(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	handlerStarted := make(chan struct{})
+	handlerDone := make(chan struct{})
+	handlerFunc := func(req *restful.Request, resp *restful.Response) {
+		close(handlerStarted)
+		<-req.Request.Context().Done()
+		resp.WriteHeader(http.StatusInternalServerError)
+		close(handlerDone)
+	}
+
+	ws := &restful.WebService{}
+	ws.Route(ws.GET("/hello").To(handlerFunc))
+	container := restful.NewContainer()
+	container.Filter(otelrestful.OTelFilter("srv", otelrestful.WithTracerProvider(provider)))
+	container.Add(ws)
+
+	ts := httptest.NewServer(container)
+	defer ts.Close()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	client := ts.Client()
+	go func() {
+		select {
+		case <-handlerStarted:
+			cancel()
+		case <-time.After(5 * time.Second):
+		}
+	}()
+
+	resp, _ := client.Do(req)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	select {
+	case <-handlerDone:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for handler")
+	}
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, 1*time.Second, 10*time.Millisecond)
+
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	span := spans[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusInternalServerError))
+	assert.Contains(t, span.Attributes(), otelsemconv.ErrorType(context.Canceled))
+}
+
+func TestDownstreamContextCancellationIgnored(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	scopedContextFilter := func(
+		req *restful.Request,
+		resp *restful.Response,
+		chain *restful.FilterChain,
+	) {
+		ctx, cancel := context.WithCancel(req.Request.Context())
+		defer cancel()
+		req.Request = req.Request.WithContext(ctx)
+		chain.ProcessFilter(req, resp)
+	}
+
+	ws := &restful.WebService{}
+	ws.Route(ws.GET("/").To(func(
+		_ *restful.Request,
+		resp *restful.Response,
+	) {
+		resp.WriteHeader(http.StatusOK)
+	}))
+
+	container := restful.NewContainer()
+	container.Filter(otelrestful.OTelFilter(
+		"test",
+		otelrestful.WithTracerProvider(provider),
+	))
+	container.Filter(scopedContextFilter)
+	container.Add(ws)
+
+	container.ServeHTTP(
+		httptest.NewRecorder(),
+		httptest.NewRequestWithContext(
+			t.Context(),
+			http.MethodGet,
+			"/",
+			http.NoBody,
+		),
+	)
+
+	require.Len(t, sr.Ended(), 1)
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Unset, span.Status().Code)
+	for _, attr := range span.Attributes() {
+		assert.NotEqual(t, otelsemconv.ErrorTypeKey, attr.Key)
 	}
 }
 
