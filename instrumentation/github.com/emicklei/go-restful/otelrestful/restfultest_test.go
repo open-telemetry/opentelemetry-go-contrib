@@ -261,6 +261,55 @@ func TestClientDisconnect(t *testing.T) {
 	assert.Contains(t, span.Attributes(), otelsemconv.ErrorType(context.Canceled))
 }
 
+func TestDownstreamContextCancellationIgnored(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	scopedContextFilter := func(
+		req *restful.Request,
+		resp *restful.Response,
+		chain *restful.FilterChain,
+	) {
+		ctx, cancel := context.WithCancel(req.Request.Context())
+		defer cancel()
+		req.Request = req.Request.WithContext(ctx)
+		chain.ProcessFilter(req, resp)
+	}
+
+	ws := &restful.WebService{}
+	ws.Route(ws.GET("/").To(func(
+		_ *restful.Request,
+		resp *restful.Response,
+	) {
+		resp.WriteHeader(http.StatusOK)
+	}))
+
+	container := restful.NewContainer()
+	container.Filter(otelrestful.OTelFilter(
+		"test",
+		otelrestful.WithTracerProvider(provider),
+	))
+	container.Filter(scopedContextFilter)
+	container.Add(ws)
+
+	container.ServeHTTP(
+		httptest.NewRecorder(),
+		httptest.NewRequestWithContext(
+			t.Context(),
+			http.MethodGet,
+			"/",
+			http.NoBody,
+		),
+	)
+
+	require.Len(t, sr.Ended(), 1)
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Unset, span.Status().Code)
+	for _, attr := range span.Attributes() {
+		assert.NotEqual(t, otelsemconv.ErrorTypeKey, attr.Key)
+	}
+}
+
 func TestWithPublicEndpoint(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(

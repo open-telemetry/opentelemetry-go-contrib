@@ -73,7 +73,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		chain.ProcessFilter(req, resp)
 
 		status := resp.StatusCode()
-		err := req.Request.Context().Err()
+		err := ctx.Err()
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
 			span.SetAttributes(otelsemconv.ErrorType(err))
