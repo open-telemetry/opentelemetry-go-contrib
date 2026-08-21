@@ -33,6 +33,12 @@ func (e testError) Error() string {
 	return string(e)
 }
 
+type testPointerError string
+
+func (e *testPointerError) Error() string {
+	return "pointer error: " + string(*e)
+}
+
 type recursiveTestSlice []recursiveTestSlice
 
 func TestConvertValue(t *testing.T) {
@@ -395,13 +401,13 @@ func TestConvertValuePointerEdgeCases(t *testing.T) {
 	var errorValue any = testError("test error")
 	errorPointer := &errorValue
 	assert.Equal(t, attribute.StringValue("test error"), convertValue(&errorPointer))
-	concreteError := testError("concrete error")
-	concreteErrorPointer := &concreteError
-	concreteErrorPointerPointer := &concreteErrorPointer
+	pointerError := testPointerError("concrete error")
+	pointerErrorPointer := &pointerError
+	pointerErrorPointerPointer := &pointerErrorPointer
 	assert.Equal(
 		t,
-		attribute.StringValue("concrete error"),
-		convertValue(&concreteErrorPointerPointer),
+		attribute.StringValue("pointer error: concrete error"),
+		convertValue(&pointerErrorPointerPointer),
 	)
 
 	channel := make(chan int)
