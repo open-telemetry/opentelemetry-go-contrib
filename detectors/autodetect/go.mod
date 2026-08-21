@@ -16,6 +16,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.17.0
 	go.opentelemetry.io/contrib/detectors/k8sapi v0.17.0
 	go.opentelemetry.io/contrib/detectors/vultr v0.17.0
+  go.opentelemetry.io/contrib/detectors/oraclecloud v0.16.0
 	go.opentelemetry.io/otel v1.45.0
 	go.opentelemetry.io/otel/sdk v1.45.0
 )
@@ -116,6 +117,8 @@ replace go.opentelemetry.io/contrib/detectors/hetzner => ../hetzner
 replace go.opentelemetry.io/contrib/detectors/ibmcloud/vpc => ../ibmcloud/vpc
 
 replace go.opentelemetry.io/contrib/detectors/k8sapi => ../k8sapi
+
+replace go.opentelemetry.io/contrib/detectors/oraclecloud => ../oraclecloud
 
 replace go.opentelemetry.io/contrib/detectors/vultr => ../vultr
 
