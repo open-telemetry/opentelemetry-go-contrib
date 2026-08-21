@@ -42,6 +42,7 @@ detectors/azure/azureappservice                                         @open-te
 detectors/azure/azurecontainerapps                                      @open-telemetry/go-approvers @iblancasa
 detectors/azure/azurefunctions                                          @open-telemetry/go-approvers @Lewis-E
 detectors/azure/azurevm                                                 @open-telemetry/go-approvers @pyohannes @paulojmdias @iblancasa
+detectors/digitalocean/                                                 @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 detectors/hetzner/                                                      @open-telemetry/go-approvers @paulojmdias
 detectors/ibmcloud/vpc/                                                 @open-telemetry/go-approvers @paulojmdias @iblancasa
