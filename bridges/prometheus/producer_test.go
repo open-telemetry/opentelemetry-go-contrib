@@ -8,12 +8,15 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -26,7 +29,6 @@ func TestProduce(t *testing.T) {
 		name     string
 		testFn   func(*prometheus.Registry)
 		expected []metricdata.ScopeMetrics
-		wantErr  error
 	}{
 		{
 			name:   "no metrics registered",
@@ -422,24 +424,18 @@ func TestProduce(t *testing.T) {
 			}},
 		},
 		{
-			name: "partial success",
+			name: "untyped",
 			testFn: func(reg *prometheus.Registry) {
-				metric := prometheus.NewGauge(prometheus.GaugeOpts{
-					Name: "test_gauge_metric",
-					Help: "A gauge metric for testing",
+				metric := prometheus.NewUntypedFunc(prometheus.UntypedOpts{
+					Name: "test_untyped_metric",
+					Help: "An untyped metric for testing",
 					ConstLabels: prometheus.Labels(map[string]string{
 						"foo": "bar",
 					}),
-				})
-				reg.MustRegister(metric)
-				metric.Set(123.4)
-				unsupportedMetric := prometheus.NewUntypedFunc(prometheus.UntypedOpts{
-					Name: "test_untyped_metric",
-					Help: "An untyped metric for testing",
 				}, func() float64 {
 					return 135.8
 				})
-				reg.MustRegister(unsupportedMetric)
+				reg.MustRegister(metric)
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
@@ -447,20 +443,19 @@ func TestProduce(t *testing.T) {
 				},
 				Metrics: []metricdata.Metrics{
 					{
-						Name:        "test_gauge_metric",
-						Description: "A gauge metric for testing",
+						Name:        "test_untyped_metric",
+						Description: "An untyped metric for testing",
 						Data: metricdata.Gauge[float64]{
 							DataPoints: []metricdata.DataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-									Value:      123.4,
+									Value:      135.8,
 								},
 							},
 						},
 					},
 				},
 			}},
-			wantErr: errUnsupportedType,
 		},
 	}
 	for _, tt := range testCases {
@@ -469,15 +464,83 @@ func TestProduce(t *testing.T) {
 			tt.testFn(reg)
 			p := NewMetricProducer(WithGatherer(reg))
 			output, err := p.Produce(t.Context())
-			if tt.wantErr == nil {
-				assert.NoError(t, err)
-			}
+			assert.NoError(t, err)
 			require.Len(t, output, len(tt.expected))
 			for i := range output {
 				metricdatatest.AssertEqual(t, tt.expected[i], output[i], metricdatatest.IgnoreTimestamp())
 			}
 		})
 	}
+}
+
+// This is separate from TestProduce because the Prometheus Go SDK does not
+// provide a function that generates a gauge histogram metric.
+func TestProducePartialSuccess(t *testing.T) {
+	previousHandler := otel.GetErrorHandler()
+	t.Cleanup(func() { otel.SetErrorHandler(previousHandler) })
+
+	var handledErr error
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		handledErr = err
+	}))
+
+	p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
+		return []*dto.MetricFamily{
+			{
+				Name: proto.String("test_gauge_metric"),
+				Help: proto.String("A gauge metric for testing"),
+				Type: dto.MetricType_GAUGE.Enum(),
+				Metric: []*dto.Metric{
+					{
+						Gauge: &dto.Gauge{
+							Value: proto.Float64(123.4),
+						},
+						Label: []*dto.LabelPair{
+							{
+								Name:  proto.String("foo"),
+								Value: proto.String("bar"),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: proto.String("test_gauge_histogram_metric"),
+				Help: proto.String("A gauge histogram metric for testing"),
+				Type: dto.MetricType_GAUGE_HISTOGRAM.Enum(),
+				Metric: []*dto.Metric{
+					{},
+				},
+			},
+		}, nil
+	})))
+
+	output, err := p.Produce(t.Context())
+	assert.NoError(t, err)
+	require.ErrorIs(t, handledErr, errUnsupportedType)
+	assert.Contains(t, handledErr.Error(), "test_gauge_histogram_metric")
+	require.Len(t, output, 1)
+
+	expected := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name: scopeName,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "test_gauge_metric",
+				Description: "A gauge metric for testing",
+				Data: metricdata.Gauge[float64]{
+					DataPoints: []metricdata.DataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      123.4,
+						},
+					},
+				},
+			},
+		},
+	}
+	metricdatatest.AssertEqual(t, expected, output[0], metricdatatest.IgnoreTimestamp())
 }
 
 func TestProduceForStartTime(t *testing.T) {
@@ -609,4 +672,10 @@ func TestProduceForStartTime(t *testing.T) {
 			}
 		})
 	}
+}
+
+type gathererFunc func() ([]*dto.MetricFamily, error)
+
+func (f gathererFunc) Gather() ([]*dto.MetricFamily, error) {
+	return f()
 }
