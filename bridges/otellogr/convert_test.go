@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
 	"testing"
 	"time"
 
@@ -17,6 +18,14 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 )
+
+type testStringer struct {
+	value any
+}
+
+func (testStringer) String() string {
+	return "formatted"
+}
 
 func TestConvertValue(t *testing.T) {
 	for _, tt := range []struct {
@@ -273,4 +282,269 @@ func TestConvertValueFloat32(t *testing.T) {
 	want := attribute.Float64Value(3.14)
 
 	assert.InDelta(t, value.AsFloat64(), want.AsFloat64(), 0.0001)
+}
+
+func TestConvertValueCycle(t *testing.T) {
+	const cycle = "<cycle>"
+
+	t.Run("Map", func(t *testing.T) {
+		value := map[string]any{}
+		value["self"] = value
+
+		assert.Equal(t, attribute.MapValue(attribute.String("self", cycle)), convertValue(value))
+	})
+
+	t.Run("Slice", func(t *testing.T) {
+		value := make([]any, 1)
+		value[0] = value
+
+		assert.Equal(t, attribute.SliceValue(attribute.StringValue(cycle)), convertValue(value))
+	})
+
+	t.Run("PointerInterface", func(t *testing.T) {
+		var value any
+		value = &value
+
+		assert.Equal(t, attribute.StringValue(cycle), convertValue(value))
+	})
+
+	t.Run("MutualMaps", func(t *testing.T) {
+		first := map[string]any{}
+		second := map[string]any{}
+		first["next"] = second
+		second["next"] = first
+
+		want := attribute.MapValue(attribute.Map("next", attribute.String("next", cycle)))
+		assert.Equal(t, want, convertValue(first))
+	})
+
+	t.Run("MixedMapSlice", func(t *testing.T) {
+		mapping := map[string]any{}
+		slice := []any{mapping}
+		mapping["slice"] = slice
+
+		want := attribute.MapValue(attribute.Slice("slice", attribute.StringValue(cycle)))
+		assert.Equal(t, want, convertValue(mapping))
+	})
+
+	t.Run("BranchingMap", func(t *testing.T) {
+		value := map[string]any{}
+		value["left"] = value
+		value["right"] = value
+
+		want := []attribute.KeyValue{
+			attribute.String("left", cycle),
+			attribute.String("right", cycle),
+		}
+		assert.ElementsMatch(t, want, convertValue(value).AsMap())
+	})
+
+	t.Run("BranchingSlice", func(t *testing.T) {
+		value := make([]any, 2)
+		value[0] = value
+		value[1] = value
+
+		want := attribute.SliceValue(attribute.StringValue(cycle), attribute.StringValue(cycle))
+		assert.Equal(t, want, convertValue(value))
+	})
+
+	t.Run("Struct", func(t *testing.T) {
+		type wrapper struct{ Value any }
+
+		mapping := map[string]any{}
+		value := wrapper{Value: mapping}
+		mapping["wrapper"] = value
+
+		assert.Equal(t, attribute.StringValue(cycle), convertValue(value))
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String("wrapper", cycle)),
+			convertValue(mapping),
+		)
+	})
+
+	t.Run("DeepPointer", func(t *testing.T) {
+		const depth = 128
+		values := make([]any, depth+1)
+		for i := range depth {
+			values[i] = &values[i+1]
+		}
+		values[depth] = &values[0]
+
+		assert.Equal(t, attribute.StringValue(cycle), convertValue(values[0]))
+	})
+
+	t.Run("DeepSlice", func(t *testing.T) {
+		const depth = 128
+		value := make([]any, 1)
+		current := value
+		for range depth {
+			next := make([]any, 1)
+			current[0] = next
+			current = next
+		}
+		current[0] = value
+
+		want := attribute.StringValue(cycle)
+		for range depth + 1 {
+			want = attribute.SliceValue(want)
+		}
+		assert.Equal(t, want, convertValue(value))
+	})
+
+	t.Run("PointerArray", func(t *testing.T) {
+		value := &[1]any{}
+		value[0] = value
+
+		assert.Equal(t, attribute.SliceValue(attribute.StringValue(cycle)), convertValue(value))
+	})
+
+	t.Run("NamedMap", func(t *testing.T) {
+		type namedMap map[string]any
+
+		value := namedMap{}
+		value["self"] = value
+
+		assert.Equal(t, attribute.MapValue(attribute.String("self", cycle)), convertValue(value))
+	})
+
+	t.Run("NamedSlice", func(t *testing.T) {
+		type namedSlice []any
+
+		value := make(namedSlice, 1)
+		value[0] = value
+
+		assert.Equal(t, attribute.SliceValue(attribute.StringValue(cycle)), convertValue(value))
+	})
+
+	t.Run("FormattedMapKey", func(t *testing.T) {
+		type key struct{ Value any }
+
+		cyclic := map[string]any{}
+		cyclic["self"] = cyclic
+		formattedKey := &key{Value: cyclic}
+		value := map[*key]int{formattedKey: 42}
+
+		assert.Equal(t, attribute.MapValue(attribute.Int64(cycle, 42)), convertValue(value))
+	})
+
+	t.Run("FormattedInterfaceMapKey", func(t *testing.T) {
+		type key struct{ Value any }
+
+		cyclic := map[string]any{}
+		cyclic["self"] = cyclic
+		formattedKey := &key{Value: cyclic}
+		value := map[any]int{formattedKey: 42}
+
+		assert.Equal(t, attribute.MapValue(attribute.Int64(cycle, 42)), convertValue(value))
+	})
+
+	t.Run("ReflectValue", func(t *testing.T) {
+		value := map[string]any{}
+		value["self"] = value
+
+		assert.Equal(t, attribute.StringValue(cycle), convertValue(reflect.ValueOf(value)))
+	})
+}
+
+func TestConvertValueCycleDetectionIsPathLocal(t *testing.T) {
+	sharedMap := map[string]any{"one": 1}
+	sharedSlice := []any{1}
+	value := []any{sharedMap, sharedMap, sharedSlice, sharedSlice}
+	want := attribute.SliceValue(
+		attribute.MapValue(attribute.Int64("one", 1)),
+		attribute.MapValue(attribute.Int64("one", 1)),
+		attribute.SliceValue(attribute.Int64Value(1)),
+		attribute.SliceValue(attribute.Int64Value(1)),
+	)
+
+	assert.Equal(t, want, convertValue(value))
+}
+
+func TestConvertValueDeepPointerPathIsLocal(t *testing.T) {
+	value := any(42)
+	for range 128 {
+		value = func(v any) *any { return &v }(value)
+	}
+	want := attribute.SliceValue(attribute.Int64Value(42), attribute.Int64Value(42))
+
+	assert.Equal(t, want, convertValue([]any{value, value}))
+}
+
+func TestConvertValueDeepContainerPathIsLocal(t *testing.T) {
+	value := any(42)
+	want := attribute.Int64Value(42)
+	for range 128 {
+		value = []any{value}
+		want = attribute.SliceValue(want)
+	}
+
+	assert.Equal(t, attribute.SliceValue(want, want), convertValue([]any{value, value}))
+}
+
+func TestConvertValueOverlappingSlices(t *testing.T) {
+	value := []any{42, nil}
+	value[1] = value[:1]
+	want := attribute.SliceValue(
+		attribute.Int64Value(42),
+		attribute.SliceValue(attribute.Int64Value(42)),
+	)
+
+	assert.Equal(t, want, convertValue(value))
+}
+
+func TestConvertValueEmptyOverlappingSlice(t *testing.T) {
+	value := []any{nil}
+	value[0] = value[:0]
+
+	assert.Equal(t, attribute.SliceValue(attribute.SliceValue()), convertValue(value))
+}
+
+func TestConvertValueOverlappingPointers(t *testing.T) {
+	value := &[2]any{42, nil}
+	value[1] = &value[0]
+	want := attribute.SliceValue(attribute.Int64Value(42), attribute.Int64Value(42))
+
+	assert.Equal(t, want, convertValue(value))
+}
+
+func TestConvertValueSharedPointer(t *testing.T) {
+	value := 42
+	want := attribute.SliceValue(attribute.Int64Value(42), attribute.Int64Value(42))
+
+	assert.Equal(t, want, convertValue([]any{&value, &value}))
+}
+
+func TestConvertValuePreservesSafeFormatting(t *testing.T) {
+	t.Run("NestedPointer", func(t *testing.T) {
+		type node struct{ Next *node }
+
+		value := &node{}
+		value.Next = value
+
+		assert.Equal(t, attribute.StringValue(fmt.Sprintf("%+v", *value)), convertValue(value))
+	})
+
+	t.Run("Stringer", func(t *testing.T) {
+		cyclic := map[string]any{}
+		cyclic["self"] = cyclic
+
+		assert.Equal(t, attribute.StringValue("formatted"), convertValue(testStringer{value: cyclic}))
+	})
+
+	t.Run("PromotedStringer", func(t *testing.T) {
+		cyclic := map[string]any{}
+		cyclic["self"] = cyclic
+		value := struct {
+			testStringer
+			Value any
+		}{Value: cyclic}
+
+		assert.Equal(t, attribute.StringValue("formatted"), convertValue(value))
+	})
+}
+
+func TestConvertValueNilCollections(t *testing.T) {
+	assert.Equal(t, attribute.SliceValue(), convertValue([]int(nil)))
+	assert.Equal(t, attribute.MapValue(), convertValue(map[string]int(nil)))
 }
