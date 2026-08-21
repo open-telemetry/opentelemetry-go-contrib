@@ -27,6 +27,14 @@ func (testStringer) String() string {
 	return "formatted"
 }
 
+type testError string
+
+func (e testError) Error() string {
+	return string(e)
+}
+
+type recursiveTestSlice []recursiveTestSlice
+
 func TestConvertValue(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
@@ -284,6 +292,167 @@ func TestConvertValueFloat32(t *testing.T) {
 	assert.InDelta(t, value.AsFloat64(), want.AsFloat64(), 0.0001)
 }
 
+func TestConvertValueTrackedAndPointerFastPaths(t *testing.T) {
+	tests := []struct {
+		name string
+		in   any
+		want attribute.Value
+	}{
+		{name: "Bool", in: true, want: attribute.BoolValue(true)},
+		{name: "String", in: "value", want: attribute.StringValue("value")},
+		{name: "Int", in: int(1), want: attribute.Int64Value(1)},
+		{name: "Int8", in: int8(2), want: attribute.Int64Value(2)},
+		{name: "Int16", in: int16(3), want: attribute.Int64Value(3)},
+		{name: "Int32", in: int32(4), want: attribute.Int64Value(4)},
+		{name: "Int64", in: int64(5), want: attribute.Int64Value(5)},
+		{name: "Uint", in: uint(6), want: attribute.Int64Value(6)},
+		{name: "Uint8", in: uint8(7), want: attribute.Int64Value(7)},
+		{name: "Uint16", in: uint16(8), want: attribute.Int64Value(8)},
+		{name: "Uint32", in: uint32(9), want: attribute.Int64Value(9)},
+		{name: "Uint64", in: uint64(10), want: attribute.Int64Value(10)},
+		{name: "Uintptr", in: uintptr(11), want: attribute.Int64Value(11)},
+		{name: "Float32", in: float32(1.5), want: attribute.Float64Value(1.5)},
+		{name: "Float64", in: float64(2.5), want: attribute.Float64Value(2.5)},
+		{name: "Duration", in: time.Second, want: attribute.Int64Value(1_000_000_000)},
+		{
+			name: "Complex64",
+			in:   complex64(complex(float32(1), float32(2))),
+			want: attribute.MapValue(attribute.Float64("r", 1), attribute.Float64("i", 2)),
+		},
+		{
+			name: "Complex128",
+			in:   complex(float64(3), float64(4)),
+			want: attribute.MapValue(attribute.Float64("r", 3), attribute.Float64("i", 4)),
+		},
+		{
+			name: "Time",
+			in:   time.Unix(1000, 1000),
+			want: attribute.Int64Value(time.Unix(1000, 1000).UnixNano()),
+		},
+		{name: "Bytes", in: []byte("hello"), want: attribute.ByteSliceValue([]byte("hello"))},
+		{name: "Error", in: testError("test error"), want: attribute.StringValue("test error")},
+		{
+			name: "AttributeValue",
+			in:   attribute.StringValue("value"),
+			want: attribute.StringValue("value"),
+		},
+	}
+
+	values := make([]any, 0, len(tests))
+	wants := make([]attribute.Value, 0, len(tests))
+	for _, tt := range tests {
+		values = append(values, tt.in)
+		wants = append(wants, tt.want)
+	}
+	assert.Equal(t, attribute.SliceValue(wants...), convertValue(values))
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pointer := reflect.New(reflect.TypeOf(tt.in))
+			pointer.Elem().Set(reflect.ValueOf(tt.in))
+			assert.Equal(t, tt.want, convertValue(pointer.Interface()))
+
+			pointerPointer := reflect.New(pointer.Type())
+			pointerPointer.Elem().Set(pointer)
+			assert.Equal(t, tt.want, convertValue(pointerPointer.Interface()))
+		})
+	}
+}
+
+func TestConvertValueTrackedReflectPaths(t *testing.T) {
+	value := 42
+	pointer := &value
+	pointerPointer := &pointer
+
+	want := attribute.SliceValue(
+		attribute.SliceValue(attribute.Int64Value(1)),
+		attribute.MapValue(attribute.Int64("one", 1)),
+		attribute.SliceValue(),
+		attribute.MapValue(),
+		attribute.Value{},
+		attribute.Int64Value(42),
+	)
+	assert.Equal(t, want, convertValue([]any{
+		[]int{1},
+		map[string]int{"one": 1},
+		[]any{},
+		map[string]any{},
+		(*int)(nil),
+		pointerPointer,
+	}))
+}
+
+func TestConvertValuePointerEdgeCases(t *testing.T) {
+	var nilInterface any
+	assert.Equal(t, attribute.Value{}, convertValue(&nilInterface))
+
+	var nilPointer *int
+	assert.Equal(t, attribute.Value{}, convertValue(&nilPointer))
+
+	nilInterfacePointer := &nilInterface
+	assert.Equal(t, attribute.Value{}, convertValue(&nilInterfacePointer))
+
+	var errorValue any = testError("test error")
+	errorPointer := &errorValue
+	assert.Equal(t, attribute.StringValue("test error"), convertValue(&errorPointer))
+
+	channel := make(chan int)
+	channelPointer := &channel
+	channelPointerPointer := &channelPointer
+	want := convertValue(channel)
+	assert.Equal(t, want, convertValue(channelPointerPointer))
+	assert.Equal(t, attribute.SliceValue(want), convertValue([]any{channelPointerPointer}))
+}
+
+func TestFormattingCycleBranches(t *testing.T) {
+	assert.False(t, formatHasCycle(reflect.Value{}, 0, nil))
+
+	var nilInterface any
+	assert.False(t, formatHasCycle(reflect.ValueOf(&nilInterface).Elem(), 0, nil))
+	assert.False(t, formatHasCycle(reflect.ValueOf([]any{}), 0, nil))
+	assert.False(t, formatHasCycle(reflect.ValueOf(map[string]any{}), 0, nil))
+
+	acyclicSlice := []any{42}
+	assert.False(t, formatHasCycle(reflect.ValueOf(acyclicSlice), 0, nil))
+	assert.False(t, formatHasCycle(reflect.ValueOf(&acyclicSlice), 0, nil))
+	assert.False(t, formatHasCycle(reflect.ValueOf(&acyclicSlice), 1, nil))
+
+	cyclicSlice := make([]any, 1)
+	cyclicSlice[0] = cyclicSlice
+	assert.True(t, formatHasCycle(reflect.ValueOf(cyclicSlice), 0, nil))
+	assert.True(t, formatHasCycle(reflect.ValueOf([1]any{cyclicSlice}), 0, nil))
+
+	acyclicMap := map[string]any{"value": 42}
+	assert.False(t, formatHasCycle(reflect.ValueOf(acyclicMap), 0, nil))
+	cyclicMap := map[string]any{}
+	cyclicMap["self"] = cyclicMap
+	assert.True(t, formatHasCycle(reflect.ValueOf(cyclicMap), 0, nil))
+
+	boundaryCycle := make([]any, 1)
+	current := boundaryCycle
+	for range inlineVisitCount - 1 {
+		next := make([]any, 1)
+		current[0] = next
+		current = next
+	}
+	current[0] = boundaryCycle
+	assert.True(t, formatHasCycle(reflect.ValueOf(boundaryCycle), 0, nil))
+
+	deepCycle := make([]any, 1)
+	current = deepCycle
+	for range inlineVisitCount + 1 {
+		next := make([]any, 1)
+		current[0] = next
+		current = next
+	}
+	current[0] = deepCycle
+	assert.True(t, formatHasCycle(reflect.ValueOf(deepCycle), 0, nil))
+
+	assert.False(t, formattingCycle(reflect.ValueOf(struct{ Value any }{Value: 42})))
+	assert.False(t, formattingCycle(reflect.ValueOf(new(int))))
+	assert.True(t, formattingMayCycle(reflect.TypeFor[recursiveTestSlice](), nil))
+}
+
 func TestConvertValueCycle(t *testing.T) {
 	const cycle = "<cycle>"
 
@@ -361,6 +530,15 @@ func TestConvertValueCycle(t *testing.T) {
 			attribute.MapValue(attribute.String("wrapper", cycle)),
 			convertValue(mapping),
 		)
+	})
+
+	t.Run("StructSlice", func(t *testing.T) {
+		type wrapper struct{ Value any }
+
+		slice := make([]any, 1)
+		slice[0] = slice
+
+		assert.Equal(t, attribute.StringValue(cycle), convertValue(wrapper{Value: slice}))
 	})
 
 	t.Run("DeepPointer", func(t *testing.T) {
