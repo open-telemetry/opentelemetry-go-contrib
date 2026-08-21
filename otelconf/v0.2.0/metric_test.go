@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"net"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -18,7 +17,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp"
@@ -1417,85 +1415,106 @@ func TestPrometheusReaderHostParsing(t *testing.T) {
 	}
 }
 
-// TestPrometheusServerErrorHandling verifies the Prometheus metrics HTTP
-// server goroutine reports genuine Serve errors and stays quiet on a normal
-// shutdown. http.ErrServerClosed is the sentinel returned by Serve on a clean
-// Shutdown/Close, so it must NOT be treated as an unexpected error, while any
-// other error (bind/accept/runtime) must be surfaced through otel.Handle.
-func TestPrometheusServerErrorHandling(t *testing.T) {
-	t.Run("clean shutdown is not reported as an error", func(t *testing.T) {
-		handled := make(chan error, 1)
-		prev := otel.GetErrorHandler()
-		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-			select {
-			case handled <- err:
-			default:
-			}
-		}))
-		t.Cleanup(func() { otel.SetErrorHandler(prev) })
+// swapReportErr routes handleServeErr's reporting into a channel for the
+// duration of a test. Production code reports through reportErr, so nothing
+// here has to touch the process-global otel error handler, which cannot be
+// restored once it has delegated.
+func swapReportErr(t *testing.T) <-chan error {
+	t.Helper()
 
-		host := "localhost"
-		port := 0
-		reader, err := prometheusReader(t.Context(), &Prometheus{
-			Host:                       &host,
-			Port:                       &port,
-			WithoutScopeInfo:           ptr(true),
-			WithoutTypeSuffix:          ptr(true),
-			WithoutUnits:               ptr(true),
-			WithResourceConstantLabels: &IncludeExclude{},
+	handled := make(chan error, 1)
+	prev := reportErr
+	reportErr = func(err error) {
+		select {
+		case handled <- err:
+		default:
+		}
+	}
+	t.Cleanup(func() { reportErr = prev })
+
+	return handled
+}
+
+// TestHandleServeErr covers the classification the Prometheus metrics HTTP
+// server goroutine applies to whatever Serve returns. http.ErrServerClosed is
+// the sentinel for a clean Shutdown or Close, so it must stay quiet, while any
+// other error has to be surfaced.
+func TestHandleServeErr(t *testing.T) {
+	serveErr := errors.New("use of closed network connection")
+
+	tests := []struct {
+		name       string
+		err        error
+		wantReport bool
+	}{
+		{
+			name: "nil is not reported",
+		},
+		{
+			name: "clean shutdown sentinel is not reported",
+			err:  http.ErrServerClosed,
+		},
+		{
+			name: "wrapped clean shutdown sentinel is not reported",
+			err:  fmt.Errorf("serve: %w", http.ErrServerClosed),
+		},
+		{
+			name:       "a genuine serve error is reported",
+			err:        serveErr,
+			wantReport: true,
+		},
+		{
+			name:       "a wrapped genuine serve error is reported",
+			err:        fmt.Errorf("accept tcp: %w", serveErr),
+			wantReport: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handled := swapReportErr(t)
+
+			handleServeErr(tt.err)
+
+			select {
+			case got := <-handled:
+				require.True(t, tt.wantReport, "unexpected report: %v", got)
+				assert.ErrorContains(t, got, "the Prometheus HTTP server exited unexpectedly")
+				assert.ErrorIs(t, got, tt.err)
+				assert.NotErrorIs(t, got, http.ErrServerClosed)
+			default:
+				assert.False(t, tt.wantReport, "expected an error to be reported, but none was")
+			}
 		})
-		require.NoError(t, err)
-		require.NotNil(t, reader)
+	}
+}
 
-		// A normal Shutdown causes Serve to return http.ErrServerClosed. That
-		// is the clean-shutdown sentinel and must not be reported.
-		//nolint:usetesting // required to avoid getting a canceled context at shutdown.
-		require.NoError(t, reader.Shutdown(context.Background()))
+// TestPrometheusServerErrorHandling drives the real reader so the goroutine
+// wiring is covered too, not just the classification above. A normal Shutdown
+// makes Serve return http.ErrServerClosed, which must stay quiet.
+func TestPrometheusServerErrorHandling(t *testing.T) {
+	handled := swapReportErr(t)
 
-		select {
-		case got := <-handled:
-			t.Fatalf("clean shutdown was reported as an error: %v", got)
-		case <-time.After(200 * time.Millisecond):
-			// No error handled, as expected.
-		}
+	host := "localhost"
+	port := 0
+	reader, err := prometheusReader(t.Context(), &Prometheus{
+		Host:                       &host,
+		Port:                       &port,
+		WithoutScopeInfo:           ptr(true),
+		WithoutTypeSuffix:          ptr(true),
+		WithoutUnits:               ptr(true),
+		WithResourceConstantLabels: &IncludeExclude{},
 	})
+	require.NoError(t, err)
+	require.NotNil(t, reader)
 
-	t.Run("real serve error is reported", func(t *testing.T) {
-		// Reproduce the exact server goroutine used by prometheusReader and
-		// force a genuine (non-ErrServerClosed) Serve error by closing the
-		// listener out from under the running server. The error must be
-		// surfaced via otel.Handle, not swallowed.
-		handled := make(chan error, 1)
-		prev := otel.GetErrorHandler()
-		otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
-			select {
-			case handled <- err:
-			default:
-			}
-		}))
-		t.Cleanup(func() { otel.SetErrorHandler(prev) })
+	//nolint:usetesting // required to avoid getting a canceled context at shutdown.
+	require.NoError(t, reader.Shutdown(context.Background()))
 
-		var lc net.ListenConfig
-		lis, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
-		require.NoError(t, err)
-
-		server := http.Server{Handler: http.NewServeMux()}
-		go func() {
-			if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
-			}
-		}()
-
-		// Closing the listener makes the blocked Accept in Serve return a real
-		// error that is not http.ErrServerClosed.
-		require.NoError(t, lis.Close())
-
-		select {
-		case got := <-handled:
-			assert.ErrorContains(t, got, "the Prometheus HTTP server exited unexpectedly")
-			assert.NotErrorIs(t, got, http.ErrServerClosed)
-		case <-time.After(2 * time.Second):
-			t.Fatal("expected a real serve error to be reported, but none was")
-		}
-	})
+	select {
+	case got := <-handled:
+		t.Fatalf("clean shutdown was reported as an error: %v", got)
+	case <-time.After(200 * time.Millisecond):
+		// No error reported, as expected.
+	}
 }

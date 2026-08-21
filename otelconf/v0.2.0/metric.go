@@ -366,12 +366,27 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	server.Addr = lis.Addr().String()
 
 	go func() {
-		if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
-		}
+		handleServeErr(server.Serve(lis))
 	}()
 
 	return readerWithServer{reader, &server}, nil
+}
+
+// reportErr reports an error that has no caller to return it to.
+//
+// It is a variable so tests can observe what handleServeErr classifies
+// without swapping the process-global otel error handler, which cannot be
+// restored once it has delegated.
+var reportErr = otel.Handle
+
+// handleServeErr reports the exit of the Prometheus metrics HTTP server,
+// unless it is the sentinel Serve returns after a clean Shutdown or Close.
+func handleServeErr(err error) {
+	if err == nil || errors.Is(err, http.ErrServerClosed) {
+		return
+	}
+
+	reportErr(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
 }
 
 type readerWithServer struct {
