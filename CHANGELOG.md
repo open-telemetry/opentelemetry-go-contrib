@@ -16,6 +16,11 @@ The next release will require at least [Go 1.26].
 - Add support for the `aws.ec2` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9139)
 - Support testing of [Go 1.27]. (#9524)
 
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`.
+  Use `github.com/labstack/echo-opentelemetry` instead. (#9136)
+
 ### Fixed
 
 - Report `ot-baggage-*` extraction errors from `go.opentelemetry.io/contrib/propagators/ot` to `otel.Handle` instead of silently discarding them, while still attaching the successfully parsed baggage members to the context. (#9395)
