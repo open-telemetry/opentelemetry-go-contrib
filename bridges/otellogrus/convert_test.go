@@ -395,6 +395,14 @@ func TestConvertValuePointerEdgeCases(t *testing.T) {
 	var errorValue any = testError("test error")
 	errorPointer := &errorValue
 	assert.Equal(t, attribute.StringValue("test error"), convertValue(&errorPointer))
+	concreteError := testError("concrete error")
+	concreteErrorPointer := &concreteError
+	concreteErrorPointerPointer := &concreteErrorPointer
+	assert.Equal(
+		t,
+		attribute.StringValue("concrete error"),
+		convertValue(&concreteErrorPointerPointer),
+	)
 
 	channel := make(chan int)
 	channelPointer := &channel
