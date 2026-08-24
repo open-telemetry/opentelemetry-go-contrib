@@ -227,6 +227,7 @@ func TestClientDisconnect(t *testing.T) {
 	defer ts.Close()
 
 	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/hello", http.NoBody)
 	require.NoError(t, err)
 
