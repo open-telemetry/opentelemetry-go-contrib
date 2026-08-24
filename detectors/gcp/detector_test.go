@@ -363,7 +363,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudProviderGCP,
 				semconv.CloudPlatformGCPBareMetalSolution,
 				semconv.CloudAccountID("my-project"),
-				semconv.HostName("1472385723456792345"),
+				semconv.HostID("1472385723456792345"),
 				semconv.CloudRegion("us-central1"),
 			),
 		},
