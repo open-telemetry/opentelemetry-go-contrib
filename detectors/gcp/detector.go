@@ -21,6 +21,8 @@ import (
 // * Google Kubernetes Engine (GKE).
 // * Google App Engine (GAE).
 // * Cloud Run.
+// * Cloud Run jobs.
+// * Cloud Run worker pools.
 // * Cloud Functions.
 // * Bare Metal Solution (BMS).
 func NewDetector() resource.Detector {
@@ -32,7 +34,7 @@ type detector struct {
 }
 
 // Detect detects associated resources when running on GCE, GKE, GAE,
-// Cloud Run, Cloud Functions, and Bare Metal Solution.
+// Cloud Run, Cloud Run jobs, Cloud Run worker pools, Cloud Functions, and Bare Metal Solution.
 func (d *detector) Detect(context.Context) (*resource.Resource, error) {
 	if _, err := d.detector.BareMetalSolutionProjectID(); err == nil && d.detector.CloudPlatform() == gcp.BareMetalSolution {
 		b := &resourceBuilder{}
