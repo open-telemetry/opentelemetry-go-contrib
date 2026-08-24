@@ -34,8 +34,7 @@ type detector struct {
 // Detect detects associated resources when running on GCE, GKE, GAE,
 // Cloud Run, Cloud Functions, and Bare Metal Solution.
 func (d *detector) Detect(context.Context) (*resource.Resource, error) {
-	cp := d.detector.CloudPlatform()
-	if cp == gcp.BareMetalSolution {
+	if _, err := d.detector.BareMetalSolutionProjectID(); err == nil && d.detector.CloudPlatform() == gcp.BareMetalSolution {
 		b := &resourceBuilder{}
 		b.attrs = append(b.attrs, semconv.CloudProviderGCP, semconv.CloudPlatformGCPBareMetalSolution)
 		b.add(semconv.CloudAccountIDKey, d.detector.BareMetalSolutionProjectID)
@@ -51,7 +50,7 @@ func (d *detector) Detect(context.Context) (*resource.Resource, error) {
 	b.attrs = append(b.attrs, semconv.CloudProviderGCP)
 	b.add(semconv.CloudAccountIDKey, d.detector.ProjectID)
 
-	switch cp {
+	switch d.detector.CloudPlatform() {
 	case gcp.GKE:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPKubernetesEngine)
 		b.addZoneOrRegion(d.detector.GKEAvailabilityZoneOrRegion)
