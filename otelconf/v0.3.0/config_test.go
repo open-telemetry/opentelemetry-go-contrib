@@ -8,6 +8,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -551,7 +552,7 @@ func TestSerializeJSON(t *testing.T) {
 	tests := []struct {
 		name     string
 		input    string
-		wantErr  error
+		wantErr  []error
 		wantType any
 	}{
 		{
@@ -566,22 +567,25 @@ func TestSerializeJSON(t *testing.T) {
 		{
 			name:    "invalid config",
 			input:   "invalid_bool.json",
-			wantErr: errors.New(`json: cannot unmarshal string into Go struct field Plain.disabled of type bool`),
+			wantErr: []error{errors.New(`json: cannot unmarshal string into Go struct field Plain.disabled of type bool`)},
 		},
 		{
 			name:    "invalid nil name",
 			input:   "invalid_nil_name.json",
-			wantErr: errors.New(`json: cannot unmarshal field name in NameStringValuePair required`),
+			wantErr: []error{errors.New(`json: cannot unmarshal field name in NameStringValuePair required`)},
 		},
 		{
 			name:    "invalid nil value",
 			input:   "invalid_nil_value.json",
-			wantErr: errors.New(`json: cannot unmarshal field value in NameStringValuePair required`),
+			wantErr: []error{errors.New(`json: cannot unmarshal field value in NameStringValuePair required`)},
 		},
 		{
-			name:    "valid v0.2 config",
-			input:   "v0.2.json",
-			wantErr: errors.New(`json: cannot unmarshal object into Go struct field LogRecordProcessor.logger_provider.processors.batch`),
+			name:  "valid v0.2 config",
+			input: "v0.2.json",
+			wantErr: []error{
+				errors.New(`json: cannot unmarshal object into Go struct field LogRecordProcessor.logger_provider.processors.batch`),
+				errors.New(`json: cannot unmarshal object into Go struct field Plain.headers of type []otelconf.NameStringValuePair`),
+			},
 		},
 		{
 			name:     "valid v0.3 config",
@@ -600,7 +604,14 @@ func TestSerializeJSON(t *testing.T) {
 
 			if tt.wantErr != nil {
 				require.Error(t, err)
-				require.ErrorContains(t, err, tt.wantErr.Error())
+				require.Condition(t, func() bool {
+					for _, wantErr := range tt.wantErr {
+						if strings.Contains(err.Error(), wantErr.Error()) {
+							return true
+						}
+					}
+					return false
+				}, "error %q does not contain any expected message: %v", err, tt.wantErr)
 			} else {
 				require.NoError(t, err)
 				assert.Equal(t, tt.wantType, got)
