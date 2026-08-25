@@ -7,11 +7,11 @@ import (
 	"context"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	instance "github.com/scaleway/scaleway-sdk-go/api/instance/v1"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
@@ -53,30 +53,39 @@ const metadataSample = `{
   "zone": "nl-ams-1"
 }`
 
-// serveMetadata points the detector at a test server running handler. The
-// server is closed and the client factory restored via t.Cleanup.
-func serveMetadata(t *testing.T, handler http.HandlerFunc) {
+// newTestDetector returns a detector querying endpoints instead of the real
+// link-local metadata service.
+func newTestDetector(endpoints []string, opts ...Option) *ResourceDetector {
+	d := NewResourceDetector(opts...)
+	d.endpoints = endpoints
+	return d
+}
+
+// serveMetadata starts a test server running handler and returns a detector
+// pointed at it. The server is closed via t.Cleanup.
+func serveMetadata(t *testing.T, handler http.HandlerFunc, opts ...Option) *ResourceDetector {
+	t.Helper()
+	return newTestDetector([]string{newServer(t, handler)}, opts...)
+}
+
+// newServer starts a test server running handler and returns its URL. The
+// server is closed via t.Cleanup.
+func newServer(t *testing.T, handler http.HandlerFunc) string {
 	t.Helper()
 
 	srv := httptest.NewServer(handler)
 	t.Cleanup(srv.Close)
-
-	useMetadataURL(t, srv.URL)
+	return srv.URL
 }
 
-// useMetadataURL makes the detector query url instead of the real link-local
-// metadata service.
-func useMetadataURL(t *testing.T, url string) {
+// unreachableURL returns the URL of a server that has already been closed.
+func unreachableURL(t *testing.T) string {
 	t.Helper()
 
-	orig := newMetadataAPI
-	t.Cleanup(func() { newMetadataAPI = orig })
-
-	newMetadataAPI = func() *instance.MetadataAPI {
-		api := instance.NewMetadataAPI()
-		api.MetadataURL = &url
-		return api
-	}
+	srv := httptest.NewServer(http.NotFoundHandler())
+	url := srv.URL
+	srv.Close()
+	return url
 }
 
 // metadataHandler serves body from the metadata endpoint of the Scaleway API.
@@ -92,9 +101,9 @@ func metadataHandler(body string) http.HandlerFunc {
 }
 
 func TestDetect_OK(t *testing.T) {
-	serveMetadata(t, metadataHandler(metadataSample))
+	d := serveMetadata(t, metadataHandler(metadataSample))
 
-	res, err := NewResourceDetector().Detect(t.Context())
+	res, err := d.Detect(t.Context())
 	require.NoError(t, err)
 
 	expected := resource.NewWithAttributes(
@@ -113,44 +122,46 @@ func TestDetect_OK(t *testing.T) {
 	assert.Equal(t, expected, res)
 }
 
-func TestDetect_NotOnScaleway(t *testing.T) {
-	// Nothing but 404s: the link-local address was answered by something that
-	// is not the metadata service.
-	serveMetadata(t, http.NotFound)
+// Nothing answers at the addresses of the metadata service: the process is not
+// running on a Scaleway Instance.
+func TestDetect_ConnectionRefused(t *testing.T) {
+	d := newTestDetector([]string{unreachableURL(t)})
 
-	res, err := NewResourceDetector().Detect(t.Context())
+	res, err := d.Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
 }
 
-func TestDetect_ConnectionRefused(t *testing.T) {
-	srv := httptest.NewServer(http.NotFoundHandler())
-	url := srv.URL
-	srv.Close()
+// Something answered at the address of the metadata service but did not serve
+// the document. Reporting that as an absent instance would hide it.
+func TestDetect_ServerError(t *testing.T) {
+	for _, status := range []int{http.StatusNotFound, http.StatusInternalServerError, http.StatusForbidden} {
+		t.Run(http.StatusText(status), func(t *testing.T) {
+			d := serveMetadata(t, func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(status)
+			})
 
-	useMetadataURL(t, url)
-
-	res, err := NewResourceDetector().Detect(t.Context())
-	require.NoError(t, err)
-	assert.Equal(t, resource.Empty(), res)
+			res, err := d.Detect(t.Context())
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), strconv.Itoa(status))
+			assert.Nil(t, res)
+		})
+	}
 }
 
 func TestDetect_MalformedJSON(t *testing.T) {
-	// The client reports a failure without the status that caused it, so a
-	// body it cannot decode is indistinguishable from an absent metadata
-	// service and is reported the same way.
-	serveMetadata(t, metadataHandler("not json"))
+	d := serveMetadata(t, metadataHandler("not json"))
 
-	res, err := NewResourceDetector().Detect(t.Context())
-	require.NoError(t, err)
-	assert.Equal(t, resource.Empty(), res)
+	res, err := d.Detect(t.Context())
+	require.Error(t, err)
+	assert.Nil(t, res)
 }
 
 func TestDetect_PartialFailure(t *testing.T) {
 	// An instance is reported, but without any of the detected fields.
-	serveMetadata(t, metadataHandler(`{}`))
+	d := serveMetadata(t, metadataHandler(`{}`))
 
-	res, err := NewResourceDetector().Detect(t.Context())
+	res, err := d.Detect(t.Context())
 	require.Error(t, err)
 	assert.ErrorIs(t, err, resource.ErrPartialResource)
 
@@ -181,28 +192,101 @@ func TestDetect_PartialFailure(t *testing.T) {
 }
 
 func TestDetect_ContextCanceled(t *testing.T) {
-	// The handler blocks until the test is done, so only the canceled context
-	// can end the wait.
-	release := make(chan struct{})
-	t.Cleanup(func() { close(release) })
-
-	serveMetadata(t, func(http.ResponseWriter, *http.Request) {
-		<-release
+	// The handler never answers, so only the canceled context can end the wait.
+	d := serveMetadata(t, func(_ http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
 	})
 
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	res, err := NewResourceDetector().Detect(ctx)
+	res, err := d.Detect(ctx)
 	require.ErrorIs(t, err, context.Canceled)
 	assert.Nil(t, res)
 }
 
-func TestDetect_WithAttributeFilter(t *testing.T) {
-	serveMetadata(t, metadataHandler(metadataSample))
+// The request itself is canceled, not only the wait for it: it must not be left
+// running after Detect returns.
+func TestDetect_CancelsInFlightRequest(t *testing.T) {
+	aborted := make(chan struct{})
+	d := serveMetadata(t, func(_ http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+		close(aborted)
+	})
 
+	ctx, cancel := context.WithCancel(t.Context())
+	go func() {
+		<-time.After(10 * time.Millisecond)
+		cancel()
+	}()
+
+	res, err := d.Detect(ctx)
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Nil(t, res)
+
+	select {
+	case <-aborted:
+	case <-time.After(time.Second):
+		t.Fatal("the metadata request outlived Detect")
+	}
+}
+
+// The first address of the metadata service is not always the one that answers.
+func TestDetect_SecondEndpoint(t *testing.T) {
+	d := newTestDetector([]string{
+		unreachableURL(t),
+		newServer(t, metadataHandler(metadataSample)),
+	})
+
+	res, err := d.Detect(t.Context())
+	require.NoError(t, err)
+
+	val, ok := res.Set().Value(semconv.HostIDKey)
+	require.True(t, ok)
+	assert.Equal(t, attribute.StringValue("daa2ea5a-0ee6-4cdc-9f1a-e0d1cb4e6d86"), val)
+}
+
+// One deadline bounds the whole detection: it must not be restarted for every
+// address of the metadata service.
+func TestDetect_OneDeadlineAcrossEndpoints(t *testing.T) {
+	// Block until the client gives up. Blocking on anything the test closes
+	// would deadlock: the server is closed before any cleanup registered here.
+	blocking := func(_ http.ResponseWriter, r *http.Request) { <-r.Context().Done() }
+	d := newTestDetector([]string{
+		newServer(t, blocking),
+		newServer(t, blocking),
+	})
+
+	const timeout = 100 * time.Millisecond
+	ctx, cancel := context.WithTimeout(t.Context(), timeout)
+	defer cancel()
+
+	start := time.Now()
+	_, err := d.Detect(ctx)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+
+	// Restarting the deadline for the second address would take at least twice
+	// as long.
+	assert.Less(t, time.Since(start), 2*timeout)
+}
+
+// The metadata service is on a link-local address that the process must reach
+// directly. A proxy configured for outbound traffic must not be used for it.
+//
+// The configuration is asserted rather than the behavior: a test server listens
+// on a loopback address, which [http.ProxyFromEnvironment] never proxies, so a
+// proxied request cannot be provoked here.
+func TestClientBypassesProxy(t *testing.T) {
+	transport, ok := NewResourceDetector().client.Transport.(*http.Transport)
+	require.True(t, ok)
+	assert.Nil(t, transport.Proxy)
+}
+
+func TestDetect_WithAttributeFilter(t *testing.T) {
 	filter := attribute.NewDenyKeysFilter(semconv.CloudPlatformKey, semconv.HostImageNameKey)
-	res, err := NewResourceDetector(WithAttributeFilter(filter)).Detect(t.Context())
+	d := serveMetadata(t, metadataHandler(metadataSample), WithAttributeFilter(filter))
+
+	res, err := d.Detect(t.Context())
 	require.NoError(t, err)
 
 	for _, k := range []attribute.Key{semconv.CloudPlatformKey, semconv.HostImageNameKey} {
@@ -223,43 +307,16 @@ func TestDetect_WithAttributeFilter(t *testing.T) {
 	}
 }
 
-// useUnreachableMetadataURLs points the detector at an address nothing answers,
-// keeping the real client factory.
-func useUnreachableMetadataURLs(t *testing.T) {
-	t.Helper()
-
-	srv := httptest.NewServer(http.NotFoundHandler())
-	url := srv.URL
-	srv.Close()
-
-	orig := metadataURLs
-	t.Cleanup(func() { metadataURLs = orig })
-	metadataURLs = []string{url}
-}
-
-func TestDetect_UnreachableMetadataService(t *testing.T) {
-	// The client discovers the address of the metadata service by probing it
-	// with the default HTTP client of the process, and panics when nothing
-	// answers. Detect must set the address itself to never reach that code.
-	useUnreachableMetadataURLs(t)
-
-	require.NotPanics(t, func() {
-		res, err := NewResourceDetector().Detect(t.Context())
-		require.NoError(t, err)
-		assert.Equal(t, resource.Empty(), res)
-	})
-}
-
+// The detector owns the client it queries the metadata service with. It must
+// not disturb the default HTTP client of the process.
 func TestDetect_LeavesDefaultHTTPClientAlone(t *testing.T) {
-	// Discovering the address of the metadata service sets a timeout on the
-	// default HTTP client of the process. Detect must not disturb it.
-	useUnreachableMetadataURLs(t)
-
 	orig := http.DefaultClient.Timeout
 	t.Cleanup(func() { http.DefaultClient.Timeout = orig })
 	http.DefaultClient.Timeout = 42 * time.Second
 
-	_, err := NewResourceDetector().Detect(t.Context())
+	d := serveMetadata(t, metadataHandler(metadataSample))
+
+	_, err := d.Detect(t.Context())
 	require.NoError(t, err)
 
 	assert.Equal(t, 42*time.Second, http.DefaultClient.Timeout)

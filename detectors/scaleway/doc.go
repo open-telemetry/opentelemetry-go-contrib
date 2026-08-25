@@ -23,10 +23,10 @@ The cloud.region value is derived from the zone reported by the metadata
 service by dropping its trailing segment: the zone "nl-ams-1" is reported as the
 region "nl-ams".
 
-The metadata service is queried through the Scaleway SDK, which reports a
-failure without the HTTP status that caused it. A metadata service that answers
-with an error is therefore indistinguishable from one that is not there at all,
-and both are reported as not running on Scaleway.
+The metadata service is queried over a link-local address, directly and never
+through an HTTP proxy configured for the process. Only a metadata service that
+cannot be reached at all is reported as not running on Scaleway; one that
+answers without serving the metadata document is reported as an error.
 
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
 [host]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/host.md

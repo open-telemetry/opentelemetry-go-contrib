@@ -5,30 +5,52 @@ package scaleway
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"strings"
 	"time"
-
-	instance "github.com/scaleway/scaleway-sdk-go/api/instance/v1"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
-// defaultTimeout bounds the wait for the metadata service when the context
-// passed to [ResourceDetector.Detect] carries no deadline.
-const defaultTimeout = 2 * time.Second
+const (
+	// metadataPath is the path the metadata service serves the metadata
+	// document of the instance from.
+	metadataPath = "/conf?format=json"
 
-// metadataURLs are the addresses of the Scaleway metadata service, tried in
-// order. They are set explicitly because the address the client discovers on
-// its own is only resolved by probing both of them with the default HTTP
-// client of the process, which the detector must not disturb.
-var metadataURLs = []string{"http://169.254.42.42", "http://[fd00:42::42]"}
+	// maxBodySize bounds the response body the metadata service is trusted to
+	// return.
+	maxBodySize = 1 << 20
 
-// newMetadataAPI is the factory for the Scaleway metadata client.
-// It is a package-level variable so tests can substitute a fake server.
-var newMetadataAPI = instance.NewMetadataAPI
+	// defaultTimeout bounds the wait for the metadata service when the context
+	// passed to [ResourceDetector.Detect] carries no deadline.
+	defaultTimeout = 2 * time.Second
+)
+
+// defaultEndpoints are the addresses of the Scaleway metadata service, tried in
+// order.
+var defaultEndpoints = []string{"http://169.254.42.42", "http://[fd00:42::42]"}
+
+// metadataResponse is the part of the metadata document of an instance this
+// detector reads.
+type metadataResponse struct {
+	ID             string `json:"id"`
+	Name           string `json:"name"`
+	Organization   string `json:"organization"`
+	CommercialType string `json:"commercial_type"`
+	Image          struct {
+		ID   string `json:"id"`
+		Name string `json:"name"`
+	} `json:"image"`
+	Location struct {
+		ZoneID string `json:"zone_id"`
+	} `json:"location"`
+}
 
 // Scaleway has no cloud.provider or cloud.platform constant in the semantic
 // conventions package yet. Both values were added to the semantic conventions
@@ -65,7 +87,9 @@ func WithAttributeFilter(filter attribute.Filter) Option {
 
 // ResourceDetector collects resource information of Scaleway Instances.
 type ResourceDetector struct {
-	cfg config
+	cfg       config
+	endpoints []string
+	client    *http.Client
 }
 
 // NewResourceDetector returns a [resource.Detector] that detects resource
@@ -75,89 +99,100 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
-	return &ResourceDetector{cfg: cfg}
+	return &ResourceDetector{
+		cfg:       cfg,
+		endpoints: defaultEndpoints,
+		// Use a transport with Proxy explicitly disabled. The metadata service
+		// is reached over a link-local address that must never be contacted
+		// through an HTTP(S) proxy: a proxy set for outbound traffic would
+		// answer for it and make detection depend on that proxy.
+		client: &http.Client{Transport: &http.Transport{Proxy: nil}},
+	}
 }
 
-// getMetadata queries the metadata service. The client does not accept a
-// [context.Context], so the request runs in its own goroutine and ctx only
-// cancels the wait. The client also offers no way to bound its own request, so
-// that goroutine can outlive this call.
-func getMetadata(ctx context.Context, api *instance.MetadataAPI) (*instance.Metadata, error) {
-	if _, ok := ctx.Deadline(); !ok {
-		var cancel context.CancelFunc
-		ctx, cancel = context.WithTimeout(ctx, defaultTimeout)
-		defer cancel()
+// fetch requests the metadata document from the metadata service at endpoint.
+// The returned boolean reports whether the metadata service answered: it is
+// false only when nothing responded at that address.
+func (d *ResourceDetector) fetch(ctx context.Context, endpoint string) (*metadataResponse, bool, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint+metadataPath, http.NoBody)
+	if err != nil {
+		return nil, false, err
 	}
 
-	type result struct {
-		md  *instance.Metadata
-		err error
+	resp, err := d.client.Do(req)
+	if err != nil {
+		return nil, false, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, true, fmt.Errorf("metadata request returned status %d", resp.StatusCode)
 	}
 
-	// Buffered so the goroutine never blocks once ctx is done.
-	ch := make(chan result, 1)
-	go func() {
-		md, err := api.GetMetadata()
-		ch <- result{md: md, err: err}
-	}()
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case r := <-ch:
-		return r.md, r.err
+	var md metadataResponse
+	if err := json.NewDecoder(io.LimitReader(resp.Body, maxBodySize)).Decode(&md); err != nil {
+		return nil, true, fmt.Errorf("decode metadata response: %w", err)
 	}
+	return &md, true, nil
 }
 
 // metadata returns the metadata of the instance the process is running on. The
-// address of the metadata service is set before every request: left unset, the
-// client discovers it by probing the metadata addresses with the default HTTP
-// client of the process, which both changes that client's timeout and panics
-// when nothing answers.
-func (*ResourceDetector) metadata(ctx context.Context) (*instance.Metadata, error) {
-	api := newMetadataAPI()
-
-	// A client that already knows where to look is used as it is.
-	if api.MetadataURL != nil {
-		return getMetadata(ctx, api)
-	}
-
-	var firstErr error
-	for _, url := range metadataURLs {
-		api.MetadataURL = &url
-
-		md, err := getMetadata(ctx, api)
+// addresses of the metadata service are tried in order, all under ctx. The
+// returned boolean reports whether the metadata service answered at any of
+// them: it is false only when the process does not appear to run on a Scaleway
+// Instance.
+func (d *ResourceDetector) metadata(ctx context.Context) (*metadataResponse, bool, error) {
+	var (
+		errs     []error
+		answered bool
+	)
+	for _, endpoint := range d.endpoints {
+		md, ok, err := d.fetch(ctx, endpoint)
+		answered = answered || ok
 		if err == nil {
-			return md, nil
+			return md, true, nil
 		}
-		if firstErr == nil {
-			firstErr = err
-		}
-		if ctx.Err() != nil {
+		errs = append(errs, err)
+		// An address that answered is the address of the metadata service.
+		// Trying the other one would not tell us anything new.
+		if ok || ctx.Err() != nil {
 			break
 		}
 	}
-	return nil, firstErr
+	return nil, answered, errors.Join(errs...)
 }
 
 // Detect detects resource attributes of the Scaleway Instance the process is
 // running on. It returns an empty resource and no error when the metadata
-// service does not report an instance, which is also the case when the process
-// is not running on Scaleway. If the instance is reported but some attributes
-// are missing from it, a partial resource is returned together with
+// service cannot be reached, which is the case when the process is not running
+// on Scaleway. A metadata service that answers without serving the document is
+// reported as an error. If the instance is reported but some attributes are
+// missing from it, a partial resource is returned together with
 // [resource.ErrPartialResource].
 //
-// The deadline of ctx bounds the request. Without one the request is bounded by
+// The deadline of ctx bounds the whole detection. Without one it is bounded by
 // an internal default.
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	md, err := d.metadata(ctx)
-	if err != nil || md == nil {
-		// Only the caller canceling is an error. Every other failure means the
-		// metadata service did not report an instance, and the client does not
-		// report the status that would tell why.
+	// The caller's context is kept so that the internal bound expiring is not
+	// mistaken for the caller giving up.
+	fetchCtx := ctx
+	if _, ok := ctx.Deadline(); !ok {
+		var cancel context.CancelFunc
+		fetchCtx, cancel = context.WithTimeout(ctx, defaultTimeout)
+		defer cancel()
+	}
+
+	md, answered, err := d.metadata(fetchCtx)
+	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
+			// The caller gave up.
 			return nil, ctxErr
 		}
+		if answered {
+			// The metadata service is there but did not serve the document.
+			return nil, err
+		}
+		// Nothing answered at any address: not running on Scaleway.
 		return resource.Empty(), nil
 	}
 
