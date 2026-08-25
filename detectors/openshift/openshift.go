@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -108,7 +109,7 @@ func (f optionFunc) apply(c *config) { f(c) }
 // WithAddress sets the base URL of the OpenShift API server, for example
 // "https://api.example.com:6443". By default it is derived from the
 // KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT environment variables
-// that Kubernetes sets in every pod.
+// that Kubernetes sets in every pod. A trailing slash is ignored.
 func WithAddress(address string) Option {
 	return optionFunc(func(c *config) { c.address = address })
 }
@@ -170,14 +171,18 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 // boolean is false when the process does not appear to run inside a cluster.
 func (d *ResourceDetector) address() (string, bool) {
 	if d.cfg.address != "" {
-		return d.cfg.address, true
+		// A trailing slash would double the separator: the request paths
+		// appended to this value already start with one.
+		return strings.TrimRight(d.cfg.address, "/"), true
 	}
 
 	host, port := os.Getenv(hostEnvVar), os.Getenv(portEnvVar)
 	if host == "" || port == "" {
 		return "", false
 	}
-	return "https://" + host + ":" + port, true
+	// Kubernetes sets the host to a bare IPv6 address on IPv6 clusters.
+	// JoinHostPort adds the brackets a URL authority requires.
+	return "https://" + net.JoinHostPort(host, port), true
 }
 
 // token returns the bearer token to authenticate with. The returned boolean is

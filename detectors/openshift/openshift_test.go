@@ -412,6 +412,31 @@ func TestAddressFromEnv(t *testing.T) {
 	assert.Equal(t, "https://10.0.0.1:443", address)
 }
 
+// Kubernetes sets the host to a bare IPv6 address on IPv6 clusters. A URL
+// authority needs it bracketed.
+func TestAddressFromEnvIPv6(t *testing.T) {
+	t.Setenv(hostEnvVar, "fd00:10:96::1")
+	t.Setenv(portEnvVar, "443")
+
+	address, ok := NewResourceDetector().address()
+	require.True(t, ok)
+	assert.Equal(t, "https://[fd00:10:96::1]:443", address)
+}
+
+// The request paths appended to the address already start with a separator, so
+// a trailing slash on the configured address must not double it.
+func TestDetectTrimsTrailingSlashFromAddress(t *testing.T) {
+	var gotPath string
+	url := newFakeServerFunc(t, func(w http.ResponseWriter, r *http.Request) {
+		gotPath = r.URL.Path
+		_ = json.NewEncoder(w).Encode(awsInfra())
+	})
+
+	_, err := newTestDetector(url + "/").Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, infrastructurePath, gotPath)
+}
+
 func TestDetectWithAttributeFilter(t *testing.T) {
 	url := newFakeServer(t, awsInfra())
 
