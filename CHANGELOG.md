@@ -8,16 +8,29 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release is the last to support [Go 1.25].
+The next release will require at least [Go 1.26].
+
 ### Added
 
 - Add support for the `aws.ec2` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9139)
+- Support testing of [Go 1.27]. (#9524)
+- Add `S3AttributeBuilder` to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` that sets S3-specific span attributes following the OpenTelemetry S3 semantic conventions. (#9292)
 - Add `go.opentelemetry.io/contrib/detectors/openstack/nova`, a new resource detector for OpenStack Nova compute instances, ported from `processor/resourcedetectionprocessor/internal/openstack/nova` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `host.id`, `host.name`, and `host.type`, and optionally emits `openstack.nova.meta.<key>` attributes for the instance metadata keys selected with `WithMetaKeyFilter`. (#9486)
+
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`.
+  Use `github.com/labstack/echo-opentelemetry` instead. (#9136)
 
 ### Fixed
 
+- Record `error.type` attribute on server spans in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` when a request is cancelled or ends in a 5xx error. (#9387)
 - Report `ot-baggage-*` extraction errors from `go.opentelemetry.io/contrib/propagators/ot` to `otel.Handle` instead of silently discarding them, while still attaching the successfully parsed baggage members to the context. (#9395)
 - Set `error.type` on the `rpc.client.call.duration` and `rpc.server.call.duration` metrics in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` when the RPC fails with a non-OK status, per the RPC semantic conventions. (#9429)
 - Reject OTLP exporter headers with an empty `name` in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x`, and `go.opentelemetry.io/contrib/otelconf/v0.3.0`, instead of forwarding invalid header names to OTLP exporters. (#9102)
+- `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer returns an error when run outside of an AWS Lambda environment, matching the no-op behavior of other resource detectors. (#9464)
+- Convert Prometheus untyped metrics to OTLP Gauges in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9099)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
@@ -1934,6 +1947,7 @@ First official tagged release of `contrib` repository.
 
 <!-- Released section ended -->
 
+[Go 1.27]: https://go.dev/doc/go1.27
 [Go 1.26]: https://go.dev/doc/go1.26
 [Go 1.25]: https://go.dev/doc/go1.25
 [Go 1.24]: https://go.dev/doc/go1.24
