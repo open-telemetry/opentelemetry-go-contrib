@@ -16,6 +16,7 @@ The next release will require at least [Go 1.26].
 - Add support for the `aws.ec2` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9139)
 - Support testing of [Go 1.27]. (#9524)
 - Add `S3AttributeBuilder` to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` that sets S3-specific span attributes following the OpenTelemetry S3 semantic conventions. (#9292)
+- Add `go.opentelemetry.io/contrib/detectors/openstack/nova`, a new resource detector for OpenStack Nova compute instances, ported from `processor/resourcedetectionprocessor/internal/openstack/nova` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `host.id`, `host.name`, and `host.type`, and optionally emits `openstack.nova.meta.<key>` attributes for the instance metadata keys selected with `WithMetaKeyFilter`. (#9486)
 
 ### Deprecated
 

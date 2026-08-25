@@ -9,3 +9,5 @@ file:///var/log/traces.jsonl
 file:///path/to/file.jsonl
 https://raw.githubusercontent.com/open-telemetry/opentelemetry.io/main/content/en/registry
 http://169.254.169.254/v1.json
+http://169.254.169.254/openstack/latest/meta_data.json
+http://169.254.169.254/latest/meta-data/instance-type
