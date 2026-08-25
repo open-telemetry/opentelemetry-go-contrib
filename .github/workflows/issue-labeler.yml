@@ -97,10 +97,10 @@ jobs:
               ns = `sampler: ${sanitize(m[1])}`;
             } else if (/^autoexporter$/i.test(component.trim())) {
               area = 'area: exporter';
-              ns = 'exporter: autoexport';
+              ns = 'exporter: exporters/autoexport';
             } else if (/^zpages$/i.test(component.trim())) {
               area = 'area: zpages';
-              ns = 'zpages';
+              ns = 'zpages: zpages';
             } else if (/^config$/i.test(component.trim())) {
               area = 'area: file-config';
               ns = '';
