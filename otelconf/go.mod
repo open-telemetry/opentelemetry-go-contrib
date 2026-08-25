@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/otelconf
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/prometheus/client_golang v1.24.1
@@ -32,7 +32,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.45.0
 	go.opentelemetry.io/proto/otlp v1.11.0
 	go.yaml.in/yaml/v3 v3.0.5
-	golang.org/x/exp v0.0.0-20260813180055-c1d0aacb2297
+	golang.org/x/exp v0.0.0-20260824195058-e88cd73687aa
 	google.golang.org/grpc v1.83.1
 )
 
