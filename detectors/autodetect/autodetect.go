@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/hetzner"
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
 	"go.opentelemetry.io/contrib/detectors/k8sapi"
+	"go.opentelemetry.io/contrib/detectors/scaleway"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -73,6 +74,10 @@ var (
 	// attributes from the Kubernetes API (see k8sapi.NewResourceDetector for
 	// details).
 	IDK8sAPI = ID("k8sapi")
+	// IDScaleway is the ID for the Scaleway detector that detects resource
+	// attributes on Scaleway Instances (see scaleway.NewResourceDetector for
+	// details).
+	IDScaleway = ID("scaleway")
 	// IDVultr is the ID for the Vultr detector that detects resource attributes
 	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
 	// details).
@@ -167,6 +172,8 @@ var (
 		IDIBMCloudVPC: func() resource.Detector { return vpc.NewResourceDetector() },
 
 		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
+
+		IDScaleway: func() resource.Detector { return scaleway.NewResourceDetector() },
 
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 

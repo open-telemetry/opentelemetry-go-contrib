@@ -16,6 +16,7 @@ The next release will require at least [Go 1.26].
 - Add support for the `aws.ec2` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9139)
 - Support testing of [Go 1.27]. (#9524)
 - Add `S3AttributeBuilder` to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` that sets S3-specific span attributes following the OpenTelemetry S3 semantic conventions. (#9292)
+- Add `go.opentelemetry.io/contrib/detectors/scaleway`, a new resource detector for Scaleway Instances, ported from `processor/resourcedetectionprocessor/internal/scaleway` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `cloud.region`, `host.id`, `host.image.id`, `host.image.name`, `host.name`, and `host.type`. (#9489)
 
 ### Deprecated
 
