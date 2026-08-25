@@ -9,7 +9,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.107.3
 	github.com/aws/aws-sdk-go-v2/service/sns v1.42.7
 	github.com/aws/aws-sdk-go-v2/service/sqs v1.46.7
-	github.com/aws/smithy-go v1.27.9
+	github.com/aws/smithy-go v1.27.10
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/sdk v1.46.0
