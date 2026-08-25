@@ -6,10 +6,10 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.43.7
 	github.com/aws/aws-sdk-go-v2/config v1.32.38
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.38
-	github.com/aws/smithy-go v1.27.9
+	github.com/aws/smithy-go v1.27.10
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/otel v1.45.0
-	go.opentelemetry.io/otel/sdk v1.45.0
+	go.opentelemetry.io/otel v1.46.0
+	go.opentelemetry.io/otel/sdk v1.46.0
 )
 
 require (
@@ -29,8 +29,8 @@ require (
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/otel/metric v1.45.0 // indirect
-	go.opentelemetry.io/otel/trace v1.45.0 // indirect
+	go.opentelemetry.io/otel/metric v1.46.0 // indirect
+	go.opentelemetry.io/otel/trace v1.46.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sys v0.47.0 // indirect
 )

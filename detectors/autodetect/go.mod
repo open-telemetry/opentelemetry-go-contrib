@@ -17,8 +17,8 @@ require (
 	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.17.0
 	go.opentelemetry.io/contrib/detectors/k8sapi v0.17.0
 	go.opentelemetry.io/contrib/detectors/vultr v0.17.0
-	go.opentelemetry.io/otel v1.45.0
-	go.opentelemetry.io/otel/sdk v1.45.0
+	go.opentelemetry.io/otel v1.46.0
+	go.opentelemetry.io/otel/sdk v1.46.0
 )
 
 require (
@@ -38,7 +38,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.33.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.38.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.45.7 // indirect
-	github.com/aws/smithy-go v1.27.9 // indirect
+	github.com/aws/smithy-go v1.27.10 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20221221133751-67e37ae746cd // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -54,19 +54,19 @@ require (
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v1.0.0 // indirect
-	github.com/go-openapi/jsonreference v1.0.0 // indirect
-	github.com/go-openapi/swag v0.29.0 // indirect
-	github.com/go-openapi/swag/cmdutils v0.29.0 // indirect
-	github.com/go-openapi/swag/conv v0.29.0 // indirect
+	github.com/go-openapi/jsonreference v1.0.1 // indirect
+	github.com/go-openapi/swag v0.29.1 // indirect
+	github.com/go-openapi/swag/cmdutils v0.29.1 // indirect
+	github.com/go-openapi/swag/conv v0.29.1 // indirect
 	github.com/go-openapi/swag/fileutils v0.29.1 // indirect
-	github.com/go-openapi/swag/jsonutils v0.29.0 // indirect
-	github.com/go-openapi/swag/loading v0.29.0 // indirect
-	github.com/go-openapi/swag/mangling v0.29.0 // indirect
-	github.com/go-openapi/swag/netutils v0.29.0 // indirect
-	github.com/go-openapi/swag/pools v0.29.0 // indirect
-	github.com/go-openapi/swag/stringutils v0.29.0 // indirect
-	github.com/go-openapi/swag/typeutils v0.29.0 // indirect
-	github.com/go-openapi/swag/yamlutils v0.29.0 // indirect
+	github.com/go-openapi/swag/jsonutils v0.29.1 // indirect
+	github.com/go-openapi/swag/loading v0.29.1 // indirect
+	github.com/go-openapi/swag/mangling v0.29.1 // indirect
+	github.com/go-openapi/swag/netutils v0.29.1 // indirect
+	github.com/go-openapi/swag/pools v0.29.1 // indirect
+	github.com/go-openapi/swag/stringutils v0.29.1 // indirect
+	github.com/go-openapi/swag/typeutils v0.29.1 // indirect
+	github.com/go-openapi/swag/yamlutils v0.29.1 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hetznercloud/hcloud-go/v2 v2.47.0 // indirect
@@ -86,8 +86,8 @@ require (
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.60.0 // indirect
-	go.opentelemetry.io/otel/metric v1.45.0 // indirect
-	go.opentelemetry.io/otel/trace v1.45.0 // indirect
+	go.opentelemetry.io/otel/metric v1.46.0 // indirect
+	go.opentelemetry.io/otel/trace v1.46.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/net v0.58.0 // indirect

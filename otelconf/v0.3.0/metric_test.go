@@ -1434,11 +1434,13 @@ func TestPrometheusIPv6(t *testing.T) {
 			}
 
 			rs, err := prometheusReader(t.Context(), &cfg)
+			require.NoError(t, err)
+
+			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(rs))
 			t.Cleanup(func() {
 				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
-				require.NoError(t, rs.Shutdown(context.Background()))
+				require.NoError(t, mp.Shutdown(context.Background()))
 			})
-			require.NoError(t, err)
 
 			hServ := rs.(readerWithServer).server
 			assert.True(t, strings.HasPrefix(hServ.Addr, "[::1]:"))
@@ -1572,9 +1574,10 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, reader)
 
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	t.Cleanup(func() {
 		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
-		require.NoError(t, reader.Shutdown(context.Background()))
+		require.NoError(t, mp.Shutdown(context.Background()))
 	})
 
 	rws, ok := reader.(readerWithServer)
