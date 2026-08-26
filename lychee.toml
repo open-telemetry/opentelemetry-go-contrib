@@ -1,3 +1,8 @@
 exclude_path = [
   "zpages/internal/templates/summary.html" # This template's URLs are only expected to be valid on the compiled file
 ]
+
+exclude = [
+  "https://compute\\.googleapis\\.com.*",
+  "https://www\\.googleapis\\.com.*"
+]
