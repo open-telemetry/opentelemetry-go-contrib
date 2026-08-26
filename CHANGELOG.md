@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Removed
+
+- Drop support for [Go 1.25]. (#9584)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -15,10 +19,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 This release is the last to support [Go 1.25].
 The next release will require at least [Go 1.26].
-
-### Removed
-
-- Drop support for [Go 1.25]. (#9584)
 
 ### Added
 
