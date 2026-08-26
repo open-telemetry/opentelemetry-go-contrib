@@ -66,7 +66,7 @@ func (realOSProvider) LookupEnv(env string) (string, bool) {
 	return os.LookupEnv(env)
 }
 
-// NewDetector returns a *Detector which can get detect the platform,
+// NewDetector returns a *Detector which can detect the platform,
 // and fetch attributes of the platform on which it is running.
 func NewDetector() *Detector {
 	return &Detector{metadata: metadata.NewClient(nil), os: realOSProvider{}}
