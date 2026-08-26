@@ -4,6 +4,8 @@
 package oraclecloud
 
 import (
+	"encoding/json"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -15,32 +17,59 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
-func TestDetect_Success(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// newFakeServer starts an httptest server serving meta as JSON and returns its
+// URL. The server is closed via t.Cleanup.
+func newFakeServer(t *testing.T, meta computeMetadata) string {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, authHeader, r.Header.Get("Authorization"))
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{
-				"id": "ocid1.instance.oc1..aaaaaaa",
-				"displayName": "my-instance",
-				"shape": "VM.Standard.E4.Flex",
-				"canonicalRegionName": "us-ashburn-1",
-				"availabilityDomain": "AD-1",
-				"metadata": {
-					"oke-cluster-display-name": "my-oke-cluster",
-					"realm": "oc1"
-				}
-			}`))
-			return
-		}
-		w.WriteHeader(http.StatusMethodNotAllowed)
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(meta)
 	}))
-	defer ts.Close()
+	t.Cleanup(srv.Close)
+	return srv.URL
+}
+
+// newTestDetector returns a detector pointed at url instead of the real
+// link-local metadata endpoint.
+func newTestDetector(url string, opts ...Option) *ResourceDetector {
+	d := NewResourceDetector(opts...)
+	d.endpoint = url
+	return d
+}
+
+func TestNewResourceDetector(t *testing.T) {
+	d := NewResourceDetector()
+	require.NotNil(t, d)
+	assert.Equal(t, defaultEndpoint, d.endpoint)
+}
+
+func TestNewResourceDetectorDisablesProxy(t *testing.T) {
+	proxy := "http://" + net.JoinHostPort("127.0.0.1", "1")
+	t.Setenv("HTTP_PROXY", proxy)
+	t.Setenv("HTTPS_PROXY", proxy)
 
 	detector := NewResourceDetector()
-	detector.endpoint = ts.URL
 
-	res, err := detector.Detect(t.Context())
+	transport, ok := detector.client.Transport.(*http.Transport)
+	require.True(t, ok)
+	assert.Nil(t, transport.Proxy)
+}
+
+func TestDetect_Success(t *testing.T) {
+	url := newFakeServer(t, computeMetadata{
+		HostID:             "ocid1.instance.oc1..aaaaaaa",
+		HostDisplayName:    "my-instance",
+		HostType:           "VM.Standard.E4.Flex",
+		CanonicalRegionID:  "us-ashburn-1",
+		AvailabilityDomain: "AD-1",
+		Metadata: instanceMetadata{
+			OKEClusterDisplayName: "my-oke-cluster",
+			Realm:                 "oc1",
+		},
+	})
+
+	res, err := newTestDetector(url).Detect(t.Context())
 	require.NoError(t, err)
 
 	expected := resource.NewWithAttributes(
@@ -60,29 +89,18 @@ func TestDetect_Success(t *testing.T) {
 }
 
 func TestDetect_NonOKE(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{
-				"id": "ocid1.instance.oc1..aaaaaaa",
-				"displayName": "my-instance",
-				"shape": "VM.Standard.E4.Flex",
-				"canonicalRegionName": "us-ashburn-1",
-				"availabilityDomain": "AD-1",
-				"metadata": {
-					"realm": "oc1"
-				}
-			}`))
-			return
-		}
-		w.WriteHeader(http.StatusMethodNotAllowed)
-	}))
-	defer ts.Close()
+	url := newFakeServer(t, computeMetadata{
+		HostID:             "ocid1.instance.oc1..aaaaaaa",
+		HostDisplayName:    "my-instance",
+		HostType:           "VM.Standard.E4.Flex",
+		CanonicalRegionID:  "us-ashburn-1",
+		AvailabilityDomain: "AD-1",
+		Metadata: instanceMetadata{
+			Realm: "oc1",
+		},
+	})
 
-	detector := NewResourceDetector()
-	detector.endpoint = ts.URL
-
-	res, err := detector.Detect(t.Context())
+	res, err := newTestDetector(url).Detect(t.Context())
 	require.NoError(t, err)
 
 	expected := resource.NewWithAttributes(
@@ -101,81 +119,61 @@ func TestDetect_NonOKE(t *testing.T) {
 }
 
 func TestDetect_NotOracleCloud(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
-	ts.Close() // Close server so connection fails
+	// Closed server → connection refused → not on Oracle Cloud → empty resource, no error.
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
+	url := srv.URL
+	srv.Close()
 
-	detector := NewResourceDetector()
-	detector.endpoint = ts.URL
-
-	res, err := detector.Detect(t.Context())
+	res, err := newTestDetector(url).Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
 }
 
 func TestDetect_ClientError404_NotOracleCloud(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	// A client error means something other than Oracle Cloud metadata service answered:
+	// not on Oracle Cloud, so no error is reported.
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
-	defer ts.Close()
+	t.Cleanup(srv.Close)
 
-	detector := NewResourceDetector()
-	detector.endpoint = ts.URL
-
-	res, err := detector.Detect(t.Context())
+	res, err := newTestDetector(srv.URL).Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, resource.Empty(), res)
 }
 
 func TestDetect_ServerError(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	// The metadata service answered but failed: surface the error instead of
+	// silently reporting "not on Oracle Cloud".
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
-	defer ts.Close()
+	t.Cleanup(srv.Close)
 
-	detector := NewResourceDetector()
-	detector.endpoint = ts.URL
-
-	res, err := detector.Detect(t.Context())
+	res, err := newTestDetector(srv.URL).Detect(t.Context())
 	require.Error(t, err)
 	assert.Nil(t, res)
 	assert.Contains(t, err.Error(), "received non-OK response from Oracle Cloud IMDS")
 }
 
 func TestDetect_MalformedJSON(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{ invalid json `))
-			return
-		}
-		w.WriteHeader(http.StatusMethodNotAllowed)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{ invalid json `))
 	}))
-	defer ts.Close()
+	t.Cleanup(srv.Close)
 
-	detector := NewResourceDetector()
-	detector.endpoint = ts.URL
-
-	res, err := detector.Detect(t.Context())
+	res, err := newTestDetector(srv.URL).Detect(t.Context())
 	require.Error(t, err)
 	assert.Nil(t, res)
 	assert.Contains(t, err.Error(), "failed to decode Oracle Cloud IMDS response")
 }
 
 func TestDetect_PartialResource(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusOK)
-			// Return empty JSON object so missing host.id, hostname, host.type, region, and availability domain branches are all covered
-			_, _ = w.Write([]byte(`{}`))
-			return
-		}
-	}))
-	defer ts.Close()
+	// Serve empty JSON object so missing host.id, hostname, host.type, region, and availability domain branches are all covered.
+	url := newFakeServer(t, computeMetadata{})
 
-	detector := NewResourceDetector()
-	detector.endpoint = ts.URL
-
-	res, err := detector.Detect(t.Context())
+	res, err := newTestDetector(url).Detect(t.Context())
 	require.ErrorIs(t, err, resource.ErrPartialResource)
 
 	expected := resource.NewWithAttributes(
@@ -188,29 +186,19 @@ func TestDetect_PartialResource(t *testing.T) {
 }
 
 func TestDetect_WithAttributeFilter(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{
-				"id": "ocid1.instance.oc1..aaaaaaa",
-				"displayName": "my-instance",
-				"shape": "VM.Standard.E4.Flex",
-				"canonicalRegionName": "us-ashburn-1",
-				"availabilityDomain": "AD-1"
-			}`))
-			return
-		}
-	}))
-	defer ts.Close()
+	url := newFakeServer(t, computeMetadata{
+		HostID:             "ocid1.instance.oc1..aaaaaaa",
+		HostDisplayName:    "my-instance",
+		HostType:           "VM.Standard.E4.Flex",
+		CanonicalRegionID:  "us-ashburn-1",
+		AvailabilityDomain: "AD-1",
+	})
 
 	filter := func(kv attribute.KeyValue) bool {
 		return kv.Key == semconv.CloudProviderKey || kv.Key == semconv.HostIDKey
 	}
 
-	detector := NewResourceDetector(WithAttributeFilter(filter))
-	detector.endpoint = ts.URL
-
-	res, err := detector.Detect(t.Context())
+	res, err := newTestDetector(url, WithAttributeFilter(filter)).Detect(t.Context())
 	require.NoError(t, err)
 
 	expected := resource.NewWithAttributes(
@@ -223,26 +211,15 @@ func TestDetect_WithAttributeFilter(t *testing.T) {
 }
 
 func TestDetect_RegionFallback(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{
-				"id": "ocid1.instance.oc1..aaaaaaa",
-				"displayName": "my-instance",
-				"shape": "VM.Standard.E4.Flex",
-				"region": "us-phoenix-1",
-				"availabilityDomain": "AD-1"
-			}`))
-			return
-		}
-		w.WriteHeader(http.StatusMethodNotAllowed)
-	}))
-	defer ts.Close()
+	url := newFakeServer(t, computeMetadata{
+		HostID:             "ocid1.instance.oc1..aaaaaaa",
+		HostDisplayName:    "my-instance",
+		HostType:           "VM.Standard.E4.Flex",
+		RegionID:           "us-phoenix-1",
+		AvailabilityDomain: "AD-1",
+	})
 
-	detector := NewResourceDetector()
-	detector.endpoint = ts.URL
-
-	res, err := detector.Detect(t.Context())
+	res, err := newTestDetector(url).Detect(t.Context())
 	require.NoError(t, err)
 
 	expected := resource.NewWithAttributes(
@@ -260,27 +237,16 @@ func TestDetect_RegionFallback(t *testing.T) {
 }
 
 func TestDetect_CanonicalRegionPrecedence(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte(`{
-				"id": "ocid1.instance.oc1..aaaaaaa",
-				"displayName": "my-instance",
-				"shape": "VM.Standard.E4.Flex",
-				"canonicalRegionName": "us-ashburn-1",
-				"region": "iad",
-				"availabilityDomain": "AD-1"
-			}`))
-			return
-		}
-		w.WriteHeader(http.StatusMethodNotAllowed)
-	}))
-	defer ts.Close()
+	url := newFakeServer(t, computeMetadata{
+		HostID:             "ocid1.instance.oc1..aaaaaaa",
+		HostDisplayName:    "my-instance",
+		HostType:           "VM.Standard.E4.Flex",
+		CanonicalRegionID:  "us-ashburn-1",
+		RegionID:           "iad",
+		AvailabilityDomain: "AD-1",
+	})
 
-	detector := NewResourceDetector()
-	detector.endpoint = ts.URL
-
-	res, err := detector.Detect(t.Context())
+	res, err := newTestDetector(url).Detect(t.Context())
 	require.NoError(t, err)
 
 	expected := resource.NewWithAttributes(
