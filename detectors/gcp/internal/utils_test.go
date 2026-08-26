@@ -97,6 +97,9 @@ func (f *FakeMetadataTransport) RoundTrip(req *http.Request) (*http.Response, er
 // newFakeMetadataTransport constructs a FakeMetadataTransport that responds with the basic GCE metadata fields.
 // To add more metadata, pass key-value pairs as arguments.
 func newFakeMetadataTransport(t *testing.T, keyValues ...string) *FakeMetadataTransport {
+	if len(keyValues)%2 != 0 {
+		t.Fatalf("newFakeMetadataTransport requires an even number of key-value arguments, got %d", len(keyValues))
+	}
 	out := map[string]string{
 		"project/project-id":         fakeProjectID,
 		"project/numeric-project-id": fakeProjectNumber,
