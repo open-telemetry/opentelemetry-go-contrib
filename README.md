@@ -5,7 +5,7 @@
 [![Docs](https://godoc.org/go.opentelemetry.io/contrib?status.svg)](https://pkg.go.dev/go.opentelemetry.io/contrib)
 [![Go Report Card](https://goreportcard.com/badge/go.opentelemetry.io/contrib)](https://goreportcard.com/report/go.opentelemetry.io/contrib)
 [![Fuzzing Status](https://oss-fuzz-build-logs.storage.googleapis.com/badges/opentelemetry-go-contrib.svg)](https://issues.oss-fuzz.com/issues?q=project:opentelemetry-go-contrib)
-[![Slack](https://img.shields.io/badge/slack-@cncf/otel--go-brightgreen.svg?logo=slack)](https://cloud-native.slack.com/archives/C01NPAXACKT)
+[![Slack](https://img.shields.io/badge/slack-@cncf/otel--go-brightgreen.svg?logo=slack)](https://slack.cncf.io/)
 
 Collection of 3rd-party packages for [OpenTelemetry-Go](https://github.com/open-telemetry/opentelemetry-go).
 
@@ -27,7 +27,7 @@ Refer to the module for its version or our [versioning manifest](./versions.yaml
 
 Project versioning information and stability guarantees can be found in the [versioning documentation](https://github.com/open-telemetry/opentelemetry-go/blob/a724cf884287e04785eaa91513d26a6ef9699288/VERSIONING.md).
 
-Progress and status specific to this repository is tracked in our local [project boards](https://github.com/open-telemetry/opentelemetry-go-contrib/projects?query=is%3Aopen) and [milestones](https://github.com/open-telemetry/opentelemetry-go-contrib/milestones).
+Progress and status specific to this repository is tracked in our [project board](https://github.com/orgs/open-telemetry/projects/186) and [milestones](https://github.com/open-telemetry/opentelemetry-go-contrib/milestones).
 
 ### Compatibility
 
