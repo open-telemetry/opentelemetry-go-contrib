@@ -2,7 +2,7 @@ module go.opentelemetry.io/contrib/detectors/docker
 
 go 1.25.0
 
-require github.com/moby/moby/client v0.4.1
+require github.com/moby/moby/client v0.5.1
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
