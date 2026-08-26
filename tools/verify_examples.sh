@@ -32,11 +32,11 @@ if ! git diff --quiet; then \
 fi
 
 
-if ! git tag --contains HEAD | grep -q .; then
+if ! git describe --tags --exact-match >/dev/null 2>&1; then
 	echo "$(git log -1)"
 	echo ""
 	echo "Error: HEAD is not pointing to a tagged version"
-	exit -1
+	exit 1
 fi
 
 
