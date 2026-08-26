@@ -32,7 +32,7 @@ func TestCreateConfig(t *testing.T) {
 		},
 		{
 			name:       "only-cacert-provided",
-			caCertFile: ptr(material.CACertPath),
+			caCertFile: new(material.CACertPath),
 			want: func(result *tls.Config, t *testing.T) {
 				require.Nil(t, result.Certificates)
 				require.NotNil(t, result.RootCAs)
@@ -40,23 +40,23 @@ func TestCreateConfig(t *testing.T) {
 		},
 		{
 			name:            "nonexistent-cacert-file",
-			caCertFile:      ptr("nowhere.crt"),
+			caCertFile:      new("nowhere.crt"),
 			wantErrContains: "open nowhere.crt:",
 		},
 		{
 			name:            "nonexistent-clientcert-file",
-			clientCertFile:  ptr("nowhere.crt"),
-			clientKeyFile:   ptr("nowhere.crt"),
+			clientCertFile:  new("nowhere.crt"),
+			clientKeyFile:   new("nowhere.crt"),
 			wantErrContains: "could not use client certificate: open nowhere.crt:",
 		},
 		{
 			name:            "clientkey-without-clientcert",
-			clientKeyFile:   ptr("nowhere.key"),
+			clientKeyFile:   new("nowhere.key"),
 			wantErrContains: "client key was provided but no client certificate was provided",
 		},
 		{
 			name:            "bad-cacert-file",
-			caCertFile:      ptr(material.BadCertPath),
+			caCertFile:      new(material.BadCertPath),
 			wantErrContains: "could not create certificate authority chain from certificate",
 		},
 	}
@@ -73,8 +73,4 @@ func TestCreateConfig(t *testing.T) {
 			}
 		})
 	}
-}
-
-func ptr[T any](v T) *T {
-	return &v
 }

@@ -119,7 +119,7 @@ body:
     attributes:
       label: Go Version
       description: What Golang version were you running?
-      placeholder: '1.25'
+      placeholder: '1.26'
     validations:
       required: true
   - type: input
@@ -139,4 +139,3 @@ body:
         useful context, avoiding comments like `+1` or `me too`, to help us
         triage it. Learn more
         [here](https://opentelemetry.io/community/end-user/issue-participation/).</sub>
-
