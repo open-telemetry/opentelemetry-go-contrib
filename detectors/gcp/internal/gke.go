@@ -59,7 +59,7 @@ func (d *Detector) GKEHostID() (string, error) {
 	return d.GCEHostID()
 }
 
-// GKEClusterName returns the name if the GKE cluster in which this program is running.
+// GKEClusterName returns the name of the GKE cluster in which this program is running.
 func (d *Detector) GKEClusterName() (string, error) {
 	return d.metadata.InstanceAttributeValueWithContext(context.TODO(), clusterNameMetadataAttr)
 }
