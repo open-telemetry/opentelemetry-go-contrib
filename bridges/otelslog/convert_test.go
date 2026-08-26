@@ -41,6 +41,50 @@ func (e *testPointerError) Error() string {
 
 type recursiveTestSlice []recursiveTestSlice
 
+func TestVisitTableCluster(t *testing.T) {
+	backing := make([]any, 17)
+	typ := reflect.TypeFor[[]any]()
+	ptr := reflect.ValueOf(backing).UnsafePointer()
+	key := func(length int) visitKey {
+		return visitKey{typ: typ, ptr: ptr, len: length}
+	}
+
+	// These overlapping-slice identities have the same home slot in this
+	// four-entry table and exercise cluster repair after removing the first.
+	table := make([]visitKey, 4)
+	first, second, third := key(1), key(5), key(9)
+	home := func(k visitKey) uintptr {
+		hash := uintptr(k.ptr)>>3 ^ uintptr(k.len)
+		hash ^= hash >> 17
+		return hash & uintptr(len(table)-1)
+	}
+	assert.Equal(t, home(first), home(second))
+	assert.Equal(t, home(first), home(third))
+	insertVisit(table, first)
+	insertVisit(table, second)
+	insertVisit(table, third)
+	mask := uintptr(len(table) - 1)
+	firstSlot := home(first)
+	assert.Equal(t, first, table[firstSlot])
+	assert.Equal(t, second, table[(firstSlot+1)&mask])
+	assert.Equal(t, third, table[(firstSlot+2)&mask])
+
+	before := append([]visitKey(nil), table...)
+	insertVisit(table, second)
+	assert.Equal(t, before, table)
+
+	tracker := visitTracker{depth: 3, overflow: table}
+	assert.True(t, tracker.contains(second))
+	removeVisit(table, first)
+	assert.False(t, containsVisit(table, first))
+	assert.True(t, containsVisit(table, second))
+	assert.True(t, containsVisit(table, third))
+
+	removeVisit(table, first)
+	assert.True(t, containsVisit(table, second))
+	assert.True(t, containsVisit(table, third))
+}
+
 func TestConvertValue(t *testing.T) {
 	for _, tt := range []struct {
 		name      string
@@ -386,6 +430,55 @@ func TestConvertValueTrackedReflectPaths(t *testing.T) {
 		(*int)(nil),
 		pointerPointer,
 	}))
+
+	var nilInterface any
+	assert.Equal(
+		t,
+		attribute.SliceValue(attribute.Value{}, attribute.Value{}),
+		convertValue([]any{nil, &nilInterface}),
+	)
+}
+
+func TestConvertValueFormattedMapKeys(t *testing.T) {
+	type key struct{ Value any }
+
+	cyclic := map[string]any{}
+	cyclic["self"] = cyclic
+	safeKey := &key{Value: 42}
+	tests := []struct {
+		name    string
+		key     *key
+		wantKey string
+	}{
+		{name: "Safe", key: safeKey, wantKey: fmt.Sprintf("%+v", safeKey)},
+		{name: "Cycle", key: &key{Value: cyclic}, wantKey: cycleMarker},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			value := map[*key]any{tt.key: 42}
+			want := attribute.MapValue(attribute.Int64(tt.wantKey, 42))
+
+			assert.Equal(t, want, convertValue(value))
+			assert.Equal(t, attribute.SliceValue(want), convertValue([]any{value}))
+		})
+	}
+
+	t.Run("NilInterface", func(t *testing.T) {
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64("<nil>", 42)),
+			convertValue(map[any]int{nil: 42}),
+		)
+	})
+
+	t.Run("InvalidReflectValue", func(t *testing.T) {
+		invalid := reflect.Value{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(fmt.Sprintf("%+v", invalid), 42)),
+			convertValue(map[reflect.Value]int{invalid: 42}),
+		)
+	})
 }
 
 func TestConvertValuePointerEdgeCases(t *testing.T) {
@@ -423,6 +516,8 @@ func TestFormattingCycleBranches(t *testing.T) {
 
 	var nilInterface any
 	assert.False(t, formatHasCycle(reflect.ValueOf(&nilInterface).Elem(), 0, nil))
+	nilField := struct{ Value any }{}
+	assert.Equal(t, attribute.StringValue(fmt.Sprintf("%+v", nilField)), convertValue(nilField))
 	assert.False(t, formatHasCycle(reflect.ValueOf([]any{}), 0, nil))
 	assert.False(t, formatHasCycle(reflect.ValueOf(map[string]any{}), 0, nil))
 
@@ -461,6 +556,21 @@ func TestFormattingCycleBranches(t *testing.T) {
 	}
 	current[0] = deepCycle
 	assert.True(t, formatHasCycle(reflect.ValueOf(deepCycle), 0, nil))
+
+	deepMap := map[string]any{}
+	currentMap := deepMap
+	for range inlineVisitCount + 1 {
+		next := map[string]any{}
+		currentMap["next"] = next
+		currentMap = next
+	}
+	currentMap["next"] = deepMap
+	typedMap := struct{ Value map[string]any }{Value: deepMap}
+	assert.Equal(t, attribute.StringValue(cycleMarker), convertValue(typedMap))
+
+	typedSlice := struct{ Value []any }{Value: make([]any, 1)}
+	typedSlice.Value[0] = typedSlice.Value
+	assert.Equal(t, attribute.StringValue(cycleMarker), convertValue(typedSlice))
 
 	assert.False(t, formattingCycle(reflect.ValueOf(struct{ Value any }{Value: 42})))
 	assert.False(t, formattingCycle(reflect.ValueOf(new(int))))
@@ -637,6 +747,37 @@ func TestConvertValueCycle(t *testing.T) {
 
 		assert.Equal(t, attribute.StringValue(cycle), convertValue(reflect.ValueOf(value)))
 	})
+}
+
+func TestConvertValueDeepMapPointerArrayCycle(t *testing.T) {
+	value := &[1]any{}
+	value[0] = value
+
+	var input any = value
+	want := attribute.SliceValue(attribute.StringValue(cycleMarker))
+	for range inlineVisitCount {
+		input = map[string]any{"next": input}
+		want = attribute.MapValue(attribute.KeyValue{
+			Key:   "next",
+			Value: want,
+		})
+	}
+
+	assert.Equal(t, want, convertValue(input))
+}
+
+func TestConvertValueRootArrayDeepMap(t *testing.T) {
+	var value any = 42
+	want := attribute.Int64Value(42)
+	for range inlineVisitCount + 1 {
+		value = map[string]any{"next": value}
+		want = attribute.MapValue(attribute.KeyValue{
+			Key:   "next",
+			Value: want,
+		})
+	}
+
+	assert.Equal(t, attribute.SliceValue(want), convertValue([1]any{value}))
 }
 
 func TestConvertValueCycleDetectionIsPathLocal(t *testing.T) {
