@@ -4,4 +4,4 @@
 package azurefunctions
 
 // Version is the current release version of the Azure Functions resource detector.
-const Version = "0.17.1"
+const Version = "0.18.0"

@@ -4,4 +4,4 @@
 package docker
 
 // Version is the current release version of the docker resource detector.
-const Version = "0.17.0"
+const Version = "0.18.0"

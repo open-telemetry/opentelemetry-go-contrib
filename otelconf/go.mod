@@ -9,7 +9,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.3
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.46.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.46.0
-	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.17.1
+	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.18.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.46.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.71.0
 	go.opentelemetry.io/otel v1.46.0
