@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Change the `AdditionalProperties` field on generated config structs from `interface{}` to `map[string]any` in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`, so structs tagged `mapstructure:",remain"` can be decoded with `github.com/go-viper/mapstructure/v2` instead of panicking.
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

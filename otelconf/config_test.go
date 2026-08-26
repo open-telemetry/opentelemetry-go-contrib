@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/go-viper/mapstructure/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	lognoop "go.opentelemetry.io/otel/log/noop"
@@ -2082,4 +2083,15 @@ func TestUnmarshalResourceJson(t *testing.T) {
 			assert.Equal(t, tt.wantResource, r)
 		})
 	}
+}
+
+func TestMapstructureDecodeAdditionalProperties(t *testing.T) {
+	raw := map[string]any{
+		"opencensus": map[string]any{},
+		"extra_key":  "value",
+	}
+
+	var cfg MetricProducer
+	require.NoError(t, mapstructure.Decode(raw, &cfg))
+	assert.Equal(t, map[string]any{"extra_key": "value"}, cfg.AdditionalProperties)
 }

@@ -2,6 +2,12 @@
 # map[string]interface{}, for more specific types, they must
 # be replaced here
 s+type Headers.*+type Headers map[string]string+g
+
+# go-jsonschema generates the ",remain" additionalProperties field as
+# interface{}, but the mapstructure decoder requires remain fields to be a
+# map, or decoding panics. Use map[string]any so structs with additional
+# properties can be decoded with mapstructure.
+s+AdditionalProperties interface{} `mapstructure:",remain"`+AdditionalProperties map[string]any `mapstructure:",remain"`+g
 /^type ExperimentalResourceDetector struct {/a\
 \	// Enable the AWS EC2 resource detector.\
 \	// If omitted, ignore.\

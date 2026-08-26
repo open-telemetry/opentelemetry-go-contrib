@@ -3,6 +3,7 @@ module go.opentelemetry.io/contrib/otelconf
 go 1.25.0
 
 require (
+	github.com/go-viper/mapstructure/v2 v2.5.0
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/stretchr/testify v1.12.1
