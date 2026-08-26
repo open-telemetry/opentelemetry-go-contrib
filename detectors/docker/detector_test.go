@@ -38,8 +38,6 @@ func (m *mockProvider) Close() error {
 	return nil
 }
 
-func ptr[T any](v T) *T { return &v }
-
 func newMockDetector(m *mockProvider, opts ...Option) *ResourceDetector {
 	d := NewResourceDetector(opts...)
 	d.createProvider = func(...client.Opt) (provider, error) { return m, nil }
@@ -63,7 +61,7 @@ func TestSuccess(t *testing.T) {
 		info: hostInfo{Name: "docker-host", OSType: "linux"},
 		containerInfo: containerInfo{
 			Name:      "my-container",
-			ImageName: ptr("golang"),
+			ImageName: new("golang"),
 			ImageID:   "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 			Tags:      []string{"1.25"},
 		},
@@ -99,7 +97,7 @@ func TestInfoError(t *testing.T) {
 		infoErr: errors.New("daemon unavailable"),
 		containerInfo: containerInfo{
 			Name:      "my-container",
-			ImageName: ptr("golang"),
+			ImageName: new("golang"),
 			ImageID:   "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 			Tags:      []string{"1.25"},
 		},
@@ -199,7 +197,7 @@ func TestWithAttributeFilter(t *testing.T) {
 			info: hostInfo{Name: "docker-host", OSType: "linux"},
 			containerInfo: containerInfo{
 				Name:      "my-container",
-				ImageName: ptr("golang"),
+				ImageName: new("golang"),
 				ImageID:   "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
 				Tags:      []string{"1.25"},
 			},

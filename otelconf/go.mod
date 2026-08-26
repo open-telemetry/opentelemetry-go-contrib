@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/otelconf
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/prometheus/client_golang v1.24.1
@@ -52,7 +52,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.33.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.38.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.45.8 // indirect
-	github.com/aws/smithy-go v1.28.0 // indirect
+	github.com/aws/smithy-go v1.28.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20221221133751-67e37ae746cd // indirect
 	github.com/cenkalti/backoff/v5 v5.0.3 // indirect

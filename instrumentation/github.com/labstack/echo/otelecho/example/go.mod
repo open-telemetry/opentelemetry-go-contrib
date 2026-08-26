@@ -1,7 +1,7 @@
 // Deprecated: Use github.com/labstack/echo-opentelemetry instead.
 module go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho/example
 
-go 1.25.0
+go 1.26.0
 
 replace (
 	go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho => ../

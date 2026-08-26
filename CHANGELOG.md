@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Replace recursive references with the string `"<cycle>"` instead of overflowing the stack in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9542)
 
+### Removed
+
+- Drop support for [Go 1.25]. (#9584)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 

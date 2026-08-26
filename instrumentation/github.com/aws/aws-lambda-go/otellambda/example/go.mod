@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda/example
 
-go 1.25.0
+go 1.26.0
 
 replace (
 	go.opentelemetry.io/contrib/detectors/aws/lambda => ../../../../../../detectors/aws/lambda
@@ -43,7 +43,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.33.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.38.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.45.8 // indirect
-	github.com/aws/smithy-go v1.28.0 // indirect
+	github.com/aws/smithy-go v1.28.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
