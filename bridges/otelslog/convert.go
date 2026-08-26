@@ -210,6 +210,8 @@ func kindCanFormatCycle(kind reflect.Kind) bool {
 
 // convertValue converts various types to attribute.Value.
 func convertValue(v any) attribute.Value {
+	// See internal/shared/logutil/DESIGN.md before changing conversion or
+	// cycle-detection behavior.
 	// Handling the most common types without reflect is a small perf win.
 	switch val := v.(type) {
 	case bool:

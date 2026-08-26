@@ -261,6 +261,8 @@ func kindCanFormatCycle(kind reflect.Kind) bool {
 {{end}}
 // convertValue converts various types to attribute.Value.
 func convertValue(v any) attribute.Value {
+	// See internal/shared/logutil/DESIGN.md before changing conversion or
+	// cycle-detection behavior.
 {{template "fastPath" .}}
 	t := reflect.TypeOf(v)
 	if t == nil {
