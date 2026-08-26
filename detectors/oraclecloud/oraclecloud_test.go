@@ -101,7 +101,7 @@ func TestDetect_NonOKE(t *testing.T) {
 }
 
 func TestDetect_NotOracleCloud(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {}))
+	ts := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}))
 	ts.Close() // Close server so connection fails
 
 	detector := NewResourceDetector()
@@ -113,7 +113,7 @@ func TestDetect_NotOracleCloud(t *testing.T) {
 }
 
 func TestDetect_ClientError404_NotOracleCloud(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 	}))
 	defer ts.Close()
@@ -127,7 +127,7 @@ func TestDetect_ClientError404_NotOracleCloud(t *testing.T) {
 }
 
 func TestDetect_ServerError(t *testing.T) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 	}))
 	defer ts.Close()

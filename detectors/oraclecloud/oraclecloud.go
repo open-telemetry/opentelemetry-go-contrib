@@ -20,6 +20,8 @@ import (
 const (
 	defaultEndpoint = "http://169.254.169.254/opc/v2/instance/"
 	authHeader      = "Bearer Oracle"
+
+	maxBodySize = 1 * 1024 * 1024
 )
 
 // Compile-time interface assertion.
@@ -103,7 +105,7 @@ func (d *ResourceDetector) fetchMetadata(ctx context.Context) (*computeMetadata,
 		return nil, onOracleCloud, fmt.Errorf("received non-OK response from Oracle Cloud IMDS: %s", resp.Status)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxBodySize))
 	if err != nil {
 		return nil, true, fmt.Errorf("failed to read Oracle Cloud IMDS response: %w", err)
 	}
@@ -122,7 +124,6 @@ func (d *ResourceDetector) fetchMetadata(ctx context.Context) (*computeMetadata,
 // attributes cannot be retrieved, a partial resource is returned together with
 // [resource.ErrPartialResource].
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-
 	meta, onOracleCloud, err := d.fetchMetadata(ctx)
 	if err != nil {
 		if !onOracleCloud {
