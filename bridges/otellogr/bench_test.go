@@ -12,8 +12,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 )
 
-var benchmarkValue attribute.Value
-
 func benchmarkPointerChain(depth int) any {
 	value := any(42)
 	for range depth {
@@ -57,8 +55,8 @@ func BenchmarkConvertValue(b *testing.B) {
 	} {
 		b.Run(tt.name, func(b *testing.B) {
 			b.ReportAllocs()
-			for range b.N {
-				benchmarkValue = convertValue(tt.value)
+			for b.Loop() {
+				convertValue(tt.value)
 			}
 		})
 	}
@@ -84,8 +82,8 @@ func BenchmarkConvertValueCycle(b *testing.B) {
 	} {
 		b.Run(tt.name, func(b *testing.B) {
 			b.ReportAllocs()
-			for range b.N {
-				benchmarkValue = convertValue(tt.value)
+			for b.Loop() {
+				convertValue(tt.value)
 			}
 		})
 	}
