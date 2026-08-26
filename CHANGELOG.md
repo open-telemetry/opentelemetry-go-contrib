@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, Cloud Run Worker Pool parity, and GKE hostname enrichment to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -22,7 +26,6 @@ The next release will require at least [Go 1.26].
 - Support testing of [Go 1.27]. (#9524)
 - Add `go.opentelemetry.io/contrib/detectors/docker`, a resource detector for Docker, ported from `processor/resourcedetectionprocessor/internal/docker` in opentelemetry-collector-contrib. (#9001)
 - Add `S3AttributeBuilder` to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` that sets S3-specific span attributes following the OpenTelemetry S3 semantic conventions. (#9292)
-- Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, Cloud Run Worker Pool parity, and GKE hostname enrichment to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
 
 ### Deprecated
 
