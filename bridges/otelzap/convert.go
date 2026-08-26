@@ -761,6 +761,7 @@ func formattingCycle(v reflect.Value) bool {
 	t := v.Type()
 	if t.Kind() == reflect.Struct {
 		mayCycle := false
+		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range v.NumField() {
 			field := v.Field(i)
 			switch field.Kind() {
@@ -834,6 +835,7 @@ func formattingMayCycle(t reflect.Type, visited *formatTypeVisit) bool {
 		return formattingMayCycle(t.Key(), visited) ||
 			formattingMayCycle(t.Elem(), visited)
 	case reflect.Struct:
+		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range t.NumField() {
 			if formattingMayCycle(t.Field(i).Type, visited) {
 				return true
@@ -929,6 +931,7 @@ func formatHasCycle(v reflect.Value, depth int, visited *visitTracker) bool {
 			}
 		}
 	case reflect.Struct:
+		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range v.NumField() {
 			if formatHasCycle(v.Field(i), depth+1, visited) {
 				return true
