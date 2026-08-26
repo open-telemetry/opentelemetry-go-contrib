@@ -54,7 +54,7 @@ type Detector struct {
 	computeBaseURL string
 }
 
-// osProvider contains the subset of the os package functions used by.
+// osProvider contains the subset of the os package functions used by Detector.
 type osProvider interface {
 	LookupEnv(string) (string, bool)
 }
