@@ -76,7 +76,7 @@ func TestDetectorPrint(t *testing.T) {
 	log("FaaSVersion", v, err)
 	v1, v2, err = d.GCEAvailabilityZoneAndRegion()
 	log("GCEAvailabilityZoneAndRegion.Zone", v1, err)
-	log("GCEAvailabilityZoneAndRegion.Region", v1, err)
+	log("GCEAvailabilityZoneAndRegion.Region", v2, err)
 	v, err = d.GCEHostID()
 	log("GCEHostID", v, err)
 	v, err = d.GCEHostName()
