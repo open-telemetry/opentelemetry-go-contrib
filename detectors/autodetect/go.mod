@@ -11,7 +11,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.71.0
 	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.17.1
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.17.1
-  go.opentelemetry.io/contrib/detectors/docker v0.17.1
+	go.opentelemetry.io/contrib/detectors/docker v0.17.1
 	go.opentelemetry.io/contrib/detectors/gcp v1.46.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.17.1
 	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.17.1
