@@ -104,7 +104,7 @@ func (d *Detector) ProjectID() (string, error) {
 	return strings.TrimSpace(s), err
 }
 
-// instanceID returns the ID of the project in which this program is running.
+// instanceID returns the ID of the instance on which this program is running.
 func (d *Detector) instanceID() (string, error) {
 	// N.B. d.metadata.InstanceIDWithContext(context.TODO()) is cached globally, so if we use it here it's untestable.
 	s, err := d.metadata.GetWithContext(context.TODO(), "instance/id")
