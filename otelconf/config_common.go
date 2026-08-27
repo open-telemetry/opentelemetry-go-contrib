@@ -273,10 +273,6 @@ func validateSpanLimits(plain *SpanLimits) error {
 	return nil
 }
 
-func ptr[T any](v T) *T {
-	return &v
-}
-
 // validateOTLPHTTPEncoding validates the encoding configuration.
 // The Go SDK only supports protobuf encoding for OTLP HTTP exporters.
 func validateOTLPHTTPEncoding(encoding *OTLPHttpEncoding) error {
