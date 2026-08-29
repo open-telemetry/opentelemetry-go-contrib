@@ -111,6 +111,10 @@ var (
 	errDeprecatedEnvVarUsed = errors.New("OTEL_EXPERIMENTAL_CONFIG_FILE is no longer supported, use OTEL_CONFIG_FILE instead")
 )
 
+func ptr[T any](v T) *T {
+	return &v
+}
+
 func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error) {
 	b, err := os.ReadFile(filename)
 	if err != nil {

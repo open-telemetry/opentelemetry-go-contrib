@@ -396,7 +396,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	} else {
 		// Configure if the SDK is disabled or not.
 		// If omitted or null, false is used.
-		sh.Plain.Disabled = new(false)
+		sh.Plain.Disabled = ptr(false)
 	}
 
 	if sh.LogLevel != nil {
@@ -406,7 +406,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	} else {
 		// Configure the log level of the internal logger used by the SDK.
 		// If omitted, info is used.
-		sh.Plain.LogLevel = new(SeverityNumberInfo)
+		sh.Plain.LogLevel = ptr(SeverityNumberInfo)
 	}
 
 	*j = OpenTelemetryConfiguration(sh.Plain)

@@ -1021,9 +1021,9 @@ func TestUnmarshalOpenTelemetryConfiguration(t *testing.T) {
 			jsonConfig: []byte(`{"file_format": "1.0"}`),
 			yamlConfig: []byte("file_format: 1.0"),
 			wantType: OpenTelemetryConfiguration{
-				Disabled:   new(false),
+				Disabled:   ptr(false),
 				FileFormat: "1.0",
-				LogLevel:   new(SeverityNumberInfo),
+				LogLevel:   ptr(SeverityNumberInfo),
 			},
 		},
 		{

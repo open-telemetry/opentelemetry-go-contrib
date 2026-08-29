@@ -100,7 +100,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	} else {
 		// Configure the log level of the internal logger used by the SDK.
 		// If omitted, info is used.
-		sh.Plain.LogLevel = new(SeverityNumberInfo)
+		sh.Plain.LogLevel = ptr(SeverityNumberInfo)
 	}
 
 	*j = OpenTelemetryConfiguration(sh.Plain)
