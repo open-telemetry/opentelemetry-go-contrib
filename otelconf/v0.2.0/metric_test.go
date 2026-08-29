@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -137,7 +138,7 @@ func TestReader(t *testing.T) {
 				Pull: &PullMetricReader{
 					Exporter: MetricExporter{
 						Prometheus: &Prometheus{
-							Host: ptr("localhost"),
+							Host: new("localhost"),
 						},
 					},
 				},
@@ -150,11 +151,11 @@ func TestReader(t *testing.T) {
 				Pull: &PullMetricReader{
 					Exporter: MetricExporter{
 						Prometheus: &Prometheus{
-							Host:              ptr("localhost"),
-							Port:              ptr(0),
-							WithoutScopeInfo:  ptr(true),
-							WithoutUnits:      ptr(true),
-							WithoutTypeSuffix: ptr(true),
+							Host:              new("localhost"),
+							Port:              new(0),
+							WithoutScopeInfo:  new(true),
+							WithoutUnits:      new(true),
+							WithoutTypeSuffix: new(true),
 							WithResourceConstantLabels: &IncludeExclude{
 								Included: []string{"include"},
 								Excluded: []string{"exclude"},
@@ -186,8 +187,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "http://localhost:4318",
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -205,8 +206,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "http://localhost:4318/path/123",
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -223,8 +224,8 @@ func TestReader(t *testing.T) {
 					Exporter: MetricExporter{
 						OTLP: &OTLPMetric{
 							Protocol:    "grpc/protobuf",
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -242,8 +243,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -261,8 +262,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    " ",
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -280,8 +281,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -299,12 +300,12 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
-							TemporalityPreference: ptr("delta"),
+							TemporalityPreference: new("delta"),
 						},
 					},
 				},
@@ -319,12 +320,12 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
-							TemporalityPreference: ptr("cumulative"),
+							TemporalityPreference: new("cumulative"),
 						},
 					},
 				},
@@ -339,12 +340,12 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
-							TemporalityPreference: ptr("lowmemory"),
+							TemporalityPreference: new("lowmemory"),
 						},
 					},
 				},
@@ -359,12 +360,12 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
-							TemporalityPreference: ptr("invalid"),
+							TemporalityPreference: new("invalid"),
 						},
 					},
 				},
@@ -379,8 +380,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "grpc/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("invalid"),
-							Timeout:     ptr(1000),
+							Compression: new("invalid"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -398,8 +399,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "http/protobuf",
 							Endpoint:    "http://localhost:4318",
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -417,8 +418,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "http/protobuf",
 							Endpoint:    "http://localhost:4318/path/123",
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -435,8 +436,8 @@ func TestReader(t *testing.T) {
 					Exporter: MetricExporter{
 						OTLP: &OTLPMetric{
 							Protocol:    "http/protobuf",
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -454,8 +455,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "http/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -473,8 +474,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "http/protobuf",
 							Endpoint:    " ",
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -492,8 +493,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "http/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -511,12 +512,12 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "http/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
-							TemporalityPreference: ptr("cumulative"),
+							TemporalityPreference: new("cumulative"),
 						},
 					},
 				},
@@ -531,12 +532,12 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "http/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
-							TemporalityPreference: ptr("lowmemory"),
+							TemporalityPreference: new("lowmemory"),
 						},
 					},
 				},
@@ -551,12 +552,12 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "http/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
-							TemporalityPreference: ptr("delta"),
+							TemporalityPreference: new("delta"),
 						},
 					},
 				},
@@ -571,12 +572,12 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "http/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
-							TemporalityPreference: ptr("invalid"),
+							TemporalityPreference: new("invalid"),
 						},
 					},
 				},
@@ -591,8 +592,8 @@ func TestReader(t *testing.T) {
 						OTLP: &OTLPMetric{
 							Protocol:    "http/protobuf",
 							Endpoint:    "localhost:4318",
-							Compression: ptr("invalid"),
-							Timeout:     ptr(1000),
+							Compression: new("invalid"),
+							Timeout:     new(1000),
 							Headers: map[string]string{
 								"test": "test1",
 							},
@@ -626,8 +627,8 @@ func TestReader(t *testing.T) {
 			name: "periodic/console-exporter-with-extra-options",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
-					Interval: ptr(30_000),
-					Timeout:  ptr(5_000),
+					Interval: new(30_000),
+					Timeout:  new(5_000),
 					Exporter: MetricExporter{
 						Console: Console{},
 					},
@@ -684,7 +685,7 @@ func TestView(t *testing.T) {
 			name: "selector/invalid_type",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("invalid_type")),
+					InstrumentType: (*ViewSelectorInstrumentType)(new("invalid_type")),
 				},
 			},
 			wantErr: "view_selector: instrument_type: invalid value",
@@ -700,12 +701,12 @@ func TestView(t *testing.T) {
 			name: "all selectors match",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
-					Unit:           ptr("test_unit"),
-					MeterName:      ptr("test_meter_name"),
-					MeterVersion:   ptr("test_meter_version"),
-					MeterSchemaUrl: ptr("test_schema_url"),
+					InstrumentName: new("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(new("counter")),
+					Unit:           new("test_unit"),
+					MeterName:      new("test_meter_name"),
+					MeterVersion:   new("test_meter_version"),
+					MeterSchemaUrl: new("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -725,12 +726,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match name",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
-					Unit:           ptr("test_unit"),
-					MeterName:      ptr("test_meter_name"),
-					MeterVersion:   ptr("test_meter_version"),
-					MeterSchemaUrl: ptr("test_schema_url"),
+					InstrumentName: new("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(new("counter")),
+					Unit:           new("test_unit"),
+					MeterName:      new("test_meter_name"),
+					MeterVersion:   new("test_meter_version"),
+					MeterSchemaUrl: new("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -750,12 +751,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match unit",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
-					Unit:           ptr("test_unit"),
-					MeterName:      ptr("test_meter_name"),
-					MeterVersion:   ptr("test_meter_version"),
-					MeterSchemaUrl: ptr("test_schema_url"),
+					InstrumentName: new("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(new("counter")),
+					Unit:           new("test_unit"),
+					MeterName:      new("test_meter_name"),
+					MeterVersion:   new("test_meter_version"),
+					MeterSchemaUrl: new("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -775,12 +776,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match kind",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("histogram")),
-					Unit:           ptr("test_unit"),
-					MeterName:      ptr("test_meter_name"),
-					MeterVersion:   ptr("test_meter_version"),
-					MeterSchemaUrl: ptr("test_schema_url"),
+					InstrumentName: new("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(new("histogram")),
+					Unit:           new("test_unit"),
+					MeterName:      new("test_meter_name"),
+					MeterVersion:   new("test_meter_version"),
+					MeterSchemaUrl: new("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -800,12 +801,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match meter name",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
-					Unit:           ptr("test_unit"),
-					MeterName:      ptr("test_meter_name"),
-					MeterVersion:   ptr("test_meter_version"),
-					MeterSchemaUrl: ptr("test_schema_url"),
+					InstrumentName: new("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(new("counter")),
+					Unit:           new("test_unit"),
+					MeterName:      new("test_meter_name"),
+					MeterVersion:   new("test_meter_version"),
+					MeterSchemaUrl: new("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -825,12 +826,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match meter version",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
-					Unit:           ptr("test_unit"),
-					MeterName:      ptr("test_meter_name"),
-					MeterVersion:   ptr("test_meter_version"),
-					MeterSchemaUrl: ptr("test_schema_url"),
+					InstrumentName: new("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(new("counter")),
+					Unit:           new("test_unit"),
+					MeterName:      new("test_meter_name"),
+					MeterVersion:   new("test_meter_version"),
+					MeterSchemaUrl: new("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -850,12 +851,12 @@ func TestView(t *testing.T) {
 			name: "all selectors no match meter schema url",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: ptr("test_name"),
-					InstrumentType: (*ViewSelectorInstrumentType)(ptr("counter")),
-					Unit:           ptr("test_unit"),
-					MeterName:      ptr("test_meter_name"),
-					MeterVersion:   ptr("test_meter_version"),
-					MeterSchemaUrl: ptr("test_schema_url"),
+					InstrumentName: new("test_name"),
+					InstrumentType: (*ViewSelectorInstrumentType)(new("counter")),
+					Unit:           new("test_unit"),
+					MeterName:      new("test_meter_name"),
+					MeterVersion:   new("test_meter_version"),
+					MeterSchemaUrl: new("test_schema_url"),
 				},
 			},
 			matchInstrument: &sdkmetric.Instrument{
@@ -875,12 +876,12 @@ func TestView(t *testing.T) {
 			name: "with stream",
 			view: View{
 				Selector: &ViewSelector{
-					InstrumentName: ptr("test_name"),
-					Unit:           ptr("test_unit"),
+					InstrumentName: new("test_name"),
+					Unit:           new("test_unit"),
 				},
 				Stream: &ViewStream{
-					Name:          ptr("new_name"),
-					Description:   ptr("new_description"),
+					Name:          new("new_name"),
+					Description:   new("new_description"),
 					AttributeKeys: []string{"foo", "bar"},
 					Aggregation:   &ViewStreamAggregation{Sum: make(ViewStreamAggregationSum)},
 				},
@@ -930,37 +931,37 @@ func TestInstrumentType(t *testing.T) {
 		},
 		{
 			name:     "counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("counter")),
+			instType: (*ViewSelectorInstrumentType)(new("counter")),
 			wantKind: sdkmetric.InstrumentKindCounter,
 		},
 		{
 			name:     "up_down_counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("up_down_counter")),
+			instType: (*ViewSelectorInstrumentType)(new("up_down_counter")),
 			wantKind: sdkmetric.InstrumentKindUpDownCounter,
 		},
 		{
 			name:     "histogram",
-			instType: (*ViewSelectorInstrumentType)(ptr("histogram")),
+			instType: (*ViewSelectorInstrumentType)(new("histogram")),
 			wantKind: sdkmetric.InstrumentKindHistogram,
 		},
 		{
 			name:     "observable_counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("observable_counter")),
+			instType: (*ViewSelectorInstrumentType)(new("observable_counter")),
 			wantKind: sdkmetric.InstrumentKindObservableCounter,
 		},
 		{
 			name:     "observable_up_down_counter",
-			instType: (*ViewSelectorInstrumentType)(ptr("observable_up_down_counter")),
+			instType: (*ViewSelectorInstrumentType)(new("observable_up_down_counter")),
 			wantKind: sdkmetric.InstrumentKindObservableUpDownCounter,
 		},
 		{
 			name:     "observable_gauge",
-			instType: (*ViewSelectorInstrumentType)(ptr("observable_gauge")),
+			instType: (*ViewSelectorInstrumentType)(new("observable_gauge")),
 			wantKind: sdkmetric.InstrumentKindObservableGauge,
 		},
 		{
 			name:     "invalid",
-			instType: (*ViewSelectorInstrumentType)(ptr("invalid")),
+			instType: (*ViewSelectorInstrumentType)(new("invalid")),
 			wantErr:  errors.New("instrument_type: invalid value"),
 		},
 	}
@@ -1008,9 +1009,9 @@ func TestAggregation(t *testing.T) {
 			name: "Base2ExponentialBucketHistogram",
 			aggregation: &ViewStreamAggregation{
 				Base2ExponentialBucketHistogram: &ViewStreamAggregationBase2ExponentialBucketHistogram{
-					MaxSize:      ptr(2),
-					MaxScale:     ptr(3),
-					RecordMinMax: ptr(true),
+					MaxSize:      new(2),
+					MaxScale:     new(3),
+					RecordMinMax: new(true),
 				},
 			},
 			wantAggregation: sdkmetric.AggregationBase2ExponentialHistogram{
@@ -1048,7 +1049,7 @@ func TestAggregation(t *testing.T) {
 			aggregation: &ViewStreamAggregation{
 				ExplicitBucketHistogram: &ViewStreamAggregationExplicitBucketHistogram{
 					Boundaries:   []float64{1, 2, 3},
-					RecordMinMax: ptr(true),
+					RecordMinMax: new(true),
 				},
 			},
 			wantAggregation: sdkmetric.AggregationExplicitBucketHistogram{
@@ -1112,6 +1113,67 @@ func TestAttributeFilter(t *testing.T) {
 	}
 }
 
+func TestNewIncludeExcludeFilter(t *testing.T) {
+	testCases := []struct {
+		name          string
+		attributeKeys *IncludeExclude
+		wantPass      []string
+		wantFail      []string
+	}{
+		{
+			name:          "empty",
+			attributeKeys: nil,
+			wantPass:      []string{"foo", "bar"},
+			wantFail:      nil,
+		},
+		{
+			name: "filter-with-include",
+			attributeKeys: new(IncludeExclude{
+				Included: []string{"foo"},
+			}),
+			wantPass: []string{"foo"},
+			wantFail: []string{"bar"},
+		},
+		{
+			name: "filter-with-exclude",
+			attributeKeys: new(IncludeExclude{
+				Excluded: []string{"foo"},
+			}),
+			wantPass: []string{"bar"},
+			wantFail: []string{"foo"},
+		},
+		{
+			name: "filter-with-include-and-exclude",
+			attributeKeys: new(IncludeExclude{
+				Included: []string{"bar"},
+				Excluded: []string{"foo"},
+			}),
+			wantPass: []string{"bar"},
+			wantFail: []string{"foo"},
+		},
+	}
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := newIncludeExcludeFilter(tt.attributeKeys)
+			require.NoError(t, err)
+			for _, pass := range tt.wantPass {
+				require.True(t, got(attribute.KeyValue{Key: attribute.Key(pass), Value: attribute.StringValue("")}))
+			}
+			for _, fail := range tt.wantFail {
+				require.False(t, got(attribute.KeyValue{Key: attribute.Key(fail), Value: attribute.StringValue("")}))
+			}
+		})
+	}
+}
+
+func TestNewIncludeExcludeFilterError(t *testing.T) {
+	_, err := newIncludeExcludeFilter(new(IncludeExclude{
+		Included: []string{"foo"},
+		Excluded: []string{"foo"},
+	}))
+	require.Equal(t, fmt.Errorf("attribute cannot be in both include and exclude list: foo"), err)
+}
+
 func TestPrometheusIPv6(t *testing.T) {
 	tests := []struct {
 		name string
@@ -1132,18 +1194,22 @@ func TestPrometheusIPv6(t *testing.T) {
 			cfg := Prometheus{
 				Host:                       &tt.host,
 				Port:                       &port,
-				WithoutScopeInfo:           ptr(true),
-				WithoutTypeSuffix:          ptr(true),
-				WithoutUnits:               ptr(true),
+				WithoutScopeInfo:           new(true),
+				WithoutTypeSuffix:          new(true),
+				WithoutUnits:               new(true),
 				WithResourceConstantLabels: &IncludeExclude{},
 			}
 
 			rs, err := prometheusReader(t.Context(), &cfg)
+			require.NoError(t, err)
+
+			// Register the reader with a MeterProvider so that scraping
+			// /metrics below does not log a "reader is not registered" error.
+			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(rs))
 			t.Cleanup(func() {
 				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
-				require.NoError(t, rs.Shutdown(context.Background()))
+				require.NoError(t, mp.Shutdown(context.Background()))
 			})
-			require.NoError(t, err)
 
 			hServ := rs.(readerWithServer).server
 			assert.True(t, strings.HasPrefix(hServ.Addr, "[::1]:"))
@@ -1169,25 +1235,37 @@ func TestPrometheusReaderErrorCases(t *testing.T) {
 	}{
 		{
 			name:   "missing host",
-			config: &Prometheus{Port: ptr(8080)},
+			config: &Prometheus{Port: new(8080)},
 			errMsg: "host must be specified",
 		},
 		{
 			name:   "missing port",
-			config: &Prometheus{Host: ptr("localhost")},
+			config: &Prometheus{Host: new("localhost")},
 			errMsg: "port must be specified",
 		},
 		{
 			name: "invalid port",
 			config: &Prometheus{
-				Host:                       ptr("localhost"),
-				Port:                       ptr(99999), // invalid port
-				WithoutScopeInfo:           ptr(true),
-				WithoutTypeSuffix:          ptr(true),
-				WithoutUnits:               ptr(true),
+				Host:                       new("localhost"),
+				Port:                       new(99999), // invalid port
+				WithoutScopeInfo:           new(true),
+				WithoutTypeSuffix:          new(true),
+				WithoutUnits:               new(true),
 				WithResourceConstantLabels: &IncludeExclude{},
 			},
 			errMsg: "binding address",
+		},
+		{
+			name: "invalid with_resource_constant_labels",
+			config: &Prometheus{
+				Host: new("localhost"),
+				Port: new(0),
+				WithResourceConstantLabels: &IncludeExclude{
+					Included: []string{"foo"},
+					Excluded: []string{"foo"},
+				},
+			},
+			errMsg: "attribute cannot be in both include and exclude list",
 		},
 	}
 
@@ -1206,9 +1284,9 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 	cfg := &Prometheus{
 		Host:              &host,
 		Port:              &port,
-		WithoutScopeInfo:  ptr(true),
-		WithoutTypeSuffix: ptr(true),
-		WithoutUnits:      ptr(true),
+		WithoutScopeInfo:  new(true),
+		WithoutTypeSuffix: new(true),
+		WithoutUnits:      new(true),
 		WithResourceConstantLabels: &IncludeExclude{
 			Included: []string{"service.name"},
 			Excluded: []string{"host.name"},
@@ -1219,9 +1297,12 @@ func TestPrometheusReaderConfigurationOptions(t *testing.T) {
 	require.NoError(t, err)
 	require.NotNil(t, reader)
 
+	// Register the reader with a MeterProvider so that scraping /metrics
+	// below does not log a "reader is not registered" error.
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 	t.Cleanup(func() {
 		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
-		require.NoError(t, reader.Shutdown(context.Background()))
+		require.NoError(t, mp.Shutdown(context.Background()))
 	})
 
 	rws, ok := reader.(readerWithServer)
@@ -1251,8 +1332,8 @@ func TestPrometheusReaderDotStyleLabels(t *testing.T) {
 	reader, err := prometheusReader(t.Context(), &Prometheus{
 		Host:              &host,
 		Port:              &port,
-		WithoutTypeSuffix: ptr(true),
-		WithoutUnits:      ptr(true),
+		WithoutTypeSuffix: new(true),
+		WithoutUnits:      new(true),
 	})
 	require.NoError(t, err)
 
@@ -1279,7 +1360,7 @@ func TestPrometheusReaderDotStyleLabels(t *testing.T) {
 	require.NoError(t, err)
 	body := buf.String()
 
-	assert.Contains(t, body, `target_info{"service.name"="test-svc"}`)
+	assert.Contains(t, body, `"service.name"="test-svc"`)
 	assert.NotContains(t, body, "service_name")
 }
 
@@ -1317,9 +1398,9 @@ func TestPrometheusReaderHostParsing(t *testing.T) {
 			cfg := Prometheus{
 				Host:                       &tt.host,
 				Port:                       &port,
-				WithoutScopeInfo:           ptr(true),
-				WithoutTypeSuffix:          ptr(true),
-				WithoutUnits:               ptr(true),
+				WithoutScopeInfo:           new(true),
+				WithoutTypeSuffix:          new(true),
+				WithoutUnits:               new(true),
 				WithResourceConstantLabels: &IncludeExclude{},
 			}
 

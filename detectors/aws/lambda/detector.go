@@ -2,17 +2,16 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package lambda provides a resource detector for AWS Lambda.
-package lambda // import "go.opentelemetry.io/contrib/detectors/aws/lambda"
+package lambda
 
 import (
 	"context"
-	"errors"
 	"os"
 	"strconv"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // For a complete list of reserved environment variables in Lambda, see:
@@ -26,10 +25,7 @@ const (
 	miB                         = 1 << 20
 )
 
-var (
-	empty          = resource.Empty()
-	errNotOnLambda = errors.New("process is not on Lambda, cannot detect environment variables from Lambda")
-)
+var empty = resource.Empty()
 
 // resource detector collects resource information from Lambda environment.
 type resourceDetector struct{}
@@ -47,7 +43,7 @@ func (*resourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	// Lambda resources come from ENV
 	lambdaName := os.Getenv(lambdaFunctionNameEnvVar)
 	if lambdaName == "" {
-		return empty, errNotOnLambda
+		return empty, nil
 	}
 	awsRegion := os.Getenv(awsRegionEnvVar)
 	functionVersion := os.Getenv(lambdaFunctionVersionEnvVar)

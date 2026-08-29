@@ -32,8 +32,9 @@ func TestWrite(t *testing.T) {
 	require.Equal(t, "localhost", serverCert.Subject.CommonName)
 	require.Equal(t, "otelconf test client", clientCert.Subject.CommonName)
 	require.Equal(t, []string{"localhost"}, serverCert.DNSNames)
-	require.Len(t, serverCert.IPAddresses, 1)
+	require.Len(t, serverCert.IPAddresses, 2)
 	require.True(t, serverCert.IPAddresses[0].Equal(net.IPv4(127, 0, 0, 1)))
+	require.True(t, serverCert.IPAddresses[1].Equal(net.IPv6loopback))
 	require.Equal(t, []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth}, serverCert.ExtKeyUsage)
 	require.Equal(t, []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth}, clientCert.ExtKeyUsage)
 

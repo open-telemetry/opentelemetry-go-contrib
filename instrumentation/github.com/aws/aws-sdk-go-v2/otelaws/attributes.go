@@ -1,18 +1,19 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
+package otelaws
 
 import (
 	"context"
 
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/smithy-go/middleware"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // AWS attributes.
@@ -24,6 +25,7 @@ const (
 
 var servicemap = map[string]AttributeBuilder{
 	dynamodb.ServiceID: DynamoDBAttributeBuilder,
+	s3.ServiceID:       S3AttributeBuilder,
 	sqs.ServiceID:      SQSAttributeBuilder,
 	sns.ServiceID:      SNSAttributeBuilder,
 }

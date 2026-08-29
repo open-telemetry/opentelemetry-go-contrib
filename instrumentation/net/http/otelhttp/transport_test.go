@@ -29,7 +29,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -203,7 +203,85 @@ func TestNilTransport(t *testing.T) {
 	}
 }
 
+func TestTransportNilResponse(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return nil, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	if res != nil {
+		defer func() {
+			assert.NoError(t, res.Body.Close())
+		}()
+	}
+	require.Error(t, err)
+	assert.Nil(t, res)
+	assert.Contains(t, err.Error(), "returned a nil *Response with a nil error")
+}
+
+func TestTransportNilResponseBody(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK}, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	require.NoError(t, err)
+	require.NotNil(t, res.Body)
+
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	assert.Empty(t, body)
+	assert.NoError(t, res.Body.Close())
+}
+
+func TestTransportNilResponseBodyWithContentLength(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			ContentLength: 1,
+		}, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	if res != nil {
+		defer func() {
+			assert.NoError(t, res.Body.Close())
+		}()
+	}
+	require.Error(t, err)
+	assert.Nil(t, res)
+	assert.Contains(t, err.Error(), "returned a *Response with content length 1 but a nil Body")
+}
+
+func TestTransportNilResponseBodyWithHeadContentLength(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			ContentLength: 1,
+		}, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodHead, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	require.NoError(t, err)
+	require.NotNil(t, res.Body)
+	assert.NoError(t, res.Body.Close())
+}
+
 const readSize = 42
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (fn roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return fn(r)
+}
 
 type readCloser struct {
 	readErr, closeErr error
@@ -858,6 +936,66 @@ func TestTransportMetrics(t *testing.T) {
 	})
 }
 
+func TestTransportNetworkProtocolVersionFromResponse(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	ts.EnableHTTP2 = true
+	ts.StartTLS()
+	defer ts.Close()
+
+	tr := NewTransport(
+		ts.Client().Transport,
+		WithTracerProvider(tracerProvider),
+		WithMeterProvider(meterProvider),
+	)
+	c := http.Client{Transport: tr}
+
+	// http.NewRequestWithContext always stamps Proto as "HTTP/1.1", regardless
+	// of what the transport ends up negotiating over ALPN.
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	res, err := c.Do(r)
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+	require.Equal(t, "HTTP/2.0", res.Proto)
+
+	spans := spanRecorder.Ended()
+	require.Len(t, spans, 1)
+
+	var gotVersion string
+	for _, kv := range spans[0].Attributes() {
+		if kv.Key == "network.protocol.version" {
+			gotVersion = kv.Value.AsString()
+		}
+	}
+	assert.Equal(t, "2.0", gotVersion, "span should report the negotiated wire protocol, not req.Proto")
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.NotEmpty(t, rm.ScopeMetrics[0].Metrics)
+
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		hist, ok := m.Data.(metricdata.Histogram[int64])
+		if !ok {
+			continue
+		}
+		require.NotEmpty(t, hist.DataPoints)
+		_, ok = hist.DataPoints[0].Attributes.Value(attribute.Key("network.protocol.version"))
+		require.True(t, ok, "metric %s missing network.protocol.version", m.Name)
+		version, _ := hist.DataPoints[0].Attributes.Value(attribute.Key("network.protocol.version"))
+		assert.Equal(t, "2.0", version.AsString(), "metric %s should report the negotiated wire protocol, not req.Proto", m.Name)
+	}
+}
+
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
@@ -1030,7 +1168,8 @@ func TestDefaultAttributesHandling(t *testing.T) {
 		http.DefaultTransport, WithMeterProvider(provider),
 		WithMetricAttributesFn(func(_ *http.Request) []attribute.KeyValue {
 			return defaultAttributes
-		}))
+		}),
+	)
 	client := http.Client{Transport: transport}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {

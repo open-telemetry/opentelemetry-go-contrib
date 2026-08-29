@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package otelconf provides an OpenTelemetry declarative configuration SDK.
-package otelconf // import "go.opentelemetry.io/contrib/otelconf"
+package otelconf
 
 import (
 	"context"
@@ -159,7 +159,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, err
 	}
 
-	r, err := newResource(o.opentelemetryConfig.Resource)
+	r, err := newResource(o.ctx, o.opentelemetryConfig.Resource)
 	if err != nil {
 		return noopSDK, err
 	}

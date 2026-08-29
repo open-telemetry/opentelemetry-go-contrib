@@ -56,7 +56,7 @@ func main() {
 		log.Fatal(err)
 	}
 	_, err = meter.RegisterCallback(func(_ context.Context, o api.Observer) error {
-		n := -10. + rng.Float64()*(90.) // [-10, 100)
+		n := -10. + rng.Float64()*90. // [-10, 100)
 		o.ObserveFloat64(gauge, n, opt)
 		return nil
 	}, gauge)

@@ -80,6 +80,7 @@ type mockCollector struct {
 	ln       *listener
 	stopFunc func()
 	stopOnce sync.Once
+	wg       sync.WaitGroup
 }
 
 type mockConfig struct {
@@ -98,9 +99,8 @@ func (mc *mockCollector) stop() error {
 		if mc.stopFunc != nil {
 			mc.stopFunc()
 		}
+		mc.wg.Wait()
 	})
-	// Give it sometime to shutdown.
-	<-time.After(160 * time.Millisecond)
 
 	// Getting the lock ensures the traceSvc is done flushing.
 	mc.traceSvc.mu.Lock()
@@ -135,9 +135,9 @@ func runMockCollectorWithConfig(t *testing.T, mockConfig *mockConfig) *mockColle
 	mc := makeMockCollector(t, mockConfig)
 	collectortracepb.RegisterTraceServiceServer(srv, mc.traceSvc)
 	mc.ln = newListener(ln)
-	go func() {
+	mc.wg.Go(func() {
 		_ = srv.Serve(net.Listener(mc.ln))
-	}()
+	})
 
 	mc.endpoint = ln.Addr().String()
 	// srv.Stop calls Close on mc.ln.

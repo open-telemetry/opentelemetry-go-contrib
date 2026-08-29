@@ -95,7 +95,8 @@ func TestProbabilisticSampler(t *testing.T) {
 
 		for range numTests {
 			traceID := idGenerator.NewTraceID()
-			assert.Equal(t,
+			assert.Equal(
+				t,
 				oracle.ShouldSample(trace.SamplingParameters{TraceID: traceID}),
 				sampler.ShouldSample(trace.SamplingParameters{TraceID: traceID}),
 			)

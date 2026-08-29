@@ -3,7 +3,7 @@
 
 // Package autodetect provides functionality to configures and use a set of
 // resource detectors at runtime.
-package autodetect // import "go.opentelemetry.io/contrib/detectors/autodetect"
+package autodetect
 
 import (
 	"context"
@@ -17,9 +17,16 @@ import (
 	"go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
 	"go.opentelemetry.io/contrib/detectors/aws/ecs"
 	"go.opentelemetry.io/contrib/detectors/aws/eks"
+	"go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk"
 	"go.opentelemetry.io/contrib/detectors/aws/lambda"
+	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
+	"go.opentelemetry.io/contrib/detectors/docker"
 	"go.opentelemetry.io/contrib/detectors/gcp"
+	"go.opentelemetry.io/contrib/detectors/hetzner"
+	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
+	"go.opentelemetry.io/contrib/detectors/k8sapi"
+	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
 var (
@@ -39,6 +46,14 @@ var (
 	// attributes on Amazon Web Services (AWS) Lambda functions (see
 	// lambda.NewResourceDetector for details).
 	IDAWSLambda = ID("aws.lambda")
+	// IDAWSElasticBeanstalk is the ID for the AWS Elastic Beanstalk detector that detects resource
+	// attributes on Amazon Web Services (AWS) Elastic Beanstalk (see
+	// elasticbeanstalk.NewResourceDetector for details).
+	IDAWSElasticBeanstalk = ID("aws.elasticbeanstalk")
+	// IDAzureContainerApps is the ID for the Azure Container Apps detector
+	// that detects resource attributes on Microsoft Azure Container Apps (see
+	// azurecontainerapps.NewResourceDetector for details).
+	IDAzureContainerApps = ID("azure.container_apps")
 	// IDAzureVM is the ID for the Azure VM detector that detects resource
 	// attributes on Microsoft Azure virtual machines (see azurevm.New for
 	// details).
@@ -47,6 +62,22 @@ var (
 	// Google Cloud Platform (GCP) environments (see gcp.NewDetector for
 	// details).
 	IDGCP = ID("gcp")
+	// IDHetzner is the ID for the Hetzner Cloud detector that detects resource
+	// attributes on Hetzner Cloud servers (see hetzner.NewResourceDetector for
+	// details).
+	IDHetzner = ID("hetzner")
+	// IDIBMCloudVPC is the ID for the IBM Cloud VPC detector that detects
+	// resource attributes on IBM Cloud VPC virtual server instances (see
+	// vpc.NewResourceDetector for details).
+	IDIBMCloudVPC = ID("ibmcloud.vpc")
+	// IDK8sAPI is the ID for the Kubernetes API detector that detects resource
+	// attributes from the Kubernetes API (see k8sapi.NewResourceDetector for
+	// details).
+	IDK8sAPI = ID("k8sapi")
+	// IDVultr is the ID for the Vultr detector that detects resource attributes
+	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
+	// details).
+	IDVultr = ID("vultr")
 	// IDHost is the ID for the host detector. This detector detects the
 	// "host.name" attribute from the os.Hostname function.
 	IDHost = ID("host")
@@ -113,21 +144,36 @@ var (
 	// identifying the container in which the process is running, especially in
 	// containerized environments like Kubernetes or Docker.
 	IDContainer = ID("container")
+	// IDDocker is the ID for the Docker detector that detects resource
+	// attributes on Docker containers (see docker.NewResourceDetector for
+	// details).
+	IDDocker = ID("docker")
 )
 
 var (
 	registryMu sync.Mutex
 	registry   = map[ID]func() resource.Detector{
-		IDAWSEC2:    ec2.NewResourceDetector,
-		IDAWSECS:    ecs.NewResourceDetector,
-		IDAWSEKS:    eks.NewResourceDetector,
-		IDAWSLambda: lambda.NewResourceDetector,
+		IDAWSEC2:              ec2.NewResourceDetector,
+		IDAWSECS:              ecs.NewResourceDetector,
+		IDAWSEKS:              eks.NewResourceDetector,
+		IDAWSLambda:           lambda.NewResourceDetector,
+		IDAWSElasticBeanstalk: func() resource.Detector { return elasticbeanstalk.NewResourceDetector() },
+
+		IDAzureContainerApps: func() resource.Detector { return azurecontainerapps.NewResourceDetector() },
 
 		IDAzureVM: func() resource.Detector {
 			return azurevm.New()
 		},
 
 		IDGCP: gcp.NewDetector,
+
+		IDHetzner: func() resource.Detector { return hetzner.NewResourceDetector() },
+
+		IDIBMCloudVPC: func() resource.Detector { return vpc.NewResourceDetector() },
+
+		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
+
+		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 
 		IDHost:   optFactory(resource.WithHost()),
 		IDHostID: optFactory(resource.WithHostID()),
@@ -147,6 +193,8 @@ var (
 		IDProcessRuntimeDescription: optFactory(resource.WithProcessRuntimeDescription()),
 
 		IDContainer: optFactory(resource.WithContainer()),
+
+		IDDocker: func() resource.Detector { return docker.NewResourceDetector() },
 	}
 )
 

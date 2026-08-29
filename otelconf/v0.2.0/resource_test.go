@@ -16,12 +16,14 @@ func TestNewResource(t *testing.T) {
 	schemaURL := resource.Default().SchemaURL()
 
 	res, err := resource.Merge(resource.Default(),
-		resource.NewWithAttributes(schemaURL,
+		resource.NewWithAttributes(
+			schemaURL,
 			attribute.String("service.name", "service-a"),
 		))
 	require.NoError(t, err)
 	resWithAttrs, err := resource.Merge(resource.Default(),
-		resource.NewWithAttributes(schemaURL,
+		resource.NewWithAttributes(
+			schemaURL,
 			attribute.String("service.name", "service-a"),
 			attribute.Bool("attr-bool", true),
 		))
@@ -44,7 +46,7 @@ func TestNewResource(t *testing.T) {
 		{
 			name: "resource-with-attributes-invalid-schema",
 			config: &Resource{
-				SchemaUrl: ptr("https://opentelemetry.io/"),
+				SchemaUrl: new("https://opentelemetry.io/"),
 				Attributes: Attributes{
 					"service.name": "service-a",
 				},
@@ -58,7 +60,7 @@ func TestNewResource(t *testing.T) {
 				Attributes: Attributes{
 					"service.name": "service-a",
 				},
-				SchemaUrl: ptr(schemaURL),
+				SchemaUrl: new(schemaURL),
 			},
 			wantResource: res,
 		},
@@ -69,7 +71,7 @@ func TestNewResource(t *testing.T) {
 					"service.name": "service-a",
 					"attr-bool":    true,
 				},
-				SchemaUrl: ptr(schemaURL),
+				SchemaUrl: new(schemaURL),
 			},
 			wantResource: resWithAttrs,
 		},

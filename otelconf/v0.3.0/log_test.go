@@ -13,11 +13,8 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
-	"path/filepath"
 	"reflect"
-	"runtime"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -76,6 +73,7 @@ func TestLoggerProvider(t *testing.T) {
 
 func TestLogProcessor(t *testing.T) {
 	ctx := t.Context()
+	material := testtls.Write(t)
 
 	otlpHTTPExporter, err := otlploghttp.New(ctx)
 	require.NoError(t, err)
@@ -114,10 +112,10 @@ func TestLogProcessor(t *testing.T) {
 
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(-1),
+					MaxExportBatchSize: new(-1),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: ptr("http/protobuf"),
+							Protocol: new("http/protobuf"),
 						},
 					},
 				},
@@ -128,10 +126,10 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch processor invalid export timeout otlphttp exporter",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					ExportTimeout: ptr(-2),
+					ExportTimeout: new(-2),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: ptr("http/protobuf"),
+							Protocol: new("http/protobuf"),
 						},
 					},
 				},
@@ -143,10 +141,10 @@ func TestLogProcessor(t *testing.T) {
 
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxQueueSize: ptr(-3),
+					MaxQueueSize: new(-3),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: ptr("http/protobuf"),
+							Protocol: new("http/protobuf"),
 						},
 					},
 				},
@@ -157,10 +155,10 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch processor invalid schedule delay console exporter",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					ScheduleDelay: ptr(-4),
+					ScheduleDelay: new(-4),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: ptr("http/protobuf"),
+							Protocol: new("http/protobuf"),
 						},
 					},
 				},
@@ -180,10 +178,10 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/console",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						Console: map[string]any{},
 					},
@@ -195,17 +193,17 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-grpc-exporter-no-endpoint",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Protocol:    new("grpc"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -217,18 +215,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-grpc-exporter",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("http://localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Protocol:    new("grpc"),
+							Endpoint:    new("http://localhost:4317"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -240,18 +238,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-grpc-exporter-socket-endpoint",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("unix:collector.sock"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Protocol:    new("grpc"),
+							Endpoint:    new("unix:collector.sock"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -265,11 +263,11 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+							Protocol:    new("grpc"),
+							Endpoint:    new("localhost:4317"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
+							Certificate: new(material.CACertPath),
 						},
 					},
 				},
@@ -282,11 +280,11 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Protocol:    new("grpc"),
+							Endpoint:    new("localhost:4317"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
+							Certificate: new(material.BadCertPath),
 						},
 					},
 				},
@@ -299,11 +297,11 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							HeadersList: ptr("==="),
+							Protocol:    new("grpc"),
+							Endpoint:    new("localhost:4317"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
+							HeadersList: new("==="),
 						},
 					},
 				},
@@ -316,12 +314,12 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:          ptr("grpc"),
-							Endpoint:          ptr("localhost:4317"),
-							Compression:       ptr("gzip"),
-							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Protocol:          new("grpc"),
+							Endpoint:          new("localhost:4317"),
+							Compression:       new("gzip"),
+							Timeout:           new(1000),
+							ClientCertificate: new(material.BadCertPath),
+							ClientKey:         new(material.BadCertPath),
 						},
 					},
 				},
@@ -332,18 +330,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-grpc-exporter-no-scheme",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Protocol:    new("grpc"),
+							Endpoint:    new("localhost:4317"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -355,18 +353,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-grpc-invalid-endpoint",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr(" "),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Protocol:    new("grpc"),
+							Endpoint:    new(" "),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -378,18 +376,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-grpc-invalid-compression",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("grpc"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("invalid"),
-							Timeout:     ptr(1000),
+							Protocol:    new("grpc"),
+							Endpoint:    new("localhost:4317"),
+							Compression: new("invalid"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -401,18 +399,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-http-exporter",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("http://localhost:4318"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Protocol:    new("http/protobuf"),
+							Endpoint:    new("http://localhost:4318"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -426,11 +424,11 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "ca.crt")),
+							Protocol:    new("http/protobuf"),
+							Endpoint:    new("localhost:4317"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
+							Certificate: new(material.CACertPath),
 						},
 					},
 				},
@@ -443,11 +441,11 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							Certificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Protocol:    new("http/protobuf"),
+							Endpoint:    new("localhost:4317"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
+							Certificate: new(material.BadCertPath),
 						},
 					},
 				},
@@ -460,12 +458,12 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:          ptr("http/protobuf"),
-							Endpoint:          ptr("localhost:4317"),
-							Compression:       ptr("gzip"),
-							Timeout:           ptr(1000),
-							ClientCertificate: ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
-							ClientKey:         ptr(filepath.Join("..", "testdata", "bad_cert.crt")),
+							Protocol:          new("http/protobuf"),
+							Endpoint:          new("localhost:4317"),
+							Compression:       new("gzip"),
+							Timeout:           new(1000),
+							ClientCertificate: new(material.BadCertPath),
+							ClientKey:         new(material.BadCertPath),
 						},
 					},
 				},
@@ -478,11 +476,11 @@ func TestLogProcessor(t *testing.T) {
 				Batch: &BatchLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4317"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
-							HeadersList: ptr("==="),
+							Protocol:    new("http/protobuf"),
+							Endpoint:    new("localhost:4317"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
+							HeadersList: new("==="),
 						},
 					},
 				},
@@ -493,18 +491,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-http-exporter-with-path",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("http://localhost:4318/path/123"),
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Protocol:    new("http/protobuf"),
+							Endpoint:    new("http://localhost:4318/path/123"),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -516,17 +514,17 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-http-exporter-no-endpoint",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Protocol:    new("http/protobuf"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -538,18 +536,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-http-exporter-no-scheme",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4318"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Protocol:    new("http/protobuf"),
+							Endpoint:    new("localhost:4318"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -561,18 +559,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-http-invalid-protocol",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("invalid"),
-							Endpoint:    ptr("https://10.0.0.0:443"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Protocol:    new("invalid"),
+							Endpoint:    new("https://10.0.0.0:443"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -584,18 +582,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-http-invalid-endpoint",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr(" "),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Protocol:    new("http/protobuf"),
+							Endpoint:    new(" "),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -607,18 +605,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-http-none-compression",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4318"),
-							Compression: ptr("none"),
-							Timeout:     ptr(1000),
+							Protocol:    new("http/protobuf"),
+							Endpoint:    new("localhost:4318"),
+							Compression: new("none"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -630,18 +628,18 @@ func TestLogProcessor(t *testing.T) {
 			name: "batch/otlp-http-invalid-compression",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
-					MaxExportBatchSize: ptr(0),
-					ExportTimeout:      ptr(0),
-					MaxQueueSize:       ptr(0),
-					ScheduleDelay:      ptr(0),
+					MaxExportBatchSize: new(0),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(0),
+					ScheduleDelay:      new(0),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4318"),
-							Compression: ptr("invalid"),
-							Timeout:     ptr(1000),
+							Protocol:    new("http/protobuf"),
+							Endpoint:    new("localhost:4318"),
+							Compression: new("invalid"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -675,12 +673,12 @@ func TestLogProcessor(t *testing.T) {
 				Simple: &SimpleLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol:    ptr("http/protobuf"),
-							Endpoint:    ptr("localhost:4318"),
-							Compression: ptr("gzip"),
-							Timeout:     ptr(1000),
+							Protocol:    new("http/protobuf"),
+							Endpoint:    new("localhost:4318"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
 							Headers: []NameStringValuePair{
-								{Name: "test", Value: ptr("test1")},
+								{Name: "test", Value: new("test1")},
 							},
 						},
 					},
@@ -723,9 +721,9 @@ func TestLoggerProviderOptions(t *testing.T) {
 				Simple: &SimpleLogRecordProcessor{
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Protocol: ptr("http/protobuf"),
-							Endpoint: ptr(srv.URL),
-							Insecure: ptr(true),
+							Protocol: new("http/protobuf"),
+							Endpoint: new(srv.URL),
+							Insecure: new(true),
 						},
 					},
 				},
@@ -762,10 +760,6 @@ func TestLoggerProviderOptions(t *testing.T) {
 }
 
 func Test_otlpGRPCLogExporter(t *testing.T) {
-	if runtime.GOOS == "windows" || runtime.GOOS == "darwin" {
-		// TODO (#8115): Fix the flakiness on Windows and MacOS.
-		t.Skip("Test is flaky on Windows and MacOS.")
-	}
 	material := testtls.Write(t)
 	type args struct {
 		ctx        context.Context
@@ -781,12 +775,12 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			args: args{
 				ctx: t.Context(),
 				otlpConfig: &OTLP{
-					Protocol:    ptr("grpc"),
-					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
-					Insecure:    ptr(true),
+					Protocol:    new("grpc"),
+					Compression: new("gzip"),
+					Timeout:     new(50000),
+					Insecure:    new(true),
 					Headers: []NameStringValuePair{
-						{Name: "test", Value: ptr("test1")},
+						{Name: "test", Value: new("test1")},
 					},
 				},
 			},
@@ -799,12 +793,12 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			args: args{
 				ctx: t.Context(),
 				otlpConfig: &OTLP{
-					Protocol:    ptr("grpc"),
-					Compression: ptr("gzip"),
-					Timeout:     ptr(5000),
-					Certificate: ptr(material.CACertPath),
+					Protocol:    new("grpc"),
+					Compression: new("gzip"),
+					Timeout:     new(50000),
+					Certificate: new(material.CACertPath),
 					Headers: []NameStringValuePair{
-						{Name: "test", Value: ptr("test1")},
+						{Name: "test", Value: new("test1")},
 					},
 				},
 			},
@@ -823,14 +817,14 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			args: args{
 				ctx: t.Context(),
 				otlpConfig: &OTLP{
-					Protocol:          ptr("grpc"),
-					Compression:       ptr("gzip"),
-					Timeout:           ptr(5000),
-					Certificate:       ptr(material.CACertPath),
-					ClientKey:         ptr(material.ClientKeyPath),
-					ClientCertificate: ptr(material.ClientCertPath),
+					Protocol:          new("grpc"),
+					Compression:       new("gzip"),
+					Timeout:           new(50000),
+					Certificate:       new(material.CACertPath),
+					ClientKey:         new(material.ClientKeyPath),
+					ClientCertificate: new(material.ClientCertPath),
 					Headers: []NameStringValuePair{
-						{Name: "test", Value: ptr("test1")},
+						{Name: "test", Value: new("test1")},
 					},
 				},
 			},
@@ -858,17 +852,14 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp4", "localhost:0")
+			n, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "localhost:0")
 			require.NoError(t, err)
 
-			// We need to manually construct the endpoint using the port on which the server is listening.
-			//
-			// n.Addr() always returns 127.0.0.1 instead of localhost.
-			// But our certificate is created with CN as 'localhost', not '127.0.0.1'.
-			// So we have to manually form the endpoint as "localhost:<port>".
-			_, port, err := net.SplitHostPort(n.Addr().String())
-			require.NoError(t, err)
-			tt.args.otlpConfig.Endpoint = ptr("localhost:" + port)
+			scheme := "https"
+			if tt.args.otlpConfig.Insecure != nil && *tt.args.otlpConfig.Insecure {
+				scheme = "http"
+			}
+			tt.args.otlpConfig.Endpoint = new(scheme + "://" + n.Addr().String())
 
 			serverOpts, err := tt.grpcServerOpts()
 			require.NoError(t, err)
@@ -879,14 +870,10 @@ func Test_otlpGRPCLogExporter(t *testing.T) {
 			require.NoError(t, err)
 
 			logFactory := sdklogtest.RecordFactory{
-				Body: log.StringValue("test"),
+				Body: attribute.StringValue("test"),
 			}
 
-			assert.EventuallyWithT(t, func(collect *assert.CollectT) {
-				assert.NoError(collect, exporter.Export(context.Background(), []sdklog.Record{ //nolint:usetesting // required to avoid getting a canceled context.
-					logFactory.NewRecord(),
-				}))
-			}, 10*time.Second, 1*time.Second)
+			assert.NoError(t, exporter.Export(t.Context(), []sdklog.Record{logFactory.NewRecord()}))
 		})
 	}
 }
@@ -913,7 +900,7 @@ func startGRPCLogsCollector(t *testing.T, listener net.Listener, serverOptions [
 	go func() { errCh <- srv.Serve(listener) }()
 
 	t.Cleanup(func() {
-		srv.GracefulStop()
+		srv.Stop()
 		if err := <-errCh; err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			assert.NoError(t, err)
 		}
