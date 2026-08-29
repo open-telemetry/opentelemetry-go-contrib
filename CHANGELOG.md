@@ -8,6 +8,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add the `cloud.platform`, `aws.log.group.names`, and `aws.log.stream.names` resource attributes to `go.opentelemetry.io/contrib/detectors/aws/lambda`, matching the `lambda` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#8945)
+- Add `WithAttributeFilter` to `go.opentelemetry.io/contrib/detectors/aws/lambda` to select which detected attributes are included in the returned resource. (#8945)
+
+### Fixed
+
+- `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer reports `cloud.region`, `faas.version`, and `faas.instance` as empty strings when their environment variables are unset; the attributes are omitted instead. (#8945)
+
 ### Removed
 
 - Drop support for [Go 1.25]. (#9584)
@@ -26,8 +35,6 @@ The next release will require at least [Go 1.26].
 - Support testing of [Go 1.27]. (#9524)
 - Add `go.opentelemetry.io/contrib/detectors/docker`, a resource detector for Docker, ported from `processor/resourcedetectionprocessor/internal/docker` in opentelemetry-collector-contrib. (#9001)
 - Add `S3AttributeBuilder` to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` that sets S3-specific span attributes following the OpenTelemetry S3 semantic conventions. (#9292)
-- Add the `cloud.platform`, `aws.log.group.names`, and `aws.log.stream.names` resource attributes to `go.opentelemetry.io/contrib/detectors/aws/lambda`, matching the `lambda` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#8945)
-- Add `WithAttributeFilter` to `go.opentelemetry.io/contrib/detectors/aws/lambda` to select which detected attributes are included in the returned resource. (#8945)
 
 ### Deprecated
 
@@ -41,7 +48,6 @@ The next release will require at least [Go 1.26].
 - Set `error.type` on the `rpc.client.call.duration` and `rpc.server.call.duration` metrics in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` when the RPC fails with a non-OK status, per the RPC semantic conventions. (#9429)
 - Reject OTLP exporter headers with an empty `name` in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x`, and `go.opentelemetry.io/contrib/otelconf/v0.3.0`, instead of forwarding invalid header names to OTLP exporters. (#9102)
 - `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer returns an error when run outside of an AWS Lambda environment, matching the no-op behavior of other resource detectors. (#9464)
-- `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer reports `cloud.region`, `faas.version`, and `faas.instance` as empty strings when their environment variables are unset; the attributes are omitted instead. (#8945)
 - Convert Prometheus untyped metrics to OTLP Gauges in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9099)
 
 ## [1.45.0/2.5.2/0.70.0/0.37.2/0.25.0/0.20.0/0.16.2/0.17.0] - 2026-08-03
