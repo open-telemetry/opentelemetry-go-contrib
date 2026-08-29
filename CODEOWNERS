@@ -44,6 +44,7 @@ detectors/azure/azurefunctions                                          @open-te
 detectors/azure/azurevm                                                 @open-telemetry/go-approvers @pyohannes @paulojmdias @iblancasa
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 detectors/hetzner/                                                      @open-telemetry/go-approvers @paulojmdias
+detectors/docker/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/ibmcloud/vpc/                                                 @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/k8sapi/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa @dashpole
 detectors/vultr/                                                        @open-telemetry/go-approvers @paulojmdias @iblancasa

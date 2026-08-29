@@ -1,14 +1,14 @@
 // Deprecated: Use github.com/labstack/echo-opentelemetry instead.
 module go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho
 
-go 1.25.0
+go 1.26.0
 
 replace go.opentelemetry.io/contrib/propagators/b3 => ../../../../../propagators/b3
 
 require (
 	github.com/labstack/echo/v4 v4.15.4
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/contrib/propagators/b3 v1.45.0
+	go.opentelemetry.io/contrib/propagators/b3 v1.46.0
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/metric v1.46.0
 	go.opentelemetry.io/otel/sdk v1.46.0

@@ -4,4 +4,4 @@
 package otellogr
 
 // Version is the current release version of the otellogr bridge.
-const Version = "0.20.0"
+const Version = "0.20.1"
