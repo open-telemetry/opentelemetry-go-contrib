@@ -151,7 +151,7 @@ var (
 		IDAWSEC2:              ec2.NewResourceDetector,
 		IDAWSECS:              ecs.NewResourceDetector,
 		IDAWSEKS:              eks.NewResourceDetector,
-		IDAWSLambda:           lambda.NewResourceDetector,
+		IDAWSLambda:           func() resource.Detector { return lambda.NewResourceDetector() },
 		IDAWSElasticBeanstalk: func() resource.Detector { return elasticbeanstalk.NewResourceDetector() },
 
 		IDAzureContainerApps: func() resource.Detector { return azurecontainerapps.NewResourceDetector() },
