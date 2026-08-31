@@ -95,8 +95,7 @@ var createdByMIGRE = regexp.MustCompile(`^projects/[^/]+/(zones|regions)/([^/]+)
 
 func (d *Detector) GCEManagedInstanceGroup() (ManagedInstanceGroup, error) {
 	createdBy, err := d.metadata.InstanceAttributeValueWithContext(context.TODO(), createdByInstanceAttr)
-	var notDefinedError metadata.NotDefinedError
-	if errors.As(err, &notDefinedError) {
+	if _, ok := errors.AsType[metadata.NotDefinedError](err); ok {
 		return ManagedInstanceGroup{}, nil
 	} else if err != nil {
 		return ManagedInstanceGroup{}, err
