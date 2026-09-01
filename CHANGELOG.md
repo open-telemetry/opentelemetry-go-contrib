@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Drop support for [Go 1.25]. (#9584)
-- Remove `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. Use `github.com/labstack/echo-opentelemetry` instead. (#9134)
+- Remove `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. Use `github.com/labstack/echo-opentelemetry` instead. (#9613)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
