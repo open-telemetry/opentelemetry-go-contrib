@@ -4,11 +4,11 @@ go 1.26.0
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.45.1
-	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.65.1
-	github.com/aws/aws-sdk-go-v2/service/route53 v1.67.1
-	github.com/aws/aws-sdk-go-v2/service/s3 v1.109.1
-	github.com/aws/aws-sdk-go-v2/service/sns v1.44.1
-	github.com/aws/aws-sdk-go-v2/service/sqs v1.48.1
+	github.com/aws/aws-sdk-go-v2/service/dynamodb v1.66.0
+	github.com/aws/aws-sdk-go-v2/service/route53 v1.68.0
+	github.com/aws/aws-sdk-go-v2/service/s3 v1.110.0
+	github.com/aws/aws-sdk-go-v2/service/sns v1.45.0
+	github.com/aws/aws-sdk-go-v2/service/sqs v1.50.0
 	github.com/aws/smithy-go v1.28.1
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.46.0
