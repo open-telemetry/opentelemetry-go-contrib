@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `go.opentelemetry.io/contrib/detectors/oraclecloud`, a new resource detector for Oracle Cloud Infrastructure (OCI) instances, ported from `processor/resourcedetectionprocessor/internal/oraclecloud` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `cloud.availability_zone`, `host.id`, `host.name`, `host.type`, `k8s.cluster.name`, and `oracle_cloud.realm`. (#9407)
+
 ### Removed
 
 - Drop support for [Go 1.25]. (#9584)

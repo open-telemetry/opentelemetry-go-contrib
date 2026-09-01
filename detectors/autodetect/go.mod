@@ -131,6 +131,8 @@ replace go.opentelemetry.io/contrib/detectors/ibmcloud/vpc => ../ibmcloud/vpc
 
 replace go.opentelemetry.io/contrib/detectors/k8sapi => ../k8sapi
 
+replace go.opentelemetry.io/contrib/detectors/oraclecloud => ../oraclecloud
+
 replace go.opentelemetry.io/contrib/detectors/vultr => ../vultr
 
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2

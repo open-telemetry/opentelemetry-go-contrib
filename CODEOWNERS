@@ -47,6 +47,7 @@ detectors/hetzner/                                                      @open-te
 detectors/docker/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/ibmcloud/vpc/                                                 @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/k8sapi/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa @dashpole
+detectors/oraclecloud/                                                  @open-telemetry/go-approvers @dashpole @geekdave
 detectors/vultr/                                                        @open-telemetry/go-approvers @paulojmdias @iblancasa
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
