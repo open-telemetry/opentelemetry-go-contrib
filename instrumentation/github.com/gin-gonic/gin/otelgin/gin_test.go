@@ -616,3 +616,55 @@ func TestMetrics(t *testing.T) {
 		})
 	}
 }
+
+func TestUnknownContentLengthMetric(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("foobar", otelgin.WithMeterProvider(meterProvider)))
+	router.POST("/chunked", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/chunked", strings.NewReader("hello"))
+	r.ContentLength = -1 // Simulate unknown / chunked content length
+	w := httptest.NewRecorder()
+
+	router.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	require.Len(t, rm.ScopeMetrics, 1)
+	sm := rm.ScopeMetrics[0]
+
+	// Verify recorded metrics: request.body.size should NOT be recorded for unknown request size (-1),
+	// but response.body.size and request.duration SHOULD be recorded and non-negative.
+	require.NotEmpty(t, sm.Metrics, "metrics should be recorded")
+
+	var foundRequestSize, foundResponseSize, foundDuration bool
+	for _, m := range sm.Metrics {
+		switch m.Name {
+		case "http.server.request.body.size":
+			foundRequestSize = true
+		case "http.server.response.body.size":
+			foundResponseSize = true
+			data, ok := m.Data.(metricdata.Histogram[int64])
+			require.True(t, ok)
+			require.NotEmpty(t, data.DataPoints)
+			assert.GreaterOrEqual(t, data.DataPoints[0].Sum, int64(0), "response.body.size should not be negative")
+		case "http.server.request.duration":
+			foundDuration = true
+			data, ok := m.Data.(metricdata.Histogram[float64])
+			require.True(t, ok)
+			require.NotEmpty(t, data.DataPoints)
+			assert.GreaterOrEqual(t, data.DataPoints[0].Sum, float64(0), "request.duration should not be negative")
+		}
+	}
+
+	assert.False(t, foundRequestSize, "http.server.request.body.size should not be recorded when request size is unknown (-1)")
+	assert.True(t, foundResponseSize, "http.server.response.body.size should be recorded")
+	assert.True(t, foundDuration, "http.server.request.duration should be recorded")
+}
