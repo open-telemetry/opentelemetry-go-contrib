@@ -619,6 +619,19 @@ func TestMetrics(t *testing.T) {
 	}
 }
 
+// waitOrFail blocks on ch and fails the test instead of hanging past the
+// package timeout if the client-disconnect fixture never reaches the
+// expected point (e.g. the handler never starts, or the request never
+// returns).
+func waitOrFail(t *testing.T, ch <-chan struct{}, what string) {
+	t.Helper()
+	select {
+	case <-ch:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for %s", what)
+	}
+}
+
 // TestClientDisconnect reproduces a real HTTP/1.1 client disconnect: the
 // handler observes the cancelled request context and writes a 500, mirroring
 // how a genuine server fault would look. The span and metrics must carry
@@ -659,9 +672,9 @@ func TestClientDisconnect(t *testing.T) {
 		}
 	}()
 
-	<-handlerStarted
+	waitOrFail(t, handlerStarted, "the handler to start")
 	cancel()
-	<-requestDone
+	waitOrFail(t, requestDone, "the request to finish")
 
 	require.Eventually(t, func() bool {
 		return len(sr.Ended()) == 1
@@ -749,9 +762,9 @@ func TestClientDisconnectWithoutErrorStatus(t *testing.T) {
 		}
 	}()
 
-	<-handlerStarted
+	waitOrFail(t, handlerStarted, "the handler to start")
 	cancel()
-	<-requestDone
+	waitOrFail(t, requestDone, "the request to finish")
 
 	require.Eventually(t, func() bool {
 		return len(sr.Ended()) == 1
@@ -862,24 +875,29 @@ func TestClientDisconnectCustomErrorTypeAttribute(t *testing.T) {
 		}
 	}()
 
-	<-handlerStarted
+	waitOrFail(t, handlerStarted, "the handler to start")
 	cancel()
-	<-requestDone
+	waitOrFail(t, requestDone, "the request to finish")
 
-	var rm metricdata.ResourceMetrics
-	require.Eventually(t, func() bool {
-		rm = metricdata.ResourceMetrics{}
-		require.NoError(t, reader.Collect(t.Context(), &rm))
-		return len(rm.ScopeMetrics) == 1
-	}, time.Second, 10*time.Millisecond, "expected metrics to be recorded after the client disconnects")
-
+	// RecordMetrics records the body-size histograms before the request-
+	// duration histogram, so a snapshot can contain the scope without yet
+	// containing the duration metric. Wait for the duration metric itself,
+	// not just the scope, or this can flake on a partial snapshot.
 	var durationMetric *metricdata.Metrics
-	for i, m := range rm.ScopeMetrics[0].Metrics {
-		if m.Name == "http.server.request.duration" {
-			durationMetric = &rm.ScopeMetrics[0].Metrics[i]
-			break
+	require.Eventually(t, func() bool {
+		rm := metricdata.ResourceMetrics{}
+		require.NoError(t, reader.Collect(t.Context(), &rm))
+		if len(rm.ScopeMetrics) != 1 {
+			return false
 		}
-	}
+		for i, m := range rm.ScopeMetrics[0].Metrics {
+			if m.Name == "http.server.request.duration" {
+				durationMetric = &rm.ScopeMetrics[0].Metrics[i]
+				return true
+			}
+		}
+		return false
+	}, time.Second, 10*time.Millisecond, "expected the http.server.request.duration metric to be recorded after the client disconnects")
 	require.NotNil(t, durationMetric, "expected to find the http.server.request.duration metric")
 	durationHistogram, ok := durationMetric.Data.(metricdata.Histogram[float64])
 	require.True(t, ok)
