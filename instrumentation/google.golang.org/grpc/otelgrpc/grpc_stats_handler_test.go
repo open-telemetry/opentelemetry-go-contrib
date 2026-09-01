@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -990,4 +991,198 @@ func TestMetricsSemconvOptIn(t *testing.T) {
 			})
 		})
 	}
+}
+
+func TestNonErrorCodes(t *testing.T) {
+	end := func(err error) *stats.End {
+		now := time.Now()
+		return &stats.End{Error: err, BeginTime: now, EndTime: now}
+	}
+
+	t.Run("server: NotFound stays as Unset (server default)", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.NotFound),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Find"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "item not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("server: promotes Internal to Unset (overrides default error)", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.Internal),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Find"})
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("server: no mapping → default mapping for NotFound", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(tp))
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("server: no mapping → default mapping for Internal", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(tp))
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Error, spans[0].Status().Code)
+		assert.Equal(t, "internal error", spans[0].Status().Description)
+	})
+
+	t.Run("server: does nothing if application has set Ok", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.Internal),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+
+		span := oteltrace.SpanFromContext(ctx)
+		span.SetStatus(otelcodes.Ok, "")
+
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Ok, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("server: does nothing if application has set Error", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.Internal),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+
+		span := oteltrace.SpanFromContext(ctx)
+		span.SetStatus(otelcodes.Error, "manually set by application")
+
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Error, spans[0].Status().Code)
+		assert.Equal(t, "manually set by application", spans[0].Status().Description)
+	})
+
+	t.Run("client: promotes NotFound to Unset (overrides default error)", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewClientHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.NotFound),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("client: no mapping → default mapping", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(tp))
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Error, spans[0].Status().Code)
+		assert.Equal(t, "not found", spans[0].Status().Description)
+	})
+
+	t.Run("server: does nothing if application has set Ok", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewClientHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.Internal),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+
+		span := oteltrace.SpanFromContext(ctx)
+		span.SetStatus(otelcodes.Ok, "")
+
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Ok, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("server: does nothing if application has set Error", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewClientHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.Internal),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+
+		span := oteltrace.SpanFromContext(ctx)
+		span.SetStatus(otelcodes.Error, "manually set by application")
+
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Error, spans[0].Status().Code)
+		assert.Equal(t, "manually set by application", spans[0].Status().Description)
+	})
 }
