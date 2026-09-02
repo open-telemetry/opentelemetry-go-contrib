@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `NewResourceDetectorWithOptions` and the `WithAWSLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom AWS SDK `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
 - Add the `cloud.platform`, `aws.log.group.names`, and `aws.log.stream.names` resource attributes to `go.opentelemetry.io/contrib/detectors/aws/lambda`, matching the `lambda` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#9606)
 - Add `WithAttributeFilter` to `go.opentelemetry.io/contrib/detectors/aws/lambda` to select which detected attributes are included in the returned resource. (#9606)
 
@@ -20,7 +21,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer reports `cloud.region`, `faas.version`, and `faas.instance` as empty strings when their environment variables are unset; the attributes are omitted instead. (#9606)
-- Add `NewResourceDetectorWithOptions` and the `WithAWSLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom AWS SDK `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
 - Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
 
 ### Removed
