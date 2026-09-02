@@ -230,3 +230,33 @@ func TestNewResourceDetectorUsesDefaultDir(t *testing.T) {
 	want := defaultEnrichmentDir(runtime.GOOS, os.Getenv("ProgramData"))
 	assert.Equal(t, want, d.enrichmentDir)
 }
+
+// TestComposition_MergeWithDefault guards against schema URL drift between
+// this detector and the SDK. [resource.Merge] reports
+// [resource.ErrSchemaURLConflict] and drops the schema URL when the two
+// disagree, so this fails as soon as the semconv version here and the one
+// behind [resource.Default] diverge.
+func TestComposition_MergeWithDefault(t *testing.T) {
+	d, _ := newDetector(t, fullProperties)
+
+	detected, err := d.Detect(t.Context())
+	require.NoError(t, err)
+
+	merged, err := resource.Merge(resource.Default(), detected)
+	require.NoError(t, err)
+	assert.NotErrorIs(t, err, resource.ErrSchemaURLConflict)
+	assert.Equal(t, resource.Default().SchemaURL(), merged.SchemaURL())
+}
+
+// TestComposition_WithCoreDetectors asserts this detector composes with
+// go.opentelemetry.io/otel/sdk's own built-in host detector.
+func TestComposition_WithCoreDetectors(t *testing.T) {
+	d, _ := newDetector(t, fullProperties)
+
+	res, err := resource.New(t.Context(),
+		resource.WithDetectors(d),
+		resource.WithHost(),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, resource.Default().SchemaURL(), res.SchemaURL())
+}
