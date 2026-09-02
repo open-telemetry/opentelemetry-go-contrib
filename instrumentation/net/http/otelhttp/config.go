@@ -148,9 +148,9 @@ const (
 //
 // Valid events are:
 //   - ReadEvents: Record the number of bytes read after every http.Request.Body.Read
-//     using the ReadBytesKey
-//   - WriteEvents: Record the number of bytes written after every http.ResponeWriter.Write
-//     using the WriteBytesKey
+//     with the "http.read_bytes" attribute.
+//   - WriteEvents: Record the number of bytes written after every http.ResponseWriter.Write
+//     with the "http.wrote_bytes" attribute.
 func WithMessageEvents(events ...Event) Option {
 	return optionFunc(func(c *config) {
 		for _, e := range events {

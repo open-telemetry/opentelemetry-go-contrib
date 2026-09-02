@@ -12,6 +12,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `NewResourceDetectorWithOptions` and the `WithAWSLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom AWS SDK `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
 
+### Deprecated
+
+- Deprecate `ReadBytesKey`, `ReadErrorKey`, `WroteBytesKey`, and `WriteErrorKey` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  Their values and the `http.read_bytes` and `http.wrote_bytes` attributes emitted by `WithMessageEvents` remain unchanged for compatibility.
+  There is no semantic-convention replacement for per-read or per-write byte counts or the human-readable error fields.
+  Use `HTTPRequestBodySizeKey` and `HTTPResponseBodySizeKey` from `go.opentelemetry.io/otel/semconv/v1.43.0` to record total body sizes on the span.
+  If an error causes the HTTP request to fail, set the span status to Error and record `ErrorType(err)` from `go.opentelemetry.io/otel/semconv/v1.43.0` on the span.
+
 ### Fixed
 
 - Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)

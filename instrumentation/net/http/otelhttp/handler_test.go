@@ -751,6 +751,68 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 	}
 }
 
+func TestMessageEventAttributeCompatibility(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(spanRecorder),
+	)
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			if !assert.NoError(t, err) {
+				return
+			}
+
+			_, err = w.Write(body)
+			assert.NoError(t, err)
+		}),
+		"test_handler",
+		WithTracerProvider(provider),
+		WithMessageEvents(ReadEvents, WriteEvents),
+	)
+
+	const payload = "hello world"
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", strings.NewReader(payload))
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	require.Len(t, spanRecorder.Ended(), 1)
+
+	var readBytes, wroteBytes int64
+	var readEvents, writeEvents int
+	for _, event := range spanRecorder.Ended()[0].Events() {
+		switch event.Name {
+		case "read":
+			readEvents++
+			found := false
+			for _, attr := range event.Attributes {
+				assert.NotEqual(t, attribute.Key("http.request.body.size"), attr.Key, "total body size must not be recorded on a per-read event")
+				if attr.Key == attribute.Key("http.read_bytes") {
+					found = true
+					readBytes += attr.Value.AsInt64()
+				}
+			}
+			assert.True(t, found, "read event should retain the legacy attribute")
+		case "write":
+			writeEvents++
+			found := false
+			for _, attr := range event.Attributes {
+				assert.NotEqual(t, attribute.Key("http.response.body.size"), attr.Key, "total body size must not be recorded on a per-write event")
+				if attr.Key == attribute.Key("http.wrote_bytes") {
+					found = true
+					wroteBytes += attr.Value.AsInt64()
+				}
+			}
+			assert.True(t, found, "write event should retain the legacy attribute")
+		}
+	}
+
+	assert.Positive(t, readEvents)
+	assert.Positive(t, writeEvents)
+	assert.Equal(t, int64(len(payload)), readBytes)
+	assert.Equal(t, int64(len(payload)), wroteBytes)
+}
+
 func BenchmarkHandlerServeHTTP(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()

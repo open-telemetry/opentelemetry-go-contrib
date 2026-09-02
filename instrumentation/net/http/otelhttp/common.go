@@ -10,12 +10,43 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
-// Attribute keys that can be added to a span.
+// Legacy HTTP attribute keys retained for compatibility.
 const (
-	ReadBytesKey  = attribute.Key("http.read_bytes")  // if anything was read from the request body, the total number of bytes read
-	ReadErrorKey  = attribute.Key("http.read_error")  // If an error occurred while reading a request, the string of the error (io.EOF is not recorded)
-	WroteBytesKey = attribute.Key("http.wrote_bytes") // if anything was written to the response writer, the total number of bytes written
-	WriteErrorKey = attribute.Key("http.write_error") // if an error occurred while writing a reply, the string of the error (io.EOF is not recorded)
+	// ReadBytesKey is the attribute key for the number of bytes returned by an
+	// individual read from an HTTP request body.
+	//
+	// Deprecated: there is no semantic-convention replacement for a per-read
+	// byte count. Use HTTPRequestBodySizeKey from
+	// go.opentelemetry.io/otel/semconv/v1.43.0 to record the total request body
+	// size on the span.
+	ReadBytesKey = attribute.Key("http.read_bytes")
+
+	// ReadErrorKey is the attribute key for the string form of a non-EOF error
+	// returned while reading an HTTP request body.
+	//
+	// Deprecated: there is no direct semantic-convention replacement. If the
+	// error causes the HTTP server request to fail, set the span status to Error
+	// and record ErrorType(err) from go.opentelemetry.io/otel/semconv/v1.43.0 on
+	// the span.
+	ReadErrorKey = attribute.Key("http.read_error")
+
+	// WroteBytesKey is the attribute key for the number of bytes returned by an
+	// individual write to an HTTP response body.
+	//
+	// Deprecated: there is no semantic-convention replacement for a per-write
+	// byte count. Use HTTPResponseBodySizeKey from
+	// go.opentelemetry.io/otel/semconv/v1.43.0 to record the total response body
+	// size on the span.
+	WroteBytesKey = attribute.Key("http.wrote_bytes")
+
+	// WriteErrorKey is the attribute key for the string form of a non-EOF error
+	// returned while writing an HTTP response body.
+	//
+	// Deprecated: there is no direct semantic-convention replacement. If the
+	// error causes the HTTP server request to fail, set the span status to Error
+	// and record ErrorType(err) from go.opentelemetry.io/otel/semconv/v1.43.0 on
+	// the span.
+	WriteErrorKey = attribute.Key("http.write_error")
 )
 
 // Filter is a predicate used to determine whether a given http.request should
