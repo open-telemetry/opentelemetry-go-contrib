@@ -751,7 +751,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 	}
 }
 
-func TestMessageEventAttributeCompatibility(t *testing.T) {
+func TestMessageEventAttributes(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(
 		sdktrace.WithSpanProcessor(spanRecorder),
@@ -778,39 +778,29 @@ func TestMessageEventAttributeCompatibility(t *testing.T) {
 
 	require.Len(t, spanRecorder.Ended(), 1)
 
-	var readBytes, wroteBytes int64
 	var readEvents, writeEvents int
-	for _, event := range spanRecorder.Ended()[0].Events() {
+	span := spanRecorder.Ended()[0]
+	for _, event := range span.Events() {
 		switch event.Name {
 		case "read":
 			readEvents++
-			found := false
-			for _, attr := range event.Attributes {
-				assert.NotEqual(t, attribute.Key("http.request.body.size"), attr.Key, "total body size must not be recorded on a per-read event")
-				if attr.Key == attribute.Key("http.read_bytes") {
-					found = true
-					readBytes += attr.Value.AsInt64()
-				}
-			}
-			assert.True(t, found, "read event should retain the legacy attribute")
+			assert.Empty(t, event.Attributes)
 		case "write":
 			writeEvents++
-			found := false
-			for _, attr := range event.Attributes {
-				assert.NotEqual(t, attribute.Key("http.response.body.size"), attr.Key, "total body size must not be recorded on a per-write event")
-				if attr.Key == attribute.Key("http.wrote_bytes") {
-					found = true
-					wroteBytes += attr.Value.AsInt64()
-				}
-			}
-			assert.True(t, found, "write event should retain the legacy attribute")
+			assert.Empty(t, event.Attributes)
 		}
 	}
 
 	assert.Positive(t, readEvents)
 	assert.Positive(t, writeEvents)
-	assert.Equal(t, int64(len(payload)), readBytes)
-	assert.Equal(t, int64(len(payload)), wroteBytes)
+	assert.Contains(t, span.Attributes(), attribute.Int("http.request.body.size", len(payload)))
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.body.size", len(payload)))
+	for _, attr := range span.Attributes() {
+		assert.NotEqual(t, attribute.Key("http.read_bytes"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.read_error"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.wrote_bytes"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.write_error"), attr.Key)
+	}
 }
 
 func BenchmarkHandlerServeHTTP(b *testing.B) {
