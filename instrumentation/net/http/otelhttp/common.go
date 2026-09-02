@@ -15,37 +15,25 @@ const (
 	// ReadBytesKey is the attribute key for the number of bytes returned by an
 	// individual read from an HTTP request body.
 	//
-	// Deprecated: there is no semantic-convention replacement for a per-read
-	// byte count. Use HTTPRequestBodySizeKey from
-	// go.opentelemetry.io/otel/semconv/v1.43.0 to record the total request body
-	// size on the span.
+	// Deprecated: there is no direct semantic-convention replacement.
 	ReadBytesKey = attribute.Key("http.read_bytes")
 
 	// ReadErrorKey is the attribute key for the string form of a non-EOF error
 	// returned while reading an HTTP request body.
 	//
-	// Deprecated: there is no direct semantic-convention replacement. If the
-	// error causes the HTTP server request to fail, set the span status to Error
-	// and record ErrorType(err) from go.opentelemetry.io/otel/semconv/v1.43.0 on
-	// the span.
+	// Deprecated: there is no direct semantic-convention replacement.
 	ReadErrorKey = attribute.Key("http.read_error")
 
 	// WroteBytesKey is the attribute key for the number of bytes returned by an
 	// individual write to an HTTP response body.
 	//
-	// Deprecated: there is no semantic-convention replacement for a per-write
-	// byte count. Use HTTPResponseBodySizeKey from
-	// go.opentelemetry.io/otel/semconv/v1.43.0 to record the total response body
-	// size on the span.
+	// Deprecated: there is no direct semantic-convention replacement.
 	WroteBytesKey = attribute.Key("http.wrote_bytes")
 
 	// WriteErrorKey is the attribute key for the string form of a non-EOF error
 	// returned while writing an HTTP response body.
 	//
-	// Deprecated: there is no direct semantic-convention replacement. If the
-	// error causes the HTTP server request to fail, set the span status to Error
-	// and record ErrorType(err) from go.opentelemetry.io/otel/semconv/v1.43.0 on
-	// the span.
+	// Deprecated: there is no direct semantic-convention replacement.
 	WriteErrorKey = attribute.Key("http.write_error")
 )
 
