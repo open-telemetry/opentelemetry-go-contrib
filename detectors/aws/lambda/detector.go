@@ -32,7 +32,7 @@ type config struct {
 	filter attribute.Filter
 }
 
-// Option configures a resource detector.
+// Option configures a [ResourceDetector].
 type Option interface {
 	apply(*config)
 }
@@ -48,25 +48,26 @@ func WithAttributeFilter(filter attribute.Filter) Option {
 	return optionFunc(func(c *config) { c.filter = filter })
 }
 
-// resource detector collects resource information from Lambda environment.
-type resourceDetector struct {
+// ResourceDetector collects resource information from the AWS Lambda environment.
+type ResourceDetector struct {
 	cfg config
 }
 
-// compile time assertion that resource detector implements the resource.Detector interface.
-var _ resource.Detector = (*resourceDetector)(nil)
+// Compile-time interface assertion.
+var _ resource.Detector = (*ResourceDetector)(nil)
 
-// NewResourceDetector returns a resource detector that will detect AWS Lambda resources.
-func NewResourceDetector(opts ...Option) resource.Detector {
+// NewResourceDetector returns a [resource.Detector] that detects resource
+// attributes on AWS Lambda.
+func NewResourceDetector(opts ...Option) *ResourceDetector {
 	var cfg config
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
-	return &resourceDetector{cfg: cfg}
+	return &ResourceDetector{cfg: cfg}
 }
 
 // Detect collects resource attributes available when running on lambda.
-func (d *resourceDetector) Detect(context.Context) (*resource.Resource, error) {
+func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	// Lambda resources come from ENV
 	lambdaName := os.Getenv(lambdaFunctionNameEnvVar)
 	if lambdaName == "" {
