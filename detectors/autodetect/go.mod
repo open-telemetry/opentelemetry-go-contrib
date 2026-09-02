@@ -12,6 +12,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.18.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.18.0
 	go.opentelemetry.io/contrib/detectors/docker v0.18.0
+	go.opentelemetry.io/contrib/detectors/dynatrace v0.18.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.46.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.18.0
 	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.18.0
@@ -136,3 +137,5 @@ replace go.opentelemetry.io/contrib/detectors/vultr => ../vultr
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
 
 replace go.opentelemetry.io/contrib/detectors/docker => ../docker
+
+replace go.opentelemetry.io/contrib/detectors/dynatrace => ../dynatrace

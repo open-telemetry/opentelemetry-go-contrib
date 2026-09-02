@@ -22,6 +22,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/docker"
+	"go.opentelemetry.io/contrib/detectors/dynatrace"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
@@ -58,6 +59,10 @@ var (
 	// attributes on Microsoft Azure virtual machines (see azurevm.New for
 	// details).
 	IDAzureVM = ID("azure.vm")
+	// IDDynatrace is the ID for the Dynatrace detector that detects resource
+	// attributes from the enrichment files written by the Dynatrace OneAgent
+	// (see dynatrace.NewResourceDetector for details).
+	IDDynatrace = ID("dynatrace")
 	// IDGCP is the ID for the GCP detector that detects resource attributes on
 	// Google Cloud Platform (GCP) environments (see gcp.NewDetector for
 	// details).
@@ -164,6 +169,8 @@ var (
 		IDAzureVM: func() resource.Detector {
 			return azurevm.New()
 		},
+
+		IDDynatrace: func() resource.Detector { return dynatrace.NewResourceDetector() },
 
 		IDGCP: gcp.NewDetector,
 
