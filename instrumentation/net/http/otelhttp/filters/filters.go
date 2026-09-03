@@ -111,3 +111,12 @@ func Method(m string) otelhttp.Filter {
 		return m == r.Method
 	}
 }
+
+// Methods returns a Filter that returns true if the request
+// method matches any of the provided values ms.
+func Methods(ms ...string) otelhttp.Filter {
+	return func(r *http.Request) bool {
+		return slices.Contains(ms, r.Method)
+	}
+}
+
