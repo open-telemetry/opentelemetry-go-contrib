@@ -3,7 +3,7 @@
 
 // Package consistent provides a consistent probability based sampler.
 //
-// Deprecated: This package is no longer supported. There is no replacement.
+// Deprecated: This package is no longer supported.
 package consistent
 
 import (
