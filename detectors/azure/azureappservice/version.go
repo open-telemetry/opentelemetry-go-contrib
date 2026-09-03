@@ -4,4 +4,4 @@
 package azureappservice
 
 // Version is the current release version of the Azure App Service resource detector.
-const Version = "0.16.0"
+const Version = "0.18.0"
