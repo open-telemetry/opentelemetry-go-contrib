@@ -14,7 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- Deprecate `go.opentelemetry.io/contrib/samplers/probability/consistent`. There is no replacement.
+- Deprecate `go.opentelemetry.io/contrib/samplers/probability/consistent`. There is no replacement. (#9633)
 
 ### Fixed
 
