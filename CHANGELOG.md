@@ -122,6 +122,7 @@ The next release will require at least [Go 1.26].
 
 ### Fixed
 
+- Fix server-side `http.route` attribute leaking into client-side metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when a server handler propagates its request context into an outbound HTTP client request. (#8924)
 - Fix header attributes lost when using sub-spans in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#8797)
 - Validate `encoding` configuration for OTLP HTTP exporters in `go.opentelemetry.io/contrib/otelconf`. (#8772)
 - Remove the custom body wrapper from the request's body after the request is processed to allow body type comparisons with the original type in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6914)
