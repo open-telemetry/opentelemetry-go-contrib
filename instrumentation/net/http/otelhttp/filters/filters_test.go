@@ -172,6 +172,41 @@ func TestMethod(t *testing.T) {
 	}
 }
 
+func TestMethods(t *testing.T) {
+	for _, s := range []scenario{
+		{
+			name:   "non-matching method",
+			filter: Methods(http.MethodGet, http.MethodPost),
+			req:    &http.Request{Method: http.MethodHead, URL: &url.URL{Path: "/boo/far", Host: "baz.bar:8080"}},
+			exp:    false,
+		},
+		{
+			name:   "matching first method",
+			filter: Methods(http.MethodGet, http.MethodPost),
+			req:    &http.Request{Method: http.MethodGet, URL: &url.URL{Path: "/boo/far", Host: "baz.bar:8080"}},
+			exp:    true,
+		},
+		{
+			name:   "matching second method",
+			filter: Methods(http.MethodGet, http.MethodPost),
+			req:    &http.Request{Method: http.MethodPost, URL: &url.URL{Path: "/boo/far", Host: "baz.bar:8080"}},
+			exp:    true,
+		},
+		{
+			name:   "no methods provided",
+			filter: Methods(),
+			req:    &http.Request{Method: http.MethodGet, URL: &url.URL{Path: "/boo/far", Host: "baz.bar:8080"}},
+			exp:    false,
+		},
+	} {
+		res := s.filter(s.req)
+		if s.exp != res {
+			t.Errorf("Failed testing %q. Expected %t, got %t", s.name, s.exp, res)
+		}
+	}
+}
+
+
 func TestQuery(t *testing.T) {
 	matching, _ := url.Parse("http://bar.baz:8080/foo/bar?key=value")
 	nonMatching, _ := url.Parse("http://bar.baz:8080/foo/bar?key=other")
