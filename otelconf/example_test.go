@@ -46,4 +46,10 @@ func Example() {
 	global.SetLoggerProvider(s.LoggerProvider())
 	// Set the global propagator.
 	otel.SetTextMapPropagator(s.Propagator())
+	// Set the SDK's internal logger based on the log_level configuration.
+	// Only override if log_level was explicitly configured, to preserve any
+	// user-provided logger.
+	if l := s.Logger(); l.GetSink() != nil {
+		otel.SetLogger(l)
+	}
 }
