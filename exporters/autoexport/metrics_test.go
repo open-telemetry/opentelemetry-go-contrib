@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"reflect"
 	"runtime/debug"
 	"strings"
@@ -25,6 +26,37 @@ import (
 
 	prometheusbridge "go.opentelemetry.io/contrib/bridges/prometheus"
 )
+
+func TestGetenv(t *testing.T) {
+	tests := []struct {
+		name     string
+		key      string
+		fallback string
+		value    string
+		set      bool
+		want     string
+	}{
+		{name: "unset host", key: "OTEL_EXPORTER_PROMETHEUS_HOST", fallback: "localhost", want: "localhost"},
+		{name: "empty host", key: "OTEL_EXPORTER_PROMETHEUS_HOST", fallback: "localhost", value: "", set: true, want: "localhost"},
+		{name: "custom host", key: "OTEL_EXPORTER_PROMETHEUS_HOST", fallback: "localhost", value: "custom", set: true, want: "custom"},
+		{name: "unset port", key: "OTEL_EXPORTER_PROMETHEUS_PORT", fallback: "9464", want: "9464"},
+		{name: "empty port", key: "OTEL_EXPORTER_PROMETHEUS_PORT", fallback: "9464", value: "", set: true, want: "9464"},
+		{name: "custom port", key: "OTEL_EXPORTER_PROMETHEUS_PORT", fallback: "9464", value: "custom", set: true, want: "custom"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.set {
+				t.Setenv(tt.key, tt.value)
+			} else {
+				t.Setenv(tt.key, "")
+				require.NoError(t, os.Unsetenv(tt.key))
+			}
+
+			assert.Equal(t, tt.want, getenv(tt.key, tt.fallback))
+		})
+	}
+}
 
 func TestMetricExporterNone(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXPORTER", "none")
