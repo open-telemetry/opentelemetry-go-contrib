@@ -1,3 +1,4 @@
+// Deprecated: This module is no longer supported.
 module go.opentelemetry.io/contrib/samplers/probability/consistent
 
 go 1.26.0

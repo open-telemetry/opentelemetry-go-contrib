@@ -12,6 +12,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `NewResourceDetectorWithOptions` and the `WithAWSLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom AWS SDK `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
 
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/contrib/samplers/probability/consistent`. (#9633)
+
 ### Fixed
 
 - Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
