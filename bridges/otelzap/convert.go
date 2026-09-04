@@ -12,13 +12,217 @@ import (
 	"reflect"
 	"strconv"
 	"time"
+	"unsafe"
 
 	"go.opentelemetry.io/otel/attribute"
 )
 
+const (
+	cycleMarker      = "<cycle>"
+	inlineVisitCount = 8
+	// Must be a power of two greater than inlineVisitCount + 1. Promotion fills
+	// inlineVisitCount + 1 slots, and probing relies on an empty slot.
+	initialOverflowVisitTableSize = 128
+)
+
+var (
+	formatterType    = reflect.TypeFor[fmt.Formatter]()
+	reflectValueType = reflect.TypeFor[reflect.Value]()
+	stringerType     = reflect.TypeFor[fmt.Stringer]()
+	errorType        = reflect.TypeFor[error]()
+)
+
+// visitKey identifies a container by pointer and type, plus length for slices
+// so overlapping views remain distinct. unsafe.Pointer keeps the referenced
+// container visible to the GC.
+type visitKey struct {
+	ptr unsafe.Pointer
+	len int
+	typ reflect.Type // A nil type marks an empty overflow-table slot.
+}
+
+type visitTracker struct {
+	depth    int
+	inline   [inlineVisitCount]visitKey
+	overflow []visitKey
+}
+
+type formatTypeVisit struct {
+	parent *formatTypeVisit
+	typ    reflect.Type
+}
+
+func (t *visitTracker) pushInline(key visitKey) bool {
+	for i := range t.depth {
+		if t.inline[i] == key {
+			return false
+		}
+	}
+	t.inline[t.depth] = key
+	t.depth++
+	return true
+}
+
+func (t *visitTracker) pushSlow(key visitKey) bool {
+	if t.overflow == nil {
+		// Promotion is one-way: the table receives the entire active path and
+		// remains authoritative while the traversal unwinds.
+		for _, existing := range t.inline {
+			if existing == key {
+				return false
+			}
+		}
+		t.overflow = make([]visitKey, initialOverflowVisitTableSize)
+		for _, existing := range t.inline {
+			insertVisit(t.overflow, existing)
+		}
+	} else {
+		if containsVisit(t.overflow, key) {
+			return false
+		}
+		// Leave an empty slot so every probe can terminate before a full scan.
+		if t.depth*4 >= len(t.overflow)*3 {
+			t.growOverflow()
+		}
+	}
+	insertVisit(t.overflow, key)
+	t.depth++
+	return true
+}
+
+func (t *visitTracker) pop(key visitKey) {
+	// Removing identities on return keeps tracking path-local, so sibling DAG
+	// branches can revisit the same value.
+	t.depth--
+	if t.overflow != nil {
+		removeVisit(t.overflow, key)
+		return
+	}
+	t.inline[t.depth] = visitKey{}
+}
+
+func (t *visitTracker) contains(key visitKey) bool {
+	if t.overflow != nil {
+		return containsVisit(t.overflow, key)
+	}
+	for i := range t.depth {
+		if t.inline[i] == key {
+			return true
+		}
+	}
+	return false
+}
+
+func (t *visitTracker) growOverflow() {
+	grown := make([]visitKey, len(t.overflow)*2)
+	for _, key := range t.overflow {
+		if key.typ != nil {
+			insertVisit(grown, key)
+		}
+	}
+	t.overflow = grown
+}
+
+func insertVisit(table []visitKey, key visitKey) {
+	mask := uintptr(len(table) - 1)
+	hash := uintptr(key.ptr)>>3 ^ uintptr(key.len)
+	hash ^= hash >> 17
+	for i := range table {
+		idx := (hash + uintptr(i)) & mask
+		existing := table[idx]
+		if existing.typ == nil {
+			table[idx] = key
+			return
+		}
+		if existing == key {
+			return
+		}
+	}
+}
+
+func containsVisit(table []visitKey, key visitKey) bool {
+	mask := uintptr(len(table) - 1)
+	hash := uintptr(key.ptr)>>3 ^ uintptr(key.len)
+	hash ^= hash >> 17
+	for i := range table {
+		idx := (hash + uintptr(i)) & mask
+		existing := table[idx]
+		if existing.typ == nil {
+			return false
+		}
+		if existing == key {
+			return true
+		}
+	}
+	return false
+}
+
+func removeVisit(table []visitKey, key visitKey) {
+	mask := uintptr(len(table) - 1)
+	hash := uintptr(key.ptr)>>3 ^ uintptr(key.len)
+	hash ^= hash >> 17
+	for i := range table {
+		idx := (hash + uintptr(i)) & mask
+		entry := table[idx]
+		if entry.typ == nil {
+			return
+		}
+		if entry == key {
+			if table[(idx+1)&mask].typ == nil {
+				table[idx] = visitKey{}
+				return
+			}
+			removeVisitAt(table, idx)
+			return
+		}
+	}
+}
+
+// removeVisitAt closes the hole left in a linear-probing cluster so later
+// lookups can still stop at the first empty slot.
+func removeVisitAt(table []visitKey, hole uintptr) {
+	mask := uintptr(len(table) - 1)
+	for next := (hole + 1) & mask; ; next = (next + 1) & mask {
+		key := table[next]
+		if key.typ == nil {
+			table[hole] = visitKey{}
+			return
+		}
+		hash := uintptr(key.ptr)>>3 ^ uintptr(key.len)
+		hash ^= hash >> 17
+		home := hash & mask
+		if (next-home)&mask >= (next-hole)&mask {
+			table[hole] = key
+			hole = next
+		}
+	}
+}
+
+// kindCanRevisit reports whether conversion descends into values of kind.
+// Structs are formatted as terminal values and checked separately below.
+func kindCanRevisit(kind reflect.Kind) bool {
+	switch kind {
+	case reflect.Array, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
+		return true
+	default:
+		return false
+	}
+}
+
+func kindCanFormatCycle(kind reflect.Kind) bool {
+	switch kind {
+	case reflect.Array, reflect.Interface, reflect.Map, reflect.Slice, reflect.Struct:
+		return true
+	default:
+		return false
+	}
+}
+
 // convertValue converts various types to attribute.Value.
 func convertValue(v any) attribute.Value {
-	// Handling the most common types without reflect is a small perf win.
+	// See internal/shared/logutil/DESIGN.md before changing conversion or
+	// cycle-detection behavior.
+	// Keep this switch inline wherever used; extracting it into a helper regresses hot paths.
 	switch val := v.(type) {
 	case bool:
 		return attribute.BoolValue(val)
@@ -77,14 +281,75 @@ func convertValue(v any) attribute.Value {
 	val := reflect.ValueOf(v)
 	switch t.Kind() {
 	case reflect.Struct:
-		return attribute.StringValue(fmt.Sprintf("%+v", v))
+		return convertStructValue(v, val)
 	case reflect.Slice, reflect.Array:
+		if val.Len() == 0 {
+			return attribute.SliceValue()
+		}
+		if !kindCanRevisit(t.Elem().Kind()) {
+			items := make([]attribute.Value, 0, val.Len())
+			for i := range val.Len() {
+				items = append(items, convertValue(val.Index(i).Interface()))
+			}
+			return attribute.SliceValue(items...)
+		}
+	case reflect.Map:
+		if val.Len() == 0 {
+			return attribute.MapValue()
+		}
+		if !kindCanRevisit(t.Elem().Kind()) {
+			kvs := make([]attribute.KeyValue, 0, val.Len())
+			for _, k := range val.MapKeys() {
+				var key string
+				switch k.Kind() {
+				case reflect.String:
+					key = k.String()
+				default:
+					if formattingCycle(k) {
+						key = cycleMarker
+					} else {
+						key = fmt.Sprintf("%+v", k.Interface())
+					}
+				}
+				kvs = append(kvs, attribute.KeyValue{
+					Key:   attribute.Key(key),
+					Value: convertValue(val.MapIndex(k).Interface()),
+				})
+			}
+			return attribute.MapValue(kvs...)
+		}
+	case reflect.Pointer:
+		return convertRootPointerValue(val)
+	case reflect.Interface:
+		if val.IsNil() {
+			return attribute.Value{}
+		}
+	default:
+		return convertUnhandledValue(v, t)
+	}
+	// Keep tracker storage in a separate stack frame so scalar and statically
+	// non-recursive paths do not reserve its inline array.
+	return convertValueRoot(t, val)
+}
+
+func convertValueRoot(t reflect.Type, val reflect.Value) attribute.Value {
+	var visited visitTracker
+	switch t.Kind() {
+	case reflect.Slice, reflect.Array:
+		// Slices have identities; arrays are values. convertPointerArray tracks
+		// the final pointer that exposes an array instead.
+		if t.Kind() == reflect.Slice {
+			visited.inline[0] = visitKey{typ: t, ptr: val.UnsafePointer(), len: val.Len()}
+			visited.depth = 1
+		}
 		items := make([]attribute.Value, 0, val.Len())
 		for i := range val.Len() {
-			items = append(items, convertValue(val.Index(i).Interface()))
+			items = append(items, convertValueWithTracker(val.Index(i).Interface(), &visited))
 		}
 		return attribute.SliceValue(items...)
 	case reflect.Map:
+		visited.inline[0] = visitKey{typ: t, ptr: val.UnsafePointer()}
+		visited.depth = 1
 		kvs := make([]attribute.KeyValue, 0, val.Len())
 		for _, k := range val.MapKeys() {
 			var key string
@@ -92,19 +357,172 @@ func convertValue(v any) attribute.Value {
 			case reflect.String:
 				key = k.String()
 			default:
-				key = fmt.Sprintf("%+v", k.Interface())
+				if formattingCycle(k) {
+					key = cycleMarker
+				} else {
+					key = fmt.Sprintf("%+v", k.Interface())
+				}
 			}
 			kvs = append(kvs, attribute.KeyValue{
 				Key:   attribute.Key(key),
-				Value: convertValue(val.MapIndex(k).Interface()),
+				Value: convertValueWithTracker(val.MapIndex(k).Interface(), &visited),
 			})
 		}
 		return attribute.MapValue(kvs...)
-	case reflect.Pointer, reflect.Interface:
+	case reflect.Interface:
+		return convertValueWithTracker(val.Elem().Interface(), &visited)
+	}
+	return convertUnhandledValue(val.Interface(), t)
+}
+
+func convertValueWithTracker(v any, visited *visitTracker) attribute.Value {
+	// Keep this switch inline wherever used; extracting it into a helper regresses hot paths.
+	switch val := v.(type) {
+	case bool:
+		return attribute.BoolValue(val)
+	case string:
+		return attribute.StringValue(val)
+	case int:
+		return attribute.Int64Value(int64(val))
+	case int8:
+		return attribute.Int64Value(int64(val))
+	case int16:
+		return attribute.Int64Value(int64(val))
+	case int32:
+		return attribute.Int64Value(int64(val))
+	case int64:
+		return attribute.Int64Value(val)
+	case uint:
+		return convertUintValue(uint64(val))
+	case uint8:
+		return attribute.Int64Value(int64(val))
+	case uint16:
+		return attribute.Int64Value(int64(val))
+	case uint32:
+		return attribute.Int64Value(int64(val))
+	case uint64:
+		return convertUintValue(val)
+	case uintptr:
+		return convertUintValue(uint64(val))
+	case float32:
+		return attribute.Float64Value(float64(val))
+	case float64:
+		return attribute.Float64Value(val)
+	case time.Duration:
+		return attribute.Int64Value(val.Nanoseconds())
+	case complex64:
+		r := attribute.Float64("r", real(complex128(val)))
+		i := attribute.Float64("i", imag(complex128(val)))
+		return attribute.MapValue(r, i)
+	case complex128:
+		r := attribute.Float64("r", real(val))
+		i := attribute.Float64("i", imag(val))
+		return attribute.MapValue(r, i)
+	case time.Time:
+		return attribute.Int64Value(val.UnixNano())
+	case []byte:
+		return attribute.ByteSliceValue(val)
+	case error:
+		return attribute.StringValue(val.Error())
+	case attribute.Value:
+		return val
+	}
+	t := reflect.TypeOf(v)
+	if t == nil {
+		return attribute.Value{}
+	}
+	val := reflect.ValueOf(v)
+	return convertReflectValue(v, t, val, visited)
+}
+
+func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visitTracker) attribute.Value {
+	switch t.Kind() {
+	case reflect.Struct:
+		return convertStructValue(v, val)
+	case reflect.Slice, reflect.Array:
+		if val.Len() == 0 {
+			return attribute.SliceValue()
+		}
+		var key visitKey
+		tracked := t.Kind() == reflect.Slice && kindCanRevisit(t.Elem().Kind())
+		if tracked {
+			key = visitKey{typ: t, ptr: val.UnsafePointer(), len: val.Len()}
+			var added bool
+			if visited.overflow == nil && visited.depth < inlineVisitCount {
+				added = visited.pushInline(key)
+			} else {
+				added = visited.pushSlow(key)
+			}
+			if !added {
+				return attribute.StringValue(cycleMarker)
+			}
+		}
+		items := make([]attribute.Value, 0, val.Len())
+		for i := range val.Len() {
+			items = append(items, convertValueWithTracker(val.Index(i).Interface(), visited))
+		}
+		if tracked {
+			visited.pop(key)
+		}
+		return attribute.SliceValue(items...)
+	case reflect.Map:
+		if val.Len() == 0 {
+			return attribute.MapValue()
+		}
+		var key visitKey
+		tracked := kindCanRevisit(t.Elem().Kind())
+		if tracked {
+			key = visitKey{typ: t, ptr: val.UnsafePointer()}
+			var added bool
+			if visited.overflow == nil && visited.depth < inlineVisitCount {
+				added = visited.pushInline(key)
+			} else {
+				added = visited.pushSlow(key)
+			}
+			if !added {
+				return attribute.StringValue(cycleMarker)
+			}
+		}
+		kvs := make([]attribute.KeyValue, 0, val.Len())
+		for _, k := range val.MapKeys() {
+			var key string
+			switch k.Kind() {
+			case reflect.String:
+				key = k.String()
+			default:
+				if formattingCycle(k) {
+					key = cycleMarker
+				} else {
+					key = fmt.Sprintf("%+v", k.Interface())
+				}
+			}
+			kvs = append(kvs, attribute.KeyValue{
+				Key:   attribute.Key(key),
+				Value: convertValueWithTracker(val.MapIndex(k).Interface(), visited),
+			})
+		}
+		if tracked {
+			visited.pop(key)
+		}
+		return attribute.MapValue(kvs...)
+	case reflect.Pointer:
 		if val.IsNil() {
 			return attribute.Value{}
 		}
-		return convertValue(val.Elem().Interface())
+		next := val.Elem().Interface()
+		if next == nil {
+			return attribute.Value{}
+		}
+		kind := reflect.TypeOf(next).Kind()
+		if kind != reflect.Array && kind != reflect.Pointer {
+			return convertValueWithTracker(next, visited)
+		}
+		return convertPointerValue(val, visited)
+	case reflect.Interface:
+		if val.IsNil() {
+			return attribute.Value{}
+		}
+		return convertValueWithTracker(val.Elem().Interface(), visited)
 	}
 
 	// Try to handle this as gracefully as possible.
@@ -112,7 +530,415 @@ func convertValue(v any) attribute.Value {
 	// Don't panic here. it is preferable to have user's open issue
 	// asking why their attributes have a "unhandled: " prefix than
 	// say that their code is panicking.
+	return convertUnhandledValue(v, t)
+}
+
+func convertStructValue(v any, val reflect.Value) attribute.Value {
+	if formattingCycle(val) {
+		return attribute.StringValue(cycleMarker)
+	}
+	return attribute.StringValue(fmt.Sprintf("%+v", v))
+}
+
+func convertUnhandledValue(v any, t reflect.Type) attribute.Value {
 	return attribute.StringValue(fmt.Sprintf("unhandled: (%s) %+v", t, v))
+}
+
+func convertRootPointerValue(val reflect.Value) attribute.Value {
+	if val.IsNil() {
+		return attribute.Value{}
+	}
+	v := val.Elem().Interface()
+	if v == nil {
+		return attribute.Value{}
+	}
+	// Keep this switch inline wherever used; extracting it into a helper regresses hot paths.
+	switch val := v.(type) {
+	case bool:
+		return attribute.BoolValue(val)
+	case string:
+		return attribute.StringValue(val)
+	case int:
+		return attribute.Int64Value(int64(val))
+	case int8:
+		return attribute.Int64Value(int64(val))
+	case int16:
+		return attribute.Int64Value(int64(val))
+	case int32:
+		return attribute.Int64Value(int64(val))
+	case int64:
+		return attribute.Int64Value(val)
+	case uint:
+		return convertUintValue(uint64(val))
+	case uint8:
+		return attribute.Int64Value(int64(val))
+	case uint16:
+		return attribute.Int64Value(int64(val))
+	case uint32:
+		return attribute.Int64Value(int64(val))
+	case uint64:
+		return convertUintValue(val)
+	case uintptr:
+		return convertUintValue(uint64(val))
+	case float32:
+		return attribute.Float64Value(float64(val))
+	case float64:
+		return attribute.Float64Value(val)
+	case time.Duration:
+		return attribute.Int64Value(val.Nanoseconds())
+	case complex64:
+		r := attribute.Float64("r", real(complex128(val)))
+		i := attribute.Float64("i", imag(complex128(val)))
+		return attribute.MapValue(r, i)
+	case complex128:
+		r := attribute.Float64("r", real(val))
+		i := attribute.Float64("i", imag(val))
+		return attribute.MapValue(r, i)
+	case time.Time:
+		return attribute.Int64Value(val.UnixNano())
+	case []byte:
+		return attribute.ByteSliceValue(val)
+	case error:
+		return attribute.StringValue(val.Error())
+	case attribute.Value:
+		return val
+	}
+	kind := reflect.TypeOf(v).Kind()
+	if kind != reflect.Array && kind != reflect.Pointer {
+		return convertValue(v)
+	}
+	return convertPointerValue(val, nil)
+}
+
+// convertPointerValue iteratively unwraps pointer/interface chains. Brent's
+// algorithm detects cycles within a chain without retaining every pointer.
+// Containers track their own identities; only the final pointer before an
+// array needs to remain active while that array is converted.
+func convertPointerValue(current reflect.Value, visited *visitTracker) attribute.Value {
+	anchor := visitKey{typ: current.Type(), ptr: current.UnsafePointer()}
+	power, distance := 1, 0
+	checkError := false
+	var terminal any
+
+	for {
+		// The fast path checked the initial pointer type for error. Only a type
+		// transition can expose a new implementation.
+		if checkError {
+			if err, ok := reflect.TypeAssert[error](current); ok {
+				return attribute.StringValue(err.Error())
+			}
+		}
+		if current.IsNil() {
+			return attribute.Value{}
+		}
+
+		key := visitKey{typ: current.Type(), ptr: current.UnsafePointer()}
+		if visited != nil && visited.depth != 0 && visited.contains(key) {
+			return attribute.StringValue(cycleMarker)
+		}
+
+		nextValue := current.Elem().Interface()
+		if nextValue == nil {
+			return attribute.Value{}
+		}
+		next := reflect.ValueOf(nextValue)
+		if next.Kind() != reflect.Pointer {
+			if next.Kind() != reflect.Array {
+				terminal = nextValue
+				break
+			}
+			return convertPointerArray(next, key, visited)
+		}
+
+		nextKey := visitKey{typ: next.Type(), ptr: next.UnsafePointer()}
+		distance++
+		if nextKey == anchor {
+			return attribute.StringValue(cycleMarker)
+		}
+		if distance == power {
+			anchor = nextKey
+			power *= 2
+			distance = 0
+		}
+		checkError = next.Type() != current.Type()
+		current = next
+	}
+
+	v := terminal
+	// Keep this switch inline wherever used; extracting it into a helper regresses hot paths.
+	switch val := v.(type) {
+	case bool:
+		return attribute.BoolValue(val)
+	case string:
+		return attribute.StringValue(val)
+	case int:
+		return attribute.Int64Value(int64(val))
+	case int8:
+		return attribute.Int64Value(int64(val))
+	case int16:
+		return attribute.Int64Value(int64(val))
+	case int32:
+		return attribute.Int64Value(int64(val))
+	case int64:
+		return attribute.Int64Value(val)
+	case uint:
+		return convertUintValue(uint64(val))
+	case uint8:
+		return attribute.Int64Value(int64(val))
+	case uint16:
+		return attribute.Int64Value(int64(val))
+	case uint32:
+		return attribute.Int64Value(int64(val))
+	case uint64:
+		return convertUintValue(val)
+	case uintptr:
+		return convertUintValue(uint64(val))
+	case float32:
+		return attribute.Float64Value(float64(val))
+	case float64:
+		return attribute.Float64Value(val)
+	case time.Duration:
+		return attribute.Int64Value(val.Nanoseconds())
+	case complex64:
+		r := attribute.Float64("r", real(complex128(val)))
+		i := attribute.Float64("i", imag(complex128(val)))
+		return attribute.MapValue(r, i)
+	case complex128:
+		r := attribute.Float64("r", real(val))
+		i := attribute.Float64("i", imag(val))
+		return attribute.MapValue(r, i)
+	case time.Time:
+		return attribute.Int64Value(val.UnixNano())
+	case []byte:
+		return attribute.ByteSliceValue(val)
+	case error:
+		return attribute.StringValue(val.Error())
+	case attribute.Value:
+		return val
+	}
+	if visited == nil {
+		return convertValue(v)
+	}
+	return convertValueWithTracker(v, visited)
+}
+
+func convertPointerArray(v reflect.Value, key visitKey, visited *visitTracker) attribute.Value {
+	// Arrays have value semantics, so keep the pointer exposing the array active
+	// until its elements finish converting.
+	var root visitTracker
+	if visited == nil {
+		visited = &root
+	}
+	var added bool
+	if visited.overflow == nil && visited.depth < inlineVisitCount {
+		added = visited.pushInline(key)
+	} else {
+		added = visited.pushSlow(key)
+	}
+	if !added {
+		return attribute.StringValue(cycleMarker)
+	}
+	result := convertValueWithTracker(v.Interface(), visited)
+	visited.pop(key)
+	return result
+}
+
+// formattingCycle reports whether formatting v with fmt would traverse a cycle.
+func formattingCycle(v reflect.Value) bool {
+	for v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return false
+		}
+		v = v.Elem()
+	}
+	// fmt unwraps reflect.Value before applying its normal traversal rules.
+	if v.Type() == reflectValueType {
+		v = v.Interface().(reflect.Value)
+		if !v.IsValid() {
+			return false
+		}
+	}
+	t := v.Type()
+	if t.Kind() == reflect.Struct {
+		mayCycle := false
+		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
+		for i := range v.NumField() {
+			field := v.Field(i)
+			switch field.Kind() {
+			case reflect.Array, reflect.Struct:
+				mayCycle = true
+			case reflect.Interface:
+				for field.Kind() == reflect.Interface {
+					if field.IsNil() {
+						break
+					}
+					field = field.Elem()
+				}
+				if field.Kind() != reflect.Interface {
+					mayCycle = kindCanFormatCycle(field.Kind())
+				}
+			case reflect.Map:
+				fieldType := field.Type()
+				mayCycle = kindCanFormatCycle(fieldType.Key().Kind()) ||
+					kindCanFormatCycle(fieldType.Elem().Kind())
+			case reflect.Slice:
+				mayCycle = kindCanFormatCycle(field.Type().Elem().Kind())
+			}
+			if mayCycle {
+				break
+			}
+		}
+		if !mayCycle {
+			return false
+		}
+	}
+	if !formattingRootMayCycle(t) {
+		return false
+	}
+	return formatHasCycle(v, 0, nil)
+}
+
+func formattingRootMayCycle(t reflect.Type) bool {
+	if t.Kind() == reflect.Pointer {
+		elem := t.Elem()
+		switch elem.Kind() {
+		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
+			return formattingMayCycle(elem, nil)
+		}
+		return false
+	}
+	return formattingMayCycle(t, nil)
+}
+
+// formattingMayCycle cheaply excludes types fmt cannot recursively traverse
+// into a map, slice, or interface. Nested pointers are terminal in fmt.
+func formattingMayCycle(t reflect.Type, visited *formatTypeVisit) bool {
+	switch t.Kind() {
+	case reflect.Interface:
+		return true
+	case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
+		for visit := visited; visit != nil; visit = visit.parent {
+			if visit.typ == t {
+				// A recursive type is not itself a cycle, but it requires the
+				// value-level scan.
+				return true
+			}
+		}
+		current := formatTypeVisit{parent: visited, typ: t}
+		visited = &current
+	}
+
+	switch t.Kind() {
+	case reflect.Array, reflect.Slice:
+		return formattingMayCycle(t.Elem(), visited)
+	case reflect.Map:
+		return formattingMayCycle(t.Key(), visited) ||
+			formattingMayCycle(t.Elem(), visited)
+	case reflect.Struct:
+		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
+		for i := range t.NumField() {
+			if formattingMayCycle(t.Field(i).Type, visited) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func formatHasCycle(v reflect.Value, depth int, visited *visitTracker) bool {
+	if !v.IsValid() {
+		return false
+	}
+	t := v.Type()
+	if v.CanInterface() && t.NumMethod() != 0 {
+		// fmt invokes formatting methods instead of traversing the value.
+		if t.Implements(formatterType) || t.Implements(stringerType) || t.Implements(errorType) {
+			return false
+		}
+	}
+
+	switch v.Kind() {
+	case reflect.Interface:
+		return !v.IsNil() && formatHasCycle(v.Elem(), depth+1, visited)
+	case reflect.Pointer:
+		// fmt dereferences aggregate pointers only at the root; nested pointers
+		// are rendered as addresses.
+		if depth != 0 || v.IsNil() {
+			return false
+		}
+		elem := v.Elem()
+		switch elem.Kind() {
+		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
+			return formatHasCycle(elem, depth+1, visited)
+		}
+	case reflect.Slice:
+		if v.Len() == 0 {
+			return false
+		}
+		if visited == nil {
+			var tracker visitTracker
+			return formatHasCycle(v, depth, &tracker)
+		}
+		key := visitKey{typ: v.Type(), ptr: v.UnsafePointer(), len: v.Len()}
+		var added bool
+		if visited.overflow == nil && visited.depth < inlineVisitCount {
+			added = visited.pushInline(key)
+		} else {
+			added = visited.pushSlow(key)
+		}
+		if !added {
+			return true
+		}
+		for i := range v.Len() {
+			if formatHasCycle(v.Index(i), depth+1, visited) {
+				visited.pop(key)
+				return true
+			}
+		}
+		visited.pop(key)
+		return false
+	case reflect.Map:
+		if v.Len() == 0 {
+			return false
+		}
+		if visited == nil {
+			var tracker visitTracker
+			return formatHasCycle(v, depth, &tracker)
+		}
+		key := visitKey{typ: v.Type(), ptr: v.UnsafePointer()}
+		var added bool
+		if visited.overflow == nil && visited.depth < inlineVisitCount {
+			added = visited.pushInline(key)
+		} else {
+			added = visited.pushSlow(key)
+		}
+		if !added {
+			return true
+		}
+		iter := v.MapRange()
+		for iter.Next() {
+			if formatHasCycle(iter.Key(), depth+1, visited) || formatHasCycle(iter.Value(), depth+1, visited) {
+				visited.pop(key)
+				return true
+			}
+		}
+		visited.pop(key)
+		return false
+	case reflect.Array:
+		for i := range v.Len() {
+			if formatHasCycle(v.Index(i), depth+1, visited) {
+				return true
+			}
+		}
+	case reflect.Struct:
+		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
+		for i := range v.NumField() {
+			if formatHasCycle(v.Field(i), depth+1, visited) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // convertUintValue converts a uint64 to an attribute.Value.
