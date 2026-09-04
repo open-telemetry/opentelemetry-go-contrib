@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
+- Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics for failed server requests in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Classify an observed response-write error, non-EOF request-body read error, or request-context error (in that order), falling back to the status-code string for a 5xx response. (#9404)
 
 ### Removed
 
