@@ -5,6 +5,7 @@ package eks
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -122,4 +123,149 @@ func TestGetConfigMapNon2xx(t *testing.T) {
 	_, err := utils.getConfigMap(t.Context(), authConfigmapNS, authConfigmapName)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "unexpected status")
+}
+
+// Tests that a client construction failure other than [rest.ErrNotInCluster] is
+// reported as an error rather than silently skipped.
+func TestConstructionError(t *testing.T) {
+	detectorUtils := new(MockDetectorUtils)
+	errConstruction := errors.New("failed to create config")
+
+	detector := resourceDetector{utils: detectorUtils, err: errConstruction}
+	r, err := detector.Detect(t.Context())
+	require.ErrorIs(t, err, errConstruction)
+	assert.Nil(t, r, "Resource object should be nil")
+	detectorUtils.AssertExpectations(t)
+}
+
+// Tests that a pod missing the service account certificate is not treated as K8s.
+func TestMissingCertFile(t *testing.T) {
+	detectorUtils := new(MockDetectorUtils)
+
+	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
+	detectorUtils.On("fileExists", k8sCertPath).Return(false)
+
+	detector := resourceDetector{utils: detectorUtils}
+	r, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), r, "Resource object should be empty")
+	detectorUtils.AssertExpectations(t)
+}
+
+// Tests that a failure to read the aws-auth ConfigMap aborts detection.
+func TestAuthConfigMapError(t *testing.T) {
+	detectorUtils := new(MockDetectorUtils)
+	errConfigMap := errors.New("forbidden")
+
+	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
+	detectorUtils.On("fileExists", k8sCertPath).Return(true)
+	detectorUtils.On("getConfigMap", authConfigmapNS, authConfigmapName).
+		Return(map[string]string(nil), errConfigMap)
+
+	detector := resourceDetector{utils: detectorUtils}
+	r, err := detector.Detect(t.Context())
+	require.ErrorIs(t, err, errConfigMap)
+	assert.Nil(t, r, "Resource object should be nil")
+	detectorUtils.AssertExpectations(t)
+}
+
+// Tests that a Kubernetes cluster without the aws-auth ConfigMap is not EKS.
+func TestAuthConfigMapAbsent(t *testing.T) {
+	detectorUtils := new(MockDetectorUtils)
+
+	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
+	detectorUtils.On("fileExists", k8sCertPath).Return(true)
+	detectorUtils.On("getConfigMap", authConfigmapNS, authConfigmapName).
+		Return(map[string]string(nil), nil)
+
+	detector := resourceDetector{utils: detectorUtils}
+	r, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), r, "Resource object should be empty")
+	detectorUtils.AssertExpectations(t)
+}
+
+// Tests that a failure to read the cluster-info ConfigMap aborts detection even
+// though the environment was already confirmed to be EKS.
+func TestClusterInfoConfigMapError(t *testing.T) {
+	detectorUtils := new(MockDetectorUtils)
+	errConfigMap := errors.New("not found")
+
+	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
+	detectorUtils.On("fileExists", k8sCertPath).Return(true)
+	detectorUtils.On("getConfigMap", authConfigmapNS, authConfigmapName).Return(map[string]string{"not": "nil"}, nil)
+	detectorUtils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).
+		Return(map[string]string(nil), errConfigMap)
+
+	detector := resourceDetector{utils: detectorUtils}
+	r, err := detector.Detect(t.Context())
+	require.ErrorIs(t, err, errConfigMap)
+	assert.Nil(t, r, "Resource object should be nil")
+	detectorUtils.AssertExpectations(t)
+}
+
+// Tests that a cluster-info ConfigMap without a cluster.name key omits the
+// attribute instead of failing.
+func TestMissingClusterName(t *testing.T) {
+	detectorUtils := new(MockDetectorUtils)
+
+	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
+	detectorUtils.On("fileExists", k8sCertPath).Return(true)
+	detectorUtils.On("getConfigMap", authConfigmapNS, authConfigmapName).Return(map[string]string{"not": "nil"}, nil)
+	detectorUtils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{}, nil)
+	detectorUtils.On("getContainerID").Return("0123456789A", nil)
+
+	expectedResource := resource.NewWithAttributes(semconv.SchemaURL,
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
+		semconv.ContainerID("0123456789A"),
+	)
+
+	detector := resourceDetector{utils: detectorUtils}
+	r, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, expectedResource, r, "Resource object returned is incorrect")
+	detectorUtils.AssertExpectations(t)
+}
+
+// Tests that a container ID lookup failure discards the attributes that were
+// already collected.
+func TestContainerIDError(t *testing.T) {
+	detectorUtils := new(MockDetectorUtils)
+	errContainerID := errors.New("cannot read containerID")
+
+	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
+	detectorUtils.On("fileExists", k8sCertPath).Return(true)
+	detectorUtils.On("getConfigMap", authConfigmapNS, authConfigmapName).Return(map[string]string{"not": "nil"}, nil)
+	detectorUtils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "my-cluster"}, nil)
+	detectorUtils.On("getContainerID").Return("", errContainerID)
+
+	detector := resourceDetector{utils: detectorUtils}
+	r, err := detector.Detect(t.Context())
+	require.ErrorIs(t, err, errContainerID)
+	assert.Nil(t, r, "Resource object should be nil")
+	detectorUtils.AssertExpectations(t)
+}
+
+// Tests that an empty container ID omits the attribute instead of failing.
+func TestEmptyContainerID(t *testing.T) {
+	detectorUtils := new(MockDetectorUtils)
+
+	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
+	detectorUtils.On("fileExists", k8sCertPath).Return(true)
+	detectorUtils.On("getConfigMap", authConfigmapNS, authConfigmapName).Return(map[string]string{"not": "nil"}, nil)
+	detectorUtils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "my-cluster"}, nil)
+	detectorUtils.On("getContainerID").Return("", nil)
+
+	expectedResource := resource.NewWithAttributes(semconv.SchemaURL,
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
+		semconv.K8SClusterName("my-cluster"),
+	)
+
+	detector := resourceDetector{utils: detectorUtils}
+	r, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, expectedResource, r, "Resource object returned is incorrect")
+	detectorUtils.AssertExpectations(t)
 }
