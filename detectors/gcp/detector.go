@@ -119,7 +119,7 @@ func (r *resourceBuilder) addInt(key attribute.Key, detect func() (string, error
 	}
 }
 
-// zoneAndRegion functions are expected to return zone, region, err.
+// addZoneAndRegion functions are expected to return zone, region, err.
 func (r *resourceBuilder) addZoneAndRegion(detect func() (string, string, error)) {
 	if zone, region, err := detect(); err == nil {
 		r.attrs = append(
