@@ -16,10 +16,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Deprecate `go.opentelemetry.io/contrib/samplers/probability/consistent`. (#9633)
 
-### Fixed
-
-- Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
-
 ### Removed
 
 - Drop support for [Go 1.25]. (#9584)
@@ -29,6 +25,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
 - Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, using the request context's cancellation error as the classification source when the handler has not already recorded an error via `c.Error`. Previously a disconnect was recorded with span status `Error` and no `error.type`, indistinguishable from a genuine server fault. (#9394)
+- Fix `http.client.request.body.size` recording for streaming request bodies in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8684)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
