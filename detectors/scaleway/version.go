@@ -4,4 +4,4 @@
 package scaleway
 
 // Version is the current release version of the Scaleway resource detector.
-const Version = "0.17.0"
+const Version = "0.18.0"
