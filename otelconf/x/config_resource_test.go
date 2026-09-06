@@ -37,7 +37,7 @@ func TestSDKResource(t *testing.T) {
 	t.Run("returns empty resource for disabled sdk", func(t *testing.T) {
 		sdk, err := NewSDK(
 			WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-				Disabled: ptr(true),
+				Disabled: new(true),
 			}),
 		)
 		assert.NoError(t, err)
