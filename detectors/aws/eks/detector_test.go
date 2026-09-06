@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -122,4 +123,23 @@ func TestGetConfigMapNon2xx(t *testing.T) {
 	_, err := utils.getConfigMap(t.Context(), authConfigmapNS, authConfigmapName)
 	require.Error(t, err)
 	assert.ErrorContains(t, err, "unexpected status")
+}
+
+// TestGetConfigMapBoundedWhenNoDeadline ensures a ConfigMap fetch cannot hang
+// indefinitely when the caller provides a context without a deadline, e.g. a
+// resource detection at application startup using context.Background().
+func TestGetConfigMapBoundedWhenNoDeadline(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		<-r.Context().Done()
+	}))
+	t.Cleanup(srv.Close)
+
+	utils := &eksDetectorUtils{host: srv.URL, client: srv.Client()}
+	start := time.Now()
+	_, err := utils.getConfigMap(context.Background(), authConfigmapNS, authConfigmapName)
+	elapsed := time.Since(start)
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "context deadline exceeded")
+	assert.Less(t, elapsed, k8sRequestTimeout*2, "request should be bounded by k8sRequestTimeout")
 }
