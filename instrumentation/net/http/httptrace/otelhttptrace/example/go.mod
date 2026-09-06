@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace/example
 
-go 1.25.0
+go 1.26.0
 
 replace (
 	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace => ../
@@ -8,8 +8,8 @@ replace (
 )
 
 require (
-	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace v0.70.0
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.70.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace v0.71.0
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.71.0
 	go.opentelemetry.io/otel v1.46.0
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.46.0
 	go.opentelemetry.io/otel/sdk v1.46.0

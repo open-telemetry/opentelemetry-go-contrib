@@ -16,7 +16,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -487,26 +486,26 @@ func TestProducePartialSuccess(t *testing.T) {
 	p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
 		return []*dto.MetricFamily{
 			{
-				Name: proto.String("test_gauge_metric"),
-				Help: proto.String("A gauge metric for testing"),
+				Name: new("test_gauge_metric"),
+				Help: new("A gauge metric for testing"),
 				Type: dto.MetricType_GAUGE.Enum(),
 				Metric: []*dto.Metric{
 					{
 						Gauge: &dto.Gauge{
-							Value: proto.Float64(123.4),
+							Value: new(123.4),
 						},
 						Label: []*dto.LabelPair{
 							{
-								Name:  proto.String("foo"),
-								Value: proto.String("bar"),
+								Name:  new("foo"),
+								Value: new("bar"),
 							},
 						},
 					},
 				},
 			},
 			{
-				Name: proto.String("test_gauge_histogram_metric"),
-				Help: proto.String("A gauge histogram metric for testing"),
+				Name: new("test_gauge_histogram_metric"),
+				Help: new("A gauge histogram metric for testing"),
 				Type: dto.MetricType_GAUGE_HISTOGRAM.Enum(),
 				Metric: []*dto.Metric{
 					{},

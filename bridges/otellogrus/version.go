@@ -4,4 +4,4 @@
 package otellogrus
 
 // Version is the current release version of the otellogrus bridge.
-const Version = "0.20.0"
+const Version = "0.20.1"
