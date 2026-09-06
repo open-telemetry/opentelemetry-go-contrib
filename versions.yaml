@@ -73,6 +73,7 @@ module-sets:
   experimental-detectors:
     version: v0.18.0
     modules:
+      - go.opentelemetry.io/contrib/detectors/alibaba/ecs
       - go.opentelemetry.io/contrib/detectors/autodetect
       - go.opentelemetry.io/contrib/detectors/azure/azureappservice
       - go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps
