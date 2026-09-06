@@ -336,3 +336,33 @@ func TestDetect_WithAttributeFilter(t *testing.T) {
 		assert.Equal(t, kv.Value, val)
 	}
 }
+
+// TestComposition_MergeWithDefault guards against schema URL drift between
+// this detector and the SDK. [resource.Merge] reports
+// [resource.ErrSchemaURLConflict] and drops the schema URL when the two
+// disagree, so this fails as soon as the semconv version here and the one
+// behind [resource.Default] diverge.
+func TestComposition_MergeWithDefault(t *testing.T) {
+	url := newFakeService(t, &fakeService{meta: fullMetadata()})
+
+	detected, err := newTestDetector(url).Detect(t.Context())
+	require.NoError(t, err)
+
+	merged, err := resource.Merge(resource.Default(), detected)
+	require.NoError(t, err)
+	assert.NotErrorIs(t, err, resource.ErrSchemaURLConflict)
+	assert.Equal(t, resource.Default().SchemaURL(), merged.SchemaURL())
+}
+
+// TestComposition_WithCoreDetectors asserts this detector composes with
+// go.opentelemetry.io/otel/sdk's own built-in host detector.
+func TestComposition_WithCoreDetectors(t *testing.T) {
+	url := newFakeService(t, &fakeService{meta: fullMetadata()})
+
+	res, err := resource.New(t.Context(),
+		resource.WithDetectors(newTestDetector(url)),
+		resource.WithHost(),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, resource.Default().SchemaURL(), res.SchemaURL())
+}
