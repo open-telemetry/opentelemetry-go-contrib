@@ -1100,16 +1100,42 @@ func TestRedactQueryParams(t *testing.T) {
 			want:     "other=kept",
 		},
 		{
-			name:     "invalid query string is returned unchanged",
+			name:     "wholly unparseable query is dropped rather than leaked",
 			rawQuery: "%zz",
 			keys:     []string{"token"},
-			want:     "%zz",
+			want:     "",
 		},
 		{
 			name:     "redacts every value for a repeated key",
 			rawQuery: "token=a&token=b",
 			keys:     []string{"token"},
 			want:     "token=REDACTED",
+		},
+		{
+			// A malformed pair elsewhere in the query must not defeat
+			// redaction of a key that did parse successfully.
+			name:     "redacts a matching key despite an unrelated malformed pair",
+			rawQuery: "a=%zz&token=secret",
+			keys:     []string{"token"},
+			want:     "token=REDACTED",
+		},
+		{
+			// The key's own value is malformed, so it never makes it into
+			// the parsed values at all. It must not be passed through raw
+			// (which would leak most of the secret); dropping it is the
+			// safe outcome.
+			name:     "a key with a malformed value is dropped, not leaked",
+			rawQuery: "token=sec%zzret&a=1",
+			keys:     []string{"token"},
+			want:     "a=1",
+		},
+		{
+			// Go rejects ";" as a query separator outright, so nothing
+			// parses; the whole query is dropped rather than returned raw.
+			name:     "semicolon-separated query is dropped rather than leaked",
+			rawQuery: "token=secret;x=1",
+			keys:     []string{"token"},
+			want:     "",
 		},
 	}
 

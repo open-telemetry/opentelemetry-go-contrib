@@ -195,7 +195,11 @@ func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 //
 // Query parameters not listed are left as-is, but the query string as a
 // whole is re-encoded (parameters may be reordered, and their values
-// percent-encoded canonically) as a side effect of the redaction.
+// percent-encoded canonically) as a side effect of the redaction. Any
+// parameter pair that fails to parse (a malformed percent-escape, for
+// example) is dropped rather than passed through raw, so a malformed pair
+// elsewhere in the query can never cause a value that should be redacted to
+// leak unredacted.
 //
 // Use this for URLs that carry sensitive values in query parameters, such as
 // API tokens, that would otherwise be captured verbatim in span data.

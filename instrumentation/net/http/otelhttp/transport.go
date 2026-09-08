@@ -106,28 +106,40 @@ func (t *Transport) requestTraceAttrs(r *http.Request) []attribute.KeyValue {
 }
 
 // redactQueryParams returns rawQuery with the values of any parameter in
-// keys replaced with "REDACTED". If rawQuery cannot be parsed, or none of
-// keys are present, rawQuery is returned unchanged. Otherwise, the returned
-// query string is re-encoded as a whole: parameters may be reordered and
-// their values percent-encoded canonically.
+// keys replaced with "REDACTED". If none of keys are present, rawQuery is
+// returned unchanged. Otherwise, the returned query string is re-encoded as
+// a whole: parameters may be reordered and their values percent-encoded
+// canonically.
+//
+// url.ParseQuery returns the pairs it was able to parse alongside an error
+// for any it wasn't (e.g. a malformed percent-escape in an unrelated
+// parameter, or a "token=secret;x=1" query rejected for its semicolon
+// separator). A pair that failed to parse is dropped rather than passed
+// through raw: returning rawQuery unchanged on any parse error would risk
+// leaking a value we were asked to redact, if it happened to sit next to a
+// malformed pair.
 func redactQueryParams(rawQuery string, keys []string) string {
 	values, err := url.ParseQuery(rawQuery)
-	if err != nil {
+	if err == nil && !hasAny(values, keys) {
 		return rawQuery
 	}
 
-	var redacted bool
 	for _, key := range keys {
 		if _, ok := values[key]; ok {
 			values.Set(key, "REDACTED")
-			redacted = true
 		}
-	}
-	if !redacted {
-		return rawQuery
 	}
 
 	return values.Encode()
+}
+
+func hasAny(values url.Values, keys []string) bool {
+	for _, key := range keys {
+		if _, ok := values[key]; ok {
+			return true
+		}
+	}
+	return false
 }
 
 // RoundTrip creates a Span and propagates its context via the provided request's headers
