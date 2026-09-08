@@ -203,9 +203,13 @@ func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 //
 // Use this for URLs that carry sensitive values in query parameters, such as
 // API tokens, that would otherwise be captured verbatim in span data.
+//
+// Like [WithFilter], keys accumulate across multiple calls to
+// WithRedactedQueryParams rather than the last call replacing the previous
+// ones.
 func WithRedactedQueryParams(keys ...string) Option {
 	return optionFunc(func(c *config) {
-		c.RedactedQueryParams = keys
+		c.RedactedQueryParams = append(c.RedactedQueryParams, keys...)
 	})
 }
 

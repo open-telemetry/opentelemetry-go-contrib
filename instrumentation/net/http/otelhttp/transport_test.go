@@ -1040,6 +1040,46 @@ func TestTransportRedactsQueryParams(t *testing.T) {
 	assert.NotContains(t, gotURL, "secret")
 }
 
+func TestTransportRedactedQueryParamsAccumulateAcrossOptions(t *testing.T) {
+	// Like WithFilter, keys from multiple WithRedactedQueryParams calls
+	// should accumulate rather than the last call replacing the previous
+	// ones.
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	tr := NewTransport(
+		http.DefaultTransport,
+		WithTracerProvider(tracerProvider),
+		WithRedactedQueryParams("a"),
+		WithRedactedQueryParams("b"),
+	)
+	c := http.Client{Transport: tr}
+
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL+"?a=1&b=2", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := c.Do(r)
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+
+	spans := spanRecorder.Ended()
+	require.Len(t, spans, 1)
+
+	var gotURL string
+	for _, kv := range spans[0].Attributes() {
+		if kv.Key == "url.full" {
+			gotURL = kv.Value.AsString()
+		}
+	}
+	assert.Contains(t, gotURL, "a=REDACTED")
+	assert.Contains(t, gotURL, "b=REDACTED")
+}
+
 func TestTransportNoRedactedQueryParamsLeavesURLUnchanged(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
