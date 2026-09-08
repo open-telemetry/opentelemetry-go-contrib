@@ -1140,7 +1140,7 @@ func TestRedactQueryParams(t *testing.T) {
 			want:     "other=kept",
 		},
 		{
-			name:     "wholly unparseable query is dropped rather than leaked",
+			name:     "wholly unparsable query is dropped rather than leaked",
 			rawQuery: "%zz",
 			keys:     []string{"token"},
 			want:     "",
