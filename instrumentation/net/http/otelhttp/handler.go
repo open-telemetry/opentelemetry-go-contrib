@@ -129,8 +129,8 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	readRecordFunc := func(int64) {}
 	if h.readEvent {
-		readRecordFunc = func(n int64) {
-			span.AddEvent("read", trace.WithAttributes(ReadBytesKey.Int64(n)))
+		readRecordFunc = func(int64) {
+			span.AddEvent("read")
 		}
 	}
 
@@ -150,8 +150,8 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	writeRecordFunc := func(int64) {}
 	if h.writeEvent {
-		writeRecordFunc = func(n int64) {
-			span.AddEvent("write", trace.WithAttributes(WroteBytesKey.Int64(n)))
+		writeRecordFunc = func(int64) {
+			span.AddEvent("write")
 		}
 	}
 
