@@ -12,24 +12,30 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Add `NewResourceDetectorWithOptions` and the `WithAWSLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom AWS SDK `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
 
+### Changed
+
+- Stop emitting the legacy `http.read_bytes` and `http.wrote_bytes` attributes on the per-operation span events enabled by `WithMessageEvents` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  The `read` and `write` events remain, while total body sizes continue to be recorded on the server span as `http.request.body.size` and `http.response.body.size` according to HTTP semantic conventions. (#9624)
+
 ### Deprecated
 
 - Deprecate `go.opentelemetry.io/contrib/samplers/probability/consistent`. (#9633)
+- Deprecate `ReadBytesKey`, `ReadErrorKey`, `WroteBytesKey`, and `WriteErrorKey` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  The identifiers remain available and their values are unchanged, but `WithMessageEvents` no longer emits `http.read_bytes` or `http.wrote_bytes`.
+  There is no semantic-convention replacement for per-read or per-write byte counts or the human-readable error fields.
+  Use `HTTPRequestBodySizeKey` and `HTTPResponseBodySizeKey` from `go.opentelemetry.io/otel/semconv/v1.43.0` to record total body sizes on the span.
+  If an error causes the HTTP request to fail, set the span status to Error and record `ErrorType(err)` from `go.opentelemetry.io/otel/semconv/v1.43.0` on the span. (#9624)
 
 ### Fixed
 
 - Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
+- Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, using the request context's cancellation error as the classification source when the handler has not already recorded an error via `c.Error`. Previously a disconnect was recorded with span status `Error` and no `error.type`, indistinguishable from a genuine server fault. (#9394)
 - Replace recursive references with the string `"<cycle>"` instead of overflowing the stack in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9542)
 
 ### Removed
 
 - Drop support for [Go 1.25]. (#9584)
 - Remove `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. Use `github.com/labstack/echo-opentelemetry` instead. (#9613)
-
-### Fixed
-
-- Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
-- Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, using the request context's cancellation error as the classification source when the handler has not already recorded an error via `c.Error`. Previously a disconnect was recorded with span status `Error` and no `error.type`, indistinguishable from a genuine server fault. (#9394)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
