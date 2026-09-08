@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptrace"
+	"net/url"
 	"sync/atomic"
 	"time"
 
@@ -35,6 +36,8 @@ type Transport struct {
 	spanNameFormatter  func(string, *http.Request) string
 	clientTrace        func(context.Context) *httptrace.ClientTrace
 	metricAttributesFn func(*http.Request) []attribute.KeyValue
+
+	redactedQueryParams []string
 
 	semconv semconv.HTTPClient
 }
@@ -76,10 +79,55 @@ func (t *Transport) applyConfig(c *config) {
 	t.clientTrace = c.ClientTrace
 	t.semconv = semconv.NewHTTPClient(c.Meter)
 	t.metricAttributesFn = c.MetricAttributesFn
+	t.redactedQueryParams = c.RedactedQueryParams
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {
 	return "HTTP " + r.Method
+}
+
+// requestTraceAttrs returns the trace attributes for r, redacting any query
+// parameter values configured via WithRedactedQueryParams from the url.full
+// attribute.
+//
+// r.URL is temporarily mutated to build the redacted attributes and restored
+// before returning, so the request actually sent over the wire is unaffected.
+func (t *Transport) requestTraceAttrs(r *http.Request) []attribute.KeyValue {
+	if len(t.redactedQueryParams) == 0 || r.URL == nil || r.URL.RawQuery == "" {
+		return t.semconv.RequestTraceAttrs(r)
+	}
+
+	original := r.URL.RawQuery
+	r.URL.RawQuery = redactQueryParams(original, t.redactedQueryParams)
+	attrs := t.semconv.RequestTraceAttrs(r)
+	r.URL.RawQuery = original
+
+	return attrs
+}
+
+// redactQueryParams returns rawQuery with the values of any parameter in
+// keys replaced with "REDACTED". If rawQuery cannot be parsed, or none of
+// keys are present, rawQuery is returned unchanged. Otherwise, the returned
+// query string is re-encoded as a whole: parameters may be reordered and
+// their values percent-encoded canonically.
+func redactQueryParams(rawQuery string, keys []string) string {
+	values, err := url.ParseQuery(rawQuery)
+	if err != nil {
+		return rawQuery
+	}
+
+	var redacted bool
+	for _, key := range keys {
+		if _, ok := values[key]; ok {
+			values.Set(key, "REDACTED")
+			redacted = true
+		}
+	}
+	if !redacted {
+		return rawQuery
+	}
+
+	return values.Encode()
 }
 
 // RoundTrip creates a Span and propagates its context via the provided request's headers
@@ -139,7 +187,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 	}
 
-	span.SetAttributes(t.semconv.RequestTraceAttrs(r)...)
+	span.SetAttributes(t.requestTraceAttrs(r)...)
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	res, err := t.rt.RoundTrip(r)

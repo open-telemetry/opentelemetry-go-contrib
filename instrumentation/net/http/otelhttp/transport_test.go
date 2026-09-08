@@ -996,6 +996,130 @@ func TestTransportNetworkProtocolVersionFromResponse(t *testing.T) {
 	}
 }
 
+func TestTransportRedactsQueryParams(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	var gotRawQuery string
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		gotRawQuery = r.URL.RawQuery
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	tr := NewTransport(
+		http.DefaultTransport,
+		WithTracerProvider(tracerProvider),
+		WithRedactedQueryParams("token", "absent"),
+	)
+	c := http.Client{Transport: tr}
+
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL+"?token=secret&other=kept", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := c.Do(r)
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+
+	// The actual request sent over the wire must be unaffected by redaction.
+	assert.Equal(t, "token=secret&other=kept", gotRawQuery)
+	// So must the original *http.Request the caller passed in.
+	assert.Equal(t, "token=secret&other=kept", r.URL.RawQuery)
+
+	spans := spanRecorder.Ended()
+	require.Len(t, spans, 1)
+
+	var gotURL string
+	for _, kv := range spans[0].Attributes() {
+		if kv.Key == "url.full" {
+			gotURL = kv.Value.AsString()
+		}
+	}
+	assert.Contains(t, gotURL, "token=REDACTED")
+	assert.Contains(t, gotURL, "other=kept")
+	assert.NotContains(t, gotURL, "secret")
+}
+
+func TestTransportNoRedactedQueryParamsLeavesURLUnchanged(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	// WithRedactedQueryParams is not configured, so the query string should
+	// pass through exactly as-is, without the reordering/re-encoding
+	// redaction performs.
+	tr := NewTransport(http.DefaultTransport, WithTracerProvider(tracerProvider))
+	c := http.Client{Transport: tr}
+
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL+"?b=2&a=1", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := c.Do(r)
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+
+	spans := spanRecorder.Ended()
+	require.Len(t, spans, 1)
+
+	var gotURL string
+	for _, kv := range spans[0].Attributes() {
+		if kv.Key == "url.full" {
+			gotURL = kv.Value.AsString()
+		}
+	}
+	assert.Contains(t, gotURL, "b=2&a=1")
+}
+
+func TestRedactQueryParams(t *testing.T) {
+	testCases := []struct {
+		name     string
+		rawQuery string
+		keys     []string
+		want     string
+	}{
+		{
+			name:     "redacts a matching key",
+			rawQuery: "token=secret&other=kept",
+			keys:     []string{"token"},
+			want:     "other=kept&token=REDACTED",
+		},
+		{
+			name:     "no keys configured leaves query unchanged",
+			rawQuery: "token=secret",
+			keys:     nil,
+			want:     "token=secret",
+		},
+		{
+			name:     "no matching keys leaves query unchanged",
+			rawQuery: "other=kept",
+			keys:     []string{"token"},
+			want:     "other=kept",
+		},
+		{
+			name:     "invalid query string is returned unchanged",
+			rawQuery: "%zz",
+			keys:     []string{"token"},
+			want:     "%zz",
+		},
+		{
+			name:     "redacts every value for a repeated key",
+			rawQuery: "token=a&token=b",
+			keys:     []string{"token"},
+			want:     "token=REDACTED",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, redactQueryParams(tc.rawQuery, tc.keys))
+		})
+	}
+}
+
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
