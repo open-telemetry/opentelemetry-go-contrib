@@ -366,18 +366,12 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	server.Addr = lis.Addr().String()
 
 	go func() {
-		handleServeErr(server.Serve(lis), otel.Handle)
+		if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
+		}
 	}()
 
 	return readerWithServer{reader, &server}, nil
-}
-
-// handleServeErr reports the error returned by [http.Server.Serve] via handle
-// unless the server was closed intentionally.
-func handleServeErr(err error, handle func(error)) {
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
-	}
 }
 
 type readerWithServer struct {
