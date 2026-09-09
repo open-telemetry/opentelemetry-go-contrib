@@ -853,6 +853,7 @@ func formatHasCycle(v reflect.Value, depth int, visited *visitTracker) bool {
 	t := v.Type()
 	if v.CanInterface() && t.NumMethod() != 0 {
 		// fmt invokes formatting methods instead of traversing the value.
+		// Formatting methods are currently treated as trusted user code.
 		if t.Implements(formatterType) || t.Implements(stringerType) || t.Implements(errorType) {
 			return false
 		}
