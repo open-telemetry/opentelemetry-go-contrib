@@ -224,7 +224,8 @@ formatters:
     - goimports
   settings:
     gofumpt:
-      extra-rules: true
+      extra:
+        group-params: true
     goimports:
       local-prefixes:
         - go.opentelemetry.io/contrib
