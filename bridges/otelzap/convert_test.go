@@ -39,6 +39,12 @@ func (e *testPointerError) Error() string {
 	return "pointer error: " + string(*e)
 }
 
+type testNilPointerError struct{}
+
+func (*testNilPointerError) Error() string {
+	return "nil pointer error"
+}
+
 type recursiveTestSlice []recursiveTestSlice
 
 func TestVisitTableCluster(t *testing.T) {
@@ -501,6 +507,14 @@ func TestConvertValuePointerEdgeCases(t *testing.T) {
 		t,
 		attribute.StringValue("pointer error: concrete error"),
 		convertValue(&pointerErrorPointerPointer),
+	)
+	var nilPointerError *testNilPointerError
+	nilPointerErrorPointer := &nilPointerError
+	nilPointerErrorPointerPointer := &nilPointerErrorPointer
+	assert.Equal(
+		t,
+		attribute.StringValue("nil pointer error"),
+		convertValue(nilPointerErrorPointerPointer),
 	)
 
 	channel := make(chan int)

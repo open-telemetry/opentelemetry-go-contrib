@@ -622,7 +622,8 @@ func convertPointerValue(current reflect.Value, visited *visitTracker) attribute
 
 	for {
 		// The fast path checked the initial pointer type for error. Only a type
-		// transition can expose a new implementation.
+		// transition can expose a new implementation. Keep this check before
+		// IsNil so indirect typed-nil errors behave like direct ones.
 		if checkError {
 			if err, ok := reflect.TypeAssert[error](current); ok {
 				return attribute.StringValue(err.Error())
