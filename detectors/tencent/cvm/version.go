@@ -4,4 +4,4 @@
 package cvm
 
 // Version is the current release version of the Tencent Cloud CVM resource detector.
-const Version = "0.17.0"
+const Version = "0.18.0"
