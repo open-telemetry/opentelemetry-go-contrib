@@ -18,7 +18,6 @@ body:
         - 'Detector: GCP'
         - 'Instrumentation: host'
         - 'Instrumentation: otelaws'
-        - 'Instrumentation: otelecho'
         - 'Instrumentation: otelgin'
         - 'Instrumentation: otelgrpc'
         - 'Instrumentation: otelhttp'
