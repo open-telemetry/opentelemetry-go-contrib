@@ -9,8 +9,8 @@ invariants when changing the converter or its generated copies.
 
 ## Goals
 
-- Terminate when maps, slices, arrays, pointers, interfaces, or values traversed
-  by `fmt` contain cycles.
+- Detect cycles in maps, slices, arrays, pointers, interfaces, and values
+  traversed by `fmt`, and stop traversing a recursive edge once it is detected.
 - Preserve as much of the original value as possible by replacing a recursive
   edge with the string `"<cycle>"`.
 - Preserve the existing output for acyclic inputs, including shared directed
@@ -101,7 +101,8 @@ bound. It introduces limit, counting, and replacement semantics that should
 follow the discussion in
 [opentelemetry-specification#5186](https://github.com/open-telemetry/opentelemetry-specification/issues/5186).
 Cycle detection intentionally remains separate from hardening against deeply
-acyclic input.
+nested input, including cyclic input with a very long non-repeating path before
+the repeated identity is reached.
 
 ### Global seen set
 
@@ -121,6 +122,23 @@ motivated the inline tracker with call-local overflow storage.
 Retaining every pointer adds per-level work and storage, and recursive traversal
 can itself exhaust the stack. Iterative Brent detection keeps pointer chains
 constant-space.
+
+### Iterative container conversion
+
+Map, slice, and array conversion uses recursive traversal. Cycle detection
+returns `"<cycle>"` once an identity already active on the current traversal
+path is encountered. A sufficiently long path of distinct containers can
+therefore exhaust the goroutine stack before traversal reaches the repeated
+identity, as described in
+[PR #9542](https://github.com/open-telemetry/opentelemetry-go-contrib/pull/9542#discussion_r3990566698).
+Before the repeated edge is reached, such a path has the same stack behavior as
+an equally deep acyclic value.
+
+An explicit iterative DFS would remove this limitation, but would substantially
+increase the size and complexity of the conversion code for an input pattern
+that is not expected in ordinary logging. It was therefore left out to keep the
+implementation reviewable and maintainable. Container traversal can be made
+iterative in the future if real-world use demonstrates the need.
 
 ### Iterative formatting preflight
 
