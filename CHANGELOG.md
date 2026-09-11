@@ -67,9 +67,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Set fields implementing `error` interface from `slog` records as `record.SetErr` instead of plain attributes in `go.opentelemetry.io/contrib/bridges/otelslog`. (#8774)
 - Set emitted errors in `go.opentelemetry.io/contrib/bridges/otellogr` as record errors (`Record.SetErr`) instead of `exception.message` attributes. (#8775)
 
-### Fixed
+### Changed
 
-- Fix server-side `http.route` attribute leaking into client-side metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when a server handler propagates its request context into an outbound HTTP client request. (#8924)
+- Client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` no longer include attributes from the server-side `Labeler`, preventing attributes such as `http.route` from leaking into outbound requests.
+  This is a breaking change for applications that use `ContextWithLabeler` to add custom client metric attributes: use `ContextWithClientLabeler` / `ClientLabelerFromContext` or the `WithMetricAttributesFn` option instead.
+  Server-side use of `ContextWithLabeler` / `LabelerFromContext` is unchanged. (#8924)
+
+### Fixed
 - Fix header attributes lost when using sub-spans in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#8797)
 - Validate `encoding` configuration for OTLP HTTP exporters in `go.opentelemetry.io/contrib/otelconf`. (#8772)
 - Remove the custom body wrapper from the request's body after the request is processed to allow body type comparisons with the original type in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#6914)
