@@ -30,7 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
 - Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, using the request context's cancellation error as the classification source when the handler has not already recorded an error via `c.Error`. Previously a disconnect was recorded with span status `Error` and no `error.type`, indistinguishable from a genuine server fault. (#9394)
-- Replace recursive references with the string `"<cycle>"` instead of overflowing the stack in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9542)
+- Add an internal 1,000-edge safety bound to recursive container traversal in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`, replacing detected recursive references with `"<cycle>"` and recursive paths that exceed the bound with `"<depth-limit>"` instead of overflowing the stack. (#9542)
 
 ### Removed
 

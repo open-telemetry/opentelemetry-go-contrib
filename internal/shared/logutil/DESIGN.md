@@ -80,11 +80,12 @@ while leaving ordinary and moderately deep values unchanged.
 An identity already active exactly at the depth boundary is still reported as
 `"<cycle>"`, because recognizing that repetition requires no further descent.
 
-If separate branches of one formatted value encounter both conditions, the
-preflight continues scanning siblings after depth exhaustion and gives a proven
-cycle precedence. This keeps the marker deterministic even when map iteration
-order changes. It does not traverse beyond an exhausted edge, so a cycle hidden
-past that edge remains unproven and uses `"<depth-limit>"`.
+The preflight stops at the first cycle or exhausted edge. This prevents a
+depth-limited branch from causing unbounded work across the remaining branches
+of a compact shared graph. For maps that contain both conditions, the diagnostic
+marker can follow map iteration order; either result prevents the unsafe call to
+`fmt`. A cycle hidden past an exhausted edge remains unproven and uses
+`"<depth-limit>"`.
 
 ## Pointer chains
 

@@ -108,9 +108,6 @@ func TestFormatResult(t *testing.T) {
 	assert.Empty(t, formatSafe.marker())
 	assert.Equal(t, cycleMarker, formatCycle.marker())
 	assert.Equal(t, depthLimitMarker, formatDepthLimit.marker())
-	assert.Equal(t, formatSafe, formatSafe.combine(formatSafe))
-	assert.Equal(t, formatDepthLimit, formatSafe.combine(formatDepthLimit))
-	assert.Equal(t, formatCycle, formatDepthLimit.combine(formatCycle))
 }
 
 func TestConvertValue(t *testing.T) {
@@ -686,12 +683,30 @@ func TestFormattingTraversalDepthLimit(t *testing.T) {
 		convertValue(struct{ Value any }{Value: mapWithDeepKey.Interface()}),
 	)
 
-	mixed := map[string]any{}
-	mixed["depth"] = array.Interface()
-	mixed["cycle"] = mixed
-	for range 20 {
-		assert.Equal(t, formatCycle, checkFormatValue(reflect.ValueOf(mixed), 0, nil))
+	shared := any([]any{42})
+	assert.Equal(t, formatSafe, checkFormatValue(reflect.ValueOf([2]any{shared, shared}), 0, nil))
+	for range maxTraversalDepth {
+		shared = []any{shared, shared}
 	}
+	cyclicSibling := map[string]any{}
+	cyclicSibling["self"] = cyclicSibling
+	depthFirst := [2]any{shared, cyclicSibling}
+	assert.Equal(
+		t,
+		formatDepthLimit,
+		checkFormatValue(reflect.ValueOf(depthFirst), 0, nil),
+	)
+	assert.Equal(
+		t,
+		attribute.StringValue(depthLimitMarker),
+		convertValue(struct{ Value any }{Value: depthFirst}),
+	)
+	cycleFirst := [2]any{cyclicSibling, shared}
+	assert.Equal(
+		t,
+		formatCycle,
+		checkFormatValue(reflect.ValueOf(cycleFirst), 0, nil),
+	)
 }
 
 func TestConvertValueCycle(t *testing.T) {

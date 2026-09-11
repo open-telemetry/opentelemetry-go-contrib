@@ -85,18 +85,6 @@ func (r formatResult) marker() string {
 	}
 }
 
-// combine returns the higher-priority result. A proven cycle takes precedence
-// over depth exhaustion, which takes precedence over a safe result.
-func (r formatResult) combine(other formatResult) formatResult {
-	if r == formatCycle || other == formatCycle {
-		return formatCycle
-	}
-	if r == formatDepthLimit || other == formatDepthLimit {
-		return formatDepthLimit
-	}
-	return formatSafe
-}
-
 // pushInline adds key to the inline active-path store. It reports false when
 // key is already active.
 func (t *visitTracker) pushInline(key visitKey) bool {
@@ -783,8 +771,9 @@ func formattingTypeNeedsCheckAtDepth(t reflect.Type, visited *formatTypeVisit, d
 	return false
 }
 
-// checkFormatValue mirrors fmt's aggregate traversal before fmt is called. A
-// proven cycle takes precedence over depth exhaustion across sibling branches.
+// checkFormatValue mirrors fmt's aggregate traversal before fmt is called. It
+// stops at the first unsafe branch so depth exhaustion cannot amplify work
+// across a branching value.
 func checkFormatValue(v reflect.Value, depth int, visited *visitTracker) formatResult {
 	if !v.IsValid() {
 		return formatSafe
@@ -842,16 +831,14 @@ func checkFormatValue(v reflect.Value, depth int, visited *visitTracker) formatR
 		if !added {
 			return formatCycle
 		}
-		result := formatSafe
 		for i := range v.Len() {
-			result = result.combine(checkFormatValue(v.Index(i), depth+1, visited))
-			if result == formatCycle {
+			if result := checkFormatValue(v.Index(i), depth+1, visited); result != formatSafe {
 				visited.pop(key)
-				return formatCycle
+				return result
 			}
 		}
 		visited.pop(key)
-		return result
+		return formatSafe
 	case reflect.Map:
 		if v.Len() == 0 {
 			return formatSafe
@@ -879,43 +866,40 @@ func checkFormatValue(v reflect.Value, depth int, visited *visitTracker) formatR
 		if !added {
 			return formatCycle
 		}
-		result := formatSafe
 		iter := v.MapRange()
 		for iter.Next() {
-			result = result.combine(checkFormatValue(iter.Key(), depth+1, visited))
-			result = result.combine(checkFormatValue(iter.Value(), depth+1, visited))
-			if result == formatCycle {
+			if result := checkFormatValue(iter.Key(), depth+1, visited); result != formatSafe {
 				visited.pop(key)
-				return formatCycle
+				return result
+			}
+			if result := checkFormatValue(iter.Value(), depth+1, visited); result != formatSafe {
+				visited.pop(key)
+				return result
 			}
 		}
 		visited.pop(key)
-		return result
+		return formatSafe
 	case reflect.Array:
 		if v.Len() != 0 && depth >= maxTraversalDepth {
 			return formatDepthLimit
 		}
-		result := formatSafe
 		for i := range v.Len() {
-			result = result.combine(checkFormatValue(v.Index(i), depth+1, visited))
-			if result == formatCycle {
-				return formatCycle
+			if result := checkFormatValue(v.Index(i), depth+1, visited); result != formatSafe {
+				return result
 			}
 		}
-		return result
+		return formatSafe
 	case reflect.Struct:
 		if v.NumField() != 0 && depth >= maxTraversalDepth {
 			return formatDepthLimit
 		}
-		result := formatSafe
 		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range v.NumField() {
-			result = result.combine(checkFormatValue(v.Field(i), depth+1, visited))
-			if result == formatCycle {
-				return formatCycle
+			if result := checkFormatValue(v.Field(i), depth+1, visited); result != formatSafe {
+				return result
 			}
 		}
-		return result
+		return formatSafe
 	}
 	return formatSafe
 }
