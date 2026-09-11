@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/detectors/aws/eks
 
-go 1.26.0
+go 1.27.0
 
 require (
 	github.com/stretchr/testify v1.12.1
@@ -39,7 +39,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/apimachinery v0.37.0 // indirect
 	k8s.io/klog/v2 v2.140.0 // indirect
-	k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098 // indirect
+	k8s.io/kube-openapi v0.0.0-20260911184034-7970a1e230da // indirect
 	k8s.io/utils v0.0.0-20260707023825-cf1189d6abe3 // indirect
 	sigs.k8s.io/json v0.0.0-20260909141634-11ed52e25bc5 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
