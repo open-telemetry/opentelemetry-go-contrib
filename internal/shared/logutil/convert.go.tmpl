@@ -19,6 +19,7 @@ import (
 
 const (
 	cycleMarker      = "<cycle>"
+	depthLimitMarker = "<depth-limit>"
 	inlineVisitCount = 8
 	// Must be a power of two greater than inlineVisitCount + 1. Promotion fills
 	// inlineVisitCount + 1 slots, and probing relies on an empty slot.
@@ -26,6 +27,10 @@ const (
 )
 
 var (
+	// maxTraversalDepth bounds recursive aggregate traversal. Tests lower this
+	// value to exercise the boundary with small inputs.
+	maxTraversalDepth = 1000
+
 	formatterType    = reflect.TypeFor[fmt.Formatter]()
 	reflectValueType = reflect.TypeFor[reflect.Value]()
 	stringerType     = reflect.TypeFor[fmt.Stringer]()
@@ -41,28 +46,72 @@ type visitKey struct {
 	typ reflect.Type // A nil type marks an empty overflow-table slot.
 }
 
+// visitTracker records active container identities and recursive conversion
+// depth for one traversal path.
 type visitTracker struct {
-	depth    int
-	inline   [inlineVisitCount]visitKey
-	overflow []visitKey
+	identityDepth   int
+	conversionDepth int
+	inline          [inlineVisitCount]visitKey
+	overflow        []visitKey
 }
 
+// formatTypeVisit links the aggregate types on the active formatting type-walk
+// path so recursive types can be recognized without a heap map.
 type formatTypeVisit struct {
 	parent *formatTypeVisit
 	typ    reflect.Type
 }
 
+// formatResult describes whether fmt can safely traverse a value and, if not,
+// why the converter must replace it with a marker.
+type formatResult uint8
+
+const (
+	formatSafe formatResult = iota
+	formatCycle
+	formatDepthLimit
+)
+
+// marker returns the attribute marker corresponding to r, or an empty string
+// when formatting is safe.
+func (r formatResult) marker() string {
+	switch r {
+	case formatCycle:
+		return cycleMarker
+	case formatDepthLimit:
+		return depthLimitMarker
+	default:
+		return ""
+	}
+}
+
+// combine returns the higher-priority result. A proven cycle takes precedence
+// over depth exhaustion, which takes precedence over a safe result.
+func (r formatResult) combine(other formatResult) formatResult {
+	if r == formatCycle || other == formatCycle {
+		return formatCycle
+	}
+	if r == formatDepthLimit || other == formatDepthLimit {
+		return formatDepthLimit
+	}
+	return formatSafe
+}
+
+// pushInline adds key to the inline active-path store. It reports false when
+// key is already active.
 func (t *visitTracker) pushInline(key visitKey) bool {
-	for i := range t.depth {
+	for i := range t.identityDepth {
 		if t.inline[i] == key {
 			return false
 		}
 	}
-	t.inline[t.depth] = key
-	t.depth++
+	t.inline[t.identityDepth] = key
+	t.identityDepth++
 	return true
 }
 
+// pushSlow adds key to the overflow active-path table. It promotes the inline
+// store on first use and reports false when key is already active.
 func (t *visitTracker) pushSlow(key visitKey) bool {
 	if t.overflow == nil {
 		// Promotion is one-way: the table receives the entire active path and
@@ -81,31 +130,33 @@ func (t *visitTracker) pushSlow(key visitKey) bool {
 			return false
 		}
 		// Leave an empty slot so every probe can terminate before a full scan.
-		if t.depth*4 >= len(t.overflow)*3 {
+		if t.identityDepth*4 >= len(t.overflow)*3 {
 			t.growOverflow()
 		}
 	}
 	insertVisit(t.overflow, key)
-	t.depth++
+	t.identityDepth++
 	return true
 }
 
+// pop removes key from the active traversal path.
 func (t *visitTracker) pop(key visitKey) {
 	// Removing identities on return keeps tracking path-local, so sibling DAG
 	// branches can revisit the same value.
-	t.depth--
+	t.identityDepth--
 	if t.overflow != nil {
 		removeVisit(t.overflow, key)
 		return
 	}
-	t.inline[t.depth] = visitKey{}
+	t.inline[t.identityDepth] = visitKey{}
 }
 
+// contains reports whether key is already on the active traversal path.
 func (t *visitTracker) contains(key visitKey) bool {
 	if t.overflow != nil {
 		return containsVisit(t.overflow, key)
 	}
-	for i := range t.depth {
+	for i := range t.identityDepth {
 		if t.inline[i] == key {
 			return true
 		}
@@ -113,6 +164,7 @@ func (t *visitTracker) contains(key visitKey) bool {
 	return false
 }
 
+// growOverflow doubles the active-path table while preserving its entries.
 func (t *visitTracker) growOverflow() {
 	grown := make([]visitKey, len(t.overflow)*2)
 	for _, key := range t.overflow {
@@ -123,6 +175,7 @@ func (t *visitTracker) growOverflow() {
 	t.overflow = grown
 }
 
+// insertVisit inserts key into an open-addressed visit table.
 func insertVisit(table []visitKey, key visitKey) {
 	mask := uintptr(len(table) - 1)
 	hash := uintptr(key.ptr)>>3 ^ uintptr(key.len)
@@ -140,6 +193,7 @@ func insertVisit(table []visitKey, key visitKey) {
 	}
 }
 
+// containsVisit reports whether an open-addressed visit table contains key.
 func containsVisit(table []visitKey, key visitKey) bool {
 	mask := uintptr(len(table) - 1)
 	hash := uintptr(key.ptr)>>3 ^ uintptr(key.len)
@@ -157,6 +211,7 @@ func containsVisit(table []visitKey, key visitKey) bool {
 	return false
 }
 
+// removeVisit removes key from an open-addressed visit table.
 func removeVisit(table []visitKey, key visitKey) {
 	mask := uintptr(len(table) - 1)
 	hash := uintptr(key.ptr)>>3 ^ uintptr(key.len)
@@ -209,7 +264,8 @@ func kindCanRevisit(kind reflect.Kind) bool {
 	}
 }
 
-func kindCanFormatCycle(kind reflect.Kind) bool {
+// kindCanFormatRecurse reports whether fmt recursively traverses values of kind.
+func kindCanFormatRecurse(kind reflect.Kind) bool {
 	switch kind {
 	case reflect.Array, reflect.Interface, reflect.Map, reflect.Slice, reflect.Struct:
 		return true
@@ -305,8 +361,8 @@ func convertValue(v any) attribute.Value {
 				case reflect.String:
 					key = k.String()
 				default:
-					if formattingCycle(k) {
-						key = cycleMarker
+					if result := checkFormatting(k); result != formatSafe {
+						key = result.marker()
 					} else {
 						key = fmt.Sprintf("%+v", k.Interface())
 					}
@@ -320,10 +376,6 @@ func convertValue(v any) attribute.Value {
 		}
 	case reflect.Pointer:
 		return convertRootPointerValue(val)
-	case reflect.Interface:
-		if val.IsNil() {
-			return attribute.Value{}
-		}
 	default:
 		return convertUnhandledValue(v, t)
 	}
@@ -332,24 +384,13 @@ func convertValue(v any) attribute.Value {
 	return convertValueRoot(t, val)
 }
 
+// convertValueRoot starts path tracking for a potentially recursive map, slice,
+// or array root.
 func convertValueRoot(t reflect.Type, val reflect.Value) attribute.Value {
 	var visited visitTracker
-	switch t.Kind() {
-	case reflect.Slice, reflect.Array:
-		// Slices have identities; arrays are values. convertPointerArray tracks
-		// the final pointer that exposes an array instead.
-		if t.Kind() == reflect.Slice {
-			visited.inline[0] = visitKey{typ: t, ptr: val.UnsafePointer(), len: val.Len()}
-			visited.depth = 1
-		}
-		items := make([]attribute.Value, 0, val.Len())
-		for i := range val.Len() {
-			items = append(items, convertValueWithTracker(val.Index(i).Interface(), &visited))
-		}
-		return attribute.SliceValue(items...)
-	case reflect.Map:
+	if t.Kind() == reflect.Map {
 		visited.inline[0] = visitKey{typ: t, ptr: val.UnsafePointer()}
-		visited.depth = 1
+		visited.identityDepth = 1
 		kvs := make([]attribute.KeyValue, 0, val.Len())
 		for _, k := range val.MapKeys() {
 			var key string
@@ -357,8 +398,8 @@ func convertValueRoot(t reflect.Type, val reflect.Value) attribute.Value {
 			case reflect.String:
 				key = k.String()
 			default:
-				if formattingCycle(k) {
-					key = cycleMarker
+				if result := checkFormatting(k); result != formatSafe {
+					key = result.marker()
 				} else {
 					key = fmt.Sprintf("%+v", k.Interface())
 				}
@@ -369,21 +410,60 @@ func convertValueRoot(t reflect.Type, val reflect.Value) attribute.Value {
 			})
 		}
 		return attribute.MapValue(kvs...)
-	case reflect.Interface:
-		return convertValueWithTracker(val.Elem().Interface(), &visited)
 	}
-	return convertUnhandledValue(val.Interface(), t)
+
+	// Slices have identities; arrays are values. convertPointerArray tracks the
+	// final pointer that exposes an array instead.
+	if t.Kind() == reflect.Slice {
+		visited.inline[0] = visitKey{typ: t, ptr: val.UnsafePointer(), len: val.Len()}
+		visited.identityDepth = 1
+	}
+	items := make([]attribute.Value, 0, val.Len())
+	for i := range val.Len() {
+		items = append(items, convertValueWithTracker(val.Index(i).Interface(), &visited))
+	}
+	return attribute.SliceValue(items...)
 }
 
+// convertValueWithTracker converts v while preserving the current active path
+// and enforcing the recursive traversal bound.
 func convertValueWithTracker(v any, visited *visitTracker) attribute.Value {
 {{template "fastPath" .}}	t := reflect.TypeOf(v)
 	if t == nil {
 		return attribute.Value{}
 	}
 	val := reflect.ValueOf(v)
-	return convertReflectValue(v, t, val, visited)
+	if visited.conversionDepth >= maxTraversalDepth {
+		switch t.Kind() {
+		case reflect.Slice:
+			if val.Len() != 0 && kindCanRevisit(t.Elem().Kind()) {
+				key := visitKey{typ: t, ptr: val.UnsafePointer(), len: val.Len()}
+				if visited.contains(key) {
+					return attribute.StringValue(cycleMarker)
+				}
+				return attribute.StringValue(depthLimitMarker)
+			}
+		case reflect.Array:
+			if val.Len() != 0 && kindCanRevisit(t.Elem().Kind()) {
+				return attribute.StringValue(depthLimitMarker)
+			}
+		case reflect.Map:
+			if val.Len() != 0 && kindCanRevisit(t.Elem().Kind()) {
+				key := visitKey{typ: t, ptr: val.UnsafePointer()}
+				if visited.contains(key) {
+					return attribute.StringValue(cycleMarker)
+				}
+				return attribute.StringValue(depthLimitMarker)
+			}
+		}
+	}
+	visited.conversionDepth++
+	result := convertReflectValue(v, t, val, visited)
+	visited.conversionDepth--
+	return result
 }
 
+// convertReflectValue converts a reflected value on an active tracked path.
 func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visitTracker) attribute.Value {
 	switch t.Kind() {
 	case reflect.Struct:
@@ -397,7 +477,7 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 		if tracked {
 			key = visitKey{typ: t, ptr: val.UnsafePointer(), len: val.Len()}
 			var added bool
-			if visited.overflow == nil && visited.depth < inlineVisitCount {
+			if visited.overflow == nil && visited.identityDepth < inlineVisitCount {
 				added = visited.pushInline(key)
 			} else {
 				added = visited.pushSlow(key)
@@ -423,7 +503,7 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 		if tracked {
 			key = visitKey{typ: t, ptr: val.UnsafePointer()}
 			var added bool
-			if visited.overflow == nil && visited.depth < inlineVisitCount {
+			if visited.overflow == nil && visited.identityDepth < inlineVisitCount {
 				added = visited.pushInline(key)
 			} else {
 				added = visited.pushSlow(key)
@@ -439,8 +519,8 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 			case reflect.String:
 				key = k.String()
 			default:
-				if formattingCycle(k) {
-					key = cycleMarker
+				if result := checkFormatting(k); result != formatSafe {
+					key = result.marker()
 				} else {
 					key = fmt.Sprintf("%+v", k.Interface())
 				}
@@ -467,11 +547,6 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 			return convertValueWithTracker(next, visited)
 		}
 		return convertPointerValue(val, visited)
-	case reflect.Interface:
-		if val.IsNil() {
-			return attribute.Value{}
-		}
-		return convertValueWithTracker(val.Elem().Interface(), visited)
 	}
 
 	// Try to handle this as gracefully as possible.
@@ -482,17 +557,21 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 	return convertUnhandledValue(v, t)
 }
 
+// convertStructValue safely formats a struct or replaces it with the reason
+// formatting cannot complete.
 func convertStructValue(v any, val reflect.Value) attribute.Value {
-	if formattingCycle(val) {
-		return attribute.StringValue(cycleMarker)
+	if result := checkFormatting(val); result != formatSafe {
+		return attribute.StringValue(result.marker())
 	}
 	return attribute.StringValue(fmt.Sprintf("%+v", v))
 }
 
+// convertUnhandledValue preserves an unsupported value in a diagnostic string.
 func convertUnhandledValue(v any, t reflect.Type) attribute.Value {
 	return attribute.StringValue(fmt.Sprintf("unhandled: (%s) %+v", t, v))
 }
 
+// convertRootPointerValue handles a pointer before general path tracking starts.
 func convertRootPointerValue(val reflect.Value) attribute.Value {
 	if val.IsNil() {
 		return attribute.Value{}
@@ -532,7 +611,7 @@ func convertPointerValue(current reflect.Value, visited *visitTracker) attribute
 		}
 
 		key := visitKey{typ: current.Type(), ptr: current.UnsafePointer()}
-		if visited != nil && visited.depth != 0 && visited.contains(key) {
+		if visited != nil && visited.identityDepth != 0 && visited.contains(key) {
 			return attribute.StringValue(cycleMarker)
 		}
 
@@ -570,6 +649,8 @@ func convertPointerValue(current reflect.Value, visited *visitTracker) attribute
 	return convertValueWithTracker(v, visited)
 }
 
+// convertPointerArray keeps the pointer exposing v active while converting the
+// array, allowing pointer-array cycles to be detected.
 func convertPointerArray(v reflect.Value, key visitKey, visited *visitTracker) attribute.Value {
 	// Arrays have value semantics, so keep the pointer exposing the array active
 	// until its elements finish converting.
@@ -577,25 +658,23 @@ func convertPointerArray(v reflect.Value, key visitKey, visited *visitTracker) a
 	if visited == nil {
 		visited = &root
 	}
-	var added bool
-	if visited.overflow == nil && visited.depth < inlineVisitCount {
-		added = visited.pushInline(key)
+	// convertPointerValue already established that key is not active.
+	if visited.overflow == nil && visited.identityDepth < inlineVisitCount {
+		visited.pushInline(key)
 	} else {
-		added = visited.pushSlow(key)
-	}
-	if !added {
-		return attribute.StringValue(cycleMarker)
+		visited.pushSlow(key)
 	}
 	result := convertValueWithTracker(v.Interface(), visited)
 	visited.pop(key)
 	return result
 }
 
-// formattingCycle reports whether formatting v with fmt would traverse a cycle.
-func formattingCycle(v reflect.Value) bool {
+// checkFormatting reports whether fmt can safely format v or would encounter a
+// cycle or the traversal-depth limit.
+func checkFormatting(v reflect.Value) formatResult {
 	for v.Kind() == reflect.Interface {
 		if v.IsNil() {
-			return false
+			return formatSafe
 		}
 		v = v.Elem()
 	}
@@ -603,18 +682,18 @@ func formattingCycle(v reflect.Value) bool {
 	if v.Type() == reflectValueType {
 		v = v.Interface().(reflect.Value)
 		if !v.IsValid() {
-			return false
+			return formatSafe
 		}
 	}
 	t := v.Type()
 	if t.Kind() == reflect.Struct {
-		mayCycle := false
+		needsCheck := false
 		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range v.NumField() {
 			field := v.Field(i)
 			switch field.Kind() {
 			case reflect.Array, reflect.Struct:
-				mayCycle = true
+				needsCheck = true
 			case reflect.Interface:
 				for field.Kind() == reflect.Interface {
 					if field.IsNil() {
@@ -623,44 +702,55 @@ func formattingCycle(v reflect.Value) bool {
 					field = field.Elem()
 				}
 				if field.Kind() != reflect.Interface {
-					mayCycle = kindCanFormatCycle(field.Kind())
+					needsCheck = kindCanFormatRecurse(field.Kind())
 				}
 			case reflect.Map:
 				fieldType := field.Type()
-				mayCycle = kindCanFormatCycle(fieldType.Key().Kind()) ||
-					kindCanFormatCycle(fieldType.Elem().Kind())
+				needsCheck = kindCanFormatRecurse(fieldType.Key().Kind()) ||
+					kindCanFormatRecurse(fieldType.Elem().Kind())
 			case reflect.Slice:
-				mayCycle = kindCanFormatCycle(field.Type().Elem().Kind())
+				needsCheck = kindCanFormatRecurse(field.Type().Elem().Kind())
 			}
-			if mayCycle {
+			if needsCheck {
 				break
 			}
 		}
-		if !mayCycle {
-			return false
+		if !needsCheck {
+			return formatSafe
 		}
 	}
-	if !formattingRootMayCycle(t) {
-		return false
+	if !formattingRootNeedsCheck(t) {
+		return formatSafe
 	}
-	return formatHasCycle(v, 0, nil)
+	return checkFormatValue(v, 0, nil)
 }
 
-func formattingRootMayCycle(t reflect.Type) bool {
+// formattingRootNeedsCheck reports whether fmt can recursively traverse a root
+// of type t deeply enough to require a value-level safety check.
+func formattingRootNeedsCheck(t reflect.Type) bool {
 	if t.Kind() == reflect.Pointer {
 		elem := t.Elem()
 		switch elem.Kind() {
 		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
-			return formattingMayCycle(elem, nil)
+			return formattingTypeNeedsCheckAtDepth(elem, nil, 1)
 		}
 		return false
 	}
-	return formattingMayCycle(t, nil)
+	return formattingTypeNeedsCheck(t)
 }
 
-// formattingMayCycle cheaply excludes types fmt cannot recursively traverse
-// into a map, slice, or interface. Nested pointers are terminal in fmt.
-func formattingMayCycle(t reflect.Type, visited *formatTypeVisit) bool {
+// formattingTypeNeedsCheck reports whether values of t can contain a cycle or
+// exhaust the traversal-depth bound under fmt's traversal rules.
+func formattingTypeNeedsCheck(t reflect.Type) bool {
+	return formattingTypeNeedsCheckAtDepth(t, nil, 0)
+}
+
+// formattingTypeNeedsCheckAtDepth walks the types fmt can recursively traverse,
+// stopping at recursive types or the traversal-depth bound.
+func formattingTypeNeedsCheckAtDepth(t reflect.Type, visited *formatTypeVisit, depth int) bool {
+	if depth >= maxTraversalDepth {
+		return kindCanFormatRecurse(t.Kind())
+	}
 	switch t.Kind() {
 	case reflect.Interface:
 		return true
@@ -678,14 +768,14 @@ func formattingMayCycle(t reflect.Type, visited *formatTypeVisit) bool {
 
 	switch t.Kind() {
 	case reflect.Array, reflect.Slice:
-		return formattingMayCycle(t.Elem(), visited)
+		return formattingTypeNeedsCheckAtDepth(t.Elem(), visited, depth+1)
 	case reflect.Map:
-		return formattingMayCycle(t.Key(), visited) ||
-			formattingMayCycle(t.Elem(), visited)
+		return formattingTypeNeedsCheckAtDepth(t.Key(), visited, depth+1) ||
+			formattingTypeNeedsCheckAtDepth(t.Elem(), visited, depth+1)
 	case reflect.Struct:
 		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range t.NumField() {
-			if formattingMayCycle(t.Field(i).Type, visited) {
+			if formattingTypeNeedsCheckAtDepth(t.Field(i).Type, visited, depth+1) {
 				return true
 			}
 		}
@@ -693,101 +783,141 @@ func formattingMayCycle(t reflect.Type, visited *formatTypeVisit) bool {
 	return false
 }
 
-func formatHasCycle(v reflect.Value, depth int, visited *visitTracker) bool {
+// checkFormatValue mirrors fmt's aggregate traversal before fmt is called. A
+// proven cycle takes precedence over depth exhaustion across sibling branches.
+func checkFormatValue(v reflect.Value, depth int, visited *visitTracker) formatResult {
 	if !v.IsValid() {
-		return false
+		return formatSafe
 	}
 	t := v.Type()
 	if v.CanInterface() && t.NumMethod() != 0 {
 		// fmt invokes formatting methods instead of traversing the value.
 		// Formatting methods are currently treated as trusted user code.
 		if t.Implements(formatterType) || t.Implements(stringerType) || t.Implements(errorType) {
-			return false
+			return formatSafe
 		}
 	}
 
 	switch v.Kind() {
 	case reflect.Interface:
-		return !v.IsNil() && formatHasCycle(v.Elem(), depth+1, visited)
+		if v.IsNil() {
+			return formatSafe
+		}
+		return checkFormatValue(v.Elem(), depth+1, visited)
 	case reflect.Pointer:
 		// fmt dereferences aggregate pointers only at the root; nested pointers
 		// are rendered as addresses.
 		if depth != 0 || v.IsNil() {
-			return false
+			return formatSafe
 		}
 		elem := v.Elem()
 		switch elem.Kind() {
 		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
-			return formatHasCycle(elem, depth+1, visited)
+			return checkFormatValue(elem, depth+1, visited)
 		}
 	case reflect.Slice:
 		if v.Len() == 0 {
-			return false
+			return formatSafe
+		}
+		if depth >= maxTraversalDepth {
+			if visited != nil {
+				key := visitKey{typ: v.Type(), ptr: v.UnsafePointer(), len: v.Len()}
+				if visited.contains(key) {
+					return formatCycle
+				}
+			}
+			return formatDepthLimit
 		}
 		if visited == nil {
 			var tracker visitTracker
-			return formatHasCycle(v, depth, &tracker)
+			return checkFormatValue(v, depth, &tracker)
 		}
 		key := visitKey{typ: v.Type(), ptr: v.UnsafePointer(), len: v.Len()}
 		var added bool
-		if visited.overflow == nil && visited.depth < inlineVisitCount {
+		if visited.overflow == nil && visited.identityDepth < inlineVisitCount {
 			added = visited.pushInline(key)
 		} else {
 			added = visited.pushSlow(key)
 		}
 		if !added {
-			return true
+			return formatCycle
 		}
+		result := formatSafe
 		for i := range v.Len() {
-			if formatHasCycle(v.Index(i), depth+1, visited) {
+			result = result.combine(checkFormatValue(v.Index(i), depth+1, visited))
+			if result == formatCycle {
 				visited.pop(key)
-				return true
+				return formatCycle
 			}
 		}
 		visited.pop(key)
-		return false
+		return result
 	case reflect.Map:
 		if v.Len() == 0 {
-			return false
+			return formatSafe
+		}
+		if depth >= maxTraversalDepth {
+			if visited != nil {
+				key := visitKey{typ: v.Type(), ptr: v.UnsafePointer()}
+				if visited.contains(key) {
+					return formatCycle
+				}
+			}
+			return formatDepthLimit
 		}
 		if visited == nil {
 			var tracker visitTracker
-			return formatHasCycle(v, depth, &tracker)
+			return checkFormatValue(v, depth, &tracker)
 		}
 		key := visitKey{typ: v.Type(), ptr: v.UnsafePointer()}
 		var added bool
-		if visited.overflow == nil && visited.depth < inlineVisitCount {
+		if visited.overflow == nil && visited.identityDepth < inlineVisitCount {
 			added = visited.pushInline(key)
 		} else {
 			added = visited.pushSlow(key)
 		}
 		if !added {
-			return true
+			return formatCycle
 		}
+		result := formatSafe
 		iter := v.MapRange()
 		for iter.Next() {
-			if formatHasCycle(iter.Key(), depth+1, visited) || formatHasCycle(iter.Value(), depth+1, visited) {
+			result = result.combine(checkFormatValue(iter.Key(), depth+1, visited))
+			result = result.combine(checkFormatValue(iter.Value(), depth+1, visited))
+			if result == formatCycle {
 				visited.pop(key)
-				return true
+				return formatCycle
 			}
 		}
 		visited.pop(key)
-		return false
+		return result
 	case reflect.Array:
+		if v.Len() != 0 && depth >= maxTraversalDepth {
+			return formatDepthLimit
+		}
+		result := formatSafe
 		for i := range v.Len() {
-			if formatHasCycle(v.Index(i), depth+1, visited) {
-				return true
+			result = result.combine(checkFormatValue(v.Index(i), depth+1, visited))
+			if result == formatCycle {
+				return formatCycle
 			}
 		}
+		return result
 	case reflect.Struct:
+		if v.NumField() != 0 && depth >= maxTraversalDepth {
+			return formatDepthLimit
+		}
+		result := formatSafe
 		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range v.NumField() {
-			if formatHasCycle(v.Field(i), depth+1, visited) {
-				return true
+			result = result.combine(checkFormatValue(v.Field(i), depth+1, visited))
+			if result == formatCycle {
+				return formatCycle
 			}
 		}
+		return result
 	}
-	return false
+	return formatSafe
 }
 
 // convertUintValue converts a uint64 to an attribute.Value.

@@ -4,17 +4,19 @@ The shared log value converter turns arbitrary Go values into OpenTelemetry
 attribute values. It is implemented in `convert.go.tmpl` and generated into the
 `otellogr`, `otellogrus`, `otelslog`, and `otelzap` bridges.
 
-This document records the invariants behind its cycle detection. Preserve these
-invariants when changing the converter or its generated copies.
+This document records the invariants behind its cycle and traversal-depth
+handling. Preserve these invariants when changing the converter or its generated
+copies.
 
 ## Goals
 
-- Detect cycles in maps, slices, arrays, pointers, interfaces, and values
-  traversed by `fmt`, and stop traversing a recursive edge once it is detected.
+- Terminate when maps, slices, arrays, pointers, interfaces, or values traversed
+  by `fmt` contain cycles, even when a repeated identity is extremely deep.
 - Preserve as much of the original value as possible by replacing a recursive
-  edge with the string `"<cycle>"`.
-- Preserve the existing output for acyclic inputs, including shared directed
-  acyclic graphs and values with formatting methods.
+  edge with `"<cycle>"` and an over-limit edge with `"<depth-limit>"`.
+- Preserve the existing output for acyclic inputs within the traversal safety
+  bound, including shared directed acyclic graphs and values with formatting
+  methods.
 - Avoid new heap allocations on common conversion paths.
 - Keep behavior consistent across all four bridges generated from the shared
   template.
@@ -43,6 +45,47 @@ their addresses to `uintptr`.
 Empty maps and slices return before identity tracking. This both preserves their
 existing conversion and avoids ambiguous identities for zero-length slices.
 
+## Traversal-depth safety bound
+
+Identity tracking alone does not bound stack use: a cycle can contain many
+distinct containers before repeating, and arrays and interfaces add recursive
+edges without adding identities. Normal conversion and the formatting preflight
+therefore stop recursive traversal at the package-internal `maxTraversalDepth`,
+whose production default is 1000. This is an implementation-safety bound, not a
+user-configurable or public attribute-value limit.
+It is a variable only so package tests can exercise the boundary with small
+values; production code does not modify it.
+
+Normal conversion counts active recursive conversions separately from active
+container identities. Scalar fast paths and nil, empty, and statically
+non-recursive containers continue converting normally at the boundary.
+Pointer-only chains are iterative and do not consume one unit per pointer. An
+edge that would enter another potentially recursive container at the bound
+becomes `"<depth-limit>"`.
+
+The formatting preflight counts every value edge that `fmt` would follow,
+including array and interface edges, and its preliminary type walk has the same
+bound. If a recursively traversable aggregate remains at the bound, the
+preflight reports depth exhaustion, so the formatted struct or map key is
+replaced as a unit with `"<depth-limit>"` and `fmt` is not called on the
+over-limit graph. Terminal methods, scalars, and nil or empty values still
+complete normally.
+
+The distinct markers preserve the reason for replacement: `"<cycle>"` means an
+identity repeated on the active path, while `"<depth-limit>"` means the safety
+bound was exhausted before the value was proven safe. Exceptionally deep
+acyclic input can therefore be truncated. This trade-off keeps stack use bounded
+while leaving ordinary and moderately deep values unchanged.
+
+An identity already active exactly at the depth boundary is still reported as
+`"<cycle>"`, because recognizing that repetition requires no further descent.
+
+If separate branches of one formatted value encounter both conditions, the
+preflight continues scanning siblings after depth exhaustion and gives a proven
+cycle precedence. This keeps the marker deterministic even when map iteration
+order changes. It does not traverse beyond an exhausted edge, so a cycle hidden
+past that edge remains unproven and uses `"<depth-limit>"`.
+
 ## Pointer chains
 
 Pointer-only chains are unwrapped iteratively and use Brent's cycle-detection
@@ -58,17 +101,18 @@ Calling `fmt` directly is unsafe for graphs such as
 `map -> struct -> same map`, because the cycle leaves the converter's normal
 traversal and recurses inside `fmt`.
 
-Before calling `fmt`, the converter therefore performs a separate cycle
+Before calling `fmt`, the converter therefore performs a separate safety
 preflight that mirrors the relevant `fmt` traversal rules. Nested pointers are
 terminal addresses, while implementations of `fmt.Formatter`, `fmt.Stringer`,
 and `error` are terminal method calls. Mirroring those rules avoids rejecting
 values that `fmt` handles without recursion, including types with promoted
 formatting methods.
 
-For maps, slices, and arrays, only the repeated edge is replaced. When a cycle
-is found inside a value formatted by `fmt`, the formatted value is replaced as
-a unit because the converter cannot resume partway through `fmt` while
-preserving its output rules.
+For maps, slices, and arrays, only the repeated or over-limit edge is replaced,
+using the corresponding marker. When a cycle or depth exhaustion is found
+inside a value formatted by `fmt`, the formatted value is replaced as a unit
+because the converter cannot resume partway through `fmt` while preserving its
+output rules.
 
 ## Hot-path strategy
 
@@ -86,23 +130,21 @@ when this structure changes.
 
 There is no opt-out option. Statically non-recursive conversion paths avoid the
 general tracker, and the formatting preflight returns early when a type cannot
-lead `fmt` into a cycle. The mechanism does not add allocations to the measured
-hot paths. An opt-out would add configuration to four bridges while restoring
-an unrecoverable stack-overflow failure mode.
+lead `fmt` into a cycle or reach the safety bound. The mechanism does not add
+allocations to the measured hot paths. An opt-out would add configuration to
+four bridges while restoring an unrecoverable stack-overflow failure mode.
 
 ## Trade-offs and rejected alternatives
 
-### Maximum depth
+### Configurable maximum depth
 
 [PR #9277](https://github.com/open-telemetry/opentelemetry-go-contrib/pull/9277)
-explored a maximum traversal depth. A depth bound also limits deeply acyclic
-input, while a branching cycle can expand exponentially before reaching the
-bound. It introduces limit, counting, and replacement semantics that should
-follow the discussion in
+explored a user-facing maximum traversal depth. A configurable limit introduces
+API, counting, and replacement semantics that should follow the discussion in
 [opentelemetry-specification#5186](https://github.com/open-telemetry/opentelemetry-specification/issues/5186).
-Cycle detection intentionally remains separate from hardening against deeply
-nested input, including cyclic input with a very long non-repeating path before
-the repeated identity is reached.
+The package-internal bound here is only a last-resort stack-safety guard. It
+defaults to 1000 in production and is deliberately not exposed as policy or
+presented as a general attribute-value size limit.
 
 ### Global seen set
 
@@ -123,34 +165,18 @@ Retaining every pointer adds per-level work and storage, and recursive traversal
 can itself exhaust the stack. Iterative Brent detection keeps pointer chains
 constant-space.
 
-### Iterative container conversion
+### Explicit iterative aggregate traversal
 
-Map, slice, and array conversion uses recursive traversal. Cycle detection
-returns `"<cycle>"` once an identity already active on the current traversal
-path is encountered. A sufficiently long path of distinct containers can
-therefore exhaust the goroutine stack before traversal reaches the repeated
-identity, as described in
-[PR #9542](https://github.com/open-telemetry/opentelemetry-go-contrib/pull/9542#discussion_r3990566698).
-Before the repeated edge is reached, such a path has the same stack behavior as
-an equally deep acyclic value.
-
-An explicit iterative DFS would remove this limitation, but would substantially
-increase the size and complexity of the conversion code for an input pattern
-that is not expected in ordinary logging. It was therefore left out to keep the
-implementation reviewable and maintainable. Container traversal can be made
-iterative in the future if real-world use demonstrates the need.
-
-### Iterative formatting preflight
-
-The formatting preflight uses recursive traversal, so a sufficiently deep,
-carefully constructed cyclic value can exhaust the goroutine stack before a
-repeated identity is reached, as described in
-[PR #9542](https://github.com/open-telemetry/opentelemetry-go-contrib/pull/9542#discussion_r3969904141).
-An explicit iterative DFS would remove this limitation, but would substantially
-increase the size and complexity of the reflection code for an input pattern
-that is not expected in ordinary logging. It was therefore left out to keep the
-implementation reviewable and maintainable. The preflight can be changed to an
-iterative traversal in the future if real-world use demonstrates the need.
+Explicit traversal stacks for normal conversion and the formatting preflight
+would remove their dependence on recursive Go frames and could preserve
+arbitrarily deep acyclic input. Normal conversion would also need to retain
+partially built map and slice results in those frames. That substantially
+increases code and state-management complexity on a hot path. The
+package-internal safety bound addresses both stack-overflow cases reported in
+[PR #9542's normal conversion review](https://github.com/open-telemetry/opentelemetry-go-contrib/pull/9542#discussion_r3990566698)
+and
+[formatting preflight review](https://github.com/open-telemetry/opentelemetry-go-contrib/pull/9542#discussion_r3969904141)
+without that machinery.
 
 ### `encoding/json` fallback
 
@@ -160,7 +186,8 @@ representation and its method and formatting behavior.
 ### Replacing the entire root
 
 Replacing the entire converted root would discard useful non-cyclic data. The
-converter replaces only the traversal edge at which it detects the cycle. The
+converter replaces only the traversal edge at which it detects a repeated
+identity or exhausts the depth bound, using the marker for that reason. The
 exception is a formatted value, which is replaced as a unit because preserving
 `%+v` while safely resuming inside `fmt` would require reimplementing its output
 rules.
