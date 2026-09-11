@@ -21,6 +21,9 @@ const (
 	cycleMarker      = "<cycle>"
 	depthLimitMarker = "<depth-limit>"
 	inlineVisitCount = 8
+	// The preliminary type walk is only an optimization. If a shared type graph
+	// takes more work than this, fall back to the bounded value-level scan.
+	maxFormattingTypeVisits = 1000
 	// Must be a power of two greater than inlineVisitCount + 1. Promotion fills
 	// inlineVisitCount + 1 slots, and probing relies on an empty slot.
 	initialOverflowVisitTableSize = 128
@@ -713,9 +716,15 @@ func checkFormatting(v reflect.Value) formatResult {
 	return checkFormatValue(v, 0, nil)
 }
 
-// formattingRootNeedsCheck reports whether fmt can recursively traverse a root
-// of type t deeply enough to require a value-level safety check.
+// formattingRootNeedsCheck reports whether a root of type t needs the
+// value-level formatting safety check.
 func formattingRootNeedsCheck(t reflect.Type) bool {
+	if t.NumMethod() != 0 &&
+		(t.Implements(formatterType) || t.Implements(stringerType) || t.Implements(errorType)) {
+		// The value scan verifies that the reflected root is interfaceable before
+		// treating its method as terminal.
+		return true
+	}
 	if t.Kind() == reflect.Pointer {
 		elem := t.Elem()
 		switch elem.Kind() {
@@ -727,15 +736,39 @@ func formattingRootNeedsCheck(t reflect.Type) bool {
 	return formattingTypeNeedsCheck(t)
 }
 
-// formattingTypeNeedsCheck reports whether values of t can contain a cycle or
-// exhaust the traversal-depth bound under fmt's traversal rules.
+// formattingTypeNeedsCheck reports whether values of t need the value-level
+// formatting safety check.
 func formattingTypeNeedsCheck(t reflect.Type) bool {
 	return formattingTypeNeedsCheckAtDepth(t, nil, 0)
 }
 
-// formattingTypeNeedsCheckAtDepth walks the types fmt can recursively traverse,
-// stopping at recursive types or the traversal-depth bound.
+// formattingTypeNeedsCheckAtDepth makes the same decision while tracking the
+// recursive type depth.
 func formattingTypeNeedsCheckAtDepth(t reflect.Type, visited *formatTypeVisit, depth int) bool {
+	typeVisits := 0
+	return formattingTypeNeedsCheckAtDepthWithBudget(t, visited, depth, &typeVisits)
+}
+
+// formattingTypeNeedsCheckAtDepthWithBudget performs the bounded type walk.
+func formattingTypeNeedsCheckAtDepthWithBudget(
+	t reflect.Type,
+	visited *formatTypeVisit,
+	depth int,
+	typeVisits *int,
+) bool {
+	if *typeVisits >= maxFormattingTypeVisits {
+		// This walk only decides whether to run the value-level preflight. Falling
+		// back is conservative and does not produce a marker by itself.
+		return true
+	}
+	(*typeVisits)++
+
+	if t.NumMethod() != 0 &&
+		(t.Implements(formatterType) || t.Implements(stringerType) || t.Implements(errorType)) {
+		// Whether fmt can call the method depends on the reflected value. Let the
+		// value-level scan make that decision without expanding the method's type.
+		return true
+	}
 	if depth >= maxTraversalDepth {
 		return kindCanFormatRecurse(t.Kind())
 	}
@@ -756,14 +789,21 @@ func formattingTypeNeedsCheckAtDepth(t reflect.Type, visited *formatTypeVisit, d
 
 	switch t.Kind() {
 	case reflect.Array, reflect.Slice:
-		return formattingTypeNeedsCheckAtDepth(t.Elem(), visited, depth+1)
+		return formattingTypeNeedsCheckAtDepthWithBudget(
+			t.Elem(), visited, depth+1, typeVisits,
+		)
 	case reflect.Map:
-		return formattingTypeNeedsCheckAtDepth(t.Key(), visited, depth+1) ||
-			formattingTypeNeedsCheckAtDepth(t.Elem(), visited, depth+1)
+		return formattingTypeNeedsCheckAtDepthWithBudget(
+			t.Key(), visited, depth+1, typeVisits,
+		) || formattingTypeNeedsCheckAtDepthWithBudget(
+			t.Elem(), visited, depth+1, typeVisits,
+		)
 	case reflect.Struct:
 		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range t.NumField() {
-			if formattingTypeNeedsCheckAtDepth(t.Field(i).Type, visited, depth+1) {
+			if formattingTypeNeedsCheckAtDepthWithBudget(
+				t.Field(i).Type, visited, depth+1, typeVisits,
+			) {
 				return true
 			}
 		}

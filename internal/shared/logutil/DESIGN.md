@@ -71,6 +71,12 @@ replaced as a unit with `"<depth-limit>"` and `fmt` is not called on the
 over-limit graph. Terminal methods, scalars, and nil or empty values still
 complete normally.
 
+The preliminary type walk is only an optimization that decides whether the
+value-level preflight is needed. Formatting-method types immediately delegate
+that decision to the value scan, and the type walk falls back after 1,000 type
+visits. This prevents shared type branches from amplifying the preliminary work;
+falling back does not produce a marker or change output by itself.
+
 The distinct markers preserve the reason for replacement: `"<cycle>"` means an
 identity repeated on the active path, while `"<depth-limit>"` means the safety
 bound was exhausted before the value was proven safe. Exceptionally deep
@@ -108,6 +114,14 @@ terminal addresses, while implementations of `fmt.Formatter`, `fmt.Stringer`,
 and `error` are terminal method calls. Mirroring those rules avoids rejecting
 values that `fmt` handles without recursion, including types with promoted
 formatting methods.
+
+Before formatting individual keys, `fmt` sorts multi-entry maps by comparing
+their raw keys. An exceptionally deep struct, array, or interface key can
+therefore recurse inside `internal/fmtsort` beyond the preflight's method
+boundary even when the key's formatting method would be terminal. This is a
+known limitation. Mirroring the private comparator would couple the converter
+to implementation details that can change between supported Go versions, so
+this preflight does not attempt to bound that raw-key sort.
 
 For maps, slices, and arrays, only the repeated or over-limit edge is replaced,
 using the corresponding marker. When a cycle or depth exhaustion is found

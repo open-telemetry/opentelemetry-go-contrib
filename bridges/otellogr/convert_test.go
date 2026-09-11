@@ -28,6 +28,18 @@ func (testStringer) String() string {
 	return "formatted"
 }
 
+type testUnexportedStringer struct {
+	value any
+}
+
+func (testUnexportedStringer) String() string {
+	return "unexported formatted"
+}
+
+type testUnexportedStringerWrapper struct {
+	value testUnexportedStringer
+}
+
 type testError string
 
 func (e testError) Error() string {
@@ -617,6 +629,37 @@ func TestFormattingCycleBranches(t *testing.T) {
 	assert.True(t, formattingTypeNeedsCheck(reflect.TypeFor[recursiveTestSlice]()))
 }
 
+func TestFormattingTypePreflightWorkLimit(t *testing.T) {
+	typeVisits := 0
+	assert.True(t, formattingTypeNeedsCheckAtDepthWithBudget(
+		reflect.TypeFor[testStringer](),
+		nil,
+		0,
+		&typeVisits,
+	))
+	assert.Equal(t, 1, typeVisits)
+
+	typ := reflect.TypeFor[struct{}]()
+	for range 10 {
+		emptyChild := reflect.ArrayOf(0, typ)
+		typ = reflect.StructOf([]reflect.StructField{
+			{Name: "Left", Type: emptyChild},
+			{Name: "Right", Type: emptyChild},
+		})
+	}
+	typeVisits = 0
+	assert.True(t, formattingTypeNeedsCheckAtDepthWithBudget(typ, nil, 0, &typeVisits))
+	assert.Equal(t, maxFormattingTypeVisits, typeVisits)
+
+	value := reflect.New(typ).Elem()
+	assert.Equal(t, formatSafe, checkFormatting(value))
+	assert.Equal(
+		t,
+		attribute.StringValue(fmt.Sprintf("%+v", value.Interface())),
+		convertValue(value.Interface()),
+	)
+}
+
 func TestFormattingTraversalDepthLimit(t *testing.T) {
 	setMaxTraversalDepth(t, 4)
 
@@ -1135,6 +1178,17 @@ func TestConvertValuePreservesSafeFormatting(t *testing.T) {
 		}{Value: cyclic}
 
 		assert.Equal(t, attribute.StringValue("formatted"), convertValue(value))
+	})
+
+	t.Run("UnexportedStringer", func(t *testing.T) {
+		cyclic := make([]any, 1)
+		cyclic[0] = cyclic
+		value := testUnexportedStringerWrapper{
+			value: testUnexportedStringer{value: cyclic},
+		}
+
+		assert.Equal(t, formatCycle, checkFormatting(reflect.ValueOf(value)))
+		assert.Equal(t, attribute.StringValue(cycleMarker), convertValue(value))
 	})
 }
 
