@@ -11,6 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	api "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -44,7 +45,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 		name    string
 		baggage baggage.Baggage
 		filter  Filter
-		want    []api.KeyValue
+		want    []attribute.KeyValue
 	}{
 		{
 			name: "all baggage attributes",
@@ -54,7 +55,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 				return b
 			}(),
 			filter: AllowAllMembers,
-			want:   []api.KeyValue{api.String("baggage.test", "baggage value")},
+			want:   []attribute.KeyValue{attribute.String("baggage.test", "baggage value")},
 		},
 		{
 			name: "baggage attributes with prefix",
@@ -66,7 +67,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 			filter: func(m baggage.Member) bool {
 				return strings.HasPrefix(m.Key(), "baggage.")
 			},
-			want: []api.KeyValue{api.String("baggage.test", "baggage value")},
+			want: []attribute.KeyValue{attribute.String("baggage.test", "baggage value")},
 		},
 		{
 			name: "baggage attributes with regex",
@@ -78,7 +79,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 			filter: func(m baggage.Member) bool {
 				return regexp.MustCompile(`^baggage\..*`).MatchString(m.Key())
 			},
-			want: []api.KeyValue{api.String("baggage.test", "baggage value")},
+			want: []attribute.KeyValue{attribute.String("baggage.test", "baggage value")},
 		},
 		{
 			name: "only adds baggage entries that match predicate",
@@ -91,7 +92,7 @@ func TestLogProcessorOnEmit(t *testing.T) {
 			filter: func(m baggage.Member) bool {
 				return m.Key() == "baggage.test"
 			},
-			want: []api.KeyValue{api.String("baggage.test", "baggage value")},
+			want: []attribute.KeyValue{attribute.String("baggage.test", "baggage value")},
 		},
 	}
 	for _, tt := range tests {
@@ -109,8 +110,8 @@ func TestLogProcessorOnEmit(t *testing.T) {
 			require.Len(t, wrapped.records, 1)
 			require.Equal(t, len(tt.want), wrapped.records[0].AttributesLen())
 
-			var got []api.KeyValue
-			wrapped.records[0].WalkAttributes(func(kv api.KeyValue) bool {
+			var got []attribute.KeyValue
+			wrapped.records[0].WalkAttributes(func(kv attribute.KeyValue) bool {
 				got = append(got, kv)
 				return true
 			})

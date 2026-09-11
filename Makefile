@@ -336,6 +336,7 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	sed -f ./otelconf/jsonschema_patch.sed ${GENERATED_EXPERIMENTAL_CONFIG} > ${GENERATED_EXPERIMENTAL_CONFIG}.tmp
 	cp ${GENERATED_EXPERIMENTAL_CONFIG}.tmp ${GENERATED_EXPERIMENTAL_CONFIG}
 	$(GO) fmt ${GENERATED_EXPERIMENTAL_CONFIG}
+	perl -0pi -e 's/type ExperimentalAWSEC2ResourceDetector map\[string\]interface\{\}\n(type ExperimentalGCPResourceDetector)/type ExperimentalAWSEC2ResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
 	perl -0pi -e 's/type ExperimentalGCPResourceDetector map\[string\]interface\{\}\n(type ExperimentalAWSECSResourceDetector)/type ExperimentalGCPResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
 	perl -0pi -e 's/type ExperimentalAWSECSResourceDetector map\[string\]interface\{\}\n(type ExperimentalAWSEKSResourceDetector)/type ExperimentalAWSECSResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
 	perl -0pi -e 's/type ExperimentalAWSEKSResourceDetector map\[string\]interface\{\}\n(type ExperimentalAzureVMResourceDetector)/type ExperimentalAWSEKSResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}

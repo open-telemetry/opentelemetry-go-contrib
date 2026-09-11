@@ -16,7 +16,7 @@ env:
   # backwards compatibility with the previous two minor releases and we
   # explicitly test our code for these versions so keeping this at prior
   # versions does not add value.
-  DEFAULT_GO_VERSION: "~1.26.0"
+  DEFAULT_GO_VERSION: "~1.27.0"
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -24,6 +24,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
+        persist-credentials: false
         fetch-depth: 0 ## Needed for "Set tools/go.mod timestamp" step.
     - name: Install Go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -61,6 +62,7 @@ jobs:
     - name: Checkout Repo
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       with:
+        persist-credentials: false
         fetch-depth: 0 ## Needed for "Set tools/go.mod timestamp" step.
     - name: Install Go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -91,6 +93,8 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: Install Go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
@@ -105,6 +109,8 @@ jobs:
     steps:
     - name: Checkout Repo
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: Install Go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
@@ -133,7 +139,7 @@ jobs:
   compatibility-test:
     strategy:
       matrix:
-        go-version: ["1.26.0", "1.25.0"]
+        go-version: ["1.27.0", "1.26.0"]
         platform:
           - os: ubuntu-latest
             arch: "386"
@@ -151,6 +157,8 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        persist-credentials: false
     - name: Install Go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:

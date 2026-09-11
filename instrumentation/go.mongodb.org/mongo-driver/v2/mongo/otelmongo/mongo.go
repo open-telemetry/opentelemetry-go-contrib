@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net"
 	"strconv"
+	"strings"
 	"sync"
 
 	"go.mongodb.org/mongo-driver/v2/bson"
@@ -210,12 +211,18 @@ func NewMonitor(opts ...Option) *event.CommandMonitor {
 }
 
 // peerInfo will parse the hostname and port from the mongo connection ID.
+//
+// ConnectionID is always formatted by the driver as "<address>[-<connection
+// number>]", so the pooled connection number suffix can be stripped by
+// cutting at the first "[-".
+// See https://github.com/open-telemetry/opentelemetry-go-contrib/issues/9370.
 func peerInfo(connectionID string) (hostname string, port int) {
 	defaultMongoPort := 27017
-	hostname, portStr, err := net.SplitHostPort(connectionID)
+	host, _, _ := strings.Cut(connectionID, "[-")
+	hostname, portStr, err := net.SplitHostPort(host)
 	if err != nil {
-		// If parsing fails, assume default MongoDB port and return the entire ConnectionID as hostname
-		hostname = connectionID
+		// If parsing fails, assume default MongoDB port and return the entire host as hostname
+		hostname = host
 		port = defaultMongoPort
 		return hostname, port
 	}

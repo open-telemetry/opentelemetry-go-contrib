@@ -4,4 +4,4 @@
 package opencensus
 
 // Version is the current release version of the OpenCensus propagator.
-const Version = "0.69.0"
+const Version = "0.71.0"
