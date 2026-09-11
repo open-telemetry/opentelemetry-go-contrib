@@ -122,6 +122,18 @@ Retaining every pointer adds per-level work and storage, and recursive traversal
 can itself exhaust the stack. Iterative Brent detection keeps pointer chains
 constant-space.
 
+### Iterative formatting preflight
+
+The formatting preflight uses recursive traversal, so a sufficiently deep,
+carefully constructed cyclic value can exhaust the goroutine stack before a
+repeated identity is reached, as described in
+[PR #9542](https://github.com/open-telemetry/opentelemetry-go-contrib/pull/9542#discussion_r3969904141).
+An explicit iterative DFS would remove this limitation, but would substantially
+increase the size and complexity of the reflection code for an input pattern
+that is not expected in ordinary logging. It was therefore left out to keep the
+implementation reviewable and maintainable. The preflight can be changed to an
+iterative traversal in the future if real-world use demonstrates the need.
+
 ### `encoding/json` fallback
 
 JSON encoding detects cycles, but changes the converter's established textual
