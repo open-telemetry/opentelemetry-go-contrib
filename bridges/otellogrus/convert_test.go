@@ -10,13 +10,216 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/attribute"
 )
+
+type testStringer struct {
+	value any
+}
+
+func (testStringer) String() string {
+	return "formatted"
+}
+
+type testUnexportedStringer struct {
+	value any
+}
+
+func (testUnexportedStringer) String() string {
+	return "unexported formatted"
+}
+
+type testUnexportedStringerWrapper struct {
+	value testUnexportedStringer
+}
+
+type testError string
+
+func (e testError) Error() string {
+	return string(e)
+}
+
+type testPointerError string
+
+func (e *testPointerError) Error() string {
+	return "pointer error: " + string(*e)
+}
+
+type testNilPointerError struct{}
+
+func (*testNilPointerError) Error() string {
+	return "nil pointer error"
+}
+
+type testArrayError [1]int
+
+func (testArrayError) Error() string {
+	return "array error"
+}
+
+type testMutatingError func()
+
+func (e testMutatingError) Error() string {
+	e()
+	return "mutating error"
+}
+
+type testLargeStringer struct {
+	Data [64]uintptr
+}
+
+func (testLargeStringer) String() string {
+	return "large stringer"
+}
+
+type testLargeStringerWrapper struct {
+	Inner testLargeStringer
+}
+
+type testMixedMethods struct {
+	Data [64]uintptr
+}
+
+func (testMixedMethods) String() string {
+	return "large stringer"
+}
+
+func (*testMixedMethods) Error() string {
+	return "pointer error"
+}
+
+type testLargeArrayError [64]uintptr
+
+func (testLargeArrayError) Error() string {
+	return "large array error"
+}
+
+type testStructError struct {
+	Value int
+}
+
+func (testStructError) Error() string {
+	return "struct error"
+}
+
+type testNamedString string
+
+type testNamedStringer string
+
+func (testNamedStringer) String() string {
+	return "named stringer"
+}
+
+type testLargeMapKey [64]int
+
+func (testLargeMapKey) String() string {
+	return "large map key"
+}
+
+type testZeroSizedMapKey [1 << 16]struct{}
+
+func (testZeroSizedMapKey) String() string {
+	return "zero-sized map key"
+}
+
+type testBlankFieldMapKey struct {
+	_ [6000]uintptr
+	X int
+}
+
+func (testBlankFieldMapKey) String() string {
+	return "blank-field map key"
+}
+
+type testNonRegularMapKeyElement struct {
+	Value float64
+}
+
+type testRepeatedNonRegularMapKey [500]testNonRegularMapKeyElement
+
+func (testRepeatedNonRegularMapKey) String() string {
+	return "repeated non-regular map key"
+}
+
+// setMaxTraversalDepth temporarily overrides the internal traversal bound.
+func setMaxTraversalDepth(t *testing.T, depth int) {
+	previous := maxTraversalDepth
+	maxTraversalDepth = depth
+	t.Cleanup(func() {
+		maxTraversalDepth = previous
+	})
+}
+
+// setMaxTraversalWork temporarily overrides the root-owned work bound.
+func setMaxTraversalWork(t *testing.T, work int) {
+	previous := maxTraversalWork
+	maxTraversalWork = work
+	t.Cleanup(func() {
+		maxTraversalWork = previous
+	})
+}
+
+func TestVisitTableCluster(t *testing.T) {
+	backing := make([]any, 17)
+	typ := reflect.TypeFor[[]any]()
+	ptr := reflect.ValueOf(backing).UnsafePointer()
+	key := func(length int) visitKey {
+		return visitKey{typ: typ, ptr: ptr, len: length}
+	}
+
+	// These overlapping-slice identities have the same home slot in this
+	// four-entry table and exercise cluster repair after removing the first.
+	table := make([]visitKey, 4)
+	first, second, third := key(1), key(5), key(9)
+	home := func(k visitKey) uintptr {
+		hash := uintptr(k.ptr)>>3 ^ uintptr(k.len)
+		hash ^= hash >> 17
+		return hash & uintptr(len(table)-1)
+	}
+	assert.Equal(t, home(first), home(second))
+	assert.Equal(t, home(first), home(third))
+	insertVisit(table, first)
+	insertVisit(table, second)
+	insertVisit(table, third)
+	mask := uintptr(len(table) - 1)
+	firstSlot := home(first)
+	assert.Equal(t, first, table[firstSlot])
+	assert.Equal(t, second, table[(firstSlot+1)&mask])
+	assert.Equal(t, third, table[(firstSlot+2)&mask])
+
+	before := append([]visitKey(nil), table...)
+	insertVisit(table, second)
+	assert.Equal(t, before, table)
+
+	tracker := visitTracker{identityDepth: 3, overflow: table}
+	assert.True(t, tracker.contains(second))
+	removeVisit(table, first)
+	assert.False(t, containsVisit(table, first))
+	assert.True(t, containsVisit(table, second))
+	assert.True(t, containsVisit(table, third))
+
+	removeVisit(table, first)
+	assert.True(t, containsVisit(table, second))
+	assert.True(t, containsVisit(table, third))
+
+	fullTable := []visitKey{first, second, third, key(13)}
+	assert.False(t, containsVisit(fullTable, key(17)))
+}
+
+func TestFormatResult(t *testing.T) {
+	assert.Empty(t, formatSafe.marker())
+	assert.Equal(t, cycleMarker, formatCycle.marker())
+	assert.Equal(t, depthLimitMarker, formatDepthLimit.marker())
+	assert.Equal(t, workLimitMarker, formatWorkLimit.marker())
+}
 
 func TestConvertValue(t *testing.T) {
 	for _, tt := range []struct {
@@ -273,4 +476,1875 @@ func TestConvertValueFloat32(t *testing.T) {
 	want := attribute.Float64Value(3.14)
 
 	assert.InDelta(t, value.AsFloat64(), want.AsFloat64(), 0.0001)
+}
+
+func TestConvertValueTrackedAndPointerFastPaths(t *testing.T) {
+	tests := []struct {
+		name string
+		in   any
+		want attribute.Value
+	}{
+		{name: "Bool", in: true, want: attribute.BoolValue(true)},
+		{name: "String", in: "value", want: attribute.StringValue("value")},
+		{name: "Int", in: int(1), want: attribute.Int64Value(1)},
+		{name: "Int8", in: int8(2), want: attribute.Int64Value(2)},
+		{name: "Int16", in: int16(3), want: attribute.Int64Value(3)},
+		{name: "Int32", in: int32(4), want: attribute.Int64Value(4)},
+		{name: "Int64", in: int64(5), want: attribute.Int64Value(5)},
+		{name: "Uint", in: uint(6), want: attribute.Int64Value(6)},
+		{name: "Uint8", in: uint8(7), want: attribute.Int64Value(7)},
+		{name: "Uint16", in: uint16(8), want: attribute.Int64Value(8)},
+		{name: "Uint32", in: uint32(9), want: attribute.Int64Value(9)},
+		{name: "Uint64", in: uint64(10), want: attribute.Int64Value(10)},
+		{name: "Uintptr", in: uintptr(11), want: attribute.Int64Value(11)},
+		{name: "Float32", in: float32(1.5), want: attribute.Float64Value(1.5)},
+		{name: "Float64", in: float64(2.5), want: attribute.Float64Value(2.5)},
+		{name: "Duration", in: time.Second, want: attribute.Int64Value(1_000_000_000)},
+		{
+			name: "Complex64",
+			in:   complex64(complex(float32(1), float32(2))),
+			want: attribute.MapValue(attribute.Float64("r", 1), attribute.Float64("i", 2)),
+		},
+		{
+			name: "Complex128",
+			in:   complex(float64(3), float64(4)),
+			want: attribute.MapValue(attribute.Float64("r", 3), attribute.Float64("i", 4)),
+		},
+		{
+			name: "Time",
+			in:   time.Unix(1000, 1000),
+			want: attribute.Int64Value(time.Unix(1000, 1000).UnixNano()),
+		},
+		{name: "Bytes", in: []byte("hello"), want: attribute.ByteSliceValue([]byte("hello"))},
+		{name: "Error", in: testError("test error"), want: attribute.StringValue("test error")},
+		{
+			name: "AttributeValue",
+			in:   attribute.StringValue("value"),
+			want: attribute.StringValue("value"),
+		},
+	}
+
+	values := make([]any, 0, len(tests))
+	wants := make([]attribute.Value, 0, len(tests))
+	for _, tt := range tests {
+		values = append(values, tt.in)
+		wants = append(wants, tt.want)
+	}
+	assert.Equal(t, attribute.SliceValue(wants...), convertValue(values))
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			pointer := reflect.New(reflect.TypeOf(tt.in))
+			pointer.Elem().Set(reflect.ValueOf(tt.in))
+			assert.Equal(t, tt.want, convertValue(pointer.Interface()))
+
+			pointerPointer := reflect.New(pointer.Type())
+			pointerPointer.Elem().Set(pointer)
+			assert.Equal(t, tt.want, convertValue(pointerPointer.Interface()))
+		})
+	}
+}
+
+func TestConvertValueWithWorkPreservesDirectConversion(t *testing.T) {
+	tests := []struct {
+		name string
+		in   any
+		want attribute.Value
+	}{
+		{name: "Nil", want: attribute.Value{}},
+		{name: "Bool", in: true, want: attribute.BoolValue(true)},
+		{name: "String", in: "value", want: attribute.StringValue("value")},
+		{name: "Int", in: int(1), want: attribute.Int64Value(1)},
+		{name: "Int8", in: int8(2), want: attribute.Int64Value(2)},
+		{name: "Int16", in: int16(3), want: attribute.Int64Value(3)},
+		{name: "Int32", in: int32(4), want: attribute.Int64Value(4)},
+		{name: "Int64", in: int64(5), want: attribute.Int64Value(5)},
+		{name: "Uint", in: uint(6), want: attribute.Int64Value(6)},
+		{name: "Uint8", in: uint8(7), want: attribute.Int64Value(7)},
+		{name: "Uint16", in: uint16(8), want: attribute.Int64Value(8)},
+		{name: "Uint32", in: uint32(9), want: attribute.Int64Value(9)},
+		{name: "Uint64", in: uint64(10), want: attribute.Int64Value(10)},
+		{name: "Uintptr", in: uintptr(11), want: attribute.Int64Value(11)},
+		{name: "Float32", in: float32(1.5), want: attribute.Float64Value(1.5)},
+		{name: "Float64", in: float64(2.5), want: attribute.Float64Value(2.5)},
+		{name: "Duration", in: time.Second, want: attribute.Int64Value(1_000_000_000)},
+		{
+			name: "Complex64",
+			in:   complex64(complex(float32(1), float32(2))),
+			want: attribute.MapValue(attribute.Float64("r", 1), attribute.Float64("i", 2)),
+		},
+		{
+			name: "Complex128",
+			in:   complex(float64(3), float64(4)),
+			want: attribute.MapValue(attribute.Float64("r", 3), attribute.Float64("i", 4)),
+		},
+		{
+			name: "Time",
+			in:   time.Unix(1000, 1000),
+			want: attribute.Int64Value(time.Unix(1000, 1000).UnixNano()),
+		},
+		{name: "Bytes", in: []byte("hello"), want: attribute.ByteSliceValue([]byte("hello"))},
+		{name: "Error", in: testError("test error"), want: attribute.StringValue("test error")},
+		{
+			name: "AttributeValue",
+			in:   attribute.StringValue("value"),
+			want: attribute.StringValue("value"),
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			work := 0
+			assert.Equal(t, tt.want, convertValueWithWork(tt.in, &work))
+		})
+	}
+
+	t.Run("Collections", func(t *testing.T) {
+		work := 0
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.Int64Value(1), attribute.Int64Value(2)),
+			convertValueWithWork([]int{1, 2}, &work),
+		)
+		assert.Equal(t, 3, work)
+
+		assert.Equal(t, attribute.SliceValue(), convertValueWithWork([]int{}, &work))
+		assert.Equal(t, attribute.MapValue(), convertValueWithWork(map[string]int{}, &work))
+
+		work = 0
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64("one", 1)),
+			convertValueWithWork(map[string]int{"one": 1}, &work),
+		)
+
+		work = 0
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.SliceValue(attribute.Int64Value(1))),
+			convertValueWithWork([]any{[]int{1}}, &work),
+		)
+	})
+
+	t.Run("NestedBudget", func(t *testing.T) {
+		setMaxTraversalWork(t, 1)
+
+		work := 0
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValueWithWork([]int{1}, &work))
+		work = 0
+		key := [2]int{}
+		assert.Equal(
+			t,
+			attribute.StringValue(workLimitMarker),
+			convertValueWithWork(map[[2]int]int{key: 1}, &work),
+		)
+		work = 0
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValueWithWork([]byte("payload!!"), &work))
+	})
+
+	t.Run("MapValueMarkers", func(t *testing.T) {
+		t.Run("DepthBeforeLookup", func(t *testing.T) {
+			setMaxTraversalDepth(t, 0)
+			work := 0
+			assert.Equal(
+				t,
+				attribute.MapValue(attribute.String("value", depthLimitMarker)),
+				convertValueWithWork(map[string]struct{ Value int }{"value": {Value: 1}}, &work),
+			)
+		})
+
+		t.Run("HashWork", func(t *testing.T) {
+			setMaxTraversalWork(t, 2)
+			work := 0
+			assert.Equal(
+				t,
+				attribute.MapValue(attribute.String("value", workLimitMarker)),
+				convertValueWithWork(map[string]int{"value": 1}, &work),
+			)
+		})
+
+		t.Run("ValueCopyWork", func(t *testing.T) {
+			setMaxTraversalWork(t, 3)
+			work := 0
+			assert.Equal(
+				t,
+				attribute.MapValue(attribute.String("x", workLimitMarker)),
+				convertValueWithWork(map[string]struct{ Data [4]int }{"x": {}}, &work),
+			)
+		})
+	})
+}
+
+func TestConvertValueTrackedReflectPaths(t *testing.T) {
+	value := 42
+	pointer := &value
+	pointerPointer := &pointer
+
+	want := attribute.SliceValue(
+		attribute.SliceValue(attribute.Int64Value(1)),
+		attribute.MapValue(attribute.Int64("one", 1)),
+		attribute.SliceValue(),
+		attribute.MapValue(),
+		attribute.Value{},
+		attribute.Int64Value(42),
+	)
+	assert.Equal(t, want, convertValue([]any{
+		[]int{1},
+		map[string]int{"one": 1},
+		[]any{},
+		map[string]any{},
+		(*int)(nil),
+		pointerPointer,
+	}))
+
+	var nilInterface any
+	assert.Equal(
+		t,
+		attribute.SliceValue(attribute.Value{}, attribute.Value{}),
+		convertValue([]any{nil, &nilInterface}),
+	)
+}
+
+func TestConvertValueFormattedMapKeys(t *testing.T) {
+	setMaxTraversalDepth(t, 4)
+
+	type key struct{ Value any }
+
+	cyclic := map[string]any{}
+	cyclic["self"] = cyclic
+	var overLimit any = 42
+	for range maxTraversalDepth + 1 {
+		overLimit = []any{overLimit}
+	}
+	safeKey := &key{Value: 42}
+	tests := []struct {
+		name    string
+		key     *key
+		wantKey string
+	}{
+		{name: "Safe", key: safeKey, wantKey: fmt.Sprintf("%+v", safeKey)},
+		{name: "Cycle", key: &key{Value: cyclic}, wantKey: cycleMarker},
+		{name: "DepthLimit", key: &key{Value: overLimit}, wantKey: depthLimitMarker},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			value := map[*key]any{tt.key: 42}
+			want := attribute.MapValue(attribute.Int64(tt.wantKey, 42))
+
+			assert.Equal(t, want, convertValue(value))
+			assert.Equal(t, attribute.SliceValue(want), convertValue([]any{value}))
+		})
+	}
+
+	t.Run("NilInterface", func(t *testing.T) {
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64("<nil>", 42)),
+			convertValue(map[any]int{nil: 42}),
+		)
+	})
+
+	t.Run("InvalidReflectValue", func(t *testing.T) {
+		invalid := reflect.Value{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(fmt.Sprintf("%+v", invalid), 42)),
+			convertValue(map[reflect.Value]int{invalid: 42}),
+		)
+	})
+}
+
+func TestConvertValuePointerEdgeCases(t *testing.T) {
+	var nilInterface any
+	assert.Equal(t, attribute.Value{}, convertValue(&nilInterface))
+
+	var nilPointer *int
+	assert.Equal(t, attribute.Value{}, convertValue(&nilPointer))
+
+	nilInterfacePointer := &nilInterface
+	assert.Equal(t, attribute.Value{}, convertValue(&nilInterfacePointer))
+
+	var errorValue any = testError("test error")
+	errorPointer := &errorValue
+	assert.Equal(t, attribute.StringValue("test error"), convertValue(&errorPointer))
+	pointerError := testPointerError("concrete error")
+	pointerErrorPointer := &pointerError
+	pointerErrorPointerPointer := &pointerErrorPointer
+	assert.Equal(
+		t,
+		attribute.StringValue("pointer error: concrete error"),
+		convertValue(&pointerErrorPointerPointer),
+	)
+	var nilPointerError *testNilPointerError
+	nilPointerErrorPointer := &nilPointerError
+	nilPointerErrorPointerPointer := &nilPointerErrorPointer
+	assert.Equal(
+		t,
+		attribute.StringValue("nil pointer error"),
+		convertValue(nilPointerErrorPointerPointer),
+	)
+	var arrayError any = testArrayError{42}
+	arrayErrorPointer := &arrayError
+	assert.Equal(t, attribute.StringValue("array error"), convertValue(arrayErrorPointer))
+	assert.Equal(t, attribute.StringValue("array error"), convertValue(&arrayErrorPointer))
+	array := &[2]any{}
+	array[0] = testMutatingError(func() { array[1] = 2 })
+	array[1] = 1
+	assert.Equal(
+		t,
+		attribute.SliceValue(
+			attribute.StringValue("mutating error"),
+			attribute.Int64Value(1),
+		),
+		convertValue(array),
+	)
+
+	channel := make(chan int)
+	channelPointer := &channel
+	channelPointerPointer := &channelPointer
+	want := convertValue(channel)
+	assert.Equal(t, want, convertValue(channelPointerPointer))
+	assert.Equal(t, attribute.SliceValue(want), convertValue([]any{channelPointerPointer}))
+}
+
+func TestFormattingCycleBranches(t *testing.T) {
+	assert.Equal(t, formatSafe, checkFormatValue(reflect.Value{}, 0, nil))
+
+	var nilInterface any
+	assert.Equal(t, formatSafe, checkFormatValue(reflect.ValueOf(&nilInterface).Elem(), 0, nil))
+	nilField := struct{ Value any }{}
+	assert.Equal(t, attribute.StringValue(fmt.Sprintf("%+v", nilField)), convertValue(nilField))
+	assert.Equal(t, formatSafe, checkFormatValue(reflect.ValueOf([]any{}), 0, nil))
+	assert.Equal(t, formatSafe, checkFormatValue(reflect.ValueOf(map[string]any{}), 0, nil))
+
+	acyclicSlice := []any{42}
+	assert.Equal(t, formatSafe, checkFormatValue(reflect.ValueOf(acyclicSlice), 0, nil))
+	assert.Equal(t, formatSafe, checkFormatValue(reflect.ValueOf(&acyclicSlice), 0, nil))
+	assert.Equal(t, formatSafe, checkFormatValue(reflect.ValueOf(&acyclicSlice), 1, nil))
+
+	cyclicSlice := make([]any, 1)
+	cyclicSlice[0] = cyclicSlice
+	assert.Equal(t, formatCycle, checkFormatValue(reflect.ValueOf(cyclicSlice), 0, nil))
+	assert.Equal(t, formatCycle, checkFormatValue(reflect.ValueOf([1]any{cyclicSlice}), 0, nil))
+
+	acyclicMap := map[string]any{"value": 42}
+	assert.Equal(t, formatSafe, checkFormatValue(reflect.ValueOf(acyclicMap), 0, nil))
+	cyclicMap := map[string]any{}
+	cyclicMap["self"] = cyclicMap
+	assert.Equal(t, formatCycle, checkFormatValue(reflect.ValueOf(cyclicMap), 0, nil))
+
+	boundaryCycle := make([]any, 1)
+	current := boundaryCycle
+	for range inlineVisitCount - 1 {
+		next := make([]any, 1)
+		current[0] = next
+		current = next
+	}
+	current[0] = boundaryCycle
+	assert.Equal(t, formatCycle, checkFormatValue(reflect.ValueOf(boundaryCycle), 0, nil))
+
+	deepCycle := make([]any, 1)
+	current = deepCycle
+	for range inlineVisitCount + 1 {
+		next := make([]any, 1)
+		current[0] = next
+		current = next
+	}
+	current[0] = deepCycle
+	assert.Equal(t, formatCycle, checkFormatValue(reflect.ValueOf(deepCycle), 0, nil))
+
+	deepMap := map[string]any{}
+	currentMap := deepMap
+	for range inlineVisitCount + 1 {
+		next := map[string]any{}
+		currentMap["next"] = next
+		currentMap = next
+	}
+	currentMap["next"] = deepMap
+	typedMap := struct{ Value map[string]any }{Value: deepMap}
+	assert.Equal(t, attribute.StringValue(cycleMarker), convertValue(typedMap))
+
+	typedSlice := struct{ Value []any }{Value: make([]any, 1)}
+	typedSlice.Value[0] = typedSlice.Value
+	assert.Equal(t, attribute.StringValue(cycleMarker), convertValue(typedSlice))
+
+	assert.Equal(t, formatSafe, checkFormatting(reflect.ValueOf(struct{ Value any }{Value: 42})))
+	assert.Equal(t, formatSafe, checkFormatting(reflect.ValueOf(new(int))))
+}
+
+func TestFormattingPreflightUsesRuntimeShape(t *testing.T) {
+	wideFields := make([]reflect.StructField, maxMapKeyHashTypeWork+1)
+	for i := range wideFields {
+		wideFields[i] = reflect.StructField{
+			Name: fmt.Sprintf("F%d", i),
+			Type: reflect.TypeFor[int](),
+		}
+	}
+	emptyType := reflect.ArrayOf(0, reflect.StructOf(wideFields))
+	assert.Equal(t, formatSafe, checkFormatting(reflect.Zero(emptyType)))
+
+	nestedType := reflect.SliceOf(reflect.SliceOf(reflect.ArrayOf(
+		1, reflect.StructOf(wideFields),
+	)))
+	nestedField := reflect.StructField{Name: "Value", Type: nestedType}
+	typ := reflect.StructOf([]reflect.StructField{nestedField})
+	value := reflect.New(typ).Elem()
+	value.Field(0).Set(reflect.MakeSlice(nestedType, 1, 1))
+	assert.Equal(t, formatSafe, checkFormatting(value))
+	assert.Equal(
+		t,
+		attribute.StringValue(fmt.Sprintf("%+v", value.Interface())),
+		convertValue(value.Interface()),
+	)
+}
+
+func TestFormattingReservationRuntimeShapes(t *testing.T) {
+	t.Run("IdentityFreeAggregate", func(t *testing.T) {
+		value := struct {
+			Text          string
+			Dynamic       any
+			Array         [1]string
+			Slice         []string
+			Keys          map[string]int
+			Values        map[int]string
+			KeysAndValues map[string]string
+			Scalars       map[int]int
+		}{
+			Text:          "text",
+			Dynamic:       "dynamic",
+			Array:         [1]string{"array"},
+			Slice:         []string{"slice"},
+			Keys:          map[string]int{"key": 1},
+			Values:        map[int]string{1: "value"},
+			KeysAndValues: map[string]string{"key": "value"},
+			Scalars:       map[int]int{1: 2},
+		}
+		work := 0
+		assert.Equal(t, formatSafe, checkFormattingWithBudget(reflect.ValueOf(value), &work))
+		assert.Positive(t, work)
+		assert.Equal(
+			t,
+			attribute.StringValue(fmt.Sprintf("%+v", value)),
+			convertValue(value),
+		)
+	})
+
+	t.Run("Terminals", func(t *testing.T) {
+		work := 0
+		assert.Equal(t, formatSafe, reserveFormattingWorkWithRoot(reflect.Value{}, 0, &work, false))
+		assert.Equal(
+			t,
+			formatSafe,
+			reserveFormattingWorkWithRoot(reflect.ValueOf(testStringer{}), 0, &work, false),
+		)
+
+		var dynamic any
+		interfaceValue := reflect.ValueOf(&dynamic).Elem()
+		assert.Equal(
+			t,
+			formatSafe,
+			reserveFormattingWorkWithRoot(interfaceValue, 0, &work, false),
+		)
+
+		value := 42
+		assert.Equal(
+			t,
+			formatSafe,
+			reserveFormattingWorkWithRoot(reflect.ValueOf(&value), 0, &work, false),
+		)
+		assert.Equal(
+			t,
+			formatSafe,
+			reserveFormattingWorkWithRoot(reflect.ValueOf(&value), 1, &work, false),
+		)
+		var nilPointer *int
+		assert.Equal(
+			t,
+			formatSafe,
+			reserveFormattingWorkWithRoot(reflect.ValueOf(nilPointer), 0, &work, false),
+		)
+	})
+
+	t.Run("EmptyAggregates", func(t *testing.T) {
+		work := 0
+		values := []reflect.Value{
+			reflect.ValueOf([]string{}),
+			reflect.ValueOf([0]string{}),
+			reflect.ValueOf(map[string]string{}),
+			reflect.ValueOf(struct{}{}),
+		}
+		for _, value := range values {
+			assert.Equal(t, formatSafe, reserveFormattingWorkWithRoot(value, 0, &work, false))
+		}
+	})
+
+	t.Run("DepthLimit", func(t *testing.T) {
+		work := 0
+		values := []reflect.Value{
+			reflect.ValueOf([1]string{"value"}),
+			reflect.ValueOf([]string{"value"}),
+			reflect.ValueOf(map[string]string{"key": "value"}),
+			reflect.ValueOf(struct{ Text string }{Text: "value"}),
+		}
+		for _, value := range values {
+			assert.Equal(
+				t,
+				formatDepthLimit,
+				reserveFormattingWorkWithRoot(value, maxTraversalDepth, &work, false),
+			)
+		}
+	})
+
+	t.Run("WorkLimit", func(t *testing.T) {
+		values := []reflect.Value{
+			reflect.ValueOf("value"),
+			reflect.ValueOf([1]string{"value"}),
+			reflect.ValueOf([]string{"value"}),
+			reflect.ValueOf(map[string]string{"key": "value"}),
+			reflect.ValueOf(struct{ Text string }{Text: "value"}),
+		}
+		for _, value := range values {
+			work := maxTraversalWork
+			assert.Equal(
+				t,
+				formatWorkLimit,
+				reserveFormattingWorkWithRoot(value, 0, &work, false),
+			)
+		}
+
+		addressableArray := reflect.ValueOf(new([1]string)).Elem()
+		work := maxTraversalWork
+		assert.Equal(
+			t,
+			formatWorkLimit,
+			reserveFormattingWorkWithRoot(addressableArray, 1, &work, false),
+		)
+	})
+}
+
+func TestMapKeyHashClassificationAndFallback(t *testing.T) {
+	t.Run("RegularMemoryClassification", func(t *testing.T) {
+		tests := []struct {
+			name     string
+			typ      reflect.Type
+			regular  bool
+			complete bool
+		}{
+			{name: "EmptyArray", typ: reflect.TypeFor[[0]float64](), regular: true, complete: true},
+			{name: "Bool", typ: reflect.TypeFor[bool](), regular: true, complete: true},
+			{name: "EmptyStruct", typ: reflect.TypeFor[struct{}](), regular: true, complete: true},
+			{name: "SingleBlankField", typ: reflect.TypeFor[struct{ _ int }](), complete: true},
+			{name: "SingleRegularField", typ: reflect.TypeFor[struct{ Value int }](), regular: true, complete: true},
+			{name: "NonRegularField", typ: reflect.TypeFor[struct {
+				Value float64
+				Other int
+			}](), complete: true},
+			{name: "InternalPadding", typ: reflect.TypeFor[struct {
+				Small byte
+				Large int
+			}](), complete: true},
+			{name: "TrailingPadding", typ: reflect.TypeFor[struct {
+				Large int
+				Small byte
+			}](), complete: true},
+			{name: "String", typ: reflect.TypeFor[string](), complete: true},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				typeWork, work := 0, 0
+				regular, complete, result := mapKeyUsesRegularMemoryHash(tt.typ, &typeWork, &work)
+				assert.Equal(t, tt.regular, regular)
+				assert.Equal(t, tt.complete, complete)
+				assert.Equal(t, formatSafe, result)
+				assert.Positive(t, typeWork)
+			})
+		}
+
+		typeWork, work := maxMapKeyHashTypeWork, 0
+		regular, complete, result := mapKeyUsesRegularMemoryHash(
+			reflect.TypeFor[int](), &typeWork, &work,
+		)
+		assert.False(t, regular)
+		assert.False(t, complete)
+		assert.Equal(t, formatSafe, result)
+
+		typeWork, work = 0, maxTraversalWork
+		regular, complete, result = mapKeyUsesRegularMemoryHash(
+			reflect.TypeFor[int](), &typeWork, &work,
+		)
+		assert.False(t, regular)
+		assert.False(t, complete)
+		assert.Equal(t, formatWorkLimit, result)
+	})
+
+	t.Run("RawValueWalk", func(t *testing.T) {
+		work := 0
+		assert.Equal(t, formatSafe, reserveMapKeyHashWork(reflect.Value{}, &work))
+
+		var dynamic any
+		assert.Equal(
+			t,
+			formatSafe,
+			reserveMapKeyHashWork(reflect.ValueOf(&dynamic).Elem(), &work),
+		)
+
+		blank := struct {
+			_     string
+			Value float64
+		}{Value: 1}
+		assert.Equal(t, formatSafe, reserveMapKeyHashWork(reflect.ValueOf(blank), &work))
+		withString := struct{ Value string }{Value: "value"}
+		assert.Equal(t, formatSafe, reserveMapKeyHashWork(reflect.ValueOf(withString), &work))
+	})
+
+	t.Run("DynamicStringWorkLimit", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String(workLimitMarker, workLimitMarker)),
+			convertValue(map[any]int{strings.Repeat("x", 64): 1}),
+		)
+	})
+
+	t.Run("CopyWorkLimit", func(t *testing.T) {
+		setMaxTraversalWork(t, 3)
+		work := 0
+		assert.Equal(
+			t,
+			formatWorkLimit,
+			reserveMapKeyHashWork(reflect.ValueOf([2]int{}), &work),
+		)
+	})
+
+	t.Run("AggregateBoundaries", func(t *testing.T) {
+		value := reflect.ValueOf([1]float64{})
+		typeWork, work := 0, 0
+		assert.Equal(
+			t,
+			formatDepthLimit,
+			reserveMapKeyHashWorkWithTypeBudget(
+				value, maxTraversalDepth, &work, &typeWork,
+			),
+		)
+
+		setMaxTraversalWork(t, 2)
+		typeWork, work = 0, 0
+		assert.Equal(
+			t,
+			formatWorkLimit,
+			reserveMapKeyHashWorkWithTypeBudget(value, 0, &work, &typeWork),
+		)
+	})
+}
+
+func TestReflectedChildrenRespectConversionBounds(t *testing.T) {
+	t.Run("LightweightArrayCopy", func(t *testing.T) {
+		value := [2]int{1, 2}
+		work := maxTraversalWork
+		assert.Equal(
+			t,
+			attribute.StringValue(workLimitMarker),
+			convertReflectChildWithWork(reflect.ValueOf(&value).Elem(), &work),
+		)
+	})
+
+	t.Run("ReflectedStructCopies", func(t *testing.T) {
+		attributeValue := attribute.StringValue("value")
+		date := time.Unix(1000, 1000)
+		errorValue := testStructError{Value: 1}
+		for _, value := range []reflect.Value{
+			reflect.ValueOf(&attributeValue).Elem(),
+			reflect.ValueOf(&date).Elem(),
+			reflect.ValueOf(&errorValue).Elem(),
+		} {
+			work := maxTraversalWork
+			assert.Equal(
+				t,
+				attribute.StringValue(workLimitMarker),
+				convertReflectedStructValue(value, &work),
+			)
+		}
+
+		setMaxTraversalDepth(t, 0)
+		value := struct{ Value int }{Value: 1}
+		work := 0
+		assert.Equal(
+			t,
+			attribute.StringValue(depthLimitMarker),
+			convertReflectedStructValue(reflect.ValueOf(&value).Elem(), &work),
+		)
+	})
+
+	t.Run("TrackedStruct", func(t *testing.T) {
+		value := struct{ Value int }{Value: 1}
+		visited := visitTracker{}
+		assert.Equal(
+			t,
+			attribute.StringValue(fmt.Sprintf("%+v", value)),
+			convertReflectChildWithTracker(reflect.ValueOf(&value).Elem(), &visited),
+		)
+	})
+
+	t.Run("TrackedArrayBoundaries", func(t *testing.T) {
+		empty := [0]int{}
+		visited := visitTracker{}
+		assert.Equal(
+			t,
+			attribute.SliceValue(),
+			convertReflectChildWithTracker(reflect.ValueOf(&empty).Elem(), &visited),
+		)
+
+		setMaxTraversalDepth(t, 0)
+		recursive := [1]any{42}
+		visited = visitTracker{}
+		assert.Equal(
+			t,
+			attribute.StringValue(depthLimitMarker),
+			convertReflectChildWithTracker(reflect.ValueOf(&recursive).Elem(), &visited),
+		)
+	})
+
+	t.Run("TrackedArrayWork", func(t *testing.T) {
+		value := [1]int{1}
+		t.Run("Aggregate", func(t *testing.T) {
+			setMaxTraversalWork(t, 1)
+			visited := visitTracker{}
+			assert.Equal(
+				t,
+				attribute.StringValue(workLimitMarker),
+				convertReflectChildWithTracker(reflect.ValueOf(&value).Elem(), &visited),
+			)
+		})
+		t.Run("Snapshot", func(t *testing.T) {
+			setMaxTraversalWork(t, 2)
+			visited := visitTracker{}
+			assert.Equal(
+				t,
+				attribute.StringValue(workLimitMarker),
+				convertReflectChildWithTracker(reflect.ValueOf(&value).Elem(), &visited),
+			)
+		})
+	})
+}
+
+func TestConvertValuePointerArrayBoundaries(t *testing.T) {
+	t.Run("Empty", func(t *testing.T) {
+		assert.Equal(t, attribute.SliceValue(), convertValue(new([0]any)))
+	})
+
+	t.Run("DepthLimit", func(t *testing.T) {
+		setMaxTraversalDepth(t, 0)
+		assert.Equal(
+			t,
+			attribute.StringValue(depthLimitMarker),
+			convertValue(new([1]any)),
+		)
+	})
+
+	t.Run("WorkLimit", func(t *testing.T) {
+		setMaxTraversalWork(t, 1)
+		assert.Equal(
+			t,
+			attribute.StringValue(workLimitMarker),
+			convertValue(new([1]int)),
+		)
+	})
+
+	t.Run("Cycle", func(t *testing.T) {
+		value := new([1]any)
+		value[0] = value
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(cycleMarker)),
+			convertValue(value),
+		)
+	})
+}
+
+func TestFormattingTraversalWorkLimit(t *testing.T) {
+	t.Run("SharedSiblings", func(t *testing.T) {
+		setMaxTraversalWork(t, 12)
+
+		leaf := []any{42}
+		shared := []any{leaf, leaf}
+		cyclic := map[string]any{}
+		cyclic["self"] = cyclic
+		value := struct{ Value [2]any }{Value: [2]any{shared, cyclic}}
+
+		assert.Equal(t, formatWorkLimit, checkFormatting(reflect.ValueOf(value)))
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+	})
+
+	t.Run("CyclePrecedence", func(t *testing.T) {
+		setMaxTraversalWork(t, 1)
+
+		cyclic := make([]any, 1)
+		cyclic[0] = cyclic
+		value := reflect.ValueOf(cyclic)
+		key := visitKey{typ: value.Type(), ptr: value.UnsafePointer(), len: value.Len()}
+		tracker := visitTracker{
+			identityDepth: 1,
+			inline:        [inlineVisitCount]visitKey{key},
+		}
+		work := maxTraversalWork
+
+		assert.Equal(
+			t,
+			formatCycle,
+			checkFormatValueWithBudget(value, 0, &tracker, &work),
+		)
+	})
+}
+
+func TestFormattingTraversalDepthLimit(t *testing.T) {
+	setMaxTraversalDepth(t, 4)
+
+	interfaceValue := reflect.ValueOf(struct{ Value any }{Value: 42}).Field(0)
+	assert.Equal(t, formatSafe, checkFormatValue(interfaceValue, maxTraversalDepth, nil))
+
+	stringerValue := reflect.ValueOf(struct{ Value any }{Value: testStringer{}}).Field(0)
+	assert.Equal(t, formatSafe, checkFormatValue(stringerValue, maxTraversalDepth, nil))
+
+	value := reflect.ValueOf(42)
+	for range maxTraversalDepth {
+		array := reflect.New(reflect.ArrayOf(1, value.Type())).Elem()
+		array.Index(0).Set(value)
+		value = array
+	}
+	assert.Equal(t, formatSafe, checkFormatValue(value, 0, nil))
+	assert.Equal(t, formatDepthLimit, checkFormatting(value.Addr()))
+
+	array := reflect.New(reflect.ArrayOf(1, value.Type())).Elem()
+	array.Index(0).Set(value)
+	assert.Equal(t, formatDepthLimit, checkFormatValue(array, 0, nil))
+
+	cyclic := make([]any, 1)
+	cyclic[0] = cyclic
+	cyclicValue := reflect.ValueOf(cyclic)
+	cyclicKey := visitKey{
+		typ: cyclicValue.Type(),
+		ptr: cyclicValue.UnsafePointer(),
+		len: cyclicValue.Len(),
+	}
+	tracker := visitTracker{identityDepth: 1, inline: [inlineVisitCount]visitKey{cyclicKey}}
+	assert.Equal(t, formatCycle, checkFormatValue(cyclicValue, maxTraversalDepth, &tracker))
+
+	mapValue := map[string]any{"value": 42}
+	assert.Equal(t, formatDepthLimit, checkFormatValue(reflect.ValueOf(mapValue), maxTraversalDepth, nil))
+	cyclicMap := map[string]any{}
+	cyclicMap["self"] = cyclicMap
+	reflectedMap := reflect.ValueOf(cyclicMap)
+	mapKey := visitKey{typ: reflectedMap.Type(), ptr: reflectedMap.UnsafePointer()}
+	tracker = visitTracker{identityDepth: 1, inline: [inlineVisitCount]visitKey{mapKey}}
+	assert.Equal(t, formatCycle, checkFormatValue(reflectedMap, maxTraversalDepth, &tracker))
+
+	assert.Equal(
+		t,
+		formatDepthLimit,
+		checkFormatValue(reflect.ValueOf(struct{ Value int }{Value: 42}), maxTraversalDepth, nil),
+	)
+
+	keyValue := reflect.ValueOf(42)
+	for range maxTraversalDepth {
+		wrapped := reflect.New(reflect.ArrayOf(1, keyValue.Type())).Elem()
+		wrapped.Index(0).Set(keyValue)
+		keyValue = wrapped
+	}
+	mapWithDeepKey := reflect.MakeMap(reflect.MapOf(keyValue.Type(), reflect.TypeFor[int]()))
+	mapWithDeepKey.SetMapIndex(keyValue, reflect.ValueOf(1))
+	assert.Equal(t, formatDepthLimit, checkFormatValue(mapWithDeepKey, 0, nil))
+	assert.Equal(
+		t,
+		attribute.StringValue(depthLimitMarker),
+		convertValue(struct{ Value any }{Value: mapWithDeepKey.Interface()}),
+	)
+
+	shared := any([]any{42})
+	assert.Equal(t, formatSafe, checkFormatValue(reflect.ValueOf([2]any{shared, shared}), 0, nil))
+	for range maxTraversalDepth {
+		shared = []any{shared, shared}
+	}
+	cyclicSibling := map[string]any{}
+	cyclicSibling["self"] = cyclicSibling
+	depthFirst := [2]any{shared, cyclicSibling}
+	assert.Equal(
+		t,
+		formatDepthLimit,
+		checkFormatValue(reflect.ValueOf(depthFirst), 0, nil),
+	)
+	assert.Equal(
+		t,
+		attribute.StringValue(depthLimitMarker),
+		convertValue(struct{ Value any }{Value: depthFirst}),
+	)
+	cycleFirst := [2]any{cyclicSibling, shared}
+	assert.Equal(
+		t,
+		formatCycle,
+		checkFormatValue(reflect.ValueOf(cycleFirst), 0, nil),
+	)
+}
+
+func TestConvertValueCycle(t *testing.T) {
+	const cycle = "<cycle>"
+
+	t.Run("Map", func(t *testing.T) {
+		value := map[string]any{}
+		value["self"] = value
+
+		assert.Equal(t, attribute.MapValue(attribute.String("self", cycle)), convertValue(value))
+	})
+
+	t.Run("Slice", func(t *testing.T) {
+		value := make([]any, 1)
+		value[0] = value
+
+		assert.Equal(t, attribute.SliceValue(attribute.StringValue(cycle)), convertValue(value))
+	})
+
+	t.Run("PointerInterface", func(t *testing.T) {
+		var value any
+		value = &value
+
+		assert.Equal(t, attribute.StringValue(cycle), convertValue(value))
+	})
+
+	t.Run("MutualMaps", func(t *testing.T) {
+		first := map[string]any{}
+		second := map[string]any{}
+		first["next"] = second
+		second["next"] = first
+
+		want := attribute.MapValue(attribute.Map("next", attribute.String("next", cycle)))
+		assert.Equal(t, want, convertValue(first))
+	})
+
+	t.Run("MixedMapSlice", func(t *testing.T) {
+		mapping := map[string]any{}
+		slice := []any{mapping}
+		mapping["slice"] = slice
+
+		want := attribute.MapValue(attribute.Slice("slice", attribute.StringValue(cycle)))
+		assert.Equal(t, want, convertValue(mapping))
+	})
+
+	t.Run("BranchingMap", func(t *testing.T) {
+		value := map[string]any{}
+		value["left"] = value
+		value["right"] = value
+
+		want := []attribute.KeyValue{
+			attribute.String("left", cycle),
+			attribute.String("right", cycle),
+		}
+		assert.ElementsMatch(t, want, convertValue(value).AsMap())
+	})
+
+	t.Run("BranchingSlice", func(t *testing.T) {
+		value := make([]any, 2)
+		value[0] = value
+		value[1] = value
+
+		want := attribute.SliceValue(attribute.StringValue(cycle), attribute.StringValue(cycle))
+		assert.Equal(t, want, convertValue(value))
+	})
+
+	t.Run("Struct", func(t *testing.T) {
+		type wrapper struct{ Value any }
+
+		mapping := map[string]any{}
+		value := wrapper{Value: mapping}
+		mapping["wrapper"] = value
+
+		assert.Equal(t, attribute.StringValue(cycle), convertValue(value))
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String("wrapper", cycle)),
+			convertValue(mapping),
+		)
+	})
+
+	t.Run("StructSlice", func(t *testing.T) {
+		type wrapper struct{ Value any }
+
+		slice := make([]any, 1)
+		slice[0] = slice
+
+		assert.Equal(t, attribute.StringValue(cycle), convertValue(wrapper{Value: slice}))
+	})
+
+	t.Run("DeepPointer", func(t *testing.T) {
+		const depth = 128
+		values := make([]any, depth+1)
+		for i := range depth {
+			values[i] = &values[i+1]
+		}
+		values[depth] = &values[0]
+
+		assert.Equal(t, attribute.StringValue(cycle), convertValue(values[0]))
+	})
+
+	t.Run("DeepSlice", func(t *testing.T) {
+		const depth = 128
+		value := make([]any, 1)
+		current := value
+		for range depth {
+			next := make([]any, 1)
+			current[0] = next
+			current = next
+		}
+		current[0] = value
+
+		want := attribute.StringValue(cycle)
+		for range depth + 1 {
+			want = attribute.SliceValue(want)
+		}
+		assert.Equal(t, want, convertValue(value))
+	})
+
+	t.Run("PointerArray", func(t *testing.T) {
+		value := &[1]any{}
+		value[0] = value
+
+		assert.Equal(t, attribute.SliceValue(attribute.StringValue(cycle)), convertValue(value))
+	})
+
+	t.Run("NamedMap", func(t *testing.T) {
+		type namedMap map[string]any
+
+		value := namedMap{}
+		value["self"] = value
+
+		assert.Equal(t, attribute.MapValue(attribute.String("self", cycle)), convertValue(value))
+	})
+
+	t.Run("NamedSlice", func(t *testing.T) {
+		type namedSlice []any
+
+		value := make(namedSlice, 1)
+		value[0] = value
+
+		assert.Equal(t, attribute.SliceValue(attribute.StringValue(cycle)), convertValue(value))
+	})
+
+	t.Run("FormattedMapKey", func(t *testing.T) {
+		type key struct{ Value any }
+
+		cyclic := map[string]any{}
+		cyclic["self"] = cyclic
+		formattedKey := &key{Value: cyclic}
+		value := map[*key]int{formattedKey: 42}
+
+		assert.Equal(t, attribute.MapValue(attribute.Int64(cycle, 42)), convertValue(value))
+	})
+
+	t.Run("FormattedInterfaceMapKey", func(t *testing.T) {
+		type key struct{ Value any }
+
+		cyclic := map[string]any{}
+		cyclic["self"] = cyclic
+		formattedKey := &key{Value: cyclic}
+		value := map[any]int{formattedKey: 42}
+
+		assert.Equal(t, attribute.MapValue(attribute.Int64(cycle, 42)), convertValue(value))
+	})
+
+	t.Run("ReflectValue", func(t *testing.T) {
+		value := map[string]any{}
+		value["self"] = value
+
+		assert.Equal(t, attribute.StringValue(cycle), convertValue(reflect.ValueOf(value)))
+	})
+}
+
+func TestConvertValueDeepMapPointerArrayCycle(t *testing.T) {
+	value := &[1]any{}
+	value[0] = value
+
+	var input any = value
+	want := attribute.SliceValue(attribute.StringValue(cycleMarker))
+	for range inlineVisitCount {
+		input = map[string]any{"next": input}
+		want = attribute.MapValue(attribute.KeyValue{
+			Key:   "next",
+			Value: want,
+		})
+	}
+
+	assert.Equal(t, want, convertValue(input))
+}
+
+func TestConvertValueRootArrayDeepMap(t *testing.T) {
+	var value any = 42
+	want := attribute.Int64Value(42)
+	for range inlineVisitCount + 1 {
+		value = map[string]any{"next": value}
+		want = attribute.MapValue(attribute.KeyValue{
+			Key:   "next",
+			Value: want,
+		})
+	}
+
+	assert.Equal(t, attribute.SliceValue(want), convertValue([1]any{value}))
+}
+
+func TestConvertValueCycleDetectionIsPathLocal(t *testing.T) {
+	sharedMap := map[string]any{"one": 1}
+	sharedSlice := []any{1}
+	value := []any{sharedMap, sharedMap, sharedSlice, sharedSlice}
+	want := attribute.SliceValue(
+		attribute.MapValue(attribute.Int64("one", 1)),
+		attribute.MapValue(attribute.Int64("one", 1)),
+		attribute.SliceValue(attribute.Int64Value(1)),
+		attribute.SliceValue(attribute.Int64Value(1)),
+	)
+
+	assert.Equal(t, want, convertValue(value))
+}
+
+func TestConvertValueTraversalWorkLimit(t *testing.T) {
+	t.Run("DirectZeroSizedAggregate", func(t *testing.T) {
+		setMaxTraversalWork(t, 4)
+
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(make([]struct{}, 4)))
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue([4]struct{}{}))
+	})
+
+	t.Run("SharedSiblings", func(t *testing.T) {
+		setMaxTraversalWork(t, 11)
+
+		leaf := []any{42}
+		shared := []any{leaf, leaf}
+		value := []any{shared, shared, 43}
+		want := attribute.SliceValue(
+			attribute.SliceValue(
+				attribute.SliceValue(attribute.Int64Value(42)),
+				attribute.SliceValue(attribute.Int64Value(42)),
+			),
+			attribute.StringValue(workLimitMarker),
+			attribute.Int64Value(43),
+		)
+
+		assert.Equal(t, want, convertValue(value))
+	})
+
+	t.Run("FormattedSiblings", func(t *testing.T) {
+		setMaxTraversalWork(t, 24)
+
+		type wrapper struct{ Value any }
+		value := wrapper{Value: []any{42}}
+		wantValue := attribute.StringValue(fmt.Sprintf("%+v", value))
+		assert.Equal(
+			t,
+			attribute.SliceValue(wantValue, wantValue, attribute.StringValue(workLimitMarker)),
+			convertValue([]wrapper{value, value, value}),
+		)
+	})
+
+	t.Run("StaticallySafeFormattedSiblings", func(t *testing.T) {
+		setMaxTraversalWork(t, 28)
+
+		type wrapper struct{ Values []int }
+		value := wrapper{Values: []int{1, 2, 3, 4}}
+		wantValue := attribute.StringValue(fmt.Sprintf("%+v", value))
+		assert.Equal(
+			t,
+			attribute.SliceValue(wantValue, wantValue, attribute.StringValue(workLimitMarker)),
+			convertValue([]wrapper{value, value, value}),
+		)
+	})
+
+	t.Run("StaticallySafeNestedAggregate", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		value := struct{ Values []int }{Values: make([]int, 64)}
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+	})
+
+	t.Run("TrustedFormattingMethodReceiver", func(t *testing.T) {
+		setMaxTraversalWork(t, 3)
+
+		value := testLargeStringer{}
+		assert.Equal(
+			t,
+			attribute.SliceValue(
+				attribute.StringValue(value.String()),
+				attribute.StringValue(value.String()),
+			),
+			convertValue([]any{value, value}),
+		)
+	})
+
+	t.Run("AddressableFormattingMethodCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 5)
+
+		value := struct{ Values []testLargeStringer }{
+			Values: make([]testLargeStringer, 1),
+		}
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+	})
+
+	t.Run("ReflectedStructSnapshotIsNotDoubleCharged", func(t *testing.T) {
+		setMaxTraversalWork(t, 70)
+
+		value := testLargeStringerWrapper{}
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(fmt.Sprintf("%+v", value))),
+			convertValue([]testLargeStringerWrapper{value}),
+		)
+	})
+
+	t.Run("StandaloneFormattingMethod", func(t *testing.T) {
+		setMaxTraversalWork(t, 0)
+
+		value := testLargeStringer{}
+		assert.Equal(t, attribute.StringValue(value.String()), convertValue(value))
+	})
+
+	t.Run("ReflectedFormattingMethodCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 0)
+
+		addressable := reflect.ValueOf(new(testLargeStringer)).Elem()
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(addressable))
+
+		value := testLargeStringer{}
+		unaddressable := reflect.ValueOf(value)
+		assert.Equal(t, attribute.StringValue(value.String()), convertValue(unaddressable))
+	})
+
+	t.Run("ReflectedAggregateCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 3)
+
+		value := [2]complex128{1 + 2i, 3 + 4i}
+		addressable := reflect.ValueOf(&value).Elem()
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(addressable))
+
+		unaddressable := reflect.ValueOf(value)
+		assert.Equal(
+			t,
+			attribute.StringValue(fmt.Sprintf("%+v", unaddressable)),
+			convertValue(unaddressable),
+		)
+	})
+
+	t.Run("SelectedPointerMethod", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		value := &testMixedMethods{}
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(value.Error())),
+			convertValue([]any{value}),
+		)
+	})
+
+	t.Run("SharedByteSliceCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		value := make([]byte, 64)
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(workLimitMarker)),
+			convertValue([]any{value}),
+		)
+	})
+
+	t.Run("SharedFormattedStringPayload", func(t *testing.T) {
+		setMaxTraversalWork(t, 10)
+
+		payload := string(make([]byte, 64))
+		formatted := struct{ Value string }{Value: payload}
+		assert.Equal(
+			t,
+			attribute.SliceValue(
+				attribute.StringValue(workLimitMarker),
+				attribute.StringValue(workLimitMarker),
+			),
+			convertValue([]any{formatted, formatted}),
+		)
+
+		named := testNamedString(payload)
+		assert.Equal(
+			t,
+			attribute.SliceValue(
+				attribute.StringValue(workLimitMarker),
+				attribute.StringValue(workLimitMarker),
+			),
+			convertValue([]any{named, named}),
+		)
+	})
+
+	t.Run("FormattedPayloadAfterSafetyField", func(t *testing.T) {
+		setMaxTraversalWork(t, 5)
+
+		value := struct {
+			Values map[string]int
+			Text   string
+		}{Text: strings.Repeat("x", 64)}
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+	})
+
+	t.Run("TrustedNamedStringMethod", func(t *testing.T) {
+		setMaxTraversalWork(t, 16)
+
+		stringer := testNamedStringer(strings.Repeat("x", 64))
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(fmt.Sprintf(
+				"unhandled: (%s) %+v", reflect.TypeOf(stringer), stringer,
+			))),
+			convertValue([]any{stringer}),
+		)
+	})
+
+	t.Run("FormattedFieldNamePayload", func(t *testing.T) {
+		setMaxTraversalWork(t, 4)
+
+		typ := reflect.StructOf([]reflect.StructField{
+			{Name: "X" + strings.Repeat("x", 64), Type: reflect.TypeFor[int]()},
+		})
+		value := reflect.New(typ).Elem().Interface()
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(workLimitMarker)),
+			convertValue([]any{value}),
+		)
+	})
+
+	t.Run("UnhandledTypeNamePayload", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		param := reflect.StructOf([]reflect.StructField{
+			{Name: "X" + strings.Repeat("x", 64), Type: reflect.TypeFor[int]()},
+		})
+		typ := reflect.FuncOf([]reflect.Type{param}, nil, false)
+		value := reflect.MakeFunc(typ, func([]reflect.Value) []reflect.Value {
+			return nil
+		}).Interface()
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(workLimitMarker)),
+			convertValue([]any{value}),
+		)
+	})
+
+	t.Run("TrustedPointerTransitionErrorReceiver", func(t *testing.T) {
+		setMaxTraversalWork(t, 3)
+
+		value := new(testLargeArrayError)
+		pointer := &value
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(value.Error())),
+			convertValue([]any{pointer}),
+		)
+	})
+
+	t.Run("PointerArrayRejectedBeforeCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 0)
+
+		value := new([1024]int)
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+		assert.Zero(t, testing.AllocsPerRun(10, func() {
+			convertValue(value)
+		}))
+	})
+
+	t.Run("NestedPointerArrayRejectedBeforeCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 3)
+
+		value := new([1][1 << 16]int)
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+		assert.Zero(t, testing.AllocsPerRun(10, func() {
+			convertValue(value)
+		}))
+	})
+
+	t.Run("MapArrayRejectedBeforeCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 6)
+
+		shared := map[string][1 << 16]int{"value": {}}
+		value := []any{shared}
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.MapValue(attribute.String("value", workLimitMarker))),
+			convertValue(value),
+		)
+		result := testing.Benchmark(func(b *testing.B) {
+			for b.Loop() {
+				convertValue(value)
+			}
+		})
+		assert.Less(t, result.AllocedBytesPerOp(), int64(64<<10))
+	})
+
+	t.Run("MapKeyHashWork", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		largeKey := testLargeMapKey{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String(largeKey.String(), workLimitMarker)),
+			convertValue(map[any]int{largeKey: 42}),
+		)
+
+		stringKey := strings.Repeat("x", 64)
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String(stringKey, workLimitMarker)),
+			convertValue(map[string]int{stringKey: 42}),
+		)
+
+		emptyStructKey := struct{}{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(fmt.Sprintf("%+v", emptyStructKey), 42)),
+			convertValue(map[struct{}]int{emptyStructKey: 42}),
+		)
+		emptyArrayKey := [0]int{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(fmt.Sprintf("%+v", emptyArrayKey), 42)),
+			convertValue(map[[0]int]int{emptyArrayKey: 42}),
+		)
+	})
+
+	t.Run("MapStringKeySortWork", func(t *testing.T) {
+		setMaxTraversalWork(t, 3)
+
+		first := strings.Repeat("a", 64) + "0"
+		second := strings.Repeat("a", 64) + "1"
+		limited := attribute.String(workLimitMarker, workLimitMarker)
+		assert.Equal(
+			t,
+			attribute.MapValue(limited, limited),
+			convertValue(map[string]int{first: 1, second: 2}),
+		)
+	})
+
+	t.Run("MapKeyHashDepth", func(t *testing.T) {
+		setMaxTraversalDepth(t, 2)
+		setMaxTraversalWork(t, 100)
+
+		// Floating-point keys do not use Go's flat regular-memory hash, so the
+		// runtime recursively follows every array layer.
+		keyType := reflect.TypeFor[float64]()
+		for range 4 {
+			keyType = reflect.ArrayOf(1, keyType)
+		}
+		key := reflect.Zero(keyType).Interface()
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String(depthLimitMarker, depthLimitMarker)),
+			convertValue(map[any]int{key: 42}),
+		)
+	})
+
+	t.Run("MapKeyHashRepresentation", func(t *testing.T) {
+		zeroSized := testZeroSizedMapKey{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(zeroSized.String(), 42)),
+			convertValue(map[testZeroSizedMapKey]int{zeroSized: 42}),
+		)
+
+		blankField := testBlankFieldMapKey{X: 1}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(blankField.String(), 42)),
+			convertValue(map[testBlankFieldMapKey]int{blankField: 42}),
+		)
+
+		repeated := testRepeatedNonRegularMapKey{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(repeated.String(), 42)),
+			convertValue(map[testRepeatedNonRegularMapKey]int{repeated: 42}),
+		)
+	})
+
+	t.Run("MapKeyHashTypeClassificationFallback", func(t *testing.T) {
+		fields := make([]reflect.StructField, maxMapKeyHashTypeWork)
+		for i := range fields {
+			fields[i] = reflect.StructField{
+				Name: fmt.Sprintf("F%d", i),
+				Type: reflect.TypeFor[int](),
+			}
+		}
+		key := reflect.New(reflect.StructOf(fields)).Elem().Interface()
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(fmt.Sprintf("%+v", key), 42)),
+			convertValue(map[any]int{key: 42}),
+		)
+	})
+
+	t.Run("WideBranchingCycle", func(t *testing.T) {
+		const width = 64
+		setMaxTraversalWork(t, 2*(width+1))
+
+		first := make([]any, width)
+		second := make([]any, width)
+		for i := range width {
+			first[i] = second
+			second[i] = first
+		}
+
+		got := convertValue(first).AsSlice()
+		require.Len(t, got, width)
+		require.Equal(t, attribute.SLICE, got[0].Type())
+		require.Len(t, got[0].AsSlice(), width)
+		for _, value := range got[1:] {
+			assert.Equal(t, attribute.StringValue(workLimitMarker), value)
+		}
+	})
+
+	t.Run("BranchingCycle", func(t *testing.T) {
+		const workLimit = 16
+		setMaxTraversalWork(t, workLimit)
+
+		nodes := make([][]any, 6)
+		for i := range nodes {
+			nodes[i] = make([]any, 2)
+		}
+		for i := range nodes {
+			next := nodes[(i+1)%len(nodes)]
+			nodes[i][0], nodes[i][1] = next, next
+		}
+
+		var inspect func(attribute.Value) (int, bool)
+		inspect = func(value attribute.Value) (int, bool) {
+			switch value.Type() {
+			case attribute.SLICE:
+				children := value.AsSlice()
+				total, limited := 1+len(children), false
+				for _, child := range children {
+					childTotal, childLimited := inspect(child)
+					total += childTotal
+					limited = limited || childLimited
+				}
+				return total, limited
+			case attribute.MAP:
+				children := value.AsMap()
+				total, limited := 1+len(children), false
+				for _, child := range children {
+					childTotal, childLimited := inspect(child.Value)
+					total += childTotal
+					limited = limited || childLimited
+				}
+				return total, limited
+			case attribute.STRING:
+				return 0, value.AsString() == workLimitMarker
+			default:
+				return 0, false
+			}
+		}
+
+		assertBounded := func(value any) {
+			total, limited := inspect(convertValue(value))
+			assert.LessOrEqual(t, total, workLimit)
+			assert.True(t, limited)
+		}
+		assertBounded(nodes[0])
+
+		maps := make([]map[string]any, len(nodes))
+		for i := range maps {
+			maps[i] = make(map[string]any, 2)
+		}
+		for i := range maps {
+			next := maps[(i+1)%len(maps)]
+			maps[i]["left"], maps[i]["right"] = next, next
+		}
+		assertBounded(maps[0])
+	})
+
+	t.Run("CyclePrecedence", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		value := make([]any, 1)
+		value[0] = value
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(cycleMarker)),
+			convertValue(value),
+		)
+	})
+
+	t.Run("DepthPrecedence", func(t *testing.T) {
+		setMaxTraversalDepth(t, 0)
+		setMaxTraversalWork(t, 3)
+
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(depthLimitMarker)),
+			convertValue([]any{[]any{42}}),
+		)
+		structs := make([]struct{ Value int }, 1)
+		structs[0].Value = 42
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(depthLimitMarker)),
+			convertValue(structs),
+		)
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String("array", depthLimitMarker)),
+			convertValue(map[string][1]any{"array": {42}}),
+		)
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String("struct", depthLimitMarker)),
+			convertValue(map[string]struct{ Value int }{"struct": {Value: 42}}),
+		)
+		array := [1]int{42}
+		assert.Equal(
+			t,
+			attribute.StringValue(depthLimitMarker),
+			convertValue(reflect.ValueOf(&array).Elem()),
+		)
+	})
+
+	t.Run("MapKeyHashPrerequisitePrecedence", func(t *testing.T) {
+		setMaxTraversalDepth(t, 0)
+
+		key := [1]float64{}
+		wordSize := reflect.TypeFor[uintptr]().Size()
+		keySize := reflect.TypeOf(key).Size()
+		keyCopyWork := int((keySize + wordSize - 1) / wordSize)
+		setMaxTraversalWork(t, 2+keyCopyWork)
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String(depthLimitMarker, workLimitMarker)),
+			convertValue(map[[1]float64]int{key: 42}),
+		)
+	})
+}
+
+func TestConvertValueDeepPointerPathIsLocal(t *testing.T) {
+	value := any(42)
+	for range 128 {
+		value = func(v any) *any { return &v }(value)
+	}
+	want := attribute.SliceValue(attribute.Int64Value(42), attribute.Int64Value(42))
+
+	assert.Equal(t, want, convertValue([]any{value, value}))
+}
+
+func TestConvertValueDeepContainerPathIsLocal(t *testing.T) {
+	value := any(42)
+	want := attribute.Int64Value(42)
+	for range 128 {
+		value = []any{value}
+		want = attribute.SliceValue(want)
+	}
+
+	assert.Equal(t, attribute.SliceValue(want, want), convertValue([]any{value, value}))
+}
+
+func TestConvertValueTraversalDepthLimit(t *testing.T) {
+	setMaxTraversalDepth(t, 4)
+
+	t.Run("ScalarAtBoundary", func(t *testing.T) {
+		depth := maxTraversalDepth + 1
+		var value any = 42
+		for range depth {
+			value = []any{value}
+		}
+
+		got := convertValue(value)
+		for range depth {
+			require.Equal(t, attribute.SLICE, got.Type())
+			values := got.AsSlice()
+			require.Len(t, values, 1)
+			got = values[0]
+		}
+		require.Equal(t, attribute.Int64Value(42), got)
+	})
+
+	t.Run("SliceCycleAtBoundary", func(t *testing.T) {
+		size := maxTraversalDepth + 1
+		backing := make([]any, size)
+		nodes := make([][]any, size)
+		for i := range nodes {
+			nodes[i] = backing[i : i+1]
+		}
+		for i := range nodes {
+			nodes[i][0] = nodes[(i+1)%len(nodes)]
+		}
+
+		got := convertValue(nodes[0])
+		for range size {
+			require.Equal(t, attribute.SLICE, got.Type())
+			values := got.AsSlice()
+			require.Len(t, values, 1)
+			got = values[0]
+		}
+		require.Equal(t, attribute.StringValue(cycleMarker), got)
+	})
+
+	t.Run("MapCycleAtBoundary", func(t *testing.T) {
+		size := maxTraversalDepth + 1
+		nodes := make([]map[string]any, size)
+		for i := range nodes {
+			nodes[i] = map[string]any{}
+		}
+		for i := range nodes {
+			nodes[i]["next"] = nodes[(i+1)%len(nodes)]
+		}
+
+		got := convertValue(nodes[0])
+		for range size {
+			require.Equal(t, attribute.MAP, got.Type())
+			values := got.AsMap()
+			require.Len(t, values, 1)
+			got = values[0].Value
+		}
+		require.Equal(t, attribute.StringValue(cycleMarker), got)
+	})
+
+	t.Run("SliceBeyondBoundary", func(t *testing.T) {
+		var value any = 42
+		for range maxTraversalDepth + 2 {
+			value = []any{value}
+		}
+
+		got := convertValue(value)
+		for range maxTraversalDepth + 1 {
+			require.Equal(t, attribute.SLICE, got.Type())
+			values := got.AsSlice()
+			require.Len(t, values, 1)
+			got = values[0]
+		}
+		require.Equal(t, attribute.StringValue(depthLimitMarker), got)
+	})
+
+	t.Run("ArrayBeyondBoundary", func(t *testing.T) {
+		value := reflect.ValueOf([1]any{42})
+		for range maxTraversalDepth + 1 {
+			wrapped := reflect.New(reflect.ArrayOf(1, value.Type())).Elem()
+			wrapped.Index(0).Set(value)
+			value = wrapped
+		}
+
+		got := convertValue(value.Interface())
+		for range maxTraversalDepth + 1 {
+			require.Equal(t, attribute.SLICE, got.Type())
+			values := got.AsSlice()
+			require.Len(t, values, 1)
+			got = values[0]
+		}
+		require.Equal(t, attribute.StringValue(depthLimitMarker), got)
+	})
+
+	t.Run("MapBeyondBoundary", func(t *testing.T) {
+		var value any = 42
+		for range maxTraversalDepth + 2 {
+			value = map[string]any{"next": value}
+		}
+
+		got := convertValue(value)
+		for range maxTraversalDepth + 1 {
+			require.Equal(t, attribute.MAP, got.Type())
+			values := got.AsMap()
+			require.Len(t, values, 1)
+			got = values[0].Value
+		}
+		require.Equal(t, attribute.StringValue(depthLimitMarker), got)
+	})
+
+	t.Run("TerminalValuesAtBoundary", func(t *testing.T) {
+		tracker := visitTracker{conversionDepth: maxTraversalDepth}
+		assert.Equal(t, attribute.SliceValue(attribute.Int64Value(42)), convertValueWithTracker([]int{42}, &tracker))
+		assert.Equal(t, attribute.MapValue(attribute.Int64("value", 42)), convertValueWithTracker(map[string]int{"value": 42}, &tracker))
+		assert.Equal(t, attribute.SliceValue(), convertValueWithTracker([]any{}, &tracker))
+		assert.Equal(t, attribute.MapValue(), convertValueWithTracker(map[string]any{}, &tracker))
+	})
+
+	t.Run("PointerChain", func(t *testing.T) {
+		var value any = 42
+		for range maxTraversalDepth * 2 {
+			value = func(v any) *any { return &v }(value)
+		}
+
+		require.Equal(t, attribute.Int64Value(42), convertValue(value))
+	})
+}
+
+func TestConvertValueOverlappingSlices(t *testing.T) {
+	value := []any{42, nil}
+	value[1] = value[:1]
+	want := attribute.SliceValue(
+		attribute.Int64Value(42),
+		attribute.SliceValue(attribute.Int64Value(42)),
+	)
+
+	assert.Equal(t, want, convertValue(value))
+}
+
+func TestConvertValueEmptyOverlappingSlice(t *testing.T) {
+	value := []any{nil}
+	value[0] = value[:0]
+
+	assert.Equal(t, attribute.SliceValue(attribute.SliceValue()), convertValue(value))
+}
+
+func TestConvertValueOverlappingPointers(t *testing.T) {
+	value := &[2]any{42, nil}
+	value[1] = &value[0]
+	want := attribute.SliceValue(attribute.Int64Value(42), attribute.Int64Value(42))
+
+	assert.Equal(t, want, convertValue(value))
+}
+
+func TestConvertValueSharedPointer(t *testing.T) {
+	value := 42
+	want := attribute.SliceValue(attribute.Int64Value(42), attribute.Int64Value(42))
+
+	assert.Equal(t, want, convertValue([]any{&value, &value}))
+}
+
+func TestConvertValuePreservesSafeFormatting(t *testing.T) {
+	t.Run("NestedPointer", func(t *testing.T) {
+		type node struct{ Next *node }
+
+		value := &node{}
+		value.Next = value
+
+		assert.Equal(t, attribute.StringValue(fmt.Sprintf("%+v", *value)), convertValue(value))
+	})
+
+	t.Run("Stringer", func(t *testing.T) {
+		cyclic := map[string]any{}
+		cyclic["self"] = cyclic
+
+		assert.Equal(t, attribute.StringValue("formatted"), convertValue(testStringer{value: cyclic}))
+	})
+
+	t.Run("PromotedStringer", func(t *testing.T) {
+		cyclic := map[string]any{}
+		cyclic["self"] = cyclic
+		value := struct {
+			testStringer
+			Value any
+		}{Value: cyclic}
+
+		assert.Equal(t, attribute.StringValue("formatted"), convertValue(value))
+	})
+
+	t.Run("UnexportedStringer", func(t *testing.T) {
+		cyclic := make([]any, 1)
+		cyclic[0] = cyclic
+		value := testUnexportedStringerWrapper{
+			value: testUnexportedStringer{value: cyclic},
+		}
+
+		assert.Equal(t, formatCycle, checkFormatting(reflect.ValueOf(value)))
+		assert.Equal(t, attribute.StringValue(cycleMarker), convertValue(value))
+	})
+}
+
+func TestConvertValueNilCollections(t *testing.T) {
+	assert.Equal(t, attribute.SliceValue(), convertValue([]int(nil)))
+	assert.Equal(t, attribute.MapValue(), convertValue(map[string]int(nil)))
 }
