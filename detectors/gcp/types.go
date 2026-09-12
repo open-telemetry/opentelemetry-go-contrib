@@ -30,4 +30,8 @@ type gcpDetector interface {
 	GCEInstanceName() (string, error)
 	CloudRunJobExecution() (string, error)
 	CloudRunJobTaskIndex() (string, error)
+	GCEManagedInstanceGroup() (gcp.ManagedInstanceGroup, error)
+	BareMetalSolutionInstanceID() (string, error)
+	BareMetalSolutionCloudRegion() (string, error)
+	BareMetalSolutionProjectID() (string, error)
 }
