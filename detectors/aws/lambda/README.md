@@ -43,11 +43,30 @@ Now your `TracerProvider` will have the following resource attributes and attach
 | Resource Attribute | Example Value |
 | --- | --- |
 | `cloud.provider` | aws
-|`cloud.region` | us-east-1
-|`faas.name` | MyLambdaFunction
-|`faas.version` | $LATEST
-|`faas.instance` | 2021/06/28/[$LATEST]2f399eb14537447da05ab2a2e39309de
-|`faas.max_memory`| 128
+| `cloud.platform` | aws_lambda
+| `cloud.region` | us-east-1
+| `faas.name` | MyLambdaFunction
+| `faas.version` | $LATEST
+| `faas.instance` | 2021/06/28/[$LATEST]2f399eb14537447da05ab2a2e39309de
+| `faas.max_memory` | 134217728
+| `aws.log.group.names` | ["/aws/lambda/MyLambdaFunction"]
+| `aws.log.stream.names` | ["2021/06/28/[$LATEST]2f399eb14537447da05ab2a2e39309de"]
+
+`faas.max_memory` is reported in bytes, as the semantic conventions require. The
+`AWS_LAMBDA_FUNCTION_MEMORY_SIZE` environment variable reports MiB, so a 128 MiB function reports
+`134217728`.
+
+Every attribute other than `cloud.provider`, `cloud.platform` and `faas.name` is only emitted when its environment variable is set.
+
+To emit a subset of the attributes, pass a filter:
+
+```go
+detector := lambdadetector.NewResourceDetector(
+	lambdadetector.WithAttributeFilter(func(kv attribute.KeyValue) bool {
+		return kv.Key != semconv.AWSLogStreamNamesKey
+	}),
+)
+```
 
 Of note, `faas.id` and `cloud.account.id` are not set by the Lambda resource detector because they are not available outside a Lambda invocation. For this reason, when using the AWS Lambda Instrumentation these attributes are set as additional span attributes.
 

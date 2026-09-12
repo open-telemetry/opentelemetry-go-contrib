@@ -20,6 +20,7 @@ const (
 	lambdaFunctionNameEnvVar    = "AWS_LAMBDA_FUNCTION_NAME"
 	awsRegionEnvVar             = "AWS_REGION"
 	lambdaFunctionVersionEnvVar = "AWS_LAMBDA_FUNCTION_VERSION"
+	lambdaLogGroupNameEnvVar    = "AWS_LAMBDA_LOG_GROUP_NAME"
 	lambdaLogStreamNameEnvVar   = "AWS_LAMBDA_LOG_STREAM_NAME"
 	lambdaMemoryLimitEnvVar     = "AWS_LAMBDA_FUNCTION_MEMORY_SIZE"
 	miB                         = 1 << 20
@@ -27,42 +28,85 @@ const (
 
 var empty = resource.Empty()
 
-// resource detector collects resource information from Lambda environment.
-type resourceDetector struct{}
+type config struct {
+	filter attribute.Filter
+}
 
-// compile time assertion that resource detector implements the resource.Detector interface.
-var _ resource.Detector = (*resourceDetector)(nil)
+// Option configures a [ResourceDetector].
+type Option interface {
+	apply(*config)
+}
 
-// NewResourceDetector returns a resource detector that will detect AWS Lambda resources.
-func NewResourceDetector() resource.Detector {
-	return &resourceDetector{}
+type optionFunc func(*config)
+
+func (f optionFunc) apply(c *config) { f(c) }
+
+// WithAttributeFilter sets a filter that controls which detected attributes are
+// included in the returned resource. Only attributes for which filter returns
+// true are included. By default all attributes are included.
+func WithAttributeFilter(filter attribute.Filter) Option {
+	return optionFunc(func(c *config) { c.filter = filter })
+}
+
+// ResourceDetector collects resource information from the AWS Lambda environment.
+type ResourceDetector struct {
+	cfg config
+}
+
+// Compile-time interface assertion.
+var _ resource.Detector = (*ResourceDetector)(nil)
+
+// NewResourceDetector returns a [resource.Detector] that detects resource
+// attributes on AWS Lambda.
+func NewResourceDetector(opts ...Option) *ResourceDetector {
+	var cfg config
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+	return &ResourceDetector{cfg: cfg}
 }
 
 // Detect collects resource attributes available when running on lambda.
-func (*resourceDetector) Detect(context.Context) (*resource.Resource, error) {
+func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 	// Lambda resources come from ENV
 	lambdaName := os.Getenv(lambdaFunctionNameEnvVar)
 	if lambdaName == "" {
 		return empty, nil
 	}
-	awsRegion := os.Getenv(awsRegionEnvVar)
-	functionVersion := os.Getenv(lambdaFunctionVersionEnvVar)
-	// The instance attributes corresponds to the log stream name for AWS lambda,
-	// see the FaaS resource specification for more details.
-	instance := os.Getenv(lambdaLogStreamNameEnvVar)
 
 	attrs := []attribute.KeyValue{
 		semconv.CloudProviderAWS,
-		semconv.CloudRegion(awsRegion),
-		semconv.FaaSInstance(instance),
+		semconv.CloudPlatformAWSLambda,
 		semconv.FaaSName(lambdaName),
-		semconv.FaaSVersion(functionVersion),
 	}
 
-	maxMemoryStr := os.Getenv(lambdaMemoryLimitEnvVar)
-	maxMemory, err := strconv.Atoi(maxMemoryStr)
-	if err == nil {
+	if v, ok := os.LookupEnv(awsRegionEnvVar); ok {
+		attrs = append(attrs, semconv.CloudRegion(v))
+	}
+	if v, ok := os.LookupEnv(lambdaFunctionVersionEnvVar); ok {
+		attrs = append(attrs, semconv.FaaSVersion(v))
+	}
+	// The instance attribute corresponds to the log stream name for AWS lambda,
+	// see the FaaS resource specification for more details.
+	if v, ok := os.LookupEnv(lambdaLogStreamNameEnvVar); ok {
+		attrs = append(attrs, semconv.FaaSInstance(v), semconv.AWSLogStreamNames(v))
+	}
+	if v, ok := os.LookupEnv(lambdaLogGroupNameEnvVar); ok {
+		attrs = append(attrs, semconv.AWSLogGroupNames(v))
+	}
+	// faas.max_memory is measured in bytes, the environment variable reports MiB.
+	if maxMemory, err := strconv.Atoi(os.Getenv(lambdaMemoryLimitEnvVar)); err == nil {
 		attrs = append(attrs, semconv.FaaSMaxMemory(maxMemory*miB))
+	}
+
+	if d.cfg.filter != nil {
+		filtered := attrs[:0]
+		for _, kv := range attrs {
+			if d.cfg.filter(kv) {
+				filtered = append(filtered, kv)
+			}
+		}
+		attrs = filtered
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attrs...), nil
