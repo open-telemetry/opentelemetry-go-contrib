@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -58,7 +59,87 @@ func (*testNilPointerError) Error() string {
 	return "nil pointer error"
 }
 
-type recursiveTestSlice []recursiveTestSlice
+type testArrayError [1]int
+
+func (testArrayError) Error() string {
+	return "array error"
+}
+
+type testMutatingError func()
+
+func (e testMutatingError) Error() string {
+	e()
+	return "mutating error"
+}
+
+type testLargeStringer struct {
+	Data [64]uintptr
+}
+
+func (testLargeStringer) String() string {
+	return "large stringer"
+}
+
+type testLargeStringerWrapper struct {
+	Inner testLargeStringer
+}
+
+type testMixedMethods struct {
+	Data [64]uintptr
+}
+
+func (testMixedMethods) String() string {
+	return "large stringer"
+}
+
+func (*testMixedMethods) Error() string {
+	return "pointer error"
+}
+
+type testLargeArrayError [64]uintptr
+
+func (testLargeArrayError) Error() string {
+	return "large array error"
+}
+
+type testNamedString string
+
+type testNamedStringer string
+
+func (testNamedStringer) String() string {
+	return "named stringer"
+}
+
+type testLargeMapKey [64]int
+
+func (testLargeMapKey) String() string {
+	return "large map key"
+}
+
+type testZeroSizedMapKey [1 << 16]struct{}
+
+func (testZeroSizedMapKey) String() string {
+	return "zero-sized map key"
+}
+
+type testBlankFieldMapKey struct {
+	_ [6000]uintptr
+	X int
+}
+
+func (testBlankFieldMapKey) String() string {
+	return "blank-field map key"
+}
+
+type testNonRegularMapKeyElement struct {
+	Value float64
+}
+
+type testRepeatedNonRegularMapKey [500]testNonRegularMapKeyElement
+
+func (testRepeatedNonRegularMapKey) String() string {
+	return "repeated non-regular map key"
+}
 
 // setMaxTraversalDepth temporarily overrides the internal traversal bound.
 func setMaxTraversalDepth(t *testing.T, depth int) {
@@ -66,6 +147,15 @@ func setMaxTraversalDepth(t *testing.T, depth int) {
 	maxTraversalDepth = depth
 	t.Cleanup(func() {
 		maxTraversalDepth = previous
+	})
+}
+
+// setMaxTraversalWork temporarily overrides the root-owned work bound.
+func setMaxTraversalWork(t *testing.T, work int) {
+	previous := maxTraversalWork
+	maxTraversalWork = work
+	t.Cleanup(func() {
+		maxTraversalWork = previous
 	})
 }
 
@@ -120,6 +210,7 @@ func TestFormatResult(t *testing.T) {
 	assert.Empty(t, formatSafe.marker())
 	assert.Equal(t, cycleMarker, formatCycle.marker())
 	assert.Equal(t, depthLimitMarker, formatDepthLimit.marker())
+	assert.Equal(t, workLimitMarker, formatWorkLimit.marker())
 }
 
 func TestConvertValue(t *testing.T) {
@@ -554,6 +645,21 @@ func TestConvertValuePointerEdgeCases(t *testing.T) {
 		attribute.StringValue("nil pointer error"),
 		convertValue(nilPointerErrorPointerPointer),
 	)
+	var arrayError any = testArrayError{42}
+	arrayErrorPointer := &arrayError
+	assert.Equal(t, attribute.StringValue("array error"), convertValue(arrayErrorPointer))
+	assert.Equal(t, attribute.StringValue("array error"), convertValue(&arrayErrorPointer))
+	array := &[2]any{}
+	array[0] = testMutatingError(func() { array[1] = 2 })
+	array[1] = 1
+	assert.Equal(
+		t,
+		attribute.SliceValue(
+			attribute.StringValue("mutating error"),
+			attribute.Int64Value(1),
+		),
+		convertValue(array),
+	)
 
 	channel := make(chan int)
 	channelPointer := &channel
@@ -626,38 +732,67 @@ func TestFormattingCycleBranches(t *testing.T) {
 
 	assert.Equal(t, formatSafe, checkFormatting(reflect.ValueOf(struct{ Value any }{Value: 42})))
 	assert.Equal(t, formatSafe, checkFormatting(reflect.ValueOf(new(int))))
-	assert.True(t, formattingTypeNeedsCheck(reflect.TypeFor[recursiveTestSlice]()))
 }
 
-func TestFormattingTypePreflightWorkLimit(t *testing.T) {
-	typeVisits := 0
-	assert.True(t, formattingTypeNeedsCheckAtDepthWithBudget(
-		reflect.TypeFor[testStringer](),
-		nil,
-		0,
-		&typeVisits,
-	))
-	assert.Equal(t, 1, typeVisits)
-
-	typ := reflect.TypeFor[struct{}]()
-	for range 10 {
-		emptyChild := reflect.ArrayOf(0, typ)
-		typ = reflect.StructOf([]reflect.StructField{
-			{Name: "Left", Type: emptyChild},
-			{Name: "Right", Type: emptyChild},
-		})
+func TestFormattingPreflightUsesRuntimeShape(t *testing.T) {
+	wideFields := make([]reflect.StructField, maxMapKeyHashTypeWork+1)
+	for i := range wideFields {
+		wideFields[i] = reflect.StructField{
+			Name: fmt.Sprintf("F%d", i),
+			Type: reflect.TypeFor[int](),
+		}
 	}
-	typeVisits = 0
-	assert.True(t, formattingTypeNeedsCheckAtDepthWithBudget(typ, nil, 0, &typeVisits))
-	assert.Equal(t, maxFormattingTypeVisits, typeVisits)
+	emptyType := reflect.ArrayOf(0, reflect.StructOf(wideFields))
+	assert.Equal(t, formatSafe, checkFormatting(reflect.Zero(emptyType)))
 
+	nestedType := reflect.SliceOf(reflect.SliceOf(reflect.ArrayOf(
+		1, reflect.StructOf(wideFields),
+	)))
+	nestedField := reflect.StructField{Name: "Value", Type: nestedType}
+	typ := reflect.StructOf([]reflect.StructField{nestedField})
 	value := reflect.New(typ).Elem()
+	value.Field(0).Set(reflect.MakeSlice(nestedType, 1, 1))
 	assert.Equal(t, formatSafe, checkFormatting(value))
 	assert.Equal(
 		t,
 		attribute.StringValue(fmt.Sprintf("%+v", value.Interface())),
 		convertValue(value.Interface()),
 	)
+}
+
+func TestFormattingTraversalWorkLimit(t *testing.T) {
+	t.Run("SharedSiblings", func(t *testing.T) {
+		setMaxTraversalWork(t, 12)
+
+		leaf := []any{42}
+		shared := []any{leaf, leaf}
+		cyclic := map[string]any{}
+		cyclic["self"] = cyclic
+		value := struct{ Value [2]any }{Value: [2]any{shared, cyclic}}
+
+		assert.Equal(t, formatWorkLimit, checkFormatting(reflect.ValueOf(value)))
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+	})
+
+	t.Run("CyclePrecedence", func(t *testing.T) {
+		setMaxTraversalWork(t, 1)
+
+		cyclic := make([]any, 1)
+		cyclic[0] = cyclic
+		value := reflect.ValueOf(cyclic)
+		key := visitKey{typ: value.Type(), ptr: value.UnsafePointer(), len: value.Len()}
+		tracker := visitTracker{
+			identityDepth: 1,
+			inline:        [inlineVisitCount]visitKey{key},
+		}
+		work := maxTraversalWork
+
+		assert.Equal(
+			t,
+			formatCycle,
+			checkFormatValueWithBudget(value, 0, &tracker, &work),
+		)
+	})
 }
 
 func TestFormattingTraversalDepthLimit(t *testing.T) {
@@ -675,14 +810,11 @@ func TestFormattingTraversalDepthLimit(t *testing.T) {
 		array.Index(0).Set(value)
 		value = array
 	}
-	assert.False(t, formattingTypeNeedsCheck(value.Type()))
 	assert.Equal(t, formatSafe, checkFormatValue(value, 0, nil))
-	assert.True(t, formattingRootNeedsCheck(value.Addr().Type()))
 	assert.Equal(t, formatDepthLimit, checkFormatting(value.Addr()))
 
 	array := reflect.New(reflect.ArrayOf(1, value.Type())).Elem()
 	array.Index(0).Set(value)
-	assert.True(t, formattingTypeNeedsCheck(array.Type()))
 	assert.Equal(t, formatDepthLimit, checkFormatValue(array, 0, nil))
 
 	cyclic := make([]any, 1)
@@ -967,6 +1099,525 @@ func TestConvertValueCycleDetectionIsPathLocal(t *testing.T) {
 	)
 
 	assert.Equal(t, want, convertValue(value))
+}
+
+func TestConvertValueTraversalWorkLimit(t *testing.T) {
+	t.Run("DirectZeroSizedAggregate", func(t *testing.T) {
+		setMaxTraversalWork(t, 4)
+
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(make([]struct{}, 4)))
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue([4]struct{}{}))
+	})
+
+	t.Run("SharedSiblings", func(t *testing.T) {
+		setMaxTraversalWork(t, 11)
+
+		leaf := []any{42}
+		shared := []any{leaf, leaf}
+		value := []any{shared, shared, 43}
+		want := attribute.SliceValue(
+			attribute.SliceValue(
+				attribute.SliceValue(attribute.Int64Value(42)),
+				attribute.SliceValue(attribute.Int64Value(42)),
+			),
+			attribute.StringValue(workLimitMarker),
+			attribute.Int64Value(43),
+		)
+
+		assert.Equal(t, want, convertValue(value))
+	})
+
+	t.Run("FormattedSiblings", func(t *testing.T) {
+		setMaxTraversalWork(t, 24)
+
+		type wrapper struct{ Value any }
+		value := wrapper{Value: []any{42}}
+		wantValue := attribute.StringValue(fmt.Sprintf("%+v", value))
+		assert.Equal(
+			t,
+			attribute.SliceValue(wantValue, wantValue, attribute.StringValue(workLimitMarker)),
+			convertValue([]wrapper{value, value, value}),
+		)
+	})
+
+	t.Run("StaticallySafeFormattedSiblings", func(t *testing.T) {
+		setMaxTraversalWork(t, 28)
+
+		type wrapper struct{ Values []int }
+		value := wrapper{Values: []int{1, 2, 3, 4}}
+		wantValue := attribute.StringValue(fmt.Sprintf("%+v", value))
+		assert.Equal(
+			t,
+			attribute.SliceValue(wantValue, wantValue, attribute.StringValue(workLimitMarker)),
+			convertValue([]wrapper{value, value, value}),
+		)
+	})
+
+	t.Run("StaticallySafeNestedAggregate", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		value := struct{ Values []int }{Values: make([]int, 64)}
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+	})
+
+	t.Run("TrustedFormattingMethodReceiver", func(t *testing.T) {
+		setMaxTraversalWork(t, 3)
+
+		value := testLargeStringer{}
+		assert.Equal(
+			t,
+			attribute.SliceValue(
+				attribute.StringValue(value.String()),
+				attribute.StringValue(value.String()),
+			),
+			convertValue([]any{value, value}),
+		)
+	})
+
+	t.Run("AddressableFormattingMethodCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 5)
+
+		value := struct{ Values []testLargeStringer }{
+			Values: make([]testLargeStringer, 1),
+		}
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+	})
+
+	t.Run("ReflectedStructSnapshotIsNotDoubleCharged", func(t *testing.T) {
+		setMaxTraversalWork(t, 70)
+
+		value := testLargeStringerWrapper{}
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(fmt.Sprintf("%+v", value))),
+			convertValue([]testLargeStringerWrapper{value}),
+		)
+	})
+
+	t.Run("StandaloneFormattingMethod", func(t *testing.T) {
+		setMaxTraversalWork(t, 0)
+
+		value := testLargeStringer{}
+		assert.Equal(t, attribute.StringValue(value.String()), convertValue(value))
+	})
+
+	t.Run("ReflectedFormattingMethodCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 0)
+
+		addressable := reflect.ValueOf(new(testLargeStringer)).Elem()
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(addressable))
+
+		value := testLargeStringer{}
+		unaddressable := reflect.ValueOf(value)
+		assert.Equal(t, attribute.StringValue(value.String()), convertValue(unaddressable))
+	})
+
+	t.Run("ReflectedAggregateCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 3)
+
+		value := [2]complex128{1 + 2i, 3 + 4i}
+		addressable := reflect.ValueOf(&value).Elem()
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(addressable))
+
+		unaddressable := reflect.ValueOf(value)
+		assert.Equal(
+			t,
+			attribute.StringValue(fmt.Sprintf("%+v", unaddressable)),
+			convertValue(unaddressable),
+		)
+	})
+
+	t.Run("SelectedPointerMethod", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		value := &testMixedMethods{}
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(value.Error())),
+			convertValue([]any{value}),
+		)
+	})
+
+	t.Run("SharedByteSliceCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		value := make([]byte, 64)
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(workLimitMarker)),
+			convertValue([]any{value}),
+		)
+	})
+
+	t.Run("SharedFormattedStringPayload", func(t *testing.T) {
+		setMaxTraversalWork(t, 10)
+
+		payload := string(make([]byte, 64))
+		formatted := struct{ Value string }{Value: payload}
+		assert.Equal(
+			t,
+			attribute.SliceValue(
+				attribute.StringValue(workLimitMarker),
+				attribute.StringValue(workLimitMarker),
+			),
+			convertValue([]any{formatted, formatted}),
+		)
+
+		named := testNamedString(payload)
+		assert.Equal(
+			t,
+			attribute.SliceValue(
+				attribute.StringValue(workLimitMarker),
+				attribute.StringValue(workLimitMarker),
+			),
+			convertValue([]any{named, named}),
+		)
+	})
+
+	t.Run("FormattedPayloadAfterSafetyField", func(t *testing.T) {
+		setMaxTraversalWork(t, 5)
+
+		value := struct {
+			Values map[string]int
+			Text   string
+		}{Text: strings.Repeat("x", 64)}
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+	})
+
+	t.Run("TrustedNamedStringMethod", func(t *testing.T) {
+		setMaxTraversalWork(t, 16)
+
+		stringer := testNamedStringer(strings.Repeat("x", 64))
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(fmt.Sprintf(
+				"unhandled: (%s) %+v", reflect.TypeOf(stringer), stringer,
+			))),
+			convertValue([]any{stringer}),
+		)
+	})
+
+	t.Run("FormattedFieldNamePayload", func(t *testing.T) {
+		setMaxTraversalWork(t, 4)
+
+		typ := reflect.StructOf([]reflect.StructField{
+			{Name: "X" + strings.Repeat("x", 64), Type: reflect.TypeFor[int]()},
+		})
+		value := reflect.New(typ).Elem().Interface()
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(workLimitMarker)),
+			convertValue([]any{value}),
+		)
+	})
+
+	t.Run("UnhandledTypeNamePayload", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		param := reflect.StructOf([]reflect.StructField{
+			{Name: "X" + strings.Repeat("x", 64), Type: reflect.TypeFor[int]()},
+		})
+		typ := reflect.FuncOf([]reflect.Type{param}, nil, false)
+		value := reflect.MakeFunc(typ, func([]reflect.Value) []reflect.Value {
+			return nil
+		}).Interface()
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(workLimitMarker)),
+			convertValue([]any{value}),
+		)
+	})
+
+	t.Run("TrustedPointerTransitionErrorReceiver", func(t *testing.T) {
+		setMaxTraversalWork(t, 3)
+
+		value := new(testLargeArrayError)
+		pointer := &value
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(value.Error())),
+			convertValue([]any{pointer}),
+		)
+	})
+
+	t.Run("PointerArrayRejectedBeforeCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 0)
+
+		value := new([1024]int)
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+		assert.Zero(t, testing.AllocsPerRun(10, func() {
+			convertValue(value)
+		}))
+	})
+
+	t.Run("NestedPointerArrayRejectedBeforeCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 3)
+
+		value := new([1][1 << 16]int)
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+		assert.Zero(t, testing.AllocsPerRun(10, func() {
+			convertValue(value)
+		}))
+	})
+
+	t.Run("MapArrayRejectedBeforeCopy", func(t *testing.T) {
+		setMaxTraversalWork(t, 6)
+
+		shared := map[string][1 << 16]int{"value": {}}
+		value := []any{shared}
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.MapValue(attribute.String("value", workLimitMarker))),
+			convertValue(value),
+		)
+		result := testing.Benchmark(func(b *testing.B) {
+			for b.Loop() {
+				convertValue(value)
+			}
+		})
+		assert.Less(t, result.AllocedBytesPerOp(), int64(64<<10))
+	})
+
+	t.Run("MapKeyHashWork", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		largeKey := testLargeMapKey{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String(largeKey.String(), workLimitMarker)),
+			convertValue(map[any]int{largeKey: 42}),
+		)
+
+		stringKey := strings.Repeat("x", 64)
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String(stringKey, workLimitMarker)),
+			convertValue(map[string]int{stringKey: 42}),
+		)
+
+		emptyStructKey := struct{}{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(fmt.Sprintf("%+v", emptyStructKey), 42)),
+			convertValue(map[struct{}]int{emptyStructKey: 42}),
+		)
+		emptyArrayKey := [0]int{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(fmt.Sprintf("%+v", emptyArrayKey), 42)),
+			convertValue(map[[0]int]int{emptyArrayKey: 42}),
+		)
+	})
+
+	t.Run("MapStringKeySortWork", func(t *testing.T) {
+		setMaxTraversalWork(t, 3)
+
+		first := strings.Repeat("a", 64) + "0"
+		second := strings.Repeat("a", 64) + "1"
+		limited := attribute.String(workLimitMarker, workLimitMarker)
+		assert.Equal(
+			t,
+			attribute.MapValue(limited, limited),
+			convertValue(map[string]int{first: 1, second: 2}),
+		)
+	})
+
+	t.Run("MapKeyHashDepth", func(t *testing.T) {
+		setMaxTraversalDepth(t, 2)
+		setMaxTraversalWork(t, 100)
+
+		// Floating-point keys do not use Go's flat regular-memory hash, so the
+		// runtime recursively follows every array layer.
+		keyType := reflect.TypeFor[float64]()
+		for range 4 {
+			keyType = reflect.ArrayOf(1, keyType)
+		}
+		key := reflect.Zero(keyType).Interface()
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String(depthLimitMarker, depthLimitMarker)),
+			convertValue(map[any]int{key: 42}),
+		)
+	})
+
+	t.Run("MapKeyHashRepresentation", func(t *testing.T) {
+		zeroSized := testZeroSizedMapKey{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(zeroSized.String(), 42)),
+			convertValue(map[testZeroSizedMapKey]int{zeroSized: 42}),
+		)
+
+		blankField := testBlankFieldMapKey{X: 1}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(blankField.String(), 42)),
+			convertValue(map[testBlankFieldMapKey]int{blankField: 42}),
+		)
+
+		repeated := testRepeatedNonRegularMapKey{}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(repeated.String(), 42)),
+			convertValue(map[testRepeatedNonRegularMapKey]int{repeated: 42}),
+		)
+	})
+
+	t.Run("MapKeyHashTypeClassificationFallback", func(t *testing.T) {
+		fields := make([]reflect.StructField, maxMapKeyHashTypeWork)
+		for i := range fields {
+			fields[i] = reflect.StructField{
+				Name: fmt.Sprintf("F%d", i),
+				Type: reflect.TypeFor[int](),
+			}
+		}
+		key := reflect.New(reflect.StructOf(fields)).Elem().Interface()
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(fmt.Sprintf("%+v", key), 42)),
+			convertValue(map[any]int{key: 42}),
+		)
+	})
+
+	t.Run("WideBranchingCycle", func(t *testing.T) {
+		const width = 64
+		setMaxTraversalWork(t, 2*(width+1))
+
+		first := make([]any, width)
+		second := make([]any, width)
+		for i := range width {
+			first[i] = second
+			second[i] = first
+		}
+
+		got := convertValue(first).AsSlice()
+		require.Len(t, got, width)
+		require.Equal(t, attribute.SLICE, got[0].Type())
+		require.Len(t, got[0].AsSlice(), width)
+		for _, value := range got[1:] {
+			assert.Equal(t, attribute.StringValue(workLimitMarker), value)
+		}
+	})
+
+	t.Run("BranchingCycle", func(t *testing.T) {
+		const workLimit = 16
+		setMaxTraversalWork(t, workLimit)
+
+		nodes := make([][]any, 6)
+		for i := range nodes {
+			nodes[i] = make([]any, 2)
+		}
+		for i := range nodes {
+			next := nodes[(i+1)%len(nodes)]
+			nodes[i][0], nodes[i][1] = next, next
+		}
+
+		var inspect func(attribute.Value) (int, bool)
+		inspect = func(value attribute.Value) (int, bool) {
+			switch value.Type() {
+			case attribute.SLICE:
+				children := value.AsSlice()
+				total, limited := 1+len(children), false
+				for _, child := range children {
+					childTotal, childLimited := inspect(child)
+					total += childTotal
+					limited = limited || childLimited
+				}
+				return total, limited
+			case attribute.MAP:
+				children := value.AsMap()
+				total, limited := 1+len(children), false
+				for _, child := range children {
+					childTotal, childLimited := inspect(child.Value)
+					total += childTotal
+					limited = limited || childLimited
+				}
+				return total, limited
+			case attribute.STRING:
+				return 0, value.AsString() == workLimitMarker
+			default:
+				return 0, false
+			}
+		}
+
+		assertBounded := func(value any) {
+			total, limited := inspect(convertValue(value))
+			assert.LessOrEqual(t, total, workLimit)
+			assert.True(t, limited)
+		}
+		assertBounded(nodes[0])
+
+		maps := make([]map[string]any, len(nodes))
+		for i := range maps {
+			maps[i] = make(map[string]any, 2)
+		}
+		for i := range maps {
+			next := maps[(i+1)%len(maps)]
+			maps[i]["left"], maps[i]["right"] = next, next
+		}
+		assertBounded(maps[0])
+	})
+
+	t.Run("CyclePrecedence", func(t *testing.T) {
+		setMaxTraversalWork(t, 2)
+
+		value := make([]any, 1)
+		value[0] = value
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(cycleMarker)),
+			convertValue(value),
+		)
+	})
+
+	t.Run("DepthPrecedence", func(t *testing.T) {
+		setMaxTraversalDepth(t, 0)
+		setMaxTraversalWork(t, 3)
+
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(depthLimitMarker)),
+			convertValue([]any{[]any{42}}),
+		)
+		structs := make([]struct{ Value int }, 1)
+		structs[0].Value = 42
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(depthLimitMarker)),
+			convertValue(structs),
+		)
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String("array", depthLimitMarker)),
+			convertValue(map[string][1]any{"array": {42}}),
+		)
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String("struct", depthLimitMarker)),
+			convertValue(map[string]struct{ Value int }{"struct": {Value: 42}}),
+		)
+		array := [1]int{42}
+		assert.Equal(
+			t,
+			attribute.StringValue(depthLimitMarker),
+			convertValue(reflect.ValueOf(&array).Elem()),
+		)
+	})
+
+	t.Run("MapKeyHashPrerequisitePrecedence", func(t *testing.T) {
+		setMaxTraversalDepth(t, 0)
+
+		key := [1]float64{}
+		wordSize := reflect.TypeFor[uintptr]().Size()
+		keySize := reflect.TypeOf(key).Size()
+		keyCopyWork := int((keySize + wordSize - 1) / wordSize)
+		setMaxTraversalWork(t, 2+keyCopyWork)
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String(depthLimitMarker, workLimitMarker)),
+			convertValue(map[[1]float64]int{key: 42}),
+		)
+	})
 }
 
 func TestConvertValueDeepPointerPathIsLocal(t *testing.T) {

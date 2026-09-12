@@ -20,10 +20,11 @@ import (
 const (
 	cycleMarker      = "<cycle>"
 	depthLimitMarker = "<depth-limit>"
+	workLimitMarker  = "<work-limit>"
 	inlineVisitCount = 8
-	// The preliminary type walk is only an optimization. If a shared type graph
-	// takes more work than this, fall back to the bounded value-level scan.
-	maxFormattingTypeVisits = 1000
+	// Type-only hash classification is an optimization. Bound it independently
+	// and fall back to the value-level raw-key walk when it is exhausted.
+	maxMapKeyHashTypeWork = 1000
 	// Must be a power of two greater than inlineVisitCount + 1. Promotion fills
 	// inlineVisitCount + 1 slots, and probing relies on an empty slot.
 	initialOverflowVisitTableSize = 128
@@ -33,11 +34,16 @@ var (
 	// maxTraversalDepth bounds recursive aggregate traversal. Tests lower this
 	// value to exercise the boundary with small inputs.
 	maxTraversalDepth = 1000
+	// maxTraversalWork bounds aggregate, child-edge, and reflected-copy work
+	// across a top-level conversion. Tests lower this value at boundaries.
+	maxTraversalWork = 10_000
 
-	formatterType    = reflect.TypeFor[fmt.Formatter]()
-	reflectValueType = reflect.TypeFor[reflect.Value]()
-	stringerType     = reflect.TypeFor[fmt.Stringer]()
-	errorType        = reflect.TypeFor[error]()
+	formatterType      = reflect.TypeFor[fmt.Formatter]()
+	attributeValueType = reflect.TypeFor[attribute.Value]()
+	reflectValueType   = reflect.TypeFor[reflect.Value]()
+	stringerType       = reflect.TypeFor[fmt.Stringer]()
+	errorType          = reflect.TypeFor[error]()
+	timeType           = reflect.TypeFor[time.Time]()
 )
 
 // visitKey identifies a container by pointer and type, plus length for slices
@@ -54,35 +60,100 @@ type visitKey struct {
 type visitTracker struct {
 	identityDepth   int
 	conversionDepth int
+	work            int
 	inline          [inlineVisitCount]visitKey
 	overflow        []visitKey
 }
 
-// formatTypeVisit links the aggregate types on the active formatting type-walk
-// path so recursive types can be recognized without a heap map.
-type formatTypeVisit struct {
-	parent *formatTypeVisit
-	typ    reflect.Type
+// reserveWork consumes units if they fit in the remaining traversal budget.
+func reserveWork(work *int, units int) bool {
+	remaining := maxTraversalWork - *work
+	if units > remaining {
+		return false
+	}
+	*work += units
+	return true
 }
 
-// formatResult describes whether fmt can safely traverse a value and, if not,
-// why the converter must replace it with a marker.
+// reserveAggregateWork reserves one unit for an aggregate and edgesPerItem
+// units for each child item before its result storage is allocated.
+func reserveAggregateWork(work *int, size, edgesPerItem int) bool {
+	remaining := maxTraversalWork - *work
+	if remaining <= 0 || size > (remaining-1)/edgesPerItem {
+		return false
+	}
+	*work += 1 + size*edgesPerItem
+	return true
+}
+
+// reserveValueCopyWork bounds reflection copies of by-value arrays and structs
+// in machine-word units. Maps, slices, interfaces, and pointers only copy
+// bounded headers; their contents are charged if traversal reaches them.
+func reserveValueCopyWork(t reflect.Type, count int, work *int) bool {
+	if t.Kind() != reflect.Array && t.Kind() != reflect.Struct {
+		return true
+	}
+	remaining := maxTraversalWork - *work
+	if remaining < 0 {
+		return false
+	}
+	wordSize := unsafe.Sizeof(uintptr(0))
+	units := t.Size() / wordSize
+	if t.Size()%wordSize != 0 {
+		units++
+	}
+	if units != 0 && uintptr(count) > uintptr(remaining)/units {
+		return false
+	}
+	*work += int(units * uintptr(count))
+	return true
+}
+
+// reserveByteWork accounts for a variable-size byte payload in machine-word
+// units. Standalone root fast paths remain unbudgeted; nested copies, hashes,
+// and formatted output participate in their top-level conversion's budget.
+func reserveByteWork(size int, work *int) bool {
+	wordSize := int(unsafe.Sizeof(uintptr(0)))
+	units := size / wordSize
+	if size%wordSize != 0 {
+		units++
+	}
+	return reserveWork(work, units)
+}
+
+// reserveStructFieldNameWork accounts for field names copied by %+v struct
+// formatting.
+func reserveStructFieldNameWork(t reflect.Type, work *int) bool {
+	//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
+	for i := range t.NumField() {
+		if !reserveByteWork(len(t.Field(i).Name), work) {
+			return false
+		}
+	}
+	return true
+}
+
+// formatResult describes whether a bounded preflight can safely traverse a
+// value and, if not, why the converter must replace it with a marker.
 type formatResult uint8
 
 const (
 	formatSafe formatResult = iota
 	formatCycle
 	formatDepthLimit
+	formatWorkLimit
 )
 
 // marker returns the attribute marker corresponding to r, or an empty string
-// when formatting is safe.
+// when traversal is safe.
 func (r formatResult) marker() string {
 	switch r {
 	case formatCycle:
 		return cycleMarker
 	case formatDepthLimit:
 		return depthLimitMarker
+	case formatWorkLimit:
+		return workLimitMarker
 	default:
 		return ""
 	}
@@ -265,12 +336,238 @@ func kindCanFormatRecurse(kind reflect.Kind) bool {
 	}
 }
 
+// typeNeedsFormattingWork reports whether fmt descends through t or copies a
+// variable-length string payload into its output.
+func typeNeedsFormattingWork(t reflect.Type) bool {
+	return t.Kind() == reflect.String || kindCanFormatRecurse(t.Kind())
+}
+
+// typeHasFormattingMethod reports whether fmt treats t as a terminal method
+// value instead of traversing its representation.
+func typeHasFormattingMethod(t reflect.Type) bool {
+	return t.NumMethod() != 0 &&
+		(t.Implements(formatterType) || t.Implements(stringerType) || t.Implements(errorType))
+}
+
+// hasCallableFormattingMethod reports whether fmt stops at v and invokes user
+// code. Method execution, including receiver ABI work and returned output,
+// remains outside the traversal budget.
+func hasCallableFormattingMethod(v reflect.Value) bool {
+	return v.CanInterface() && typeHasFormattingMethod(v.Type())
+}
+
+// formattingValueHitsDepthLimit reports a depth result that can be known from
+// a by-value aggregate's type before reflection materializes the value.
+
+//nolint:revive // Interfaceability is part of fmt's method-selection semantics.
+func formattingValueHitsDepthLimit(t reflect.Type, depth int, canInterface bool) bool {
+	if depth < maxTraversalDepth || canInterface && typeHasFormattingMethod(t) {
+		return false
+	}
+	switch t.Kind() {
+	case reflect.Array:
+		return t.Len() != 0
+	case reflect.Struct:
+		return t.NumField() != 0
+	default:
+		return false
+	}
+}
+
+// conversionValueHitsDepthLimit performs the equivalent pre-copy check for a
+// normal map value. Arrays use conversion depth; structs start fmt's separate
+// depth domain.
+func conversionValueHitsDepthLimit(t reflect.Type, conversionDepth int) bool {
+	switch t.Kind() {
+	case reflect.Array:
+		return !t.Implements(errorType) && t.Len() != 0 &&
+			kindCanRevisit(t.Elem().Kind()) && conversionDepth >= maxTraversalDepth
+	case reflect.Struct:
+		if t == attributeValueType || t == timeType {
+			return false
+		}
+		return formattingValueHitsDepthLimit(t, 0, true)
+	default:
+		return false
+	}
+}
+
+// mapKeyUsesRegularMemoryHash mirrors the public-type portion of Go's
+// regular-memory classification. Such values are hashed as one fixed byte
+// range instead of recursively visiting their logical elements. The shared
+// type-work counter bounds this preliminary classification.
+func mapKeyUsesRegularMemoryHash(
+	t reflect.Type,
+	typeWork *int,
+	work *int,
+) (bool, bool, formatResult) {
+	if *typeWork >= maxMapKeyHashTypeWork {
+		return false, false, formatSafe
+	}
+	if !reserveWork(work, 1) {
+		return false, false, formatWorkLimit
+	}
+	(*typeWork)++
+
+	switch t.Kind() {
+	case reflect.Array:
+		elem := t.Elem()
+		if elem.Comparable() && t.Len() == 0 {
+			return true, true, formatSafe
+		}
+		return mapKeyUsesRegularMemoryHash(elem, typeWork, work)
+	case reflect.Bool,
+		reflect.Chan,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Pointer,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Uintptr,
+		reflect.UnsafePointer:
+		return true, true, formatSafe
+	case reflect.Struct:
+		switch t.NumField() {
+		case 0:
+			return true, true, formatSafe
+		case 1:
+			field := t.Field(0)
+			if field.Name == "_" {
+				return false, true, formatSafe
+			}
+			return mapKeyUsesRegularMemoryHash(field.Type, typeWork, work)
+		}
+		for i := range t.NumField() {
+			field := t.Field(i)
+			if field.Name == "_" {
+				return false, true, formatSafe
+			}
+			regular, complete, result := mapKeyUsesRegularMemoryHash(
+				field.Type, typeWork, work,
+			)
+			if result != formatSafe {
+				return false, false, result
+			}
+			if !complete {
+				return false, false, formatSafe
+			}
+			if !regular {
+				return false, true, formatSafe
+			}
+			fieldEnd := field.Offset + field.Type.Size()
+			if i+1 < t.NumField() {
+				if fieldEnd != t.Field(i+1).Offset {
+					return false, true, formatSafe
+				}
+			} else if fieldEnd != t.Size() {
+				return false, true, formatSafe
+			}
+		}
+		return true, true, formatSafe
+	default:
+		return false, true, formatSafe
+	}
+}
+
+// reserveMapKeyHashWork accounts for the raw comparable representation that
+// MapIndex hashes. Formatting methods do not affect map hashing, so this walk
+// deliberately ignores them and follows arrays, structs, interfaces, and
+// string payloads as the runtime hash does.
+func reserveMapKeyHashWork(v reflect.Value, work *int) formatResult {
+	var typeWork int
+	return reserveMapKeyHashWorkWithTypeBudget(v, 0, work, &typeWork)
+}
+
+func reserveMapKeyHashWorkWithTypeBudget(
+	v reflect.Value,
+	depth int,
+	work *int,
+	typeWork *int,
+) formatResult {
+	if !v.IsValid() {
+		return formatSafe
+	}
+	for v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return formatSafe
+		}
+		v = v.Elem()
+		depth++
+	}
+	switch v.Kind() {
+	case reflect.String:
+		if !reserveByteWork(len(v.String()), work) {
+			return formatWorkLimit
+		}
+		return formatSafe
+	case reflect.Array, reflect.Struct:
+		if v.Kind() == reflect.Array && v.Len() == 0 ||
+			v.Kind() == reflect.Struct && v.NumField() == 0 {
+			return formatSafe
+		}
+		regular, complete, result := mapKeyUsesRegularMemoryHash(
+			v.Type(), typeWork, work,
+		)
+		if result != formatSafe {
+			return result
+		}
+		if complete && regular {
+			if !reserveValueCopyWork(v.Type(), 1, work) {
+				return formatWorkLimit
+			}
+			return formatSafe
+		}
+	}
+
+	switch v.Kind() {
+	case reflect.Array:
+		if v.Len() == 0 {
+			return formatSafe
+		}
+		if depth >= maxTraversalDepth {
+			return formatDepthLimit
+		}
+		if !reserveAggregateWork(work, v.Len(), 1) {
+			return formatWorkLimit
+		}
+		for i := range v.Len() {
+			if result := reserveMapKeyHashWorkWithTypeBudget(
+				v.Index(i), depth+1, work, typeWork,
+			); result != formatSafe {
+				return result
+			}
+		}
+	case reflect.Struct:
+		if v.NumField() == 0 {
+			return formatSafe
+		}
+		if depth >= maxTraversalDepth {
+			return formatDepthLimit
+		}
+		if !reserveAggregateWork(work, v.NumField(), 1) {
+			return formatWorkLimit
+		}
+		for i := range v.NumField() {
+			if v.Type().Field(i).Name == "_" {
+				continue
+			}
+			if result := reserveMapKeyHashWorkWithTypeBudget(
+				v.Field(i), depth+1, work, typeWork,
+			); result != formatSafe {
+				return result
+			}
+		}
+	}
+	return formatSafe
+}
+
 // convertValue converts various types to attribute.Value.
 func convertValue(v any) attribute.Value {
 	// See internal/shared/logutil/DESIGN.md before changing conversion or
 	// cycle-detection behavior.
+	var fastPathWork *int
 	// Keep this switch inline wherever used; extracting it into a helper regresses hot paths.
 	switch val := v.(type) {
+	case nil:
+		return attribute.Value{}
 	case bool:
 		return attribute.BoolValue(val)
 	case string:
@@ -314,6 +611,9 @@ func convertValue(v any) attribute.Value {
 	case time.Time:
 		return attribute.Int64Value(val.UnixNano())
 	case []byte:
+		if fastPathWork != nil && !reserveByteWork(len(val), fastPathWork) {
+			return attribute.StringValue(workLimitMarker)
+		}
 		return attribute.ByteSliceValue(val)
 	case error:
 		return attribute.StringValue(val.Error())
@@ -328,99 +628,107 @@ func convertValue(v any) attribute.Value {
 	val := reflect.ValueOf(v)
 	switch t.Kind() {
 	case reflect.Struct:
-		return convertStructValue(v, val)
+		var work int
+		return convertStructValue(v, val, &work)
 	case reflect.Slice, reflect.Array:
 		if val.Len() == 0 {
 			return attribute.SliceValue()
 		}
-		if !kindCanRevisit(t.Elem().Kind()) {
-			items := make([]attribute.Value, 0, val.Len())
-			for i := range val.Len() {
-				items = append(items, convertValue(val.Index(i).Interface()))
-			}
-			return attribute.SliceValue(items...)
-		}
+		return convertRootSliceOrArrayValue(t, val)
 	case reflect.Map:
 		if val.Len() == 0 {
 			return attribute.MapValue()
 		}
-		if !kindCanRevisit(t.Elem().Kind()) {
-			kvs := make([]attribute.KeyValue, 0, val.Len())
-			for _, k := range val.MapKeys() {
-				var key string
-				switch k.Kind() {
-				case reflect.String:
-					key = k.String()
-				default:
-					if result := checkFormatting(k); result != formatSafe {
-						key = result.marker()
-					} else {
-						key = fmt.Sprintf("%+v", k.Interface())
-					}
-				}
-				kvs = append(kvs, attribute.KeyValue{
-					Key:   attribute.Key(key),
-					Value: convertValue(val.MapIndex(k).Interface()),
-				})
-			}
-			return attribute.MapValue(kvs...)
-		}
+		return convertRootMapValue(t, val)
 	case reflect.Pointer:
 		return convertRootPointerValue(val)
 	default:
 		return convertUnhandledValue(v, t)
 	}
-	// Keep tracker storage in a separate stack frame so scalar and statically
-	// non-recursive paths do not reserve its inline array.
-	return convertValueRoot(t, val)
 }
 
-// convertValueRoot starts path tracking for a potentially recursive map, slice,
-// or array root.
-func convertValueRoot(t reflect.Type, val reflect.Value) attribute.Value {
-	var visited visitTracker
-	if t.Kind() == reflect.Map {
-		visited.inline[0] = visitKey{typ: t, ptr: val.UnsafePointer()}
-		visited.identityDepth = 1
-		kvs := make([]attribute.KeyValue, 0, val.Len())
-		for _, k := range val.MapKeys() {
-			var key string
-			switch k.Kind() {
-			case reflect.String:
-				key = k.String()
-			default:
-				if result := checkFormatting(k); result != formatSafe {
-					key = result.marker()
-				} else {
-					key = fmt.Sprintf("%+v", k.Interface())
-				}
-			}
-			kvs = append(kvs, attribute.KeyValue{
-				Key:   attribute.Key(key),
-				Value: convertValueWithTracker(val.MapIndex(k).Interface(), &visited),
-			})
+// convertRootSliceOrArrayValue keeps collection state out of exact scalar and
+// empty-collection stack frames.
+func convertRootSliceOrArrayValue(t reflect.Type, val reflect.Value) attribute.Value {
+	var work int
+	if !kindCanRevisit(t.Elem().Kind()) {
+		if !reserveAggregateWork(&work, val.Len(), 1) {
+			return attribute.StringValue(workLimitMarker)
 		}
-		return attribute.MapValue(kvs...)
+		items := make([]attribute.Value, 0, val.Len())
+		for i := range val.Len() {
+			items = append(items, convertReflectChildWithWork(val.Index(i), &work))
+		}
+		return attribute.SliceValue(items...)
 	}
-
-	// Slices have identities; arrays are values. convertPointerArray tracks the
-	// final pointer that exposes an array instead.
-	if t.Kind() == reflect.Slice {
-		visited.inline[0] = visitKey{typ: t, ptr: val.UnsafePointer(), len: val.Len()}
-		visited.identityDepth = 1
-	}
-	items := make([]attribute.Value, 0, val.Len())
-	for i := range val.Len() {
-		items = append(items, convertValueWithTracker(val.Index(i).Interface(), &visited))
-	}
-	return attribute.SliceValue(items...)
+	return convertValueRoot(t, val, &work)
 }
 
-// convertValueWithTracker converts v while preserving the current active path
-// and enforcing the recursive traversal bound.
-func convertValueWithTracker(v any, visited *visitTracker) attribute.Value {
+// convertRootMapValue keeps map iteration state out of exact scalar and
+// empty-map stack frames.
+func convertRootMapValue(t reflect.Type, val reflect.Value) attribute.Value {
+	var work int
+	if kindCanRevisit(t.Elem().Kind()) {
+		return convertValueRoot(t, val, &work)
+	}
+	if !reserveAggregateWork(&work, val.Len(), 1) {
+		return attribute.StringValue(workLimitMarker)
+	}
+	if !reserveValueCopyWork(t.Key(), val.Len(), &work) {
+		return attribute.StringValue(workLimitMarker)
+	}
+	stringKey := t.Key().Kind() == reflect.String
+	keys := val.MapKeys()
+	kvs := make([]attribute.KeyValue, 0, val.Len())
+	for _, k := range keys {
+		var key string
+		keyResult := formatSafe
+		if stringKey {
+			if val.Len() > 1 && !reserveByteWork(k.Len(), &work) {
+				keyResult = formatWorkLimit
+				key = workLimitMarker
+			} else {
+				key = k.String()
+			}
+		} else if keyResult = checkFormattingWithBudgetRoot(k, &work); keyResult != formatSafe {
+			key = keyResult.marker()
+		} else {
+			key = fmt.Sprintf("%+v", k.Interface())
+		}
+		var value attribute.Value
+		if conversionValueHitsDepthLimit(t.Elem(), 0) {
+			value = attribute.StringValue(depthLimitMarker)
+		} else {
+			hashResult := formatSafe
+			if stringKey {
+				if !reserveByteWork(k.Len(), &work) {
+					hashResult = formatWorkLimit
+				}
+			} else {
+				hashResult = reserveMapKeyHashWork(k, &work)
+			}
+			switch {
+			case hashResult != formatSafe:
+				value = attribute.StringValue(hashResult.marker())
+			case !reserveValueCopyWork(t.Elem(), 1, &work):
+				value = attribute.StringValue(workLimitMarker)
+			default:
+				value = convertReflectChildWithWork(val.MapIndex(k), &work)
+			}
+		}
+		kvs = append(kvs, attribute.KeyValue{Key: attribute.Key(key), Value: value})
+	}
+	return attribute.MapValue(kvs...)
+}
+
+// convertValueWithWork converts a statically non-recursive child while sharing
+// its top-level conversion's traversal-work budget.
+func convertValueWithWork(v any, work *int) attribute.Value {
+	fastPathWork := work
 	// Keep this switch inline wherever used; extracting it into a helper regresses hot paths.
 	switch val := v.(type) {
+	case nil:
+		return attribute.Value{}
 	case bool:
 		return attribute.BoolValue(val)
 	case string:
@@ -464,6 +772,297 @@ func convertValueWithTracker(v any, visited *visitTracker) attribute.Value {
 	case time.Time:
 		return attribute.Int64Value(val.UnixNano())
 	case []byte:
+		if fastPathWork != nil && !reserveByteWork(len(val), fastPathWork) {
+			return attribute.StringValue(workLimitMarker)
+		}
+		return attribute.ByteSliceValue(val)
+	case error:
+		return attribute.StringValue(val.Error())
+	case attribute.Value:
+		return val
+	}
+
+	t := reflect.TypeOf(v)
+	if t == nil {
+		return attribute.Value{}
+	}
+	val := reflect.ValueOf(v)
+	switch t.Kind() {
+	case reflect.Struct:
+		return convertStructValue(v, val, work)
+	case reflect.Slice, reflect.Array:
+		if val.Len() == 0 {
+			return attribute.SliceValue()
+		}
+		if !kindCanRevisit(t.Elem().Kind()) {
+			if !reserveAggregateWork(work, val.Len(), 1) {
+				return attribute.StringValue(workLimitMarker)
+			}
+			items := make([]attribute.Value, 0, val.Len())
+			for i := range val.Len() {
+				items = append(items, convertReflectChildWithWork(val.Index(i), work))
+			}
+			return attribute.SliceValue(items...)
+		}
+	case reflect.Map:
+		if val.Len() == 0 {
+			return attribute.MapValue()
+		}
+		if !kindCanRevisit(t.Elem().Kind()) {
+			if !reserveAggregateWork(work, val.Len(), 1) {
+				return attribute.StringValue(workLimitMarker)
+			}
+			if !reserveValueCopyWork(t.Key(), val.Len(), work) {
+				return attribute.StringValue(workLimitMarker)
+			}
+			stringKey := t.Key().Kind() == reflect.String
+			keys := val.MapKeys()
+			kvs := make([]attribute.KeyValue, 0, val.Len())
+			for _, k := range keys {
+				var key string
+				keyResult := formatSafe
+				if stringKey {
+					if val.Len() > 1 && !reserveByteWork(k.Len(), work) {
+						keyResult = formatWorkLimit
+						key = workLimitMarker
+					} else {
+						key = k.String()
+					}
+				} else {
+					if keyResult = checkFormattingWithBudgetRoot(k, work); keyResult != formatSafe {
+						key = keyResult.marker()
+					} else {
+						key = fmt.Sprintf("%+v", k.Interface())
+					}
+				}
+				var value attribute.Value
+				if conversionValueHitsDepthLimit(t.Elem(), 0) {
+					value = attribute.StringValue(depthLimitMarker)
+				} else {
+					hashResult := formatSafe
+					if stringKey {
+						if !reserveByteWork(k.Len(), work) {
+							hashResult = formatWorkLimit
+						}
+					} else {
+						hashResult = reserveMapKeyHashWork(k, work)
+					}
+					switch {
+					case hashResult != formatSafe:
+						value = attribute.StringValue(hashResult.marker())
+					case !reserveValueCopyWork(t.Elem(), 1, work):
+						value = attribute.StringValue(workLimitMarker)
+					default:
+						value = convertReflectChildWithWork(val.MapIndex(k), work)
+					}
+				}
+				kvs = append(kvs, attribute.KeyValue{
+					Key:   attribute.Key(key),
+					Value: value,
+				})
+			}
+			return attribute.MapValue(kvs...)
+		}
+	}
+	if kindCanRevisit(t.Kind()) {
+		return convertValueRoot(t, val, work)
+	}
+	return convertUnhandledValueWithWork(v, t, work)
+}
+
+// convertReflectChildWithWork checks by-value aggregates before materializing
+// them while retaining the lightweight direct-conversion path.
+func convertReflectChildWithWork(val reflect.Value, work *int) attribute.Value {
+	switch val.Kind() {
+	case reflect.Array:
+		if val.CanAddr() && !reserveValueCopyWork(val.Type(), 1, work) {
+			return attribute.StringValue(workLimitMarker)
+		}
+	case reflect.Struct:
+		return convertReflectedStructValue(val, work)
+	}
+	return convertValueWithWork(val.Interface(), work)
+}
+
+// convertReflectChildWithTracker avoids copying an array until its full fixed
+// representation fits. It snapshots the array after reservation to preserve
+// the value semantics of the previous Interface-based conversion.
+func convertReflectChildWithTracker(val reflect.Value, visited *visitTracker) attribute.Value {
+	if val.Kind() != reflect.Array {
+		if val.Kind() == reflect.Struct {
+			visited.conversionDepth++
+			result := convertReflectedStructValue(val, &visited.work)
+			visited.conversionDepth--
+			return result
+		}
+		return convertValueWithTracker(val.Interface(), visited)
+	}
+
+	if val.Type().Implements(errorType) {
+		if val.CanAddr() && !reserveValueCopyWork(val.Type(), 1, &visited.work) {
+			return attribute.StringValue(workLimitMarker)
+		}
+		return attribute.StringValue(val.Interface().(error).Error())
+	}
+	if val.Len() == 0 {
+		return attribute.SliceValue()
+	}
+	if visited.conversionDepth >= maxTraversalDepth &&
+		kindCanRevisit(val.Type().Elem().Kind()) {
+		return attribute.StringValue(depthLimitMarker)
+	}
+	if !reserveAggregateWork(&visited.work, val.Len(), 1) {
+		return attribute.StringValue(workLimitMarker)
+	}
+	if val.CanAddr() && !reserveValueCopyWork(val.Type(), 1, &visited.work) {
+		return attribute.StringValue(workLimitMarker)
+	}
+
+	// The pre-check above bounds this copy, and taking it after reservation keeps
+	// mutations made by an earlier element from changing later array elements.
+	val = reflect.ValueOf(val.Interface())
+	visited.conversionDepth++
+	items := make([]attribute.Value, 0, val.Len())
+	for i := range val.Len() {
+		items = append(items, convertReflectChildWithTracker(val.Index(i), visited))
+	}
+	visited.conversionDepth--
+	return attribute.SliceValue(items...)
+}
+
+// convertValueRoot starts path tracking for a potentially recursive map, slice,
+// or array root.
+func convertValueRoot(t reflect.Type, val reflect.Value, work *int) attribute.Value {
+	if !reserveAggregateWork(work, val.Len(), 1) {
+		return attribute.StringValue(workLimitMarker)
+	}
+	visited := visitTracker{work: *work}
+	if t.Kind() == reflect.Map {
+		key := visitKey{typ: t, ptr: val.UnsafePointer()}
+		visited.inline[0] = key
+		visited.identityDepth = 1
+		if !reserveValueCopyWork(t.Key(), val.Len(), &visited.work) {
+			*work = visited.work
+			return attribute.StringValue(workLimitMarker)
+		}
+		stringKey := t.Key().Kind() == reflect.String
+		keys := val.MapKeys()
+		kvs := make([]attribute.KeyValue, 0, val.Len())
+		for _, k := range keys {
+			var key string
+			keyResult := formatSafe
+			if stringKey {
+				if val.Len() > 1 && !reserveByteWork(k.Len(), &visited.work) {
+					keyResult = formatWorkLimit
+					key = workLimitMarker
+				} else {
+					key = k.String()
+				}
+			} else {
+				if keyResult = checkFormattingWithBudgetRoot(k, &visited.work); keyResult != formatSafe {
+					key = keyResult.marker()
+				} else {
+					key = fmt.Sprintf("%+v", k.Interface())
+				}
+			}
+			var value attribute.Value
+			if conversionValueHitsDepthLimit(t.Elem(), visited.conversionDepth) {
+				value = attribute.StringValue(depthLimitMarker)
+			} else {
+				hashResult := formatSafe
+				if stringKey {
+					if !reserveByteWork(k.Len(), &visited.work) {
+						hashResult = formatWorkLimit
+					}
+				} else {
+					hashResult = reserveMapKeyHashWork(k, &visited.work)
+				}
+				switch {
+				case hashResult != formatSafe:
+					value = attribute.StringValue(hashResult.marker())
+				case !reserveValueCopyWork(t.Elem(), 1, &visited.work):
+					value = attribute.StringValue(workLimitMarker)
+				default:
+					value = convertReflectChildWithTracker(val.MapIndex(k), &visited)
+				}
+			}
+			kvs = append(kvs, attribute.KeyValue{
+				Key:   attribute.Key(key),
+				Value: value,
+			})
+		}
+		*work = visited.work
+		return attribute.MapValue(kvs...)
+	}
+
+	// Slices have identities; arrays are values. convertPointerArray tracks the
+	// final pointer that exposes an array instead.
+	if t.Kind() == reflect.Slice {
+		visited.inline[0] = visitKey{typ: t, ptr: val.UnsafePointer(), len: val.Len()}
+		visited.identityDepth = 1
+	}
+	items := make([]attribute.Value, 0, val.Len())
+	for i := range val.Len() {
+		items = append(items, convertReflectChildWithTracker(val.Index(i), &visited))
+	}
+	*work = visited.work
+	return attribute.SliceValue(items...)
+}
+
+// convertValueWithTracker converts v while preserving the current active path
+// and enforcing the traversal bounds.
+func convertValueWithTracker(v any, visited *visitTracker) attribute.Value {
+	fastPathWork := &visited.work
+	// Keep this switch inline wherever used; extracting it into a helper regresses hot paths.
+	switch val := v.(type) {
+	case nil:
+		return attribute.Value{}
+	case bool:
+		return attribute.BoolValue(val)
+	case string:
+		return attribute.StringValue(val)
+	case int:
+		return attribute.Int64Value(int64(val))
+	case int8:
+		return attribute.Int64Value(int64(val))
+	case int16:
+		return attribute.Int64Value(int64(val))
+	case int32:
+		return attribute.Int64Value(int64(val))
+	case int64:
+		return attribute.Int64Value(val)
+	case uint:
+		return convertUintValue(uint64(val))
+	case uint8:
+		return attribute.Int64Value(int64(val))
+	case uint16:
+		return attribute.Int64Value(int64(val))
+	case uint32:
+		return attribute.Int64Value(int64(val))
+	case uint64:
+		return convertUintValue(val)
+	case uintptr:
+		return convertUintValue(uint64(val))
+	case float32:
+		return attribute.Float64Value(float64(val))
+	case float64:
+		return attribute.Float64Value(val)
+	case time.Duration:
+		return attribute.Int64Value(val.Nanoseconds())
+	case complex64:
+		r := attribute.Float64("r", real(complex128(val)))
+		i := attribute.Float64("i", imag(complex128(val)))
+		return attribute.MapValue(r, i)
+	case complex128:
+		r := attribute.Float64("r", real(val))
+		i := attribute.Float64("i", imag(val))
+		return attribute.MapValue(r, i)
+	case time.Time:
+		return attribute.Int64Value(val.UnixNano())
+	case []byte:
+		if fastPathWork != nil && !reserveByteWork(len(val), fastPathWork) {
+			return attribute.StringValue(workLimitMarker)
+		}
 		return attribute.ByteSliceValue(val)
 	case error:
 		return attribute.StringValue(val.Error())
@@ -509,7 +1108,7 @@ func convertValueWithTracker(v any, visited *visitTracker) attribute.Value {
 func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visitTracker) attribute.Value {
 	switch t.Kind() {
 	case reflect.Struct:
-		return convertStructValue(v, val)
+		return convertStructValue(v, val, &visited.work)
 	case reflect.Slice, reflect.Array:
 		if val.Len() == 0 {
 			return attribute.SliceValue()
@@ -528,9 +1127,15 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 				return attribute.StringValue(cycleMarker)
 			}
 		}
+		if !reserveAggregateWork(&visited.work, val.Len(), 1) {
+			if tracked {
+				visited.pop(key)
+			}
+			return attribute.StringValue(workLimitMarker)
+		}
 		items := make([]attribute.Value, 0, val.Len())
 		for i := range val.Len() {
-			items = append(items, convertValueWithTracker(val.Index(i).Interface(), visited))
+			items = append(items, convertReflectChildWithTracker(val.Index(i), visited))
 		}
 		if tracked {
 			visited.pop(key)
@@ -554,22 +1159,62 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 				return attribute.StringValue(cycleMarker)
 			}
 		}
+		if !reserveAggregateWork(&visited.work, val.Len(), 1) {
+			if tracked {
+				visited.pop(key)
+			}
+			return attribute.StringValue(workLimitMarker)
+		}
+		if !reserveValueCopyWork(t.Key(), val.Len(), &visited.work) {
+			if tracked {
+				visited.pop(key)
+			}
+			return attribute.StringValue(workLimitMarker)
+		}
+		stringKey := t.Key().Kind() == reflect.String
+		keys := val.MapKeys()
 		kvs := make([]attribute.KeyValue, 0, val.Len())
-		for _, k := range val.MapKeys() {
+		for _, k := range keys {
 			var key string
-			switch k.Kind() {
-			case reflect.String:
-				key = k.String()
-			default:
-				if result := checkFormatting(k); result != formatSafe {
-					key = result.marker()
+			keyResult := formatSafe
+			if stringKey {
+				if val.Len() > 1 && !reserveByteWork(k.Len(), &visited.work) {
+					keyResult = formatWorkLimit
+					key = workLimitMarker
+				} else {
+					key = k.String()
+				}
+			} else {
+				if keyResult = checkFormattingWithBudgetRoot(k, &visited.work); keyResult != formatSafe {
+					key = keyResult.marker()
 				} else {
 					key = fmt.Sprintf("%+v", k.Interface())
 				}
 			}
+			var value attribute.Value
+			if conversionValueHitsDepthLimit(t.Elem(), visited.conversionDepth) {
+				value = attribute.StringValue(depthLimitMarker)
+			} else {
+				hashResult := formatSafe
+				if stringKey {
+					if !reserveByteWork(k.Len(), &visited.work) {
+						hashResult = formatWorkLimit
+					}
+				} else {
+					hashResult = reserveMapKeyHashWork(k, &visited.work)
+				}
+				switch {
+				case hashResult != formatSafe:
+					value = attribute.StringValue(hashResult.marker())
+				case !reserveValueCopyWork(t.Elem(), 1, &visited.work):
+					value = attribute.StringValue(workLimitMarker)
+				default:
+					value = convertReflectChildWithTracker(val.MapIndex(k), visited)
+				}
+			}
 			kvs = append(kvs, attribute.KeyValue{
 				Key:   attribute.Key(key),
-				Value: convertValueWithTracker(val.MapIndex(k).Interface(), visited),
+				Value: value,
 			})
 		}
 		if tracked {
@@ -580,15 +1225,18 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 		if val.IsNil() {
 			return attribute.Value{}
 		}
-		next := val.Elem().Interface()
-		if next == nil {
-			return attribute.Value{}
+		next := val.Elem()
+		for next.Kind() == reflect.Interface {
+			if next.IsNil() {
+				return attribute.Value{}
+			}
+			next = next.Elem()
 		}
-		kind := reflect.TypeOf(next).Kind()
-		if kind != reflect.Array && kind != reflect.Pointer {
-			return convertValueWithTracker(next, visited)
+		switch next.Kind() {
+		case reflect.Array, reflect.Map, reflect.Pointer, reflect.Slice, reflect.Struct:
+			return convertPointerValue(val, visited)
 		}
-		return convertPointerValue(val, visited)
+		return convertValueWithTracker(next.Interface(), visited)
 	}
 
 	// Try to handle this as gracefully as possible.
@@ -596,16 +1244,55 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 	// Don't panic here. it is preferable to have user's open issue
 	// asking why their attributes have a "unhandled: " prefix than
 	// say that their code is panicking.
-	return convertUnhandledValue(v, t)
+	return convertUnhandledValueWithWork(v, t, &visited.work)
 }
 
 // convertStructValue safely formats a struct or replaces it with the reason
 // formatting cannot complete.
-func convertStructValue(v any, val reflect.Value) attribute.Value {
-	if result := checkFormatting(val); result != formatSafe {
+func convertStructValue(v any, val reflect.Value, work *int) attribute.Value {
+	if result := checkFormattingWithBudgetRoot(val, work); result != formatSafe {
 		return attribute.StringValue(result.marker())
 	}
 	return attribute.StringValue(fmt.Sprintf("%+v", v))
+}
+
+// convertReflectedStructValue checks val before materializing what may be a
+// large struct reached through a pointer chain.
+func convertReflectedStructValue(val reflect.Value, work *int) attribute.Value {
+	switch val.Type() {
+	case attributeValueType:
+		if val.CanAddr() && !reserveValueCopyWork(val.Type(), 1, work) {
+			return attribute.StringValue(workLimitMarker)
+		}
+		return val.Interface().(attribute.Value)
+	case timeType:
+		if val.CanAddr() && !reserveValueCopyWork(val.Type(), 1, work) {
+			return attribute.StringValue(workLimitMarker)
+		}
+		return attribute.Int64Value(val.Interface().(time.Time).UnixNano())
+	}
+	if val.Type().Implements(errorType) {
+		if val.CanAddr() && !reserveValueCopyWork(val.Type(), 1, work) {
+			return attribute.StringValue(workLimitMarker)
+		}
+		return attribute.StringValue(val.Interface().(error).Error())
+	}
+	// Materialize an addressable struct once before modeling fmt. This matches
+	// the value snapshot passed to Sprintf and prevents charging its now-
+	// unaddressable fixed fields again during the preflight.
+	if val.CanAddr() {
+		if formattingValueHitsDepthLimit(val.Type(), 0, true) {
+			return attribute.StringValue(depthLimitMarker)
+		}
+		if !reserveValueCopyWork(val.Type(), 1, work) {
+			return attribute.StringValue(workLimitMarker)
+		}
+		val = reflect.ValueOf(val.Interface())
+	}
+	if result := checkFormattingWithBudgetRoot(val, work); result != formatSafe {
+		return attribute.StringValue(result.marker())
+	}
+	return attribute.StringValue(fmt.Sprintf("%+v", val.Interface()))
 }
 
 // convertUnhandledValue preserves an unsupported value in a diagnostic string.
@@ -613,17 +1300,45 @@ func convertUnhandledValue(v any, t reflect.Type) attribute.Value {
 	return attribute.StringValue(fmt.Sprintf("unhandled: (%s) %+v", t, v))
 }
 
+// convertUnhandledValueWithWork accounts for variable-length string payloads
+// copied by diagnostic formatting inside a larger conversion.
+func convertUnhandledValueWithWork(v any, t reflect.Type, work *int) attribute.Value {
+	if !reserveByteWork(len(t.String()), work) {
+		return attribute.StringValue(workLimitMarker)
+	}
+	if t.Kind() == reflect.String && !typeHasFormattingMethod(t) &&
+		!reserveByteWork(len(reflect.ValueOf(v).String()), work) {
+		return attribute.StringValue(workLimitMarker)
+	}
+	return convertUnhandledValue(v, t)
+}
+
 // convertRootPointerValue handles a pointer before general path tracking starts.
 func convertRootPointerValue(val reflect.Value) attribute.Value {
 	if val.IsNil() {
 		return attribute.Value{}
 	}
-	v := val.Elem().Interface()
+	next := val.Elem()
+	for next.Kind() == reflect.Interface {
+		if next.IsNil() {
+			return attribute.Value{}
+		}
+		next = next.Elem()
+	}
+	switch next.Kind() {
+	case reflect.Array, reflect.Map, reflect.Pointer, reflect.Slice, reflect.Struct:
+		var visited visitTracker
+		return convertPointerValue(val, &visited)
+	}
+	v := next.Interface()
 	if v == nil {
 		return attribute.Value{}
 	}
+	var fastPathWork *int
 	// Keep this switch inline wherever used; extracting it into a helper regresses hot paths.
 	switch val := v.(type) {
+	case nil:
+		return attribute.Value{}
 	case bool:
 		return attribute.BoolValue(val)
 	case string:
@@ -667,17 +1382,16 @@ func convertRootPointerValue(val reflect.Value) attribute.Value {
 	case time.Time:
 		return attribute.Int64Value(val.UnixNano())
 	case []byte:
+		if fastPathWork != nil && !reserveByteWork(len(val), fastPathWork) {
+			return attribute.StringValue(workLimitMarker)
+		}
 		return attribute.ByteSliceValue(val)
 	case error:
 		return attribute.StringValue(val.Error())
 	case attribute.Value:
 		return val
 	}
-	kind := reflect.TypeOf(v).Kind()
-	if kind != reflect.Array && kind != reflect.Pointer {
-		return convertValue(v)
-	}
-	return convertPointerValue(val, nil)
+	return convertValue(v)
 }
 
 // convertPointerValue iteratively unwraps pointer/interface chains. Brent's
@@ -685,6 +1399,7 @@ func convertRootPointerValue(val reflect.Value) attribute.Value {
 // Containers track their own identities; only the final pointer before an
 // array needs to remain active while that array is converted.
 func convertPointerValue(current reflect.Value, visited *visitTracker) attribute.Value {
+	root := visited.identityDepth == 0 && visited.conversionDepth == 0
 	anchor := visitKey{typ: current.Type(), ptr: current.UnsafePointer()}
 	power, distance := 1, 0
 	checkError := false
@@ -704,18 +1419,26 @@ func convertPointerValue(current reflect.Value, visited *visitTracker) attribute
 		}
 
 		key := visitKey{typ: current.Type(), ptr: current.UnsafePointer()}
-		if visited != nil && visited.identityDepth != 0 && visited.contains(key) {
+		if visited.identityDepth != 0 && visited.contains(key) {
 			return attribute.StringValue(cycleMarker)
 		}
-
-		nextValue := current.Elem().Interface()
-		if nextValue == nil {
-			return attribute.Value{}
+		if !reserveWork(&visited.work, 1) {
+			return attribute.StringValue(workLimitMarker)
 		}
-		next := reflect.ValueOf(nextValue)
+
+		next := current.Elem()
+		for next.Kind() == reflect.Interface {
+			if next.IsNil() {
+				return attribute.Value{}
+			}
+			next = next.Elem()
+		}
 		if next.Kind() != reflect.Pointer {
 			if next.Kind() != reflect.Array {
-				terminal = nextValue
+				if next.Kind() == reflect.Struct {
+					return convertReflectedStructValue(next, &visited.work)
+				}
+				terminal = next.Interface()
 				break
 			}
 			return convertPointerArray(next, key, visited)
@@ -736,8 +1459,11 @@ func convertPointerValue(current reflect.Value, visited *visitTracker) attribute
 	}
 
 	v := terminal
+	fastPathWork := &visited.work
 	// Keep this switch inline wherever used; extracting it into a helper regresses hot paths.
 	switch val := v.(type) {
+	case nil:
+		return attribute.Value{}
 	case bool:
 		return attribute.BoolValue(val)
 	case string:
@@ -781,41 +1507,86 @@ func convertPointerValue(current reflect.Value, visited *visitTracker) attribute
 	case time.Time:
 		return attribute.Int64Value(val.UnixNano())
 	case []byte:
+		if fastPathWork != nil && !reserveByteWork(len(val), fastPathWork) {
+			return attribute.StringValue(workLimitMarker)
+		}
 		return attribute.ByteSliceValue(val)
 	case error:
 		return attribute.StringValue(val.Error())
 	case attribute.Value:
 		return val
 	}
-	if visited == nil {
-		return convertValue(v)
+	if root {
+		return convertValueWithWork(v, &visited.work)
 	}
 	return convertValueWithTracker(v, visited)
 }
 
 // convertPointerArray keeps the pointer exposing v active while converting the
 // array, allowing pointer-array cycles to be detected.
-func convertPointerArray(v reflect.Value, key visitKey, visited *visitTracker) attribute.Value {
+func convertPointerArray(
+	v reflect.Value,
+	key visitKey,
+	visited *visitTracker,
+) attribute.Value {
 	// Arrays have value semantics, so keep the pointer exposing the array active
 	// until its elements finish converting.
-	var root visitTracker
-	if visited == nil {
-		visited = &root
-	}
 	// convertPointerValue already established that key is not active.
+	if v.Type().Implements(errorType) {
+		if v.CanAddr() && !reserveValueCopyWork(v.Type(), 1, &visited.work) {
+			return attribute.StringValue(workLimitMarker)
+		}
+		return attribute.StringValue(v.Interface().(error).Error())
+	}
+	if v.Len() == 0 {
+		return attribute.SliceValue()
+	}
+	if visited.conversionDepth >= maxTraversalDepth && kindCanRevisit(v.Type().Elem().Kind()) {
+		return attribute.StringValue(depthLimitMarker)
+	}
+	if !reserveAggregateWork(&visited.work, v.Len(), 1) {
+		return attribute.StringValue(workLimitMarker)
+	}
+	if v.CanAddr() && !reserveValueCopyWork(v.Type(), 1, &visited.work) {
+		return attribute.StringValue(workLimitMarker)
+	}
 	if visited.overflow == nil && visited.identityDepth < inlineVisitCount {
 		visited.pushInline(key)
 	} else {
 		visited.pushSlow(key)
 	}
-	result := convertValueWithTracker(v.Interface(), visited)
+	// Preserve array value semantics after ensuring the copy cannot exceed the
+	// traversal budget.
+	v = reflect.ValueOf(v.Interface())
+	visited.conversionDepth++
+	items := make([]attribute.Value, 0, v.Len())
+	for i := range v.Len() {
+		items = append(items, convertReflectChildWithTracker(v.Index(i), visited))
+	}
+	visited.conversionDepth--
 	visited.pop(key)
-	return result
+	return attribute.SliceValue(items...)
 }
 
 // checkFormatting reports whether fmt can safely format v or would encounter a
-// cycle or the traversal-depth limit.
+// cycle or a traversal limit.
 func checkFormatting(v reflect.Value) formatResult {
+	var work int
+	return checkFormattingWithBudget(v, &work)
+}
+
+// checkFormattingWithBudget performs the formatting preflight within the work
+// budget of the top-level conversion.
+func checkFormattingWithBudget(v reflect.Value, work *int) formatResult {
+	return checkFormattingWithBudgetRoot(v, work)
+}
+
+// checkFormattingWithBudgetRoot performs one formatting preflight. A nested
+// formatting unit charges reflection copies needed at its root.
+func checkFormattingWithBudgetRoot(
+	v reflect.Value,
+	work *int,
+) formatResult {
 	for v.Kind() == reflect.Interface {
 		if v.IsNil() {
 			return formatSafe
@@ -828,15 +1599,100 @@ func checkFormatting(v reflect.Value) formatResult {
 		if !v.IsValid() {
 			return formatSafe
 		}
+		// fmt calls Interface on an extractable reflect.Value before checking
+		// methods, even when it will ultimately traverse the reflected value.
+		// Reserve that materialization once here, before any aggregate work.
+		if formattingValueHitsDepthLimit(v.Type(), 0, v.CanInterface()) {
+			return formatDepthLimit
+		}
+		if v.CanInterface() && v.CanAddr() &&
+			!reserveValueCopyWork(v.Type(), 1, work) {
+			return formatWorkLimit
+		}
 	}
 	t := v.Type()
+	if hasCallableFormattingMethod(v) {
+		return formatSafe
+	}
+	// fmt cannot recurse through an empty aggregate. Return before any other
+	// inspection so an unreachable element type cannot add work.
+	switch v.Kind() {
+	case reflect.Array, reflect.Map, reflect.Slice:
+		if v.Len() == 0 {
+			return formatSafe
+		}
+	case reflect.Struct:
+		if v.NumField() == 0 {
+			return formatSafe
+		}
+	case reflect.Pointer:
+		if v.IsNil() {
+			return formatSafe
+		}
+		elem := v.Elem()
+		switch elem.Kind() {
+		case reflect.Array, reflect.Map, reflect.Slice:
+			if elem.Len() == 0 {
+				return formatSafe
+			}
+		case reflect.Struct:
+			if elem.NumField() == 0 {
+				return formatSafe
+			}
+		}
+	}
+	// Both formatting walkers must reserve the root aggregate before examining
+	// its children. Make that reservation before the shallow type/value scans so
+	// a rejected wide value cannot make every sibling repeat uncharged work.
+	rootReserved := false
+	switch v.Kind() {
+	case reflect.Slice, reflect.Array:
+		if v.Len() != 0 {
+			if maxTraversalDepth <= 0 {
+				return formatDepthLimit
+			}
+			if !reserveAggregateWork(work, v.Len(), 1) {
+				return formatWorkLimit
+			}
+			rootReserved = true
+		}
+	case reflect.Map:
+		if v.Len() != 0 {
+			if maxTraversalDepth <= 0 {
+				return formatDepthLimit
+			}
+			if !reserveAggregateWork(work, v.Len(), 2) {
+				return formatWorkLimit
+			}
+			rootReserved = true
+		}
+	case reflect.Struct:
+		if v.NumField() != 0 {
+			if maxTraversalDepth <= 0 {
+				return formatDepthLimit
+			}
+			if !reserveAggregateWork(work, v.NumField(), 1) {
+				return formatWorkLimit
+			}
+			if !reserveStructFieldNameWork(t, work) {
+				return formatWorkLimit
+			}
+			rootReserved = true
+		}
+	}
 	if t.Kind() == reflect.Struct {
 		needsCheck := false
+		needsWork := false
 		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range v.NumField() {
 			field := v.Field(i)
 			switch field.Kind() {
-			case reflect.Array, reflect.Struct:
+			case reflect.Array:
+				needsWork = true
+				needsCheck = needsCheck ||
+					kindCanFormatRecurse(field.Type().Elem().Kind())
+			case reflect.Struct:
+				needsWork = true
 				needsCheck = true
 			case reflect.Interface:
 				for field.Kind() == reflect.Interface {
@@ -846,146 +1702,258 @@ func checkFormatting(v reflect.Value) formatResult {
 					field = field.Elem()
 				}
 				if field.Kind() != reflect.Interface {
-					needsCheck = kindCanFormatRecurse(field.Kind())
+					fieldNeedsWork := typeNeedsFormattingWork(field.Type())
+					needsCheck = needsCheck || kindCanFormatRecurse(field.Kind())
+					needsWork = needsWork || fieldNeedsWork
 				}
 			case reflect.Map:
+				needsWork = needsWork || field.Len() != 0
 				fieldType := field.Type()
-				needsCheck = kindCanFormatRecurse(fieldType.Key().Kind()) ||
+				needsCheck = needsCheck || kindCanFormatRecurse(fieldType.Key().Kind()) ||
 					kindCanFormatRecurse(fieldType.Elem().Kind())
 			case reflect.Slice:
-				needsCheck = kindCanFormatRecurse(field.Type().Elem().Kind())
-			}
-			if needsCheck {
-				break
+				needsWork = needsWork || field.Len() != 0
+				needsCheck = needsCheck ||
+					kindCanFormatRecurse(field.Type().Elem().Kind())
+			case reflect.String:
+				needsWork = needsWork || field.Len() != 0
 			}
 		}
-		if !needsCheck {
+		if !needsWork {
 			return formatSafe
 		}
-	}
-	if !formattingRootNeedsCheck(t) {
-		return formatSafe
-	}
-	return checkFormatValue(v, 0, nil)
-}
-
-// formattingRootNeedsCheck reports whether a root of type t needs the
-// value-level formatting safety check.
-func formattingRootNeedsCheck(t reflect.Type) bool {
-	if t.NumMethod() != 0 &&
-		(t.Implements(formatterType) || t.Implements(stringerType) || t.Implements(errorType)) {
-		// The value scan verifies that the reflected root is interfaceable before
-		// treating its method as terminal.
-		return true
-	}
-	if t.Kind() == reflect.Pointer {
-		elem := t.Elem()
-		switch elem.Kind() {
-		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
-			return formattingTypeNeedsCheckAtDepth(elem, nil, 1)
+		if !needsCheck {
+			return reserveFormattingWorkWithRoot(v, 0, work, rootReserved)
 		}
-		return false
 	}
-	return formattingTypeNeedsCheck(t)
-}
-
-// formattingTypeNeedsCheck reports whether values of t need the value-level
-// formatting safety check.
-func formattingTypeNeedsCheck(t reflect.Type) bool {
-	return formattingTypeNeedsCheckAtDepth(t, nil, 0)
-}
-
-// formattingTypeNeedsCheckAtDepth makes the same decision while tracking the
-// recursive type depth.
-func formattingTypeNeedsCheckAtDepth(t reflect.Type, visited *formatTypeVisit, depth int) bool {
-	typeVisits := 0
-	return formattingTypeNeedsCheckAtDepthWithBudget(t, visited, depth, &typeVisits)
-}
-
-// formattingTypeNeedsCheckAtDepthWithBudget performs the bounded type walk.
-func formattingTypeNeedsCheckAtDepthWithBudget(
-	t reflect.Type,
-	visited *formatTypeVisit,
-	depth int,
-	typeVisits *int,
-) bool {
-	if *typeVisits >= maxFormattingTypeVisits {
-		// This walk only decides whether to run the value-level preflight. Falling
-		// back is conservative and does not produce a marker by itself.
-		return true
-	}
-	(*typeVisits)++
-
-	if t.NumMethod() != 0 &&
-		(t.Implements(formatterType) || t.Implements(stringerType) || t.Implements(errorType)) {
-		// Whether fmt can call the method depends on the reflected value. Let the
-		// value-level scan make that decision without expanding the method's type.
-		return true
-	}
-	if depth >= maxTraversalDepth {
-		return kindCanFormatRecurse(t.Kind())
-	}
-	switch t.Kind() {
-	case reflect.Interface:
-		return true
-	case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
-		for visit := visited; visit != nil; visit = visit.parent {
-			if visit.typ == t {
-				// A recursive type is not itself a cycle, but it requires the
-				// value-level scan.
-				return true
-			}
-		}
-		current := formatTypeVisit{parent: visited, typ: t}
-		visited = &current
-	}
-
-	switch t.Kind() {
+	switch v.Kind() {
 	case reflect.Array, reflect.Slice:
-		return formattingTypeNeedsCheckAtDepthWithBudget(
-			t.Elem(), visited, depth+1, typeVisits,
-		)
-	case reflect.Map:
-		return formattingTypeNeedsCheckAtDepthWithBudget(
-			t.Key(), visited, depth+1, typeVisits,
-		) || formattingTypeNeedsCheckAtDepthWithBudget(
-			t.Elem(), visited, depth+1, typeVisits,
-		)
-	case reflect.Struct:
-		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
-		for i := range t.NumField() {
-			if formattingTypeNeedsCheckAtDepthWithBudget(
-				t.Field(i).Type, visited, depth+1, typeVisits,
-			) {
-				return true
-			}
+		if !kindCanFormatRecurse(t.Elem().Kind()) {
+			return reserveFormattingWorkWithRoot(v, 0, work, rootReserved)
 		}
+	case reflect.Map:
+		if !kindCanFormatRecurse(t.Key().Kind()) &&
+			!kindCanFormatRecurse(t.Elem().Kind()) {
+			return reserveFormattingWorkWithRoot(v, 0, work, rootReserved)
+		}
+	case reflect.Pointer:
+		switch v.Elem().Kind() {
+		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
+		default:
+			return reserveFormattingWorkWithRoot(v, 0, work, rootReserved)
+		}
+	case reflect.Struct:
+		// The shallow scan above selected identity-aware traversal.
+	default:
+		return reserveFormattingWorkWithRoot(v, 0, work, rootReserved)
 	}
-	return false
+	return checkFormatValueWithBudgetRoot(v, 0, nil, work, rootReserved)
 }
 
-// checkFormatValue mirrors fmt's aggregate traversal before fmt is called. It
-// stops at the first unsafe branch so depth exhaustion cannot amplify work
-// across a branching value.
-func checkFormatValue(v reflect.Value, depth int, visited *visitTracker) formatResult {
+// reserveFormattingWorkWithRoot performs the identity-free formatting walk. The
+// caller can pre-reserve the root aggregate so wide rejected values do not
+// repeat preliminary shallow inspection without consuming work.
+
+//nolint:revive // The caller can reserve the root before this recursive walk.
+func reserveFormattingWorkWithRoot(
+	v reflect.Value,
+	depth int,
+	work *int,
+	aggregateReserved bool,
+) formatResult {
 	if !v.IsValid() {
 		return formatSafe
 	}
 	t := v.Type()
-	if v.CanInterface() && t.NumMethod() != 0 {
-		// fmt invokes formatting methods instead of traversing the value.
-		// Formatting methods are currently treated as trusted user code.
-		if t.Implements(formatterType) || t.Implements(stringerType) || t.Implements(errorType) {
-			return formatSafe
+	if depth != 0 && v.CanInterface() && v.CanAddr() &&
+		(v.Kind() == reflect.Array || v.Kind() == reflect.Struct) {
+		if formattingValueHitsDepthLimit(t, depth, true) {
+			return formatDepthLimit
 		}
+		if !reserveValueCopyWork(t, 1, work) {
+			return formatWorkLimit
+		}
+	}
+	if hasCallableFormattingMethod(v) {
+		return formatSafe
 	}
 
 	switch v.Kind() {
+	case reflect.String:
+		if !reserveByteWork(len(v.String()), work) {
+			return formatWorkLimit
+		}
 	case reflect.Interface:
 		if v.IsNil() {
 			return formatSafe
 		}
-		return checkFormatValue(v.Elem(), depth+1, visited)
+		return reserveFormattingWorkWithRoot(v.Elem(), depth+1, work, false)
+	case reflect.Pointer:
+		if depth != 0 || v.IsNil() {
+			return formatSafe
+		}
+		elem := v.Elem()
+		switch elem.Kind() {
+		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
+			return reserveFormattingWorkWithRoot(elem, depth+1, work, false)
+		}
+	case reflect.Slice, reflect.Array:
+		if v.Len() == 0 {
+			return formatSafe
+		}
+		if depth >= maxTraversalDepth {
+			return formatDepthLimit
+		}
+		if !aggregateReserved && !reserveAggregateWork(work, v.Len(), 1) {
+			return formatWorkLimit
+		}
+		if !typeNeedsFormattingWork(t.Elem()) {
+			return formatSafe
+		}
+		for i := range v.Len() {
+			if result := reserveFormattingWorkWithRoot(
+				v.Index(i), depth+1, work, false,
+			); result != formatSafe {
+				return result
+			}
+		}
+	case reflect.Map:
+		if v.Len() == 0 {
+			return formatSafe
+		}
+		if depth >= maxTraversalDepth {
+			return formatDepthLimit
+		}
+		if !aggregateReserved && !reserveAggregateWork(work, v.Len(), 2) {
+			return formatWorkLimit
+		}
+		checkKey := typeNeedsFormattingWork(t.Key())
+		checkValue := typeNeedsFormattingWork(t.Elem())
+		if !checkKey && !checkValue {
+			return formatSafe
+		}
+		iter := v.MapRange()
+		for iter.Next() {
+			if checkKey {
+				if formattingValueHitsDepthLimit(t.Key(), depth+1, v.CanInterface()) {
+					return formatDepthLimit
+				}
+				if !reserveValueCopyWork(t.Key(), 1, work) {
+					return formatWorkLimit
+				}
+				if result := reserveFormattingWorkWithRoot(
+					iter.Key(), depth+1, work, false,
+				); result != formatSafe {
+					return result
+				}
+			}
+			if checkValue {
+				if formattingValueHitsDepthLimit(t.Elem(), depth+1, v.CanInterface()) {
+					return formatDepthLimit
+				}
+				if !reserveValueCopyWork(t.Elem(), 1, work) {
+					return formatWorkLimit
+				}
+				if result := reserveFormattingWorkWithRoot(
+					iter.Value(), depth+1, work, false,
+				); result != formatSafe {
+					return result
+				}
+			}
+		}
+	case reflect.Struct:
+		if v.NumField() == 0 {
+			return formatSafe
+		}
+		if depth >= maxTraversalDepth {
+			return formatDepthLimit
+		}
+		if !aggregateReserved {
+			if !reserveAggregateWork(work, v.NumField(), 1) ||
+				!reserveStructFieldNameWork(t, work) {
+				return formatWorkLimit
+			}
+		}
+		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
+		for i := range v.NumField() {
+			field := v.Field(i)
+			if typeNeedsFormattingWork(field.Type()) {
+				if result := reserveFormattingWorkWithRoot(
+					field, depth+1, work, false,
+				); result != formatSafe {
+					return result
+				}
+			}
+		}
+	}
+	return formatSafe
+}
+
+// checkFormatValue mirrors fmt's aggregate traversal before fmt is called. It
+// stops at the first unsafe branch and shares a monotonic traversal-work count
+// across siblings so a compact graph cannot amplify the preflight work.
+func checkFormatValue(v reflect.Value, depth int, visited *visitTracker) formatResult {
+	var work int
+	return checkFormatValueWithBudget(v, depth, visited, &work)
+}
+
+// checkFormatValueWithBudget performs the value preflight within budget.
+func checkFormatValueWithBudget(
+	v reflect.Value,
+	depth int,
+	visited *visitTracker,
+	work *int,
+) formatResult {
+	return checkFormatValueWithBudgetRoot(v, depth, visited, work, false)
+}
+
+// checkFormatValueWithBudgetRoot performs the identity-aware formatting walk.
+// aggregateReserved records a root reservation made before the shallow scan.
+
+//nolint:revive // The caller can reserve the root before this recursive walk.
+func checkFormatValueWithBudgetRoot(
+	v reflect.Value,
+	depth int,
+	visited *visitTracker,
+	work *int,
+	aggregateReserved bool,
+) formatResult {
+	if visited == nil {
+		var tracker visitTracker
+		return checkFormatValueWithBudgetRoot(
+			v, depth, &tracker, work, aggregateReserved,
+		)
+	}
+	if !v.IsValid() {
+		return formatSafe
+	}
+	t := v.Type()
+	if depth != 0 && v.CanInterface() && v.CanAddr() &&
+		(v.Kind() == reflect.Array || v.Kind() == reflect.Struct) {
+		if formattingValueHitsDepthLimit(t, depth, true) {
+			return formatDepthLimit
+		}
+		if !reserveValueCopyWork(t, 1, work) {
+			return formatWorkLimit
+		}
+	}
+	if hasCallableFormattingMethod(v) {
+		return formatSafe
+	}
+
+	switch v.Kind() {
+	case reflect.String:
+		if !reserveByteWork(len(v.String()), work) {
+			return formatWorkLimit
+		}
+		return formatSafe
+	case reflect.Interface:
+		if v.IsNil() {
+			return formatSafe
+		}
+		return checkFormatValueWithBudgetRoot(
+			v.Elem(), depth+1, visited, work, false,
+		)
 	case reflect.Pointer:
 		// fmt dereferences aggregate pointers only at the root; nested pointers
 		// are rendered as addresses.
@@ -995,26 +1963,21 @@ func checkFormatValue(v reflect.Value, depth int, visited *visitTracker) formatR
 		elem := v.Elem()
 		switch elem.Kind() {
 		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
-			return checkFormatValue(elem, depth+1, visited)
+			return checkFormatValueWithBudgetRoot(
+				elem, depth+1, visited, work, false,
+			)
 		}
 	case reflect.Slice:
 		if v.Len() == 0 {
 			return formatSafe
 		}
+		key := visitKey{typ: v.Type(), ptr: v.UnsafePointer(), len: v.Len()}
 		if depth >= maxTraversalDepth {
-			if visited != nil {
-				key := visitKey{typ: v.Type(), ptr: v.UnsafePointer(), len: v.Len()}
-				if visited.contains(key) {
-					return formatCycle
-				}
+			if visited.contains(key) {
+				return formatCycle
 			}
 			return formatDepthLimit
 		}
-		if visited == nil {
-			var tracker visitTracker
-			return checkFormatValue(v, depth, &tracker)
-		}
-		key := visitKey{typ: v.Type(), ptr: v.UnsafePointer(), len: v.Len()}
 		var added bool
 		if visited.overflow == nil && visited.identityDepth < inlineVisitCount {
 			added = visited.pushInline(key)
@@ -1024,8 +1987,14 @@ func checkFormatValue(v reflect.Value, depth int, visited *visitTracker) formatR
 		if !added {
 			return formatCycle
 		}
+		if !aggregateReserved && !reserveAggregateWork(work, v.Len(), 1) {
+			visited.pop(key)
+			return formatWorkLimit
+		}
 		for i := range v.Len() {
-			if result := checkFormatValue(v.Index(i), depth+1, visited); result != formatSafe {
+			if result := checkFormatValueWithBudgetRoot(
+				v.Index(i), depth+1, visited, work, false,
+			); result != formatSafe {
 				visited.pop(key)
 				return result
 			}
@@ -1036,20 +2005,13 @@ func checkFormatValue(v reflect.Value, depth int, visited *visitTracker) formatR
 		if v.Len() == 0 {
 			return formatSafe
 		}
+		key := visitKey{typ: v.Type(), ptr: v.UnsafePointer()}
 		if depth >= maxTraversalDepth {
-			if visited != nil {
-				key := visitKey{typ: v.Type(), ptr: v.UnsafePointer()}
-				if visited.contains(key) {
-					return formatCycle
-				}
+			if visited.contains(key) {
+				return formatCycle
 			}
 			return formatDepthLimit
 		}
-		if visited == nil {
-			var tracker visitTracker
-			return checkFormatValue(v, depth, &tracker)
-		}
-		key := visitKey{typ: v.Type(), ptr: v.UnsafePointer()}
 		var added bool
 		if visited.overflow == nil && visited.identityDepth < inlineVisitCount {
 			added = visited.pushInline(key)
@@ -1059,13 +2021,37 @@ func checkFormatValue(v reflect.Value, depth int, visited *visitTracker) formatR
 		if !added {
 			return formatCycle
 		}
+		if !aggregateReserved && !reserveAggregateWork(work, v.Len(), 2) {
+			visited.pop(key)
+			return formatWorkLimit
+		}
 		iter := v.MapRange()
 		for iter.Next() {
-			if result := checkFormatValue(iter.Key(), depth+1, visited); result != formatSafe {
+			if formattingValueHitsDepthLimit(t.Key(), depth+1, v.CanInterface()) {
+				visited.pop(key)
+				return formatDepthLimit
+			}
+			if !reserveValueCopyWork(t.Key(), 1, work) {
+				visited.pop(key)
+				return formatWorkLimit
+			}
+			if result := checkFormatValueWithBudgetRoot(
+				iter.Key(), depth+1, visited, work, false,
+			); result != formatSafe {
 				visited.pop(key)
 				return result
 			}
-			if result := checkFormatValue(iter.Value(), depth+1, visited); result != formatSafe {
+			if formattingValueHitsDepthLimit(t.Elem(), depth+1, v.CanInterface()) {
+				visited.pop(key)
+				return formatDepthLimit
+			}
+			if !reserveValueCopyWork(t.Elem(), 1, work) {
+				visited.pop(key)
+				return formatWorkLimit
+			}
+			if result := checkFormatValueWithBudgetRoot(
+				iter.Value(), depth+1, visited, work, false,
+			); result != formatSafe {
 				visited.pop(key)
 				return result
 			}
@@ -1073,22 +2059,41 @@ func checkFormatValue(v reflect.Value, depth int, visited *visitTracker) formatR
 		visited.pop(key)
 		return formatSafe
 	case reflect.Array:
-		if v.Len() != 0 && depth >= maxTraversalDepth {
+		if v.Len() == 0 {
+			return formatSafe
+		}
+		if depth >= maxTraversalDepth {
 			return formatDepthLimit
 		}
+		if !aggregateReserved && !reserveAggregateWork(work, v.Len(), 1) {
+			return formatWorkLimit
+		}
 		for i := range v.Len() {
-			if result := checkFormatValue(v.Index(i), depth+1, visited); result != formatSafe {
+			if result := checkFormatValueWithBudgetRoot(
+				v.Index(i), depth+1, visited, work, false,
+			); result != formatSafe {
 				return result
 			}
 		}
 		return formatSafe
 	case reflect.Struct:
-		if v.NumField() != 0 && depth >= maxTraversalDepth {
+		if v.NumField() == 0 {
+			return formatSafe
+		}
+		if depth >= maxTraversalDepth {
 			return formatDepthLimit
+		}
+		if !aggregateReserved {
+			if !reserveAggregateWork(work, v.NumField(), 1) ||
+				!reserveStructFieldNameWork(t, work) {
+				return formatWorkLimit
+			}
 		}
 		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range v.NumField() {
-			if result := checkFormatValue(v.Field(i), depth+1, visited); result != formatSafe {
+			if result := checkFormatValueWithBudgetRoot(
+				v.Field(i), depth+1, visited, work, false,
+			); result != formatSafe {
 				return result
 			}
 		}
