@@ -4,13 +4,19 @@
 package otelhttp
 
 import (
+	"context"
+	"errors"
+	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/felixge/httpsnoop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
@@ -187,18 +193,62 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if r.Pattern != "" {
 		span.SetName(h.spanNameFormatter(h.operation, r))
 	}
-
 	statusCode := rww.StatusCode()
 	bytesWritten := rww.BytesWritten()
-	span.SetStatus(h.semconv.Status(statusCode))
 	bytesRead := bw.BytesRead()
-	span.SetAttributes(h.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
+
+	spanCode, spanMsg := h.semconv.Status(statusCode)
+
+	// Select the failure cause once, in priority order: an observed response
+	// write error, a request-body read error, or the request context's error
+	// (e.g. the client disconnected mid-request). A detected failure is
+	// recorded as an error regardless of the HTTP status the handler set,
+	// since the response did not complete as the handler intended.
+	writeErr := rww.Error()
+	readErr := bw.Error()
+	cause := writeErr
+	if cause == nil {
+		// Reading a request body to completion reports io.EOF as the last read
+		// error; that is the success path and must not be classified as a
+		// failure.
+		if readErr != nil && !errors.Is(readErr, io.EOF) {
+			cause = readErr
+		}
+	}
+	if cause == nil {
+		cause = r.Context().Err()
+	}
+
+	if cause != nil {
+		spanCode = codes.Error
+	}
+	span.SetStatus(spanCode, spanMsg)
+
+	var errorType attribute.KeyValue
+	hasErrorType := cause != nil
+	if cause != nil {
+		errorType = errorTypeAttr(cause)
+	} else if statusCode >= http.StatusInternalServerError {
+		errorType = otelsemconv.ErrorTypeKey.String(strconv.Itoa(statusCode))
+		hasErrorType = true
+	}
+
+	attrs := h.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: statusCode,
 		ReadBytes:  bytesRead,
-		ReadError:  bw.Error(),
+		ReadError:  readErr,
 		WriteBytes: bytesWritten,
-		WriteError: rww.Error(),
-	})...)
+		WriteError: writeErr,
+	})
+	if hasErrorType {
+		attrs = append(attrs, errorType)
+	}
+	span.SetAttributes(attrs...)
+
+	additionalAttributes := append(labeler.Get(), h.metricAttributesFromRequest(r)...)
+	if hasErrorType {
+		additionalAttributes = append(additionalAttributes, errorType)
+	}
 
 	h.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
 		ServerName:   h.server,
@@ -206,7 +256,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		MetricAttributes: semconv.MetricAttributes{
 			Req:                  r,
 			StatusCode:           statusCode,
-			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(r)...),
+			AdditionalAttributes: additionalAttributes,
 		},
 		MetricData: semconv.MetricData{
 			RequestSize:     bytesRead,
@@ -221,4 +271,15 @@ func (h *middleware) metricAttributesFromRequest(r *http.Request) []attribute.Ke
 		attributeForRequest = h.metricAttributesFn(r)
 	}
 	return attributeForRequest
+}
+
+func errorTypeAttr(err error) attribute.KeyValue {
+	switch {
+	case errors.Is(err, context.Canceled):
+		return otelsemconv.ErrorTypeKey.String("context_canceled")
+	case errors.Is(err, context.DeadlineExceeded):
+		return otelsemconv.ErrorTypeKey.String("context_deadline_exceeded")
+	default:
+		return otelsemconv.ErrorType(err)
+	}
 }
