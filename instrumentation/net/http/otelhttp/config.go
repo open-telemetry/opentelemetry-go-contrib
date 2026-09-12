@@ -36,6 +36,8 @@ type config struct {
 	TracerProvider     trace.TracerProvider
 	MeterProvider      metric.MeterProvider
 	MetricAttributesFn func(*http.Request) []attribute.KeyValue
+
+	RedactedQueryParams []string
 }
 
 // Option interface used for setting optional config properties.
@@ -182,6 +184,32 @@ func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Opt
 func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 	return optionFunc(func(c *config) {
 		c.ClientTrace = f
+	})
+}
+
+// WithRedactedQueryParams returns an Option that replaces the value of the
+// given query parameters with "REDACTED" in the url.full attribute recorded
+// by the otelhttp Transport, for parameters present on the outbound request.
+// It has no effect on the request that is actually sent; only the recorded
+// span attribute is changed.
+//
+// Query parameters not listed are left as-is, but the query string as a
+// whole is re-encoded (parameters may be reordered, and their values
+// percent-encoded canonically) as a side effect of the redaction. Any
+// parameter pair that fails to parse (a malformed percent-escape, for
+// example) is dropped rather than passed through raw, so a malformed pair
+// elsewhere in the query can never cause a value that should be redacted to
+// leak unredacted.
+//
+// Use this for URLs that carry sensitive values in query parameters, such as
+// API tokens, that would otherwise be captured verbatim in span data.
+//
+// Like [WithFilter], keys accumulate across multiple calls to
+// WithRedactedQueryParams rather than the last call replacing the previous
+// ones.
+func WithRedactedQueryParams(keys ...string) Option {
+	return optionFunc(func(c *config) {
+		c.RedactedQueryParams = append(c.RedactedQueryParams, keys...)
 	})
 }
 
