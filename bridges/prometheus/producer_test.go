@@ -678,3 +678,70 @@ type gathererFunc func() ([]*dto.MetricFamily, error)
 func (f gathererFunc) Gather() ([]*dto.MetricFamily, error) {
 	return f()
 }
+
+func TestConvertersExplicitEpochTimestamp(t *testing.T) {
+	// Prometheus samples may explicitly carry a Unix epoch timestamp (0).
+	// The proto getter returns 0 both for an absent field and for this
+	// explicit value, so presence used to be detected with != 0 and epoch
+	// timestamps were replaced with the production time (#9539).
+	epoch := int64(0)
+	now := time.Unix(1720000000, 0) // deliberately not the epoch
+
+	metrics := []*dto.Metric{
+		{TimestampMs: &epoch, Gauge: &dto.Gauge{}},
+		{TimestampMs: &epoch, Untyped: &dto.Untyped{}},
+		{TimestampMs: &epoch, Counter: &dto.Counter{}},
+		{TimestampMs: &epoch, Summary: &dto.Summary{}},
+		{TimestampMs: &epoch, Histogram: &dto.Histogram{}},
+	}
+
+	expectEpoch := func(t *testing.T, name string, got time.Time) {
+		t.Helper()
+		if !got.Equal(time.UnixMilli(epoch)) {
+			t.Errorf("%s: expected explicit epoch timestamp %v, got %v", name, time.UnixMilli(epoch), got)
+		}
+	}
+
+	t.Run("gauge", func(t *testing.T) {
+		out := convertGauge(metrics[0:1], now)
+		expectEpoch(t, "gauge", out.DataPoints[0].Time)
+	})
+	t.Run("untyped", func(t *testing.T) {
+		out := convertUntyped(metrics[1:2], now)
+		expectEpoch(t, "untyped", out.DataPoints[0].Time)
+	})
+	t.Run("counter", func(t *testing.T) {
+		out := convertCounter(metrics[2:3], now)
+		expectEpoch(t, "counter", out.DataPoints[0].Time)
+	})
+	t.Run("summary", func(t *testing.T) {
+		out := convertSummary(metrics[3:4], now)
+		expectEpoch(t, "summary", out.DataPoints[0].Time)
+	})
+	t.Run("exponential histogram", func(t *testing.T) {
+		out := convertExponentialHistogram(metrics[4:5], now)
+		expectEpoch(t, "exponential histogram", out.DataPoints[0].Time)
+	})
+	t.Run("histogram", func(t *testing.T) {
+		out := convertHistogram(metrics[4:5], now)
+		expectEpoch(t, "histogram", out.DataPoints[0].Time)
+	})
+}
+
+func TestConvertersAbsentTimestampUsesProductionTime(t *testing.T) {
+	now := time.Unix(1720000000, 0)
+
+	metrics := []*dto.Metric{
+		{Gauge: &dto.Gauge{}},
+		{Counter: &dto.Counter{}},
+	}
+
+	gauge := convertGauge(metrics[0:1], now)
+	if !gauge.DataPoints[0].Time.Equal(now) {
+		t.Errorf("gauge: expected production time %v, got %v", now, gauge.DataPoints[0].Time)
+	}
+	counter := convertCounter(metrics[1:2], now)
+	if !counter.DataPoints[0].Time.Equal(now) {
+		t.Errorf("counter: expected production time %v, got %v", now, counter.DataPoints[0].Time)
+	}
+}

@@ -132,7 +132,9 @@ func convertGauge(metrics []*dto.Metric, now time.Time) metricdata.Gauge[float64
 			Time:       now,
 			Value:      m.GetGauge().GetValue(),
 		}
-		if m.GetTimestampMs() != 0 {
+		// The getter conflates an absent timestamp with an explicit Unix
+		// epoch (0), so presence must be checked on the field itself (#9539).
+		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelGauge.DataPoints[i] = dp
@@ -150,7 +152,9 @@ func convertUntyped(metrics []*dto.Metric, now time.Time) metricdata.Gauge[float
 			Time:       now,
 			Value:      m.GetUntyped().GetValue(),
 		}
-		if m.GetTimestampMs() != 0 {
+		// The getter conflates an absent timestamp with an explicit Unix
+		// epoch (0), so presence must be checked on the field itself (#9539).
+		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelGauge.DataPoints[i] = dp
@@ -178,7 +182,9 @@ func convertCounter(metrics []*dto.Metric, now time.Time) metricdata.Sum[float64
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if m.GetTimestampMs() != 0 {
+		// The getter conflates an absent timestamp with an explicit Unix
+		// epoch (0), so presence must be checked on the field itself (#9539).
+		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelCounter.DataPoints[i] = dp
@@ -215,8 +221,10 @@ func convertExponentialHistogram(metrics []*dto.Metric, now time.Time) metricdat
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if t := m.GetTimestampMs(); t != 0 {
-			dp.Time = time.UnixMilli(t)
+		// The getter conflates an absent timestamp with an explicit Unix
+		// epoch (0), so presence must be checked on the field itself (#9539).
+		if m.TimestampMs != nil {
+			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelExpHistogram.DataPoints[i] = dp
 	}
@@ -288,7 +296,9 @@ func convertHistogram(metrics []*dto.Metric, now time.Time) metricdata.Histogram
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if m.GetTimestampMs() != 0 {
+		// The getter conflates an absent timestamp with an explicit Unix
+		// epoch (0), so presence must be checked on the field itself (#9539).
+		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelHistogram.DataPoints[i] = dp
@@ -353,8 +363,10 @@ func convertSummary(metrics []*dto.Metric, now time.Time) metricdata.Summary {
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if t := m.GetTimestampMs(); t != 0 {
-			dp.Time = time.UnixMilli(t)
+		// The getter conflates an absent timestamp with an explicit Unix
+		// epoch (0), so presence must be checked on the field itself (#9539).
+		if m.TimestampMs != nil {
+			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelSummary.DataPoints[i] = dp
 	}
