@@ -14,6 +14,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` no longer include attributes from the server-side `Labeler`, preventing attributes such as `http.route` from leaking into outbound requests.
+  This is a breaking change for applications that use `ContextWithLabeler` to add custom client metric attributes: use `ContextWithClientLabeler` / `ClientLabelerFromContext` or the `WithMetricAttributesFn` option instead.
+  Server-side use of `ContextWithLabeler` / `LabelerFromContext` is unchanged. (#8924)
 - Stop emitting the legacy `http.read_bytes` and `http.wrote_bytes` attributes on the per-operation span events enabled by `WithMessageEvents` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The `read` and `write` events remain, while total body sizes continue to be recorded on the server span as `http.request.body.size` and `http.response.body.size` according to HTTP semantic conventions. (#9624)
 
