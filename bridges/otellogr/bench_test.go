@@ -84,6 +84,7 @@ func BenchmarkConvertValue(b *testing.B) {
 	shared := map[string]int{"one": 1}
 	integer := 42
 	slice := []int{1, 2, 3}
+	mutator := testMutatingError(func() {})
 
 	for _, tt := range []struct {
 		name  string
@@ -116,6 +117,14 @@ func BenchmarkConvertValue(b *testing.B) {
 		{name: "Struct", value: struct{ Value int }{Value: 42}},
 		{name: "StructInterface", value: struct{ Value any }{Value: 42}},
 		{name: "StructMap", value: struct{ Value map[string]int }{Value: shared}},
+		{name: "FormattingSnapshotMap", value: struct {
+			Mutator testMutatingError
+			Values  map[string]int
+		}{Mutator: mutator, Values: shared}},
+		{name: "FormattingSnapshotSlice", value: struct {
+			Mutator testMutatingError
+			Values  []any
+		}{Mutator: mutator, Values: []any{1, 2, 3}}},
 		{name: "StructRecursiveSlice", value: recursiveBenchmarkValue{
 			Values: []recursiveBenchmarkValue{{}},
 		}},

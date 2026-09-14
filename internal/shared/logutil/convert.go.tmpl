@@ -144,6 +144,41 @@ const (
 	formatWorkLimit
 )
 
+// formattingMutationState records whether fmt would both invoke user code and
+// reach state whose contents or runtime shape could change before it is
+// traversed. Such values need an isolated snapshot so method side effects
+// cannot invalidate the preflight.
+type formattingMutationState struct {
+	method      bool
+	shared      bool
+	replaceable bool
+	rootMutable bool
+}
+
+func (s *formattingMutationState) snapshotRequired() bool {
+	return s != nil && s.method && s.needsMethodScan()
+}
+
+func (s *formattingMutationState) needsMethodScan() bool {
+	return s != nil && (s.shared || s.rootMutable && s.replaceable)
+}
+
+func (s *formattingMutationState) observe(v reflect.Value) {
+	if s == nil {
+		return
+	}
+	switch v.Kind() {
+	case reflect.Interface, reflect.String:
+		s.replaceable = true
+	case reflect.Map:
+		s.replaceable = true
+		s.shared = s.shared || !v.IsNil()
+	case reflect.Slice:
+		s.replaceable = true
+		s.shared = s.shared || v.Len() != 0
+	}
+}
+
 // marker returns the attribute marker corresponding to r, or an empty string
 // when traversal is safe.
 func (r formatResult) marker() string {
@@ -679,21 +714,28 @@ func convertRootMapValue(t reflect.Type, val reflect.Value) attribute.Value {
 	}
 	stringKey := t.Key().Kind() == reflect.String
 	keys := val.MapKeys()
-	kvs := make([]attribute.KeyValue, 0, val.Len())
+	multiKey := len(keys) > 1
+	kvs := make([]attribute.KeyValue, 0, len(keys))
 	for _, k := range keys {
 		var key string
 		keyResult := formatSafe
 		if stringKey {
-			if val.Len() > 1 && !reserveByteWork(k.Len(), &work) {
+			if multiKey && !reserveByteWork(k.Len(), &work) {
 				keyResult = formatWorkLimit
 				key = workLimitMarker
 			} else {
 				key = k.String()
 			}
-		} else if keyResult = checkFormattingWithBudgetRoot(k, &work); keyResult != formatSafe {
-			key = keyResult.marker()
 		} else {
-			key = fmt.Sprintf("%+v", k.Interface())
+			prepared, result := prepareFormattingValue(
+				k, &work, formattingRootMayMutate(k),
+			)
+			keyResult = result
+			if keyResult != formatSafe {
+				key = keyResult.marker()
+			} else {
+				key = fmt.Sprintf("%+v", prepared.Interface())
+			}
 		}
 		var value attribute.Value
 		if conversionValueHitsDepthLimit(t.Elem(), 0) {
@@ -763,22 +805,27 @@ func convertValueWithWork(v any, work *int) attribute.Value {
 			}
 			stringKey := t.Key().Kind() == reflect.String
 			keys := val.MapKeys()
-			kvs := make([]attribute.KeyValue, 0, val.Len())
+			multiKey := len(keys) > 1
+			kvs := make([]attribute.KeyValue, 0, len(keys))
 			for _, k := range keys {
 				var key string
 				keyResult := formatSafe
 				if stringKey {
-					if val.Len() > 1 && !reserveByteWork(k.Len(), work) {
+					if multiKey && !reserveByteWork(k.Len(), work) {
 						keyResult = formatWorkLimit
 						key = workLimitMarker
 					} else {
 						key = k.String()
 					}
 				} else {
-					if keyResult = checkFormattingWithBudgetRoot(k, work); keyResult != formatSafe {
+					prepared, result := prepareFormattingValue(
+						k, work, formattingRootMayMutate(k),
+					)
+					keyResult = result
+					if keyResult != formatSafe {
 						key = keyResult.marker()
 					} else {
-						key = fmt.Sprintf("%+v", k.Interface())
+						key = fmt.Sprintf("%+v", prepared.Interface())
 					}
 				}
 				var value attribute.Value
@@ -895,22 +942,27 @@ func convertValueRoot(t reflect.Type, val reflect.Value, work *int) attribute.Va
 		}
 		stringKey := t.Key().Kind() == reflect.String
 		keys := val.MapKeys()
-		kvs := make([]attribute.KeyValue, 0, val.Len())
+		multiKey := len(keys) > 1
+		kvs := make([]attribute.KeyValue, 0, len(keys))
 		for _, k := range keys {
 			var key string
 			keyResult := formatSafe
 			if stringKey {
-				if val.Len() > 1 && !reserveByteWork(k.Len(), &visited.work) {
+				if multiKey && !reserveByteWork(k.Len(), &visited.work) {
 					keyResult = formatWorkLimit
 					key = workLimitMarker
 				} else {
 					key = k.String()
 				}
 			} else {
-				if keyResult = checkFormattingWithBudgetRoot(k, &visited.work); keyResult != formatSafe {
+				prepared, result := prepareFormattingValue(
+					k, &visited.work, formattingRootMayMutate(k),
+				)
+				keyResult = result
+				if keyResult != formatSafe {
 					key = keyResult.marker()
 				} else {
-					key = fmt.Sprintf("%+v", k.Interface())
+					key = fmt.Sprintf("%+v", prepared.Interface())
 				}
 			}
 			var value attribute.Value
@@ -1067,22 +1119,27 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 		}
 		stringKey := t.Key().Kind() == reflect.String
 		keys := val.MapKeys()
-		kvs := make([]attribute.KeyValue, 0, val.Len())
+		multiKey := len(keys) > 1
+		kvs := make([]attribute.KeyValue, 0, len(keys))
 		for _, k := range keys {
 			var key string
 			keyResult := formatSafe
 			if stringKey {
-				if val.Len() > 1 && !reserveByteWork(k.Len(), &visited.work) {
+				if multiKey && !reserveByteWork(k.Len(), &visited.work) {
 					keyResult = formatWorkLimit
 					key = workLimitMarker
 				} else {
 					key = k.String()
 				}
 			} else {
-				if keyResult = checkFormattingWithBudgetRoot(k, &visited.work); keyResult != formatSafe {
+				prepared, result := prepareFormattingValue(
+					k, &visited.work, formattingRootMayMutate(k),
+				)
+				keyResult = result
+				if keyResult != formatSafe {
 					key = keyResult.marker()
 				} else {
-					key = fmt.Sprintf("%+v", k.Interface())
+					key = fmt.Sprintf("%+v", prepared.Interface())
 				}
 			}
 			var value attribute.Value
@@ -1143,11 +1200,350 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 	return convertUnhandledValueWithWork(v, t, &visited.work)
 }
 
+// snapshotFormattingValue detaches mutable containers that fmt traverses while
+// preserving the value's concrete type and terminal method receivers.
+func snapshotFormattingValue(
+	v reflect.Value,
+	work *int,
+) (reflect.Value, formatResult) {
+	// Passing an interface value to fmt erases its top-level interface layers.
+	// Unwrap them without increasing formatting depth so a dynamic aggregate
+	// pointer is detached exactly as the pointer fmt receives.
+	for v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return v, formatSafe
+		}
+		v = v.Elem()
+	}
+	// fmt unwraps one top-level reflect.Value before applying its traversal
+	// rules. Preserve that wrapper around the detached reflected value.
+	if v.Type() == reflectValueType {
+		reflected := v.Interface().(reflect.Value)
+		if !reflected.IsValid() {
+			return v, formatSafe
+		}
+		snapshot, result := snapshotFormattingConcreteValue(reflected, work)
+		if result != formatSafe {
+			return reflect.Value{}, result
+		}
+		return reflect.ValueOf(snapshot), formatSafe
+	}
+	return snapshotFormattingConcreteValue(v, work)
+}
+
+func snapshotFormattingConcreteValue(
+	v reflect.Value,
+	work *int,
+) (reflect.Value, formatResult) {
+	if (v.Kind() == reflect.Array || v.Kind() == reflect.Struct) &&
+		!reserveValueCopyWork(v.Type(), 1, work) {
+		return reflect.Value{}, formatWorkLimit
+	}
+	snapshot := reflect.New(v.Type()).Elem()
+	snapshot.Set(v)
+	if _, result := detachFormattingValue(v, snapshot, 0, work); result != formatSafe {
+		return reflect.Value{}, result
+	}
+	return snapshot, formatSafe
+}
+
+// formattingValueNeedsDetach reports whether a structural branch reaches map
+// or slice storage that must be isolated. The successful formatting preflight
+// already bounds this read-only walk and proves that it cannot encounter a
+// recursively traversed cycle.
+func formattingValueNeedsDetach(v reflect.Value, depth int) bool {
+	if !v.IsValid() || hasCallableFormattingMethod(v) {
+		return false
+	}
+	switch v.Kind() {
+	case reflect.Interface:
+		return !v.IsNil() && formattingValueNeedsDetach(v.Elem(), depth+1)
+	case reflect.Map:
+		return !v.IsNil()
+	case reflect.Slice:
+		return v.Len() != 0
+	case reflect.Array:
+		if v.Len() == 0 || depth >= maxTraversalDepth {
+			return false
+		}
+		for i := range v.Len() {
+			if formattingValueNeedsDetach(v.Index(i), depth+1) {
+				return true
+			}
+		}
+	case reflect.Struct:
+		if v.NumField() == 0 || depth >= maxTraversalDepth {
+			return false
+		}
+		//nolint:modernize // Indexed reflection matches fmt's field order.
+		for i := range v.NumField() {
+			if formattingValueNeedsDetach(v.Field(i), depth+1) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// detachFormattingValue replaces maps and non-empty slices in dst with
+// occurrence-local copies. It stops where fmt invokes a method or prints a
+// nested pointer, so those terminal values retain their original receivers.
+func detachFormattingValue(
+	src, dst reflect.Value,
+	depth int,
+	work *int,
+) (bool, formatResult) {
+	if !src.IsValid() || hasCallableFormattingMethod(src) {
+		return false, formatSafe
+	}
+
+	switch src.Kind() {
+	case reflect.Interface:
+		if src.IsNil() {
+			return false, formatSafe
+		}
+		value := src.Elem()
+		if !formattingValueNeedsDetach(value, depth+1) {
+			// The shallow root copy already froze this interface header. Avoid
+			// materializing a dynamic value with no shared storage to detach.
+			return false, formatSafe
+		}
+		if !src.CanInterface() || !dst.CanSet() {
+			return false, formatWorkLimit
+		}
+		if (value.Kind() == reflect.Array || value.Kind() == reflect.Struct) &&
+			!reserveValueCopyWork(value.Type(), 1, work) {
+			return false, formatWorkLimit
+		}
+		value = reflect.ValueOf(src.Interface())
+		detached := reflect.New(value.Type()).Elem()
+		detached.Set(value)
+		changed, result := detachFormattingValue(value, detached, depth+1, work)
+		if result != formatSafe || !changed {
+			return false, result
+		}
+		dst.Set(detached)
+		return true, formatSafe
+	case reflect.Pointer:
+		if depth != 0 || src.IsNil() {
+			return false, formatSafe
+		}
+		elem := src.Elem()
+		switch elem.Kind() {
+		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
+		default:
+			return false, formatSafe
+		}
+		if !dst.CanSet() || !reserveValueCopyWork(elem.Type(), 1, work) {
+			return false, formatWorkLimit
+		}
+		detached := reflect.New(elem.Type())
+		detached.Elem().Set(elem)
+		_, result := detachFormattingValue(elem, detached.Elem(), depth+1, work)
+		if result != formatSafe {
+			return false, result
+		}
+		dst.Set(detached)
+		return true, formatSafe
+	case reflect.Map:
+		if src.IsNil() {
+			return false, formatSafe
+		}
+		if !src.CanInterface() || !dst.CanSet() ||
+			!reserveAggregateWork(work, src.Len(), 2) {
+			return false, formatWorkLimit
+		}
+		if src.Len() == 0 {
+			dst.Set(reflect.MakeMapWithSize(src.Type(), 0))
+			return true, formatSafe
+		}
+		if depth >= maxTraversalDepth {
+			return false, formatDepthLimit
+		}
+		if !reserveValueCopyWork(src.Type().Key(), src.Len(), work) ||
+			!reserveValueCopyWork(src.Type().Elem(), src.Len(), work) {
+			return false, formatWorkLimit
+		}
+		source := reflect.ValueOf(src.Interface())
+		detached := reflect.MakeMapWithSize(src.Type(), src.Len())
+		key := reflect.New(src.Type().Key()).Elem()
+		value := reflect.New(src.Type().Elem()).Elem()
+		iter := source.MapRange()
+		for iter.Next() {
+			key.SetIterKey(iter)
+			if result := reserveMapKeyHashWork(key, work); result != formatSafe {
+				return false, result
+			}
+			value.SetIterValue(iter)
+			if hasCallableFormattingMethod(value) {
+				detached.SetMapIndex(key, value)
+				continue
+			}
+			switch value.Kind() {
+			case reflect.Array, reflect.Interface, reflect.Map, reflect.Slice, reflect.Struct:
+			default:
+				// Nested pointers and scalar values need only their normal map
+				// value copy; they cannot contain a traversed container.
+				detached.SetMapIndex(key, value)
+				continue
+			}
+			valueCopy := reflect.New(value.Type()).Elem()
+			valueCopy.Set(value)
+			if _, result := detachFormattingValue(
+				value, valueCopy, depth+1, work,
+			); result != formatSafe {
+				return false, result
+			}
+			detached.SetMapIndex(key, valueCopy)
+		}
+		dst.Set(detached)
+		return true, formatSafe
+	case reflect.Slice:
+		if src.Len() == 0 {
+			return false, formatSafe
+		}
+		if !src.CanInterface() || !dst.CanSet() ||
+			!reserveAggregateWork(work, src.Len(), 1) {
+			return false, formatWorkLimit
+		}
+		if !reserveValueCopyWork(src.Type().Elem(), src.Len(), work) {
+			return false, formatWorkLimit
+		}
+		if depth >= maxTraversalDepth {
+			return false, formatDepthLimit
+		}
+		source := reflect.ValueOf(src.Interface())
+		detached := reflect.MakeSlice(src.Type(), src.Len(), src.Len())
+		for i := range src.Len() {
+			value := source.Index(i)
+			detached.Index(i).Set(value)
+			if _, result := detachFormattingValue(
+				value, detached.Index(i), depth+1, work,
+			); result != formatSafe {
+				return false, result
+			}
+		}
+		dst.Set(detached)
+		return true, formatSafe
+	case reflect.Array:
+		if src.Len() == 0 {
+			return false, formatSafe
+		}
+		if depth >= maxTraversalDepth {
+			return false, formatDepthLimit
+		}
+		changed := false
+		for i := range src.Len() {
+			childChanged, result := detachFormattingValue(
+				src.Index(i), dst.Index(i), depth+1, work,
+			)
+			if result != formatSafe {
+				return false, result
+			}
+			changed = changed || childChanged
+		}
+		return changed, formatSafe
+	case reflect.Struct:
+		if src.NumField() == 0 {
+			return false, formatSafe
+		}
+		if depth >= maxTraversalDepth {
+			return false, formatDepthLimit
+		}
+		changed := false
+		for i := range src.NumField() {
+			childChanged, result := detachFormattingValue(
+				src.Field(i), dst.Field(i), depth+1, work,
+			)
+			if result != formatSafe {
+				return false, result
+			}
+			changed = changed || childChanged
+		}
+		return changed, formatSafe
+	}
+	return false, formatSafe
+}
+
+// formattingRootMayMutate reports whether user code can replace headers in the
+// root value that fmt will continue traversing. Ordinary interface arguments
+// are already stable by-value copies; aggregate pointers and addressable values
+// exposed through reflect.Value are not.
+func formattingRootMayMutate(v reflect.Value) bool {
+	for v.IsValid() && v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return false
+		}
+		v = v.Elem()
+	}
+	if !v.IsValid() {
+		return false
+	}
+	if v.Type() == reflectValueType {
+		v = v.Interface().(reflect.Value)
+		if !v.IsValid() {
+			return false
+		}
+	}
+	if v.Kind() == reflect.Pointer && !v.IsNil() {
+		switch v.Elem().Kind() {
+		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
+			return true
+		}
+	}
+	if !v.CanAddr() {
+		return false
+	}
+	switch v.Kind() {
+	case reflect.Array, reflect.Struct:
+		return true
+	default:
+		return false
+	}
+}
+
+// prepareFormattingValue proves that fmt traversal is safe and isolates its
+// mutation-sensitive graph when a method could invalidate that proof.
+func prepareFormattingValue(
+	val reflect.Value,
+	work *int,
+	rootMutable bool,
+) (reflect.Value, formatResult) {
+	mutation := formattingMutationState{
+		rootMutable: rootMutable,
+	}
+	if result := checkFormattingWithBudgetRootState(
+		val, work, &mutation,
+	); result != formatSafe {
+		return reflect.Value{}, result
+	}
+	if !mutation.snapshotRequired() {
+		return val, formatSafe
+	}
+	snapshot, result := snapshotFormattingValue(val, work)
+	if result != formatSafe {
+		return reflect.Value{}, result
+	}
+	return snapshot, formatSafe
+}
+
 // convertStructValue safely formats a struct or replaces it with the reason
 // formatting cannot complete.
 func convertStructValue(v any, val reflect.Value, work *int) attribute.Value {
-	if result := checkFormattingWithBudgetRoot(val, work); result != formatSafe {
+	mutation := formattingMutationState{
+		rootMutable: val.Type() == reflectValueType && formattingRootMayMutate(val),
+	}
+	if result := checkFormattingWithBudgetRootState(
+		val, work, &mutation,
+	); result != formatSafe {
 		return attribute.StringValue(result.marker())
+	}
+	if mutation.snapshotRequired() {
+		prepared, result := snapshotFormattingValue(val, work)
+		if result != formatSafe {
+			return attribute.StringValue(result.marker())
+		}
+		v = prepared.Interface()
 	}
 	return attribute.StringValue(fmt.Sprintf("%+v", v))
 }
@@ -1185,8 +1581,18 @@ func convertReflectedStructValue(val reflect.Value, work *int) attribute.Value {
 		}
 		val = reflect.ValueOf(val.Interface())
 	}
-	if result := checkFormattingWithBudgetRoot(val, work); result != formatSafe {
+	var mutation formattingMutationState
+	if result := checkFormattingWithBudgetRootState(
+		val, work, &mutation,
+	); result != formatSafe {
 		return attribute.StringValue(result.marker())
+	}
+	if mutation.snapshotRequired() {
+		prepared, result := snapshotFormattingValue(val, work)
+		if result != formatSafe {
+			return attribute.StringValue(result.marker())
+		}
+		val = prepared
 	}
 	return attribute.StringValue(fmt.Sprintf("%+v", val.Interface()))
 }
@@ -1382,6 +1788,16 @@ func checkFormattingWithBudgetRoot(
 	v reflect.Value,
 	work *int,
 ) formatResult {
+	return checkFormattingWithBudgetRootState(v, work, nil)
+}
+
+// checkFormattingWithBudgetRootState performs one formatting preflight and
+// records whether safe formatting needs an isolated entry snapshot.
+func checkFormattingWithBudgetRootState(
+	v reflect.Value,
+	work *int,
+	mutation *formattingMutationState,
+) formatResult {
 	for v.Kind() == reflect.Interface {
 		if v.IsNil() {
 			return formatSafe
@@ -1407,7 +1823,16 @@ func checkFormattingWithBudgetRoot(
 	}
 	t := v.Type()
 	if hasCallableFormattingMethod(v) {
+		if mutation != nil {
+			mutation.method = true
+		}
 		return formatSafe
+	}
+	if mutation != nil {
+		switch v.Kind() {
+		case reflect.Interface, reflect.Map, reflect.Slice, reflect.String:
+			mutation.observe(v)
+		}
 	}
 	// fmt cannot recurse through an empty aggregate. Return before any other
 	// inspection so an unreachable element type cannot add work.
@@ -1490,6 +1915,9 @@ func checkFormattingWithBudgetRoot(
 				needsWork = true
 				needsCheck = true
 			case reflect.Interface:
+				if mutation != nil {
+					mutation.replaceable = true
+				}
 				for field.Kind() == reflect.Interface {
 					if field.IsNil() {
 						break
@@ -1497,64 +1925,112 @@ func checkFormattingWithBudgetRoot(
 					field = field.Elem()
 				}
 				if field.Kind() != reflect.Interface {
+					if mutation == nil && hasCallableFormattingMethod(field) {
+						continue
+					}
+					if mutation != nil {
+						switch field.Kind() {
+						case reflect.Interface, reflect.Map, reflect.Slice, reflect.String:
+							mutation.observe(field)
+						}
+					}
 					fieldNeedsWork := typeNeedsFormattingWork(field.Type())
 					needsCheck = needsCheck || kindCanFormatRecurse(field.Kind())
 					needsWork = needsWork || fieldNeedsWork
 				}
 			case reflect.Map:
+				if mutation != nil {
+					mutation.replaceable = true
+					mutation.shared = mutation.shared || !field.IsNil()
+				}
 				needsWork = needsWork || field.Len() != 0
 				fieldType := field.Type()
 				needsCheck = needsCheck || kindCanFormatRecurse(fieldType.Key().Kind()) ||
 					kindCanFormatRecurse(fieldType.Elem().Kind())
 			case reflect.Slice:
+				if mutation != nil {
+					mutation.replaceable = true
+					mutation.shared = mutation.shared || field.Len() != 0
+				}
 				needsWork = needsWork || field.Len() != 0
 				needsCheck = needsCheck ||
 					kindCanFormatRecurse(field.Type().Elem().Kind())
 			case reflect.String:
+				if mutation != nil {
+					mutation.replaceable = true
+				}
 				needsWork = needsWork || field.Len() != 0
 			}
 		}
-		if !needsWork {
+		if !needsWork && !mutation.needsMethodScan() {
 			return formatSafe
 		}
 		if !needsCheck {
-			return reserveFormattingWorkWithRoot(v, 0, work, rootReserved)
+			return reserveFormattingWorkWithRootState(
+				v, 0, work, rootReserved, mutation,
+			)
 		}
 	}
 	switch v.Kind() {
 	case reflect.Array, reflect.Slice:
 		if !kindCanFormatRecurse(t.Elem().Kind()) {
-			return reserveFormattingWorkWithRoot(v, 0, work, rootReserved)
+			return reserveFormattingWorkWithRootState(
+				v, 0, work, rootReserved, mutation,
+			)
 		}
 	case reflect.Map:
 		if !kindCanFormatRecurse(t.Key().Kind()) &&
 			!kindCanFormatRecurse(t.Elem().Kind()) {
-			return reserveFormattingWorkWithRoot(v, 0, work, rootReserved)
+			return reserveFormattingWorkWithRootState(
+				v, 0, work, rootReserved, mutation,
+			)
 		}
 	case reflect.Pointer:
 		switch v.Elem().Kind() {
 		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
 		default:
-			return reserveFormattingWorkWithRoot(v, 0, work, rootReserved)
+			return reserveFormattingWorkWithRootState(
+				v, 0, work, rootReserved, mutation,
+			)
 		}
 	case reflect.Struct:
 		// The shallow scan above selected identity-aware traversal.
 	default:
-		return reserveFormattingWorkWithRoot(v, 0, work, rootReserved)
+		return reserveFormattingWorkWithRootState(
+			v, 0, work, rootReserved, mutation,
+		)
 	}
-	return checkFormatValueWithBudgetRoot(v, 0, nil, work, rootReserved)
+	return checkFormatValueWithBudgetRootState(
+		v, 0, nil, work, rootReserved, mutation,
+	)
 }
 
 // reserveFormattingWorkWithRoot performs the identity-free formatting walk. The
 // caller can pre-reserve the root aggregate so wide rejected values do not
 // repeat preliminary shallow inspection without consuming work.
 
-//nolint:revive // The caller can reserve the root before this recursive walk.
+//nolint:unparam // Tests cover explicit root-reservation behavior.
 func reserveFormattingWorkWithRoot(
 	v reflect.Value,
 	depth int,
 	work *int,
 	aggregateReserved bool,
+) formatResult {
+	return reserveFormattingWorkWithRootState(
+		v, depth, work, aggregateReserved, nil,
+	)
+}
+
+// reserveFormattingWorkWithRootState performs the identity-free formatting
+// walk while recording method and mutation-sensitive state coexistence.
+//
+//nolint:revive // The caller can reserve the root before this recursive walk.
+func reserveFormattingWorkWithRootState(
+	v reflect.Value,
+	depth int,
+	work *int,
+	aggregateReserved bool,
+	mutation *formattingMutationState,
 ) formatResult {
 	if !v.IsValid() {
 		return formatSafe
@@ -1570,7 +2046,16 @@ func reserveFormattingWorkWithRoot(
 		}
 	}
 	if hasCallableFormattingMethod(v) {
+		if mutation != nil {
+			mutation.method = true
+		}
 		return formatSafe
+	}
+	if mutation != nil {
+		switch v.Kind() {
+		case reflect.Interface, reflect.Map, reflect.Slice, reflect.String:
+			mutation.observe(v)
+		}
 	}
 
 	switch v.Kind() {
@@ -1582,7 +2067,9 @@ func reserveFormattingWorkWithRoot(
 		if v.IsNil() {
 			return formatSafe
 		}
-		return reserveFormattingWorkWithRoot(v.Elem(), depth+1, work, false)
+		return reserveFormattingWorkWithRootState(
+			v.Elem(), depth+1, work, false, mutation,
+		)
 	case reflect.Pointer:
 		if depth != 0 || v.IsNil() {
 			return formatSafe
@@ -1590,7 +2077,9 @@ func reserveFormattingWorkWithRoot(
 		elem := v.Elem()
 		switch elem.Kind() {
 		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
-			return reserveFormattingWorkWithRoot(elem, depth+1, work, false)
+			return reserveFormattingWorkWithRootState(
+				elem, depth+1, work, false, mutation,
+			)
 		}
 	case reflect.Slice, reflect.Array:
 		if v.Len() == 0 {
@@ -1602,12 +2091,13 @@ func reserveFormattingWorkWithRoot(
 		if !aggregateReserved && !reserveAggregateWork(work, v.Len(), 1) {
 			return formatWorkLimit
 		}
-		if !typeNeedsFormattingWork(t.Elem()) {
+		if !typeNeedsFormattingWork(t.Elem()) &&
+			(mutation == nil || !typeHasFormattingMethod(t.Elem())) {
 			return formatSafe
 		}
 		for i := range v.Len() {
-			if result := reserveFormattingWorkWithRoot(
-				v.Index(i), depth+1, work, false,
+			if result := reserveFormattingWorkWithRootState(
+				v.Index(i), depth+1, work, false, mutation,
 			); result != formatSafe {
 				return result
 			}
@@ -1622,8 +2112,10 @@ func reserveFormattingWorkWithRoot(
 		if !aggregateReserved && !reserveAggregateWork(work, v.Len(), 2) {
 			return formatWorkLimit
 		}
-		checkKey := typeNeedsFormattingWork(t.Key())
-		checkValue := typeNeedsFormattingWork(t.Elem())
+		checkKey := typeNeedsFormattingWork(t.Key()) ||
+			mutation != nil && typeHasFormattingMethod(t.Key())
+		checkValue := typeNeedsFormattingWork(t.Elem()) ||
+			mutation != nil && typeHasFormattingMethod(t.Elem())
 		if !checkKey && !checkValue {
 			return formatSafe
 		}
@@ -1636,8 +2128,8 @@ func reserveFormattingWorkWithRoot(
 				if !reserveValueCopyWork(t.Key(), 1, work) {
 					return formatWorkLimit
 				}
-				if result := reserveFormattingWorkWithRoot(
-					iter.Key(), depth+1, work, false,
+				if result := reserveFormattingWorkWithRootState(
+					iter.Key(), depth+1, work, false, mutation,
 				); result != formatSafe {
 					return result
 				}
@@ -1649,8 +2141,8 @@ func reserveFormattingWorkWithRoot(
 				if !reserveValueCopyWork(t.Elem(), 1, work) {
 					return formatWorkLimit
 				}
-				if result := reserveFormattingWorkWithRoot(
-					iter.Value(), depth+1, work, false,
+				if result := reserveFormattingWorkWithRootState(
+					iter.Value(), depth+1, work, false, mutation,
 				); result != formatSafe {
 					return result
 				}
@@ -1672,9 +2164,9 @@ func reserveFormattingWorkWithRoot(
 		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range v.NumField() {
 			field := v.Field(i)
-			if typeNeedsFormattingWork(field.Type()) {
-				if result := reserveFormattingWorkWithRoot(
-					field, depth+1, work, false,
+			if hasCallableFormattingMethod(field) || typeNeedsFormattingWork(field.Type()) {
+				if result := reserveFormattingWorkWithRootState(
+					field, depth+1, work, false, mutation,
 				); result != formatSafe {
 					return result
 				}
@@ -1705,7 +2197,6 @@ func checkFormatValueWithBudget(
 // checkFormatValueWithBudgetRoot performs the identity-aware formatting walk.
 // aggregateReserved records a root reservation made before the shallow scan.
 
-//nolint:revive // The caller can reserve the root before this recursive walk.
 func checkFormatValueWithBudgetRoot(
 	v reflect.Value,
 	depth int,
@@ -1713,10 +2204,27 @@ func checkFormatValueWithBudgetRoot(
 	work *int,
 	aggregateReserved bool,
 ) formatResult {
+	return checkFormatValueWithBudgetRootState(
+		v, depth, visited, work, aggregateReserved, nil,
+	)
+}
+
+// checkFormatValueWithBudgetRootState performs the identity-aware formatting
+// walk while recording method and mutation-sensitive state coexistence.
+//
+//nolint:revive // The caller can reserve the root before this recursive walk.
+func checkFormatValueWithBudgetRootState(
+	v reflect.Value,
+	depth int,
+	visited *visitTracker,
+	work *int,
+	aggregateReserved bool,
+	mutation *formattingMutationState,
+) formatResult {
 	if visited == nil {
 		var tracker visitTracker
-		return checkFormatValueWithBudgetRoot(
-			v, depth, &tracker, work, aggregateReserved,
+		return checkFormatValueWithBudgetRootState(
+			v, depth, &tracker, work, aggregateReserved, mutation,
 		)
 	}
 	if !v.IsValid() {
@@ -1733,7 +2241,16 @@ func checkFormatValueWithBudgetRoot(
 		}
 	}
 	if hasCallableFormattingMethod(v) {
+		if mutation != nil {
+			mutation.method = true
+		}
 		return formatSafe
+	}
+	if mutation != nil {
+		switch v.Kind() {
+		case reflect.Interface, reflect.Map, reflect.Slice, reflect.String:
+			mutation.observe(v)
+		}
 	}
 
 	switch v.Kind() {
@@ -1746,8 +2263,8 @@ func checkFormatValueWithBudgetRoot(
 		if v.IsNil() {
 			return formatSafe
 		}
-		return checkFormatValueWithBudgetRoot(
-			v.Elem(), depth+1, visited, work, false,
+		return checkFormatValueWithBudgetRootState(
+			v.Elem(), depth+1, visited, work, false, mutation,
 		)
 	case reflect.Pointer:
 		// fmt dereferences aggregate pointers only at the root; nested pointers
@@ -1758,8 +2275,8 @@ func checkFormatValueWithBudgetRoot(
 		elem := v.Elem()
 		switch elem.Kind() {
 		case reflect.Array, reflect.Map, reflect.Slice, reflect.Struct:
-			return checkFormatValueWithBudgetRoot(
-				elem, depth+1, visited, work, false,
+			return checkFormatValueWithBudgetRootState(
+				elem, depth+1, visited, work, false, mutation,
 			)
 		}
 	case reflect.Slice:
@@ -1787,8 +2304,8 @@ func checkFormatValueWithBudgetRoot(
 			return formatWorkLimit
 		}
 		for i := range v.Len() {
-			if result := checkFormatValueWithBudgetRoot(
-				v.Index(i), depth+1, visited, work, false,
+			if result := checkFormatValueWithBudgetRootState(
+				v.Index(i), depth+1, visited, work, false, mutation,
 			); result != formatSafe {
 				visited.pop(key)
 				return result
@@ -1830,8 +2347,8 @@ func checkFormatValueWithBudgetRoot(
 				visited.pop(key)
 				return formatWorkLimit
 			}
-			if result := checkFormatValueWithBudgetRoot(
-				iter.Key(), depth+1, visited, work, false,
+			if result := checkFormatValueWithBudgetRootState(
+				iter.Key(), depth+1, visited, work, false, mutation,
 			); result != formatSafe {
 				visited.pop(key)
 				return result
@@ -1844,8 +2361,8 @@ func checkFormatValueWithBudgetRoot(
 				visited.pop(key)
 				return formatWorkLimit
 			}
-			if result := checkFormatValueWithBudgetRoot(
-				iter.Value(), depth+1, visited, work, false,
+			if result := checkFormatValueWithBudgetRootState(
+				iter.Value(), depth+1, visited, work, false, mutation,
 			); result != formatSafe {
 				visited.pop(key)
 				return result
@@ -1864,8 +2381,8 @@ func checkFormatValueWithBudgetRoot(
 			return formatWorkLimit
 		}
 		for i := range v.Len() {
-			if result := checkFormatValueWithBudgetRoot(
-				v.Index(i), depth+1, visited, work, false,
+			if result := checkFormatValueWithBudgetRootState(
+				v.Index(i), depth+1, visited, work, false, mutation,
 			); result != formatSafe {
 				return result
 			}
@@ -1886,8 +2403,8 @@ func checkFormatValueWithBudgetRoot(
 		}
 		//nolint:modernize // Indexed reflection avoids iterator allocations on this path.
 		for i := range v.NumField() {
-			if result := checkFormatValueWithBudgetRoot(
-				v.Field(i), depth+1, visited, work, false,
+			if result := checkFormatValueWithBudgetRootState(
+				v.Field(i), depth+1, visited, work, false, mutation,
 			); result != formatSafe {
 				return result
 			}

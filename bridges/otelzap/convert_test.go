@@ -11,7 +11,10 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
+	"os/exec"
 	"reflect"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -79,6 +82,14 @@ type testLargeStringer struct {
 
 func (testLargeStringer) String() string {
 	return "large stringer"
+}
+
+type testLongStringKey struct {
+	Value string
+}
+
+func (testLongStringKey) String() string {
+	return "long string key"
 }
 
 type testLargeStringerWrapper struct {
@@ -917,6 +928,277 @@ func TestFormattingCycleBranches(t *testing.T) {
 
 	assert.Equal(t, formatSafe, checkFormatting(reflect.ValueOf(struct{ Value any }{Value: 42})))
 	assert.Equal(t, formatSafe, checkFormatting(reflect.ValueOf(new(int))))
+}
+
+func TestConvertValueFormattingMethodMutation(t *testing.T) {
+	const helperEnv = "OTEL_LOGUTIL_FORMATTING_MUTATION_HELPER"
+	if os.Getenv(helperEnv) != "1" {
+		cmd := exec.CommandContext(
+			t.Context(), os.Args[0], "-test.run=^TestConvertValueFormattingMethodMutation$",
+		)
+		cmd.Env = append(os.Environ(), helperEnv+"=1")
+		output, err := cmd.CombinedOutput()
+		require.NoError(t, err, "formatting-mutation subprocess failed:\n%s", output)
+		return
+	}
+
+	debug.SetMaxStack(1 << 20)
+	t.Run("DirectStruct", func(t *testing.T) {
+		calls := 0
+		cycle := []any{42}
+		value := struct {
+			Mutator testMutatingError
+			Later   []any
+		}{
+			Mutator: testMutatingError(func() {
+				calls++
+				cycle[0] = cycle
+			}),
+			Later: cycle,
+		}
+		assert.Equal(
+			t,
+			attribute.StringValue("{Mutator:mutating error Later:[42]}"),
+			convertValue(value),
+		)
+		assert.Equal(t, 1, calls)
+		assert.Equal(t, reflect.ValueOf(cycle).Pointer(), reflect.ValueOf(cycle[0]).Pointer())
+	})
+
+	t.Run("ReflectedStruct", func(t *testing.T) {
+		calls := 0
+		cycle := []any{42}
+		value := struct {
+			Mutator testMutatingError
+			Later   []any
+		}{
+			Mutator: testMutatingError(func() {
+				calls++
+				cycle[0] = cycle
+			}),
+			Later: cycle,
+		}
+		assert.Equal(
+			t,
+			attribute.SliceValue(
+				attribute.StringValue("{Mutator:mutating error Later:[42]}"),
+			),
+			convertValue([]any{value}),
+		)
+		assert.Equal(t, 1, calls)
+		assert.Equal(t, reflect.ValueOf(cycle).Pointer(), reflect.ValueOf(cycle[0]).Pointer())
+	})
+
+	t.Run("ActiveSlice", func(t *testing.T) {
+		calls := 0
+		values := []any{nil, 42}
+		values[0] = testMutatingError(func() {
+			calls++
+			values[1] = values
+		})
+		value := struct{ Values []any }{Values: values}
+		assert.Equal(
+			t,
+			attribute.StringValue("{Values:[mutating error 42]}"),
+			convertValue(value),
+		)
+		assert.Equal(t, 1, calls)
+		assert.Equal(t, reflect.ValueOf(values).Pointer(), reflect.ValueOf(values[1]).Pointer())
+	})
+
+	t.Run("LaterEmptyMap", func(t *testing.T) {
+		calls := 0
+		cycle := map[string]any{}
+		value := struct {
+			Mutator testMutatingError
+			Later   map[string]any
+		}{
+			Mutator: testMutatingError(func() {
+				calls++
+				cycle["self"] = cycle
+			}),
+			Later: cycle,
+		}
+		assert.Equal(
+			t,
+			attribute.StringValue("{Mutator:mutating error Later:map[]}"),
+			convertValue(value),
+		)
+		assert.Equal(t, 1, calls)
+		assert.Equal(
+			t,
+			reflect.ValueOf(cycle).UnsafePointer(),
+			reflect.ValueOf(cycle["self"]).UnsafePointer(),
+		)
+	})
+
+	t.Run("MapKeys", func(t *testing.T) {
+		type mutationKey struct {
+			Mutator testMutatingError
+			Later   []any
+		}
+		assertIsolated := func(
+			t *testing.T,
+			convert func(*mutationKey) attribute.Value,
+		) {
+			calls := 0
+			cycle := []any{42}
+			key := &mutationKey{
+				Mutator: testMutatingError(func() {
+					calls++
+					cycle[0] = cycle
+				}),
+				Later: cycle,
+			}
+			assert.Equal(
+				t,
+				attribute.MapValue(attribute.Int64(
+					"&{Mutator:mutating error Later:[42]}", 42,
+				)),
+				convert(key),
+			)
+			assert.Equal(t, 1, calls)
+			assert.Equal(
+				t,
+				reflect.ValueOf(cycle).Pointer(),
+				reflect.ValueOf(cycle[0]).Pointer(),
+			)
+		}
+
+		t.Run("RootStatic", func(t *testing.T) {
+			assertIsolated(t, func(key *mutationKey) attribute.Value {
+				return convertValue(map[*mutationKey]int{key: 42})
+			})
+		})
+		t.Run("DynamicInterface", func(t *testing.T) {
+			assertIsolated(t, func(key *mutationKey) attribute.Value {
+				return convertValue(map[any]int{key: 42})
+			})
+		})
+		t.Run("ReflectedValue", func(t *testing.T) {
+			assertIsolated(t, func(key *mutationKey) attribute.Value {
+				return convertValue(map[reflect.Value]int{
+					reflect.ValueOf(key): 42,
+				})
+			})
+		})
+		t.Run("PointerStatic", func(t *testing.T) {
+			assertIsolated(t, func(key *mutationKey) attribute.Value {
+				value := map[*mutationKey]int{key: 42}
+				return convertValue(&value)
+			})
+		})
+		t.Run("RootTracked", func(t *testing.T) {
+			assertIsolated(t, func(key *mutationKey) attribute.Value {
+				return convertValue(map[*mutationKey]any{key: 42})
+			})
+		})
+		t.Run("NestedTracked", func(t *testing.T) {
+			assertIsolated(t, func(key *mutationKey) attribute.Value {
+				return convertValue([]any{
+					map[*mutationKey]any{key: 42},
+				}).AsSlice()[0]
+			})
+		})
+	})
+
+	t.Run("ReplacedHeaders", func(t *testing.T) {
+		t.Run("NilMap", func(t *testing.T) {
+			type mutationKey struct {
+				Mutator testMutatingError
+				Later   map[string]any
+			}
+			calls := 0
+			key := &mutationKey{}
+			key.Mutator = testMutatingError(func() {
+				calls++
+				key.Later = map[string]any{}
+				key.Later["self"] = key.Later
+			})
+			assert.Equal(
+				t,
+				attribute.MapValue(attribute.Int64(
+					"&{Mutator:mutating error Later:map[]}", 42,
+				)),
+				convertValue(map[*mutationKey]int{key: 42}),
+			)
+			assert.Equal(t, 1, calls)
+			assert.Equal(
+				t,
+				reflect.ValueOf(key.Later).UnsafePointer(),
+				reflect.ValueOf(key.Later["self"]).UnsafePointer(),
+			)
+		})
+
+		t.Run("DynamicInterface", func(t *testing.T) {
+			type mutationKey struct {
+				Mutator testMutatingError
+				Later   any
+			}
+			calls := 0
+			key := &mutationKey{Later: 42}
+			key.Mutator = testMutatingError(func() {
+				calls++
+				cycle := map[string]any{}
+				cycle["self"] = cycle
+				key.Later = cycle
+			})
+			assert.Equal(
+				t,
+				attribute.MapValue(attribute.Int64(
+					"&{Mutator:mutating error Later:42}", 42,
+				)),
+				convertValue(map[reflect.Value]int{
+					reflect.ValueOf(key): 42,
+				}),
+			)
+			assert.Equal(t, 1, calls)
+			assert.Equal(t, reflect.Map, reflect.ValueOf(key.Later).Kind())
+		})
+
+		t.Run("AddressableReflectValue", func(t *testing.T) {
+			calls := 0
+			value := struct {
+				Mutator testMutatingError
+				Later   any
+			}{Later: 42}
+			value.Mutator = testMutatingError(func() {
+				calls++
+				cycle := map[string]any{}
+				cycle["self"] = cycle
+				value.Later = cycle
+			})
+			assert.Equal(
+				t,
+				attribute.StringValue("{Mutator:mutating error Later:42}"),
+				convertValue(reflect.ValueOf(&value).Elem()),
+			)
+			assert.Equal(t, 1, calls)
+			assert.Equal(t, reflect.Map, reflect.ValueOf(value.Later).Kind())
+		})
+
+		t.Run("String", func(t *testing.T) {
+			type mutationKey struct {
+				Mutator testMutatingError
+				Later   string
+			}
+			calls := 0
+			key := &mutationKey{Later: "short"}
+			key.Mutator = testMutatingError(func() {
+				calls++
+				key.Later = strings.Repeat("x", 64*1024)
+			})
+			assert.Equal(
+				t,
+				attribute.MapValue(attribute.Int64(
+					"&{Mutator:mutating error Later:short}", 42,
+				)),
+				convertValue(map[*mutationKey]int{key: 42}),
+			)
+			assert.Equal(t, 1, calls)
+			assert.Len(t, key.Later, 64*1024)
+		})
+	})
 }
 
 func TestFormattingPreflightUsesRuntimeShape(t *testing.T) {
@@ -1970,6 +2252,73 @@ func TestConvertValueTraversalWorkLimit(t *testing.T) {
 		)
 	})
 
+	t.Run("MapStringKeySnapshotSortWork", func(t *testing.T) {
+		setMaxTraversalWork(t, 64)
+
+		keys := make([]string, 8)
+		for i := range keys {
+			keys[i] = fmt.Sprintf("%064d", i)
+		}
+		staticMap := func(pointer bool) attribute.Value {
+			value := make(map[string]testMutatingError, len(keys))
+			mutator := testMutatingError(func() { clear(value) })
+			for _, key := range keys {
+				value[key] = mutator
+			}
+			if pointer {
+				return convertValue(&value)
+			}
+			return convertValue(value)
+		}
+		trackedMap := func(nested bool) attribute.Value {
+			value := make(map[string]any, len(keys))
+			mutator := testMutatingError(func() { clear(value) })
+			for _, key := range keys {
+				value[key] = mutator
+			}
+			if nested {
+				return convertValue([]any{value}).AsSlice()[0]
+			}
+			return convertValue(value)
+		}
+
+		for _, test := range []struct {
+			name    string
+			convert func() attribute.Value
+		}{
+			{name: "RootStatic", convert: func() attribute.Value { return staticMap(false) }},
+			{name: "PointerStatic", convert: func() attribute.Value { return staticMap(true) }},
+			{name: "RootTracked", convert: func() attribute.Value { return trackedMap(false) }},
+			{name: "NestedTracked", convert: func() attribute.Value { return trackedMap(true) }},
+		} {
+			t.Run(test.name, func(t *testing.T) {
+				got := test.convert()
+				require.Equal(t, attribute.MAP, got.Type())
+				values := got.AsMap()
+				require.Len(t, values, len(keys))
+				limited := 0
+				for _, value := range values {
+					if value.Key == attribute.Key(workLimitMarker) {
+						limited++
+					}
+				}
+				assert.Positive(t, limited)
+			})
+		}
+	})
+
+	t.Run("FormattingSnapshotMapKeyHash", func(t *testing.T) {
+		setMaxTraversalWork(t, 64)
+		value := struct {
+			Values map[testLongStringKey]int
+		}{
+			Values: map[testLongStringKey]int{
+				{Value: strings.Repeat("x", 1024)}: 42,
+			},
+		}
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+	})
+
 	t.Run("MapKeyHashDepth", func(t *testing.T) {
 		setMaxTraversalDepth(t, 2)
 		setMaxTraversalWork(t, 100)
@@ -2352,6 +2701,74 @@ func TestConvertValueSharedPointer(t *testing.T) {
 }
 
 func TestConvertValuePreservesSafeFormatting(t *testing.T) {
+	t.Run("EmptyMapAtDepthBoundary", func(t *testing.T) {
+		setMaxTraversalDepth(t, 1)
+		empty := map[string]any{}
+		value := struct {
+			Mutator testMutatingError
+			Empty   map[string]any
+		}{
+			Mutator: testMutatingError(func() { empty["self"] = empty }),
+			Empty:   empty,
+		}
+		assert.Equal(
+			t,
+			attribute.StringValue("{Mutator:mutating error Empty:map[]}"),
+			convertValue(value),
+		)
+		assert.Equal(
+			t,
+			reflect.ValueOf(empty).UnsafePointer(),
+			reflect.ValueOf(empty["self"]).UnsafePointer(),
+		)
+	})
+
+	t.Run("MethodAndMutableFields", func(t *testing.T) {
+		value := struct {
+			When   time.Time
+			Labels map[string]int
+		}{
+			When:   time.Unix(1, 2).UTC(),
+			Labels: map[string]int{"one": 1},
+		}
+		assert.Equal(
+			t,
+			attribute.StringValue(fmt.Sprintf("%+v", value)),
+			convertValue(value),
+		)
+	})
+
+	t.Run("UnexportedMutableSnapshot", func(t *testing.T) {
+		type hidden struct{ values []any }
+		calls := 0
+		value := struct {
+			Mutator testMutatingError
+			Hidden  hidden
+		}{
+			Mutator: testMutatingError(func() { calls++ }),
+			Hidden:  hidden{values: []any{42}},
+		}
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(value))
+		assert.Zero(t, calls)
+	})
+
+	t.Run("UnexportedInterfaceWithoutSharedStorage", func(t *testing.T) {
+		type hidden struct{ value any }
+		type key struct {
+			Mutator testError
+			Hidden  hidden
+		}
+		value := &key{
+			Mutator: testError("safe"),
+			Hidden:  hidden{value: struct{ N int }{N: 1}},
+		}
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.Int64(fmt.Sprintf("%+v", value), 42)),
+			convertValue(map[*key]int{value: 42}),
+		)
+	})
+
 	t.Run("NestedPointer", func(t *testing.T) {
 		type node struct{ Next *node }
 

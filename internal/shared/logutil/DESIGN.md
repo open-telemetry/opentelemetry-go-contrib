@@ -96,12 +96,13 @@ formatting participate in the shared budget.
 Reflection sometimes has to copy a by-value array or struct before traversal can
 inspect it. The converter reserves one work unit per machine word before such a
 copy, including map key snapshots, map value lookups, addressable array
-snapshots, and reflected structs passed to `fmt`. This prevents repeated aliases
-of one compact map or pointer from multiplying a large fixed-size copy. Map keys
-are still snapshotted before formatting begins, preserving the previous behavior
-when a formatting method mutates the source map. Addressable arrays are copied
-only after the reservation succeeds, preserving array value semantics without
-copying a value that is already known to exceed the bound.
+snapshots, reflected structs passed to `fmt`, and conditional formatting
+snapshots. This prevents repeated aliases of one compact map or pointer from
+multiplying a large fixed-size copy. Map keys are still snapshotted before
+formatting begins, preserving the previous behavior when a formatting method
+mutates the source map. Addressable arrays are copied only after the reservation
+succeeds, preserving array value semantics without copying a value that is
+already known to exceed the bound.
 
 Other variable-size operations use the same machine-word approximation. Nested
 `[]byte` values reserve their cloned payload, and formatting reserves ordinary
@@ -112,6 +113,10 @@ proportional to the supplied value rather than multiplied by graph traversal.
 
 Normal map conversion snapshots the key set before formatting, as it did before
 cycle detection, and then uses `MapIndex` to retrieve each snapshotted value.
+Output capacity and the decision to account for multi-entry string-key sorting
+come from that same key snapshot, not the live map length. A formatting method
+that shrinks the source map therefore cannot exempt retained keys from output
+and sorting work.
 Before that lookup it accounts for hashing the key's raw comparable
 representation. Regular-memory arrays and structs reserve their flat byte size;
 non-regular arrays, structs, interfaces, and strings use a bounded value walk,
@@ -140,8 +145,12 @@ formatted struct or map key is replaced as a unit and `fmt` is not called on the
 unsafe graph. Formatting methods remain trusted terminals, but any by-value
 reflection materialization needed before dispatching them must first fit the
 shared work budget. The method body, receiver ABI work, and returned output are
-trusted user code and are not budgeted. Scalars and nil or empty values still
-complete normally.
+trusted user code and are not budgeted. Their side effects are not trusted to
+leave the rest of the enclosing graph unchanged. The preflight records whether
+one formatted value contains both a callable method and reachable formatting
+state whose contents or runtime shape could change. Such a value is formatted
+through an isolated snapshot as described below. Scalars and nil or empty values
+still complete normally.
 
 Classifying whether a raw map key uses Go's flat regular-memory hash is the only
 recursive type-only analysis. Every type inspection consumes the same
@@ -153,11 +162,11 @@ top-level work bound.
 
 The distinct markers preserve the reason for replacement: `"<cycle>"` means an
 identity repeated on the active path, `"<depth-limit>"` means the recursive-path
-bound was exhausted, and `"<work-limit>"` means the traversal or reflection-copy
-work budget was exhausted before the value was proven safe. Exceptionally deep,
-broad, or repeatedly shared acyclic input can therefore be truncated. This
-trade-off keeps stack use and graph amplification bounded while leaving ordinary
-values unchanged.
+bound was exhausted, and `"<work-limit>"` means bounded traversal,
+reflection-copy, or isolation work could not finish before the value was proven
+safe. Exceptionally deep, broad, repeatedly shared, or reflection-inaccessible
+acyclic input can therefore be truncated. This trade-off keeps stack use and
+graph amplification bounded while leaving ordinary values unchanged.
 
 An identity already active exactly at either boundary is still reported as
 `"<cycle>"`, because recognizing that repetition requires no further descent.
@@ -192,17 +201,50 @@ preflight that mirrors the relevant `fmt` traversal rules. Nested pointers are
 terminal addresses, while implementations of `fmt.Formatter`, `fmt.Stringer`,
 and `error` are terminal method calls. Mirroring those rules avoids rejecting
 values that `fmt` handles without recursion, including types with promoted
-formatting methods. User method execution is deliberately a trust boundary: it
-can perform arbitrary work or return arbitrarily large output, so the converter
-only accounts for its own reflection materialization before method dispatch.
+formatting methods.
+
+User method execution is deliberately a trust boundary for the method's own
+work, receiver ABI work, panic behavior, and returned output. It is not trusted
+to preserve the enclosing formatted graph after the safety proof. The preflight
+therefore distinguishes shared container contents from replaceable headers. A
+stable by-value formatting root needs isolation when a callable method coexists
+with a non-nil map or non-empty slice that shares storage with the source. For a
+root aggregate pointer or addressable aggregate exposed through `reflect.Value`,
+the preflight also treats nil or empty map and slice headers, variable-length
+strings, and dynamic interface slots as mutation-sensitive: method code can
+replace those headers before `fmt` reaches them.
+
+When either condition applies, the converter shallow-copies the exact root type,
+clones a root aggregate pointer's target, and replaces each traversed non-nil map
+and non-empty slice occurrence with a bounded detached copy. Structural arrays,
+structs, and interfaces are copied only as needed to reach those containers.
+Their by-value headers also freeze the entry-time values of nil containers,
+strings, and interfaces. Method nodes and nested pointers remain terminal
+shallow values, so methods still execute once with their original reference
+state while their side effects reach the source graph instead of the state
+subsequently traversed by `fmt`. This closes the gap in which a method could
+create a cycle or enlarge ordinary output after the preflight and make
+converter-owned formatting overflow the process stack or escape its work bound.
+
+The snapshot consumes the same monotonic work budget before allocating and does
+not preserve aliases between separately traversed mutable occurrences. Creating
+a detached map also charges the raw hash work for every reinserted key before
+calling `SetMapIndex`. This snapshot-at-entry behavior is consistent with the
+converter's existing map-key and addressable-array snapshots. Safe reflection
+cannot replace a map or slice through an unexported non-settable field; if
+isolation reaches such a field, the formatted value becomes `"<work-limit>"` and
+`fmt` is not called. Concurrent mutation from another goroutine remains a caller
+data race and is outside this contract.
 
 Before formatting individual keys, `fmt` sorts multi-entry maps by comparing
-their raw keys. An exceptionally deep struct, array, or interface key can
-therefore recurse inside `internal/fmtsort` beyond the preflight's method
-boundary even when the key's formatting method would be terminal. This is a
-known limitation. Mirroring the private comparator would couple the converter
-to implementation details that can change between supported Go versions, so
-this preflight does not attempt to bound that raw-key sort.
+their raw keys. The ordinary preflight bounds that raw recursive shape unless a
+formatting method makes the key a terminal. A map containing such a method uses
+the isolated-snapshot path, whose map construction performs the bounded raw-key
+hash walk before reinserting every key. The entry count, recursive key shape,
+and variable-size key payload are therefore bounded before `internal/fmtsort`
+runs. Individual comparisons are not charged again; bounding their inputs and
+the number of entries caps their amplification without coupling the converter
+to a private comparator that can change between supported Go versions.
 
 The public reflection API also exposes a map's logical length but not its
 retained bucket capacity. Iterating a very sparse map can therefore scan more
@@ -235,6 +277,11 @@ allocation counts when this structure changes.
 A single pointer to a map, slice, or struct charges its pointer edge and then
 reuses the corresponding conversion path without constructing a pointer-chain
 tracker. Pointer chains and pointers exposing arrays retain the general tracker.
+
+Formatting snapshots are conditional. Values containing only methods or only
+mutation-sensitive state keep the existing preflight-and-format path. Snapshot
+reflection and allocations occur only when both coexist, leaving scalar,
+direct-container, and other formatted-value allocation behavior unchanged.
 
 There is no opt-out option. Statically non-recursive conversion paths avoid the
 general tracker, and formatting values whose shallow runtime shape cannot cycle
@@ -294,6 +341,17 @@ without that machinery.
 
 JSON encoding detects cycles, but changes the converter's established textual
 representation and its method and formatting behavior.
+
+### Replacing `fmt`
+
+A project-owned bounded renderer could remove the remaining dependency on
+`fmt`, but it cannot preserve the established `%+v` representation through
+public Go APIs. It would have to reproduce aggregate and pointer formatting,
+`reflect.Value` handling, formatter-method dispatch, and the private
+`internal/fmtsort` ordering across supported Go versions. Rendering sanitized
+proxy values is smaller, but changes concrete types, method selection, map
+ordering, and output. A deterministic project-owned representation is therefore
+a separate compatibility decision rather than an incremental safety fix.
 
 ### Replacing the entire root
 
