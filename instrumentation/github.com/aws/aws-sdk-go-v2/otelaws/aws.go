@@ -140,6 +140,14 @@ func responseStatusCode(err error) (code int, ok bool) {
 	if !errors.As(err, &respErr) {
 		return 0, false
 	}
+	// HTTPStatusCode dereferences e.Response.Response without guarding either level,
+	// and both can legitimately be nil here: errors.As binds a typed nil pointer
+	// happily, and a ResponseError assembled by a test mock or by custom middleware
+	// wrapping *smithyhttp.ResponseError may carry no HTTP response at all. Check the
+	// whole chain rather than calling into it.
+	if respErr == nil || respErr.Response == nil || respErr.Response.Response == nil {
+		return 0, false
+	}
 	return respErr.HTTPStatusCode(), true
 }
 

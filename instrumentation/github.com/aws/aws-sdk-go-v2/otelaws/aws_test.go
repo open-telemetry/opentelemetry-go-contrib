@@ -173,6 +173,33 @@ func Test_otelMiddlewares_presignedRequests(t *testing.T) {
 	assert.NotContains(t, input.Header[key], value)
 }
 
+// Test_responseStatusCodeNilResponse covers the nil chains reachable through
+// errors.As. HTTPStatusCode dereferences e.Response.Response, so a typed-nil error, a
+// ResponseError carrying no Response, or one whose embedded *http.Response is nil would
+// each panic if responseStatusCode called into it unguarded. Every case must report
+// "no status code" instead.
+func Test_responseStatusCodeNilResponse(t *testing.T) {
+	var typedNil *smithyhttp.ResponseError
+
+	testcases := []struct {
+		name string
+		err  error
+	}{
+		{name: "typed nil ResponseError", err: typedNil},
+		{name: "nil Response", err: &smithyhttp.ResponseError{}},
+		{name: "nil embedded http.Response", err: &smithyhttp.ResponseError{Response: &smithyhttp.Response{}}},
+	}
+
+	for _, tt := range testcases {
+		t.Run(tt.name, func(t *testing.T) {
+			code, ok := responseStatusCode(tt.err)
+			assert.False(t, ok, "should report no status code")
+			assert.Equal(t, 0, code)
+			assert.False(t, isNotModifiedStatus(tt.err), "should not be treated as 304")
+		})
+	}
+}
+
 func Test_isNotModifiedStatus(t *testing.T) {
 	tests := []struct {
 		name string
