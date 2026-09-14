@@ -39,6 +39,7 @@ func TestAppendMiddlewares(t *testing.T) {
 		responseBody       []byte
 		expectedRegion     string
 		expectedError      codes.Code
+		expectSDKError     bool
 		expectedRequestID  string
 		expectedStatusCode int
 	}{
@@ -53,6 +54,7 @@ func TestAppendMiddlewares(t *testing.T) {
 		</InvalidChangeBatch>`),
 			expectedRegion:     "us-east-1",
 			expectedError:      codes.Error,
+			expectSDKError:     true,
 			expectedRequestID:  "b25f48e8-84fd-11e6-80d9-574e0c4664cb",
 			expectedStatusCode: http.StatusInternalServerError,
 		},
@@ -71,6 +73,7 @@ func TestAppendMiddlewares(t *testing.T) {
 		`),
 			expectedRegion:     "us-west-1",
 			expectedError:      codes.Error,
+			expectSDKError:     true,
 			expectedRequestID:  "1234567890A",
 			expectedStatusCode: http.StatusNotFound,
 		},
@@ -86,6 +89,21 @@ func TestAppendMiddlewares(t *testing.T) {
 		</ChangeResourceRecordSetsResponse>`),
 			expectedRegion:     "us-west-2",
 			expectedStatusCode: http.StatusOK,
+		},
+
+		"not modified response is not recorded as an error": {
+			responseStatus:     http.StatusNotModified,
+			expectedRegion:     "us-west-2",
+			expectSDKError:     true,
+			expectedStatusCode: http.StatusNotModified,
+		},
+
+		"other redirect response is still recorded as an error": {
+			responseStatus:     http.StatusMovedPermanently,
+			expectedRegion:     "us-west-2",
+			expectedError:      codes.Error,
+			expectSDKError:     true,
+			expectedStatusCode: http.StatusMovedPermanently,
 		},
 	}
 
@@ -125,10 +143,10 @@ func TestAppendMiddlewares(t *testing.T) {
 					&options.APIOptions, otelaws.WithTracerProvider(provider),
 				)
 			})
-			if c.expectedError == codes.Unset {
-				assert.NoError(t, err)
-			} else {
+			if c.expectSDKError {
 				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
 			}
 
 			spans := sr.Ended()
