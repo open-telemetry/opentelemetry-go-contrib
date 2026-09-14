@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"reflect"
 	"strings"
 	"testing"
@@ -752,6 +753,21 @@ func TestConvertValueFormattedMapKeys(t *testing.T) {
 			convertValue(map[reflect.Value]int{invalid: 42}),
 		)
 	})
+
+	t.Run("NonReflexive", func(t *testing.T) {
+		key := math.NaN()
+		value := attribute.MapValue(attribute.KeyValue{
+			Key:   attribute.Key(fmt.Sprintf("%+v", key)),
+			Value: attribute.Value{},
+		})
+
+		assert.Equal(t, value, convertValue(map[float64]int{key: 42}))
+		assert.Equal(t, value, convertValue(&map[float64]int{key: 42}))
+		assert.Equal(t, value, convertValue(map[float64]any{key: 42}))
+		assert.Equal(t, attribute.SliceValue(value), convertValue([]any{
+			map[float64]int{key: 42},
+		}))
+	})
 }
 
 func TestConvertValuePointerEdgeCases(t *testing.T) {
@@ -805,6 +821,37 @@ func TestConvertValuePointerEdgeCases(t *testing.T) {
 	want := convertValue(channel)
 	assert.Equal(t, want, convertValue(channelPointerPointer))
 	assert.Equal(t, attribute.SliceValue(want), convertValue([]any{channelPointerPointer}))
+
+	t.Run("DirectAggregateCycles", func(t *testing.T) {
+		mapping := map[string]any{}
+		mapPointer := &mapping
+		mapping["self"] = mapPointer
+		assert.Equal(
+			t,
+			attribute.MapValue(attribute.String("self", cycleMarker)),
+			convertValue(mapPointer),
+		)
+
+		slice := make([]any, 1)
+		slicePointer := &slice
+		slice[0] = slicePointer
+		assert.Equal(
+			t,
+			attribute.SliceValue(attribute.StringValue(cycleMarker)),
+			convertValue(slicePointer),
+		)
+	})
+
+	t.Run("DirectAggregateWork", func(t *testing.T) {
+		setMaxTraversalWork(t, 1)
+
+		mapping := map[string]int{"one": 1}
+		slice := []int{1}
+		structure := struct{ Value int }{Value: 1}
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(&mapping))
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(&slice))
+		assert.Equal(t, attribute.StringValue(workLimitMarker), convertValue(&structure))
+	})
 }
 
 func TestFormattingCycleBranches(t *testing.T) {

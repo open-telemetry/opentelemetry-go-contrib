@@ -27,7 +27,7 @@ const (
 	maxMapKeyHashTypeWork = 1000
 	// Must be a power of two greater than inlineVisitCount + 1. Promotion fills
 	// inlineVisitCount + 1 slots, and probing relies on an empty slot.
-	initialOverflowVisitTableSize = 128
+	initialOverflowVisitTableSize = 64
 )
 
 var (
@@ -713,7 +713,9 @@ func convertRootMapValue(t reflect.Type, val reflect.Value) attribute.Value {
 			case !reserveValueCopyWork(t.Elem(), 1, &work):
 				value = attribute.StringValue(workLimitMarker)
 			default:
-				value = convertReflectChildWithWork(val.MapIndex(k), &work)
+				if mapValue := val.MapIndex(k); mapValue.IsValid() {
+					value = convertReflectChildWithWork(mapValue, &work)
+				}
 			}
 		}
 		kvs = append(kvs, attribute.KeyValue{Key: attribute.Key(key), Value: value})
@@ -853,7 +855,9 @@ func convertValueWithWork(v any, work *int) attribute.Value {
 					case !reserveValueCopyWork(t.Elem(), 1, work):
 						value = attribute.StringValue(workLimitMarker)
 					default:
-						value = convertReflectChildWithWork(val.MapIndex(k), work)
+						if mapValue := val.MapIndex(k); mapValue.IsValid() {
+							value = convertReflectChildWithWork(mapValue, work)
+						}
 					}
 				}
 				kvs = append(kvs, attribute.KeyValue{
@@ -983,7 +987,9 @@ func convertValueRoot(t reflect.Type, val reflect.Value, work *int) attribute.Va
 				case !reserveValueCopyWork(t.Elem(), 1, &visited.work):
 					value = attribute.StringValue(workLimitMarker)
 				default:
-					value = convertReflectChildWithTracker(val.MapIndex(k), &visited)
+					if mapValue := val.MapIndex(k); mapValue.IsValid() {
+						value = convertReflectChildWithTracker(mapValue, &visited)
+					}
 				}
 			}
 			kvs = append(kvs, attribute.KeyValue{
@@ -1209,7 +1215,9 @@ func convertReflectValue(v any, t reflect.Type, val reflect.Value, visited *visi
 				case !reserveValueCopyWork(t.Elem(), 1, &visited.work):
 					value = attribute.StringValue(workLimitMarker)
 				default:
-					value = convertReflectChildWithTracker(val.MapIndex(k), visited)
+					if mapValue := val.MapIndex(k); mapValue.IsValid() {
+						value = convertReflectChildWithTracker(mapValue, visited)
+					}
 				}
 			}
 			kvs = append(kvs, attribute.KeyValue{
@@ -1326,7 +1334,18 @@ func convertRootPointerValue(val reflect.Value) attribute.Value {
 		next = next.Elem()
 	}
 	switch next.Kind() {
-	case reflect.Array, reflect.Map, reflect.Pointer, reflect.Slice, reflect.Struct:
+	case reflect.Map, reflect.Slice, reflect.Struct:
+		// Maps and slices track their own identities, and structs use the
+		// formatting preflight. A single pointer edge only needs its work unit.
+		var work int
+		if !reserveWork(&work, 1) {
+			return attribute.StringValue(workLimitMarker)
+		}
+		if next.Kind() == reflect.Struct {
+			return convertReflectedStructValue(next, &work)
+		}
+		return convertValueWithWork(next.Interface(), &work)
+	case reflect.Array, reflect.Pointer:
 		var visited visitTracker
 		return convertPointerValue(val, &visited)
 	}

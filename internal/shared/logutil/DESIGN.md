@@ -119,6 +119,8 @@ including dynamic values stored in interface keys. Formatting methods do not
 short-circuit this accounting because Go hashes the raw key before invoking any
 method for its textual representation. If raw hashing reaches a traversal bound,
 the lookup is skipped and its value is replaced by the corresponding marker.
+If `MapIndex` cannot retrieve a snapshotted non-reflexive key, such as a NaN,
+the key is retained with an invalid attribute value instead of panicking.
 
 The formatting preflight's depth count includes every value edge that `fmt`
 would follow, including array and interface edges. Before scanning an
@@ -229,6 +231,10 @@ recursive roots enter a separate stack frame, so the inline identity array is
 not charged to scalar or statically non-recursive paths. The root-owned work
 state does not escape. Paired benchmarks must continue to check both time and
 allocation counts when this structure changes.
+
+A single pointer to a map, slice, or struct charges its pointer edge and then
+reuses the corresponding conversion path without constructing a pointer-chain
+tracker. Pointer chains and pointers exposing arrays retain the general tracker.
 
 There is no opt-out option. Statically non-recursive conversion paths avoid the
 general tracker, and formatting values whose shallow runtime shape cannot cycle

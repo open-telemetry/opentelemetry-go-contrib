@@ -34,6 +34,14 @@ func benchmarkPointerChain(depth int) any {
 	return value
 }
 
+func benchmarkNestedSlice(depth int) any {
+	value := any(42)
+	for range depth {
+		value = []any{value}
+	}
+	return value
+}
+
 func benchmarkFormattingTypeValue(depth int) any {
 	typ := reflect.TypeFor[int]()
 	for range depth {
@@ -75,6 +83,7 @@ func benchmarkWideFormattingStruct(size int) any {
 func BenchmarkConvertValue(b *testing.B) {
 	shared := map[string]int{"one": 1}
 	integer := 42
+	slice := []int{1, 2, 3}
 
 	for _, tt := range []struct {
 		name  string
@@ -93,6 +102,9 @@ func BenchmarkConvertValue(b *testing.B) {
 		{name: "PointerDepth1", value: benchmarkPointerChain(1)},
 		{name: "PointerDepth8", value: benchmarkPointerChain(8)},
 		{name: "PointerDepth64", value: benchmarkPointerChain(64)},
+		{name: "PointerStruct", value: &struct{ Value int }{Value: 42}},
+		{name: "PointerMap", value: &shared},
+		{name: "PointerSlice", value: &slice},
 		{name: "EmptySlice", value: []int{}},
 		{name: "Slice", value: []int{1, 2, 3}},
 		{name: "SliceAny", value: []any{1, 2, 3}},
@@ -114,6 +126,24 @@ func BenchmarkConvertValue(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
 				convertValue(tt.value)
+			}
+		})
+	}
+}
+
+func BenchmarkConvertValueTrackerBoundary(b *testing.B) {
+	for _, depth := range []int{
+		inlineVisitCount,
+		inlineVisitCount + 1,
+		16,
+		initialOverflowVisitTableSize * 3 / 4,
+		initialOverflowVisitTableSize*3/4 + 1,
+	} {
+		b.Run(strconv.Itoa(depth), func(b *testing.B) {
+			value := benchmarkNestedSlice(depth)
+			b.ReportAllocs()
+			for b.Loop() {
+				convertValue(value)
 			}
 		})
 	}
