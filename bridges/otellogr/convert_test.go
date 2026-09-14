@@ -932,17 +932,20 @@ func TestFormattingCycleBranches(t *testing.T) {
 
 func TestConvertValueFormattingMethodMutation(t *testing.T) {
 	const helperEnv = "OTEL_LOGUTIL_FORMATTING_MUTATION_HELPER"
-	if os.Getenv(helperEnv) != "1" {
+	helperProcess := os.Getenv(helperEnv) == "1"
+	if !helperProcess {
 		cmd := exec.CommandContext(
 			t.Context(), os.Args[0], "-test.run=^TestConvertValueFormattingMethodMutation$",
 		)
 		cmd.Env = append(os.Environ(), helperEnv+"=1")
 		output, err := cmd.CombinedOutput()
 		require.NoError(t, err, "formatting-mutation subprocess failed:\n%s", output)
-		return
 	}
 
-	debug.SetMaxStack(1 << 20)
+	if helperProcess {
+		previousMaxStack := debug.SetMaxStack(1 << 20)
+		defer debug.SetMaxStack(previousMaxStack)
+	}
 	t.Run("DirectStruct", func(t *testing.T) {
 		calls := 0
 		cycle := []any{42}
