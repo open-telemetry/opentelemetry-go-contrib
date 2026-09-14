@@ -14,6 +14,7 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -30,6 +31,11 @@ const (
 	cwConfigmapName   = "cluster-info"
 	defaultCgroupPath = "/proc/self/cgroup"
 	containerIDLength = 64
+
+	// k8sRequestTimeout bounds each Kubernetes API call when the caller
+	// provides a context without a deadline, so resource detection cannot
+	// hang indefinitely at application startup.
+	k8sRequestTimeout = 5 * time.Second
 )
 
 // detectorUtils is used for testing the resourceDetector by abstracting functions that rely on external systems.
@@ -163,6 +169,14 @@ func (eksDetectorUtils) fileExists(filename string) bool {
 
 // getConfigMap retrieves the configuration map from the k8s API.
 func (eksUtils eksDetectorUtils) getConfigMap(ctx context.Context, namespace, name string) (map[string]string, error) {
+	// Bound the request duration when the caller provides no deadline so a
+	// non-responding Kubernetes API cannot block detection indefinitely.
+	if _, hasDeadline := ctx.Deadline(); !hasDeadline {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, k8sRequestTimeout)
+		defer cancel()
+	}
+
 	u, err := url.JoinPath(eksUtils.host, "api", "v1", "namespaces", namespace, "configmaps", name)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build ConfigMap URL for %s/%s: %w", namespace, name, err)
