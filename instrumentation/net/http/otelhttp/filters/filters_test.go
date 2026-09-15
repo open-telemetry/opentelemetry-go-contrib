@@ -206,7 +206,6 @@ func TestMethods(t *testing.T) {
 	}
 }
 
-
 func TestQuery(t *testing.T) {
 	matching, _ := url.Parse("http://bar.baz:8080/foo/bar?key=value")
 	nonMatching, _ := url.Parse("http://bar.baz:8080/foo/bar?key=other")
