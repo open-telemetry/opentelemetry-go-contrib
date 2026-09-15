@@ -751,6 +751,58 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 	}
 }
 
+func TestMessageEventAttributes(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(spanRecorder),
+	)
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			body, err := io.ReadAll(r.Body)
+			if !assert.NoError(t, err) {
+				return
+			}
+
+			_, err = w.Write(body)
+			assert.NoError(t, err)
+		}),
+		"test_handler",
+		WithTracerProvider(provider),
+		WithMessageEvents(ReadEvents, WriteEvents),
+	)
+
+	const payload = "hello world"
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", strings.NewReader(payload))
+	h.ServeHTTP(httptest.NewRecorder(), req)
+
+	require.Len(t, spanRecorder.Ended(), 1)
+
+	var readEvents, writeEvents int
+	span := spanRecorder.Ended()[0]
+	for _, event := range span.Events() {
+		switch event.Name {
+		case "read":
+			readEvents++
+			assert.Empty(t, event.Attributes)
+		case "write":
+			writeEvents++
+			assert.Empty(t, event.Attributes)
+		}
+	}
+
+	assert.Positive(t, readEvents)
+	assert.Positive(t, writeEvents)
+	assert.Contains(t, span.Attributes(), attribute.Int("http.request.body.size", len(payload)))
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.body.size", len(payload)))
+	for _, attr := range span.Attributes() {
+		assert.NotEqual(t, attribute.Key("http.read_bytes"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.read_error"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.wrote_bytes"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.write_error"), attr.Key)
+	}
+}
+
 func BenchmarkHandlerServeHTTP(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()
