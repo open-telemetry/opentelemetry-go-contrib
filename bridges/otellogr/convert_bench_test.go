@@ -4,16 +4,9 @@
 package otellogr
 
 import (
-	"context"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
-)
-
-var (
-	benchmarkValueResult   attribute.Value
-	benchmarkContextResult context.Context
-	benchmarkKVsResult     []attribute.KeyValue
 )
 
 func BenchmarkConvertValue(b *testing.B) {
@@ -39,12 +32,10 @@ func BenchmarkConvertValue(b *testing.B) {
 		{name: "StructMap", value: struct{ Value map[string]int }{Value: mapping}},
 	} {
 		b.Run(tt.name, func(b *testing.B) {
-			var result attribute.Value
 			b.ReportAllocs()
 			for b.Loop() {
-				result = convertValue(tt.value)
+				convertValue(tt.value)
 			}
-			benchmarkValueResult = result
 		})
 	}
 }
@@ -58,14 +49,8 @@ func BenchmarkConvertKVs(b *testing.B) {
 		"attribute", attribute.StringValue("value"),
 	}
 
-	var (
-		resultContext context.Context
-		resultKVs     []attribute.KeyValue
-	)
 	b.ReportAllocs()
 	for b.Loop() {
-		resultContext, resultKVs = convertKVs(ctx, keyValues...)
+		convertKVs(ctx, keyValues...)
 	}
-	benchmarkContextResult = resultContext
-	benchmarkKVsResult = resultKVs
 }
