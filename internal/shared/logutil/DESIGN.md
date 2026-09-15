@@ -63,8 +63,9 @@ calls to `error.Error` and `fmt` retain Go's normal behavior. Implementations of
 `fmt.Formatter`, `fmt.Stringer`, and `error`, along with their runtime, side
 effects, panics, blocking, allocations, and recursive formatting, are trusted
 user code. Struct and non-string map-key formatting is not preflighted. The
-[`fmt` documentation](https://pkg.go.dev/fmt) likewise states that it does not
-protect against every self-referential formatting pathology.
+[`fmt` documentation](https://github.com/golang/go/blob/8af21751f066eced273ca3ce49506b366847c623/src/fmt/doc.go#L227-L230)
+likewise states that it does not protect against every self-referential
+formatting pathology.
 
 Unsynchronized concurrent mutation is also outside this contract. In
 particular, mutating a map while it is converted is a caller data race. Wide
@@ -74,10 +75,10 @@ proportional to the input. They are separate resource-policy concerns, not
 stack-depth concerns.
 
 This design has standard-library precedents for bounded, whole-value failure:
-[`log/slog.Value.Resolve`](https://go.dev/src/log/slog/value.go#L491) uses a
-fixed iteration bound, while
-[`encoding/json`](https://go.dev/src/encoding/json/encode.go#L297) rejects a
-cyclic value instead of returning a partial encoding.
+[`log/slog.Value.Resolve`](https://github.com/golang/go/blob/8af21751f066eced273ca3ce49506b366847c623/src/log/slog/value.go#L491-L515)
+uses a fixed iteration bound, while
+[`encoding/json`](https://github.com/golang/go/blob/8af21751f066eced273ca3ce49506b366847c623/src/encoding/json/encode.go#L201-L204)
+rejects a cyclic value instead of returning a partial encoding.
 
 ## Relationship to OpenTelemetry attribute limits
 
