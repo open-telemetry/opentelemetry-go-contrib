@@ -119,4 +119,3 @@ func Methods(ms ...string) otelhttp.Filter {
 		return slices.Contains(ms, r.Method)
 	}
 }
-
