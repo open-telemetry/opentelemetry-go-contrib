@@ -181,8 +181,14 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		ctx = ContextWithLabeler(ctx, labeler)
 	}
 
+	origReq := r
 	r = r.WithContext(ctx)
 	next.ServeHTTP(w, r)
+	// Copy MultipartForm back to the original request so net/http can find
+	// and remove any temp files ParseMultipartForm created on the copy.
+	if r.MultipartForm != nil {
+		origReq.MultipartForm = r.MultipartForm
+	}
 
 	if r.Pattern != "" {
 		span.SetName(h.spanNameFormatter(h.operation, r))
