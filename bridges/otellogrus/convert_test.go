@@ -348,7 +348,7 @@ func TestConvertValueRecursiveValues(t *testing.T) {
 func TestConvertValueDepthLimit(t *testing.T) {
 	t.Run("100 nested slices ending in scalar succeed", func(t *testing.T) {
 		got := convertValue(wrapSlices(maxConvertDepth, "leaf"))
-		leaf := requireNestedSlice(t, got, maxConvertDepth)
+		leaf := requireNestedSlice(t, got)
 		assert.Equal(t, attribute.StringValue("leaf"), leaf)
 	})
 
@@ -357,15 +357,15 @@ func TestConvertValueDepthLimit(t *testing.T) {
 		assert.Equal(t, attribute.StringValue(maxDepthExceeded), got)
 	})
 
-	t.Run("interface indirection counts toward limit", func(t *testing.T) {
+	t.Run("interface indirection does not count toward limit", func(t *testing.T) {
 		got := convertValue(wrapSlices(maxConvertDepth-1, []any{"leaf"}))
-		assert.Equal(t, attribute.StringValue(maxDepthExceeded), got)
+		leaf := requireNestedSlice(t, got)
+		assert.Equal(t, attribute.StringValue("leaf"), leaf)
 	})
 
-	t.Run("interface indirection succeeds at boundary", func(t *testing.T) {
-		got := convertValue(wrapSlices(maxConvertDepth-2, []any{"leaf"}))
-		leaf := requireNestedSlice(t, got, maxConvertDepth-1)
-		assert.Equal(t, attribute.StringValue("leaf"), leaf)
+	t.Run("container beyond limit fails through interface", func(t *testing.T) {
+		got := convertValue(wrapSlices(maxConvertDepth-1, []any{[]any{"leaf"}}))
+		assert.Equal(t, attribute.StringValue(maxDepthExceeded), got)
 	})
 
 	t.Run("100 pointers ending in scalar succeed", func(t *testing.T) {
@@ -385,13 +385,13 @@ func TestConvertValueDepthLimit(t *testing.T) {
 
 	t.Run("empty slice is allowed at boundary", func(t *testing.T) {
 		got := convertValue(wrapSlices(maxConvertDepth, []any{}))
-		empty := requireNestedSlice(t, got, maxConvertDepth)
+		empty := requireNestedSlice(t, got)
 		assert.Equal(t, attribute.SliceValue(), empty)
 	})
 
 	t.Run("empty map is allowed at boundary", func(t *testing.T) {
 		got := convertValue(wrapSlices(maxConvertDepth, map[string]any{}))
-		empty := requireNestedSlice(t, got, maxConvertDepth)
+		empty := requireNestedSlice(t, got)
 		assert.Equal(t, attribute.MapValue(), empty)
 	})
 }
@@ -437,9 +437,9 @@ func wrapPointers(depth int, leaf any) any {
 	return value.Interface()
 }
 
-func requireNestedSlice(t *testing.T, value attribute.Value, depth int) attribute.Value {
+func requireNestedSlice(t *testing.T, value attribute.Value) attribute.Value {
 	t.Helper()
-	for range depth {
+	for range maxConvertDepth {
 		require.Equal(t, attribute.SLICE, value.Type())
 		values := value.AsSlice()
 		require.Len(t, values, 1)

@@ -115,7 +115,7 @@ func convertValue(v any) attribute.Value {
 			})
 		}
 		return attribute.MapValue(kvs...)
-	case reflect.Pointer, reflect.Interface:
+	case reflect.Pointer:
 		if val.IsNil() {
 			return attribute.Value{}
 		}
@@ -142,11 +142,7 @@ func convertValueDepth(val reflect.Value, remaining int) (attribute.Value, bool)
 		if val.IsNil() {
 			return attribute.Value{}, true
 		}
-		if remaining == 0 {
-			return attribute.Value{}, false
-		}
 		val = val.Elem()
-		remaining--
 	}
 
 	v := val.Interface()

@@ -13,12 +13,16 @@ graph.
 on the active path that the converter itself descends into:
 
 - a non-empty map, slice, or array counts as one level;
-- a non-nil pointer or interface counts as one level; and
+- a non-nil pointer counts as one level;
+- a non-nil interface wrapper does not count; and
 - a scalar, nil pointer or interface, and empty map, slice, or array does not
-count because conversion does not recurse through it.
+  count because conversion does not recurse through it.
 
-The `reflect.Interface` case is charged if reached, although ordinary boxing
-into `any` normally exposes the concrete dynamic type directly.
+The `reflect.Interface` case is unwrapped in the current helper invocation, so
+it does not add a recursive stack frame. Interface wrappers also cannot form an
+independent recursive chain: any cycle reached through one must contain a map,
+slice, or pointer, which is counted normally. The unwrapped concrete value is
+charged according to the rules above.
 
 At most 100 counted values may be active. If descending into another counted
 value would make the depth 101, conversion fails. A terminal scalar, nil, or
