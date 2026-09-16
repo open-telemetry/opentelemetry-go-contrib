@@ -77,7 +77,7 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	// a link-local address (169.254.169.254) that must never be reached via an
 	// HTTP(S) proxy: doing so could leak instance metadata or break detection
 	// in environments where users set HTTP_PROXY/HTTPS_PROXY for outbound
-	// traffic. Keep-alives are disabled because the detector makes a single
+	// traffic. Keep-alive is disabled because the detector makes a single
 	// request, and an idle connection would otherwise stay open (with its
 	// read/write goroutines) until the metadata service closes it.
 	transport := &http.Transport{Proxy: nil, DisableKeepAlives: true}
