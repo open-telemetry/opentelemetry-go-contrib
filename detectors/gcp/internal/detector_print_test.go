@@ -18,7 +18,7 @@
 // This provides an always-passing test that simply logs the detected environment in which it is run.
 // To run it on an arbitrary machine, build a test binary:
 //
-// go test -c -tags print
+// go test -c -tags print -o gcp.test ./internal
 //
 // and then copy it to a test VM and run:
 //
