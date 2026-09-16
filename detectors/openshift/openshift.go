@@ -234,7 +234,7 @@ func (d *ResourceDetector) client(address string) (*http.Client, error) {
 	// outbound traffic.
 	//
 	// A new client is built per detection and sends a single request, so
-	// keep-alives are disabled to release the connection once it is done.
+	// keep-alive is disabled to release the connection once it is done.
 	return &http.Client{
 		Timeout: requestTimeout,
 		Transport: &http.Transport{
