@@ -44,7 +44,7 @@ func TestNewResource(t *testing.T) {
 		{
 			name: "resource-with-schema",
 			config: &Resource{
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: new(semconv.SchemaURL),
 			},
 			wantSchemaURL: semconv.SchemaURL,
 		},
@@ -64,7 +64,7 @@ func TestNewResource(t *testing.T) {
 				Attributes: []AttributeNameValue{
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: new(semconv.SchemaURL),
 			},
 			wantSchemaURL: semconv.SchemaURL,
 			wantAttrs:     []attribute.KeyValue{semconv.ServiceName("service-a")},
@@ -76,7 +76,7 @@ func TestNewResource(t *testing.T) {
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 					{Name: "attr-bool", Value: true},
 				},
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: new(semconv.SchemaURL),
 			},
 			wantSchemaURL: semconv.SchemaURL,
 			wantAttrs: []attribute.KeyValue{
@@ -306,7 +306,7 @@ func TestNewResourceWithDetectionAttributesFilterDoesNotApplyToConfiguredAttribu
 func TestNewResourceWithDetectionAttributesFilterRemovesDetectedSchema(t *testing.T) {
 	schemaURL := "https://example.com/schema"
 	got, err := newResource(t.Context(), &Resource{
-		SchemaUrl: ptr(schemaURL),
+		SchemaUrl: new(schemaURL),
 		DetectionDevelopment: &ExperimentalResourceDetection{
 			Detectors: []ExperimentalResourceDetector{
 				{Host: ExperimentalHostResourceDetector{}},
