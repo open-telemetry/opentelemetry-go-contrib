@@ -4,4 +4,4 @@
 package vultr
 
 // Version is the current release version of the Vultr resource detector.
-const Version = "0.17.0"
+const Version = "0.18.0"
