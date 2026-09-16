@@ -19,6 +19,11 @@ import (
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
+// maxMetadataSize bounds how much of the metadata response is read. The compute
+// document is a few kilobytes; the limit guards against something unexpected
+// answering on the link-local address.
+const maxMetadataSize = 1 << 20
+
 const defaultEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
 
 // kubernetesServiceHostEnvVar is set by the kubelet in every pod. Its presence
@@ -72,8 +77,10 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	// a link-local address (169.254.169.254) that must never be reached via an
 	// HTTP(S) proxy: doing so could leak instance metadata or break detection
 	// in environments where users set HTTP_PROXY/HTTPS_PROXY for outbound
-	// traffic.
-	transport := &http.Transport{Proxy: nil}
+	// traffic. Keep-alives are disabled because the detector makes a single
+	// request, and an idle connection would otherwise stay open (with its
+	// read/write goroutines) until the metadata service closes it.
+	transport := &http.Transport{Proxy: nil, DisableKeepAlives: true}
 	return &ResourceDetector{
 		endpoint: defaultEndpoint,
 		cfg:      cfg,
@@ -112,7 +119,7 @@ func (d *ResourceDetector) fetchMetadata(ctx context.Context) (*aksMetadata, boo
 		return nil, onAzure, fmt.Errorf("metadata request returned status %d", resp.StatusCode)
 	}
 
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxMetadataSize))
 	if err != nil {
 		return nil, true, err
 	}
@@ -151,10 +158,9 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		semconv.CloudPlatformAzureAKS,
 	}
 
-	var errs []error
-
+	var partialErr error
 	if meta.ResourceGroupName == "" {
-		errs = append(errs, errors.New("cluster name: resourceGroupName not present in metadata"))
+		partialErr = errors.New("cluster name: resourceGroupName not present in metadata")
 	} else {
 		attrs = append(attrs, semconv.K8SClusterName(parseClusterName(meta.ResourceGroupName)))
 	}
@@ -171,8 +177,8 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 
 	res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
 
-	if len(errs) > 0 {
-		return res, fmt.Errorf("%w: %v", resource.ErrPartialResource, errs)
+	if partialErr != nil {
+		return res, fmt.Errorf("%w: %w", resource.ErrPartialResource, partialErr)
 	}
 	return res, nil
 }

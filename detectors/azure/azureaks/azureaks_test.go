@@ -4,6 +4,7 @@
 package azureaks
 
 import (
+	"bytes"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -239,6 +240,20 @@ func TestDetect_MalformedJSON(t *testing.T) {
 	assert.Nil(t, res)
 }
 
+func TestDetect_OversizedBody(t *testing.T) {
+	onKubernetes(t)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"resourceGroupName":"`))
+		_, _ = w.Write(bytes.Repeat([]byte("a"), maxMetadataSize))
+		_, _ = w.Write([]byte(`"}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	// The body is truncated at maxMetadataSize, leaving invalid JSON.
+	_, err := newTestDetector(srv.URL).Detect(t.Context())
+	require.Error(t, err)
+}
+
 func TestDetect_PartialFailure(t *testing.T) {
 	// Serve JSON with resourceGroupName absent.
 	onKubernetes(t)
@@ -284,4 +299,39 @@ func TestDetect_WithAttributeFilter(t *testing.T) {
 		assert.True(t, ok, "expected %s to be present", kv.Key)
 		assert.Equal(t, kv.Value, val)
 	}
+}
+
+func testDetector(t *testing.T) *ResourceDetector {
+	t.Helper()
+	onKubernetes(t)
+	url, _ := newFakeServer(t, aksMetadata{
+		ResourceGroupName: "MC_myResourceGroup_AKSCluster_eastus",
+	})
+	return newTestDetector(url)
+}
+
+// TestComposition_MergeWithDefault guards against schema URL drift between
+// this detector and the SDK. [resource.Merge] reports
+// [resource.ErrSchemaURLConflict] and drops the schema URL when the two
+// disagree, so this fails as soon as the semconv version here and the one
+// behind [resource.Default] diverge.
+func TestComposition_MergeWithDefault(t *testing.T) {
+	detected, err := testDetector(t).Detect(t.Context())
+	require.NoError(t, err)
+
+	merged, err := resource.Merge(resource.Default(), detected)
+	require.NoError(t, err)
+	assert.Equal(t, resource.Default().SchemaURL(), merged.SchemaURL())
+}
+
+// TestComposition_WithCoreDetectors asserts this detector composes with the
+// SDK's built-in detectors.
+func TestComposition_WithCoreDetectors(t *testing.T) {
+	res, err := resource.New(t.Context(),
+		resource.WithDetectors(testDetector(t)),
+		resource.WithHost(),
+		resource.WithTelemetrySDK(),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, resource.Default().SchemaURL(), res.SchemaURL())
 }

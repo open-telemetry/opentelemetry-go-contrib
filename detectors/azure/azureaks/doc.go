@@ -14,7 +14,9 @@ following attributes is added if it is available:
 
 Detection requires both that the KUBERNETES_SERVICE_HOST environment variable is
 set, which the kubelet does for every pod, and that the Azure Instance Metadata
-Service is reachable. When either is not the case an empty resource is returned.
+Service is reachable. When either is not the case an empty resource is returned
+without an error. If the metadata service is reachable but fails, for example
+with a 5xx status or a malformed response body, an error is returned instead.
 
 The k8s.cluster.name value is parsed from the infrastructure resource group name
 reported by the Azure Instance Metadata Service. AKS generates that group as
