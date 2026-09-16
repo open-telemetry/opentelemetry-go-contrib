@@ -10,7 +10,7 @@ OpenShift API server, authenticating with the service account token projected
 into the pod. It requires the following RBAC:
 
   - apiGroups: ["config.openshift.io"]
-    resources: ["infrastructures"]
+    resources: ["infrastructures", "infrastructures/status"]
     resourceNames: ["cluster"]
     verbs: ["get"]
 

@@ -5,7 +5,10 @@ package openshift
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
+	"encoding/pem"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -254,14 +257,27 @@ func TestDetectFetchesOnce(t *testing.T) {
 // A plain Kubernetes API server does not serve the OpenShift config API group
 // and answers 404.
 func TestDetectNotOpenShift(t *testing.T) {
-	for _, status := range []int{http.StatusNotFound, http.StatusForbidden, http.StatusUnauthorized} {
+	url := newFakeServerFunc(t, func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+
+	res, err := newTestDetector(url).Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
+}
+
+// A rejected token or missing RBAC is a misconfigured detector, not evidence
+// that the process does not run on OpenShift.
+func TestDetectUnauthorized(t *testing.T) {
+	for _, status := range []int{http.StatusUnauthorized, http.StatusForbidden} {
 		url := newFakeServerFunc(t, func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(status)
 		})
 
 		res, err := newTestDetector(url).Detect(t.Context())
-		require.NoError(t, err)
-		assert.Equal(t, resource.Empty(), res)
+		require.Error(t, err)
+		assert.NotErrorIs(t, err, resource.ErrPartialResource)
+		assert.Nil(t, res)
 	}
 }
 
@@ -339,6 +355,7 @@ func TestDetectPartialMissingRegion(t *testing.T) {
 
 	res, err := newTestDetector(url).Detect(t.Context())
 	require.ErrorIs(t, err, resource.ErrPartialResource)
+	assert.ErrorContains(t, err, "aws.region")
 
 	expected := resource.NewWithAttributes(
 		semconv.SchemaURL,
@@ -393,6 +410,83 @@ func TestDetectReadsServiceAccountToken(t *testing.T) {
 	_, err := d.Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, "Bearer projected-token", gotAuth)
+}
+
+// An empty token would produce an invalid Authorization header, so no request
+// is sent.
+func TestDetectEmptyServiceAccountToken(t *testing.T) {
+	var requests int
+	url := newFakeServerFunc(t, func(w http.ResponseWriter, _ *http.Request) {
+		requests++
+		_ = json.NewEncoder(w).Encode(awsInfra())
+	})
+
+	tokenPath := filepath.Join(t.TempDir(), "token")
+	require.NoError(t, os.WriteFile(tokenPath, []byte(" \n"), 0o600))
+
+	d := NewResourceDetector(WithAddress(url))
+	d.tokenPath = tokenPath
+
+	res, err := d.Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
+	assert.Equal(t, 0, requests)
+}
+
+func newTLSFakeServer(t *testing.T) *httptest.Server {
+	t.Helper()
+	srv := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(awsInfra())
+	}))
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+func TestDetectWithTLSConfig(t *testing.T) {
+	srv := newTLSFakeServer(t)
+	pool := x509.NewCertPool()
+	pool.AddCert(srv.Certificate())
+
+	d := newTestDetector(srv.URL, WithTLSConfig(&tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}))
+
+	res, err := d.Detect(t.Context())
+	require.NoError(t, err)
+	val, ok := res.Set().Value(semconv.K8SClusterNameKey)
+	require.True(t, ok)
+	assert.Equal(t, "test-d-bm4rt", val.AsString())
+}
+
+// Without WithTLSConfig the projected certificate authority is the root of
+// trust.
+func TestDetectReadsCertificateAuthority(t *testing.T) {
+	srv := newTLSFakeServer(t)
+
+	caPath := filepath.Join(t.TempDir(), "ca.crt")
+	ca := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: srv.Certificate().Raw})
+	require.NoError(t, os.WriteFile(caPath, ca, 0o600))
+
+	d := newTestDetector(srv.URL)
+	d.caPath = caPath
+
+	res, err := d.Detect(t.Context())
+	require.NoError(t, err)
+	val, ok := res.Set().Value(semconv.K8SClusterNameKey)
+	require.True(t, ok)
+	assert.Equal(t, "test-d-bm4rt", val.AsString())
+}
+
+func TestDetectInvalidCertificateAuthority(t *testing.T) {
+	srv := newTLSFakeServer(t)
+
+	caPath := filepath.Join(t.TempDir(), "ca.crt")
+	require.NoError(t, os.WriteFile(caPath, []byte("not a certificate"), 0o600))
+
+	d := newTestDetector(srv.URL)
+	d.caPath = caPath
+
+	res, err := d.Detect(t.Context())
+	require.Error(t, err)
+	assert.Nil(t, res)
 }
 
 func TestDetectMissingCertificateAuthority(t *testing.T) {
@@ -452,4 +546,36 @@ func TestDetectWithAttributeFilter(t *testing.T) {
 		semconv.K8SClusterName("test-d-bm4rt"),
 	)
 	assert.Equal(t, expected, res)
+}
+
+// TestComposition_MergeWithDefault guards against schema URL drift between
+// this detector and the SDK. [resource.Merge] reports
+// [resource.ErrSchemaURLConflict] and drops the schema URL when the two
+// disagree, so this fails as soon as the semconv version here and the one
+// behind [resource.Default] diverge.
+func TestComposition_MergeWithDefault(t *testing.T) {
+	detected, err := newTestDetector(newFakeServer(t, awsInfra())).Detect(t.Context())
+	require.NoError(t, err)
+
+	merged, err := resource.Merge(resource.Default(), detected)
+	require.NoError(t, err)
+	assert.Equal(t, resource.Default().SchemaURL(), merged.SchemaURL())
+}
+
+// TestComposition_WithCoreDetectors asserts this detector composes with the
+// built-in detectors of go.opentelemetry.io/otel/sdk.
+func TestComposition_WithCoreDetectors(t *testing.T) {
+	d := newTestDetector(newFakeServer(t, awsInfra()))
+
+	res, err := resource.New(t.Context(),
+		resource.WithDetectors(d),
+		resource.WithHost(),
+		resource.WithFromEnv(),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, resource.Default().SchemaURL(), res.SchemaURL())
+
+	val, ok := res.Set().Value(semconv.K8SClusterNameKey)
+	require.True(t, ok)
+	assert.Equal(t, "test-d-bm4rt", val.AsString())
 }

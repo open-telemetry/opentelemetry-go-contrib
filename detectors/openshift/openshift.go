@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -31,6 +32,10 @@ const (
 	// defaultCAPath is where Kubernetes projects the certificate authority
 	// that signed the API server certificate.
 	defaultCAPath = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
+
+	// requestTimeout bounds the request to the API server so that a stalled
+	// connection cannot block detection until the caller's context is done.
+	requestTimeout = 5 * time.Second
 
 	hostEnvVar = "KUBERNETES_SERVICE_HOST"
 	portEnvVar = "KUBERNETES_SERVICE_PORT"
@@ -152,7 +157,7 @@ type ResourceDetector struct {
 // therefore requires the following RBAC:
 //
 //   - apiGroups: ["config.openshift.io"]
-//     resources: ["infrastructures"]
+//     resources: ["infrastructures", "infrastructures/status"]
 //     resourceNames: ["cluster"]
 //     verbs: ["get"]
 func NewResourceDetector(opts ...Option) *ResourceDetector {
@@ -197,7 +202,11 @@ func (d *ResourceDetector) token() (string, bool) {
 		return "", false
 	}
 	// Trailing whitespace would make the Authorization header value invalid.
-	return strings.TrimSpace(string(token)), true
+	t := strings.TrimSpace(string(token))
+	if t == "" {
+		return "", false
+	}
+	return t, true
 }
 
 // client returns the HTTP client used to reach the API server at address.
@@ -223,8 +232,16 @@ func (d *ResourceDetector) client(address string) (*http.Client, error) {
 	// HTTP(S) proxy: doing so would hand the service account bearer token to
 	// the proxy in environments where users set HTTP_PROXY/HTTPS_PROXY for
 	// outbound traffic.
+	//
+	// A new client is built per detection and sends a single request, so
+	// keep-alives are disabled to release the connection once it is done.
 	return &http.Client{
-		Transport: &http.Transport{Proxy: nil, TLSClientConfig: tlsConfig},
+		Timeout: requestTimeout,
+		Transport: &http.Transport{
+			Proxy:             nil,
+			TLSClientConfig:   tlsConfig,
+			DisableKeepAlives: true,
+		},
 	}, nil
 }
 
@@ -267,10 +284,15 @@ func (d *ResourceDetector) infrastructure(ctx context.Context) (*infrastructureR
 
 	switch {
 	case resp.StatusCode >= 200 && resp.StatusCode < 300:
+	case resp.StatusCode == http.StatusUnauthorized || resp.StatusCode == http.StatusForbidden:
+		// The token was rejected or lacks the RBAC to read the Infrastructure
+		// object. Report the misconfiguration instead of hiding it as "not
+		// running on OpenShift".
+		return nil, true, fmt.Errorf("infrastructure request returned status %d: check the service account token and its RBAC for config.openshift.io infrastructures/status", resp.StatusCode)
 	case resp.StatusCode >= 400 && resp.StatusCode < 500:
 		// A plain Kubernetes API server answers 404 for the OpenShift config
-		// API group. Any other client error means the request was rejected,
-		// which is not evidence of an OpenShift cluster either.
+		// API group. Any other client error is not evidence of an OpenShift
+		// cluster either.
 		return nil, false, fmt.Errorf("infrastructure request returned status %d", resp.StatusCode)
 	default:
 		return nil, true, fmt.Errorf("infrastructure request returned status %d", resp.StatusCode)
@@ -286,7 +308,8 @@ func (d *ResourceDetector) infrastructure(ctx context.Context) (*infrastructureR
 // Detect detects resource attributes of the OpenShift 4 cluster the process is
 // running in. It returns an empty resource and no error when not running on
 // OpenShift, and an error when the OpenShift API is reachable but does not
-// return usable metadata. If the process runs on OpenShift but some attributes
+// return usable metadata, including when the request is rejected as
+// unauthorized or forbidden. If the process runs on OpenShift but some attributes
 // cannot be retrieved, a partial resource is returned together with
 // [resource.ErrPartialResource].
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
@@ -360,7 +383,7 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
 
 	if len(errs) > 0 {
-		return res, fmt.Errorf("%w: %v", resource.ErrPartialResource, errs)
+		return res, fmt.Errorf("%w: %w", resource.ErrPartialResource, errors.Join(errs...))
 	}
 	return res, nil
 }
