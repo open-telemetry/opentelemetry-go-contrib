@@ -33,7 +33,7 @@ import "testing"
 func TestDetectorPrint(t *testing.T) {
 	d := NewDetector()
 	t.Logf("CloudPlatform: %+v", d.CloudPlatform())
-	log := func(label, v interface{}, err error) {
+	log := func(label, v any, err error) {
 		t.Helper()
 		if err != nil {
 			t.Logf("%s returned err %v", label, err)
