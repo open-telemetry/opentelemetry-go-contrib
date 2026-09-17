@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, Cloud Run Worker Pool parity, and GKE hostname enrichment to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
+
 ### Fixed
 
 - Preserve explicit Unix epoch timestamps (`TimestampMs = 0`) instead of replacing them with the current time in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9837)

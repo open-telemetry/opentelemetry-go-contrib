@@ -30,6 +30,49 @@ func TestDetect(t *testing.T) {
 				projectID:           "my-project",
 				cloudPlatform:       internal.GKE,
 				gkeHostID:           "1472385723456792345",
+				gceHostName:         "my-gke-node-1234",
+				gkeClusterName:      "my-cluster",
+				gkeAvailabilityZone: "us-central1-c",
+			}},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPKubernetesEngine,
+				semconv.K8SClusterName("my-cluster"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+			),
+		},
+		{
+			desc: "regional GKE cluster",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:      "my-project",
+				cloudPlatform:  internal.GKE,
+				gkeHostID:      "1472385723456792345",
+				gceHostName:    "my-gke-node-1234",
+				gkeClusterName: "my-cluster",
+				gkeRegion:      "us-central1",
+			}},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPKubernetesEngine,
+				semconv.K8SClusterName("my-cluster"),
+				semconv.CloudRegion("us-central1"),
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+			),
+		},
+		{
+			desc: "GKE cluster with GCEHostName error",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:           "my-project",
+				cloudPlatform:       internal.GKE,
+				gkeHostID:           "1472385723456792345",
+				gceHostNameErr:      fmt.Errorf("failed to get hostname"),
 				gkeClusterName:      "my-cluster",
 				gkeAvailabilityZone: "us-central1-c",
 			}},
@@ -44,26 +87,7 @@ func TestDetect(t *testing.T) {
 			),
 		},
 		{
-			desc: "regional GKE cluster",
-			detector: &detector{detector: &fakeGCPDetector{
-				projectID:      "my-project",
-				cloudPlatform:  internal.GKE,
-				gkeHostID:      "1472385723456792345",
-				gkeClusterName: "my-cluster",
-				gkeRegion:      "us-central1",
-			}},
-			expectedResource: resource.NewWithAttributes(
-				semconv.SchemaURL,
-				semconv.CloudProviderGCP,
-				semconv.CloudAccountID("my-project"),
-				semconv.CloudPlatformGCPKubernetesEngine,
-				semconv.K8SClusterName("my-cluster"),
-				semconv.CloudRegion("us-central1"),
-				semconv.HostID("1472385723456792345"),
-			),
-		},
-		{
-			desc: "GCE",
+			desc: "GCE without MIG",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:              "my-project",
 				cloudPlatform:          internal.GCE,
@@ -224,6 +248,176 @@ func TestDetect(t *testing.T) {
 			),
 		},
 		{
+			desc: "GCE with MIG",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:              "my-project",
+				cloudPlatform:          internal.GCE,
+				gceHostID:              "1472385723456792345",
+				gceHostName:            "my-gke-node-1234",
+				gceHostType:            "n1-standard1",
+				gceAvailabilityZone:    "us-central1-c",
+				gceRegion:              "us-central1",
+				gcpGceInstanceName:     "my-gke-node-1234",
+				gcpGceInstanceHostname: "hostname",
+				gcpGceManagedInstanceGroup: internal.ManagedInstanceGroup{
+					Name:     "my-mig",
+					Location: "us-central1",
+					Type:     internal.Region,
+				},
+			}},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPComputeEngine,
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+				semconv.GCPGCEInstanceNameKey.String("my-gke-node-1234"),
+				semconv.GCPGCEInstanceHostnameKey.String("hostname"),
+				semconv.HostType("n1-standard1"),
+				semconv.CloudRegion("us-central1"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				semconv.GCPGCEInstanceGroupManagerName("my-mig"),
+				semconv.GCPGCEInstanceGroupManagerRegion("us-central1"),
+			),
+		},
+		{
+			desc: "GCE with zonal MIG",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:              "my-project",
+				cloudPlatform:          internal.GCE,
+				gceHostID:              "1472385723456792345",
+				gceHostName:            "my-gke-node-1234",
+				gceHostType:            "n1-standard1",
+				gceAvailabilityZone:    "us-central1-c",
+				gceRegion:              "us-central1",
+				gcpGceInstanceName:     "my-gke-node-1234",
+				gcpGceInstanceHostname: "hostname",
+				gcpGceManagedInstanceGroup: internal.ManagedInstanceGroup{
+					Name:     "my-mig",
+					Location: "us-central1-c",
+					Type:     internal.Zone,
+				},
+			}},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPComputeEngine,
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+				semconv.GCPGCEInstanceNameKey.String("my-gke-node-1234"),
+				semconv.GCPGCEInstanceHostnameKey.String("hostname"),
+				semconv.HostType("n1-standard1"),
+				semconv.CloudRegion("us-central1"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				semconv.GCPGCEInstanceGroupManagerName("my-mig"),
+				semconv.GCPGCEInstanceGroupManagerZone("us-central1-c"),
+			),
+		},
+		{
+			desc: "GCE with MIG invalid type",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:              "my-project",
+				cloudPlatform:          internal.GCE,
+				gceHostID:              "1472385723456792345",
+				gceHostName:            "my-gke-node-1234",
+				gceHostType:            "n1-standard1",
+				gceAvailabilityZone:    "us-central1-c",
+				gceRegion:              "us-central1",
+				gcpGceInstanceName:     "my-gke-node-1234",
+				gcpGceInstanceHostname: "hostname",
+				gcpGceManagedInstanceGroup: internal.ManagedInstanceGroup{
+					Name:     "my-mig",
+					Location: "us-central1",
+					Type:     internal.LocationType(99),
+				},
+			}},
+			expectErr: true,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPComputeEngine,
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+				semconv.GCPGCEInstanceNameKey.String("my-gke-node-1234"),
+				semconv.GCPGCEInstanceHostnameKey.String("hostname"),
+				semconv.HostType("n1-standard1"),
+				semconv.CloudRegion("us-central1"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				semconv.GCPGCEInstanceGroupManagerName("my-mig"),
+			),
+		},
+		{
+			desc: "GCE with MIG error",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:              "my-project",
+				cloudPlatform:          internal.GCE,
+				gceHostID:              "1472385723456792345",
+				gceHostName:            "my-gke-node-1234",
+				gceHostType:            "n1-standard1",
+				gceAvailabilityZone:    "us-central1-c",
+				gceRegion:              "us-central1",
+				gcpGceInstanceName:     "my-gke-node-1234",
+				gcpGceInstanceHostname: "hostname",
+				migErr:                 fmt.Errorf("failed to get MIG"),
+			}},
+			expectErr: true,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPComputeEngine,
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+				semconv.GCPGCEInstanceNameKey.String("my-gke-node-1234"),
+				semconv.GCPGCEInstanceHostnameKey.String("hostname"),
+				semconv.HostType("n1-standard1"),
+				semconv.CloudRegion("us-central1"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+			),
+		},
+		{
+			desc: "Cloud Run Worker Pool",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:       "my-project",
+				cloudPlatform:   internal.CloudRunWorkerPool,
+				faaSID:          "1472385723456792345",
+				faaSCloudRegion: "us-central1",
+				faaSName:        "my-service",
+				faaSVersion:     "123456",
+			}},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPCloudRun,
+				semconv.CloudRegion("us-central1"),
+				semconv.FaaSName("my-service"),
+				semconv.FaaSVersion("123456"),
+				semconv.FaaSInstance("1472385723456792345"),
+			),
+		},
+		{
+			desc: "Bare Metal Solution",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:                       "my-project",
+				cloudPlatform:                   internal.BareMetalSolution,
+				gcpBareMetalSolutionCloudRegion: "us-central1",
+				gcpBareMetalSolutionInstanceID:  "1472385723456792345",
+				gcpBareMetalSolutionProjectID:   "my-project",
+			}},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudPlatformGCPBareMetalSolution,
+				semconv.CloudAccountID("my-project"),
+				semconv.HostID("1472385723456792345"),
+				semconv.CloudRegion("us-central1"),
+			),
+		},
+		{
 			desc: "Unknown Platform",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:     "my-project",
@@ -261,32 +455,38 @@ func TestDetect(t *testing.T) {
 
 // fakeGCPDetector implements gcpDetector and uses fake values.
 type fakeGCPDetector struct {
-	err                       error
-	projectID                 string
-	cloudPlatform             internal.Platform
-	gkeAvailabilityZone       string
-	gkeRegion                 string
-	gkeClusterName            string
-	gkeHostID                 string
-	gkeHostName               string
-	faaSName                  string
-	faaSVersion               string
-	faaSID                    string
-	faaSCloudRegion           string
-	appEngineAvailabilityZone string
-	appEngineRegion           string
-	appEngineServiceName      string
-	appEngineServiceVersion   string
-	appEngineServiceInstance  string
-	gceAvailabilityZone       string
-	gceRegion                 string
-	gceHostType               string
-	gceHostID                 string
-	gceHostName               string
-	gcpGceInstanceName        string
-	gcpGceInstanceHostname    string
-	cloudRunJobExecution      string
-	cloudRunJobTaskIndex      string
+	err                             error
+	gceHostNameErr                  error
+	migErr                          error
+	projectID                       string
+	cloudPlatform                   internal.Platform
+	gkeAvailabilityZone             string
+	gkeRegion                       string
+	gkeClusterName                  string
+	gkeHostID                       string
+	gkeHostName                     string
+	faaSName                        string
+	faaSVersion                     string
+	faaSID                          string
+	faaSCloudRegion                 string
+	appEngineAvailabilityZone       string
+	appEngineRegion                 string
+	appEngineServiceName            string
+	appEngineServiceVersion         string
+	appEngineServiceInstance        string
+	gceAvailabilityZone             string
+	gceRegion                       string
+	gceHostType                     string
+	gceHostID                       string
+	gceHostName                     string
+	gcpGceInstanceName              string
+	gcpGceInstanceHostname          string
+	gcpGceManagedInstanceGroup      internal.ManagedInstanceGroup
+	gcpBareMetalSolutionCloudRegion string
+	gcpBareMetalSolutionInstanceID  string
+	gcpBareMetalSolutionProjectID   string
+	cloudRunJobExecution            string
+	cloudRunJobTaskIndex            string
 }
 
 func (f *fakeGCPDetector) ProjectID() (string, error) {
@@ -325,6 +525,9 @@ func (f *fakeGCPDetector) GKEHostID() (string, error) {
 }
 
 func (f *fakeGCPDetector) GKEHostName() (string, error) {
+	if f.gceHostNameErr != nil {
+		return "", f.gceHostNameErr
+	}
 	if f.err != nil {
 		return "", f.err
 	}
@@ -423,6 +626,9 @@ func (f *fakeGCPDetector) GCEHostID() (string, error) {
 }
 
 func (f *fakeGCPDetector) GCEHostName() (string, error) {
+	if f.gceHostNameErr != nil {
+		return "", f.gceHostNameErr
+	}
 	if f.err != nil {
 		return "", f.err
 	}
@@ -455,4 +661,35 @@ func (f *fakeGCPDetector) CloudRunJobTaskIndex() (string, error) {
 		return "", f.err
 	}
 	return f.cloudRunJobTaskIndex, nil
+}
+
+func (f *fakeGCPDetector) GCEManagedInstanceGroup() (internal.ManagedInstanceGroup, error) {
+	if f.migErr != nil {
+		return internal.ManagedInstanceGroup{}, f.migErr
+	}
+	if f.err != nil {
+		return internal.ManagedInstanceGroup{}, f.err
+	}
+	return f.gcpGceManagedInstanceGroup, nil
+}
+
+func (f *fakeGCPDetector) BareMetalSolutionInstanceID() (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.gcpBareMetalSolutionInstanceID, nil
+}
+
+func (f *fakeGCPDetector) BareMetalSolutionCloudRegion() (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.gcpBareMetalSolutionCloudRegion, nil
+}
+
+func (f *fakeGCPDetector) BareMetalSolutionProjectID() (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.gcpBareMetalSolutionProjectID, nil
 }

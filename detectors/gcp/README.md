@@ -7,7 +7,9 @@ The GCP resource detector supports detecting resources on:
 * Google App Engine (GAE)
 * Cloud Run
 * Cloud Run jobs
+* Cloud Run worker pools
 * Cloud Functions
+* Bare Metal Solution (BMS)
 
 ## Usage
 
@@ -56,8 +58,8 @@ env:
   value: my-container-name
 - name: OTEL_RESOURCE_ATTRIBUTES
   value: k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(NAMESPACE_NAME),k8s.container.name=$(CONTAINER_NAME)
-
 ```
+
 To have a detector unpack the `OTEL_RESOURCE_ATTRIBUTES` envvar, use the `WithFromEnv` option:
 
 ```golang
@@ -75,3 +77,6 @@ res, err := resource.New(ctx,
 )
 ...
 ```
+
+> [!NOTE]
+> On GKE, `host.name` is collected on a best-effort basis from the underlying node name. If `resource.WithHost()` is also configured, `host.name` will reflect the pod hostname or the node name depending on detector option order.
