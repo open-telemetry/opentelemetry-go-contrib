@@ -11,7 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `NewResourceDetectorWithOptions` and the `WithAWSLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom AWS SDK `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
-- Add `go.opentelemetry.io/contrib/detectors/openshift`, a new resource detector for OpenShift 4 clusters, ported from `processor/resourcedetectionprocessor/internal/openshift` in `opentelemetry-collector-contrib`. Detects `k8s.cluster.name`, and `cloud.provider`, `cloud.platform` and `cloud.region` for clusters running on AWS, Azure, Google Cloud and IBM Cloud; OpenStack clusters report only `cloud.region`. (#9499)
+- Add `go.opentelemetry.io/contrib/detectors/openshift`, a new resource detector for OpenShift 4 clusters, ported from `processor/resourcedetectionprocessor/internal/openshift` in `opentelemetry-collector-contrib`. Detects `k8s.cluster.name`, and `cloud.provider`, `cloud.platform` and `cloud.region` for clusters running on AWS, Google Cloud and IBM Cloud; Azure clusters report `cloud.provider` and `cloud.platform` only. (#9499)
 
 ### Changed
 

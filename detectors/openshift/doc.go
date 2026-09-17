@@ -10,7 +10,7 @@ OpenShift API server, authenticating with the service account token projected
 into the pod. It requires the following RBAC:
 
   - apiGroups: ["config.openshift.io"]
-    resources: ["infrastructures", "infrastructures/status"]
+    resources: ["infrastructures/status"]
     resourceNames: ["cluster"]
     verbs: ["get"]
 
@@ -26,14 +26,14 @@ The k8s.cluster.name value is the infrastructure name of the cluster. Which
 cloud attributes are reported depends on the infrastructure the cluster runs
 on:
 
-  - AWS, Azure, Google Cloud and IBM Cloud clusters report cloud.provider,
+  - AWS, Google Cloud and IBM Cloud clusters report cloud.provider,
     cloud.platform and cloud.region.
-  - OpenStack clusters report only cloud.region. Semantic conventions define no
-    cloud.provider value for OpenStack and no cloud.platform value for
-    OpenShift on OpenStack.
-  - Clusters that do not run on a cloud provider, such as bare metal, vSphere
-    and oVirt, report no cloud attributes at all. This is not treated as a
-    partial resource.
+  - Azure clusters report cloud.provider and cloud.platform. The OpenShift API
+    does not expose the Azure region, so cloud.region is not reported.
+  - OpenStack clusters and clusters that do not run on a cloud provider, such
+    as bare metal, vSphere and oVirt, report no cloud attributes at all.
+    Semantic conventions define no cloud.provider value for OpenStack. This is
+    not treated as a partial resource.
 
 Region values are normalized to lower case.
 

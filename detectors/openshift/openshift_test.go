@@ -88,15 +88,11 @@ func TestDetectAWS(t *testing.T) {
 	assert.Equal(t, expected, res)
 }
 
+// Azure clusters report no region: azure.cloudName is the cloud environment,
+// not a region.
 func TestDetectAzure(t *testing.T) {
-	url := newFakeServer(t, infrastructureResponse{
-		Status: infrastructureStatus{
-			InfrastructureName: "test-azure",
-			PlatformStatus: platformStatus{
-				Type:  "Azure",
-				Azure: azurePlatform{CloudName: "AzurePublicCloud"},
-			},
-		},
+	url := newFakeServerFunc(t, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"status":{"infrastructureName":"test-azure","platformStatus":{"type":"Azure","azure":{"cloudName":"AzurePublicCloud"}}}}`))
 	})
 
 	res, err := newTestDetector(url).Detect(t.Context())
@@ -107,7 +103,6 @@ func TestDetectAzure(t *testing.T) {
 		semconv.K8SClusterName("test-azure"),
 		semconv.CloudProviderAzure,
 		semconv.CloudPlatformAzureOpenShift,
-		semconv.CloudRegion("azurepubliccloud"),
 	)
 	assert.Equal(t, expected, res)
 }
@@ -160,18 +155,12 @@ func TestDetectIBMCloud(t *testing.T) {
 	assert.Equal(t, expected, res)
 }
 
-// OpenStack clusters report only the region: semantic conventions define no
-// cloud.provider value for OpenStack and no cloud.platform value for OpenShift
-// on OpenStack.
+// OpenStack clusters report no cloud attributes: semantic conventions define no
+// cloud.provider value for OpenStack, and openstack.cloudName is the clouds.yaml
+// entry name, not a region.
 func TestDetectOpenStack(t *testing.T) {
-	url := newFakeServer(t, infrastructureResponse{
-		Status: infrastructureStatus{
-			InfrastructureName: "test-osp",
-			PlatformStatus: platformStatus{
-				Type:      "OpenStack",
-				OpenStack: openStackPlatform{CloudName: "MyCloud"},
-			},
-		},
+	url := newFakeServerFunc(t, func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"status":{"infrastructureName":"test-osp","platformStatus":{"type":"OpenStack","openstack":{"cloudName":"MyCloud"}}}}`))
 	})
 
 	res, err := newTestDetector(url).Detect(t.Context())
@@ -180,7 +169,6 @@ func TestDetectOpenStack(t *testing.T) {
 	expected := resource.NewWithAttributes(
 		semconv.SchemaURL,
 		semconv.K8SClusterName("test-osp"),
-		semconv.CloudRegion("mycloud"),
 	)
 	assert.Equal(t, expected, res)
 }
@@ -287,8 +275,9 @@ func TestDetectAPIServerUnreachable(t *testing.T) {
 	srv.Close()
 
 	res, err := newTestDetector(url).Detect(t.Context())
-	require.NoError(t, err)
-	assert.Equal(t, resource.Empty(), res)
+	require.Error(t, err)
+	assert.NotErrorIs(t, err, resource.ErrPartialResource)
+	assert.Nil(t, res)
 }
 
 func TestDetectServerError(t *testing.T) {

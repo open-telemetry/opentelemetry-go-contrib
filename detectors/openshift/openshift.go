@@ -60,23 +60,16 @@ type infrastructureStatus struct {
 // platformStatus holds status information specific to the underlying
 // infrastructure provider.
 type platformStatus struct {
-	Type      string            `json:"type"`
-	AWS       awsPlatform       `json:"aws"`
-	Azure     azurePlatform     `json:"azure"`
-	GCP       gcpPlatform       `json:"gcp"`
-	IBMCloud  ibmCloudPlatform  `json:"ibmcloud"`
-	OpenStack openStackPlatform `json:"openstack"`
+	Type     string           `json:"type"`
+	AWS      awsPlatform      `json:"aws"`
+	GCP      gcpPlatform      `json:"gcp"`
+	IBMCloud ibmCloudPlatform `json:"ibmcloud"`
 }
 
 type awsPlatform struct {
 	// Region holds the default AWS region for new AWS resources created by the
 	// cluster.
 	Region string `json:"region"`
-}
-
-type azurePlatform struct {
-	// CloudName is the name of the Azure cloud environment.
-	CloudName string `json:"cloudName"`
 }
 
 type gcpPlatform struct {
@@ -87,12 +80,6 @@ type gcpPlatform struct {
 type ibmCloudPlatform struct {
 	// Location is where the cluster has been deployed.
 	Location string `json:"location"`
-}
-
-type openStackPlatform struct {
-	// CloudName is the name of the desired OpenStack cloud in the client
-	// configuration file (clouds.yaml).
-	CloudName string `json:"cloudName"`
 }
 
 type config struct {
@@ -157,7 +144,7 @@ type ResourceDetector struct {
 // therefore requires the following RBAC:
 //
 //   - apiGroups: ["config.openshift.io"]
-//     resources: ["infrastructures", "infrastructures/status"]
+//     resources: ["infrastructures/status"]
 //     resourceNames: ["cluster"]
 //     verbs: ["get"]
 func NewResourceDetector(opts ...Option) *ResourceDetector {
@@ -247,8 +234,8 @@ func (d *ResourceDetector) client(address string) (*http.Client, error) {
 
 // infrastructure requests the Infrastructure status from the OpenShift API
 // server. The returned boolean reports whether the process appears to run on
-// OpenShift: it is false when the API server cannot be reached or when it does
-// not serve the OpenShift config API.
+// OpenShift: it is false when no in-cluster API server is configured or when
+// the API server does not serve the OpenShift config API.
 func (d *ResourceDetector) infrastructure(ctx context.Context) (*infrastructureResponse, bool, error) {
 	address, ok := d.address()
 	if !ok {
@@ -270,15 +257,12 @@ func (d *ResourceDetector) infrastructure(ctx context.Context) (*infrastructureR
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 
+	// An address and a token were found, so the process runs in a cluster or
+	// was pointed at an API server explicitly. Failing to reach it (TLS, DNS,
+	// timeout, ...) is an error, not evidence of a cluster other than OpenShift.
 	resp, err := client.Do(req)
 	if err != nil {
-		if ctx.Err() != nil {
-			// The caller gave up. Do not report this as "not running on
-			// OpenShift".
-			return nil, true, err
-		}
-		// The API server is unreachable: not running on OpenShift.
-		return nil, false, err
+		return nil, true, fmt.Errorf("infrastructure request: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -307,7 +291,7 @@ func (d *ResourceDetector) infrastructure(ctx context.Context) (*infrastructureR
 
 // Detect detects resource attributes of the OpenShift 4 cluster the process is
 // running in. It returns an empty resource and no error when not running on
-// OpenShift, and an error when the OpenShift API is reachable but does not
+// OpenShift, and an error when the API server cannot be reached or does not
 // return usable metadata, including when the request is rejected as
 // unauthorized or forbidden. If the process runs on OpenShift but some attributes
 // cannot be retrieved, a partial resource is returned together with
@@ -338,6 +322,9 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	// The OpenShift API reports regions in the casing of the underlying
 	// provider. Normalize to lower case so cloud.region matches the value the
 	// collector's OpenShift detector reports for the same cluster.
+	//
+	// Azure and OpenStack expose no region: their cloudName fields name the
+	// cloud environment and the clouds.yaml entry, so cloud.region is omitted.
 	region := func(value, field string) {
 		if value == "" {
 			errs = append(errs, fmt.Errorf("cloud.region: %s not present in infrastructure status", field))
@@ -353,22 +340,17 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 		region(platform.AWS.Region, "aws.region")
 	case "azure":
 		attrs = append(attrs, semconv.CloudProviderAzure, semconv.CloudPlatformAzureOpenShift)
-		region(platform.Azure.CloudName, "azure.cloudName")
 	case "gcp":
 		attrs = append(attrs, semconv.CloudProviderGCP, semconv.CloudPlatformGCPOpenShift)
 		region(platform.GCP.Region, "gcp.region")
 	case "ibmcloud":
 		attrs = append(attrs, semconv.CloudProviderIBMCloud, semconv.CloudPlatformIBMCloudOpenShift)
 		region(platform.IBMCloud.Location, "ibmcloud.location")
-	case "openstack":
-		// Semantic conventions define no cloud.provider value for OpenStack and
-		// no cloud.platform value for OpenShift on OpenStack, so only the
-		// region is reported.
-		region(platform.OpenStack.CloudName, "openstack.cloudName")
 	}
-	// Any other platform type (baremetal, vsphere, ovirt, none, external, ...)
-	// is a cluster that does not run on a cloud provider. Reporting no cloud
-	// attributes for it is correct, not partial.
+	// Any other platform type (openstack, baremetal, vsphere, ovirt, none,
+	// external, ...) has no semantic conventions cloud.provider value or does
+	// not run on a cloud provider. Reporting no cloud attributes for it is
+	// correct, not partial.
 
 	if d.cfg.filter != nil {
 		filtered := attrs[:0]
