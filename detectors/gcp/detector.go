@@ -37,13 +37,18 @@ type detector struct {
 // Detect detects associated resources when running on GCE, GKE, GAE,
 // Cloud Run, Cloud Run jobs, Cloud Run worker pools, Cloud Functions, and Bare Metal Solution.
 func (d *detector) Detect(context.Context) (*resource.Resource, error) {
-	if _, err := d.detector.BareMetalSolutionProjectID(); err == nil && d.detector.CloudPlatform() == internal.BareMetalSolution {
-		b := &resourceBuilder{}
-		b.attrs = append(b.attrs, semconv.CloudProviderGCP, semconv.CloudPlatformGCPBareMetalSolution)
-		b.add(semconv.CloudAccountIDKey, d.detector.BareMetalSolutionProjectID)
-		b.add(semconv.HostIDKey, d.detector.BareMetalSolutionInstanceID)
-		b.add(semconv.CloudRegionKey, d.detector.BareMetalSolutionCloudRegion)
-		return b.build()
+	projectID, err1 := d.detector.BareMetalSolutionProjectID()
+	region, err2 := d.detector.BareMetalSolutionCloudRegion()
+	instanceID, err3 := d.detector.BareMetalSolutionInstanceID()
+	if err1 == nil && err2 == nil && err3 == nil && projectID != "" && region != "" && instanceID != "" {
+		return resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.CloudProviderGCP,
+			semconv.CloudPlatformGCPBareMetalSolution,
+			semconv.CloudAccountID(projectID),
+			semconv.HostID(instanceID),
+			semconv.CloudRegion(region),
+		), nil
 	}
 
 	if !metadata.OnGCE() {

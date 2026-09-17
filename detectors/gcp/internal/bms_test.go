@@ -54,6 +54,17 @@ func TestBareMetalSolutionCloudRegion(t *testing.T) {
 	assert.Equal(t, "us-central1", region)
 }
 
+func TestBareMetalSolutionCloudRegionFromLocation(t *testing.T) {
+	d := NewTestDetector(&FakeMetadataTransport{}, &FakeOSProvider{
+		Vars: map[string]string{
+			bmsLocationEnv: "europe-west1",
+		},
+	})
+	region, err := d.BareMetalSolutionCloudRegion()
+	assert.NoError(t, err)
+	assert.Equal(t, "europe-west1", region)
+}
+
 func TestBareMetalSolutionCloudRegionErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{}, &FakeOSProvider{
 		Vars: map[string]string{},
