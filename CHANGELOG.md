@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, Cloud Run Worker Pool parity, and GKE hostname enrichment to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
+- Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, and Cloud Run Worker Pool parity to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
 
 ### Fixed
 

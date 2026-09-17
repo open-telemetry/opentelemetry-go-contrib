@@ -78,9 +78,6 @@ res, err := resource.New(ctx,
 ...
 ```
 
-> [!NOTE]
-> On GKE, `host.name` is collected on a best-effort basis from the underlying node name. If `resource.WithHost()` is also configured, `host.name` will reflect the pod hostname or the node name depending on detector option order.
-
 ## Bare Metal Solution (BMS)
 
 Bare Metal Solution hosts do not provide a Compute Engine metadata server. Detection on BMS is entirely environment-driven and requires all three of the following environment variables to be set and non-empty (matching the [Google Cloud Ops Agent BMS configuration](https://docs.cloud.google.com/bare-metal/docs/set-up-ops-agent-for-bms#authorize_the_ops_agent)):
