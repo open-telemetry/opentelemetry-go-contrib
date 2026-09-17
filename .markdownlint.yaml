@@ -26,3 +26,12 @@ MD033: false
 
 # fenced-code-language
 MD040: false
+
+# table-pipe-style
+MD055: false
+
+# descriptive-link-text
+MD059: false
+
+# table-column-style
+MD060: false
