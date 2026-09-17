@@ -30,7 +30,6 @@ func TestDetect(t *testing.T) {
 				projectID:           "my-project",
 				cloudPlatform:       internal.GKE,
 				gkeHostID:           "1472385723456792345",
-				gceHostName:         "my-gke-node-1234",
 				gkeClusterName:      "my-cluster",
 				gkeAvailabilityZone: "us-central1-c",
 			}},
@@ -42,7 +41,6 @@ func TestDetect(t *testing.T) {
 				semconv.K8SClusterName("my-cluster"),
 				semconv.CloudAvailabilityZone("us-central1-c"),
 				semconv.HostID("1472385723456792345"),
-				semconv.HostName("my-gke-node-1234"),
 			),
 		},
 		{
@@ -51,7 +49,6 @@ func TestDetect(t *testing.T) {
 				projectID:      "my-project",
 				cloudPlatform:  internal.GKE,
 				gkeHostID:      "1472385723456792345",
-				gceHostName:    "my-gke-node-1234",
 				gkeClusterName: "my-cluster",
 				gkeRegion:      "us-central1",
 			}},
@@ -62,27 +59,6 @@ func TestDetect(t *testing.T) {
 				semconv.CloudPlatformGCPKubernetesEngine,
 				semconv.K8SClusterName("my-cluster"),
 				semconv.CloudRegion("us-central1"),
-				semconv.HostID("1472385723456792345"),
-				semconv.HostName("my-gke-node-1234"),
-			),
-		},
-		{
-			desc: "GKE cluster with GCEHostName error",
-			detector: &detector{detector: &fakeGCPDetector{
-				projectID:           "my-project",
-				cloudPlatform:       internal.GKE,
-				gkeHostID:           "1472385723456792345",
-				gceHostNameErr:      fmt.Errorf("failed to get hostname"),
-				gkeClusterName:      "my-cluster",
-				gkeAvailabilityZone: "us-central1-c",
-			}},
-			expectedResource: resource.NewWithAttributes(
-				semconv.SchemaURL,
-				semconv.CloudProviderGCP,
-				semconv.CloudAccountID("my-project"),
-				semconv.CloudPlatformGCPKubernetesEngine,
-				semconv.K8SClusterName("my-cluster"),
-				semconv.CloudAvailabilityZone("us-central1-c"),
 				semconv.HostID("1472385723456792345"),
 			),
 		},
@@ -501,7 +477,6 @@ func TestBareMetalSolutionEnv(t *testing.T) {
 // fakeGCPDetector implements gcpDetector and uses fake values.
 type fakeGCPDetector struct {
 	err                             error
-	gceHostNameErr                  error
 	migErr                          error
 	cloudPlatformCalls              int
 	projectID                       string
@@ -572,9 +547,6 @@ func (f *fakeGCPDetector) GKEHostID() (string, error) {
 }
 
 func (f *fakeGCPDetector) GKEHostName() (string, error) {
-	if f.gceHostNameErr != nil {
-		return "", f.gceHostNameErr
-	}
 	if f.err != nil {
 		return "", f.err
 	}
@@ -673,9 +645,6 @@ func (f *fakeGCPDetector) GCEHostID() (string, error) {
 }
 
 func (f *fakeGCPDetector) GCEHostName() (string, error) {
-	if f.gceHostNameErr != nil {
-		return "", f.gceHostNameErr
-	}
 	if f.err != nil {
 		return "", f.err
 	}
