@@ -36,8 +36,8 @@ func TestComposition_MergeWithDefault(t *testing.T) {
 	require.NoError(t, err)
 
 	merged, err := resource.Merge(resource.Default(), detected)
+	require.NotErrorIs(t, err, resource.ErrSchemaURLConflict)
 	require.NoError(t, err)
-	assert.NotErrorIs(t, err, resource.ErrSchemaURLConflict)
 	assert.Equal(t, resource.Default().SchemaURL(), merged.SchemaURL())
 }
 
