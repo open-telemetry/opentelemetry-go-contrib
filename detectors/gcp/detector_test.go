@@ -453,11 +453,57 @@ func TestDetect(t *testing.T) {
 	}
 }
 
+func TestBareMetalSolutionEnv(t *testing.T) {
+	expectedResource := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.CloudProviderGCP,
+		semconv.CloudPlatformGCPBareMetalSolution,
+		semconv.CloudAccountID("my-project"),
+		semconv.HostID("my-instance-id"),
+		semconv.CloudRegion("us-central1"),
+	)
+
+	t.Run("documented BMS_LOCATION env vars", func(t *testing.T) {
+		t.Setenv("BMS_PROJECT_ID", "my-project")
+		t.Setenv("BMS_LOCATION", "us-central1")
+		t.Setenv("BMS_INSTANCE_ID", "my-instance-id")
+
+		res, err := NewDetector().Detect(t.Context())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResource, res)
+	})
+
+	t.Run("legacy BMS_REGION alias", func(t *testing.T) {
+		t.Setenv("BMS_PROJECT_ID", "my-project")
+		t.Setenv("BMS_REGION", "us-central1")
+		t.Setenv("BMS_INSTANCE_ID", "my-instance-id")
+
+		res, err := NewDetector().Detect(t.Context())
+		assert.NoError(t, err)
+		assert.Equal(t, expectedResource, res)
+	})
+
+	t.Run("partial BMS env vars do not trigger BMS resource or extra CloudPlatform probe", func(t *testing.T) {
+		fake := &fakeGCPDetector{
+			projectID:                     "my-project",
+			cloudPlatform:                 internal.UnknownPlatform,
+			gcpBareMetalSolutionProjectID: "my-project",
+		}
+		d := &detector{detector: fake}
+
+		res, err := d.Detect(t.Context())
+		assert.NoError(t, err)
+		assert.NotEqual(t, expectedResource, res)
+		assert.Equal(t, 1, fake.cloudPlatformCalls, "CloudPlatform should only be called once after OnGCE")
+	})
+}
+
 // fakeGCPDetector implements gcpDetector and uses fake values.
 type fakeGCPDetector struct {
 	err                             error
 	gceHostNameErr                  error
 	migErr                          error
+	cloudPlatformCalls              int
 	projectID                       string
 	cloudPlatform                   internal.Platform
 	gkeAvailabilityZone             string
@@ -497,6 +543,7 @@ func (f *fakeGCPDetector) ProjectID() (string, error) {
 }
 
 func (f *fakeGCPDetector) CloudPlatform() internal.Platform {
+	f.cloudPlatformCalls++
 	return f.cloudPlatform
 }
 
