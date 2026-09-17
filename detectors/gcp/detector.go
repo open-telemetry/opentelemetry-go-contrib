@@ -18,14 +18,15 @@ import (
 )
 
 // NewDetector returns a resource detector which detects resource attributes on:
-// * Google Compute Engine (GCE).
-// * Google Kubernetes Engine (GKE).
-// * Google App Engine (GAE).
-// * Cloud Run.
-// * Cloud Run jobs.
-// * Cloud Run worker pools.
-// * Cloud Functions.
-// * Bare Metal Solution (BMS).
+//
+//   - Google Compute Engine (GCE).
+//   - Google Kubernetes Engine (GKE).
+//   - Google App Engine (GAE).
+//   - Cloud Run.
+//   - Cloud Run jobs.
+//   - Cloud Run worker pools.
+//   - Cloud Functions.
+//   - Bare Metal Solution (BMS).
 func NewDetector() resource.Detector {
 	return &detector{detector: internal.NewDetector()}
 }
