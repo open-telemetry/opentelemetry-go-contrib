@@ -5,12 +5,15 @@ package otelhttp
 
 import (
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/felixge/httpsnoop"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
@@ -190,8 +193,18 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	statusCode := rww.StatusCode()
 	bytesWritten := rww.BytesWritten()
-	span.SetStatus(h.semconv.Status(statusCode))
 	bytesRead := bw.BytesRead()
+
+	if err := ctx.Err(); err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		span.SetAttributes(otelsemconv.ErrorType(err))
+	} else {
+		stCode, stMsg := h.semconv.Status(statusCode)
+		span.SetStatus(stCode, stMsg)
+		if statusCode >= 500 && statusCode < 600 {
+			span.SetAttributes(otelsemconv.ErrorTypeKey.String(strconv.Itoa(statusCode)))
+		}
+	}
 	span.SetAttributes(h.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: statusCode,
 		ReadBytes:  bytesRead,
