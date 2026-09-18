@@ -28,4 +28,4 @@ The following attributes are populated according to semantic conventions for
 
 [X-Ray integration must be enabled]: https://docs.aws.amazon.com/elasticbeanstalk/latest/dg/environment-configuration-debugging.html
 */
-package elasticbeanstalk // import "go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk"
+package elasticbeanstalk

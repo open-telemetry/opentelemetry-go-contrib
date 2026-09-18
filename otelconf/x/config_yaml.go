@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package x // import "go.opentelemetry.io/contrib/otelconf/x"
+package x
 
 import (
 	"errors"
@@ -33,19 +33,30 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
-	// container can be nil, must check and set here
+	if hasYAMLMapKey(node, "aws.ec2") && plain.AWSEC2 == nil {
+		plain.AWSEC2 = ExperimentalAWSEC2ResourceDetector{}
+	}
+	if hasYAMLMapKey(node, "gcp") && plain.GCP == nil {
+		plain.GCP = ExperimentalGCPResourceDetector{}
+	}
+	if hasYAMLMapKey(node, "aws.ecs") && plain.AWSECS == nil {
+		plain.AWSECS = ExperimentalAWSECSResourceDetector{}
+	}
+	if hasYAMLMapKey(node, "aws.eks") && plain.AWSEKS == nil {
+		plain.AWSEKS = ExperimentalAWSEKSResourceDetector{}
+	}
+	if hasYAMLMapKey(node, "azure.vm") && plain.AzureVM == nil {
+		plain.AzureVM = ExperimentalAzureVMResourceDetector{}
+	}
 	if hasYAMLMapKey(node, "container") && plain.Container == nil {
 		plain.Container = ExperimentalContainerResourceDetector{}
 	}
-	// host can be nil, must check and set here
 	if hasYAMLMapKey(node, "host") && plain.Host == nil {
 		plain.Host = ExperimentalHostResourceDetector{}
 	}
-	// process can be nil, must check and set here
 	if hasYAMLMapKey(node, "process") && plain.Process == nil {
 		plain.Process = ExperimentalProcessResourceDetector{}
 	}
-	// service can be nil, must check and set here
 	if hasYAMLMapKey(node, "service") && plain.Service == nil {
 		plain.Service = ExperimentalServiceResourceDetector{}
 	}
@@ -103,7 +114,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	} else {
 		// Configure the log level of the internal logger used by the SDK.
 		// If omitted, info is used.
-		sh.Plain.Disabled = ptr(false)
+		sh.Plain.Disabled = new(false)
 	}
 	if sh.LoggerProvider != nil {
 		sh.Plain.LoggerProvider = sh.LoggerProvider
@@ -129,7 +140,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	} else {
 		// Configure the log level of the internal logger used by the SDK.
 		// If omitted, info is used.
-		sh.Plain.LogLevel = ptr(SeverityNumberInfo)
+		sh.Plain.LogLevel = new(SeverityNumberInfo)
 	}
 
 	*j = OpenTelemetryConfiguration(sh.Plain)

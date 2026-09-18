@@ -7,4 +7,4 @@
 // instrumenting the routing of a received message (the Middleware function)
 // and instrumenting the response generation through template evaluation (the
 // HTML function).
-package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+package otelgin

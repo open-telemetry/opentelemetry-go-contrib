@@ -5,15 +5,19 @@ package otelmux
 
 import (
 	"bufio"
+	"bytes"
 	"io"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -46,6 +50,57 @@ func TestRequestBodyWrapper(t *testing.T) {
 
 	_, ok := r.Body.(*request.BodyWrapper)
 	assert.Falsef(t, ok, "body should not be wrapped after request is processed")
+}
+
+// TestMultipartFormCopiedToOriginalRequest is a regression test for
+// https://github.com/open-telemetry/opentelemetry-go-contrib/issues/9070.
+// Middleware passes a context-derived copy of the request to the handler;
+// if ParseMultipartForm is called on that copy, the resulting MultipartForm
+// (and its temp files) must be copied back onto the request the middleware
+// received so net/http's finishRequest can clean them up.
+//
+// The middleware is applied directly, rather than through a mux.Router, so
+// that the request the middleware receives is the same one net/http would
+// hand to ServeHTTP. gorilla/mux's own router makes an additional,
+// unrelated context copy of its own when matching routes, which is outside
+// otelmux's control.
+func TestMultipartFormCopiedToOriginalRequest(t *testing.T) {
+	handler := Middleware("foobar")(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// maxMemory of 0 forces the file part to spill to a disk-backed temp
+		// file instead of staying in memory, matching the leak this
+		// regression test guards against.
+		assert.NoError(t, r.ParseMultipartForm(0))
+		w.WriteHeader(http.StatusOK)
+	}))
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/upload", &body)
+	r.Header.Set("Content-Type", writer.FormDataContentType())
+	w := httptest.NewRecorder()
+
+	handler.ServeHTTP(w, r)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	t.Cleanup(func() {
+		if r.MultipartForm != nil {
+			require.NoError(t, r.MultipartForm.RemoveAll())
+		}
+	})
+	require.NotNil(t, r.MultipartForm, "MultipartForm should be copied back to the original request so net/http can clean up its temp files")
+	require.Len(t, r.MultipartForm.File["file"], 1)
+
+	f, err := r.MultipartForm.File["file"][0].Open()
+	require.NoError(t, err)
+	defer f.Close()
+	_, diskBacked := f.(*os.File)
+	assert.True(t, diskBacked, "file part should be disk-backed given maxMemory of 0, otherwise this test doesn't exercise the temp-file leak")
 }
 
 func TestPassthroughSpanFromGlobalTracer(t *testing.T) {

@@ -130,7 +130,8 @@ var validDecodingTests = []struct {
 	{"SeverityWarn2Plus2", SeverityWarn4, "WARN2+2"},
 	{"SeverityErrorMinus4", SeverityWarn1, "ERROR-4"},
 	{"SeverityError2Minus4", SeverityWarn2, "ERROR2-4"},
-	{"SeverityFatalPlus10", SeverityFatal1 + 10, "FATAL+10"},
+	{"SeverityFatalPlus6", SeverityFatal4 + 2, "FATAL+6"},
+	{"SeverityFatalPlus10", SeverityFatal1 + 9, "FATAL+10"},
 
 	// Test oversized fine-grained severity.
 	{"SeverityTrace15", SeverityWarn3, "TRACE15"},
@@ -209,6 +210,19 @@ func TestSeverityMarshalText(t *testing.T) {
 			got, err := test.Severity.MarshalText()
 			require.NoError(t, err)
 			assert.Equal(t, test.Text, string(got))
+		})
+	}
+}
+
+func TestSeverityMarshalTextRoundTrip(t *testing.T) {
+	for _, test := range validEncodingTests {
+		t.Run(test.Name, func(t *testing.T) {
+			text, err := test.Severity.MarshalText()
+			require.NoError(t, err)
+
+			var got Severity
+			require.NoError(t, got.UnmarshalText(text))
+			assert.Equal(t, test.Severity, got)
 		})
 	}
 }

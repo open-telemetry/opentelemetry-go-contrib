@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelzap // import "go.opentelemetry.io/contrib/bridges/otelzap"
+package otelzap
 
 import (
 	"time"

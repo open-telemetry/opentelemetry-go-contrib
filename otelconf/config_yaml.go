@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf // import "go.opentelemetry.io/contrib/otelconf"
+package otelconf
 
 import (
 	"errors"
@@ -77,7 +77,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	} else {
 		// Configure the log level of the internal logger used by the SDK.
 		// If omitted, info is used.
-		sh.Plain.Disabled = ptr(false)
+		sh.Plain.Disabled = new(false)
 	}
 	if sh.LoggerProvider != nil {
 		sh.Plain.LoggerProvider = sh.LoggerProvider
@@ -100,7 +100,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalYAML(node *yaml.Node) error {
 	} else {
 		// Configure the log level of the internal logger used by the SDK.
 		// If omitted, info is used.
-		sh.Plain.LogLevel = ptr(SeverityNumberInfo)
+		sh.Plain.LogLevel = new(SeverityNumberInfo)
 	}
 
 	*j = OpenTelemetryConfiguration(sh.Plain)

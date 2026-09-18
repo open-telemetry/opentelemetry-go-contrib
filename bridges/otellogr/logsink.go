@@ -51,7 +51,7 @@
 //   - pointer, interface are transformed to the dereferenced value.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
-package otellogr // import "go.opentelemetry.io/contrib/bridges/otellogr"
+package otellogr
 
 import (
 	"context"

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf // import "go.opentelemetry.io/contrib/otelconf/v0.2.0"
+package otelconf
 
 import (
 	"context"
@@ -366,7 +366,7 @@ func prometheusReader(ctx context.Context, prometheusConfig *Prometheus) (sdkmet
 	server.Addr = lis.Addr().String()
 
 	go func() {
-		if err := server.Serve(lis); err != nil && errors.Is(err, http.ErrServerClosed) {
+		if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
 		}
 	}()

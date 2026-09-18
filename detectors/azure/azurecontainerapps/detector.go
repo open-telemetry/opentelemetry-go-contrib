@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package azurecontainerapps // import "go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
+package azurecontainerapps
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // For a complete list of reserved environment variables in Azure Container Apps, see:

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
+package runtime
 
 import (
 	"time"
@@ -86,7 +86,7 @@ func newConfig(opts ...Option) config {
 	return c
 }
 
-// newConfig computes a config from the supplied ProducerOptions.
+// newProducerConfig computes a config from the supplied ProducerOptions.
 func newProducerConfig(opts ...ProducerOption) config {
 	c := config{}
 	for _, opt := range opts {

@@ -42,7 +42,7 @@
 //   - [slog.KindLogValuer] the value is resolved and then transformed.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
-package otelslog // import "go.opentelemetry.io/contrib/bridges/otelslog"
+package otelslog
 
 import (
 	"context"
@@ -54,7 +54,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // NewLogger returns a new [slog.Logger] backed by a new [Handler]. See
@@ -412,6 +412,12 @@ func (g *group) AddAttrs(attrs []slog.Attr) {
 type kvBuffer struct {
 	data []attribute.KeyValue
 	err  error
+	// keepErr, when true, keeps an error-valued attribute as a normal
+	// attribute instead of promoting it to err. It is set when converting a
+	// group value, because a group maps to an attribute.MAP that has no
+	// dedicated error slot like a record does, so a promoted error would be
+	// silently dropped.
+	keepErr bool
 }
 
 func newKVBuffer(n int) *kvBuffer {
@@ -431,15 +437,21 @@ func (b *kvBuffer) Clone() *kvBuffer {
 	if b == nil {
 		return nil
 	}
-	return &kvBuffer{data: slices.Clone(b.data), err: b.err}
+	return &kvBuffer{data: slices.Clone(b.data), err: b.err, keepErr: b.keepErr}
 }
 
-// KeyValues returns kvs appended to the [attribute.KeyValue] held by b.
+// KeyValues returns kvs appended to the [attribute.KeyValue] held by b. The
+// returned slice never shares spare capacity with b's backing array, so
+// appending to it (including a concurrent KeyValues call on the same shared
+// buffer) cannot corrupt b or a slice returned by a previous call.
 func (b *kvBuffer) KeyValues(kvs ...attribute.KeyValue) []attribute.KeyValue {
 	if b == nil {
 		return kvs
 	}
-	return append(b.data, kvs...)
+	// Clip forces append to allocate a new backing array rather than writing
+	// kvs into b.data's spare capacity, which is shared across concurrent
+	// Handle calls.
+	return append(slices.Clip(b.data), kvs...)
 }
 
 // AddAttrs adds attrs to b.
@@ -459,7 +471,7 @@ func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
 //
 // If attr is empty, it will be dropped.
 func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
-	if attr.Value.Kind() == slog.KindAny {
+	if !b.keepErr && attr.Value.Kind() == slog.KindAny {
 		if err, ok := attr.Value.Any().(error); ok {
 			b.err = err
 			return true
@@ -513,6 +525,7 @@ func convert(v slog.Value) attribute.Value {
 	case slog.KindGroup:
 		g := v.Group()
 		buf := newKVBuffer(len(g))
+		buf.keepErr = true
 		buf.AddAttrs(g)
 		return attribute.MapValue(buf.data...)
 	case slog.KindLogValuer:

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package request // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
+package request
 
 // Generate request package:
 //go:generate gotmpl --body=../../../../../../../internal/shared/request/body_wrapper.go.tmpl "--data={}" --out=body_wrapper.go

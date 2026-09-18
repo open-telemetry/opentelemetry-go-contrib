@@ -19,4 +19,4 @@
 // permissions. Do not use this carrier for sensitive context.
 //
 // [Environment Variables as Context Propagation Carriers specification]: https://opentelemetry.io/docs/specs/otel/context/env-carriers/
-package envcar // import "go.opentelemetry.io/contrib/propagators/envcar"
+package envcar
