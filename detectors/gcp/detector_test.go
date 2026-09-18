@@ -30,6 +30,7 @@ func TestDetect(t *testing.T) {
 				projectID:           "my-project",
 				cloudPlatform:       internal.GKE,
 				gkeHostID:           "1472385723456792345",
+				gkeHostType:         "e2-standard-4",
 				gkeClusterName:      "my-cluster",
 				gkeAvailabilityZone: "us-central1-c",
 			}},
@@ -41,6 +42,30 @@ func TestDetect(t *testing.T) {
 				semconv.K8SClusterName("my-cluster"),
 				semconv.CloudAvailabilityZone("us-central1-c"),
 				semconv.HostID("1472385723456792345"),
+			),
+		},
+		{
+			desc: "zonal GKE cluster with host.type enabled",
+			detector: &detector{
+				detector: &fakeGCPDetector{
+					projectID:           "my-project",
+					cloudPlatform:       internal.GKE,
+					gkeHostID:           "1472385723456792345",
+					gkeHostType:         "e2-standard-4",
+					gkeClusterName:      "my-cluster",
+					gkeAvailabilityZone: "us-central1-c",
+				},
+				cfg: config{gkeHostType: true},
+			},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPKubernetesEngine,
+				semconv.K8SClusterName("my-cluster"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				semconv.HostID("1472385723456792345"),
+				semconv.HostType("e2-standard-4"),
 			),
 		},
 		{
@@ -474,6 +499,16 @@ func TestBareMetalSolutionEnv(t *testing.T) {
 	})
 }
 
+func TestNewDetectorWithOptions(t *testing.T) {
+	d, ok := NewDetectorWithOptions(WithGKEHostType()).(*detector)
+	assert.True(t, ok)
+	assert.True(t, d.cfg.gkeHostType)
+
+	defaultDetector, ok := NewDetector().(*detector)
+	assert.True(t, ok)
+	assert.False(t, defaultDetector.cfg.gkeHostType)
+}
+
 // fakeGCPDetector implements gcpDetector and uses fake values.
 type fakeGCPDetector struct {
 	err                             error
@@ -485,6 +520,7 @@ type fakeGCPDetector struct {
 	gkeRegion                       string
 	gkeClusterName                  string
 	gkeHostID                       string
+	gkeHostType                     string
 	gkeHostName                     string
 	faaSName                        string
 	faaSVersion                     string
@@ -544,6 +580,13 @@ func (f *fakeGCPDetector) GKEHostID() (string, error) {
 		return "", f.err
 	}
 	return f.gkeHostID, nil
+}
+
+func (f *fakeGCPDetector) GKEHostType() (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.gkeHostType, nil
 }
 
 func (f *fakeGCPDetector) GKEHostName() (string, error) {
