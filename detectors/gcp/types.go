@@ -12,6 +12,7 @@ type gcpDetector interface {
 	GKEAvailabilityZoneOrRegion() (string, internal.LocationType, error)
 	GKEClusterName() (string, error)
 	GKEHostID() (string, error)
+	GKEHostType() (string, error)
 	FaaSName() (string, error)
 	FaaSVersion() (string, error)
 	FaaSID() (string, error)

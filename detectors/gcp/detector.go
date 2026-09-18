@@ -28,11 +28,45 @@ import (
 //   - Cloud Functions.
 //   - Bare Metal Solution (BMS).
 func NewDetector() resource.Detector {
-	return &detector{detector: internal.NewDetector()}
+	return NewDetectorWithOptions()
+}
+
+// NewDetectorWithOptions returns a resource detector configured with the provided options.
+func NewDetectorWithOptions(opts ...Option) resource.Detector {
+	var cfg config
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+	return &detector{detector: internal.NewDetector(), cfg: cfg}
+}
+
+// Option configures a GCP resource detector.
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (f optionFunc) apply(c *config) { f(c) }
+
+type config struct {
+	gkeHostType bool
+}
+
+// WithGKEHostType enables detection of the host.type resource attribute on
+// Google Kubernetes Engine (GKE) by querying the Compute Engine instances.get
+// API. It is disabled by default because it makes an additional API call and
+// requires the compute.instances.get IAM permission (as well as access to
+// instance/name metadata, which is unavailable under GKE Workload Identity).
+func WithGKEHostType() Option {
+	return optionFunc(func(c *config) {
+		c.gkeHostType = true
+	})
 }
 
 type detector struct {
 	detector gcpDetector
+	cfg      config
 }
 
 // Detect detects associated resources when running on GCE, GKE, GAE,
@@ -65,6 +99,9 @@ func (d *detector) Detect(context.Context) (*resource.Resource, error) {
 		b.addZoneOrRegion(d.detector.GKEAvailabilityZoneOrRegion)
 		b.add(semconv.K8SClusterNameKey, d.detector.GKEClusterName)
 		b.add(semconv.HostIDKey, d.detector.GKEHostID)
+		if d.cfg.gkeHostType {
+			b.add(semconv.HostTypeKey, d.detector.GKEHostType)
+		}
 	case internal.CloudRun, internal.CloudRunWorkerPool:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
 		b.add(semconv.FaaSNameKey, d.detector.FaaSName)
