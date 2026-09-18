@@ -12,6 +12,7 @@ type gcpDetector interface {
 	GKEAvailabilityZoneOrRegion() (string, internal.LocationType, error)
 	GKEClusterName() (string, error)
 	GKEHostID() (string, error)
+	GKEHostType() (string, error)
 	FaaSName() (string, error)
 	FaaSVersion() (string, error)
 	FaaSID() (string, error)
@@ -30,4 +31,8 @@ type gcpDetector interface {
 	GCEInstanceName() (string, error)
 	CloudRunJobExecution() (string, error)
 	CloudRunJobTaskIndex() (string, error)
+	GCEManagedInstanceGroup() (internal.ManagedInstanceGroup, error)
+	BareMetalSolutionInstanceID() (string, error)
+	BareMetalSolutionCloudRegion() (string, error)
+	BareMetalSolutionProjectID() (string, error)
 }
