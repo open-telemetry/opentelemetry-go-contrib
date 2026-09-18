@@ -87,3 +87,13 @@ Bare Metal Solution hosts do not provide a Compute Engine metadata server. Detec
 * `BMS_INSTANCE_ID`: Mapped to `host.id`.
 
 When detected, `cloud.provider` is set to `gcp` and `cloud.platform` is set to `gcp_bare_metal_solution`. Without all three non-empty environment variables configured, no BMS resource is detected.
+
+## GKE `host.type` Detection
+
+On Google Kubernetes Engine (GKE), detecting the node machine type (`host.type`) requires an additional call to the Compute Engine `instances.get` API, the `compute.instances.get` IAM permission, and access to `instance/name` metadata (which is unavailable under GKE Workload Identity). Because of this overhead and permission requirement, `host.type` detection on GKE is disabled by default and can be enabled via `NewDetectorWithOptions`:
+
+```golang
+res, err := resource.New(ctx,
+    resource.WithDetectors(gcp.NewDetectorWithOptions(gcp.WithGKEHostType())),
+)
+```
