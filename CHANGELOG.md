@@ -22,7 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
-- Deprecate `go.opentelemetry.io/contrib/propagators/aws`.
+- Deprecate `go.opentelemetry.io/contrib/propagators/aws`. (#9706)
 - Deprecate `go.opentelemetry.io/contrib/samplers/probability/consistent`. (#9633)
 - Deprecate `ReadBytesKey`, `ReadErrorKey`, `WroteBytesKey`, and `WriteErrorKey` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The identifiers remain available and their values are unchanged, but `WithMessageEvents` no longer emits `http.read_bytes` or `http.wrote_bytes`.
