@@ -23,6 +23,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - Deprecate `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9707)
+- Deprecate `go.opentelemetry.io/contrib/propagators/aws`. (#9706)
 - Deprecate `go.opentelemetry.io/contrib/samplers/probability/consistent`. (#9633)
 - Deprecate `ReadBytesKey`, `ReadErrorKey`, `WroteBytesKey`, and `WriteErrorKey` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The identifiers remain available and their values are unchanged, but `WithMessageEvents` no longer emits `http.read_bytes` or `http.wrote_bytes`.
@@ -32,6 +33,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Treat empty Prometheus exporter environment variable values as unset in `go.opentelemetry.io/contrib/exporters/autoexport`, restoring the documented defaults. (#9636)
 - Bound converter-owned recursive map, slice, array, and pointer traversal in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`.
   A field requiring more than 100 such levels is replaced with `<max-depth-exceeded>` and the record continues to be emitted. Existing `fmt` and user-method behavior remains unchanged. (#9691)
 - Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
