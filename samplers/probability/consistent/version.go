@@ -5,4 +5,4 @@ package consistent
 
 // Version is the current release version of the consistent probability
 // sampler.
-const Version = "0.37.1"
+const Version = "0.37.3"

@@ -4,4 +4,4 @@
 package otellambda
 
 // Version is the current release version of the AWS Lambda instrumentation.
-const Version = "0.69.0"
+const Version = "0.71.0"

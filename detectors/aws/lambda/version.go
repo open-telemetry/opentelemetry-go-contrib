@@ -4,4 +4,4 @@
 package lambda
 
 // Version is the current release version of the Lambda resource detector.
-const Version = "0.69.0"
+const Version = "0.71.0"

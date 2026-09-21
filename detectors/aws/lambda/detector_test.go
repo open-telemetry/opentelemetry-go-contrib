@@ -37,12 +37,12 @@ func TestDetectSuccess(t *testing.T) {
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
 }
 
-// return empty resource when not running on lambda.
+// return empty resource and no error when not running on lambda.
 func TestReturnsIfNoEnvVars(t *testing.T) {
 	os.Clearenv()
 	detector := resourceDetector{}
 	res, err := detector.Detect(t.Context())
 
-	assert.Equal(t, errNotOnLambda, err)
+	assert.NoError(t, err, "Detector unexpectedly returned error when not running on Lambda")
 	assert.Empty(t, res.Attributes())
 }
