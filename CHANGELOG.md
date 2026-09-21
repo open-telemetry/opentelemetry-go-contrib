@@ -34,7 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Report genuine Prometheus metrics HTTP server errors instead of swallowing them in `go.opentelemetry.io/contrib/otelconf/v0.2.0`.
   The error check was inverted, so a clean shutdown (`http.ErrServerClosed`) was reported as unexpected while real `Serve` errors were ignored. (#9653)
 - Honor a standalone `without_type_suffix` or `without_units` Prometheus option in `go.opentelemetry.io/contrib/otelconf/v0.3.0`.
-  Previously the option was silently ignored unless both were set together.
+  Previously the option was silently ignored unless both were set together. (#9717)
 
 ### Removed
 
