@@ -1432,11 +1432,11 @@ func TestPrometheusReaderOptsStandaloneWithoutOptions(t *testing.T) {
 		exp, err := otelprom.New(append(opts, otelprom.WithRegisterer(reg))...)
 		require.NoError(t, err)
 		mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exp))
-		t.Cleanup(func() { require.NoError(t, mp.Shutdown(context.Background())) })
+		t.Cleanup(func() { require.NoError(t, mp.Shutdown(t.Context())) })
 
 		c, err := mp.Meter("test").Int64Counter("request_duration", metric.WithUnit("s"))
 		require.NoError(t, err)
-		c.Add(context.Background(), 1)
+		c.Add(t.Context(), 1)
 
 		mfs, err := reg.Gather()
 		require.NoError(t, err)
