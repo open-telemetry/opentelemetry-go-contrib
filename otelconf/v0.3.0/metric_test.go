@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	prometheusclient "github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
@@ -1397,6 +1398,20 @@ func TestPrometheusReaderOpts(t *testing.T) {
 			},
 			wantOptions: 2,
 		},
+		{
+			name: "without_type_suffix only",
+			cfg: Prometheus{
+				WithoutTypeSuffix: new(true),
+			},
+			wantOptions: 2,
+		},
+		{
+			name: "without_units only",
+			cfg: Prometheus{
+				WithoutUnits: new(true),
+			},
+			wantOptions: 2,
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1405,6 +1420,46 @@ func TestPrometheusReaderOpts(t *testing.T) {
 			require.Len(t, opts, tt.wantOptions)
 		})
 	}
+}
+
+// TestPrometheusReaderOptsStandaloneWithoutOptions verifies that a single
+// without_type_suffix or without_units option is applied even when the other
+// is absent, by observing the metric name the exporter actually produces.
+func TestPrometheusReaderOptsStandaloneWithoutOptions(t *testing.T) {
+	metricName := func(t *testing.T, opts []otelprom.Option) string {
+		t.Helper()
+		reg := prometheusclient.NewRegistry()
+		exp, err := otelprom.New(append(opts, otelprom.WithRegisterer(reg))...)
+		require.NoError(t, err)
+		mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(exp))
+		t.Cleanup(func() { require.NoError(t, mp.Shutdown(context.Background())) })
+
+		c, err := mp.Meter("test").Int64Counter("request_duration", metric.WithUnit("s"))
+		require.NoError(t, err)
+		c.Add(context.Background(), 1)
+
+		mfs, err := reg.Gather()
+		require.NoError(t, err)
+		for _, mf := range mfs {
+			if strings.HasPrefix(mf.GetName(), "request_duration") {
+				return mf.GetName()
+			}
+		}
+		t.Fatal("request_duration metric not found")
+		return ""
+	}
+
+	t.Run("without_units only omits the unit suffix", func(t *testing.T) {
+		opts, err := prometheusReaderOpts(&Prometheus{WithoutUnits: new(true)})
+		require.NoError(t, err)
+		assert.Equal(t, "request_duration_total", metricName(t, opts))
+	})
+
+	t.Run("without_type_suffix only omits the counter suffix", func(t *testing.T) {
+		opts, err := prometheusReaderOpts(&Prometheus{WithoutTypeSuffix: new(true)})
+		require.NoError(t, err)
+		assert.Equal(t, "request_duration_seconds", metricName(t, opts))
+	})
 }
 
 func TestPrometheusIPv6(t *testing.T) {
