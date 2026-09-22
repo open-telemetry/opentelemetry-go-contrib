@@ -5,6 +5,7 @@ package otelhttp
 
 import (
 	"bytes"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -16,26 +17,55 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// multipartParseResult carries the outcome of parsing a multipart request
+// inside an HTTP handler back to the test goroutine. Handlers must not call
+// require directly because they run outside the test goroutine.
+type multipartParseResult struct {
+	tmpPath string
+	err     error
+}
+
+// multipartDiskBackedTmpPath parses the request with maxMemory of 0 so the
+// file part spills to a disk-backed temp file, and returns that file's path.
+func multipartDiskBackedTmpPath(r *http.Request) (string, error) {
+	if err := r.ParseMultipartForm(0); err != nil {
+		return "", err
+	}
+	files := r.MultipartForm.File["file"]
+	if len(files) == 0 {
+		return "", errors.New("missing file part")
+	}
+	f, err := files[0].Open()
+	if err != nil {
+		return "", err
+	}
+	name := ""
+	if of, ok := f.(*os.File); ok {
+		name = of.Name()
+	}
+	if err := f.Close(); err != nil {
+		return "", err
+	}
+	if name == "" {
+		return "", errors.New("file part should be disk-backed given maxMemory of 0")
+	}
+	return name, nil
+}
+
 // TestHandlerMultipartTempFileCleanup verifies that a disk-backed multipart
 // upload parsed downstream is cleaned up by net/http after the request
 // completes. The middleware passes a context-derived request copy downstream,
 // so the parsed MultipartForm must be copied back onto the original request
 // for net/http's finishRequest to find and remove its temp files.
 func TestHandlerMultipartTempFileCleanup(t *testing.T) {
-	pathCh := make(chan string, 1)
+	resultCh := make(chan multipartParseResult, 1)
 	handler := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// maxMemory of 0 forces the file part to spill to a disk-backed
-		// temp file instead of staying in memory.
-		require.NoError(t, r.ParseMultipartForm(0))
-		f, err := r.MultipartForm.File["file"][0].Open()
-		require.NoError(t, err)
-		name := ""
-		if of, ok := f.(*os.File); ok {
-			name = of.Name()
+		path, err := multipartDiskBackedTmpPath(r)
+		resultCh <- multipartParseResult{tmpPath: path, err: err}
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
-		require.NoError(t, f.Close())
-		require.NotEmpty(t, name, "file part should be disk-backed given maxMemory of 0")
-		pathCh <- name
 		w.WriteHeader(http.StatusOK)
 	}), "test_handler")
 
@@ -59,12 +89,15 @@ func TestHandlerMultipartTempFileCleanup(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var tmpPath string
+	var result multipartParseResult
 	select {
-	case tmpPath = <-pathCh:
+	case result = <-resultCh:
 	case <-time.After(5 * time.Second):
 		t.Fatal("handler never reported temp file path")
 	}
+	require.NoError(t, result.err)
+	require.NotEmpty(t, result.tmpPath)
+	tmpPath := result.tmpPath
 
 	// finishRequest runs on the server before the response completes, but
 	// allow scheduling slack.
@@ -90,20 +123,10 @@ func TestHandlerMultipartTempFileCleanup(t *testing.T) {
 // original request would have a nil MultipartForm and the temp file would
 // leak.
 func TestHandlerMultipartTempFileCleanupOnPanic(t *testing.T) {
-	pathCh := make(chan string, 1)
-	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// maxMemory of 0 forces the file part to spill to a disk-backed
-		// temp file instead of staying in memory.
-		require.NoError(t, r.ParseMultipartForm(0))
-		f, err := r.MultipartForm.File["file"][0].Open()
-		require.NoError(t, err)
-		name := ""
-		if of, ok := f.(*os.File); ok {
-			name = of.Name()
-		}
-		require.NoError(t, f.Close())
-		require.NotEmpty(t, name, "file part should be disk-backed given maxMemory of 0")
-		pathCh <- name
+	resultCh := make(chan multipartParseResult, 1)
+	inner := http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		path, err := multipartDiskBackedTmpPath(r)
+		resultCh <- multipartParseResult{tmpPath: path, err: err}
 		panic("test panic after multipart parse")
 	})
 	otelHandler := NewHandler(inner, "test_handler")
@@ -136,12 +159,15 @@ func TestHandlerMultipartTempFileCleanupOnPanic(t *testing.T) {
 	require.NoError(t, resp.Body.Close())
 	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
 
-	var tmpPath string
+	var result multipartParseResult
 	select {
-	case tmpPath = <-pathCh:
+	case result = <-resultCh:
 	case <-time.After(5 * time.Second):
 		t.Fatal("handler never reported temp file path")
 	}
+	require.NoError(t, result.err)
+	require.NotEmpty(t, result.tmpPath)
+	tmpPath := result.tmpPath
 
 	// finishRequest runs on the server before the recovery response
 	// completes, but allow scheduling slack.
