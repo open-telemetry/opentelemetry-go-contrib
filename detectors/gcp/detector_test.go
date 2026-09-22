@@ -4,6 +4,7 @@
 package gcp
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -509,11 +510,46 @@ func TestNewDetectorWithOptions(t *testing.T) {
 	assert.False(t, defaultDetector.cfg.gkeHostType)
 }
 
+func TestDetectGKEHostTypeContextCancellation(t *testing.T) {
+	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
+
+	fake := &fakeGCPDetector{
+		projectID:           "my-project",
+		cloudPlatform:       internal.GKE,
+		gkeHostID:           "1472385723456792345",
+		gkeHostType:         "e2-standard-4",
+		gkeClusterName:      "my-cluster",
+		gkeAvailabilityZone: "us-central1-c",
+	}
+	d := &detector{
+		detector: fake,
+		cfg:      config{gkeHostType: true},
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	res, err := d.Detect(ctx)
+	assert.ErrorIs(t, err, resource.ErrPartialResource)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Same(t, ctx, fake.gkeHostTypeCtx)
+	assert.Equal(t, resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.CloudProviderGCP,
+		semconv.CloudAccountID("my-project"),
+		semconv.CloudPlatformGCPKubernetesEngine,
+		semconv.K8SClusterName("my-cluster"),
+		semconv.CloudAvailabilityZone("us-central1-c"),
+		semconv.HostID("1472385723456792345"),
+	), res)
+}
+
 // fakeGCPDetector implements gcpDetector and uses fake values.
 type fakeGCPDetector struct {
 	err                             error
 	migErr                          error
 	cloudPlatformCalls              int
+	gkeHostTypeCtx                  context.Context
 	projectID                       string
 	cloudPlatform                   internal.Platform
 	gkeAvailabilityZone             string
@@ -582,7 +618,11 @@ func (f *fakeGCPDetector) GKEHostID() (string, error) {
 	return f.gkeHostID, nil
 }
 
-func (f *fakeGCPDetector) GKEHostType() (string, error) {
+func (f *fakeGCPDetector) GKEHostType(ctx context.Context) (string, error) {
+	f.gkeHostTypeCtx = ctx
+	if err := ctx.Err(); err != nil {
+		return "", err
+	}
 	if f.err != nil {
 		return "", f.err
 	}
