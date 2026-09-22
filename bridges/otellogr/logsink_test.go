@@ -285,6 +285,32 @@ func TestLogSink(t *testing.T) {
 			},
 		},
 		{
+			name: "info_with_recursive_attr",
+			f: func(l *logr.Logger) {
+				var recursive any
+				recursive = &recursive
+				l.Info(
+					"msg",
+					"before", "value",
+					"recursive", recursive,
+					"after", int64(42),
+				)
+			},
+			want: logtest.Recording{
+				logtest.Scope{Name: name}: {
+					{
+						Body:     attribute.StringValue("msg"),
+						Severity: log.SeverityInfo,
+						Attributes: []attribute.KeyValue{
+							attribute.String("before", "value"),
+							attribute.String("recursive", "<max-depth-exceeded>"),
+							attribute.Int64("after", 42),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "info_with_normal_attr_and_nil_pointer_attr",
 			f: func(l *logr.Logger) {
 				var p *int

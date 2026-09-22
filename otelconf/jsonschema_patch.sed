@@ -3,6 +3,11 @@
 # be replaced here
 s+type Headers.*+type Headers map[string]string+g
 /^type ExperimentalResourceDetector struct {/a\
+\	// Enable the AWS EC2 resource detector.\
+\	// If omitted, ignore.\
+\	//\
+\	AWSEC2 ExperimentalAWSEC2ResourceDetector `json:"aws.ec2,omitempty,omitzero" yaml:"aws.ec2,omitempty" mapstructure:"aws.ec2,omitempty"`\
+\
 \	// Enable the GCP resource detector.\
 \	// If omitted, ignore.\
 \	//\
@@ -24,6 +29,8 @@ s+type Headers.*+type Headers map[string]string+g
 \	AzureVM ExperimentalAzureVMResourceDetector `json:"azure.vm,omitempty,omitzero" yaml:"azure.vm,omitempty" mapstructure:"azure.vm,omitempty"`\
 
 /^type ExperimentalServiceResourceDetector map\[string\]interface{}$/i\
+type ExperimentalAWSEC2ResourceDetector map[string]interface{}\
+\
 type ExperimentalGCPResourceDetector map[string]interface{}\
 \
 type ExperimentalAWSECSResourceDetector map[string]interface{}\
