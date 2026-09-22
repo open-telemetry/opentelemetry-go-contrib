@@ -14,11 +14,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` no longer include attributes from the server-side `Labeler`, preventing attributes such as `http.route` from leaking into outbound requests.
+  This is a breaking change for applications that use `ContextWithLabeler` to add custom client metric attributes: use `ContextWithClientLabeler` / `ClientLabelerFromContext` or the `WithMetricAttributesFn` option instead.
+  Server-side use of `ContextWithLabeler` / `LabelerFromContext` is unchanged. (#8924)
 - Stop emitting the legacy `http.read_bytes` and `http.wrote_bytes` attributes on the per-operation span events enabled by `WithMessageEvents` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The `read` and `write` events remain, while total body sizes continue to be recorded on the server span as `http.request.body.size` and `http.response.body.size` according to HTTP semantic conventions. (#9624)
 
 ### Deprecated
 
+- Deprecate `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9707)
+- Deprecate `go.opentelemetry.io/contrib/propagators/aws`. (#9706)
 - Deprecate `go.opentelemetry.io/contrib/samplers/probability/consistent`. (#9633)
 - Deprecate `ReadBytesKey`, `ReadErrorKey`, `WroteBytesKey`, and `WriteErrorKey` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The identifiers remain available and their values are unchanged, but `WithMessageEvents` no longer emits `http.read_bytes` or `http.wrote_bytes`.
@@ -28,9 +33,14 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Treat empty Prometheus exporter environment variable values as unset in `go.opentelemetry.io/contrib/exporters/autoexport`, restoring the documented defaults. (#9636)
+- Bound converter-owned recursive map, slice, array, and pointer traversal in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`.
+  A field requiring more than 100 such levels is replaced with `<max-depth-exceeded>` and the record continues to be emitted. Existing `fmt` and user-method behavior remains unchanged. (#9691)
 - Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
 - Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
 - Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, using the request context's cancellation error as the classification source when the handler has not already recorded an error via `c.Error`. Previously a disconnect was recorded with span status `Error` and no `error.type`, indistinguishable from a genuine server fault. (#9394)
+- Report genuine Prometheus metrics HTTP server errors instead of swallowing them in `go.opentelemetry.io/contrib/otelconf/v0.2.0`.
+  The error check was inverted, so a clean shutdown (`http.ErrServerClosed`) was reported as unexpected while real `Serve` errors were ignored. (#9653)
 - Fix temporary file cleanup for multipart requests in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` by copying the parsed multipart form back to the original request during deferred cleanup, preserving `net/http` cleanup during panic unwinding for HTTP/2 panic handling and outer recovery middleware paths. Unrecovered HTTP/1 handler panics remain uncleaned because `net/http` skips `finishRequest` in that path. (#9685)
 
 ### Removed
