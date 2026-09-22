@@ -82,3 +82,80 @@ func TestHandlerMultipartTempFileCleanup(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 }
+
+// TestHandlerMultipartTempFileCleanupOnPanic verifies that the deferred
+// MultipartForm copy-back preserves net/http temp file cleanup when the
+// downstream handler panics. An outer recovery middleware recovers the panic
+// so the server still runs finishRequest; without the deferred copy-back the
+// original request would have a nil MultipartForm and the temp file would
+// leak.
+func TestHandlerMultipartTempFileCleanupOnPanic(t *testing.T) {
+	pathCh := make(chan string, 1)
+	inner := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// maxMemory of 0 forces the file part to spill to a disk-backed
+		// temp file instead of staying in memory.
+		require.NoError(t, r.ParseMultipartForm(0))
+		f, err := r.MultipartForm.File["file"][0].Open()
+		require.NoError(t, err)
+		name := ""
+		if of, ok := f.(*os.File); ok {
+			name = of.Name()
+		}
+		require.NoError(t, f.Close())
+		require.NotEmpty(t, name, "file part should be disk-backed given maxMemory of 0")
+		pathCh <- name
+		panic("test panic after multipart parse")
+	})
+	otelHandler := NewHandler(inner, "test_handler")
+	recovering := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		defer func() {
+			if rec := recover(); rec != nil {
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+		}()
+		otelHandler.ServeHTTP(w, r)
+	})
+
+	srv := httptest.NewServer(recovering)
+	defer srv.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+"/upload", &body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := srv.Client().Do(req)
+	require.NoError(t, err)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	require.NoError(t, resp.Body.Close())
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	var tmpPath string
+	select {
+	case tmpPath = <-pathCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("handler never reported temp file path")
+	}
+
+	// finishRequest runs on the server before the recovery response
+	// completes, but allow scheduling slack.
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		_, statErr := os.Stat(tmpPath)
+		if os.IsNotExist(statErr) {
+			break
+		}
+		require.NoError(t, statErr)
+		if time.Now().After(deadline) {
+			_ = os.Remove(tmpPath)
+			t.Fatalf("multipart temp file was not cleaned up after panic: %s", tmpPath)
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+}
