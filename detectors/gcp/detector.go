@@ -71,7 +71,7 @@ type detector struct {
 
 // Detect detects associated resources when running on GCE, GKE, GAE,
 // Cloud Run, Cloud Run jobs, Cloud Run worker pools, Cloud Functions, and Bare Metal Solution.
-func (d *detector) Detect(context.Context) (*resource.Resource, error) {
+func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 	projectID, err1 := d.detector.BareMetalSolutionProjectID()
 	region, err2 := d.detector.BareMetalSolutionCloudRegion()
 	instanceID, err3 := d.detector.BareMetalSolutionInstanceID()
@@ -100,7 +100,9 @@ func (d *detector) Detect(context.Context) (*resource.Resource, error) {
 		b.add(semconv.K8SClusterNameKey, d.detector.GKEClusterName)
 		b.add(semconv.HostIDKey, d.detector.GKEHostID)
 		if d.cfg.gkeHostType {
-			b.add(semconv.HostTypeKey, d.detector.GKEHostType)
+			b.add(semconv.HostTypeKey, func() (string, error) {
+				return d.detector.GKEHostType(ctx)
+			})
 		}
 	case internal.CloudRun, internal.CloudRunWorkerPool:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
