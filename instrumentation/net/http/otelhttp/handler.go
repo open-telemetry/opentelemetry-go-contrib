@@ -180,8 +180,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if !found {
 		ctx = ContextWithLabeler(ctx, labeler)
 	}
-
-	origReq := r
+	
 	rCtx := r.WithContext(ctx)
 	defer func() {
 		// Copy MultipartForm back to the original request so net/http can
@@ -190,7 +189,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		// letting net/http cleanup paths that still run (HTTP/2 handler
 		// recovery, outer recovery middleware) find the form.
 		if rCtx.MultipartForm != nil {
-			origReq.MultipartForm = rCtx.MultipartForm
+			r.MultipartForm = rCtx.MultipartForm
 		}
 	}()
 	next.ServeHTTP(w, rCtx)
