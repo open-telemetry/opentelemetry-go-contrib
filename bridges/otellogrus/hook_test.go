@@ -9,10 +9,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 )
 
@@ -37,7 +37,7 @@ func TestNewConfig(t *testing.T) {
 			name: "with no options",
 
 			wantConfig: config{
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 				levels:   logrus.AllLevels,
 			},
 		},
@@ -49,7 +49,7 @@ func TestNewConfig(t *testing.T) {
 
 			wantConfig: config{
 				version:  "42.0",
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 				levels:   logrus.AllLevels,
 			},
 		},
@@ -71,7 +71,7 @@ func TestNewConfig(t *testing.T) {
 			},
 
 			wantConfig: config{
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 				levels:   []logrus.Level{logrus.FatalLevel},
 			},
 		},
@@ -84,7 +84,7 @@ func TestNewConfig(t *testing.T) {
 
 func TestNewHook(t *testing.T) {
 	const name = "name"
-	provider := global.GetLoggerProvider()
+	provider := otel.GetLoggerProvider()
 
 	for _, tt := range []struct {
 		name    string
