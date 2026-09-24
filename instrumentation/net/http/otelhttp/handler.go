@@ -180,7 +180,6 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if !found {
 		ctx = ContextWithLabeler(ctx, labeler)
 	}
-	
 	rCtx := r.WithContext(ctx)
 	defer func() {
 		// Copy MultipartForm back to the original request so net/http can
