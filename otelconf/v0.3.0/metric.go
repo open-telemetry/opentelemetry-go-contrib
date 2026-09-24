@@ -386,7 +386,10 @@ func prometheusReaderOpts(prometheusConfig *Prometheus) ([]otelprom.Option, erro
 		opts = append(opts, otelprom.WithoutScopeInfo())
 	}
 
-	if prometheusConfig.WithoutTypeSuffix != nil && *prometheusConfig.WithoutTypeSuffix && prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits {
+	withoutTypeSuffix := prometheusConfig.WithoutTypeSuffix != nil && *prometheusConfig.WithoutTypeSuffix
+	withoutUnits := prometheusConfig.WithoutUnits != nil && *prometheusConfig.WithoutUnits
+
+	if withoutTypeSuffix && withoutUnits {
 		// NoTranslation preserves OTel dot-style label names (e.g. service.name)
 		// and suppresses metric name suffixes. The exporter's newConfig will
 		// automatically set withoutCounterSuffixes and withoutUnits when
@@ -394,6 +397,15 @@ func prometheusReaderOpts(prometheusConfig *Prometheus) ([]otelprom.Option, erro
 		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.NoTranslation))
 	} else {
 		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.NoUTF8EscapingWithSuffixes))
+
+		// A standalone without_type_suffix or without_units option must still be
+		// honored even though NoTranslation only applies when both are set.
+		if withoutTypeSuffix {
+			opts = append(opts, otelprom.WithoutCounterSuffixes()) //nolint:staticcheck // no WithTranslationStrategy equivalent for a single suffix
+		}
+		if withoutUnits {
+			opts = append(opts, otelprom.WithoutUnits()) //nolint:staticcheck // no WithTranslationStrategy equivalent for a single suffix
+		}
 	}
 
 	if prometheusConfig.WithResourceConstantLabels != nil {
