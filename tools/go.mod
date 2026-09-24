@@ -43,7 +43,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // indirect
 	github.com/MirrexOne/unqueryvet v1.5.4 // indirect
 	github.com/OpenPeeDeeP/depguard/v2 v2.2.1 // indirect
-	github.com/ProtonMail/go-crypto v1.5.0 // indirect
+	github.com/ProtonMail/go-crypto v1.5.1 // indirect
 	github.com/alecthomas/chroma/v2 v2.27.0 // indirect
 	github.com/alecthomas/go-check-sumtype v0.3.1 // indirect
 	github.com/alexkohler/nakedret/v2 v2.0.6 // indirect
@@ -242,7 +242,7 @@ require (
 	golang.org/x/net v0.59.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect
-	golang.org/x/telemetry v0.0.0-20260922173722-c6096d2f4a49 // indirect
+	golang.org/x/telemetry v0.0.0-20260923143127-9662f6fe0b7f // indirect
 	golang.org/x/text v0.42.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
