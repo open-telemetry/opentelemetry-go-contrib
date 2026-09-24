@@ -195,8 +195,8 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	}()
 	next.ServeHTTP(w, rCtx)
 
-	if r.Pattern != "" {
-		span.SetName(h.spanNameFormatter(h.operation, r))
+	if rCtx.Pattern != "" {
+		span.SetName(h.spanNameFormatter(h.operation, rCtx))
 	}
 
 	statusCode := rww.StatusCode()
