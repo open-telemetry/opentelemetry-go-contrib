@@ -7,6 +7,8 @@
 package request
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"sync"
 )
@@ -110,6 +112,36 @@ func (w *RespWriterWrapper) BytesWritten() int64 {
 	defer w.mu.RUnlock()
 
 	return w.written
+}
+
+// ReadFrom implements [io.ReaderFrom] enabling the fast path
+// to optimize copying data from the provided reader into the
+// ResponseWriter.
+func (w *RespWriterWrapper) ReadFrom(r io.Reader) (int64, error) {
+	// Unreachable in normal use: httpsnoop only wires ReadFrom when the
+	// underlying ResponseWriter supports it. Fail loudly rather than silently
+	// degrading to a buffered copy.
+	rf, ok := w.ResponseWriter.(io.ReaderFrom)
+	if !ok {
+		return 0, errors.New("response writer does not implement io.ReaderFrom")
+	}
+
+	n, err := rf.ReadFrom(r)
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	// The underlying ResponseWriter implicitly commits HTTP 200 when
+	// writing response data, unless a status code was already sent.
+	// Mark the header as written to keep our bookkeeping consistent.
+	if n > 0 {
+		w.wroteHeader = true
+	}
+
+	w.OnWrite(n)
+	w.written += n
+	w.err = err
+	return n, err
 }
 
 // StatusCode returns the HTTP status code that was sent.

@@ -160,7 +160,6 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	// Wrap w to use our ResponseWriter methods while also exposing
 	// other interfaces that w may implement (http.CloseNotifier,
 	// http.Flusher, http.Hijacker, http.Pusher, io.ReaderFrom).
-
 	w = httpsnoop.Wrap(w, httpsnoop.Hooks{
 		Header: func(httpsnoop.HeaderFunc) httpsnoop.HeaderFunc {
 			return rww.Header
@@ -173,6 +172,9 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		},
 		Flush: func(httpsnoop.FlushFunc) httpsnoop.FlushFunc {
 			return rww.Flush
+		},
+		ReadFrom: func(httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
+			return rww.ReadFrom
 		},
 	})
 
