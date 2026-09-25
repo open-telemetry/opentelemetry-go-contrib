@@ -180,12 +180,21 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if !found {
 		ctx = ContextWithLabeler(ctx, labeler)
 	}
+	rCtx := r.WithContext(ctx)
+	defer func() {
+		// Copy MultipartForm back to the original request so net/http can
+		// find and remove any temp files ParseMultipartForm created on the
+		// copy. Deferred so the copy-back also runs during panic unwinding,
+		// letting net/http cleanup paths that still run (HTTP/2 handler
+		// recovery, outer recovery middleware) find the form.
+		if rCtx.MultipartForm != nil {
+			r.MultipartForm = rCtx.MultipartForm
+		}
+	}()
+	next.ServeHTTP(w, rCtx)
 
-	r = r.WithContext(ctx)
-	next.ServeHTTP(w, r)
-
-	if r.Pattern != "" {
-		span.SetName(h.spanNameFormatter(h.operation, r))
+	if rCtx.Pattern != "" {
+		span.SetName(h.spanNameFormatter(h.operation, rCtx))
 	}
 
 	statusCode := rww.StatusCode()
