@@ -74,6 +74,11 @@ func NewResourceDetector() resource.Detector {
 }
 
 // Detect returns a Resource describing the Amazon EKS environment being run in.
+//
+// Detect performs up to two Kubernetes API requests, each bounded by a
+// 10-second timeout, so a single call can take up to ~20 seconds when the
+// API server is unresponsive. Provide a ctx with a shorter deadline to bound
+// the total duration.
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	if detector.err != nil {
 		if errors.Is(detector.err, rest.ErrNotInCluster) {
