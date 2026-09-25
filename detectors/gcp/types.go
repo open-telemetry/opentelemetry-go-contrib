@@ -3,7 +3,11 @@
 
 package gcp
 
-import "go.opentelemetry.io/contrib/detectors/gcp/internal"
+import (
+	"context"
+
+	"go.opentelemetry.io/contrib/detectors/gcp/internal"
+)
 
 // gcpDetector can detect attributes of GCP environments.
 type gcpDetector interface {
@@ -12,6 +16,7 @@ type gcpDetector interface {
 	GKEAvailabilityZoneOrRegion() (string, internal.LocationType, error)
 	GKEClusterName() (string, error)
 	GKEHostID() (string, error)
+	GKEHostType(context.Context) (string, error)
 	FaaSName() (string, error)
 	FaaSVersion() (string, error)
 	FaaSID() (string, error)
@@ -30,4 +35,8 @@ type gcpDetector interface {
 	GCEInstanceName() (string, error)
 	CloudRunJobExecution() (string, error)
 	CloudRunJobTaskIndex() (string, error)
+	GCEManagedInstanceGroup() (internal.ManagedInstanceGroup, error)
+	BareMetalSolutionInstanceID() (string, error)
+	BareMetalSolutionCloudRegion() (string, error)
+	BareMetalSolutionProjectID() (string, error)
 }
