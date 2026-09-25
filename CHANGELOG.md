@@ -39,6 +39,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer reports `cloud.region`, `faas.version`, and `faas.instance` as empty strings when their environment variables are unset; the attributes are omitted instead. (#9606)
 - Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
 - Use the context bound to a logger when checking whether logs are enabled in `go.opentelemetry.io/contrib/bridges/otellogr` and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9878)
+- Fix response body size tracking when `http.response` uses the `io.ReaderFrom` fast path in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, ensuring copied bytes are included in `http.response.body.size` spans and `http.server.response.body.size` metrics. (#9773)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
