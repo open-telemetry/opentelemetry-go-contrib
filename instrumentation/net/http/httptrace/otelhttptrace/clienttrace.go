@@ -260,6 +260,36 @@ func (ct *clientTracer) end(hook string, err error, attrs ...attribute.KeyValue)
 	}
 }
 
+func (ct *clientTracer) endIfActive(hook string, err error, attrs ...attribute.KeyValue) {
+	if !ct.useSpans {
+		ct.end(hook, err, attrs...)
+		return
+	}
+
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+	if ctx, ok := ct.activeHooks[hook]; ok {
+		span := trace.SpanFromContext(ctx)
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.SetAttributes(attrs...)
+		span.End()
+		delete(ct.activeHooks, hook)
+	}
+}
+
+func (ct *clientTracer) hasActiveConnect() bool {
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+	for hook := range ct.activeHooks {
+		if strings.HasPrefix(hook, "http.connect.") {
+			return true
+		}
+	}
+	return false
+}
+
 func (ct *clientTracer) getParentContext(hook string) context.Context {
 	ctx, ok := ct.activeHooks[parentHook(hook)]
 	if !ok {
@@ -291,7 +321,7 @@ func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
 	if info.WasIdle {
 		attrs = append(attrs, HTTPConnectionIdleTime.String(info.IdleTime.String()))
 	}
-	ct.end("http.getconn", nil, attrs...)
+	ct.endIfActive("http.getconn", nil, attrs...)
 }
 
 func (ct *clientTracer) putIdleConn(err error) {
@@ -328,6 +358,9 @@ func (ct *clientTracer) connectDone(network, addr string, err error) {
 		HTTPConnectionDoneAddr.String(addr),
 		HTTPConnectionDoneNetwork.String(network),
 	)
+	if err != nil && !ct.hasActiveConnect() {
+		ct.endIfActive("http.getconn", err)
+	}
 }
 
 func (ct *clientTracer) tlsHandshakeStart() {
