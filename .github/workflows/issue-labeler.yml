@@ -15,7 +15,12 @@ jobs:
       cancel-in-progress: false
 
     steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
       - name: Apply Area and Namespace Labels
+        id: labeler
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
           github-token: ${{ github.token }}
@@ -77,7 +82,7 @@ jobs:
               return core.setFailed('Gate met, but component not found. Ensure the form has a "Component" field with a value.');
             }
 
-            const sanitize = s => s.toLowerCase().replace(/\s+/g, ':').replace(/:+$/,'').trim();
+            const sanitize = s => s.toLowerCase().replace(/\s+/g, ':').replace(/x-ray/g, 'xray').replace(/:+$/,'').trim();
 
             let area = '';
             let ns = '';
@@ -97,10 +102,10 @@ jobs:
               ns = `sampler: ${sanitize(m[1])}`;
             } else if (/^autoexporter$/i.test(component.trim())) {
               area = 'area: exporter';
-              ns = 'exporter: autoexport';
+              ns = 'exporter: exporters/autoexport';
             } else if (/^zpages$/i.test(component.trim())) {
               area = 'area: zpages';
-              ns = 'zpages';
+              ns = 'zpages: zpages';
             } else if (/^config$/i.test(component.trim())) {
               area = 'area: file-config';
               ns = '';
@@ -109,6 +114,7 @@ jobs:
             core.info(`Computed area: "${area || '(none)'}", namespace: "${ns || '(none)'}"`);
 
             const toAdd = [area, ns].filter(Boolean).filter(l => !currentLower.includes(l.toLowerCase()));
+            const namespaceAdded = toAdd.includes(ns);
             core.info(`Labels to add: ${toAdd.join(', ') || '(none)'}`);
 
             if (!toAdd.length) {
@@ -134,4 +140,13 @@ jobs:
               core.setFailed(`Attempted to add labels but they are missing after update: ${stillMissing.join(', ')}`);
             } else {
               core.info(`Labels added successfully: ${toAdd.join(', ')}`);
+              if (namespaceAdded) core.setOutput('component', ns);
             }
+
+      - name: Ping code owners
+        if: ${{ steps.labeler.outputs.component != '' }}
+        run: ./tools/ping_codeowners_issues.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ISSUE: ${{ github.event.issue.number }}
+          COMPONENT: ${{ steps.labeler.outputs.component }}
