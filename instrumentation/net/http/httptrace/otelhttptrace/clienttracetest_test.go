@@ -6,6 +6,7 @@ package otelhttptrace_test
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
@@ -234,6 +235,24 @@ func TestConcurrentConnectionStart(t *testing.T) {
 			assert.ElementsMatch(t, expectedRemotes, gotRemotes)
 		})
 	}
+}
+
+func TestConnectErrorWithoutGotConn(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	otel.SetTracerProvider(tp)
+
+	ct := otelhttptrace.NewClientTrace(t.Context())
+	ct.GetConn("example.com:443")
+	ct.ConnectStart("tcp", "192.0.2.1:443")
+	ct.ConnectDone("tcp", "192.0.2.1:443", errors.New("connection refused"))
+
+	connectSpans := getSpansFromRecorder(sr, "http.connect")
+	require.Len(t, connectSpans, 1)
+	getConnSpans := getSpansFromRecorder(sr, "http.getconn")
+	require.Len(t, getConnSpans, 1)
+
+	assert.Equal(t, getConnSpans[0].SpanContext().SpanID(), connectSpans[0].Parent().SpanID())
 }
 
 func TestEndBeforeStartCreatesSpan(t *testing.T) {
