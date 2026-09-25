@@ -7,6 +7,8 @@
 package request
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"sync"
 )
@@ -110,6 +112,29 @@ func (w *RespWriterWrapper) BytesWritten() int64 {
 	defer w.mu.RUnlock()
 
 	return w.written
+}
+
+// ReadFrom implements [io.ReaderFrom] enabling the fast path
+// to optimize copying data from the provided reader into the
+// ResponseWrite.
+func (w *RespWriterWrapper) ReadFrom(r io.Reader) (int64, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if !w.wroteHeader {
+		w.writeHeader(http.StatusOK)
+	}
+
+	rf, ok := w.ResponseWriter.(io.ReaderFrom)
+	if !ok {
+		return 0, errors.New("ResponseWriter does not implement io.ReaderFrom")
+	}
+
+	n, err := rf.ReadFrom(r)
+	w.OnWrite(n)
+	w.written += n
+	w.err = err
+	return n, err
 }
 
 // StatusCode returns the HTTP status code that was sent.
