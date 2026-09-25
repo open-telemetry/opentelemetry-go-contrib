@@ -42,6 +42,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Report genuine Prometheus metrics HTTP server errors instead of swallowing them in `go.opentelemetry.io/contrib/otelconf/v0.2.0`.
   The error check was inverted, so a clean shutdown (`http.ErrServerClosed`) was reported as unexpected while real `Serve` errors were ignored. (#9653)
 - Fix `http.client.request.body.size` recording for streaming request bodies in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8684)
+- Copy the parsed multipart form back onto the original request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` so net/http cleans up temporary files when the request is recycled. (#8851)
 
 ### Removed
 

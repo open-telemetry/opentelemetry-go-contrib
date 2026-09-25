@@ -6,10 +6,12 @@
 package otelgin_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"html/template"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -906,4 +908,36 @@ func TestClientDisconnectCustomErrorTypeAttribute(t *testing.T) {
 	errorType, ok := durationHistogram.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
 	require.True(t, ok, "expected error.type attribute on the http.server.request.duration metric")
 	assert.Equal(t, "custom_error_type", errorType.AsString(), "the caller-supplied error.type must take precedence over the disconnect-derived one")
+}
+
+// TestMiddlewarePropagatesMultipartFormBack asserts that the MultipartForm
+// populated on gin's context-carrying request is copied back onto the
+// http.Request the server handed us, so net/http's finishRequest cleanup
+// can reach it instead of leaking the temp files (#5946).
+func TestMiddlewarePropagatesMultipartFormBack(t *testing.T) {
+	body := &bytes.Buffer{}
+	w := multipart.NewWriter(body)
+	part, err := w.CreateFormFile("file", "sample.bin")
+	require.NoError(t, err)
+	_, err = part.Write(bytes.Repeat([]byte("x"), 1024))
+	require.NoError(t, err)
+	require.NoError(t, w.Close())
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/upload", body)
+	r.Header.Set("Content-Type", w.FormDataContentType())
+	r.ContentLength = int64(body.Len())
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("test"))
+	router.POST("/upload", func(c *gin.Context) {
+		_, err := c.FormFile("file")
+		require.NoError(t, err)
+		c.Status(http.StatusOK)
+	})
+
+	rec := httptest.NewRecorder()
+	router.ServeHTTP(rec, r)
+
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.NotNil(t, r.MultipartForm, "original request's MultipartForm must be restored so net/http can clean its temp files")
 }
