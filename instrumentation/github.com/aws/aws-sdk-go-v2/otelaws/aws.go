@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package otelaws provides instrumentation for the AWS SDK.
+//
+// Deprecated: This package is no longer supported.
 package otelaws
 
 import (

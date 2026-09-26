@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -125,6 +126,7 @@ func TestMetricExporterPrometheus(t *testing.T) {
 	assertNoOtelHandleErrors(t)
 
 	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_HOST", "")
 	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "0")
 
 	r, err := NewMetricReader(t.Context())
@@ -134,9 +136,12 @@ func TestMetricExporterPrometheus(t *testing.T) {
 	mp := metric.NewMeterProvider(metric.WithReader(r))
 
 	rws, ok := r.(readerWithServer)
-	if !ok {
-		t.Errorf("expected readerWithServer but got %v", r)
-	}
+	require.True(t, ok, "expected readerWithServer but got %v", r)
+	host, _, err := net.SplitHostPort(rws.addr.String())
+	require.NoError(t, err)
+	localhostIPs, err := net.DefaultResolver.LookupHost(t.Context(), "localhost")
+	require.NoError(t, err)
+	assert.Contains(t, localhostIPs, host)
 
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("http://%s/metrics", rws.addr), http.NoBody)
 	require.NoError(t, err)
@@ -150,6 +155,26 @@ func TestMetricExporterPrometheus(t *testing.T) {
 
 	assert.NoError(t, mp.Shutdown(t.Context()))
 	goleak.VerifyNone(t)
+}
+
+func TestMetricExporterPrometheusEmptyPort(t *testing.T) {
+	assertNoOtelHandleErrors(t)
+
+	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_HOST", "127.0.0.1")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "")
+
+	r, err := NewMetricReader(t.Context())
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		assert.NoError(t, r.Shutdown(t.Context()))
+	})
+
+	rws, ok := r.(readerWithServer)
+	require.True(t, ok)
+	_, port, err := net.SplitHostPort(rws.addr.String())
+	require.NoError(t, err)
+	assert.Equal(t, "9464", port)
 }
 
 func TestMetricExporterPrometheusInvalidPort(t *testing.T) {
