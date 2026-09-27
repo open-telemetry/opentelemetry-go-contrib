@@ -209,7 +209,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if cause != nil {
 		spanCode, spanMsg = codes.Error, cause.Error()
 		errorType = otelsemconv.ErrorType(cause)
-	} else if statusCode >= 500 && statusCode < 600 {
+	} else if spanCode == codes.Error {
 		errorType = otelsemconv.ErrorTypeKey.String(strconv.Itoa(statusCode))
 	}
 	span.SetStatus(spanCode, spanMsg)
