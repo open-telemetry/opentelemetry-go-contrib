@@ -21,10 +21,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/global"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
@@ -478,9 +478,9 @@ func TestNewHandlerConfiguration(t *testing.T) {
 	name := "name"
 	t.Run("Default", func(t *testing.T) {
 		r := new(recorder)
-		prev := global.GetLoggerProvider()
-		defer global.SetLoggerProvider(prev)
-		global.SetLoggerProvider(r)
+		prev := otel.GetLoggerProvider()
+		defer otel.SetLoggerProvider(prev)
+		otel.SetLoggerProvider(r)
 
 		var h *Handler
 		require.NotPanics(t, func() { h = NewHandler(name) })
