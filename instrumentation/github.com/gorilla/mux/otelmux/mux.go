@@ -4,7 +4,9 @@
 package otelmux
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"strconv"
 	"time"
@@ -194,7 +196,12 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	spanCode, spanMsg := tw.semconv.Status(statusCode)
 	var errorType attribute.KeyValue
 	writeErr := rww.Error()
+	readErr := bw.Error()
 	cause := writeErr
+	// A fully read body leaves io.EOF as the last read error.
+	if cause == nil && readErr != nil && !errors.Is(readErr, io.EOF) {
+		cause = readErr
+	}
 	if cause == nil {
 		// Use ctx, not rCtx.Context(): downstream middleware may replace and cancel the request context.
 		cause = ctx.Err()
@@ -209,7 +216,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: statusCode,
 		ReadBytes:  bw.BytesRead(),
-		ReadError:  bw.Error(),
+		ReadError:  readErr,
 		WriteBytes: rww.BytesWritten(),
 		WriteError: writeErr,
 	})...)
