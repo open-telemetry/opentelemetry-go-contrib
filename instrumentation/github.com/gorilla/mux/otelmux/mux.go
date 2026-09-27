@@ -193,9 +193,15 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	statusCode := rww.StatusCode()
 	spanCode, spanMsg := tw.semconv.Status(statusCode)
 	var errorType attribute.KeyValue
-	if err := ctx.Err(); err != nil {
-		spanCode, spanMsg = codes.Error, err.Error()
-		errorType = otelsemconv.ErrorType(err)
+	writeErr := rww.Error()
+	cause := writeErr
+	if cause == nil {
+		// Use ctx, not rCtx.Context(): downstream middleware may replace and cancel the request context.
+		cause = ctx.Err()
+	}
+	if cause != nil {
+		spanCode, spanMsg = codes.Error, cause.Error()
+		errorType = otelsemconv.ErrorType(cause)
 	} else if statusCode >= 500 && statusCode < 600 {
 		errorType = otelsemconv.ErrorTypeKey.String(strconv.Itoa(statusCode))
 	}
@@ -205,7 +211,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ReadBytes:  bw.BytesRead(),
 		ReadError:  bw.Error(),
 		WriteBytes: rww.BytesWritten(),
-		WriteError: rww.Error(),
+		WriteError: writeErr,
 	})...)
 	if errorType.Valid() {
 		span.SetAttributes(errorType)
