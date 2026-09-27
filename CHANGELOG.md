@@ -42,6 +42,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Report genuine Prometheus metrics HTTP server errors instead of swallowing them in `go.opentelemetry.io/contrib/otelconf/v0.2.0`.
   The error check was inverted, so a clean shutdown (`http.ErrServerClosed`) was reported as unexpected while real `Serve` errors were ignored. (#9653)
 - Fix `http.client.request.body.size` recording for streaming request bodies in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8684)
+- Set `error.type` on the server span and on the request-duration, request-body-size, and response-body-size metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` when a request fails.
+  A detected cause also sets span status to `Error`, even for non-5xx responses.
 
 ### Removed
 
