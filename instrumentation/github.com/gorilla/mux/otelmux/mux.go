@@ -211,11 +211,16 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		span.SetAttributes(errorType)
 	}
 
+	additionalAttributes := tw.metricAttributesFromRequest(r)
+	if errorType.Valid() {
+		// Prepend so an error.type from metricAttributesFn takes precedence.
+		additionalAttributes = append([]attribute.KeyValue{errorType}, additionalAttributes...)
+	}
 	metricAttributes := semconv.MetricAttributes{
 		Req:                  r,
 		StatusCode:           statusCode,
 		Route:                routeStr,
-		AdditionalAttributes: tw.metricAttributesFromRequest(r),
+		AdditionalAttributes: additionalAttributes,
 	}
 
 	tw.semconv.RecordMetrics(ctx, semconv.ServerMetricData{
