@@ -12,8 +12,10 @@ import (
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
@@ -188,7 +190,13 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.MultipartForm = rCtx.MultipartForm
 	}
 	statusCode := rww.StatusCode()
-	span.SetStatus(tw.semconv.Status(statusCode))
+	spanCode, spanMsg := tw.semconv.Status(statusCode)
+	var errorType attribute.KeyValue
+	if err := ctx.Err(); err != nil {
+		spanCode, spanMsg = codes.Error, err.Error()
+		errorType = otelsemconv.ErrorType(err)
+	}
+	span.SetStatus(spanCode, spanMsg)
 	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: statusCode,
 		ReadBytes:  bw.BytesRead(),
@@ -196,6 +204,9 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		WriteBytes: rww.BytesWritten(),
 		WriteError: rww.Error(),
 	})...)
+	if errorType.Valid() {
+		span.SetAttributes(errorType)
+	}
 
 	metricAttributes := semconv.MetricAttributes{
 		Req:                  r,
