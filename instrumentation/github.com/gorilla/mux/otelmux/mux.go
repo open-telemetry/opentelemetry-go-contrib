@@ -6,6 +6,7 @@ package otelmux
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/felixge/httpsnoop"
@@ -195,6 +196,8 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := ctx.Err(); err != nil {
 		spanCode, spanMsg = codes.Error, err.Error()
 		errorType = otelsemconv.ErrorType(err)
+	} else if statusCode >= 500 && statusCode < 600 {
+		errorType = otelsemconv.ErrorTypeKey.String(strconv.Itoa(statusCode))
 	}
 	span.SetStatus(spanCode, spanMsg)
 	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
