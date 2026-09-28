@@ -4,4 +4,4 @@
 package otelslog
 
 // Version is the current release version of the otelslog bridge.
-const Version = "0.20.0"
+const Version = "0.20.1"

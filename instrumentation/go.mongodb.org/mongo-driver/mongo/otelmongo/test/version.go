@@ -4,4 +4,4 @@
 package test
 
 // Version is the current release version of the mongo-driver instrumentation test module.
-const Version = "0.70.0"
+const Version = "0.71.0"
