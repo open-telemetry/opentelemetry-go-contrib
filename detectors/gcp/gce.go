@@ -74,7 +74,7 @@ func (*GCE) Detect(ctx context.Context) (*resource.Resource, error) {
 	if hostType, err := metadata.GetWithContext(ctx, "instance/machine-type"); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if hostType != "" {
-		attributes = append(attributes, semconv.HostType(hostType))
+		attributes = append(attributes, semconv.HostType(machineType(hostType)))
 	}
 
 	var aggregatedErr error
@@ -96,4 +96,11 @@ func hasProblem(err error) bool {
 		return false
 	}
 	return true
+}
+
+// machineType returns the last path segment of the GCE machine-type metadata
+// value (projects/PROJECT_NUM/machineTypes/MACHINE_TYPE), as host.type must
+// only contain the machine type.
+func machineType(v string) string {
+	return v[strings.LastIndex(v, "/")+1:]
 }
