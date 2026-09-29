@@ -5,6 +5,7 @@ package docker
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -48,7 +49,7 @@ func newTestProvider(t *testing.T, rt roundTripFunc) *dockerProviderImpl {
 		client.WithHTTPClient(&http.Client{Transport: rt}),
 	)
 	require.NoError(t, err)
-	return &dockerProviderImpl{dockerClient: cli}
+	return &dockerProviderImpl{dockerClient: cli, containerID: getContainerID}
 }
 
 func TestDockerProviderImpl_Info(t *testing.T) {
@@ -74,17 +75,19 @@ func TestDockerProviderImpl_Info_Error(t *testing.T) {
 const testImageID = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
 
 func TestDockerProviderImpl_ContainerInfo(t *testing.T) {
-	hostname, err := os.Hostname()
-	require.NoError(t, err)
-
 	p := newTestProvider(t, func(req *http.Request) (*http.Response, error) {
-		assert.Equal(t, "/v"+client.MaxAPIVersion+"/containers/"+hostname+"/json", req.URL.Path)
+		assert.Equal(t, "/v"+client.MaxAPIVersion+"/containers/container-id/json", req.URL.Path)
 		return jsonResponse(t, http.StatusOK, container.InspectResponse{
 			Name:   "/my-container",
 			Image:  testImageID,
 			Config: &container.Config{Image: "golang:1.25"},
 		}), nil
 	})
+	previousContainerID := p.containerID
+	p.containerID = func(context.Context) (string, error) {
+		return "container-id", nil
+	}
+	t.Cleanup(func() { p.containerID = previousContainerID })
 
 	info, err := p.ContainerInfo(t.Context())
 	require.NoError(t, err)
@@ -93,6 +96,46 @@ func TestDockerProviderImpl_ContainerInfo(t *testing.T) {
 	assert.Equal(t, "golang", *info.ImageName)
 	assert.Equal(t, []string{"1.25"}, info.Tags)
 	assert.Equal(t, testImageID, info.ImageID)
+}
+
+func TestDockerProviderImpl_ContainerInfo_FallbackToHostname(t *testing.T) {
+	p := newTestProvider(t, func(req *http.Request) (*http.Response, error) {
+		hostname, err := os.Hostname()
+		require.NoError(t, err)
+		assert.Equal(t, "/v"+client.MaxAPIVersion+"/containers/"+hostname+"/json", req.URL.Path)
+		return jsonResponse(t, http.StatusOK, container.InspectResponse{
+			Name:   "/my-container",
+			Image:  testImageID,
+			Config: &container.Config{Image: "golang:1.25"},
+		}), nil
+	})
+	p.containerID = func(context.Context) (string, error) { return "", nil }
+
+	info, err := p.ContainerInfo(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "my-container", info.Name)
+}
+
+func TestDockerProviderImpl_ContainerInfo_FallbackToHostnameAfterNotFound(t *testing.T) {
+	hostname, err := os.Hostname()
+	require.NoError(t, err)
+
+	p := newTestProvider(t, func(req *http.Request) (*http.Response, error) {
+		switch req.URL.Path {
+		case "/v" + client.MaxAPIVersion + "/containers/container-id/json":
+			return jsonResponse(t, http.StatusNotFound, map[string]string{"message": "no such container"}), nil
+		case "/v" + client.MaxAPIVersion + "/containers/" + hostname + "/json":
+			return jsonResponse(t, http.StatusOK, container.InspectResponse{Name: "/my-container", Image: testImageID}), nil
+		default:
+			t.Fatalf("unexpected request path: %s", req.URL.Path)
+			return nil, nil
+		}
+	})
+	p.containerID = func(context.Context) (string, error) { return "container-id", nil }
+
+	info, err := p.ContainerInfo(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "my-container", info.Name)
 }
 
 func TestDockerProviderImpl_ContainerInfo_NilConfig(t *testing.T) {
