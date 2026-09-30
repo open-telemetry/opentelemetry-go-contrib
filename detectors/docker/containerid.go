@@ -6,21 +6,11 @@ package docker
 import (
 	"context"
 
-	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/contrib/detectors/docker/internal"
 )
 
 type containerIDProvider func(context.Context) (string, error)
 
-func getContainerID(ctx context.Context) (string, error) {
-	res, err := resource.New(ctx, resource.WithContainerID())
-	if err != nil {
-		return "", err
-	}
-
-	id, ok := res.Set().Value(semconv.ContainerIDKey)
-	if !ok {
-		return "", nil
-	}
-	return id.AsString(), nil
+func getContainerID(context.Context) (string, error) {
+	return internal.ContainerID()
 }
