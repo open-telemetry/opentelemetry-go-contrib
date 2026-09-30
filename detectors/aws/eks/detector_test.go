@@ -5,7 +5,6 @@ package eks
 
 import (
 	"context"
-	"errors"
 	"testing"
 	"time"
 
@@ -89,57 +88,63 @@ func TestNotEKS(t *testing.T) {
 	detectorUtils.AssertExpectations(t)
 }
 
-func TestConfigMapContextKeepsExistingDeadline(t *testing.T) {
-	detectorUtils := new(MockDetectorUtils)
-	deadline := time.Now().Add(time.Hour)
-	ctx, cancel := context.WithDeadline(t.Context(), deadline)
-	defer cancel()
+func TestConfigMapContext(t *testing.T) {
+	for _, operation := range []string{"isEKS", "getClusterName"} {
+		for _, state := range []string{"no deadline", "deadline", "canceled", "expired"} {
+			t.Run(operation+"/"+state, func(t *testing.T) {
+				ctx := t.Context()
+				switch state {
+				case "deadline":
+					var cancel context.CancelFunc
+					ctx, cancel = context.WithTimeout(ctx, time.Hour)
+					defer cancel()
+				case "canceled":
+					var cancel context.CancelFunc
+					ctx, cancel = context.WithCancel(ctx)
+					cancel()
+				case "expired":
+					var cancel context.CancelFunc
+					ctx, cancel = context.WithDeadline(ctx, time.Now().Add(-time.Second))
+					defer cancel()
+				}
 
-	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
-	detectorUtils.On("fileExists", k8sCertPath).Return(true)
-	detectorUtils.On("getConfigMap", mock.MatchedBy(func(ctx context.Context) bool {
-		got, ok := ctx.Deadline()
-		return ok && got.Equal(deadline)
-	}), authConfigmapNS, authConfigmapName).Return(map[string]string{"not": "nil"}, nil)
+				utils := new(MockDetectorUtils)
+				namespace, name := cwConfigmapNS, cwConfigmapName
+				if operation == "isEKS" {
+					utils.On("fileExists", k8sTokenPath).Return(true)
+					utils.On("fileExists", k8sCertPath).Return(true)
+					namespace, name = authConfigmapNS, authConfigmapName
+				}
+				utils.On("getConfigMap", mock.Anything, namespace, name).
+					Run(func(args mock.Arguments) {
+						// Both requests must receive the caller's context unchanged,
+						// including when the caller has not set a deadline.
+						assert.Same(t, ctx, args.Get(0))
+					}).Return(map[string]string{"cluster.name": "my-cluster"}, ctx.Err()).Once()
 
-	isEks, err := isEKS(ctx, detectorUtils)
-	require.NoError(t, err)
-	assert.True(t, isEks)
-	detectorUtils.AssertExpectations(t)
-}
-
-func TestConfigMapContextAddsDefaultTimeout(t *testing.T) {
-	detectorUtils := new(MockDetectorUtils)
-	start := time.Now()
-
-	detectorUtils.On("getConfigMap", mock.MatchedBy(func(ctx context.Context) bool {
-		deadline, ok := ctx.Deadline()
-		return ok && deadline.After(start) &&
-			deadline.Sub(start) > defaultK8sAPICallTimeout-time.Second &&
-			deadline.Sub(start) <= defaultK8sAPICallTimeout+time.Second
-	}), cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "my-cluster"}, nil)
-
-	clusterName, err := getClusterName(t.Context(), detectorUtils)
-	require.NoError(t, err)
-	assert.Equal(t, "my-cluster", clusterName)
-	detectorUtils.AssertExpectations(t)
-}
-
-func TestConfigMapContextPreservesCancellation(t *testing.T) {
-	detectorUtils := new(MockDetectorUtils)
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
-
-	detectorUtils.On("fileExists", k8sTokenPath).Return(true)
-	detectorUtils.On("fileExists", k8sCertPath).Return(true)
-	detectorUtils.On("getConfigMap", mock.MatchedBy(func(ctx context.Context) bool {
-		return errors.Is(ctx.Err(), context.Canceled)
-	}), authConfigmapNS, authConfigmapName).Return(nil, context.Canceled)
-
-	isEks, err := isEKS(ctx, detectorUtils)
-	require.ErrorIs(t, err, context.Canceled)
-	assert.False(t, isEks)
-	detectorUtils.AssertExpectations(t)
+				var err error
+				if operation == "isEKS" {
+					var detected bool
+					detected, err = isEKS(ctx, utils)
+					assert.Equal(t, ctx.Err() == nil, detected)
+				} else {
+					var name string
+					name, err = getClusterName(ctx, utils)
+					if ctx.Err() == nil {
+						assert.Equal(t, "my-cluster", name)
+					} else {
+						assert.Empty(t, name)
+					}
+				}
+				if ctx.Err() == nil {
+					require.NoError(t, err)
+				} else {
+					require.ErrorIs(t, err, ctx.Err())
+				}
+				utils.AssertExpectations(t)
+			})
+		}
+	}
 }
 
 // Tests EKS resource detector not running K8S at all.
