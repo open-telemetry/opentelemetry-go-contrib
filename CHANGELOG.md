@@ -33,7 +33,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Use the cgroup-derived container ID when detecting Docker resources, allowing detection to work when a container overrides its hostname. Fall back to hostname lookup when cgroup detection is unavailable or the connected Docker daemon does not recognize the cgroup ID. (#9549)
+- Resolve the Docker container ID from cgroup data, with a `/proc/self/mountinfo` fallback for private cgroup namespaces, so custom hostnames do not disable detection. Fall back to hostname lookup when neither source provides an ID or the Docker daemon does not recognize it. (#9549)
 - Treat empty Prometheus exporter environment variable values as unset in `go.opentelemetry.io/contrib/exporters/autoexport`, restoring the documented defaults. (#9636)
 - Bound converter-owned recursive map, slice, array, and pointer traversal in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`.
   A field requiring more than 100 such levels is replaced with `<max-depth-exceeded>` and the record continues to be emitted. Existing `fmt` and user-method behavior remains unchanged. (#9691)

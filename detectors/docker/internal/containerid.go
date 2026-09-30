@@ -9,37 +9,53 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strings"
 )
 
 const cgroupPath = "/proc/self/cgroup"
 
+const mountInfoPath = "/proc/self/mountinfo"
+
 var cgroupContainerIDRe = regexp.MustCompile(`^.*/(?:.*[-:])?([0-9a-f]{64})(?:\.|\s*$)`)
 
-var (
-	defaultOSStat = os.Stat
-	osStat        = defaultOSStat
+var dockerHostnamePathRe = regexp.MustCompile(`(?:^|/)containers/([0-9a-f]{64})/hostname$`)
 
-	defaultOSOpen = func(name string) (io.ReadCloser, error) {
-		return os.Open(name)
-	}
-	osOpen = defaultOSOpen
-)
-
-// ContainerID returns the container ID from the cgroup file.
-// If the cgroup file does not exist or contains no container ID, it returns
-// an empty string and no error.
+// ContainerID returns the container ID from cgroup data or Docker's hostname
+// mount. If neither contains a container ID, it returns an empty string.
 func ContainerID() (string, error) {
-	if _, err := osStat(cgroupPath); errors.Is(err, os.ErrNotExist) {
-		return "", nil
+	return containerIDFromFiles(func(path string) (io.ReadCloser, error) {
+		return os.Open(path)
+	})
+}
+
+func containerIDFromFiles(openFile func(string) (io.ReadCloser, error)) (string, error) {
+	cgroupFile, cgroupErr := openFile(cgroupPath)
+	if cgroupErr == nil {
+		id, parseErr := containerIDFromReader(cgroupFile)
+		_ = cgroupFile.Close()
+		if id != "" {
+			return id, nil
+		}
+		cgroupErr = parseErr
 	}
 
-	file, err := osOpen(cgroupPath)
-	if err != nil {
-		return "", err
+	mountInfoFile, mountInfoErr := openFile(mountInfoPath)
+	if mountInfoErr == nil {
+		id, parseErr := containerIDFromMountInfo(mountInfoFile)
+		_ = mountInfoFile.Close()
+		if id != "" {
+			return id, nil
+		}
+		mountInfoErr = parseErr
 	}
-	defer func() { _ = file.Close() }()
 
-	return containerIDFromReader(file)
+	if errors.Is(cgroupErr, os.ErrNotExist) {
+		cgroupErr = nil
+	}
+	if errors.Is(mountInfoErr, os.ErrNotExist) {
+		mountInfoErr = nil
+	}
+	return "", errors.Join(cgroupErr, mountInfoErr)
 }
 
 func containerIDFromReader(reader io.Reader) (string, error) {
@@ -58,4 +74,20 @@ func containerIDFromLine(line string) string {
 		return ""
 	}
 	return matches[1]
+}
+
+func containerIDFromMountInfo(reader io.Reader) (string, error) {
+	scanner := bufio.NewScanner(reader)
+	for scanner.Scan() {
+		fields := strings.Fields(scanner.Text())
+		if len(fields) < 6 || fields[4] != "/etc/hostname" {
+			continue
+		}
+
+		matches := dockerHostnamePathRe.FindStringSubmatch(fields[3])
+		if len(matches) > 1 {
+			return matches[1], nil
+		}
+	}
+	return "", scanner.Err()
 }

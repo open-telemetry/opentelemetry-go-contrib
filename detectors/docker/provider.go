@@ -51,8 +51,8 @@ type provider interface {
 }
 
 type dockerProviderImpl struct {
-	dockerClient *client.Client
-	containerID  containerIDProvider
+	dockerClient        *client.Client
+	containerIDProvider func(context.Context) (string, error)
 }
 
 func (d *dockerProviderImpl) Info(ctx context.Context) (hostInfo, error) {
@@ -64,7 +64,7 @@ func (d *dockerProviderImpl) Info(ctx context.Context) (hostInfo, error) {
 }
 
 func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (containerInfo, error) {
-	containerRef, err := d.containerID(ctx)
+	containerRef, err := d.containerIDProvider(ctx)
 	if err != nil || containerRef == "" {
 		// Fall back to the hostname for platforms where cgroup detection is
 		// unavailable and to preserve support for older Docker setups.
@@ -143,5 +143,8 @@ func newProvider(opts ...client.Opt) (provider, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize Docker client: %w", err)
 	}
-	return &dockerProviderImpl{dockerClient: cli, containerID: getContainerID}, nil
+	return &dockerProviderImpl{
+		dockerClient:        cli,
+		containerIDProvider: getContainerID,
+	}, nil
 }

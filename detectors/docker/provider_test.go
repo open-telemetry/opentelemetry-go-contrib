@@ -49,7 +49,7 @@ func newTestProvider(t *testing.T, rt roundTripFunc) *dockerProviderImpl {
 		client.WithHTTPClient(&http.Client{Transport: rt}),
 	)
 	require.NoError(t, err)
-	return &dockerProviderImpl{dockerClient: cli, containerID: getContainerID}
+	return &dockerProviderImpl{dockerClient: cli, containerIDProvider: getContainerID}
 }
 
 func TestDockerProviderImpl_Info(t *testing.T) {
@@ -83,11 +83,11 @@ func TestDockerProviderImpl_ContainerInfo(t *testing.T) {
 			Config: &container.Config{Image: "golang:1.25"},
 		}), nil
 	})
-	previousContainerID := p.containerID
-	p.containerID = func(context.Context) (string, error) {
+	previousContainerIDProvider := p.containerIDProvider
+	p.containerIDProvider = func(context.Context) (string, error) {
 		return "container-id", nil
 	}
-	t.Cleanup(func() { p.containerID = previousContainerID })
+	t.Cleanup(func() { p.containerIDProvider = previousContainerIDProvider })
 
 	info, err := p.ContainerInfo(t.Context())
 	require.NoError(t, err)
@@ -109,7 +109,7 @@ func TestDockerProviderImpl_ContainerInfo_FallbackToHostname(t *testing.T) {
 			Config: &container.Config{Image: "golang:1.25"},
 		}), nil
 	})
-	p.containerID = func(context.Context) (string, error) { return "", nil }
+	p.containerIDProvider = func(context.Context) (string, error) { return "", nil }
 
 	info, err := p.ContainerInfo(t.Context())
 	require.NoError(t, err)
@@ -131,7 +131,7 @@ func TestDockerProviderImpl_ContainerInfo_FallbackToHostnameAfterNotFound(t *tes
 			return nil, nil
 		}
 	})
-	p.containerID = func(context.Context) (string, error) { return "container-id", nil }
+	p.containerIDProvider = func(context.Context) (string, error) { return "container-id", nil }
 
 	info, err := p.ContainerInfo(t.Context())
 	require.NoError(t, err)

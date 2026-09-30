@@ -4,7 +4,6 @@
 package internal
 
 import (
-	"errors"
 	"io"
 	"os"
 	"strings"
@@ -14,7 +13,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestContainerID(t *testing.T) {
+func TestContainerIDFromReader(t *testing.T) {
 	const containerID = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 
 	tests := []struct {
@@ -40,57 +39,65 @@ func TestContainerID(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			setFileHooks(t, tt.content, nil, nil)
-
-			got, err := ContainerID()
+			got, err := containerIDFromReader(strings.NewReader(tt.content))
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
 		})
 	}
 }
 
-func TestContainerID_MissingCgroupFile(t *testing.T) {
-	openCalled := false
-	previousOSStat := osStat
-	previousOSOpen := osOpen
-	osStat = func(string) (os.FileInfo, error) { return nil, os.ErrNotExist }
-	osOpen = func(string) (io.ReadCloser, error) {
-		openCalled = true
-		return nil, errors.New("unexpected open")
+func TestContainerIDFromMountInfo(t *testing.T) {
+	const containerID = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+
+	tests := []struct {
+		name      string
+		mountInfo string
+		want      string
+	}{
+		{
+			name: "private cgroup namespace",
+			mountInfo: "34 25 8:1 /docker/containers/" + containerID +
+				"/hostname /etc/hostname rw,relatime - ext4 /dev/sda1 rw\n",
+			want: containerID,
+		},
+		{
+			name:      "unrelated hostname mount",
+			mountInfo: "34 25 8:1 /etc/hostname /etc/hostname rw,relatime - ext4 /dev/sda1 rw\n",
+		},
+		{
+			name:      "hostname ID on another mount point",
+			mountInfo: "34 25 8:1 /docker/containers/" + containerID + "/hostname /mnt/hostname rw,relatime - ext4 /dev/sda1 rw\n",
+		},
 	}
-	t.Cleanup(func() {
-		osStat = previousOSStat
-		osOpen = previousOSOpen
-	})
 
-	got, err := ContainerID()
-	require.NoError(t, err)
-	assert.Empty(t, got)
-	assert.False(t, openCalled)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := containerIDFromMountInfo(strings.NewReader(tt.mountInfo))
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
 }
 
-func TestContainerID_OpenError(t *testing.T) {
-	openErr := errors.New("open failed")
-	setFileHooks(t, "", nil, openErr)
+func TestContainerIDFromFiles_PrivateCgroupNamespace(t *testing.T) {
+	const containerID = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+	calls := make([]string, 0, 2)
 
-	got, err := ContainerID()
-	assert.ErrorIs(t, err, openErr)
-	assert.Empty(t, got)
-}
-
-func setFileHooks(t *testing.T, content string, statErr, openErr error) {
-	t.Helper()
-	previousOSStat := osStat
-	previousOSOpen := osOpen
-	osStat = func(string) (os.FileInfo, error) { return nil, statErr }
-	osOpen = func(string) (io.ReadCloser, error) {
-		if openErr != nil {
-			return nil, openErr
+	got, err := containerIDFromFiles(func(path string) (io.ReadCloser, error) {
+		calls = append(calls, path)
+		switch path {
+		case cgroupPath:
+			return io.NopCloser(strings.NewReader("0::/\n")), nil
+		case mountInfoPath:
+			return io.NopCloser(strings.NewReader(
+				"34 25 8:1 /docker/containers/" + containerID + "/hostname /etc/hostname rw,relatime - ext4 /dev/sda1 rw\n",
+			)), nil
+		default:
+			return nil, os.ErrNotExist
 		}
-		return io.NopCloser(strings.NewReader(content)), nil
-	}
-	t.Cleanup(func() {
-		osStat = previousOSStat
-		osOpen = previousOSOpen
 	})
+
+	require.NoError(t, err)
+	assert.Equal(t, containerID, got)
+	assert.Equal(t, []string{cgroupPath, mountInfoPath}, calls)
 }
