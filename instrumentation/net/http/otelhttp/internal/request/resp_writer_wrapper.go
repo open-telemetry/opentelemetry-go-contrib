@@ -17,6 +17,10 @@ var (
 	_ io.ReaderFrom       = (*RespWriterWrapper)(nil)
 )
 
+// sniffLen matches net/http's prefix size: ReadFrom copies this much through
+// Write before handing off to the underlying ReadFrom.
+const sniffLen = 512
+
 // RespWriterWrapper wraps a http.ResponseWriter in order to track the number of
 // bytes written, the first write error, and to catch the first written statusCode.
 // TODO: The wrapped http.ResponseWriter doesn't implement any of the optional
@@ -51,6 +55,12 @@ func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
+	return w.write(p)
+}
+
+// write implements Write. It does not acquire a lock, and therefore assumes
+// that is being handled by a parent method.
+func (w *RespWriterWrapper) write(p []byte) (int, error) {
 	if !w.wroteHeader {
 		w.writeHeader(http.StatusOK)
 	}
@@ -73,27 +83,47 @@ func (w *RespWriterWrapper) ReadFrom(src io.Reader) (int64, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	if !w.wroteHeader {
-		w.writeHeader(http.StatusOK)
-	}
-
-	var (
-		n   int64
-		err error
-	)
-	if rf, ok := w.ResponseWriter.(io.ReaderFrom); ok {
-		n, err = rf.ReadFrom(src)
-	} else {
-		n, err = io.Copy(w.ResponseWriter, src)
-	}
-	w.OnWrite(n)
-	w.written += n
+	n, err := w.readFrom(src)
 	// Keep the first error; later writes must not clear or replace it.
 	if w.err == nil {
 		w.err = err
 	}
 	return n, err
 }
+
+// readFrom implements ReadFrom. It does not acquire a lock, and therefore
+// assumes that is being handled by a parent method.
+func (w *RespWriterWrapper) readFrom(src io.Reader) (int64, error) {
+	// lockedWriter has no ReadFrom, so io.Copy uses write instead of recursing.
+	dst := lockedWriter{w}
+
+	rf, ok := w.ResponseWriter.(io.ReaderFrom)
+	if !ok {
+		return io.Copy(dst, src)
+	}
+
+	var n int64
+	if !w.wroteHeader {
+		// Like net/http, copy a prefix through write first so the header is
+		// only committed once data arrives; an empty or failing src leaves the
+		// handler free to set another status.
+		var err error
+		n, err = io.Copy(dst, io.LimitReader(src, sniffLen))
+		if err != nil || n < sniffLen {
+			return n, err
+		}
+	}
+
+	m, err := rf.ReadFrom(src)
+	w.OnWrite(m)
+	w.written += m
+	return n + m, err
+}
+
+// lockedWriter writes through w.write. The caller must hold w.mu.
+type lockedWriter struct{ w *RespWriterWrapper }
+
+func (l lockedWriter) Write(p []byte) (int, error) { return l.w.write(p) }
 
 // WriteHeader persists initial statusCode for span attribution.
 // All calls to WriteHeader will be propagated to the underlying ResponseWriter

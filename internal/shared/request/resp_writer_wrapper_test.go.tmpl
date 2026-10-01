@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -136,11 +137,75 @@ func TestRespWriterReadFromError(t *testing.T) {
 		err:            want,
 	}, func(int64) {})
 
-	_, err := rw.ReadFrom(strings.NewReader("hello"))
+	_, err := rw.ReadFrom(strings.NewReader(strings.Repeat("a", 2*sniffLen)))
 	require.ErrorIs(t, err, want)
 	_, err = rw.Write([]byte("world"))
 	require.NoError(t, err)
 
 	assert.ErrorIs(t, rw.Error(), want)
 	assert.Equal(t, http.StatusOK, rw.StatusCode())
+}
+
+type readerFromRecorder struct {
+	*httptest.ResponseRecorder
+	readFromBytes int64
+}
+
+func (r *readerFromRecorder) ReadFrom(src io.Reader) (int64, error) {
+	n, err := io.Copy(r.ResponseRecorder, src)
+	r.readFromBytes += n
+	return n, err
+}
+
+func TestRespWriterReadFromEmptyKeepsHeaderUncommitted(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		rw := NewRespWriterWrapper(w, func(int64) {})
+		n, err := rw.ReadFrom(strings.NewReader(""))
+		assert.NoError(t, err)
+		assert.Zero(t, n)
+
+		rw.Header().Set("Retry-After", "5")
+		rw.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer srv.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, http.NoBody)
+	require.NoError(t, err)
+	resp, err := srv.Client().Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+	assert.Equal(t, "5", resp.Header.Get("Retry-After"))
+}
+
+func TestRespWriterReadFromReadErrorKeepsHeaderUncommitted(t *testing.T) {
+	want := errors.New("read failed")
+	rec := httptest.NewRecorder()
+	rw := NewRespWriterWrapper(&readerFromRecorder{ResponseRecorder: rec}, func(int64) {})
+
+	_, err := rw.ReadFrom(iotest.ErrReader(want))
+	require.ErrorIs(t, err, want)
+	assert.ErrorIs(t, rw.Error(), want)
+
+	rw.WriteHeader(http.StatusServiceUnavailable)
+	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
+	assert.Equal(t, http.StatusServiceUnavailable, rw.StatusCode())
+}
+
+func TestRespWriterReadFromUsesUnderlyingReadFrom(t *testing.T) {
+	rec := httptest.NewRecorder()
+	rf := &readerFromRecorder{ResponseRecorder: rec}
+	var onWrite int64
+	rw := NewRespWriterWrapper(rf, func(n int64) { onWrite += n })
+
+	n, err := rw.ReadFrom(strings.NewReader(strings.Repeat("a", 2*sniffLen)))
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(2*sniffLen), n)
+	assert.Equal(t, int64(2*sniffLen), rw.BytesWritten())
+	assert.Equal(t, int64(2*sniffLen), onWrite)
+	assert.Equal(t, int64(sniffLen), rf.readFromBytes, "bytes after the prefix use the underlying ReadFrom")
+	assert.Equal(t, 2*sniffLen, rec.Body.Len())
+	assert.Equal(t, http.StatusOK, rec.Code)
 }
