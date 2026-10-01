@@ -88,6 +88,7 @@ func (w *RespWriterWrapper) ReadFrom(src io.Reader) (int64, error) {
 	}
 	w.OnWrite(n)
 	w.written += n
+	// Keep the first error; later writes must not clear or replace it.
 	if w.err == nil {
 		w.err = err
 	}
