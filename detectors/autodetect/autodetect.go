@@ -27,6 +27,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
 	"go.opentelemetry.io/contrib/detectors/k8sapi"
 	"go.opentelemetry.io/contrib/detectors/kubeadm"
+	"go.opentelemetry.io/contrib/detectors/openshift"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -79,6 +80,10 @@ var (
 	// attributes of the kubeadm-provisioned Kubernetes cluster the process is
 	// running in (see kubeadm.NewResourceDetector for details).
 	IDKubeadm = ID("kubeadm")
+	// IDOpenShift is the ID for the OpenShift detector that detects resource
+	// attributes of OpenShift 4 clusters (see openshift.NewResourceDetector
+	// for details).
+	IDOpenShift = ID("openshift")
 	// IDVultr is the ID for the Vultr detector that detects resource attributes
 	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
 	// details).
@@ -179,6 +184,7 @@ var (
 		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
 
 		IDKubeadm: func() resource.Detector { return kubeadm.NewResourceDetector() },
+		IDOpenShift: func() resource.Detector { return openshift.NewResourceDetector() },
 
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 
