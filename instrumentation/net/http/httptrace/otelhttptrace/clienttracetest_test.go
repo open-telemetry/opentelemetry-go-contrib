@@ -528,17 +528,21 @@ func TestHeaderAttributesUseSemconvValuesAndNames(t *testing.T) {
 	clientTrace.WroteHeaderField("Authorization", []string{"Bearer secret", "another secret"})
 	firstValue := []string{"first"}
 	clientTrace.WroteHeaderField("X-Custom-Header", firstValue)
+	firstValue[0] = "mutated"
 	clientTrace.WroteHeaderField("x-custom-header", []string{"second"})
+	retainedValue := []string{"original"}
+	clientTrace.WroteHeaderField("X-Retained-Header", retainedValue)
+	retainedValue[0] = "mutated"
 	for _, name := range []string{":authority", ":method", ":path", ":scheme"} {
 		clientTrace.WroteHeaderField(name, []string{"pseudo-header"})
 	}
 	span.End()
 
 	require.Len(t, fixture.SpanRecorder.Ended(), 1)
-	assert.Equal(t, []string{"first"}, firstValue)
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		attribute.Key("http.request.header.authorization").StringSlice([]string{"****"}),
 		attribute.Key("http.request.header.x-custom-header").StringSlice([]string{"first", "second"}),
+		attribute.Key("http.request.header.x-retained-header").StringSlice([]string{"original"}),
 	}, fixture.SpanRecorder.Ended()[0].Attributes())
 }
 

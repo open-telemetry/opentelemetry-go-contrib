@@ -355,17 +355,19 @@ func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 		return
 	}
 	k = strings.ToLower(k)
-	values := v
+	var values []string
 	ct.mtx.Lock()
 	state, seen := ct.headerAttributes[k]
-	if state.redacted {
+	switch {
+	case state.redacted:
 		values = []string{"****"}
-	} else if seen {
-		if previous := state.values; previous != nil {
-			values = make([]string, 0, len(previous)+len(values))
-			values = append(values, previous...)
-			values = append(values, v...)
-		}
+	case seen && state.values != nil:
+		values = make([]string, 0, len(state.values)+len(v))
+		values = append(values, state.values...)
+		values = append(values, v...)
+	default:
+		// Keep aggregation state independent of callback-owned storage.
+		values = append([]string(nil), v...)
 	}
 	ct.headerAttributes[k] = headerAttribute{values: values, redacted: state.redacted}
 	ct.root.SetAttributes(attribute.StringSlice("http.request.header."+k, values))
