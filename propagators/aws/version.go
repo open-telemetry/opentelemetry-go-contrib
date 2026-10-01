@@ -3,6 +3,8 @@
 
 // Package aws contains OpenTelemetry propagators that use AWS propagation
 // formats.
+//
+// Deprecated: This package is no longer supported.
 package aws
 
 // Version is the current release version of the AWS XRay propagator.

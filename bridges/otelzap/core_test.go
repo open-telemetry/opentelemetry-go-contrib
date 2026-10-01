@@ -12,10 +12,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.uber.org/zap"
@@ -542,9 +542,9 @@ func TestCoreWithExceptionStacktrace(t *testing.T) {
 func TestNewCoreConfiguration(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
 		r := logtest.NewRecorder()
-		prev := global.GetLoggerProvider()
-		defer global.SetLoggerProvider(prev)
-		global.SetLoggerProvider(r)
+		prev := otel.GetLoggerProvider()
+		defer otel.SetLoggerProvider(prev)
+		otel.SetLoggerProvider(r)
 
 		var h *Core
 		require.NotPanics(t, func() { h = NewCore(loggerName) })
