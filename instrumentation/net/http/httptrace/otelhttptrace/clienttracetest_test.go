@@ -360,10 +360,10 @@ func TestWithoutSubSpans(t *testing.T) {
 	assert.Equal(
 		t,
 		[]attribute.KeyValue{
-			attribute.Key("http.request.header.host").String(fixture.Address),
-			attribute.Key("http.request.header.user-agent").String("oteltest/1.1"),
-			attribute.Key("http.request.header.authorization").String("****"),
-			attribute.Key("http.request.header.accept-encoding").String("gzip"),
+			attribute.Key("http.request.header.host").StringSlice([]string{fixture.Address}),
+			attribute.Key("http.request.header.user-agent").StringSlice([]string{"oteltest/1.1"}),
+			attribute.Key("http.request.header.authorization").StringSlice([]string{"****"}),
+			attribute.Key("http.request.header.accept-encoding").StringSlice([]string{"gzip"}),
 		},
 		gotAttributes,
 	)
@@ -450,9 +450,9 @@ func TestWithRedactedHeaders(t *testing.T) {
 	assert.Equal(
 		t,
 		[]attribute.KeyValue{
-			attribute.Key("http.request.header.host").String(fixture.Address),
-			attribute.Key("http.request.header.user-agent").String("****"),
-			attribute.Key("http.request.header.accept-encoding").String("gzip"),
+			attribute.Key("http.request.header.host").StringSlice([]string{fixture.Address}),
+			attribute.Key("http.request.header.user-agent").StringSlice([]string{"****"}),
+			attribute.Key("http.request.header.accept-encoding").StringSlice([]string{"gzip"}),
 		},
 		gotAttributes,
 	)
@@ -510,13 +510,54 @@ func TestWithInsecureHeaders(t *testing.T) {
 	assert.Equal(
 		t,
 		[]attribute.KeyValue{
-			attribute.Key("http.request.header.host").String(fixture.Address),
-			attribute.Key("http.request.header.user-agent").String("oteltest/1.1"),
-			attribute.Key("http.request.header.authorization").String("Bearer token123"),
-			attribute.Key("http.request.header.accept-encoding").String("gzip"),
+			attribute.Key("http.request.header.host").StringSlice([]string{fixture.Address}),
+			attribute.Key("http.request.header.user-agent").StringSlice([]string{"oteltest/1.1"}),
+			attribute.Key("http.request.header.authorization").StringSlice([]string{"Bearer token123"}),
+			attribute.Key("http.request.header.accept-encoding").StringSlice([]string{"gzip"}),
 		},
 		gotAttributes,
 	)
+}
+
+func TestHeaderAttributesUseSemconvValuesAndNames(t *testing.T) {
+	fixture := prepareClientTraceTest(t)
+
+	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
+	clientTrace := otelhttptrace.NewClientTrace(ctx, otelhttptrace.WithoutSubSpans())
+	clientTrace.GetConn("example.com:443")
+	clientTrace.WroteHeaderField("Authorization", []string{"Bearer secret", "another secret"})
+	firstValue := []string{"first"}
+	clientTrace.WroteHeaderField("X-Custom-Header", firstValue)
+	clientTrace.WroteHeaderField("x-custom-header", []string{"second"})
+	for _, name := range []string{":authority", ":method", ":path", ":scheme"} {
+		clientTrace.WroteHeaderField(name, []string{"pseudo-header"})
+	}
+	span.End()
+
+	require.Len(t, fixture.SpanRecorder.Ended(), 1)
+	assert.Equal(t, []string{"first"}, firstValue)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		attribute.Key("http.request.header.authorization").StringSlice([]string{"****"}),
+		attribute.Key("http.request.header.x-custom-header").StringSlice([]string{"first", "second"}),
+	}, fixture.SpanRecorder.Ended()[0].Attributes())
+}
+
+func TestHeaderAttributesResetAfterWroteHeaders(t *testing.T) {
+	fixture := prepareClientTraceTest(t)
+
+	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
+	clientTrace := otelhttptrace.NewClientTrace(ctx, otelhttptrace.WithoutSubSpans())
+	clientTrace.GetConn("example.com:443")
+	clientTrace.WroteHeaderField("X-Request-ID", []string{"first"})
+	clientTrace.WroteHeaderField("x-request-id", []string{"second"})
+	clientTrace.WroteHeaders()
+	clientTrace.WroteHeaderField("X-Request-ID", []string{"third"})
+	span.End()
+
+	require.Len(t, fixture.SpanRecorder.Ended(), 1)
+	assert.Equal(t, []attribute.KeyValue{
+		attribute.Key("http.request.header.x-request-id").StringSlice([]string{"third"}),
+	}, fixture.SpanRecorder.Ended()[0].Attributes())
 }
 
 func TestSubSpansHeaderAttributes(t *testing.T) {
@@ -551,8 +592,18 @@ func TestSubSpansHeaderAttributes(t *testing.T) {
 		"header attribute should be recorded on a span")
 	assert.Contains(t, allAttrs, attribute.Key("http.request.header.user-agent"),
 		"header attribute should be recorded on a span")
+	assert.Equal(
+		t,
+		[]string{"oteltest/1.1"},
+		allAttrs[attribute.Key("http.request.header.user-agent")].AsStringSlice(),
+	)
 	assert.Contains(t, allAttrs, attribute.Key("http.request.header.authorization"),
 		"header attribute should be recorded on a span (redacted)")
+	assert.Equal(
+		t,
+		[]string{"****"},
+		allAttrs[attribute.Key("http.request.header.authorization")].AsStringSlice(),
+	)
 }
 
 func TestHTTPRequestWithTraceContext(t *testing.T) {

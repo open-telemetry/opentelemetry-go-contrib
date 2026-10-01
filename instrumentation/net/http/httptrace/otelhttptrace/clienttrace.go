@@ -90,7 +90,7 @@ func WithoutSubSpans() ClientTraceOption {
 func WithRedactedHeaders(headers ...string) ClientTraceOption {
 	return clientTraceOptionFunc(func(ct *clientTracer) {
 		for _, header := range headers {
-			ct.redactedHeaders[strings.ToLower(header)] = struct{}{}
+			ct.headerAttributes[strings.ToLower(header)] = headerAttribute{redacted: true}
 		}
 	})
 }
@@ -111,7 +111,7 @@ func WithoutHeaders() ClientTraceOption {
 func WithInsecureHeaders() ClientTraceOption {
 	return clientTraceOptionFunc(func(ct *clientTracer) {
 		ct.addHeaders = true
-		ct.redactedHeaders = nil
+		clear(ct.headerAttributes)
 	})
 }
 
@@ -132,13 +132,18 @@ type clientTracer struct {
 
 	tr trace.Tracer
 
-	activeHooks     map[string]context.Context
-	root            trace.Span
-	mtx             sync.Mutex
-	redactedHeaders map[string]struct{}
-	addHeaders      bool
-	useSpans        bool
-	semconv         semconv.HTTPClient
+	activeHooks      map[string]context.Context
+	root             trace.Span
+	mtx              sync.Mutex
+	headerAttributes map[string]headerAttribute
+	addHeaders       bool
+	useSpans         bool
+	semconv          semconv.HTTPClient
+}
+
+type headerAttribute struct {
+	values   []string
+	redacted bool
 }
 
 // NewClientTrace returns an httptrace.ClientTrace implementation that will
@@ -152,13 +157,13 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 	ct := &clientTracer{
 		Context:     ctx,
 		activeHooks: make(map[string]context.Context),
-		redactedHeaders: map[string]struct{}{
-			"authorization":       {},
-			"www-authenticate":    {},
-			"proxy-authenticate":  {},
-			"proxy-authorization": {},
-			"cookie":              {},
-			"set-cookie":          {},
+		headerAttributes: map[string]headerAttribute{
+			"authorization":       {redacted: true},
+			"www-authenticate":    {redacted: true},
+			"proxy-authenticate":  {redacted: true},
+			"proxy-authorization": {redacted: true},
+			"cookie":              {redacted: true},
+			"set-cookie":          {redacted: true},
 		},
 		addHeaders: true,
 		useSpans:   true,
@@ -339,6 +344,10 @@ func (ct *clientTracer) tlsHandshakeDone(_ tls.ConnectionState, err error) {
 }
 
 func (ct *clientTracer) wroteHeaderField(k string, v []string) {
+	// HTTP/2 pseudo-headers are not HTTP header fields.
+	if strings.HasPrefix(k, ":") {
+		return
+	}
 	if ct.useSpans && ct.span("http.headers") == nil {
 		ct.start("http.headers", "http.headers")
 	}
@@ -346,14 +355,32 @@ func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 		return
 	}
 	k = strings.ToLower(k)
-	value := sliceToString(v)
-	if _, ok := ct.redactedHeaders[k]; ok {
-		value = "****"
+	values := v
+	ct.mtx.Lock()
+	state, seen := ct.headerAttributes[k]
+	if state.redacted {
+		values = []string{"****"}
+	} else if seen {
+		if previous := state.values; previous != nil {
+			values = make([]string, 0, len(previous)+len(values))
+			values = append(values, previous...)
+			values = append(values, v...)
+		}
 	}
-	ct.root.SetAttributes(attribute.String("http.request.header."+k, value))
+	ct.headerAttributes[k] = headerAttribute{values: values, redacted: state.redacted}
+	ct.root.SetAttributes(attribute.StringSlice("http.request.header."+k, values))
+	ct.mtx.Unlock()
 }
 
 func (ct *clientTracer) wroteHeaders() {
+	ct.mtx.Lock()
+	for key, value := range ct.headerAttributes {
+		if !value.redacted {
+			delete(ct.headerAttributes, key)
+		}
+	}
+	ct.mtx.Unlock()
+
 	if ct.useSpans && ct.span("http.headers") != nil {
 		ct.end("http.headers", nil)
 	}
