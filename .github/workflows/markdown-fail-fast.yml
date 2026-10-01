@@ -41,4 +41,5 @@ jobs:
     - name: Lint Markdown
       uses: docker://avtodev/markdown-lint:v1@sha256:6aeedc2f49138ce7a1cd0adffc1b1c0321b841dc2102408967d9301c031949ee
       with:
+        config: .markdownlint.yaml
         args: ${{needs.changedfiles.outputs.md}}

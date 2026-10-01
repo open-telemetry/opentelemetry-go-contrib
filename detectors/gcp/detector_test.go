@@ -7,10 +7,11 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/GoogleCloudPlatform/opentelemetry-operations-go/detectors/gcp"
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+
+	"go.opentelemetry.io/contrib/detectors/gcp/internal"
 )
 
 func TestDetect(t *testing.T) {
@@ -27,7 +28,7 @@ func TestDetect(t *testing.T) {
 			desc: "zonal GKE cluster",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:           "my-project",
-				cloudPlatform:       gcp.GKE,
+				cloudPlatform:       internal.GKE,
 				gkeHostID:           "1472385723456792345",
 				gkeClusterName:      "my-cluster",
 				gkeAvailabilityZone: "us-central1-c",
@@ -46,7 +47,7 @@ func TestDetect(t *testing.T) {
 			desc: "regional GKE cluster",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:      "my-project",
-				cloudPlatform:  gcp.GKE,
+				cloudPlatform:  internal.GKE,
 				gkeHostID:      "1472385723456792345",
 				gkeClusterName: "my-cluster",
 				gkeRegion:      "us-central1",
@@ -65,7 +66,7 @@ func TestDetect(t *testing.T) {
 			desc: "GCE",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:              "my-project",
-				cloudPlatform:          gcp.GCE,
+				cloudPlatform:          internal.GCE,
 				gceHostID:              "1472385723456792345",
 				gceHostName:            "my-gke-node-1234",
 				gceHostType:            "n1-standard1",
@@ -92,7 +93,7 @@ func TestDetect(t *testing.T) {
 			desc: "Cloud Run",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:       "my-project",
-				cloudPlatform:   gcp.CloudRun,
+				cloudPlatform:   internal.CloudRun,
 				faaSID:          "1472385723456792345",
 				faaSCloudRegion: "us-central1",
 				faaSName:        "my-service",
@@ -113,7 +114,7 @@ func TestDetect(t *testing.T) {
 			desc: "Cloud Run Job",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:            "my-project",
-				cloudPlatform:        gcp.CloudRunJob,
+				cloudPlatform:        internal.CloudRunJob,
 				faaSID:               "1472385723456792345",
 				faaSCloudRegion:      "us-central1",
 				faaSName:             "my-service",
@@ -136,7 +137,7 @@ func TestDetect(t *testing.T) {
 			desc: "Cloud Run Job Bad Index",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:            "my-project",
-				cloudPlatform:        gcp.CloudRunJob,
+				cloudPlatform:        internal.CloudRunJob,
 				faaSID:               "1472385723456792345",
 				faaSCloudRegion:      "us-central1",
 				faaSName:             "my-service",
@@ -159,7 +160,7 @@ func TestDetect(t *testing.T) {
 			desc: "Cloud Functions",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:       "my-project",
-				cloudPlatform:   gcp.CloudFunctions,
+				cloudPlatform:   internal.CloudFunctions,
 				faaSID:          "1472385723456792345",
 				faaSCloudRegion: "us-central1",
 				faaSName:        "my-service",
@@ -180,7 +181,7 @@ func TestDetect(t *testing.T) {
 			desc: "App Engine Flex",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:                 "my-project",
-				cloudPlatform:             gcp.AppEngineFlex,
+				cloudPlatform:             internal.AppEngineFlex,
 				appEngineServiceInstance:  "1472385723456792345",
 				appEngineAvailabilityZone: "us-central1-c",
 				appEngineRegion:           "us-central1",
@@ -203,7 +204,7 @@ func TestDetect(t *testing.T) {
 			desc: "App Engine Standard",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:                 "my-project",
-				cloudPlatform:             gcp.AppEngineStandard,
+				cloudPlatform:             internal.AppEngineStandard,
 				appEngineServiceInstance:  "1472385723456792345",
 				appEngineAvailabilityZone: "us-central1-c",
 				appEngineRegion:           "us-central1",
@@ -226,7 +227,7 @@ func TestDetect(t *testing.T) {
 			desc: "Unknown Platform",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:     "my-project",
-				cloudPlatform: gcp.UnknownPlatform,
+				cloudPlatform: internal.UnknownPlatform,
 			}},
 			expectedResource: resource.NewWithAttributes(
 				semconv.SchemaURL,
@@ -262,7 +263,7 @@ func TestDetect(t *testing.T) {
 type fakeGCPDetector struct {
 	err                       error
 	projectID                 string
-	cloudPlatform             gcp.Platform
+	cloudPlatform             internal.Platform
 	gkeAvailabilityZone       string
 	gkeRegion                 string
 	gkeClusterName            string
@@ -295,18 +296,18 @@ func (f *fakeGCPDetector) ProjectID() (string, error) {
 	return f.projectID, nil
 }
 
-func (f *fakeGCPDetector) CloudPlatform() gcp.Platform {
+func (f *fakeGCPDetector) CloudPlatform() internal.Platform {
 	return f.cloudPlatform
 }
 
-func (f *fakeGCPDetector) GKEAvailabilityZoneOrRegion() (string, gcp.LocationType, error) {
+func (f *fakeGCPDetector) GKEAvailabilityZoneOrRegion() (string, internal.LocationType, error) {
 	if f.err != nil {
-		return "", gcp.UndefinedLocation, f.err
+		return "", internal.UndefinedLocation, f.err
 	}
 	if f.gkeAvailabilityZone != "" {
-		return f.gkeAvailabilityZone, gcp.Zone, nil
+		return f.gkeAvailabilityZone, internal.Zone, nil
 	}
-	return f.gkeRegion, gcp.Region, nil
+	return f.gkeRegion, internal.Region, nil
 }
 
 func (f *fakeGCPDetector) GKEClusterName() (string, error) {
