@@ -7,11 +7,13 @@
 package request
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRespWriterWriteHeader(t *testing.T) {
@@ -75,4 +77,32 @@ func TestConcurrentRespWriterWrapper(t *testing.T) {
 	assert.NotNil(t, rw.BytesWritten())
 	assert.NotNil(t, rw.StatusCode())
 	assert.NoError(t, rw.Error())
+}
+
+type failOnceResponseWriter struct {
+	*httptest.ResponseRecorder
+	err error
+}
+
+func (w *failOnceResponseWriter) Write(p []byte) (int, error) {
+	if err := w.err; err != nil {
+		w.err = nil
+		return 0, err
+	}
+	return w.ResponseRecorder.Write(p)
+}
+
+func TestRespWriterErrorKeepsFirstError(t *testing.T) {
+	want := errors.New("write failed")
+	rw := NewRespWriterWrapper(&failOnceResponseWriter{
+		ResponseRecorder: httptest.NewRecorder(),
+		err:              want,
+	}, func(int64) {})
+
+	_, err := rw.Write([]byte("hello"))
+	require.ErrorIs(t, err, want)
+	_, err = rw.Write([]byte("world"))
+	require.NoError(t, err)
+
+	assert.ErrorIs(t, rw.Error(), want)
 }
