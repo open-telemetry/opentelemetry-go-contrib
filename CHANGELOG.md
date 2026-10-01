@@ -19,6 +19,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Server-side use of `ContextWithLabeler` / `LabelerFromContext` is unchanged. (#8924)
 - Stop emitting the legacy `http.read_bytes` and `http.wrote_bytes` attributes on the per-operation span events enabled by `WithMessageEvents` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The `read` and `write` events remain, while total body sizes continue to be recorded on the server span as `http.request.body.size` and `http.response.body.size` according to HTTP semantic conventions. (#9624)
+- Change captured `http.request.header.<key>` span attribute values from comma-joined strings to string arrays in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace` to match HTTP semantic conventions. HTTP/2 pseudo-headers are not emitted as header attributes.
+  This is a breaking change for telemetry consumers: replace `attribute.Value.AsString()` with `attribute.Value.AsStringSlice()` and handle each header value separately. (#9781)
 
 ### Deprecated
 
@@ -33,7 +35,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Emit captured request header attributes as string arrays and omit HTTP/2 pseudo-headers in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`. (#9781)
 - Treat empty Prometheus exporter environment variable values as unset in `go.opentelemetry.io/contrib/exporters/autoexport`, restoring the documented defaults. (#9636)
 - Bound converter-owned recursive map, slice, array, and pointer traversal in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`.
   A field requiring more than 100 such levels is replaced with `<max-depth-exceeded>` and the record continues to be emitted. Existing `fmt` and user-method behavior remains unchanged. (#9691)
