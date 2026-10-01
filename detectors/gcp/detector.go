@@ -18,22 +18,74 @@ import (
 )
 
 // NewDetector returns a resource detector which detects resource attributes on:
-// * Google Compute Engine (GCE).
-// * Google Kubernetes Engine (GKE).
-// * Google App Engine (GAE).
-// * Cloud Run.
-// * Cloud Functions.
+//
+//   - Google Compute Engine (GCE).
+//   - Google Kubernetes Engine (GKE).
+//   - Google App Engine (GAE).
+//   - Cloud Run.
+//   - Cloud Run jobs.
+//   - Cloud Run worker pools.
+//   - Cloud Functions.
+//   - Bare Metal Solution (BMS).
 func NewDetector() resource.Detector {
-	return &detector{detector: internal.NewDetector()}
+	return NewDetectorWithOptions()
+}
+
+// NewDetectorWithOptions returns a resource detector configured with the provided options.
+func NewDetectorWithOptions(opts ...Option) resource.Detector {
+	var cfg config
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+	return &detector{detector: internal.NewDetector(), cfg: cfg}
+}
+
+// Option configures a GCP resource detector.
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (f optionFunc) apply(c *config) { f(c) }
+
+type config struct {
+	gkeHostType bool
+}
+
+// WithGKEHostType enables detection of the host.type resource attribute on
+// Google Kubernetes Engine (GKE) by querying the Compute Engine instances.get
+// API. It is disabled by default because it makes an additional API call and
+// requires the compute.instances.get IAM permission (as well as access to
+// instance/name metadata, which is unavailable under GKE Workload Identity).
+func WithGKEHostType() Option {
+	return optionFunc(func(c *config) {
+		c.gkeHostType = true
+	})
 }
 
 type detector struct {
 	detector gcpDetector
+	cfg      config
 }
 
 // Detect detects associated resources when running on GCE, GKE, GAE,
-// Cloud Run, and Cloud functions.
-func (d *detector) Detect(context.Context) (*resource.Resource, error) {
+// Cloud Run, Cloud Run jobs, Cloud Run worker pools, Cloud Functions, and Bare Metal Solution.
+func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
+	projectID, err1 := d.detector.BareMetalSolutionProjectID()
+	region, err2 := d.detector.BareMetalSolutionCloudRegion()
+	instanceID, err3 := d.detector.BareMetalSolutionInstanceID()
+	if err1 == nil && err2 == nil && err3 == nil && projectID != "" && region != "" && instanceID != "" {
+		return resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.CloudProviderGCP,
+			semconv.CloudPlatformGCPBareMetalSolution,
+			semconv.CloudAccountID(projectID),
+			semconv.HostID(instanceID),
+			semconv.CloudRegion(region),
+		), nil
+	}
+
 	if !metadata.OnGCE() {
 		return nil, nil
 	}
@@ -47,7 +99,12 @@ func (d *detector) Detect(context.Context) (*resource.Resource, error) {
 		b.addZoneOrRegion(d.detector.GKEAvailabilityZoneOrRegion)
 		b.add(semconv.K8SClusterNameKey, d.detector.GKEClusterName)
 		b.add(semconv.HostIDKey, d.detector.GKEHostID)
-	case internal.CloudRun:
+		if d.cfg.gkeHostType {
+			b.add(semconv.HostTypeKey, func() (string, error) {
+				return d.detector.GKEHostType(ctx)
+			})
+		}
+	case internal.CloudRun, internal.CloudRunWorkerPool:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
 		b.add(semconv.FaaSNameKey, d.detector.FaaSName)
 		b.add(semconv.FaaSVersionKey, d.detector.FaaSVersion)
@@ -87,6 +144,7 @@ func (d *detector) Detect(context.Context) (*resource.Resource, error) {
 		b.add(semconv.HostNameKey, d.detector.GCEHostName)
 		b.add(semconv.GCPGCEInstanceNameKey, d.detector.GCEInstanceName)
 		b.add(semconv.GCPGCEInstanceHostnameKey, d.detector.GCEInstanceHostname)
+		b.addManagedInstanceGroup(d.detector.GCEManagedInstanceGroup)
 	default:
 		// We don't support this platform yet, so just return with what we have
 	}
@@ -142,6 +200,24 @@ func (r *resourceBuilder) addZoneOrRegion(detect func() (string, internal.Locati
 			r.attrs = append(r.attrs, semconv.CloudRegion(v))
 		default:
 			r.errs = append(r.errs, fmt.Errorf("location must be zone or region. Got %v", locType))
+		}
+	} else {
+		r.errs = append(r.errs, err)
+	}
+}
+
+func (r *resourceBuilder) addManagedInstanceGroup(detect func() (internal.ManagedInstanceGroup, error)) {
+	if mig, err := detect(); err == nil {
+		if mig.Name != "" {
+			r.attrs = append(r.attrs, semconv.GCPGCEInstanceGroupManagerName(mig.Name))
+			switch mig.Type {
+			case internal.Zone:
+				r.attrs = append(r.attrs, semconv.GCPGCEInstanceGroupManagerZone(mig.Location))
+			case internal.Region:
+				r.attrs = append(r.attrs, semconv.GCPGCEInstanceGroupManagerRegion(mig.Location))
+			default:
+				r.errs = append(r.errs, fmt.Errorf("managed instance group location must be zone or region. Got %v", mig.Type))
+			}
 		}
 	} else {
 		r.errs = append(r.errs, err)

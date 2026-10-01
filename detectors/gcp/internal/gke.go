@@ -65,12 +65,12 @@ func (d *Detector) GKEClusterName() (string, error) {
 }
 
 // GKEHostType returns the machine type of the instance on which this program is running.
-func (d *Detector) GKEHostType() (string, error) {
-	ctx := context.TODO()
-	projectID, err := d.ProjectID()
+func (d *Detector) GKEHostType(ctx context.Context) (string, error) {
+	projectID, err := d.metadata.GetWithContext(ctx, "project/project-id")
 	if err != nil {
 		return "", err
 	}
+	projectID = strings.TrimSpace(projectID)
 	zone, err := d.metadata.ZoneWithContext(ctx)
 	if err != nil {
 		return "", err
