@@ -4,7 +4,6 @@
 package otelmux
 
 import (
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -199,7 +198,7 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	readErr := bw.Error()
 	cause := writeErr
 	// A fully read body leaves io.EOF as the last read error.
-	if cause == nil && readErr != nil && !errors.Is(readErr, io.EOF) {
+	if cause == nil && readErr != nil && readErr != io.EOF { //nolint:errorlint // io.ReadAll treats only literal io.EOF as clean completion. errors.Is matches wrapped io.EOF as well.
 		cause = readErr
 	}
 	if cause == nil {

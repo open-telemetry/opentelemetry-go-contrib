@@ -609,6 +609,7 @@ func (failingBody) Close() error               { return nil }
 func TestSpanStatus(t *testing.T) {
 	writeErr := testError("write_error")
 	readErrBody := failingBody{err: testError("read_error")}
+	wrappedEOF := fmt.Errorf("upload failed: %w", io.EOF)
 
 	testCases := []struct {
 		name          string
@@ -625,6 +626,7 @@ func TestSpanStatus(t *testing.T) {
 		{name: "600", status: 600, wantErrorType: "600"},
 		{name: "write error", status: http.StatusOK, writeErr: writeErr, wantErrorType: "write_error"},
 		{name: "read error", status: http.StatusOK, body: readErrBody, wantErrorType: "read_error"},
+		{name: "wrapped EOF is read error", status: http.StatusOK, body: failingBody{err: wrappedEOF}, wantErrorType: semconv.ErrorType(wrappedEOF).Value.AsString()},
 		// A fully read body leaves io.EOF as the last read error.
 		{name: "body fully read", status: http.StatusOK, body: strings.NewReader("hello")},
 		{name: "context canceled", status: http.StatusOK, cancelCtx: true, wantErrorType: semconv.ErrorType(context.Canceled).Value.AsString()},
@@ -675,9 +677,12 @@ func TestSpanStatus(t *testing.T) {
 			}
 			assert.Equal(t, wantSpanStatus, span.Status().Code)
 			assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", tc.status))
-			spanAttrs := attribute.NewSet(span.Attributes()...)
-			got, _ := spanAttrs.Value(semconv.ErrorTypeKey)
-			assert.Equal(t, tc.wantErrorType, got.AsString())
+			if tc.wantErrorType == "" {
+				spanAttrs := attribute.NewSet(span.Attributes()...)
+				assert.False(t, spanAttrs.HasValue(semconv.ErrorTypeKey), "span should not have error.type")
+			} else {
+				assert.Contains(t, span.Attributes(), semconv.ErrorTypeKey.String(tc.wantErrorType))
+			}
 			assertMetricErrorType(t, reader, tc.wantErrorType)
 		})
 	}
@@ -733,8 +738,12 @@ func assertMetricErrorType(t *testing.T, reader sdkmetric.Reader, want string) {
 		default:
 			t.Fatalf("unexpected metric type for %s", m.Name)
 		}
-		got, _ := attrs.Value(semconv.ErrorTypeKey)
-		assert.Equal(t, want, got.AsString(), m.Name)
+		if want == "" {
+			assert.Falsef(t, attrs.HasValue(semconv.ErrorTypeKey), "%s should not have error.type", m.Name)
+		} else {
+			got, _ := attrs.Value(semconv.ErrorTypeKey)
+			assert.Equal(t, want, got.AsString(), m.Name)
+		}
 	}
 }
 
@@ -767,6 +776,7 @@ func BenchmarkMiddleware(b *testing.B) {
 			b.ReportAllocs()
 			b.ResetTimer()
 			for range b.N {
+				rr.Body.Reset()
 				router.ServeHTTP(rr, r)
 			}
 		})
