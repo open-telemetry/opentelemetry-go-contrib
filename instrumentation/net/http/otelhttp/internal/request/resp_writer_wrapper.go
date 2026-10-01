@@ -55,12 +55,6 @@ func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	return w.write(p)
-}
-
-// write implements Write. It does not acquire a lock, and therefore assumes
-// that is being handled by a parent method.
-func (w *RespWriterWrapper) write(p []byte) (int, error) {
 	if !w.wroteHeader {
 		w.writeHeader(http.StatusOK)
 	}
@@ -80,10 +74,11 @@ func (w *RespWriterWrapper) write(p []byte) (int, error) {
 // [ResponseWriter]'s ReadFrom when available (e.g. sendfile in net/http), and
 // tracks the number of bytes written and the first error.
 func (w *RespWriterWrapper) ReadFrom(src io.Reader) (int64, error) {
+	n, err := w.readFrom(src)
+
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	n, err := w.readFrom(src)
 	// Keep the first error; later writes must not clear or replace it.
 	if w.err == nil {
 		w.err = err
@@ -91,20 +86,24 @@ func (w *RespWriterWrapper) ReadFrom(src io.Reader) (int64, error) {
 	return n, err
 }
 
-// readFrom implements ReadFrom. It does not acquire a lock, and therefore
-// assumes that is being handled by a parent method.
+// readFrom implements ReadFrom. The lock is not held across the copy: a
+// [ResponseWriter] must not be written to concurrently, and Write acquires it.
 func (w *RespWriterWrapper) readFrom(src io.Reader) (int64, error) {
-	// lockedWriter has no ReadFrom, so io.Copy uses write instead of recursing.
-	dst := lockedWriter{w}
+	// writerOnly has no ReadFrom, so io.Copy uses Write instead of recursing.
+	dst := writerOnly{w}
 
 	rf, ok := w.ResponseWriter.(io.ReaderFrom)
 	if !ok {
 		return io.Copy(dst, src)
 	}
 
+	w.mu.RLock()
+	wroteHeader := w.wroteHeader
+	w.mu.RUnlock()
+
 	var n int64
-	if !w.wroteHeader {
-		// Like net/http, copy a prefix through write first so the header is
+	if !wroteHeader {
+		// Like net/http, copy a prefix through Write first so the header is
 		// only committed once data arrives; an empty or failing src leaves the
 		// handler free to set another status.
 		var err error
@@ -114,16 +113,19 @@ func (w *RespWriterWrapper) readFrom(src io.Reader) (int64, error) {
 		}
 	}
 
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	m, err := rf.ReadFrom(src)
 	w.OnWrite(m)
 	w.written += m
 	return n + m, err
 }
 
-// lockedWriter writes through w.write. The caller must hold w.mu.
-type lockedWriter struct{ w *RespWriterWrapper }
+// writerOnly exposes only the Write method of a RespWriterWrapper.
+type writerOnly struct{ w *RespWriterWrapper }
 
-func (l lockedWriter) Write(p []byte) (int, error) { return l.w.write(p) }
+func (o writerOnly) Write(p []byte) (int, error) { return o.w.Write(p) }
 
 // WriteHeader persists initial statusCode for span attribution.
 // All calls to WriteHeader will be propagated to the underlying ResponseWriter
