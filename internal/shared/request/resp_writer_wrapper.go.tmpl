@@ -59,8 +59,7 @@ func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 	n1 := int64(n)
 	w.OnWrite(n1)
 	w.written += n1
-	// Keep the first error: a later successful write does not repair a
-	// response that already failed.
+	// Keep the first error; later writes must not clear or replace it.
 	if w.err == nil {
 		w.err = err
 	}
