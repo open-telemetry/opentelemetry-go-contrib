@@ -52,6 +52,22 @@ func newTestProvider(t *testing.T, rt roundTripFunc) *dockerProviderImpl {
 	return &dockerProviderImpl{dockerClient: cli, containerIDProvider: getContainerID}
 }
 
+func TestNewProvider(t *testing.T) {
+	p, err := newProvider(client.WithHost("tcp://127.0.0.1:2375"))
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, p.Close()) })
+
+	dockerProvider, ok := p.(*dockerProviderImpl)
+	require.True(t, ok)
+	assert.NotNil(t, dockerProvider.dockerClient)
+	assert.NotNil(t, dockerProvider.containerIDProvider)
+}
+
+func TestNewProvider_InvalidHost(t *testing.T) {
+	_, err := newProvider(client.WithHost("://"))
+	require.ErrorContains(t, err, "could not initialize Docker client")
+}
+
 func TestDockerProviderImpl_Info(t *testing.T) {
 	p := newTestProvider(t, func(req *http.Request) (*http.Response, error) {
 		assert.Equal(t, "/v"+client.MaxAPIVersion+"/info", req.URL.Path)
