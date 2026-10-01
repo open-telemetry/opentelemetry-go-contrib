@@ -7,11 +7,15 @@
 package request
 
 import (
+	"io"
 	"net/http"
 	"sync"
 )
 
-var _ http.ResponseWriter = &RespWriterWrapper{}
+var (
+	_ http.ResponseWriter = (*RespWriterWrapper)(nil)
+	_ io.ReaderFrom       = (*RespWriterWrapper)(nil)
+)
 
 // RespWriterWrapper wraps a http.ResponseWriter in order to track the number of
 // bytes written, the first write error, and to catch the first written statusCode.
@@ -57,6 +61,34 @@ func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 	w.written += n1
 	// Keep the first error: a later successful write does not repair a
 	// response that already failed.
+	if w.err == nil {
+		w.err = err
+	}
+	return n, err
+}
+
+// ReadFrom implements [io.ReaderFrom]. It uses the underlying
+// [ResponseWriter]'s ReadFrom when available (e.g. sendfile in net/http), and
+// tracks the number of bytes written and the first error.
+func (w *RespWriterWrapper) ReadFrom(src io.Reader) (int64, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if !w.wroteHeader {
+		w.writeHeader(http.StatusOK)
+	}
+
+	var (
+		n   int64
+		err error
+	)
+	if rf, ok := w.ResponseWriter.(io.ReaderFrom); ok {
+		n, err = rf.ReadFrom(src)
+	} else {
+		n, err = io.Copy(w.ResponseWriter, src)
+	}
+	w.OnWrite(n)
+	w.written += n
 	if w.err == nil {
 		w.err = err
 	}
