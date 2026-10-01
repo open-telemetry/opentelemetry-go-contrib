@@ -17,6 +17,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.18.0
 	go.opentelemetry.io/contrib/detectors/k8sapi v0.18.0
 	go.opentelemetry.io/contrib/detectors/openshift v0.18.0
+	go.opentelemetry.io/contrib/detectors/scaleway v0.18.0
 	go.opentelemetry.io/contrib/detectors/vultr v0.18.0
 	go.opentelemetry.io/otel v1.47.0-rc.1.0.20260924072922-c131dcfc3885
 	go.opentelemetry.io/otel/sdk v1.47.0-rc.1.0.20260924072922-c131dcfc3885
@@ -139,3 +140,5 @@ replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
 replace go.opentelemetry.io/contrib/detectors/docker => ../docker
 
 replace go.opentelemetry.io/contrib/detectors/openshift => ../openshift
+
+replace go.opentelemetry.io/contrib/detectors/scaleway => ../scaleway
