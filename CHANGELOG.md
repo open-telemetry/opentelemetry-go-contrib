@@ -44,7 +44,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix temporary file cleanup for multipart requests in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` by copying the parsed multipart form back to the original request during deferred cleanup, preserving `net/http` cleanup during panic unwinding for HTTP/2 panic handling and outer recovery middleware paths. Unrecovered HTTP/1 handler panics remain uncleaned because `net/http` skips `finishRequest` in that path. (#9685)
 - Fix `http.client.request.body.size` recording for streaming request bodies in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8684)
 - Set `error.type` on the server span and on the request-duration, request-body-size, and response-body-size metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` when a request fails.
-  A detected cause also sets span status to `Error`, even for non-5xx responses.
+  A detected cause also sets span status to `Error`, even for non-5xx responses. (#9754)
 
 ### Removed
 
