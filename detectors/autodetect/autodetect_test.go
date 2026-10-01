@@ -123,7 +123,7 @@ func TestOpenShiftDetectorRegistered(t *testing.T) {
 
 func TestScalewayDetectorRegistered(t *testing.T) {
 	detector, err := Detector(IDScaleway)
-  if err != nil {
+	if err != nil {
 		t.Fatalf("got error: %v, expected no error", err)
 	}
 
@@ -133,7 +133,7 @@ func TestScalewayDetectorRegistered(t *testing.T) {
 	}
 	if len(c.detectors) != 1 {
 		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	} 
+	}
 }
 
 func TestOptDetectorDetect(t *testing.T) {

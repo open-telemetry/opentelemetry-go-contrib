@@ -27,7 +27,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
 	"go.opentelemetry.io/contrib/detectors/k8sapi"
 	"go.opentelemetry.io/contrib/detectors/openshift"
-  "go.opentelemetry.io/contrib/detectors/scaleway"
+	"go.opentelemetry.io/contrib/detectors/scaleway"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -80,7 +80,7 @@ var (
 	// attributes of OpenShift 4 clusters (see openshift.NewResourceDetector
 	// for details).
 	IDOpenShift = ID("openshift")
-  // IDScaleway is the ID for the Scaleway detector that detects resource
+	// IDScaleway is the ID for the Scaleway detector that detects resource
 	// attributes on Scaleway Instances (see scaleway.NewResourceDetector for
 	// details).
 	IDScaleway = ID("scaleway")
@@ -185,8 +185,8 @@ var (
 
 		IDOpenShift: func() resource.Detector { return openshift.NewResourceDetector() },
 
-    IDScaleway: func() resource.Detector { return scaleway.NewResourceDetector() },
-    
+		IDScaleway: func() resource.Detector { return scaleway.NewResourceDetector() },
+
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 
 		IDHost:   optFactory(resource.WithHost()),
