@@ -751,6 +751,88 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 	}
 }
 
+func TestHandlerServeMuxRouteMetric(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	mux := http.NewServeMux()
+	mux.Handle("/foo/{id}", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	h := NewHandler(
+		mux,
+		"test_handler",
+		WithMeterProvider(meterProvider),
+		WithTracerProvider(tracerProvider),
+	)
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/foo/123", http.NoBody)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, r)
+	require.Equal(t, http.StatusOK, rr.Result().StatusCode)
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+
+	wantRoute := attribute.String("http.route", "/foo/{id}")
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch data := m.Data.(type) {
+		case metricdata.Histogram[int64]:
+			require.Len(t, data.DataPoints, 1)
+			assert.Contains(t, data.DataPoints[0].Attributes.ToSlice(), wantRoute, "metric %s should carry http.route", m.Name)
+		case metricdata.Histogram[float64]:
+			require.Len(t, data.DataPoints, 1)
+			assert.Contains(t, data.DataPoints[0].Attributes.ToSlice(), wantRoute, "metric %s should carry http.route", m.Name)
+		default:
+			t.Fatalf("unexpected metric data type %T for metric %s", m.Data, m.Name)
+		}
+	}
+}
+
+func TestHandlerMetricAttributesFnSeesRoutedRequest(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+
+	var gotPattern, gotID string
+	var spanValid bool
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	mux := http.NewServeMux()
+	mux.Handle("/foo/{id}", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	h := NewHandler(
+		mux,
+		"test_handler",
+		WithMeterProvider(meterProvider),
+		WithTracerProvider(tracerProvider),
+		WithMetricAttributesFn(func(r *http.Request) []attribute.KeyValue {
+			gotPattern = r.Pattern
+			gotID = r.PathValue("id")
+			spanValid = trace.SpanFromContext(r.Context()).SpanContext().IsValid()
+			return nil
+		}),
+	)
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/foo/123", http.NoBody)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, r)
+	require.Equal(t, http.StatusOK, rr.Result().StatusCode)
+
+	assert.Equal(t, "/foo/{id}", gotPattern, "MetricAttributesFn should see the routed pattern")
+	assert.Equal(t, "123", gotID, "MetricAttributesFn should see the routed path value")
+	assert.True(t, spanValid, "MetricAttributesFn should see a request carrying a valid span context")
+}
+
 func TestMessageEventAttributes(t *testing.T) {
 	spanRecorder := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(
