@@ -157,40 +157,48 @@ func (r *readerFromRecorder) ReadFrom(src io.Reader) (int64, error) {
 	return n, err
 }
 
-func TestRespWriterReadFromEmptyKeepsHeaderUncommitted(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-		rw := NewRespWriterWrapper(w, func(int64) {})
-		n, err := rw.ReadFrom(strings.NewReader(""))
-		assert.NoError(t, err)
-		assert.Zero(t, n)
-
-		rw.Header().Set("Retry-After", "5")
-		rw.WriteHeader(http.StatusServiceUnavailable)
-	}))
-	defer srv.Close()
-
-	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, http.NoBody)
-	require.NoError(t, err)
-	resp, err := srv.Client().Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-
-	assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
-	assert.Equal(t, "5", resp.Header.Get("Retry-After"))
-}
-
-func TestRespWriterReadFromReadErrorKeepsHeaderUncommitted(t *testing.T) {
+func TestRespWriterReadFromKeepsHeaderUncommitted(t *testing.T) {
 	want := errors.New("read failed")
-	rec := httptest.NewRecorder()
-	rw := NewRespWriterWrapper(&readerFromRecorder{ResponseRecorder: rec}, func(int64) {})
+	tests := []struct {
+		name    string
+		src     io.Reader
+		wantErr error
+	}{
+		{
+			name: "empty",
+			src:  strings.NewReader(""),
+		},
+		{
+			name:    "read_error",
+			src:     iotest.ErrReader(want),
+			wantErr: want,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				rw := NewRespWriterWrapper(w, func(int64) {})
+				n, err := rw.ReadFrom(tt.src)
+				assert.ErrorIs(t, err, tt.wantErr)
+				assert.ErrorIs(t, rw.Error(), tt.wantErr)
+				assert.Zero(t, n)
 
-	_, err := rw.ReadFrom(iotest.ErrReader(want))
-	require.ErrorIs(t, err, want)
-	assert.ErrorIs(t, rw.Error(), want)
+				rw.Header().Set("Retry-After", "5")
+				rw.WriteHeader(http.StatusServiceUnavailable)
+				assert.Equal(t, http.StatusServiceUnavailable, rw.StatusCode())
+			}))
+			defer srv.Close()
 
-	rw.WriteHeader(http.StatusServiceUnavailable)
-	assert.Equal(t, http.StatusServiceUnavailable, rec.Code)
-	assert.Equal(t, http.StatusServiceUnavailable, rw.StatusCode())
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, http.NoBody)
+			require.NoError(t, err)
+			resp, err := srv.Client().Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+			assert.Equal(t, "5", resp.Header.Get("Retry-After"))
+		})
+	}
 }
 
 func TestRespWriterReadFromUsesUnderlyingReadFrom(t *testing.T) {
