@@ -30,10 +30,10 @@ require (
 	go.opentelemetry.io/otel/sdk/log/logtest v0.22.1-0.20260924072922-c131dcfc3885
 	go.opentelemetry.io/otel/sdk/metric v1.47.0-rc.1.0.20260924072922-c131dcfc3885
 	go.opentelemetry.io/otel/trace v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/proto/otlp v1.11.0
+	go.opentelemetry.io/proto/otlp v1.11.1
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba
-	google.golang.org/grpc v1.83.2
+	google.golang.org/grpc v1.84.0
 )
 
 require (
@@ -61,7 +61,7 @@ require (
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.30.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.31.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
