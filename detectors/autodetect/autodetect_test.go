@@ -108,7 +108,7 @@ func TestIBMCloudVPCDetectorRegistered(t *testing.T) {
 
 func TestKubeadmDetectorRegistered(t *testing.T) {
 	detector, err := Detector(IDKubeadm)
-  if err != nil {
+	if err != nil {
 		t.Fatalf("got error: %v, expected no error", err)
 	}
 

@@ -183,7 +183,7 @@ var (
 
 		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
 
-		IDKubeadm: func() resource.Detector { return kubeadm.NewResourceDetector() },
+		IDKubeadm:   func() resource.Detector { return kubeadm.NewResourceDetector() },
 		IDOpenShift: func() resource.Detector { return openshift.NewResourceDetector() },
 
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
