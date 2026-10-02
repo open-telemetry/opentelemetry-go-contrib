@@ -142,3 +142,5 @@ replace go.opentelemetry.io/contrib/detectors/docker => ../docker
 replace go.opentelemetry.io/contrib/detectors/kubeadm => ../kubeadm
 
 replace go.opentelemetry.io/contrib/detectors/openshift => ../openshift
+
+replace go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../instrumentation/net/http/otelhttp
