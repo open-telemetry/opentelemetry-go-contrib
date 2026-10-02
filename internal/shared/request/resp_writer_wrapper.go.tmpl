@@ -113,12 +113,12 @@ func (w *RespWriterWrapper) readFrom(src io.Reader) (int64, error) {
 		}
 	}
 
-	w.mu.Lock()
-	defer w.mu.Unlock()
-
 	m, err := rf.ReadFrom(src)
+	w.mu.Lock()
 	w.OnWrite(m)
 	w.written += m
+	w.mu.Unlock()
+
 	return n + m, err
 }
 
