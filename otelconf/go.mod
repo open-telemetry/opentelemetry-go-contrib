@@ -6,7 +6,7 @@ require (
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.3
+	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.6.0
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.47.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.18.0
