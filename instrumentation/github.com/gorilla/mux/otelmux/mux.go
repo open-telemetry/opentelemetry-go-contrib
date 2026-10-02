@@ -5,15 +5,19 @@ package otelmux
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
@@ -188,20 +192,47 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.MultipartForm = rCtx.MultipartForm
 	}
 	statusCode := rww.StatusCode()
-	span.SetStatus(tw.semconv.Status(statusCode))
+	spanCode, spanMsg := tw.semconv.Status(statusCode)
+	var errorType attribute.KeyValue
+	writeErr := rww.Error()
+	readErr := bw.Error()
+	cause := writeErr
+	// A fully read body leaves io.EOF as the last read error.
+	if cause == nil && readErr != nil && readErr != io.EOF { //nolint:errorlint // io.ReadAll treats only literal io.EOF as clean completion. errors.Is matches wrapped io.EOF as well.
+		cause = readErr
+	}
+	if cause == nil {
+		// Use ctx, not rCtx.Context(): downstream middleware may replace and cancel the request context.
+		cause = ctx.Err()
+	}
+	if cause != nil {
+		spanCode, spanMsg = codes.Error, cause.Error()
+		errorType = otelsemconv.ErrorType(cause)
+	} else if spanCode == codes.Error {
+		errorType = otelsemconv.ErrorTypeKey.String(strconv.Itoa(statusCode))
+	}
+	span.SetStatus(spanCode, spanMsg)
 	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: statusCode,
 		ReadBytes:  bw.BytesRead(),
-		ReadError:  bw.Error(),
+		ReadError:  readErr,
 		WriteBytes: rww.BytesWritten(),
-		WriteError: rww.Error(),
+		WriteError: writeErr,
 	})...)
+	if errorType.Valid() {
+		span.SetAttributes(errorType)
+	}
 
+	additionalAttributes := tw.metricAttributesFromRequest(r)
+	if errorType.Valid() {
+		// Prepend so an error.type from metricAttributesFn takes precedence.
+		additionalAttributes = append([]attribute.KeyValue{errorType}, additionalAttributes...)
+	}
 	metricAttributes := semconv.MetricAttributes{
 		Req:                  r,
 		StatusCode:           statusCode,
 		Route:                routeStr,
-		AdditionalAttributes: tw.metricAttributesFromRequest(r),
+		AdditionalAttributes: additionalAttributes,
 	}
 
 	tw.semconv.RecordMetrics(ctx, semconv.ServerMetricData{

@@ -4,11 +4,14 @@
 package otelmux_test
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -20,6 +23,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
@@ -509,4 +513,272 @@ func setDefaultName(method, path string) string {
 
 func ensurePrefix(prefix, s string) bool {
 	return strings.HasPrefix(s, prefix)
+}
+
+// waitOrFail blocks on ch and fails the test instead of hanging past the
+// package timeout.
+func waitOrFail(t *testing.T, ch <-chan struct{}, what string) {
+	t.Helper()
+	select {
+	case <-ch:
+	case <-time.After(5 * time.Second):
+		t.Fatalf("timed out waiting for %s", what)
+	}
+}
+
+// TestClientDisconnect verifies that a real client disconnect is recorded as
+// the cause, not the 500 the handler writes afterwards.
+func TestClientDisconnect(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	handlerStarted := make(chan struct{})
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware("foobar",
+		otelmux.WithTracerProvider(provider),
+		otelmux.WithMeterProvider(meterProvider),
+	))
+	router.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+		close(handlerStarted)
+		<-r.Context().Done()
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/hello", http.NoBody)
+	require.NoError(t, err)
+
+	requestDone := make(chan struct{})
+	go func() {
+		defer close(requestDone)
+		resp, doErr := srv.Client().Do(req)
+		if doErr == nil {
+			_ = resp.Body.Close()
+		}
+	}()
+
+	waitOrFail(t, handlerStarted, "the handler to start")
+	cancel()
+	waitOrFail(t, requestDone, "the request to finish")
+
+	require.Eventually(t, func() bool {
+		return len(sr.Ended()) == 1
+	}, 5*time.Second, 10*time.Millisecond, "server span never ended")
+
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Equal(t, context.Canceled.Error(), span.Status().Description)
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusInternalServerError))
+	assert.Contains(t, span.Attributes(), semconv.ErrorType(context.Canceled))
+	// Metrics are recorded before the span ends, so they are complete here.
+	assertMetricErrorType(t, reader, semconv.ErrorType(context.Canceled).Value.AsString())
+}
+
+// testError has a distinct ErrorType() so tests can tell which cause was
+// selected for error.type.
+type testError string
+
+func (e testError) Error() string     { return string(e) }
+func (e testError) ErrorType() string { return string(e) }
+
+// failingWriter is a ResponseWriter whose body writes fail, as when the peer
+// has gone away.
+type failingWriter struct {
+	*httptest.ResponseRecorder
+	err error
+}
+
+func (w failingWriter) Write([]byte) (int, error) { return 0, w.err }
+
+// failingBody is a request body whose reads fail, as when the client's upload
+// breaks mid-stream.
+type failingBody struct{ err error }
+
+func (b failingBody) Read([]byte) (int, error) { return 0, b.err }
+func (failingBody) Close() error               { return nil }
+
+// TestSpanStatus verifies span status and error.type on the span and metrics.
+// A detected cause wins over the status code, in priority order: response
+// write error, request body read error, request context error.
+func TestSpanStatus(t *testing.T) {
+	writeErr := testError("write_error")
+	readErrBody := failingBody{err: testError("read_error")}
+	wrappedEOF := fmt.Errorf("upload failed: %w", io.EOF)
+
+	testCases := []struct {
+		name          string
+		status        int
+		writeErr      error
+		body          io.Reader
+		cancelCtx     bool
+		wantErrorType string
+	}{
+		{name: "200", status: http.StatusOK},
+		{name: "400", status: http.StatusBadRequest},
+		{name: "500", status: http.StatusInternalServerError, wantErrorType: "500"},
+		// Codes >= 600 are invalid and marked as errors by Status.
+		{name: "600", status: 600, wantErrorType: "600"},
+		{name: "write error", status: http.StatusOK, writeErr: writeErr, wantErrorType: "write_error"},
+		{name: "read error", status: http.StatusOK, body: readErrBody, wantErrorType: "read_error"},
+		{name: "wrapped EOF is read error", status: http.StatusOK, body: failingBody{err: wrappedEOF}, wantErrorType: semconv.ErrorType(wrappedEOF).Value.AsString()},
+		// A fully read body leaves io.EOF as the last read error.
+		{name: "body fully read", status: http.StatusOK, body: strings.NewReader("hello")},
+		{name: "context canceled", status: http.StatusOK, cancelCtx: true, wantErrorType: semconv.ErrorType(context.Canceled).Value.AsString()},
+		{name: "write over read", status: http.StatusOK, writeErr: writeErr, body: readErrBody, wantErrorType: "write_error"},
+		{name: "write over context", status: http.StatusOK, writeErr: writeErr, cancelCtx: true, wantErrorType: "write_error"},
+		{name: "read over context", status: http.StatusOK, body: readErrBody, cancelCtx: true, wantErrorType: "read_error"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+			reader := sdkmetric.NewManualReader()
+			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			router := mux.NewRouter()
+			router.Use(otelmux.Middleware("foobar",
+				otelmux.WithTracerProvider(provider),
+				otelmux.WithMeterProvider(meterProvider),
+			))
+			router.HandleFunc("/user/{id}", func(w http.ResponseWriter, r *http.Request) {
+				_, _ = io.ReadAll(r.Body)
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte("payload"))
+			})
+
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			if tc.cancelCtx {
+				cancel()
+			}
+			body := tc.body
+			if body == nil {
+				body = http.NoBody
+			}
+			var w http.ResponseWriter = httptest.NewRecorder()
+			if tc.writeErr != nil {
+				w = failingWriter{ResponseRecorder: httptest.NewRecorder(), err: tc.writeErr}
+			}
+
+			router.ServeHTTP(w, httptest.NewRequestWithContext(ctx, http.MethodPost, "/user/123", body))
+
+			require.Len(t, sr.Ended(), 1)
+			span := sr.Ended()[0]
+			wantSpanStatus := codes.Unset
+			if tc.wantErrorType != "" {
+				wantSpanStatus = codes.Error
+			}
+			assert.Equal(t, wantSpanStatus, span.Status().Code)
+			assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", tc.status))
+			if tc.wantErrorType == "" {
+				spanAttrs := attribute.NewSet(span.Attributes()...)
+				assert.False(t, spanAttrs.HasValue(semconv.ErrorTypeKey), "span should not have error.type")
+			} else {
+				assert.Contains(t, span.Attributes(), semconv.ErrorTypeKey.String(tc.wantErrorType))
+			}
+			assertMetricErrorType(t, reader, tc.wantErrorType)
+		})
+	}
+}
+
+// TestMetricAttributesFnErrorTypeTakesPrecedence verifies that an error.type
+// returned by WithMetricAttributesFn overrides the one otelmux detects.
+func TestMetricAttributesFnErrorTypeTakesPrecedence(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware("foobar",
+		otelmux.WithTracerProvider(provider),
+		otelmux.WithMeterProvider(meterProvider),
+		otelmux.WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue {
+			return []attribute.KeyValue{semconv.ErrorTypeKey.String("custom")}
+		}),
+	))
+	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+
+	router.ServeHTTP(httptest.NewRecorder(),
+		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody))
+
+	require.Len(t, sr.Ended(), 1)
+	assert.Contains(t, sr.Ended()[0].Attributes(), semconv.ErrorTypeKey.String("500"), "span keeps the detected error.type")
+	assertMetricErrorType(t, reader, "custom")
+}
+
+// assertMetricErrorType asserts that every server metric data point has
+// error.type set to want, or has none when want is empty.
+func assertMetricErrorType(t *testing.T, reader sdkmetric.Reader, want string) {
+	t.Helper()
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		var attrs attribute.Set
+		switch d := m.Data.(type) {
+		case metricdata.Histogram[int64]:
+			require.Len(t, d.DataPoints, 1, m.Name)
+			attrs = d.DataPoints[0].Attributes
+		case metricdata.Histogram[float64]:
+			require.Len(t, d.DataPoints, 1, m.Name)
+			attrs = d.DataPoints[0].Attributes
+		default:
+			t.Fatalf("unexpected metric type for %s", m.Name)
+		}
+		if want == "" {
+			assert.Falsef(t, attrs.HasValue(semconv.ErrorTypeKey), "%s should not have error.type", m.Name)
+		} else {
+			got, _ := attrs.Value(semconv.ErrorTypeKey)
+			assert.Equal(t, want, got.AsString(), m.Name)
+		}
+	}
+}
+
+func BenchmarkMiddleware(b *testing.B) {
+	tp := sdktrace.NewTracerProvider()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewManualReader()))
+
+	r, err := http.NewRequestWithContext(b.Context(), http.MethodGet, "/user/123", http.NoBody)
+	require.NoError(b, err)
+
+	for _, bb := range []struct {
+		name   string
+		status int
+	}{
+		{name: "ok", status: http.StatusOK},
+		{name: "internal server error", status: http.StatusInternalServerError},
+	} {
+		b.Run(bb.name, func(b *testing.B) {
+			router := mux.NewRouter()
+			router.Use(otelmux.Middleware("foobar",
+				otelmux.WithTracerProvider(tp),
+				otelmux.WithMeterProvider(mp),
+			))
+			router.HandleFunc("/user/{id}", func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(bb.status)
+				_, _ = w.Write([]byte("Hello World"))
+			})
+			rr := httptest.NewRecorder()
+
+			b.ReportAllocs()
+			b.ResetTimer()
+			for range b.N {
+				rr.Body.Reset()
+				router.ServeHTTP(rr, r)
+			}
+		})
+	}
 }
