@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- `Detect` in `go.opentelemetry.io/contrib/detectors/hetzner` now returns `ctx.Err()` when the context is cancelled or its deadline expires before the metadata client can answer, instead of silently returning an empty resource. (#8999)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
