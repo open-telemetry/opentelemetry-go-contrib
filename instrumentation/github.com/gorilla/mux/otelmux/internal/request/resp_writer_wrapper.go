@@ -7,11 +7,19 @@
 package request
 
 import (
+	"io"
 	"net/http"
 	"sync"
 )
 
-var _ http.ResponseWriter = &RespWriterWrapper{}
+var (
+	_ http.ResponseWriter = (*RespWriterWrapper)(nil)
+	_ io.ReaderFrom       = (*RespWriterWrapper)(nil)
+)
+
+// sniffLen matches net/http's prefix size: ReadFrom copies this much through
+// Write before handing off to the underlying ReadFrom.
+const sniffLen = 512
 
 // RespWriterWrapper wraps a http.ResponseWriter in order to track the number of
 // bytes written, the last error, and to catch the first written statusCode.
@@ -58,6 +66,60 @@ func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 	w.err = err
 	return n, err
 }
+
+// ReadFrom implements [io.ReaderFrom]. It uses the underlying
+// [ResponseWriter]'s ReadFrom when available (e.g. sendfile in net/http), and
+// tracks the number of bytes written and the error.
+func (w *RespWriterWrapper) ReadFrom(src io.Reader) (int64, error) {
+	n, err := w.readFrom(src)
+
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	w.err = err
+	return n, err
+}
+
+// readFrom implements ReadFrom. The lock is not held across the copy: a
+// [ResponseWriter] must not be written to concurrently, and Write acquires it.
+func (w *RespWriterWrapper) readFrom(src io.Reader) (int64, error) {
+	// writerOnly has no ReadFrom, so io.Copy uses Write instead of recursing.
+	dst := writerOnly{w}
+
+	rf, ok := w.ResponseWriter.(io.ReaderFrom)
+	if !ok {
+		return io.Copy(dst, src)
+	}
+
+	w.mu.RLock()
+	wroteHeader := w.wroteHeader
+	w.mu.RUnlock()
+
+	var n int64
+	if !wroteHeader {
+		// Like net/http, copy a prefix through Write first so the header is
+		// only committed once data arrives; an empty or failing src leaves the
+		// handler free to set another status.
+		var err error
+		n, err = io.Copy(dst, io.LimitReader(src, sniffLen))
+		if err != nil || n < sniffLen {
+			return n, err
+		}
+	}
+
+	m, err := rf.ReadFrom(src)
+	w.mu.Lock()
+	w.OnWrite(m)
+	w.written += m
+	w.mu.Unlock()
+
+	return n + m, err
+}
+
+// writerOnly exposes only the Write method of a RespWriterWrapper.
+type writerOnly struct{ w *RespWriterWrapper }
+
+func (o writerOnly) Write(p []byte) (int, error) { return o.w.Write(p) }
 
 // WriteHeader persists initial statusCode for span attribution.
 // All calls to WriteHeader will be propagated to the underlying ResponseWriter
