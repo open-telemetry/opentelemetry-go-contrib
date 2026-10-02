@@ -7,18 +7,18 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.6.0
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.47.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
-	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.18.0
+	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.19.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.72.0
-	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.18.0
-	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.18.0
-	go.opentelemetry.io/contrib/detectors/docker v0.18.0
+	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.19.0
+	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.19.0
+	go.opentelemetry.io/contrib/detectors/docker v0.19.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
-	go.opentelemetry.io/contrib/detectors/hetzner v0.18.0
-	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.18.0
-	go.opentelemetry.io/contrib/detectors/k8sapi v0.18.0
-	go.opentelemetry.io/contrib/detectors/kubeadm v0.18.0
-	go.opentelemetry.io/contrib/detectors/openshift v0.18.0
-	go.opentelemetry.io/contrib/detectors/vultr v0.18.0
+	go.opentelemetry.io/contrib/detectors/hetzner v0.19.0
+	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.19.0
+	go.opentelemetry.io/contrib/detectors/k8sapi v0.19.0
+	go.opentelemetry.io/contrib/detectors/kubeadm v0.19.0
+	go.opentelemetry.io/contrib/detectors/openshift v0.19.0
+	go.opentelemetry.io/contrib/detectors/vultr v0.19.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
 )
