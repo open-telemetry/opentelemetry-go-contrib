@@ -7,10 +7,10 @@ require (
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.3
-	go.opentelemetry.io/contrib/detectors/aws/ecs v1.46.0
-	go.opentelemetry.io/contrib/detectors/aws/eks v1.46.0
+	go.opentelemetry.io/contrib/detectors/aws/ecs v1.47.0
+	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.18.0
-	go.opentelemetry.io/contrib/detectors/gcp v1.46.0
+	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.71.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.23.0
@@ -71,10 +71,10 @@ require (
 	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/propagators/aws v1.46.0 // indirect
-	go.opentelemetry.io/contrib/propagators/b3 v1.46.0 // indirect
-	go.opentelemetry.io/contrib/propagators/jaeger v1.46.0 // indirect
-	go.opentelemetry.io/contrib/propagators/ot v1.46.0 // indirect
+	go.opentelemetry.io/contrib/propagators/aws v1.47.0 // indirect
+	go.opentelemetry.io/contrib/propagators/b3 v1.47.0 // indirect
+	go.opentelemetry.io/contrib/propagators/jaeger v1.47.0 // indirect
+	go.opentelemetry.io/contrib/propagators/ot v1.47.0 // indirect
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.47.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
