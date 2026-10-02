@@ -6,30 +6,30 @@ require (
 	github.com/prometheus/client_golang v1.24.1
 	github.com/prometheus/otlptranslator v1.0.0
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.3
-	go.opentelemetry.io/contrib/detectors/aws/ecs v1.46.0
-	go.opentelemetry.io/contrib/detectors/aws/eks v1.46.0
-	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.18.0
-	go.opentelemetry.io/contrib/detectors/gcp v1.46.0
-	go.opentelemetry.io/contrib/propagators/autoprop v0.71.0
-	go.opentelemetry.io/otel v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.22.1-0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.22.1-0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/exporters/prometheus v0.68.1-0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.22.1-0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/log v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/metric v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/sdk v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/sdk/log v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/sdk/log/logtest v0.22.1-0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/sdk/metric v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/trace v1.47.0-rc.1.0.20260924072922-c131dcfc3885
+	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.6.0
+	go.opentelemetry.io/contrib/detectors/aws/ecs v1.47.0
+	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
+	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.19.0
+	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
+	go.opentelemetry.io/contrib/propagators/autoprop v0.72.0
+	go.opentelemetry.io/otel v1.47.0
+	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.23.0
+	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.23.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.47.0
+	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.47.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.47.0
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp v1.47.0
+	go.opentelemetry.io/otel/exporters/prometheus v0.69.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutlog v0.23.0
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.47.0
+	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.47.0
+	go.opentelemetry.io/otel/log v1.47.0
+	go.opentelemetry.io/otel/metric v1.47.0
+	go.opentelemetry.io/otel/sdk v1.47.0
+	go.opentelemetry.io/otel/sdk/log v1.47.0
+	go.opentelemetry.io/otel/sdk/log/logtest v0.23.0
+	go.opentelemetry.io/otel/sdk/metric v1.47.0
+	go.opentelemetry.io/otel/trace v1.47.0
 	go.opentelemetry.io/proto/otlp v1.11.1
 	go.yaml.in/yaml/v3 v3.0.5
 	golang.org/x/exp v0.0.0-20260908205506-85c1c2202aba
@@ -71,11 +71,11 @@ require (
 	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/propagators/aws v1.46.0 // indirect
-	go.opentelemetry.io/contrib/propagators/b3 v1.46.0 // indirect
-	go.opentelemetry.io/contrib/propagators/jaeger v1.46.0 // indirect
-	go.opentelemetry.io/contrib/propagators/ot v1.46.0 // indirect
-	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.47.0-rc.1.0.20260924072922-c131dcfc3885 // indirect
+	go.opentelemetry.io/contrib/propagators/aws v1.47.0 // indirect
+	go.opentelemetry.io/contrib/propagators/b3 v1.47.0 // indirect
+	go.opentelemetry.io/contrib/propagators/jaeger v1.47.0 // indirect
+	go.opentelemetry.io/contrib/propagators/ot v1.47.0 // indirect
+	go.opentelemetry.io/otel/exporters/otlp/otlptrace v1.47.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	golang.org/x/net v0.59.0 // indirect
