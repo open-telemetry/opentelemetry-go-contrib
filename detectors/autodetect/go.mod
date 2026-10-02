@@ -8,7 +8,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.47.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
 	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.18.0
-	go.opentelemetry.io/contrib/detectors/aws/lambda v0.71.0
+	go.opentelemetry.io/contrib/detectors/aws/lambda v0.72.0
 	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.18.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.18.0
 	go.opentelemetry.io/contrib/detectors/docker v0.18.0
@@ -86,7 +86,7 @@ require (
 	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.71.0 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect

@@ -11,8 +11,8 @@ replace (
 require (
 	github.com/aws/aws-lambda-go v1.55.1
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/contrib/detectors/aws/lambda v0.71.0
-	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.71.0
+	go.opentelemetry.io/contrib/detectors/aws/lambda v0.72.0
+	go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda v0.72.0
 	go.opentelemetry.io/contrib/propagators/aws v1.47.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.47.0
