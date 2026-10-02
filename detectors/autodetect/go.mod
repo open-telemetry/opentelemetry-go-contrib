@@ -16,6 +16,8 @@ require (
 	go.opentelemetry.io/contrib/detectors/hetzner v0.18.0
 	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.18.0
 	go.opentelemetry.io/contrib/detectors/k8sapi v0.18.0
+	go.opentelemetry.io/contrib/detectors/kubeadm v0.18.0
+	go.opentelemetry.io/contrib/detectors/openshift v0.18.0
 	go.opentelemetry.io/contrib/detectors/vultr v0.18.0
 	go.opentelemetry.io/otel v1.47.0-rc.1.0.20260924072922-c131dcfc3885
 	go.opentelemetry.io/otel/sdk v1.47.0-rc.1.0.20260924072922-c131dcfc3885
@@ -71,8 +73,8 @@ require (
 	github.com/hetznercloud/hcloud-go/v2 v2.49.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
-	github.com/moby/moby/api v1.56.0 // indirect
-	github.com/moby/moby/client v0.6.0 // indirect
+	github.com/moby/moby/api v1.56.1 // indirect
+	github.com/moby/moby/client v0.6.1 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
@@ -136,3 +138,7 @@ replace go.opentelemetry.io/contrib/detectors/vultr => ../vultr
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
 
 replace go.opentelemetry.io/contrib/detectors/docker => ../docker
+
+replace go.opentelemetry.io/contrib/detectors/kubeadm => ../kubeadm
+
+replace go.opentelemetry.io/contrib/detectors/openshift => ../openshift
