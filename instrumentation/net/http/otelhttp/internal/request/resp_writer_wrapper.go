@@ -69,14 +69,17 @@ func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 
 // ReadFrom implements [io.ReaderFrom]. It uses the underlying
 // [ResponseWriter]'s ReadFrom when available (e.g. sendfile in net/http), and
-// tracks the number of bytes written and the error.
+// tracks the number of bytes written and the first error.
 func (w *RespWriterWrapper) ReadFrom(src io.Reader) (int64, error) {
 	n, err := w.readFrom(src)
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	w.err = err
+	// Keep the first error; later writes must not clear or replace it.
+	if w.err == nil {
+		w.err = err
+	}
 	return n, err
 }
 
