@@ -118,6 +118,23 @@ func TestHandlerResponseControllerFlushError(t *testing.T) {
 	assert.Zero(t, rw.flushCalls)
 }
 
+func TestHandlerResponseControllerFlushErrorOnly(t *testing.T) {
+	flushErr := errors.New("flush failed")
+	rw := &flushErrorOnlyResponseWriter{
+		responseRecorder: httptest.NewRecorder(),
+		flushErr:         flushErr,
+	}
+	h := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		assert.ErrorIs(t, http.NewResponseController(w).Flush(), flushErr)
+	}), "test_handler")
+
+	h.ServeHTTP(rw, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody))
+
+	assert.Equal(t, 1, rw.flushErrorCalls)
+	assert.Equal(t, 1, rw.writeHeaderCalls)
+	assert.Equal(t, http.StatusOK, rw.responseRecorder.Code)
+}
+
 func TestHandlerBasics(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 	rr := httptest.NewRecorder()
@@ -324,6 +341,31 @@ type flushErrorResponseWriter struct {
 	flushErr        error
 	flushCalls      int
 	flushErrorCalls int
+}
+
+type flushErrorOnlyResponseWriter struct {
+	responseRecorder *httptest.ResponseRecorder
+	flushErr         error
+	flushErrorCalls  int
+	writeHeaderCalls int
+}
+
+func (rw *flushErrorOnlyResponseWriter) Header() http.Header {
+	return rw.responseRecorder.Header()
+}
+
+func (rw *flushErrorOnlyResponseWriter) WriteHeader(statusCode int) {
+	rw.writeHeaderCalls++
+	rw.responseRecorder.WriteHeader(statusCode)
+}
+
+func (rw *flushErrorOnlyResponseWriter) Write(p []byte) (int, error) {
+	return rw.responseRecorder.Write(p)
+}
+
+func (rw *flushErrorOnlyResponseWriter) FlushError() error {
+	rw.flushErrorCalls++
+	return rw.flushErr
 }
 
 func (*flushErrorResponseWriter) Header() http.Header { return make(http.Header) }
