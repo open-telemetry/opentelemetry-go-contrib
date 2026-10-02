@@ -470,96 +470,56 @@ func (j *SpanLimits) UnmarshalJSON(value []byte) error {
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *OTLPHttpMetricExporter) UnmarshalJSON(b []byte) error {
 	type Plain OTLPHttpMetricExporter
-	type shadow struct {
-		Plain
-		Endpoint json.RawMessage `json:"endpoint"`
-	}
-	var sh shadow
-	if err := json.Unmarshal(b, &sh); err != nil {
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
-	if sh.Endpoint == nil {
-		return newErrRequired(j, "endpoint")
-	}
-	if err := json.Unmarshal(sh.Endpoint, &sh.Plain.Endpoint); err != nil {
-		return err
-	}
-	if sh.Timeout != nil && 0 > *sh.Timeout {
+	if plain.Timeout != nil && 0 > *plain.Timeout {
 		return newErrGreaterOrEqualZero("timeout")
 	}
-	*j = OTLPHttpMetricExporter(sh.Plain)
+	*j = OTLPHttpMetricExporter(plain)
 	return nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *OTLPGrpcMetricExporter) UnmarshalJSON(b []byte) error {
 	type Plain OTLPGrpcMetricExporter
-	type shadow struct {
-		Plain
-		Endpoint json.RawMessage `json:"endpoint"`
-	}
-	var sh shadow
-	if err := json.Unmarshal(b, &sh); err != nil {
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
-	if sh.Endpoint == nil {
-		return newErrRequired(j, "endpoint")
-	}
-	if err := json.Unmarshal(sh.Endpoint, &sh.Plain.Endpoint); err != nil {
-		return err
-	}
-	if sh.Timeout != nil && 0 > *sh.Timeout {
+	if plain.Timeout != nil && 0 > *plain.Timeout {
 		return newErrGreaterOrEqualZero("timeout")
 	}
-	*j = OTLPGrpcMetricExporter(sh.Plain)
+	*j = OTLPGrpcMetricExporter(plain)
 	return nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *OTLPHttpExporter) UnmarshalJSON(b []byte) error {
 	type Plain OTLPHttpExporter
-	type shadow struct {
-		Plain
-		Endpoint json.RawMessage `json:"endpoint"`
-	}
-	var sh shadow
-	if err := json.Unmarshal(b, &sh); err != nil {
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
-	if sh.Endpoint == nil {
-		return newErrRequired(j, "endpoint")
-	}
-	if err := json.Unmarshal(sh.Endpoint, &sh.Plain.Endpoint); err != nil {
-		return err
-	}
-	if sh.Timeout != nil && 0 > *sh.Timeout {
+	if plain.Timeout != nil && 0 > *plain.Timeout {
 		return newErrGreaterOrEqualZero("timeout")
 	}
-	*j = OTLPHttpExporter(sh.Plain)
+	*j = OTLPHttpExporter(plain)
 	return nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
 func (j *OTLPGrpcExporter) UnmarshalJSON(b []byte) error {
 	type Plain OTLPGrpcExporter
-	type shadow struct {
-		Plain
-		Endpoint json.RawMessage `json:"endpoint"`
-	}
-	var sh shadow
-	if err := json.Unmarshal(b, &sh); err != nil {
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
-	if sh.Endpoint == nil {
-		return newErrRequired(j, "endpoint")
-	}
-	if err := json.Unmarshal(sh.Endpoint, &sh.Plain.Endpoint); err != nil {
-		return err
-	}
-	if sh.Timeout != nil && 0 > *sh.Timeout {
+	if plain.Timeout != nil && 0 > *plain.Timeout {
 		return newErrGreaterOrEqualZero("timeout")
 	}
-	*j = OTLPGrpcExporter(sh.Plain)
+	*j = OTLPGrpcExporter(plain)
 	return nil
 }
 
