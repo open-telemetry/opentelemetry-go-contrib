@@ -94,8 +94,9 @@ func BenchmarkWroteHeaderFieldWithoutSubSpans(b *testing.B) {
 			provider := noop.NewTracerProvider()
 			_, span := provider.Tracer(ScopeName).Start(b.Context(), "root")
 			ct := &clientTracer{
-				root:       span,
-				addHeaders: true,
+				root:                span,
+				addHeaders:          true,
+				stableHeaderSemconv: true,
 				headerAttributes: map[string]headerAttribute{
 					"authorization":       {redacted: true},
 					"www-authenticate":    {redacted: true},

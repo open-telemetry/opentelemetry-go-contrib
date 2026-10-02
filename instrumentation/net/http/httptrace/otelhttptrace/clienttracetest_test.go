@@ -315,6 +315,7 @@ func prepareClientTraceTest(t *testing.T) clientTraceTestFixture {
 }
 
 func TestWithoutSubSpans(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 	fixture := prepareClientTraceTest(t)
 
 	ctx := t.Context()
@@ -426,6 +427,7 @@ func TestWithoutSubSpans(t *testing.T) {
 }
 
 func TestWithRedactedHeaders(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
@@ -484,6 +486,7 @@ func TestWithoutHeaders(t *testing.T) {
 }
 
 func TestWithInsecureHeaders(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
@@ -520,6 +523,7 @@ func TestWithInsecureHeaders(t *testing.T) {
 }
 
 func TestHeaderAttributesUseSemconvValuesAndNames(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
@@ -546,7 +550,87 @@ func TestHeaderAttributesUseSemconvValuesAndNames(t *testing.T) {
 	}, fixture.SpanRecorder.Ended()[0].Attributes())
 }
 
+func TestHeaderAttributeSemconvStability(t *testing.T) {
+	tests := []struct {
+		name   string
+		optIn  string
+		stable bool
+	}{
+		{name: "default legacy behavior"},
+		{name: "http opt-in", optIn: "http", stable: true},
+		{name: "http dup with whitespace and unrelated token", optIn: " database , http/dup ", stable: true},
+		{name: "invalid token", optIn: "http/old"},
+		{name: "unrelated token", optIn: "database"},
+		{name: "valid token among invalid tokens", optIn: "unknown, http, http/old", stable: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", tc.optIn)
+			fixture := prepareClientTraceTest(t)
+
+			ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
+			clientTrace := otelhttptrace.NewClientTrace(ctx, otelhttptrace.WithoutSubSpans())
+			clientTrace.GetConn("example.test:80")
+			clientTrace.WroteHeaderField("X-Joined", []string{"one", "two"})
+			clientTrace.WroteHeaderField("X-Repeated", []string{"first"})
+			clientTrace.WroteHeaderField("x-repeated", []string{"second", "third"})
+			clientTrace.WroteHeaderField("Authorization", []string{"secret", "another secret"})
+			clientTrace.WroteHeaderField(":authority", []string{"example.test"})
+			span.End()
+
+			require.Len(t, fixture.SpanRecorder.Ended(), 1)
+			attrs := make(map[attribute.Key]attribute.Value)
+			for _, kv := range fixture.SpanRecorder.Ended()[0].Attributes() {
+				attrs[kv.Key] = kv.Value
+			}
+
+			if tc.stable {
+				assert.Equal(
+					t,
+					attribute.StringSlice("http.request.header.x-joined", []string{"one", "two"}).Value,
+					attrs[attribute.Key("http.request.header.x-joined")],
+				)
+				assert.Equal(
+					t,
+					attribute.StringSlice("http.request.header.x-repeated", []string{"first", "second", "third"}).Value,
+					attrs[attribute.Key("http.request.header.x-repeated")],
+				)
+				assert.Equal(
+					t,
+					attribute.StringSlice("http.request.header.authorization", []string{"****"}).Value,
+					attrs[attribute.Key("http.request.header.authorization")],
+				)
+				assert.NotContains(t, attrs, attribute.Key("http.request.header.:authority"))
+				return
+			}
+
+			assert.Equal(
+				t,
+				attribute.String("http.request.header.x-joined", "one,two").Value,
+				attrs[attribute.Key("http.request.header.x-joined")],
+			)
+			// The legacy callback behavior keeps the most recent scalar value.
+			assert.Equal(
+				t,
+				attribute.String("http.request.header.x-repeated", "second,third").Value,
+				attrs[attribute.Key("http.request.header.x-repeated")],
+			)
+			assert.Equal(
+				t,
+				attribute.String("http.request.header.authorization", "****").Value,
+				attrs[attribute.Key("http.request.header.authorization")],
+			)
+			assert.Equal(
+				t,
+				attribute.String("http.request.header.:authority", "example.test").Value,
+				attrs[attribute.Key("http.request.header.:authority")],
+			)
+		})
+	}
+}
+
 func TestHeaderAttributesResetAfterWroteHeaders(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
@@ -565,6 +649,7 @@ func TestHeaderAttributesResetAfterWroteHeaders(t *testing.T) {
 }
 
 func TestSubSpansHeaderAttributes(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
