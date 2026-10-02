@@ -26,13 +26,8 @@ import (
 
 var (
 	loadDefaultConfig = awsconfig.LoadDefaultConfig
-	newIMDSClient     = func(cfg aws.Config, disableDefaultMaxBackoff bool) client {
-		if disableDefaultMaxBackoff {
-			return imds.NewFromConfig(cfg, func(o *imds.Options) {
-				o.DisableDefaultMaxBackoff = true
-			})
-		}
-		return imds.NewFromConfig(cfg)
+	newIMDSClient     = func(cfg aws.Config, optFns ...func(*imds.Options)) client {
+		return imds.NewFromConfig(cfg, optFns...)
 	}
 )
 
@@ -198,7 +193,14 @@ func newClient(ctx context.Context, c config) (client, error) {
 		}
 	}
 
-	return newIMDSClient(cfg, c.maxBackoff != nil), nil
+	var imdsOptFns []func(*imds.Options)
+	if c.maxBackoff != nil {
+		imdsOptFns = append(imdsOptFns, func(o *imds.Options) {
+			o.DisableDefaultMaxBackoff = true
+		})
+	}
+
+	return newIMDSClient(cfg, imdsOptFns...), nil
 }
 
 type metadata struct {
