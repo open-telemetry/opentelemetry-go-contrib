@@ -6,11 +6,14 @@ package eks
 import (
 	"context"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -45,6 +48,7 @@ func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 
 func TestResourceDetectorDetect(t *testing.T) {
 	var nilMap map[string]string
+	errInitialization := errors.New("initialization failure")
 
 	tests := []struct {
 		name             string
@@ -93,8 +97,8 @@ func TestResourceDetectorDetect(t *testing.T) {
 		},
 		{
 			name:          "generic initialization error",
-			detectorErr:   errors.New("initialization failure"),
-			expectedErrIs: errors.New("initialization failure"),
+			detectorErr:   errInitialization,
+			expectedErrIs: errInitialization,
 		},
 		{
 			name: "token missing not EKS",
@@ -155,7 +159,7 @@ func TestResourceDetectorDetect(t *testing.T) {
 
 			switch {
 			case tt.expectedErrIs != nil:
-				assert.EqualError(t, err, tt.expectedErrIs.Error())
+				assert.ErrorIs(t, err, tt.expectedErrIs)
 				assert.Nil(t, res)
 			case tt.expectedErrMsg != "":
 				require.Error(t, err)
@@ -245,6 +249,54 @@ func TestGetConfigMap(t *testing.T) {
 			}
 		})
 	}
+}
+
+// deadlineRoundTripper records the deadline of the request context and
+// returns a static ConfigMap response without touching the network.
+type deadlineRoundTripper struct {
+	deadline time.Time
+	ok       bool
+}
+
+func (rt *deadlineRoundTripper) RoundTrip(req *http.Request) (*http.Response, error) {
+	rt.deadline, rt.ok = req.Context().Deadline()
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Status:     "200 OK",
+		Header:     http.Header{"Content-Type": []string{"application/json"}},
+		Body:       io.NopCloser(strings.NewReader(`{"data":{}}`)),
+		Request:    req,
+	}, nil
+}
+
+func TestGetConfigMapRequestDeadline(t *testing.T) {
+	t.Run("no caller deadline is bounded by configMapTimeout", func(t *testing.T) {
+		rt := &deadlineRoundTripper{}
+		utils := &eksDetectorUtils{host: "http://k8s.invalid", client: &http.Client{Transport: rt}}
+
+		before := time.Now()
+		_, err := utils.getConfigMap(context.WithoutCancel(t.Context()), authConfigmapNS, authConfigmapName)
+		after := time.Now()
+		require.NoError(t, err)
+
+		require.True(t, rt.ok, "request context must carry a deadline")
+		assert.WithinRange(t, rt.deadline, before.Add(configMapTimeout), after.Add(configMapTimeout))
+	})
+
+	t.Run("shorter caller deadline is preserved", func(t *testing.T) {
+		rt := &deadlineRoundTripper{}
+		utils := &eksDetectorUtils{host: "http://k8s.invalid", client: &http.Client{Transport: rt}}
+
+		callerDeadline := time.Now().Add(time.Second)
+		ctx, cancel := context.WithDeadline(t.Context(), callerDeadline)
+		t.Cleanup(cancel)
+
+		_, err := utils.getConfigMap(ctx, authConfigmapNS, authConfigmapName)
+		require.NoError(t, err)
+
+		require.True(t, rt.ok, "request context must carry a deadline")
+		assert.Equal(t, callerDeadline, rt.deadline)
+	})
 }
 
 func TestFileExists(t *testing.T) {
