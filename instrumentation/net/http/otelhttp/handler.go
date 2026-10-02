@@ -176,7 +176,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		},
 		FlushError: func(flush httpsnoop.FlushErrorFunc) httpsnoop.FlushErrorFunc {
 			return func() error {
-				return rww.FlushError(flush)
+				return rww.FlushWithError(flush)
 			}
 		},
 	})

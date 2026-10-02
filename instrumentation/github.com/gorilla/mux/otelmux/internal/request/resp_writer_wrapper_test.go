@@ -46,13 +46,13 @@ func TestRespWriterFlush(t *testing.T) {
 	assert.True(t, rw.wroteHeader)
 }
 
-func TestRespWriterFlushError(t *testing.T) {
+func TestRespWriterFlushWithError(t *testing.T) {
 	wantErr := errors.New("flush failed")
 	responseRecorder := httptest.NewRecorder()
 	rw := NewRespWriterWrapper(responseRecorder, func(int64) {})
 	flushCalls := 0
 
-	err := rw.FlushError(func() error {
+	err := rw.FlushWithError(func() error {
 		flushCalls++
 		return wantErr
 	})

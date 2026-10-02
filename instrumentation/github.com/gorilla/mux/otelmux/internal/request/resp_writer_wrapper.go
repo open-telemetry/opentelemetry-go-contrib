@@ -104,9 +104,9 @@ func (w *RespWriterWrapper) Flush() {
 	}
 }
 
-// FlushError records the implicit successful response status before invoking
-// an error-returning flush operation.
-func (w *RespWriterWrapper) FlushError(flush func() error) error {
+// FlushWithError records the implicit successful response status before
+// invoking an error-returning flush operation.
+func (w *RespWriterWrapper) FlushWithError(flush func() error) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
