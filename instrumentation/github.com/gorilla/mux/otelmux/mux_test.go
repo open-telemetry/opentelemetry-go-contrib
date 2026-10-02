@@ -6,6 +6,7 @@ package otelmux
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net"
@@ -326,4 +327,41 @@ func TestHeaderAlreadyWrittenWhenFlushing(t *testing.T) {
 	// Assertions
 	assert.True(t, called, "failed to run test")
 	assert.Equal(t, http.StatusBadRequest, w.Code, "Header was not set before flushing")
+}
+
+func TestResponseControllerFlushError(t *testing.T) {
+	wantErr := errors.New("flush failed")
+	rw := &flushErrorResponseWriter{
+		ResponseRecorder: httptest.NewRecorder(),
+		flushErr:         wantErr,
+	}
+	var gotErr error
+
+	router := mux.NewRouter()
+	router.Use(Middleware("test"))
+	router.HandleFunc("/flush", func(w http.ResponseWriter, _ *http.Request) {
+		gotErr = http.NewResponseController(w).Flush()
+	})
+	router.ServeHTTP(rw, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/flush", http.NoBody))
+
+	require.ErrorIs(t, gotErr, wantErr)
+	assert.Equal(t, 1, rw.flushErrorCalls)
+	assert.Zero(t, rw.flushCalls)
+}
+
+type flushErrorResponseWriter struct {
+	*httptest.ResponseRecorder
+	flushErr        error
+	flushCalls      int
+	flushErrorCalls int
+}
+
+func (rw *flushErrorResponseWriter) Flush() {
+	rw.flushCalls++
+	rw.ResponseRecorder.Flush()
+}
+
+func (rw *flushErrorResponseWriter) FlushError() error {
+	rw.flushErrorCalls++
+	return rw.flushErr
 }

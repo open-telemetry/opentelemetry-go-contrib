@@ -176,6 +176,11 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Flush: func(httpsnoop.FlushFunc) httpsnoop.FlushFunc {
 			return rww.Flush
 		},
+		FlushError: func(flush httpsnoop.FlushErrorFunc) httpsnoop.FlushErrorFunc {
+			return func() error {
+				return rww.FlushError(flush)
+			}
+		},
 	})
 
 	rCtx := r.WithContext(ctx)

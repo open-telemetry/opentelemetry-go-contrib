@@ -174,6 +174,11 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		Flush: func(httpsnoop.FlushFunc) httpsnoop.FlushFunc {
 			return rww.Flush
 		},
+		FlushError: func(flush httpsnoop.FlushErrorFunc) httpsnoop.FlushErrorFunc {
+			return func() error {
+				return rww.FlushError(flush)
+			}
+		},
 	})
 
 	labeler, found := LabelerFromContext(ctx)

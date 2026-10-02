@@ -7,6 +7,7 @@
 package request
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -43,6 +44,23 @@ func TestRespWriterFlush(t *testing.T) {
 	rw.Flush()
 	assert.Equal(t, http.StatusOK, rw.statusCode)
 	assert.True(t, rw.wroteHeader)
+}
+
+func TestRespWriterFlushError(t *testing.T) {
+	wantErr := errors.New("flush failed")
+	responseRecorder := httptest.NewRecorder()
+	rw := NewRespWriterWrapper(responseRecorder, func(int64) {})
+	flushCalls := 0
+
+	err := rw.FlushError(func() error {
+		flushCalls++
+		return wantErr
+	})
+
+	assert.ErrorIs(t, err, wantErr)
+	assert.Equal(t, 1, flushCalls)
+	assert.Equal(t, http.StatusOK, rw.StatusCode())
+	assert.Equal(t, http.StatusOK, responseRecorder.Code)
 }
 
 type nonFlushableResponseWriter struct{}

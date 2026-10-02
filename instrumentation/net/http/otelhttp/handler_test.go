@@ -4,6 +4,7 @@
 package otelhttp
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -102,6 +103,19 @@ func TestHandler(t *testing.T) {
 			assert.Falsef(t, ok, "body should not be wrapped after request is processed")
 		})
 	}
+}
+
+func TestHandlerResponseControllerFlushError(t *testing.T) {
+	flushErr := errors.New("flush failed")
+	rw := &flushErrorResponseWriter{flushErr: flushErr}
+	h := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		assert.ErrorIs(t, http.NewResponseController(w).Flush(), flushErr)
+	}), "test_handler")
+
+	h.ServeHTTP(rw, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody))
+
+	assert.Equal(t, 1, rw.flushErrorCalls)
+	assert.Zero(t, rw.flushCalls)
 }
 
 func TestHandlerBasics(t *testing.T) {
@@ -304,6 +318,25 @@ type respWriteHeaderCounter struct {
 	http.ResponseWriter
 
 	headersWritten []int
+}
+
+type flushErrorResponseWriter struct {
+	flushErr        error
+	flushCalls      int
+	flushErrorCalls int
+}
+
+func (*flushErrorResponseWriter) Header() http.Header { return make(http.Header) }
+
+func (*flushErrorResponseWriter) WriteHeader(int) {}
+
+func (*flushErrorResponseWriter) Write(p []byte) (int, error) { return len(p), nil }
+
+func (rw *flushErrorResponseWriter) Flush() { rw.flushCalls++ }
+
+func (rw *flushErrorResponseWriter) FlushError() error {
+	rw.flushErrorCalls++
+	return rw.flushErr
 }
 
 func (rw *respWriteHeaderCounter) WriteHeader(statusCode int) {
