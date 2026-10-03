@@ -885,6 +885,48 @@ func TestMessageEventAttributes(t *testing.T) {
 	}
 }
 
+func TestBodyReadFrom_RecordsResponseSize(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(spanRecorder),
+	)
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			_, err := io.Copy(w, r.Body)
+			assert.NoError(t, err)
+		}),
+		"test_handler",
+		WithTracerProvider(provider),
+	)
+
+	// Using a real http.Server because httptest.ResponseRecorder does not implement
+	// ReadFrom, while the internal http.response type does.
+	server := httptest.NewServer(h)
+	defer server.Close()
+
+	const payload = "hello world"
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL, strings.NewReader(payload))
+	require.NoError(t, err)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	defer resp.Body.Close()
+
+	require.Len(t, spanRecorder.Ended(), 1)
+
+	firstSpan := spanRecorder.Ended()[0]
+	assert.Contains(t, firstSpan.Attributes(), attribute.Int("http.request.body.size", len(payload)))
+	assert.Contains(t, firstSpan.Attributes(), attribute.Int("http.response.body.size", len(payload)))
+
+	for _, attr := range firstSpan.Attributes() {
+		assert.NotEqual(t, attribute.Key("http.read_bytes"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.read_error"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.wrote_bytes"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.write_error"), attr.Key)
+	}
+}
+
 func BenchmarkHandlerServeHTTP(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()

@@ -76,3 +76,10 @@ func TestConcurrentRespWriterWrapper(t *testing.T) {
 	assert.NotNil(t, rw.StatusCode())
 	assert.NoError(t, rw.Error())
 }
+
+func TestRespWriterReaderFromUnsupported(t *testing.T) {
+	rw := NewRespWriterWrapper(&httptest.ResponseRecorder{}, func(int64) {})
+
+	_, err := rw.ReadFrom(nil)
+	assert.EqualError(t, err, "ResponseWriter does not implement io.ReaderFrom")
+}
