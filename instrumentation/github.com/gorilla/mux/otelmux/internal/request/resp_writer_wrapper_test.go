@@ -7,11 +7,16 @@
 package request
 
 import (
+	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
+	"testing/iotest"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRespWriterWriteHeader(t *testing.T) {
@@ -75,4 +80,109 @@ func TestConcurrentRespWriterWrapper(t *testing.T) {
 	assert.NotNil(t, rw.BytesWritten())
 	assert.NotNil(t, rw.StatusCode())
 	assert.NoError(t, rw.Error())
+}
+
+func TestRespWriterReadFrom(t *testing.T) {
+	rw := NewRespWriterWrapper(&httptest.ResponseRecorder{}, func(int64) {})
+
+	n, err := rw.ReadFrom(strings.NewReader("hello world"))
+	require.NoError(t, err)
+	assert.Equal(t, int64(11), n)
+	assert.Equal(t, int64(11), rw.BytesWritten())
+	assert.Equal(t, http.StatusOK, rw.StatusCode())
+	assert.NoError(t, rw.Error())
+}
+
+type errReaderFrom struct {
+	http.ResponseWriter
+	err error
+}
+
+func (e errReaderFrom) ReadFrom(io.Reader) (int64, error) {
+	return 0, e.err
+}
+
+func TestRespWriterReadFromError(t *testing.T) {
+	want := errors.New("readfrom failed")
+	rw := NewRespWriterWrapper(errReaderFrom{
+		ResponseWriter: &httptest.ResponseRecorder{},
+		err:            want,
+	}, func(int64) {})
+
+	_, err := rw.ReadFrom(strings.NewReader(strings.Repeat("a", 2*sniffLen)))
+	require.ErrorIs(t, err, want)
+	assert.ErrorIs(t, rw.Error(), want)
+	assert.Equal(t, http.StatusOK, rw.StatusCode())
+}
+
+type readerFromRecorder struct {
+	*httptest.ResponseRecorder
+	readFromBytes int64
+}
+
+func (r *readerFromRecorder) ReadFrom(src io.Reader) (int64, error) {
+	n, err := io.Copy(r.ResponseRecorder, src)
+	r.readFromBytes += n
+	return n, err
+}
+
+func TestRespWriterReadFromKeepsHeaderUncommitted(t *testing.T) {
+	want := errors.New("read failed")
+	tests := []struct {
+		name    string
+		src     io.Reader
+		wantErr error
+	}{
+		{
+			name: "empty",
+			src:  strings.NewReader(""),
+		},
+		{
+			name:    "read_error",
+			src:     iotest.ErrReader(want),
+			wantErr: want,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				rw := NewRespWriterWrapper(w, func(int64) {})
+				n, err := rw.ReadFrom(tt.src)
+				assert.ErrorIs(t, err, tt.wantErr)
+				assert.ErrorIs(t, rw.Error(), tt.wantErr)
+				assert.Zero(t, n)
+
+				rw.Header().Set("Retry-After", "5")
+				rw.WriteHeader(http.StatusServiceUnavailable)
+				assert.Equal(t, http.StatusServiceUnavailable, rw.StatusCode())
+			}))
+			defer srv.Close()
+
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, http.NoBody)
+			require.NoError(t, err)
+			resp, err := srv.Client().Do(req)
+			require.NoError(t, err)
+			defer resp.Body.Close()
+
+			assert.Equal(t, http.StatusServiceUnavailable, resp.StatusCode)
+			assert.Equal(t, "5", resp.Header.Get("Retry-After"))
+		})
+	}
+}
+
+func TestRespWriterReadFromUsesUnderlyingReadFrom(t *testing.T) {
+	rec := httptest.NewRecorder()
+	rf := &readerFromRecorder{ResponseRecorder: rec}
+	var onWrite int64
+	rw := NewRespWriterWrapper(rf, func(n int64) { onWrite += n })
+
+	n, err := rw.ReadFrom(strings.NewReader(strings.Repeat("a", 2*sniffLen)))
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(2*sniffLen), n)
+	assert.Equal(t, int64(2*sniffLen), rw.BytesWritten())
+	assert.Equal(t, int64(2*sniffLen), onWrite)
+	assert.Equal(t, int64(sniffLen), rf.readFromBytes, "bytes after the prefix use the underlying ReadFrom")
+	assert.Equal(t, 2*sniffLen, rec.Body.Len())
+	assert.Equal(t, http.StatusOK, rec.Code)
 }
