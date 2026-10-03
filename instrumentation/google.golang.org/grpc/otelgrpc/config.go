@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/stats"
 )
 
@@ -51,6 +52,7 @@ type config struct {
 	MetricAttributes   []attribute.KeyValue
 	MetricAttributesFn func(ctx context.Context) []attribute.KeyValue
 
+	NonErrorCodes    map[grpc_codes.Code]struct{}
 	PublicEndpoint   bool
 	PublicEndpointFn func(ctx context.Context, info *stats.RPCTagInfo) bool
 
@@ -241,6 +243,21 @@ func WithMetricAttributesFn(fn func(ctx context.Context) []attribute.KeyValue) O
 	return optionFunc(func(c *config) {
 		if fn != nil {
 			c.MetricAttributesFn = fn
+		}
+	})
+}
+
+// WithNonErrorCodes returns an Option that prevents [NewClientHandler] and
+// [NewServerHandler] from setting an error span status for the provided gRPC
+// codes. The codes apply to every RPC. An existing span status set by the
+// application is left unchanged.
+func WithNonErrorCodes(nonErrorCodes ...grpc_codes.Code) Option {
+	return optionFunc(func(c *config) {
+		if len(nonErrorCodes) > 0 {
+			c.NonErrorCodes = make(map[grpc_codes.Code]struct{})
+			for _, code := range nonErrorCodes {
+				c.NonErrorCodes[code] = struct{}{}
+			}
 		}
 	})
 }

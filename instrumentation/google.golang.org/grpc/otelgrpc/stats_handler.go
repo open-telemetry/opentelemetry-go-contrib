@@ -317,7 +317,7 @@ func (*clientHandler) HandleConn(context.Context, stats.ConnStats) {
 	// no-op
 }
 
-func (*config) handleRPC(
+func (c *config) handleRPC(
 	ctx context.Context,
 	rs stats.RPCStats,
 	duration metric.Float64Histogram,
@@ -384,8 +384,15 @@ func (*config) handleRPC(
 		}
 		if span.IsRecording() {
 			if s != nil {
-				c, m := recordStatus(s)
-				span.SetStatus(c, m)
+				code, m := recordStatus(s)
+				if c.NonErrorCodes != nil {
+					if _, ok := c.NonErrorCodes[s.Code()]; ok {
+						// Override the status code to Unset for non-error codes. This will allow callers to override the server-defaults.
+						code = codes.Unset
+						m = ""
+					}
+				}
+				span.SetStatus(code, m)
 			}
 			span.SetAttributes(rpcStatusAttr)
 			span.End()
