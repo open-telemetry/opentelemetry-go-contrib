@@ -123,6 +123,51 @@ func (j *TraceContextPropagator) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalAWSEC2ResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalAWSEC2ResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if p == nil {
+		*j = ExperimentalAWSEC2ResourceDetector{}
+	} else {
+		*j = ExperimentalAWSEC2ResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalGCPResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalGCPResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if p == nil {
+		*j = ExperimentalGCPResourceDetector{}
+	} else {
+		*j = ExperimentalGCPResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalAWSECSResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalAWSECSResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if p == nil {
+		*j = ExperimentalAWSECSResourceDetector{}
+	} else {
+		*j = ExperimentalAWSECSResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *ExperimentalAWSEKSResourceDetector) UnmarshalJSON(b []byte) error {
 	type plain ExperimentalAWSEKSResourceDetector
 	var p plain
@@ -133,6 +178,21 @@ func (j *ExperimentalAWSEKSResourceDetector) UnmarshalJSON(b []byte) error {
 		*j = ExperimentalAWSEKSResourceDetector{}
 	} else {
 		*j = ExperimentalAWSEKSResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalAzureVMResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalAzureVMResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if p == nil {
+		*j = ExperimentalAzureVMResourceDetector{}
+	} else {
+		*j = ExperimentalAzureVMResourceDetector(p)
 	}
 	return nil
 }
@@ -207,7 +267,11 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	type Plain ExperimentalResourceDetector
 	type shadow struct {
 		Plain
+		AWSEC2    json.RawMessage `json:"aws.ec2"`
+		GCP       json.RawMessage `json:"gcp"`
+		AWSECS    json.RawMessage `json:"aws.ecs"`
 		AWSEKS    json.RawMessage `json:"aws.eks"`
+		AzureVM   json.RawMessage `json:"azure.vm"`
 		Container json.RawMessage `json:"container"`
 		Host      json.RawMessage `json:"host"`
 		Process   json.RawMessage `json:"process"`
@@ -216,6 +280,39 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	var sh shadow
 	if err := json.Unmarshal(b, &sh); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if sh.AWSEC2 != nil {
+		var c ExperimentalAWSEC2ResourceDetector
+		if err := json.Unmarshal(sh.AWSEC2, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		if c == nil {
+			c = ExperimentalAWSEC2ResourceDetector{}
+		}
+		sh.Plain.AWSEC2 = c
+	}
+
+	if sh.GCP != nil {
+		var c ExperimentalGCPResourceDetector
+		if err := json.Unmarshal(sh.GCP, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		if c == nil {
+			c = ExperimentalGCPResourceDetector{}
+		}
+		sh.Plain.GCP = c
+	}
+
+	if sh.AWSECS != nil {
+		var c ExperimentalAWSECSResourceDetector
+		if err := json.Unmarshal(sh.AWSECS, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		if c == nil {
+			c = ExperimentalAWSECSResourceDetector{}
+		}
+		sh.Plain.AWSECS = c
 	}
 
 	if sh.AWSEKS != nil {
@@ -227,6 +324,17 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 			c = ExperimentalAWSEKSResourceDetector{}
 		}
 		sh.Plain.AWSEKS = c
+	}
+
+	if sh.AzureVM != nil {
+		var c ExperimentalAzureVMResourceDetector
+		if err := json.Unmarshal(sh.AzureVM, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		if c == nil {
+			c = ExperimentalAzureVMResourceDetector{}
+		}
+		sh.Plain.AzureVM = c
 	}
 
 	if sh.Container != nil {
@@ -547,7 +655,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	} else {
 		// Configure if the SDK is disabled or not.
 		// If omitted or null, false is used.
-		sh.Plain.Disabled = ptr(false)
+		sh.Plain.Disabled = new(false)
 	}
 
 	if sh.LogLevel != nil {
@@ -557,7 +665,7 @@ func (j *OpenTelemetryConfiguration) UnmarshalJSON(b []byte) error {
 	} else {
 		// Configure the log level of the internal logger used by the SDK.
 		// If omitted, info is used.
-		sh.Plain.LogLevel = ptr(SeverityNumberInfo)
+		sh.Plain.LogLevel = new(SeverityNumberInfo)
 	}
 
 	*j = OpenTelemetryConfiguration(sh.Plain)

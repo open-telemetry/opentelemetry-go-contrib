@@ -123,11 +123,10 @@ func TestB3Propagator_Fields(t *testing.T) {
 		{
 			name:       "no encoding specified",
 			propagator: b3.New(),
+			// B3Unspecified defaults to single-header injection, so Fields must
+			// report the `b3` header to match what Inject writes.
 			want: []string{
-				b3TraceID,
-				b3SpanID,
-				b3Sampled,
-				b3Flags,
+				b3Context,
 			},
 		},
 		{

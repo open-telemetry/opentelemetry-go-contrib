@@ -151,11 +151,14 @@ func (propagator) Extract(ctx context.Context, carrier propagation.TextMapCarrie
 }
 
 func (b3 propagator) Fields() []string {
+	// Mirror the encoding conditions used by Inject so Fields reports exactly
+	// the headers that may be written. In particular, B3Unspecified defaults to
+	// single-header injection (the `b3` header), not multiple headers.
 	header := []string{}
-	if b3.cfg.InjectEncoding.supports(B3SingleHeader) {
+	if b3.cfg.InjectEncoding.supports(B3SingleHeader) || b3.cfg.InjectEncoding == B3Unspecified {
 		header = append(header, b3ContextHeader)
 	}
-	if b3.cfg.InjectEncoding.supports(B3MultipleHeader) || b3.cfg.InjectEncoding == B3Unspecified {
+	if b3.cfg.InjectEncoding.supports(B3MultipleHeader) {
 		header = append(header, b3TraceIDHeader, b3SpanIDHeader, b3SampledHeader, b3DebugFlagHeader)
 	}
 	return header

@@ -150,13 +150,12 @@ For more information about the approver role, see the [community repository](htt
 
 ### Triagers
 
-- [Alex Kats](https://github.com/akats7), Capital One
-
 For more information about the triager role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#triager).
 
 ### Emeritus
 
 - [Aaron Clawson](https://github.com/MadVikingGod)
+- [Alex Kats](https://github.com/akats7)
 - [Anthony Mirabella](https://github.com/Aneurysm9)
 - [Chester Cheung](https://github.com/hanyuancheung)
 - [Cheng-Zhen Yang](https://github.com/scorpionknifes)

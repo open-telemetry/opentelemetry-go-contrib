@@ -516,10 +516,10 @@ func TestRemotelyControlledSampler_updateRateLimitingOrProbabilisticSampler(t *t
 			if testCase.referenceEquivalence {
 				assert.Equal(t, testCase.expectedSampler, remoteSampler.sampler)
 			} else {
-				type comparable interface {
+				type comparableSampler interface {
 					Equal(other trace.Sampler) bool
 				}
-				es, esOk := testCase.expectedSampler.(comparable)
+				es, esOk := testCase.expectedSampler.(comparableSampler)
 				require.True(t, esOk, "expected sampler %+v must implement Equal()", testCase.expectedSampler)
 				assert.True(t, es.Equal(remoteSampler.sampler),
 					"sampler.Equal: want=%+v, have=%+v", testCase.expectedSampler, remoteSampler.sampler)

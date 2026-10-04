@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 func TestNewResource(t *testing.T) {
@@ -34,7 +34,7 @@ func TestNewResource(t *testing.T) {
 		{
 			name: "resource-with-schema",
 			config: &Resource{
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: new(semconv.SchemaURL),
 			},
 			wantSchemaURL: semconv.SchemaURL,
 		},
@@ -54,7 +54,7 @@ func TestNewResource(t *testing.T) {
 				Attributes: []AttributeNameValue{
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: new(semconv.SchemaURL),
 			},
 			wantSchemaURL: semconv.SchemaURL,
 			wantAttrs:     []attribute.KeyValue{semconv.ServiceName("service-a")},
@@ -66,7 +66,7 @@ func TestNewResource(t *testing.T) {
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 					{Name: "attr-bool", Value: true},
 				},
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: new(semconv.SchemaURL),
 			},
 			wantSchemaURL: semconv.SchemaURL,
 			wantAttrs: []attribute.KeyValue{
