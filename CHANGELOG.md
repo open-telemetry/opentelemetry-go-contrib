@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Every detector in `go.opentelemetry.io/contrib/detectors/autodetect` that pulls in a third-party dependency now registers itself behind an `otelcontrib_no_<detector>` build tag, so a build can leave it out together with its dependencies. All detectors remain registered by default. (#9824)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
