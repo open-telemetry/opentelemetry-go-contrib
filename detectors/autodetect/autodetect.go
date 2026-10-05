@@ -3,6 +3,15 @@
 
 // Package autodetect provides functionality to configures and use a set of
 // resource detectors at runtime.
+//
+// Every detector that pulls in a third-party dependency registers itself from
+// its own file, guarded by a build tag named after it, so a build can leave it
+// out together with its dependencies:
+//
+//	go build -tags otelcontrib_no_docker,otelcontrib_no_hetzner
+//
+// All detectors are registered by default; see the register_*.go files for the
+// available tags.
 package autodetect
 
 import (
@@ -13,22 +22,6 @@ import (
 	"sync"
 
 	"go.opentelemetry.io/otel/sdk/resource"
-
-	"go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
-	"go.opentelemetry.io/contrib/detectors/aws/ecs"
-	"go.opentelemetry.io/contrib/detectors/aws/eks"
-	"go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk"
-	"go.opentelemetry.io/contrib/detectors/aws/lambda"
-	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
-	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
-	"go.opentelemetry.io/contrib/detectors/docker"
-	"go.opentelemetry.io/contrib/detectors/gcp"
-	"go.opentelemetry.io/contrib/detectors/hetzner"
-	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
-	"go.opentelemetry.io/contrib/detectors/k8sapi"
-	"go.opentelemetry.io/contrib/detectors/kubeadm"
-	"go.opentelemetry.io/contrib/detectors/openshift"
-	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
 var (
@@ -163,31 +156,6 @@ var (
 var (
 	registryMu sync.Mutex
 	registry   = map[ID]func() resource.Detector{
-		IDAWSEC2:              ec2.NewResourceDetector,
-		IDAWSECS:              ecs.NewResourceDetector,
-		IDAWSEKS:              eks.NewResourceDetector,
-		IDAWSLambda:           lambda.NewResourceDetector,
-		IDAWSElasticBeanstalk: func() resource.Detector { return elasticbeanstalk.NewResourceDetector() },
-
-		IDAzureContainerApps: func() resource.Detector { return azurecontainerapps.NewResourceDetector() },
-
-		IDAzureVM: func() resource.Detector {
-			return azurevm.New()
-		},
-
-		IDGCP: gcp.NewDetector,
-
-		IDHetzner: func() resource.Detector { return hetzner.NewResourceDetector() },
-
-		IDIBMCloudVPC: func() resource.Detector { return vpc.NewResourceDetector() },
-
-		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
-
-		IDKubeadm:   func() resource.Detector { return kubeadm.NewResourceDetector() },
-		IDOpenShift: func() resource.Detector { return openshift.NewResourceDetector() },
-
-		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
-
 		IDHost:   optFactory(resource.WithHost()),
 		IDHostID: optFactory(resource.WithHostID()),
 
@@ -206,8 +174,6 @@ var (
 		IDProcessRuntimeDescription: optFactory(resource.WithProcessRuntimeDescription()),
 
 		IDContainer: optFactory(resource.WithContainer()),
-
-		IDDocker: func() resource.Detector { return docker.NewResourceDetector() },
 	}
 )
 
