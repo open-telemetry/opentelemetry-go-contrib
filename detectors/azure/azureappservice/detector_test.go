@@ -26,6 +26,7 @@ func setAppServiceEnv(t *testing.T) {
 	// Not a Function; keep the success paths deterministic regardless of the
 	// ambient environment.
 	t.Setenv(functionsWorkerRuntimeEnvVar, "")
+	t.Setenv(functionsExtensionVersionEnvVar, "")
 }
 
 func fullExpectedAttrs() []attribute.KeyValue {
@@ -97,6 +98,7 @@ func TestDetectMissingOptionalEnvVars(t *testing.T) {
 	t.Setenv(slotNameEnvVar, "")
 	t.Setenv(instanceIDEnvVar, "")
 	t.Setenv(functionsWorkerRuntimeEnvVar, "")
+	t.Setenv(functionsExtensionVersionEnvVar, "")
 
 	res, err := (&ResourceDetector{}).Detect(t.Context())
 
@@ -138,16 +140,26 @@ func TestReturnsEmptyIfNotOnAppService(t *testing.T) {
 }
 
 func TestReturnsEmptyOnAzureFunctions(t *testing.T) {
-	// A Function sets the same WEBSITE_* gate variables plus
-	// FUNCTIONS_WORKER_RUNTIME; the App Service detector must defer to the
-	// Functions detector rather than claim it.
-	setAppServiceEnv(t)
-	t.Setenv(functionsWorkerRuntimeEnvVar, "dotnet-isolated")
+	for _, tt := range []struct {
+		name             string
+		workerRuntime    string
+		extensionVersion string
+	}{
+		{name: "worker runtime", workerRuntime: "dotnet-isolated"},
+		{name: "extension version", extensionVersion: "~4"},
+		{name: "both markers", workerRuntime: "dotnet-isolated", extensionVersion: "~4"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			setAppServiceEnv(t)
+			t.Setenv(functionsWorkerRuntimeEnvVar, tt.workerRuntime)
+			t.Setenv(functionsExtensionVersionEnvVar, tt.extensionVersion)
 
-	res, err := (&ResourceDetector{}).Detect(t.Context())
+			res, err := NewResourceDetector().Detect(t.Context())
 
-	assert.NoError(t, err)
-	assert.Equal(t, resource.Empty(), res)
+			assert.NoError(t, err)
+			assert.Equal(t, resource.Empty(), res)
+		})
+	}
 }
 
 func TestReturnsEmptyIfGateVarPartiallySet(t *testing.T) {
