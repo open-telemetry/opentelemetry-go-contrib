@@ -10,7 +10,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `ReadFrom` support to the internal response writer wrapper template shared by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to track copied bytes and the first error. (#9804)
 - Add `NewResourceDetectorWithOptions` and the `WithAWSLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom AWS SDK `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
 - Add `go.opentelemetry.io/contrib/detectors/openshift`, a new resource detector for OpenShift 4 clusters, ported from `processor/resourcedetectionprocessor/internal/openshift` in `opentelemetry-collector-contrib`. Detects `k8s.cluster.name`, and `cloud.provider`, `cloud.platform` and `cloud.region` for clusters running on AWS, Google Cloud and IBM Cloud; Azure clusters report `cloud.provider` and `cloud.platform` only. (#9499)
 - Add `go.opentelemetry.io/contrib/detectors/kubeadm`, a new resource detector for kubeadm-provisioned Kubernetes clusters, ported from `processor/resourcedetectionprocessor/internal/kubeadm` in `opentelemetry-collector-contrib`. Detects `k8s.cluster.name` from the `ClusterConfiguration` document in the `kube-system/kubeadm-config` ConfigMap and `k8s.cluster.uid` from the `kube-system` namespace UID. (#9500)
@@ -22,6 +21,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Server-side use of `ContextWithLabeler` / `LabelerFromContext` is unchanged. (#8924)
 - Stop emitting the legacy `http.read_bytes` and `http.wrote_bytes` attributes on the per-operation span events enabled by `WithMessageEvents` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
   The `read` and `write` events remain, while total body sizes continue to be recorded on the server span as `http.request.body.size` and `http.response.body.size` according to HTTP semantic conventions. (#9624)
+- Add `ReadFrom` support to the internal response writer wrapper template shared by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to track copied bytes and the first error. (#9804)
 
 ### Deprecated
 
