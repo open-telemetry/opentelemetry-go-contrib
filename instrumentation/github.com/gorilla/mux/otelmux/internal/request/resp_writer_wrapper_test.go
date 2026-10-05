@@ -79,30 +79,35 @@ func TestConcurrentRespWriterWrapper(t *testing.T) {
 	assert.NoError(t, rw.Error())
 }
 
-type failOnceResponseWriter struct {
+type errorResponseWriter struct {
 	*httptest.ResponseRecorder
-	err error
+	errs []error
 }
 
-func (w *failOnceResponseWriter) Write(p []byte) (int, error) {
-	if err := w.err; err != nil {
-		w.err = nil
+func (w *errorResponseWriter) Write(p []byte) (int, error) {
+	if len(w.errs) > 0 {
+		err := w.errs[0]
+		w.errs = w.errs[1:]
 		return 0, err
 	}
 	return w.ResponseRecorder.Write(p)
 }
 
 func TestRespWriterErrorKeepsFirstError(t *testing.T) {
-	want := errors.New("write failed")
-	rw := NewRespWriterWrapper(&failOnceResponseWriter{
+	first := errors.New("first write failed")
+	second := errors.New("second write failed")
+	rw := NewRespWriterWrapper(&errorResponseWriter{
 		ResponseRecorder: httptest.NewRecorder(),
-		err:              want,
+		errs:             []error{first, second},
 	}, func(int64) {})
 
-	_, err := rw.Write([]byte("hello"))
-	require.ErrorIs(t, err, want)
-	_, err = rw.Write([]byte("world"))
+	_, err := rw.Write([]byte("a"))
+	require.ErrorIs(t, err, first)
+	_, err = rw.Write([]byte("b"))
+	require.ErrorIs(t, err, second)
+	assert.ErrorIs(t, rw.Error(), first)
+	_, err = rw.Write([]byte("c"))
 	require.NoError(t, err)
 
-	assert.ErrorIs(t, rw.Error(), want)
+	assert.ErrorIs(t, rw.Error(), first)
 }
