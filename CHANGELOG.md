@@ -40,6 +40,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Type `AdditionalProperties` as `map[string]any` in the generated config structs of `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x` so `mapstructure`'s `,remain` decoder no longer fails on a bare `interface{}`. (#8850)
 - Treat empty Prometheus exporter environment variable values as unset in `go.opentelemetry.io/contrib/exporters/autoexport`, restoring the documented defaults. (#9636)
 - Bound converter-owned recursive map, slice, array, and pointer traversal in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`.
   A field requiring more than 100 such levels is replaced with `<max-depth-exceeded>` and the record continues to be emitted. Existing `fmt` and user-method behavior remains unchanged. (#9691)
