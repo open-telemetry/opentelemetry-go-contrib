@@ -4,23 +4,23 @@ go 1.26.0
 
 require (
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.5.3
-	go.opentelemetry.io/contrib/detectors/aws/ecs v1.46.0
-	go.opentelemetry.io/contrib/detectors/aws/eks v1.46.0
-	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.18.0
-	go.opentelemetry.io/contrib/detectors/aws/lambda v0.71.0
-	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.18.0
-	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.18.0
-	go.opentelemetry.io/contrib/detectors/docker v0.18.0
-	go.opentelemetry.io/contrib/detectors/gcp v1.46.0
-	go.opentelemetry.io/contrib/detectors/hetzner v0.18.0
-	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.18.0
-	go.opentelemetry.io/contrib/detectors/k8sapi v0.18.0
-	go.opentelemetry.io/contrib/detectors/kubeadm v0.18.0
-	go.opentelemetry.io/contrib/detectors/openshift v0.18.0
-	go.opentelemetry.io/contrib/detectors/vultr v0.18.0
-	go.opentelemetry.io/otel v1.47.0-rc.1.0.20260924072922-c131dcfc3885
-	go.opentelemetry.io/otel/sdk v1.47.0-rc.1.0.20260924072922-c131dcfc3885
+	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.6.0
+	go.opentelemetry.io/contrib/detectors/aws/ecs v1.47.0
+	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
+	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.19.0
+	go.opentelemetry.io/contrib/detectors/aws/lambda v0.72.0
+	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.19.0
+	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.19.0
+	go.opentelemetry.io/contrib/detectors/docker v0.19.0
+	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
+	go.opentelemetry.io/contrib/detectors/hetzner v0.19.0
+	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.19.0
+	go.opentelemetry.io/contrib/detectors/k8sapi v0.19.0
+	go.opentelemetry.io/contrib/detectors/kubeadm v0.19.0
+	go.opentelemetry.io/contrib/detectors/openshift v0.19.0
+	go.opentelemetry.io/contrib/detectors/vultr v0.19.0
+	go.opentelemetry.io/otel v1.47.0
+	go.opentelemetry.io/otel/sdk v1.47.0
 )
 
 require (
@@ -70,7 +70,7 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.29.2 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/hetznercloud/hcloud-go/v2 v2.49.0 // indirect
+	github.com/hetznercloud/hcloud-go/v2 v2.50.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/moby/api v1.56.1 // indirect
@@ -86,10 +86,10 @@ require (
 	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
-	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.71.0 // indirect
-	go.opentelemetry.io/otel/log v1.47.0-rc.1 // indirect
-	go.opentelemetry.io/otel/metric v1.47.0-rc.1.0.20260924072922-c131dcfc3885 // indirect
-	go.opentelemetry.io/otel/trace v1.47.0-rc.1.0.20260924072922-c131dcfc3885 // indirect
+	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0 // indirect
+	go.opentelemetry.io/otel/log v1.47.0 // indirect
+	go.opentelemetry.io/otel/metric v1.47.0 // indirect
+	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/net v0.59.0 // indirect
@@ -142,3 +142,5 @@ replace go.opentelemetry.io/contrib/detectors/docker => ../docker
 replace go.opentelemetry.io/contrib/detectors/kubeadm => ../kubeadm
 
 replace go.opentelemetry.io/contrib/detectors/openshift => ../openshift
+
+replace go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../instrumentation/net/http/otelhttp
