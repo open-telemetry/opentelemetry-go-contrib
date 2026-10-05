@@ -1,6 +1,9 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package detectors contains functionality to return resource
+// detectors that can be disabled via go build tags to avoid taking
+// on additional dependencies at compile time.
 package detectors
 
 import (
