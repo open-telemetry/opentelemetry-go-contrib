@@ -117,10 +117,20 @@ func TestRespWriterReadFromError(t *testing.T) {
 
 type readerFromRecorder struct {
 	*httptest.ResponseRecorder
+	writeErr      error
+	readFromCalls int
 	readFromBytes int64
 }
 
+func (r *readerFromRecorder) Write(p []byte) (int, error) {
+	if r.writeErr != nil {
+		return 0, r.writeErr
+	}
+	return r.ResponseRecorder.Write(p)
+}
+
 func (r *readerFromRecorder) ReadFrom(src io.Reader) (int64, error) {
+	r.readFromCalls++
 	n, err := io.Copy(r.ResponseRecorder, src)
 	r.readFromBytes += n
 	return n, err
@@ -171,18 +181,89 @@ func TestRespWriterReadFromKeepsHeaderUncommitted(t *testing.T) {
 }
 
 func TestRespWriterReadFromUsesUnderlyingReadFrom(t *testing.T) {
-	rec := httptest.NewRecorder()
-	rf := &readerFromRecorder{ResponseRecorder: rec}
-	var onWrite int64
-	rw := NewRespWriterWrapper(rf, func(n int64) { onWrite += n })
+	wantErr := errors.New("write failed")
+	tests := []struct {
+		name              string
+		setup             func(*testing.T, *RespWriterWrapper)
+		size              int
+		writeErr          error
+		wantN             int64
+		wantWritten       int64
+		wantReadFromCalls int
+		wantReadFromBytes int64
+		wantStatus        int
+	}{
+		{
+			name:              "prefix",
+			size:              2 * sniffLen,
+			wantN:             2 * sniffLen,
+			wantWritten:       2 * sniffLen,
+			wantReadFromCalls: 1,
+			wantReadFromBytes: sniffLen,
+			wantStatus:        http.StatusOK,
+		},
+		{
+			name: "header_already_written",
+			setup: func(_ *testing.T, rw *RespWriterWrapper) {
+				rw.WriteHeader(http.StatusCreated)
+			},
+			size:              2 * sniffLen,
+			wantN:             2 * sniffLen,
+			wantWritten:       2 * sniffLen,
+			wantReadFromCalls: 1,
+			wantReadFromBytes: 2 * sniffLen,
+			wantStatus:        http.StatusCreated,
+		},
+		{
+			name: "body_already_written",
+			setup: func(t *testing.T, rw *RespWriterWrapper) {
+				_, err := rw.Write([]byte("hello"))
+				require.NoError(t, err)
+			},
+			size:              2 * sniffLen,
+			wantN:             2 * sniffLen,
+			wantWritten:       5 + 2*sniffLen,
+			wantReadFromCalls: 1,
+			wantReadFromBytes: 2 * sniffLen,
+			wantStatus:        http.StatusOK,
+		},
+		{
+			name:              "exact_prefix",
+			size:              sniffLen,
+			wantN:             sniffLen,
+			wantWritten:       sniffLen,
+			wantReadFromCalls: 1,
+			wantStatus:        http.StatusOK,
+		},
+		{
+			name:       "prefix_write_error",
+			size:       2 * sniffLen,
+			writeErr:   wantErr,
+			wantStatus: http.StatusOK,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			rf := &readerFromRecorder{ResponseRecorder: rec, writeErr: tt.writeErr}
+			var onWrite int64
+			rw := NewRespWriterWrapper(rf, func(n int64) { onWrite += n })
+			if tt.setup != nil {
+				tt.setup(t, rw)
+			}
 
-	n, err := rw.ReadFrom(strings.NewReader(strings.Repeat("a", 2*sniffLen)))
-	require.NoError(t, err)
-
-	assert.Equal(t, int64(2*sniffLen), n)
-	assert.Equal(t, int64(2*sniffLen), rw.BytesWritten())
-	assert.Equal(t, int64(2*sniffLen), onWrite)
-	assert.Equal(t, int64(sniffLen), rf.readFromBytes, "bytes after the prefix use the underlying ReadFrom")
-	assert.Equal(t, 2*sniffLen, rec.Body.Len())
-	assert.Equal(t, http.StatusOK, rec.Code)
+			n, err := rw.ReadFrom(strings.NewReader(strings.Repeat("a", tt.size)))
+			require.ErrorIs(t, err, tt.writeErr)
+			assert.ErrorIs(t, rw.Error(), tt.writeErr)
+			assert.Equal(t, tt.wantN, n)
+			assert.Equal(t, tt.wantWritten, rw.BytesWritten())
+			assert.Equal(t, tt.wantWritten, onWrite)
+			assert.Equal(t, tt.wantReadFromCalls, rf.readFromCalls)
+			assert.Equal(t, tt.wantReadFromBytes, rf.readFromBytes)
+			assert.Equal(t, int(tt.wantWritten), rec.Body.Len())
+			assert.Equal(t, tt.wantStatus, rw.StatusCode())
+			assert.Equal(t, tt.wantStatus, rec.Code)
+			assert.True(t, rw.wroteHeader)
+		})
+	}
 }
