@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+- Updated the response writer wrapper in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to retain the first write error instead of letting a later successful write clear it. (#9790)
+
+### Deprecated
+
+### Fixed
+
+### Removed
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -49,7 +61,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The error check was inverted, so a clean shutdown (`http.ErrServerClosed`) was reported as unexpected while real `Serve` errors were ignored. (#9653)
 - Fix temporary file cleanup for multipart requests in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` by copying the parsed multipart form back to the original request during deferred cleanup, preserving `net/http` cleanup during panic unwinding for HTTP/2 panic handling and outer recovery middleware paths. Unrecovered HTTP/1 handler panics remain uncleaned because `net/http` skips `finishRequest` in that path. (#9685)
 - Fix `http.client.request.body.size` recording for streaming request bodies in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8684)
-- Fix the response writer wrapper in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to retain the first write error instead of letting a later successful write clear it. (#9790)
 - Bound Kubernetes ConfigMap requests in `go.opentelemetry.io/contrib/detectors/aws/eks` with a 10-second timeout so `Detect` cannot hang indefinitely when the caller-provided context has no deadline. (#9419)
 
 ### Removed
