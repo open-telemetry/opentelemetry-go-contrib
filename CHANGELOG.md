@@ -8,6 +8,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.47.0/2.6.0/0.72.0/0.38.0/0.27.0/0.21.0/0.17.0/0.19.0] - 2026-10-03
+
 ### Added
 
 - Add `NewResourceDetectorWithOptions` and the `WithAWSLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom AWS SDK `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
@@ -39,9 +44,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Bound converter-owned recursive map, slice, array, and pointer traversal in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`.
   A field requiring more than 100 such levels is replaced with `<max-depth-exceeded>` and the record continues to be emitted. Existing `fmt` and user-method behavior remains unchanged. (#9691)
 - Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
-- Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
 - Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, using the request context's cancellation error as the classification source when the handler has not already recorded an error via `c.Error`. Previously a disconnect was recorded with span status `Error` and no `error.type`, indistinguishable from a genuine server fault. (#9394)
-- Report genuine Prometheus metrics HTTP server errors instead of swallowing them in `go.opentelemetry.io/contrib/otelconf/v0.2.0`.
+- Report Prometheus metrics HTTP server errors in `go.opentelemetry.io/contrib/otelconf` when using the `v0.2.0` configuration schema.
   The error check was inverted, so a clean shutdown (`http.ErrServerClosed`) was reported as unexpected while real `Serve` errors were ignored. (#9653)
 - Fix temporary file cleanup for multipart requests in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` by copying the parsed multipart form back to the original request during deferred cleanup, preserving `net/http` cleanup during panic unwinding for HTTP/2 panic handling and outer recovery middleware paths. Unrecovered HTTP/1 handler panics remain uncleaned because `net/http` skips `finishRequest` in that path. (#9685)
 - Fix `http.client.request.body.size` recording for streaming request bodies in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8684)
@@ -52,9 +56,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Drop support for [Go 1.25]. (#9584)
 - Remove `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. Use `github.com/labstack/echo-opentelemetry` instead. (#9613)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
 
 ## [1.46.0/2.5.3/0.71.0/0.37.3/0.26.0/0.20.1/0.16.3/0.18.0] - 2026-08-25
 
@@ -1913,7 +1914,8 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.46.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.47.0...HEAD
+[1.47.0/2.6.0/0.72.0/0.38.0/0.27.0/0.21.0/0.17.0/0.19.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.47.0
 [1.46.0/2.5.3/0.71.0/0.37.3/0.26.0/0.20.1/0.16.3/0.18.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.46.0
 [1.45.0/2.5.2/0.70.0/0.37.2/0.25.0/0.20.0/0.16.2/0.17.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.45.0
 [1.44.0/2.5.1/0.69.0/0.37.1/0.24.0/0.19.0/0.16.1/0.16.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.44.0
