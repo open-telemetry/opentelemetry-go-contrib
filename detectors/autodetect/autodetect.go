@@ -8,7 +8,7 @@
 // its own file, guarded by a build tag named after it, so a build can leave it
 // out together with its dependencies:
 //
-//	go build -tags otelcontrib_no_docker,otelcontrib_no_hetzner
+//	go build -tags omit_detector_docker,omit_detector_hetzner
 //
 // All detectors are registered by default; see the register_*.go files for the
 // available tags.

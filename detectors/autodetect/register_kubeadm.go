@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !otelcontrib_no_kubeadm
+//go:build !omit_detector_kubeadm
 
 package autodetect
 

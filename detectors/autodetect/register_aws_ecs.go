@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-//go:build !otelcontrib_no_aws_ecs
+//go:build !omit_detector_aws_ecs
 
 package autodetect
 
