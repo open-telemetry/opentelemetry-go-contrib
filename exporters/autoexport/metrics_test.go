@@ -5,6 +5,7 @@ package autoexport
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -183,6 +184,75 @@ func TestMetricExporterPrometheusInvalidPort(t *testing.T) {
 
 	_, err := NewMetricReader(t.Context())
 	assert.ErrorContains(t, err, "binding")
+}
+
+func TestMetricReaderFallback(t *testing.T) {
+	t.Run("with manual reader", func(t *testing.T) {
+		ctx := t.Context()
+		fallbackReaderFactory := func(context.Context) (metric.Reader, error) {
+			return metric.NewManualReader(), nil
+		}
+
+		t.Setenv("OTEL_METRICS_EXPORTER", "")
+
+		got, err := NewMetricReader(ctx, WithFallbackMetricReader(fallbackReaderFactory))
+		assert.NoError(t, err)
+		assert.NotNil(t, got)
+		assert.IsType(t, &metric.ManualReader{}, got)
+		assert.NoError(t, got.Shutdown(ctx))
+	})
+
+	t.Run("error propagation", func(t *testing.T) {
+		expectedErr := errors.New("reader factory failed")
+		fallbackReaderFactory := func(context.Context) (metric.Reader, error) {
+			return nil, expectedErr
+		}
+
+		t.Setenv("OTEL_METRICS_EXPORTER", "")
+
+		got, err := NewMetricReader(t.Context(), WithFallbackMetricReader(fallbackReaderFactory))
+		assert.ErrorIs(t, err, expectedErr)
+		assert.Nil(t, got)
+	})
+}
+
+func TestMetricProducerFallback(t *testing.T) {
+	t.Run("with fallback producer", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_PRODUCERS", "")
+
+		expectedProducer := newNoopMetricProducer()
+		data, err := expectedProducer.Produce(t.Context())
+		assert.NoError(t, err)
+		assert.Nil(t, data)
+
+		WithFallbackMetricProducer(func(context.Context) (metric.Producer, error) {
+			return expectedProducer, nil
+		})
+		t.Cleanup(func() {
+			WithFallbackMetricProducer(nil)
+		})
+
+		producers, err := metricsProducers.create(t.Context())
+		assert.NoError(t, err)
+		require.Len(t, producers, 1)
+		assert.Equal(t, expectedProducer, producers[0])
+	})
+
+	t.Run("error propagation", func(t *testing.T) {
+		t.Setenv("OTEL_METRICS_PRODUCERS", "")
+
+		expectedErr := errors.New("producer factory failed")
+		WithFallbackMetricProducer(func(context.Context) (metric.Producer, error) {
+			return nil, expectedErr
+		})
+		t.Cleanup(func() {
+			WithFallbackMetricProducer(nil)
+		})
+
+		producers, err := metricsProducers.create(t.Context())
+		assert.ErrorIs(t, err, expectedErr)
+		assert.Nil(t, producers)
+	})
 }
 
 func TestMetricProducerPrometheusWithOTLPExporter(t *testing.T) {
