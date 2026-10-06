@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Fixed
+
+- Copy the parsed multipart form back onto the original request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` so net/http cleans up temporary files when the request is recycled. (#8851)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -50,7 +54,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix temporary file cleanup for multipart requests in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` by copying the parsed multipart form back to the original request during deferred cleanup, preserving `net/http` cleanup during panic unwinding for HTTP/2 panic handling and outer recovery middleware paths. Unrecovered HTTP/1 handler panics remain uncleaned because `net/http` skips `finishRequest` in that path. (#9685)
 - Fix `http.client.request.body.size` recording for streaming request bodies in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8684)
 - Bound Kubernetes ConfigMap requests in `go.opentelemetry.io/contrib/detectors/aws/eks` with a 10-second timeout so `Detect` cannot hang indefinitely when the caller-provided context has no deadline. (#9419)
-- Copy the parsed multipart form back onto the original request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` so net/http cleans up temporary files when the request is recycled. (#8851)
 
 ### Removed
 
