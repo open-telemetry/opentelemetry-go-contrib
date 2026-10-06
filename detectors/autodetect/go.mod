@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	github.com/stretchr/testify v1.12.1
+	go.opentelemetry.io/contrib/detectors/autodetect/registry v0.0.0-00010101000000-000000000000
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.6.0
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.47.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
@@ -144,3 +145,5 @@ replace go.opentelemetry.io/contrib/detectors/kubeadm => ../kubeadm
 replace go.opentelemetry.io/contrib/detectors/openshift => ../openshift
 
 replace go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../instrumentation/net/http/otelhttp
+
+replace go.opentelemetry.io/contrib/detectors/autodetect/registry => ./registry
