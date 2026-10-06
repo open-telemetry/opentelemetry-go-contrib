@@ -99,31 +99,48 @@ func TestSpanExporterOTLPOverInvalidProtocol(t *testing.T) {
 }
 
 func TestSpanExporterFallback(t *testing.T) {
-	t.Run("with console exporter", func(t *testing.T) {
-		ctx := t.Context()
-		fallbackExporterFactory := func(context.Context) (trace.SpanExporter, error) {
-			return stdouttrace.New()
-		}
+	testErr := errors.New("factory failed")
 
-		t.Setenv("OTEL_TRACES_EXPORTER", "")
+	testCases := []struct {
+		name        string
+		factory     func(context.Context) (trace.SpanExporter, error)
+		expectedErr error
+		verify      func(*testing.T, trace.SpanExporter)
+	}{
+		{
+			name: "success with console exporter",
+			factory: func(context.Context) (trace.SpanExporter, error) {
+				return stdouttrace.New()
+			},
+			verify: func(t *testing.T, got trace.SpanExporter) {
+				assert.NotNil(t, got)
+				assert.IsType(t, &stdouttrace.Exporter{}, got)
+				assert.NoError(t, got.Shutdown(t.Context()))
+			},
+		},
+		{
+			name: "error propagation",
+			factory: func(context.Context) (trace.SpanExporter, error) {
+				return nil, testErr
+			},
+			expectedErr: testErr,
+			verify: func(t *testing.T, got trace.SpanExporter) {
+				assert.Nil(t, got)
+			},
+		},
+	}
 
-		got, err := NewSpanExporter(ctx, WithFallbackSpanExporter(fallbackExporterFactory))
-		assert.NoError(t, err)
-		assert.NotNil(t, got)
-		assert.IsType(t, &stdouttrace.Exporter{}, got)
-		assert.NoError(t, got.Shutdown(ctx))
-	})
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_TRACES_EXPORTER", "")
 
-	t.Run("error propagation", func(t *testing.T) {
-		expectedErr := errors.New("factory failed")
-		fallbackExporterFactory := func(context.Context) (trace.SpanExporter, error) {
-			return nil, expectedErr
-		}
-
-		t.Setenv("OTEL_TRACES_EXPORTER", "")
-
-		got, err := NewSpanExporter(t.Context(), WithFallbackSpanExporter(fallbackExporterFactory))
-		assert.ErrorIs(t, err, expectedErr)
-		assert.Nil(t, got)
-	})
+			got, err := NewSpanExporter(t.Context(), WithFallbackSpanExporter(tc.factory))
+			if tc.expectedErr != nil {
+				assert.ErrorIs(t, err, tc.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+			tc.verify(t, got)
+		})
+	}
 }
