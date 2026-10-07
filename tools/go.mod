@@ -161,7 +161,7 @@ require (
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-runewidth v0.0.30 // indirect
-	github.com/mgechev/revive v1.17.0 // indirect
+	github.com/mgechev/revive v1.17.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/moricho/tparallel v0.3.2 // indirect
@@ -213,7 +213,7 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tetafro/godot v1.5.6 // indirect
 	github.com/timakin/bodyclose v0.0.0-20260923065923-98ded9ab4ef2 // indirect
-	github.com/timonwong/loggercheck v0.12.1 // indirect
+	github.com/timonwong/loggercheck v0.13.0 // indirect
 	github.com/tomarrell/wrapcheck/v2 v2.12.0 // indirect
 	github.com/tommy-muehle/go-mnd/v2 v2.5.1 // indirect
 	github.com/ultraware/funlen v0.2.0 // indirect
