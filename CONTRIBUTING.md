@@ -160,6 +160,7 @@ For more information about the triager role, see the [community repository](http
 - [Chester Cheung](https://github.com/hanyuancheung)
 - [Cheng-Zhen Yang](https://github.com/scorpionknifes)
 - [Evan Torrie](https://github.com/evantorrie)
+- [Flc゛](https://github.com/flc1125)
 - [Gustavo Silva Paiva](https://github.com/paivagustavo)
 - [Josh MacDonald](https://github.com/jmacd)
 
