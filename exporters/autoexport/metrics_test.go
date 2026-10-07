@@ -149,11 +149,65 @@ func TestMetricExporterPrometheus(t *testing.T) {
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer func() { assert.NoError(t, resp.Body.Close()) }()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
 	body, err := io.ReadAll(resp.Body)
 	require.NoError(t, err)
 	assert.Contains(t, string(body), "# HELP")
 
 	assert.NoError(t, mp.Shutdown(t.Context()))
+	goleak.VerifyNone(t)
+}
+
+func TestMetricExporterPrometheusWithGatherers(t *testing.T) {
+	assertNoOtelHandleErrors(t)
+
+	t.Setenv("OTEL_METRICS_EXPORTER", "prometheus")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_HOST", "127.0.0.1")
+	t.Setenv("OTEL_EXPORTER_PROMETHEUS_PORT", "0")
+
+	firstRegistry := prometheus.NewRegistry()
+	firstMetric := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "first_native_metric",
+		Help: "first native metric",
+	})
+	firstRegistry.MustRegister(firstMetric)
+	firstMetric.Inc()
+
+	secondRegistry := prometheus.NewRegistry()
+	secondMetric := prometheus.NewCounter(prometheus.CounterOpts{
+		Name: "second_native_metric",
+		Help: "second native metric",
+	})
+	secondRegistry.MustRegister(secondMetric)
+	secondMetric.Inc()
+
+	r, err := NewMetricReader(t.Context(),
+		WithPrometheusGatherer(firstRegistry),
+		WithPrometheusGatherer(secondRegistry),
+	)
+	require.NoError(t, err)
+
+	mp := metric.NewMeterProvider(metric.WithReader(r))
+	otelCounter, err := mp.Meter("test").Int64Counter("otel_native_gatherer_test")
+	require.NoError(t, err)
+	otelCounter.Add(t.Context(), 1)
+
+	rws, ok := r.(readerWithServer)
+	require.True(t, ok, "expected readerWithServer but got %v", r)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, fmt.Sprintf("http://%s/metrics", rws.addr), http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { assert.NoError(t, resp.Body.Close()) }()
+	assert.Equal(t, http.StatusOK, resp.StatusCode)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Contains(t, string(body), "first_native_metric")
+	assert.Contains(t, string(body), "second_native_metric")
+	assert.Contains(t, string(body), "otel_native_gatherer_test")
+
+	require.NoError(t, mp.Shutdown(t.Context()))
 	goleak.VerifyNone(t)
 }
 
