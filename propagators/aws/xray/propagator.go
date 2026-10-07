@@ -37,7 +37,7 @@ const (
 
 var (
 	empty                    = trace.SpanContext{}
-	errInvalidTraceHeader    = errors.New("invalid X-Amzn-Trace-Id header value, should contain 3 different part separated by ;")
+	errInvalidTraceHeader    = errors.New("invalid X-Amzn-Trace-Id header value, each field must be a key=value pair separated by ;")
 	errMalformedTraceID      = errors.New("cannot decode trace ID from header")
 	errLengthTraceIDHeader   = errors.New("incorrect length of X-Ray trace ID found, 35 character length expected")
 	errInvalidTraceIDVersion = errors.New("invalid X-Ray trace ID header found, does not have valid trace ID version")
@@ -81,7 +81,8 @@ func (Propagator) Extract(ctx context.Context, carrier propagation.TextMapCarrie
 	// extract tracing information
 	if header := carrier.Get(traceHeaderKey); header != "" {
 		sc, err := extract(header)
-		if err == nil && sc.IsValid() {
+		// AWS ALB may inject a header containing only the Root field without a Parent
+		if err == nil && sc.TraceID().IsValid() {
 			return trace.ContextWithRemoteSpanContext(ctx, sc)
 		}
 	}
