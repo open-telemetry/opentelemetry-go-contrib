@@ -51,6 +51,8 @@ jobs:
       run: make generate
     - name: Run linters
       run: make toolchain-check license-check lint
+    - name: Check issue component mappings
+      run: bash tools/ping_codeowners_issues_test.sh
     - name: Build
       run: make build
     - name: Check clean repository
