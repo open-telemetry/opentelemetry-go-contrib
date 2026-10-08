@@ -315,6 +315,7 @@ func prepareClientTraceTest(t *testing.T) clientTraceTestFixture {
 }
 
 func TestWithoutSubSpans(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 	fixture := prepareClientTraceTest(t)
 
 	ctx := t.Context()
@@ -360,10 +361,10 @@ func TestWithoutSubSpans(t *testing.T) {
 	assert.Equal(
 		t,
 		[]attribute.KeyValue{
-			attribute.Key("http.request.header.host").String(fixture.Address),
-			attribute.Key("http.request.header.user-agent").String("oteltest/1.1"),
-			attribute.Key("http.request.header.authorization").String("****"),
-			attribute.Key("http.request.header.accept-encoding").String("gzip"),
+			attribute.Key("http.request.header.host").StringSlice([]string{fixture.Address}),
+			attribute.Key("http.request.header.user-agent").StringSlice([]string{"oteltest/1.1"}),
+			attribute.Key("http.request.header.authorization").StringSlice([]string{"****"}),
+			attribute.Key("http.request.header.accept-encoding").StringSlice([]string{"gzip"}),
 		},
 		gotAttributes,
 	)
@@ -426,6 +427,7 @@ func TestWithoutSubSpans(t *testing.T) {
 }
 
 func TestWithRedactedHeaders(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
@@ -450,9 +452,9 @@ func TestWithRedactedHeaders(t *testing.T) {
 	assert.Equal(
 		t,
 		[]attribute.KeyValue{
-			attribute.Key("http.request.header.host").String(fixture.Address),
-			attribute.Key("http.request.header.user-agent").String("****"),
-			attribute.Key("http.request.header.accept-encoding").String("gzip"),
+			attribute.Key("http.request.header.host").StringSlice([]string{fixture.Address}),
+			attribute.Key("http.request.header.user-agent").StringSlice([]string{"****"}),
+			attribute.Key("http.request.header.accept-encoding").StringSlice([]string{"gzip"}),
 		},
 		gotAttributes,
 	)
@@ -484,6 +486,7 @@ func TestWithoutHeaders(t *testing.T) {
 }
 
 func TestWithInsecureHeaders(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
@@ -510,16 +513,143 @@ func TestWithInsecureHeaders(t *testing.T) {
 	assert.Equal(
 		t,
 		[]attribute.KeyValue{
-			attribute.Key("http.request.header.host").String(fixture.Address),
-			attribute.Key("http.request.header.user-agent").String("oteltest/1.1"),
-			attribute.Key("http.request.header.authorization").String("Bearer token123"),
-			attribute.Key("http.request.header.accept-encoding").String("gzip"),
+			attribute.Key("http.request.header.host").StringSlice([]string{fixture.Address}),
+			attribute.Key("http.request.header.user-agent").StringSlice([]string{"oteltest/1.1"}),
+			attribute.Key("http.request.header.authorization").StringSlice([]string{"Bearer token123"}),
+			attribute.Key("http.request.header.accept-encoding").StringSlice([]string{"gzip"}),
 		},
 		gotAttributes,
 	)
 }
 
+func TestHeaderAttributesUseSemconvValuesAndNames(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
+	fixture := prepareClientTraceTest(t)
+
+	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
+	clientTrace := otelhttptrace.NewClientTrace(ctx, otelhttptrace.WithoutSubSpans())
+	clientTrace.GetConn("example.com:443")
+	clientTrace.WroteHeaderField("Authorization", []string{"Bearer secret", "another secret"})
+	firstValue := []string{"first"}
+	clientTrace.WroteHeaderField("X-Custom-Header", firstValue)
+	firstValue[0] = "mutated"
+	clientTrace.WroteHeaderField("x-custom-header", []string{"second"})
+	retainedValue := []string{"original"}
+	clientTrace.WroteHeaderField("X-Retained-Header", retainedValue)
+	retainedValue[0] = "mutated"
+	for _, name := range []string{":authority", ":method", ":path", ":scheme"} {
+		clientTrace.WroteHeaderField(name, []string{"pseudo-header"})
+	}
+	span.End()
+
+	require.Len(t, fixture.SpanRecorder.Ended(), 1)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		attribute.Key("http.request.header.authorization").StringSlice([]string{"****"}),
+		attribute.Key("http.request.header.x-custom-header").StringSlice([]string{"first", "second"}),
+		attribute.Key("http.request.header.x-retained-header").StringSlice([]string{"original"}),
+	}, fixture.SpanRecorder.Ended()[0].Attributes())
+}
+
+func TestHeaderAttributeSemconvStability(t *testing.T) {
+	tests := []struct {
+		name   string
+		optIn  string
+		stable bool
+	}{
+		{name: "default legacy behavior"},
+		{name: "http opt-in", optIn: "http", stable: true},
+		{name: "http dup with whitespace and unrelated token", optIn: " database , http/dup ", stable: true},
+		{name: "invalid token", optIn: "http/old"},
+		{name: "unrelated token", optIn: "database"},
+		{name: "valid token among invalid tokens", optIn: "unknown, http, http/old", stable: true},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", tc.optIn)
+			fixture := prepareClientTraceTest(t)
+
+			ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
+			clientTrace := otelhttptrace.NewClientTrace(ctx, otelhttptrace.WithoutSubSpans())
+			clientTrace.GetConn("example.test:80")
+			clientTrace.WroteHeaderField("X-Joined", []string{"one", "two"})
+			clientTrace.WroteHeaderField("X-Repeated", []string{"first"})
+			clientTrace.WroteHeaderField("x-repeated", []string{"second", "third"})
+			clientTrace.WroteHeaderField("Authorization", []string{"secret", "another secret"})
+			clientTrace.WroteHeaderField(":authority", []string{"example.test"})
+			span.End()
+
+			require.Len(t, fixture.SpanRecorder.Ended(), 1)
+			attrs := make(map[attribute.Key]attribute.Value)
+			for _, kv := range fixture.SpanRecorder.Ended()[0].Attributes() {
+				attrs[kv.Key] = kv.Value
+			}
+
+			if tc.stable {
+				assert.Equal(
+					t,
+					attribute.StringSlice("http.request.header.x-joined", []string{"one", "two"}).Value,
+					attrs[attribute.Key("http.request.header.x-joined")],
+				)
+				assert.Equal(
+					t,
+					attribute.StringSlice("http.request.header.x-repeated", []string{"first", "second", "third"}).Value,
+					attrs[attribute.Key("http.request.header.x-repeated")],
+				)
+				assert.Equal(
+					t,
+					attribute.StringSlice("http.request.header.authorization", []string{"****"}).Value,
+					attrs[attribute.Key("http.request.header.authorization")],
+				)
+				assert.NotContains(t, attrs, attribute.Key("http.request.header.:authority"))
+				return
+			}
+
+			assert.Equal(
+				t,
+				attribute.String("http.request.header.x-joined", "one,two").Value,
+				attrs[attribute.Key("http.request.header.x-joined")],
+			)
+			// The legacy callback behavior keeps the most recent scalar value.
+			assert.Equal(
+				t,
+				attribute.String("http.request.header.x-repeated", "second,third").Value,
+				attrs[attribute.Key("http.request.header.x-repeated")],
+			)
+			assert.Equal(
+				t,
+				attribute.String("http.request.header.authorization", "****").Value,
+				attrs[attribute.Key("http.request.header.authorization")],
+			)
+			assert.Equal(
+				t,
+				attribute.String("http.request.header.:authority", "example.test").Value,
+				attrs[attribute.Key("http.request.header.:authority")],
+			)
+		})
+	}
+}
+
+func TestHeaderAttributesResetAfterWroteHeaders(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
+	fixture := prepareClientTraceTest(t)
+
+	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
+	clientTrace := otelhttptrace.NewClientTrace(ctx, otelhttptrace.WithoutSubSpans())
+	clientTrace.GetConn("example.com:443")
+	clientTrace.WroteHeaderField("X-Request-ID", []string{"first"})
+	clientTrace.WroteHeaderField("x-request-id", []string{"second"})
+	clientTrace.WroteHeaders()
+	clientTrace.WroteHeaderField("X-Request-ID", []string{"third"})
+	span.End()
+
+	require.Len(t, fixture.SpanRecorder.Ended(), 1)
+	assert.Equal(t, []attribute.KeyValue{
+		attribute.Key("http.request.header.x-request-id").StringSlice([]string{"third"}),
+	}, fixture.SpanRecorder.Ended()[0].Attributes())
+}
+
 func TestSubSpansHeaderAttributes(t *testing.T) {
+	t.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "http")
 	fixture := prepareClientTraceTest(t)
 
 	ctx, span := otel.Tracer("oteltest").Start(t.Context(), "root")
@@ -551,8 +681,18 @@ func TestSubSpansHeaderAttributes(t *testing.T) {
 		"header attribute should be recorded on a span")
 	assert.Contains(t, allAttrs, attribute.Key("http.request.header.user-agent"),
 		"header attribute should be recorded on a span")
+	assert.Equal(
+		t,
+		[]string{"oteltest/1.1"},
+		allAttrs[attribute.Key("http.request.header.user-agent")].AsStringSlice(),
+	)
 	assert.Contains(t, allAttrs, attribute.Key("http.request.header.authorization"),
 		"header attribute should be recorded on a span (redacted)")
+	assert.Equal(
+		t,
+		[]string{"****"},
+		allAttrs[attribute.Key("http.request.header.authorization")].AsStringSlice(),
+	)
 }
 
 func TestHTTPRequestWithTraceContext(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"crypto/tls"
 	"net/http/httptrace"
 	"net/textproto"
+	"os"
 	"strings"
 	"sync"
 
@@ -41,6 +42,22 @@ var hookMap = map[string]string{
 	"http.dns":     "http.getconn",
 	"http.connect": "http.getconn",
 	"http.tls":     "http.getconn",
+}
+
+const semconvStabilityOptInEnv = "OTEL_SEMCONV_STABILITY_OPT_IN"
+
+func useStableHeaderSemconv() bool {
+	for _, token := range strings.Split(os.Getenv(semconvStabilityOptInEnv), ",") {
+		switch strings.TrimSpace(token) {
+		case "http":
+			return true
+		case "http/dup":
+			// The legacy scalar and stable string-slice forms share one key, so
+			// http/dup selects the stable form instead of emitting both.
+			return true
+		}
+	}
+	return false
 }
 
 func parentHook(hook string) string {
@@ -90,7 +107,7 @@ func WithoutSubSpans() ClientTraceOption {
 func WithRedactedHeaders(headers ...string) ClientTraceOption {
 	return clientTraceOptionFunc(func(ct *clientTracer) {
 		for _, header := range headers {
-			ct.redactedHeaders[strings.ToLower(header)] = struct{}{}
+			ct.headerAttributes[strings.ToLower(header)] = headerAttribute{redacted: true}
 		}
 	})
 }
@@ -111,7 +128,7 @@ func WithoutHeaders() ClientTraceOption {
 func WithInsecureHeaders() ClientTraceOption {
 	return clientTraceOptionFunc(func(ct *clientTracer) {
 		ct.addHeaders = true
-		ct.redactedHeaders = nil
+		clear(ct.headerAttributes)
 	})
 }
 
@@ -132,13 +149,19 @@ type clientTracer struct {
 
 	tr trace.Tracer
 
-	activeHooks     map[string]context.Context
-	root            trace.Span
-	mtx             sync.Mutex
-	redactedHeaders map[string]struct{}
-	addHeaders      bool
-	useSpans        bool
-	semconv         semconv.HTTPClient
+	activeHooks         map[string]context.Context
+	root                trace.Span
+	mtx                 sync.Mutex
+	headerAttributes    map[string]headerAttribute
+	addHeaders          bool
+	stableHeaderSemconv bool
+	useSpans            bool
+	semconv             semconv.HTTPClient
+}
+
+type headerAttribute struct {
+	values   []string
+	redacted bool
 }
 
 // NewClientTrace returns an httptrace.ClientTrace implementation that will
@@ -148,21 +171,28 @@ type clientTracer struct {
 // added as attributes to spans, although several headers will be automatically
 // redacted: Authorization, WWW-Authenticate, Proxy-Authenticate,
 // Proxy-Authorization, Cookie, and Set-Cookie.
+//
+// Header attributes retain their legacy comma-joined string values by default.
+// Setting OTEL_SEMCONV_STABILITY_OPT_IN to a comma-separated value containing
+// "http" or "http/dup" opts into string-slice values and omits HTTP/2
+// pseudo-headers. Since both forms use the same attribute key, "http/dup"
+// emits only the stable string-slice form for header attributes.
 func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.ClientTrace {
 	ct := &clientTracer{
 		Context:     ctx,
 		activeHooks: make(map[string]context.Context),
-		redactedHeaders: map[string]struct{}{
-			"authorization":       {},
-			"www-authenticate":    {},
-			"proxy-authenticate":  {},
-			"proxy-authorization": {},
-			"cookie":              {},
-			"set-cookie":          {},
+		headerAttributes: map[string]headerAttribute{
+			"authorization":       {redacted: true},
+			"www-authenticate":    {redacted: true},
+			"proxy-authenticate":  {redacted: true},
+			"proxy-authorization": {redacted: true},
+			"cookie":              {redacted: true},
+			"set-cookie":          {redacted: true},
 		},
-		addHeaders: true,
-		useSpans:   true,
-		semconv:    semconv.NewHTTPClient(nil),
+		addHeaders:          true,
+		stableHeaderSemconv: useStableHeaderSemconv(),
+		useSpans:            true,
+		semconv:             semconv.NewHTTPClient(nil),
 	}
 
 	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
@@ -339,6 +369,10 @@ func (ct *clientTracer) tlsHandshakeDone(_ tls.ConnectionState, err error) {
 }
 
 func (ct *clientTracer) wroteHeaderField(k string, v []string) {
+	// HTTP/2 pseudo-headers are omitted in stable HTTP semantic conventions.
+	if ct.stableHeaderSemconv && strings.HasPrefix(k, ":") {
+		return
+	}
 	if ct.useSpans && ct.span("http.headers") == nil {
 		ct.start("http.headers", "http.headers")
 	}
@@ -346,14 +380,43 @@ func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 		return
 	}
 	k = strings.ToLower(k)
-	value := sliceToString(v)
-	if _, ok := ct.redactedHeaders[k]; ok {
-		value = "****"
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+	state, seen := ct.headerAttributes[k]
+	if !ct.stableHeaderSemconv {
+		value := sliceToString(v)
+		if state.redacted {
+			value = "****"
+		}
+		ct.root.SetAttributes(attribute.String("http.request.header."+k, value))
+		return
 	}
-	ct.root.SetAttributes(attribute.String("http.request.header."+k, value))
+
+	var values []string
+	switch {
+	case state.redacted:
+		values = []string{"****"}
+	case seen && state.values != nil:
+		values = make([]string, 0, len(state.values)+len(v))
+		values = append(values, state.values...)
+		values = append(values, v...)
+	default:
+		// Keep aggregation state independent of callback-owned storage.
+		values = append([]string(nil), v...)
+	}
+	ct.headerAttributes[k] = headerAttribute{values: values, redacted: state.redacted}
+	ct.root.SetAttributes(attribute.StringSlice("http.request.header."+k, values))
 }
 
 func (ct *clientTracer) wroteHeaders() {
+	ct.mtx.Lock()
+	for key, value := range ct.headerAttributes {
+		if !value.redacted {
+			delete(ct.headerAttributes, key)
+		}
+	}
+	ct.mtx.Unlock()
+
 	if ct.useSpans && ct.span("http.headers") != nil {
 		ct.end("http.headers", nil)
 	}

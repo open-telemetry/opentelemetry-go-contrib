@@ -8,6 +8,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Changed
+
+- Support `OTEL_SEMCONV_STABILITY_OPT_IN=http` and `http/dup` for `http.request.header.<key>` span attributes in `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`.
+  The default remains the legacy comma-joined string value. Either opt-in emits the stable string-slice value and omits HTTP/2 pseudo-headers. Because the legacy and stable values share an attribute key but have incompatible types, `http/dup` emits only the stable value for header attributes.
+  Consumers opting in should replace `attribute.Value.AsString()` with `attribute.Value.AsStringSlice()` and handle each header value separately. (#9781)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
