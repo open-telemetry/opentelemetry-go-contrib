@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+- Updated the response writer wrapper in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to retain the first write error instead of letting a later successful write clear it. (#9790)
+
+### Deprecated
+
+### Fixed
+
+### Removed
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
