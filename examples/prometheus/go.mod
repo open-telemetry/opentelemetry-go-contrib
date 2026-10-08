@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/examples/prometheus
 go 1.26.0
 
 require (
-	github.com/prometheus/client_golang v1.24.1
+	github.com/prometheus/client_golang v1.25.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/prometheus v0.69.0
 	go.opentelemetry.io/otel/metric v1.47.0
