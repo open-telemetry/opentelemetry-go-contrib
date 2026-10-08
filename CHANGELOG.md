@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `go.opentelemetry.io/contrib/detectors/autodetect/registry`, holding the detector registry and the detectors that need nothing beyond the SDK. Import it instead of `autodetect` to register only the detectors a build needs and keep the dependencies of the others out of the module graph. `autodetect` keeps registering every detector, so existing users are unaffected. (#9832)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
