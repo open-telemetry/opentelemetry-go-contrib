@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add the `db.operation.name` attribute to DynamoDB spans in the default attribute builder of `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#8295)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
