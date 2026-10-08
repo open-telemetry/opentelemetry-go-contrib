@@ -8,6 +8,18 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+- Add `ReadFrom` support to the internal response writer wrapper template shared by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to track copied bytes and the first error. (#9804)
+
+### Deprecated
+
+### Fixed
+
+### Removed
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
