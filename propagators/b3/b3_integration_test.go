@@ -60,6 +60,64 @@ func TestExtractB3(t *testing.T) {
 	}
 }
 
+func TestExtractB3ReplacesSamplingState(t *testing.T) {
+	const (
+		traceID = "463ac35c9f6413ad48485a3953bb6124"
+		spanID  = "a2fb4a1d1a96d312"
+	)
+	for _, previous := range []string{"debug", "deferred"} {
+		for _, encoding := range []string{"single", "multiple"} {
+			for _, sampling := range []string{"0", "1", "d", ""} {
+				t.Run(previous+"/"+encoding+"/"+sampling, func(t *testing.T) {
+					propagator := b3.New()
+					previousHeader := "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7"
+					if previous == "debug" {
+						previousHeader += "-d"
+					}
+					parent := propagator.Extract(t.Context(), propagation.MapCarrier{b3Context: previousHeader})
+					wantHeader := traceID + "-" + spanID
+					if sampling != "" {
+						wantHeader += "-" + sampling
+					}
+					header := propagation.MapCarrier{b3Context: wantHeader}
+					if encoding == "multiple" {
+						header = propagation.MapCarrier{b3TraceID: traceID, b3SpanID: spanID}
+						if sampling == "d" {
+							header[b3Flags] = "1"
+						} else if sampling != "" {
+							header[b3Sampled] = sampling
+						}
+					}
+					ctx := propagator.Extract(parent, header)
+					assert.True(t, trace.SpanContextFromContext(ctx).IsRemote())
+					assert.Equal(t, sampling == "1" || sampling == "d", trace.SpanContextFromContext(ctx).IsSampled())
+					injected := propagation.MapCarrier{}
+					propagator.Inject(ctx, injected)
+					assert.Equal(t, wantHeader, injected[b3Context])
+					propagator.Inject(parent, injected)
+					assert.Equal(t, previousHeader, injected[b3Context])
+				})
+			}
+		}
+	}
+}
+
+func TestExtractB3PreservesDebugWithoutValidSpanContext(t *testing.T) {
+	const parentHeader = "4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-d"
+	propagator := b3.New()
+	parent := propagator.Extract(t.Context(), propagation.MapCarrier{b3Context: parentHeader})
+	for _, header := range []propagation.MapCarrier{
+		{},
+		{b3TraceID: "invalid", b3SpanID: "invalid"},
+		{b3Context: "0"},
+	} {
+		ctx := propagator.Extract(parent, header)
+		injected := propagation.MapCarrier{}
+		propagator.Inject(ctx, injected)
+		assert.Equal(t, parentHeader, injected[b3Context])
+	}
+}
+
 type testSpan struct {
 	trace.Span
 	sc trace.SpanContext
