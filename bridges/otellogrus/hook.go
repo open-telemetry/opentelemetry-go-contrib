@@ -34,6 +34,8 @@
 package otellogrus
 
 import (
+	"context"
+
 	"github.com/sirupsen/logrus"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -169,6 +171,9 @@ func (h *Hook) Levels() []logrus.Level {
 // Fire handles the passed record, and sends it to OpenTelemetry.
 func (h *Hook) Fire(entry *logrus.Entry) error {
 	ctx := entry.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	h.logger.Emit(ctx, h.convertEntry(entry))
 	return nil
 }
