@@ -176,6 +176,9 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Flush: func(httpsnoop.FlushFunc) httpsnoop.FlushFunc {
 			return rww.Flush
 		},
+		ReadFrom: func(httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
+			return rww.ReadFrom
+		},
 	})
 
 	rCtx := r.WithContext(ctx)

@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Preserve explicit Unix epoch timestamps (`TimestampMs = 0`) instead of replacing them with the current time in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9837)
+- Fix response body size tracking when `http.response` uses the `io.ReaderFrom` fast path in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, ensuring copied bytes are included in `http.response.body.size` spans and `http.server.response.body.size` metrics. (#9773)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

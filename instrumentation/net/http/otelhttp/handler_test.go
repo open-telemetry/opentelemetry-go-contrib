@@ -4,6 +4,8 @@
 package otelhttp
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -885,6 +887,102 @@ func TestMessageEventAttributes(t *testing.T) {
 	}
 }
 
+func TestBodyReadFrom_RecordsResponseSize(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(spanRecorder),
+	)
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Buffer the request body first to avoid reading from it after it has been closed.
+			buff := bytes.NewBuffer(nil)
+			_, err := io.Copy(buff, r.Body)
+			assert.NoError(t, err)
+
+			_, err = io.Copy(w, struct{ io.Reader }{buff})
+			assert.NoError(t, err)
+		}),
+		"test_handler",
+		WithTracerProvider(provider),
+	)
+
+	// Using a real http.Server because httptest.ResponseRecorder does not implement
+	// ReadFrom, while the internal http.response type does.
+	server := httptest.NewServer(h)
+	defer server.Close()
+
+	// Keep the body larger than the buffer used by net/http.copyBufPoolSize copy path.
+	bodySize := 64 * 1024
+	payload := strings.Repeat("0", bodySize)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL, strings.NewReader(payload))
+	require.NoError(t, err)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	_, err = io.Copy(io.Discard, resp.Body)
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+
+	require.Len(t, spanRecorder.Ended(), 1)
+
+	firstSpan := spanRecorder.Ended()[0]
+	assert.Contains(t, firstSpan.Attributes(), attribute.Int("http.request.body.size", bodySize))
+	assert.Contains(t, firstSpan.Attributes(), attribute.Int("http.response.body.size", bodySize))
+	assert.Contains(t, firstSpan.Attributes(), attribute.Int("http.response.status_code", http.StatusOK))
+
+	for _, attr := range firstSpan.Attributes() {
+		assert.NotEqual(t, attribute.Key("http.read_bytes"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.read_error"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.wrote_bytes"), attr.Key)
+		assert.NotEqual(t, attribute.Key("http.write_error"), attr.Key)
+	}
+}
+
+func TestBodyReadFrom_RecordsBytesBeforeReadError(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(spanRecorder),
+	)
+
+	bodySize := 64 * 1024
+	reader := &failAtEOFReader{
+		reader: strings.NewReader(strings.Repeat("0", bodySize)),
+		err:    errors.New("error at eof reader"),
+	}
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			_, err := io.Copy(w, reader)
+			assert.Error(t, err)
+		}),
+		"test_handler",
+		WithTracerProvider(provider),
+	)
+
+	// Using a real http.Server because httptest.ResponseRecorder does not implement
+	// ReadFrom, while the internal http.response type does.
+	server := httptest.NewServer(h)
+	defer server.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, server.URL, http.NoBody)
+	require.NoError(t, err)
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	n, err := io.Copy(io.Discard, resp.Body)
+	require.NoError(t, err)
+	require.Equal(t, int64(bodySize), n)
+	defer resp.Body.Close()
+
+	require.Len(t, spanRecorder.Ended(), 1)
+
+	firstSpan := spanRecorder.Ended()[0]
+	assert.Contains(t, firstSpan.Attributes(), attribute.Int("http.response.body.size", bodySize))
+	// Even if copying from the reader fails, http.response may have already committed a 200 status.
+	assert.Contains(t, firstSpan.Attributes(), attribute.Int("http.response.status_code", http.StatusOK))
+}
+
 func BenchmarkHandlerServeHTTP(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()
@@ -924,4 +1022,19 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 			}
 		})
 	}
+}
+
+// failAtEOFReader returns an error only after the underlying reader reaches EOF,
+// allowing buffered copies to write some data before the final read fails.
+type failAtEOFReader struct {
+	reader io.Reader
+	err    error
+}
+
+func (r *failAtEOFReader) Read(p []byte) (n int, err error) {
+	n, err = r.reader.Read(p)
+	if err == io.EOF {
+		return n, r.err
+	}
+	return n, err
 }

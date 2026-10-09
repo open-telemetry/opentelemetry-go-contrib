@@ -19,7 +19,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
@@ -206,8 +209,8 @@ func (*testResponseWriter) Flush() {
 }
 
 // implement io.ReaderFrom.
-func (*testResponseWriter) ReadFrom(io.Reader) (int64, error) {
-	return 0, nil
+func (rw *testResponseWriter) ReadFrom(r io.Reader) (int64, error) {
+	return rw.writer.(io.ReaderFrom).ReadFrom(r)
 }
 
 func TestResponseWriterInterfaces(t *testing.T) {
@@ -301,6 +304,45 @@ func TestPassthroughSpanFromGlobalTracerWithBody(t *testing.T) {
 	assert.True(t, called, "failed to run test")
 	assert.Equal(t, http.StatusCreated, w.Code, "unexpected status code")
 	assert.JSONEq(t, expectedBody, w.Body.String(), "unexpected response body")
+}
+
+func TestTrackingResponseBody_ReaderFrom(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(spanRecorder),
+	)
+
+	const bodySize = 64 * 1024
+	bodyReader := strings.NewReader(strings.Repeat("0", bodySize))
+	router := mux.NewRouter()
+	router.Use(Middleware("reader-from", WithTracerProvider(provider)))
+
+	router.HandleFunc("/readers", func(w http.ResponseWriter, _ *http.Request) {
+		// Hide io.WriterTo so io.Copy uses the ResponseWriter's io.ReaderFrom path.
+		_, err := io.Copy(w, struct{ io.Reader }{bodyReader})
+		assert.NoError(t, err)
+	}).Methods(http.MethodGet)
+
+	server := httptest.NewServer(router)
+	defer server.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL+"/readers", http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+
+	written, err := io.Copy(io.Discard, resp.Body)
+	require.NoError(t, err)
+
+	require.Len(t, spanRecorder.Ended(), 1)
+	span := spanRecorder.Ended()[0]
+
+	// Validate the assertions
+	assert.Equal(t, http.StatusOK, resp.StatusCode, "unexpected status code")
+	assert.Equal(t, int64(bodySize), written, "unexpected response size")
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.body.size", bodySize))
 }
 
 func TestHeaderAlreadyWrittenWhenFlushing(t *testing.T) {

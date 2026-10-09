@@ -7,11 +7,14 @@
 package request
 
 import (
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRespWriterWriteHeader(t *testing.T) {
@@ -75,4 +78,56 @@ func TestConcurrentRespWriterWrapper(t *testing.T) {
 	assert.NotNil(t, rw.BytesWritten())
 	assert.NotNil(t, rw.StatusCode())
 	assert.NoError(t, rw.Error())
+}
+
+type responseWriterReaderFrom struct {
+	httptest.ResponseRecorder
+}
+
+func (w *responseWriterReaderFrom) ReadFrom(r io.Reader) (int64, error) {
+	return io.Copy(&w.ResponseRecorder, r)
+}
+
+func TestRespWriterReaderFrom(t *testing.T) {
+	rw := NewRespWriterWrapper(&responseWriterReaderFrom{}, func(int64) {})
+
+	reader := strings.NewReader("hello world")
+	n, err := rw.ReadFrom(reader)
+	require.NoError(t, err)
+	assert.EqualValues(t, len("hello world"), n)
+}
+
+func TestRespWriterReaderFromUnsupported(t *testing.T) {
+	rw := NewRespWriterWrapper(&httptest.ResponseRecorder{}, func(int64) {})
+
+	_, err := rw.ReadFrom(nil)
+	assert.EqualError(t, err, "response writer does not implement io.ReaderFrom")
+}
+
+type readerResponseWriteStream struct {
+	writer  http.ResponseWriter
+	source  io.Reader
+	flushed bool
+}
+
+func (rws *readerResponseWriteStream) Read(b []byte) (int, error) {
+	rws.flushed = true
+	rws.writer.(http.Flusher).Flush()
+	return rws.source.Read(b)
+}
+
+func TestRespWriterReadFromDeadlockOnFlush(t *testing.T) {
+	rw := NewRespWriterWrapper(&responseWriterReaderFrom{}, func(int64) {})
+
+	readerStream := &readerResponseWriteStream{
+		writer: rw,
+		source: strings.NewReader("hello world"),
+	}
+
+	n, err := rw.ReadFrom(readerStream)
+	require.NoError(t, err)
+	assert.EqualValues(t, len("hello world"), n)
+	assert.EqualValues(t, len("hello world"), rw.BytesWritten())
+	assert.Equal(t, http.StatusOK, rw.StatusCode())
+	assert.True(t, readerStream.flushed)
 }
