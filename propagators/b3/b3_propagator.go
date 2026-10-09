@@ -205,7 +205,7 @@ func parseHexBytes(dst []byte, s string) bool {
 	if len(s) != len(dst)*2 {
 		return false
 	}
-	for i := 0; i < len(dst); i++ {
+	for i := range dst {
 		hi, ok1 := decodeHexNibble(s[i*2])
 		lo, ok2 := decodeHexNibble(s[i*2+1])
 		if !ok1 || !ok2 {
