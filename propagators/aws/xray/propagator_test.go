@@ -113,6 +113,14 @@ func TestExtract(t *testing.T) {
 			wantSpanID:  "1234567890abcdef",
 			wantSampled: true,
 		},
+		{
+			name:        "Valid header with auxiliary prefix-matching keys",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=1;ParentType=AWS::Lambda;RootCause=db_timeout;SampledBy=gateway",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: true,
+		},
 	}
 
 	for _, tc := range tests {
