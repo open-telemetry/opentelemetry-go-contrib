@@ -107,24 +107,23 @@ func extract(headerVal string) (trace.SpanContext, error) {
 			part = strings.TrimSpace(headerVal[pos:])
 			pos = len(headerVal)
 		}
-		_, after, ok := strings.Cut(part, kvDelimiter)
+		key, value, ok := strings.Cut(part, kvDelimiter)
 		if !ok {
 			return empty, errInvalidTraceHeader
 		}
-		value := after
-		switch {
-		case strings.HasPrefix(part, traceIDKey):
+		switch key {
+		case traceIDKey:
 			scc.TraceID, err = parseTraceID(value)
 			if err != nil {
 				return empty, err
 			}
-		case strings.HasPrefix(part, parentIDKey):
+		case parentIDKey:
 			// extract parentId
 			scc.SpanID, err = trace.SpanIDFromHex(value)
 			if err != nil {
 				return empty, errInvalidSpanIDLength
 			}
-		case strings.HasPrefix(part, sampleFlagKey):
+		case sampleFlagKey:
 			// extract traceflag
 			scc.TraceFlags = parseTraceFlag(value)
 		}

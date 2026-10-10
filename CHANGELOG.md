@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray` to prevent auxiliary fields with prefix-sharing keys from dropping trace contexts. (#9879)
 - Preserve explicit Unix epoch timestamps (`TimestampMs = 0`) instead of replacing them with the current time in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9837)
 
 <!-- Released section -->
