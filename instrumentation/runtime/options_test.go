@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/goconv"
 )
 
 func TestNewConfig(t *testing.T) {
@@ -36,6 +37,25 @@ func TestNewConfig(t *testing.T) {
 			assert.True(t, configEqual(got, tt.expect))
 		})
 	}
+}
+
+func TestOptInEnabled(t *testing.T) {
+	c := newConfig(WithOptInMetrics(MemoryGCCycles))
+	assert.True(t, c.optInEnabled(MemoryGCCycles))
+	assert.False(t, c.optInEnabled(CPUTime))
+
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.cpu.time")
+	assert.True(t, c.optInEnabled(MemoryGCCycles))
+	assert.True(t, c.optInEnabled(CPUTime))
+
+	p := newProducerConfig(WithOptInMetrics(MemoryGCPauseDuration))
+	assert.True(t, p.optInEnabled(MemoryGCPauseDuration))
+}
+
+func TestOptInMetricString(t *testing.T) {
+	assert.Equal(t, goconv.MemoryGCCyclesObservable{}.Name(), MemoryGCCycles.String())
+	assert.Equal(t, goconv.CPUTimeObservable{}.Name(), CPUTime.String())
+	assert.Equal(t, goconv.MemoryGCPauseDuration{}.Name(), MemoryGCPauseDuration.String())
 }
 
 func configEqual(a, b config) bool {

@@ -5,6 +5,7 @@ package runtime
 
 import (
 	"math"
+	goruntime "runtime"
 	"runtime/debug"
 	"testing"
 	"time"
@@ -176,6 +177,112 @@ func TestRuntimeWithLimit(t *testing.T) {
 	}
 	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 	assertNonZeroValues(t, rm.ScopeMetrics[0])
+}
+
+func TestRuntimeOptInMetrics(t *testing.T) {
+	t.Run("option", func(t *testing.T) {
+		testRuntimeOptInMetrics(t, WithOptInMetrics(MemoryGCCycles, CPUTime))
+	})
+	t.Run("environment", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.cycles, go.cpu.time")
+		testRuntimeOptInMetrics(t)
+	})
+}
+
+func testRuntimeOptInMetrics(t *testing.T, opts ...Option) {
+	goruntime.GC()
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	err := Start(append(opts, WithMeterProvider(mp))...)
+	assert.NoError(t, err)
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(t.Context(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	metrics := map[string]metricdata.Metrics{}
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		metrics[m.Name] = m
+	}
+
+	metricdatatest.AssertEqual(t, metricdata.Metrics{
+		Name:        goconv.MemoryGCCyclesObservable{}.Name(),
+		Description: goconv.MemoryGCCyclesObservable{}.Description(),
+		Unit:        goconv.MemoryGCCyclesObservable{}.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints:  []metricdata.DataPoint[int64]{{}},
+		},
+	}, metrics[goconv.MemoryGCCyclesObservable{}.Name()], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+	gcCycles := metrics[goconv.MemoryGCCyclesObservable{}.Name()].Data.(metricdata.Sum[int64])
+	assert.Positive(t, gcCycles.DataPoints[0].Value)
+
+	cpuTime := goconv.CPUTimeObservable{}
+	metricdatatest.AssertEqual(t, metricdata.Metrics{
+		Name:        cpuTime.Name(),
+		Description: cpuTime.Description(),
+		Unit:        cpuTime.Unit(),
+		Data: metricdata.Sum[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints: []metricdata.DataPoint[float64]{
+				{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateUser))},
+				{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateGC))},
+				{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateScavenge))},
+				{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateIdle))},
+			},
+		},
+	}, metrics[cpuTime.Name()], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+	var totalCPUTime float64
+	for _, dp := range metrics[cpuTime.Name()].Data.(metricdata.Sum[float64]).DataPoints {
+		state, _ := dp.Attributes.Value("go.cpu.state")
+		assert.GreaterOrEqualf(t, dp.Value, float64(0), "go.cpu.state %q", state.AsString())
+		totalCPUTime += dp.Value
+	}
+	assert.Positive(t, totalCPUTime)
+}
+
+func TestRuntimeIgnoresProducerOptInMetrics(t *testing.T) {
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	err := Start(WithMeterProvider(mp), WithOptInMetrics(MemoryGCPauseDuration))
+	assert.NoError(t, err)
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(t.Context(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		assert.NotEqual(t, goconv.MemoryGCPauseDuration{}.Name(), m.Name)
+	}
+}
+
+func TestGoCollectorGetFloat(t *testing.T) {
+	collector := newCollector(0, []string{goCPUUser, goGCCycles})
+	goruntime.GC()
+	collector.refresh()
+	assert.Positive(t, collector.getFloat(goCPUUser))
+	assert.Zero(t, collector.getFloat(goGCCycles), "a uint64 sample is not read as a float")
+	assert.Zero(t, collector.getFloat(goCPUIdle), "an unread sample is zero")
+}
+
+func TestRuntimeWithoutOptInMetrics(t *testing.T) {
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	err := Start(WithMeterProvider(mp))
+	assert.NoError(t, err)
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(t.Context(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		assert.NotEqual(t, goconv.MemoryGCCyclesObservable{}.Name(), m.Name)
+		assert.NotEqual(t, goconv.CPUTimeObservable{}.Name(), m.Name)
+	}
 }
 
 func assertNonZeroValues(t *testing.T, sm metricdata.ScopeMetrics) {
