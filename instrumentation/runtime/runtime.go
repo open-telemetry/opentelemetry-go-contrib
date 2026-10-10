@@ -7,6 +7,7 @@ import (
 	"context"
 	"math"
 	"runtime/metrics"
+	"slices"
 	"sync"
 	"time"
 
@@ -33,10 +34,16 @@ const (
 	goMaxProcs          = "/sched/gomaxprocs:threads"
 	goConfigGC          = "/gc/gogc:percent"
 	goSchedLatencies    = "/sched/latencies:seconds"
+	goGCCycles          = "/gc/cycles/total:gc-cycles"
+	goGCPauses          = "/sched/pauses/total/gc:seconds"
+	goCPUUser           = "/cpu/classes/user:cpu-seconds"
+	goCPUGC             = "/cpu/classes/gc/total:cpu-seconds"
+	goCPUScavenge       = "/cpu/classes/scavenge/total:cpu-seconds"
+	goCPUIdle           = "/cpu/classes/idle:cpu-seconds"
 )
 
 // Start initializes reporting of runtime metrics using the supplied config.
-// For goroutine scheduling metrics, additionally see [NewProducer].
+// For goroutine scheduling and GC pause metrics, additionally see [NewProducer].
 //
 // Metrics emitted by Start includes:
 //
@@ -48,6 +55,13 @@ const (
 //	go.goroutine.count      {goroutine}   Count of live goroutines.
 //	go.processor.limit      {thread}      The number of OS threads that can execute user-level Go code simultaneously.
 //	go.config.gogc          %             Heap size target percentage configured by the user, otherwise 100.
+//
+// The following opt-in metrics are produced when enabled with
+// [WithOptInMetrics] or listed, comma-separated, in the
+// OTEL_GO_X_RUNTIME_METRICS_OPTIN environment variable:
+//
+//	go.memory.gc.cycles     {gc_cycle}    Number of completed GC cycles.
+//	go.cpu.time             s             Estimated CPU time spent by the Go runtime.
 //
 // When the OTEL_GO_X_DEPRECATED_RUNTIME_METRICS environment variable is set to
 // true, the following deprecated metrics are produced:
@@ -116,7 +130,45 @@ func Start(opts ...Option) error {
 	stackMemoryOpt := metric.WithAttributeSet(
 		attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeStack)),
 	)
-	collector := newCollector(c.MinimumReadMemStatsInterval, runtimeMetrics)
+	instruments := []metric.Observable{
+		memoryUsed.Inst(),
+		memoryLimit.Inst(),
+		memoryAllocated.Inst(),
+		memoryAllocations.Inst(),
+		memoryGCGoal.Inst(),
+		goroutineCount.Inst(),
+		processorLimit.Inst(),
+		configGogc.Inst(),
+	}
+	metricNames := slices.Clone(runtimeMetrics)
+
+	enableGCCycles := c.optInEnabled(MemoryGCCycles)
+	var gcCycles goconv.MemoryGCCyclesObservable
+	if enableGCCycles {
+		gcCycles, err = goconv.NewMemoryGCCyclesObservable(meter)
+		if err != nil {
+			return err
+		}
+		instruments = append(instruments, gcCycles.Inst())
+		metricNames = append(metricNames, goGCCycles)
+	}
+
+	enableCPUTime := c.optInEnabled(CPUTime)
+	var cpuTime goconv.CPUTimeObservable
+	var cpuStates []cpuState
+	if enableCPUTime {
+		cpuTime, err = goconv.NewCPUTimeObservable(meter)
+		if err != nil {
+			return err
+		}
+		cpuStates = newCPUStates(cpuTime)
+		instruments = append(instruments, cpuTime.Inst())
+		for _, state := range cpuStates {
+			metricNames = append(metricNames, state.runtimeMetric)
+		}
+	}
+
+	collector := newCollector(c.MinimumReadMemStatsInterval, metricNames)
 	var lock sync.Mutex
 	_, err = meter.RegisterCallback(
 		func(_ context.Context, o metric.Observer) error {
@@ -138,16 +190,15 @@ func Start(opts ...Option) error {
 			o.ObserveInt64(goroutineCount.Inst(), collector.getInt(goGoroutines))
 			o.ObserveInt64(processorLimit.Inst(), collector.getInt(goMaxProcs))
 			o.ObserveInt64(configGogc.Inst(), collector.getInt(goConfigGC))
+			if enableGCCycles {
+				o.ObserveInt64(gcCycles.Inst(), collector.getInt(goGCCycles))
+			}
+			for _, state := range cpuStates {
+				o.ObserveFloat64(cpuTime.Inst(), collector.getFloat(state.runtimeMetric), state.attributes)
+			}
 			return nil
 		},
-		memoryUsed.Inst(),
-		memoryLimit.Inst(),
-		memoryAllocated.Inst(),
-		memoryAllocations.Inst(),
-		memoryGCGoal.Inst(),
-		goroutineCount.Inst(),
-		processorLimit.Inst(),
-		configGogc.Inst(),
+		instruments...,
 	)
 	if err != nil {
 		return err
@@ -167,6 +218,27 @@ var runtimeMetrics = []string{
 	goGoroutines,
 	goMaxProcs,
 	goConfigGC,
+}
+
+// cpuState maps a runtime CPU class to its go.cpu.state attribute.
+type cpuState struct {
+	runtimeMetric string
+	attributes    metric.ObserveOption
+}
+
+func newCPUStates(cpuTime goconv.CPUTimeObservable) []cpuState {
+	newState := func(runtimeMetric string, state goconv.CPUStateAttr) cpuState {
+		return cpuState{
+			runtimeMetric: runtimeMetric,
+			attributes:    metric.WithAttributeSet(attribute.NewSet(cpuTime.AttrCPUState(state))),
+		}
+	}
+	return []cpuState{
+		newState(goCPUUser, goconv.CPUStateUser),
+		newState(goCPUGC, goconv.CPUStateGC),
+		newState(goCPUScavenge, goconv.CPUStateScavenge),
+		newState(goCPUIdle, goconv.CPUStateIdle),
+	}
 }
 
 type goCollector struct {
@@ -217,6 +289,13 @@ func (g *goCollector) getInt(name string) int64 {
 			return math.MaxInt64
 		}
 		return int64(v)
+	}
+	return 0
+}
+
+func (g *goCollector) getFloat(name string) float64 {
+	if s, ok := g.sampleMap[name]; ok && s.Value.Kind() == metrics.KindFloat64 {
+		return s.Value.Float64()
 	}
 	return 0
 }

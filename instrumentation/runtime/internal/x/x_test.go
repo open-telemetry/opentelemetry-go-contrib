@@ -24,6 +24,24 @@ func TestDeprecatedRuntimeMetrics(t *testing.T) {
 	t.Run("empty", run(assertEnabled(DeprecatedRuntimeMetrics, false)))
 }
 
+func TestOptInMetrics(t *testing.T) {
+	const key = "OTEL_GO_X_RUNTIME_METRICS_OPTIN"
+	require.Equal(t, key, OptInMetrics.Key())
+
+	t.Run("listed", run(setenv(key, "go.memory.gc.cycles,go.cpu.time"), assertListed(OptInMetrics, "go.cpu.time", true)))
+	t.Run("spaces", run(setenv(key, " go.memory.gc.cycles , go.cpu.time "), assertListed(OptInMetrics, "go.memory.gc.cycles", true)))
+	t.Run("unlisted", run(setenv(key, "go.memory.gc.cycles"), assertListed(OptInMetrics, "go.cpu.time", false)))
+	t.Run("prefix", run(setenv(key, "go.memory.gc"), assertListed(OptInMetrics, "go.memory.gc.cycles", false)))
+	t.Run("empty", run(assertListed(OptInMetrics, "go.cpu.time", false)))
+}
+
+func assertListed(f ListFeature, value string, listed bool) func(*testing.T) {
+	return func(t *testing.T) {
+		t.Helper()
+		assert.Equal(t, listed, f.Enabled(value), "listed")
+	}
+}
+
 func run(steps ...func(*testing.T)) func(*testing.T) {
 	return func(t *testing.T) {
 		t.Helper()
@@ -33,7 +51,7 @@ func run(steps ...func(*testing.T)) func(*testing.T) {
 	}
 }
 
-func setenv(k, v string) func(t *testing.T) { //nolint:unparam // ignore linter
+func setenv(k, v string) func(t *testing.T) {
 	return func(t *testing.T) { t.Setenv(k, v) }
 }
 

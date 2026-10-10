@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/goconv"
 )
 
 var startTime time.Time
@@ -23,12 +24,11 @@ func init() {
 	startTime = time.Now()
 }
 
-var histogramMetrics = []string{goSchedLatencies}
-
 // Producer is a metric.Producer, which provides precomputed histogram metrics from the go runtime.
 type Producer struct {
-	lock      sync.Mutex
-	collector *goCollector
+	lock           sync.Mutex
+	collector      *goCollector
+	enableGCPauses bool
 }
 
 var _ metric.Producer = (*Producer)(nil)
@@ -38,10 +38,22 @@ var _ metric.Producer = (*Producer)(nil)
 // Metrics emitted by NewProducer include:
 //
 //	go.schedule.duration    s             The time goroutines have spent in the scheduler in a runnable state before actually running.
+//
+// The following opt-in metrics are produced when enabled with
+// [WithOptInMetrics] or listed, comma-separated, in the
+// OTEL_GO_X_RUNTIME_METRICS_OPTIN environment variable:
+//
+//	go.memory.gc.pause.duration  s        Distribution of individual GC-related stop-the-world pause latencies.
 func NewProducer(opts ...ProducerOption) *Producer {
 	c := newProducerConfig(opts...)
+	histogramMetrics := []string{goSchedLatencies}
+	enableGCPauses := c.optInEnabled(MemoryGCPauseDuration)
+	if enableGCPauses {
+		histogramMetrics = append(histogramMetrics, goGCPauses)
+	}
 	return &Producer{
-		collector: newCollector(c.MinimumReadMemStatsInterval, histogramMetrics),
+		collector:      newCollector(c.MinimumReadMemStatsInterval, histogramMetrics),
+		enableGCPauses: enableGCPauses,
 	}
 }
 
@@ -50,11 +62,38 @@ func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	p.lock.Lock()
 	p.collector.refresh()
 	schedHist := p.collector.getHistogram(goSchedLatencies)
+	pauseHist := p.collector.getHistogram(goGCPauses)
 	p.lock.Unlock()
 	// Use the last collection time (which may or may not be now) for the timestamp.
-	histDp := convertRuntimeHistogram(schedHist, p.collector.lastCollect)
-	if len(histDp) == 0 {
+	schedDp := convertRuntimeHistogram(schedHist, p.collector.lastCollect)
+	if len(schedDp) == 0 {
 		return nil, errors.New("unable to obtain go.schedule.duration metric from the runtime")
+	}
+	scopeMetrics := []metricdata.Metrics{
+		{
+			Name:        goconv.ScheduleDuration{}.Name(),
+			Description: goconv.ScheduleDuration{}.Description(),
+			Unit:        goconv.ScheduleDuration{}.Unit(),
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints:  schedDp,
+			},
+		},
+	}
+	if p.enableGCPauses {
+		pauseDp := convertRuntimeHistogram(pauseHist, p.collector.lastCollect)
+		if len(pauseDp) == 0 {
+			return nil, errors.New("unable to obtain go.memory.gc.pause.duration metric from the runtime")
+		}
+		scopeMetrics = append(scopeMetrics, metricdata.Metrics{
+			Name:        goconv.MemoryGCPauseDuration{}.Name(),
+			Description: goconv.MemoryGCPauseDuration{}.Description(),
+			Unit:        goconv.MemoryGCPauseDuration{}.Unit(),
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints:  pauseDp,
+			},
+		})
 	}
 	return []metricdata.ScopeMetrics{
 		{
@@ -62,17 +101,7 @@ func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 				Name:    ScopeName,
 				Version: Version,
 			},
-			Metrics: []metricdata.Metrics{
-				{
-					Name:        "go.schedule.duration",
-					Description: "The time goroutines have spent in the scheduler in a runnable state before actually running.",
-					Unit:        "s",
-					Data: metricdata.Histogram[float64]{
-						Temporality: metricdata.CumulativeTemporality,
-						DataPoints:  histDp,
-					},
-				},
-			},
+			Metrics: scopeMetrics,
 		},
 	}, nil
 }

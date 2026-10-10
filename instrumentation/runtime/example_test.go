@@ -20,7 +20,9 @@ func Example() {
 	// exporters that can be used as or with readers.
 	reader := metric.NewManualReader(
 		// Add the runtime producer to get histograms from the Go runtime.
-		metric.WithProducer(runtime.NewProducer()),
+		metric.WithProducer(runtime.NewProducer(
+			runtime.WithOptInMetrics(runtime.MemoryGCPauseDuration),
+		)),
 	)
 	provider := metric.NewMeterProvider(metric.WithReader(reader))
 	defer func() {
@@ -32,7 +34,10 @@ func Example() {
 	otel.SetMeterProvider(provider)
 
 	// Start go runtime metric collection.
-	err := runtime.Start(runtime.WithMinimumReadMemStatsInterval(time.Second))
+	err := runtime.Start(
+		runtime.WithMinimumReadMemStatsInterval(time.Second),
+		runtime.WithOptInMetrics(runtime.MemoryGCCycles, runtime.CPUTime),
+	)
 	if err != nil {
 		log.Fatal(err)
 	}
