@@ -11,10 +11,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 )
 
@@ -39,7 +39,7 @@ func TestNewConfig(t *testing.T) {
 			name: "with no options",
 
 			wantConfig: config{
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 			},
 		},
 		{
@@ -50,7 +50,7 @@ func TestNewConfig(t *testing.T) {
 
 			wantConfig: config{
 				version:  "42.0",
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 			},
 		},
 		{

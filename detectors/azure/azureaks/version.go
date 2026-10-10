@@ -4,4 +4,4 @@
 package azureaks
 
 // Version is the current release version of the Azure Kubernetes Service resource detector.
-const Version = "0.18.0"
+const Version = "0.19.0"
