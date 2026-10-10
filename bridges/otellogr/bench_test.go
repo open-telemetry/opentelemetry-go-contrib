@@ -168,3 +168,16 @@ func BenchmarkLogSinkErrorField(b *testing.B) {
 		}
 	})
 }
+
+func BenchmarkLogSinkEnabled(b *testing.B) {
+	base := NewLogSink("name")
+	bound := base.WithValues("ctx", b.Context())
+	for name, logger := range map[string]logr.LogSink{"Default": base, "WithContext": bound} {
+		b.Run(name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				logger.Enabled(0)
+			}
+		})
+	}
+}
