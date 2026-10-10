@@ -27,8 +27,9 @@ const (
 	// return.
 	maxBodySize = 1 << 20
 
-	// defaultTimeout bounds the wait for the metadata service when the context
-	// passed to [ResourceDetector.Detect] carries no deadline.
+	// defaultTimeout bounds the wait for the metadata service. A shorter
+	// deadline on the context passed to [ResourceDetector.Detect] takes
+	// precedence.
 	defaultTimeout = 2 * time.Second
 )
 
@@ -170,17 +171,15 @@ func (d *ResourceDetector) metadata(ctx context.Context) (*metadataResponse, boo
 // missing from it, a partial resource is returned together with
 // [resource.ErrPartialResource].
 //
-// The deadline of ctx bounds the whole detection. Without one it is bounded by
-// an internal default.
+// The whole detection is bounded by an internal default, or by the deadline of
+// ctx if that is shorter.
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	// The caller's context is kept so that the internal bound expiring is not
+	// The bound applies even under a longer caller deadline, so a host where the
+	// metadata address drops packets is not stalled for that whole deadline. The
+	// caller's context is kept so that the internal bound expiring is not
 	// mistaken for the caller giving up.
-	fetchCtx := ctx
-	if _, ok := ctx.Deadline(); !ok {
-		var cancel context.CancelFunc
-		fetchCtx, cancel = context.WithTimeout(ctx, defaultTimeout)
-		defer cancel()
-	}
+	fetchCtx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	defer cancel()
 
 	md, answered, err := d.metadata(fetchCtx)
 	if err != nil {
@@ -237,7 +236,7 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
 
 	if len(errs) > 0 {
-		return res, fmt.Errorf("%w: %v", resource.ErrPartialResource, errs)
+		return res, fmt.Errorf("%w: %w", resource.ErrPartialResource, errors.Join(errs...))
 	}
 	return res, nil
 }

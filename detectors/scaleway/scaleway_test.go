@@ -270,6 +270,24 @@ func TestDetect_OneDeadlineAcrossEndpoints(t *testing.T) {
 	assert.Less(t, time.Since(start), 2*timeout)
 }
 
+// A longer caller deadline does not stretch the wait: on a host where the
+// metadata address drops packets, detection gives up after the internal default
+// and reports that it is not running on Scaleway.
+func TestDetect_LongCallerDeadlineUsesDefaultTimeout(t *testing.T) {
+	d := newTestDetector([]string{
+		newServer(t, func(_ http.ResponseWriter, r *http.Request) { <-r.Context().Done() }),
+	})
+
+	ctx, cancel := context.WithTimeout(t.Context(), 10*defaultTimeout)
+	defer cancel()
+
+	start := time.Now()
+	res, err := d.Detect(ctx)
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
+	assert.Less(t, time.Since(start), 2*defaultTimeout)
+}
+
 // The metadata service is on a link-local address that the process must reach
 // directly. A proxy configured for outbound traffic must not be used for it.
 //
