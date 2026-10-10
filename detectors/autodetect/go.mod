@@ -11,6 +11,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.72.0
 	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.19.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.19.0
+	go.opentelemetry.io/contrib/detectors/consul v0.19.0
 	go.opentelemetry.io/contrib/detectors/docker v0.19.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.19.0
@@ -26,6 +27,7 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.10.0 // indirect
 	github.com/Microsoft/go-winio v0.6.2 // indirect
+	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.47.1 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.33.7 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.7 // indirect
@@ -50,6 +52,7 @@ require (
 	github.com/docker/go-connections v0.8.1 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/emicklei/go-restful/v3 v3.14.0 // indirect
+	github.com/fatih/color v1.16.0 // indirect
 	github.com/felixge/httpsnoop v1.1.0 // indirect
 	github.com/fxamacker/cbor/v2 v2.9.6 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
@@ -70,8 +73,21 @@ require (
 	github.com/go-openapi/swag/yamlutils v0.29.2 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/hashicorp/consul/api v1.32.1 // indirect
+	github.com/hashicorp/errwrap v1.1.0 // indirect
+	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
+	github.com/hashicorp/go-hclog v1.5.0 // indirect
+	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
+	github.com/hashicorp/go-multierror v1.1.1 // indirect
+	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
+	github.com/hashicorp/golang-lru v0.5.4 // indirect
+	github.com/hashicorp/serf v0.10.1 // indirect
 	github.com/hetznercloud/hcloud-go/v2 v2.52.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/moby/api v1.56.1 // indirect
 	github.com/moby/moby/client v0.6.1 // indirect
@@ -92,6 +108,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	golang.org/x/exp v0.0.0-20250305212735-054e65f0b394 // indirect
 	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/oauth2 v0.37.0 // indirect
 	golang.org/x/sys v0.49.0 // indirect
@@ -136,6 +153,8 @@ replace go.opentelemetry.io/contrib/detectors/k8sapi => ../k8sapi
 replace go.opentelemetry.io/contrib/detectors/vultr => ../vultr
 
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
+
+replace go.opentelemetry.io/contrib/detectors/consul => ../consul
 
 replace go.opentelemetry.io/contrib/detectors/docker => ../docker
 
