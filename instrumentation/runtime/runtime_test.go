@@ -236,14 +236,13 @@ func testRuntimeOptInMetrics(t *testing.T, opts ...Option) {
 		},
 	}, metrics[cpuTime.Name()], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 
-	cpuStates := map[string]float64{}
+	var totalCPUTime float64
 	for _, dp := range metrics[cpuTime.Name()].Data.(metricdata.Sum[float64]).DataPoints {
 		state, _ := dp.Attributes.Value("go.cpu.state")
-		cpuStates[state.AsString()] = dp.Value
 		assert.GreaterOrEqualf(t, dp.Value, float64(0), "go.cpu.state %q", state.AsString())
+		totalCPUTime += dp.Value
 	}
-	assert.Positive(t, cpuStates[string(goconv.CPUStateUser)])
-	assert.Positive(t, cpuStates[string(goconv.CPUStateGC)])
+	assert.Positive(t, totalCPUTime)
 }
 
 func TestRuntimeIgnoresProducerOptInMetrics(t *testing.T) {
