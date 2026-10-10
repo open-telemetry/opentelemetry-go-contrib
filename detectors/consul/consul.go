@@ -173,6 +173,9 @@ func (d *ResourceDetector) newClient(ctx context.Context) (*api.Client, error) {
 		timeout := defaultTimeout
 		if deadline, ok := ctx.Deadline(); ok {
 			timeout = time.Until(deadline)
+			if timeout <= 0 {
+				return nil, context.DeadlineExceeded
+			}
 		}
 		cfg.HttpClient.Timeout = timeout
 	}

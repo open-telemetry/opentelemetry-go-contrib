@@ -13,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -308,6 +309,23 @@ func TestDetect_ContextDeadline(t *testing.T) {
 	res, err := newTestDetector(t, addr).Detect(ctx)
 	require.Error(t, err)
 	assert.Nil(t, res)
+}
+
+func TestDetect_ExpiredDeadline(t *testing.T) {
+	// An expired deadline must not become an unbounded (nonpositive) HTTP
+	// timeout: Detect fails without sending a request.
+	var hits atomic.Int32
+	addr := newRawFakeAgent(t, func(http.ResponseWriter, *http.Request) {
+		hits.Add(1)
+	})
+
+	ctx, cancel := context.WithDeadline(t.Context(), time.Now().Add(-time.Second))
+	t.Cleanup(cancel)
+
+	res, err := newTestDetector(t, addr).Detect(ctx)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Nil(t, res)
+	assert.Zero(t, hits.Load())
 }
 
 func TestDetect_WithAttributeFilter(t *testing.T) {

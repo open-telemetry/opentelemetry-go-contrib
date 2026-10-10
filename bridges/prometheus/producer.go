@@ -90,6 +90,8 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 		switch pm.GetType() {
 		case dto.MetricType_GAUGE:
 			newMetric.Data = convertGauge(pm.GetMetric(), now)
+		case dto.MetricType_UNTYPED:
+			newMetric.Data = convertUntyped(pm.GetMetric(), now)
 		case dto.MetricType_COUNTER:
 			newMetric.Data = convertCounter(pm.GetMetric(), now)
 		case dto.MetricType_SUMMARY:
@@ -101,7 +103,7 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 				newMetric.Data = convertHistogram(pm.GetMetric(), now)
 			}
 		default:
-			// MetricType_GAUGE_HISTOGRAM, MetricType_UNTYPED
+			// MetricType_GAUGE_HISTOGRAM
 			errs = append(errs, fmt.Errorf("%w: %v for metric %v", errUnsupportedType, pm.GetType(), pm.GetName()))
 			continue
 		}
@@ -130,7 +132,25 @@ func convertGauge(metrics []*dto.Metric, now time.Time) metricdata.Gauge[float64
 			Time:       now,
 			Value:      m.GetGauge().GetValue(),
 		}
-		if m.GetTimestampMs() != 0 {
+		if m.TimestampMs != nil {
+			dp.Time = time.UnixMilli(m.GetTimestampMs())
+		}
+		otelGauge.DataPoints[i] = dp
+	}
+	return otelGauge
+}
+
+func convertUntyped(metrics []*dto.Metric, now time.Time) metricdata.Gauge[float64] {
+	otelGauge := metricdata.Gauge[float64]{
+		DataPoints: make([]metricdata.DataPoint[float64], len(metrics)),
+	}
+	for i, m := range metrics {
+		dp := metricdata.DataPoint[float64]{
+			Attributes: convertLabels(m.GetLabel()),
+			Time:       now,
+			Value:      m.GetUntyped().GetValue(),
+		}
+		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelGauge.DataPoints[i] = dp
@@ -158,7 +178,7 @@ func convertCounter(metrics []*dto.Metric, now time.Time) metricdata.Sum[float64
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if m.GetTimestampMs() != 0 {
+		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelCounter.DataPoints[i] = dp
@@ -195,8 +215,8 @@ func convertExponentialHistogram(metrics []*dto.Metric, now time.Time) metricdat
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if t := m.GetTimestampMs(); t != 0 {
-			dp.Time = time.UnixMilli(t)
+		if m.TimestampMs != nil {
+			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelExpHistogram.DataPoints[i] = dp
 	}
@@ -268,7 +288,7 @@ func convertHistogram(metrics []*dto.Metric, now time.Time) metricdata.Histogram
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if m.GetTimestampMs() != 0 {
+		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelHistogram.DataPoints[i] = dp
@@ -333,8 +353,8 @@ func convertSummary(metrics []*dto.Metric, now time.Time) metricdata.Summary {
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if t := m.GetTimestampMs(); t != 0 {
-			dp.Time = time.UnixMilli(t)
+		if m.TimestampMs != nil {
+			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelSummary.DataPoints[i] = dp
 	}

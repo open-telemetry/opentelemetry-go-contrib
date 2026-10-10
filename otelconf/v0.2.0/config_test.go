@@ -55,7 +55,7 @@ func TestNewSDK(t *testing.T) {
 			cfg: []ConfigurationOption{
 				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
-					Disabled:       ptr(true),
+					Disabled:       new(true),
 					TracerProvider: &TracerProvider{},
 					MeterProvider:  &MeterProvider{},
 					LoggerProvider: &LoggerProvider{},
@@ -77,39 +77,39 @@ func TestNewSDK(t *testing.T) {
 }
 
 var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
-	Disabled:   ptr(false),
+	Disabled:   new(false),
 	FileFormat: "0.2",
 	AttributeLimits: &AttributeLimits{
-		AttributeCountLimit:       ptr(128),
-		AttributeValueLengthLimit: ptr(4096),
+		AttributeCountLimit:       new(128),
+		AttributeValueLengthLimit: new(4096),
 	},
 	LoggerProvider: &LoggerProvider{
 		Limits: &LogRecordLimits{
-			AttributeCountLimit:       ptr(128),
-			AttributeValueLengthLimit: ptr(4096),
+			AttributeCountLimit:       new(128),
+			AttributeValueLengthLimit: new(4096),
 		},
 		Processors: []LogRecordProcessor{
 			{
 				Batch: &BatchLogRecordProcessor{
-					ExportTimeout: ptr(30000),
+					ExportTimeout: new(30000),
 					Exporter: LogRecordExporter{
 						OTLP: &OTLP{
-							Certificate:       ptr("/app/cert.pem"),
-							ClientCertificate: ptr("/app/cert.pem"),
-							ClientKey:         ptr("/app/cert.pem"),
-							Compression:       ptr("gzip"),
+							Certificate:       new("/app/cert.pem"),
+							ClientCertificate: new("/app/cert.pem"),
+							ClientKey:         new("/app/cert.pem"),
+							Compression:       new("gzip"),
 							Endpoint:          "http://localhost:4318",
 							Headers: Headers{
 								"api-key": "1234",
 							},
-							Insecure: ptr(false),
+							Insecure: new(false),
 							Protocol: "http/protobuf",
-							Timeout:  ptr(10000),
+							Timeout:  new(10000),
 						},
 					},
-					MaxExportBatchSize: ptr(512),
-					MaxQueueSize:       ptr(2048),
-					ScheduleDelay:      ptr(5000),
+					MaxExportBatchSize: new(512),
+					MaxQueueSize:       new(2048),
+					ScheduleDelay:      new(5000),
 				},
 			},
 			{
@@ -127,15 +127,15 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Pull: &PullMetricReader{
 					Exporter: MetricExporter{
 						Prometheus: &Prometheus{
-							Host: ptr("localhost"),
-							Port: ptr(9464),
+							Host: new("localhost"),
+							Port: new(9464),
 							WithResourceConstantLabels: &IncludeExclude{
 								Excluded: []string{"service.attr1"},
 								Included: []string{"service*"},
 							},
-							WithoutScopeInfo:  ptr(false),
-							WithoutTypeSuffix: ptr(false),
-							WithoutUnits:      ptr(false),
+							WithoutScopeInfo:  new(false),
+							WithoutTypeSuffix: new(false),
+							WithoutUnits:      new(false),
 						},
 					},
 				},
@@ -144,23 +144,23 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Periodic: &PeriodicMetricReader{
 					Exporter: MetricExporter{
 						OTLP: &OTLPMetric{
-							Certificate:                 ptr("/app/cert.pem"),
-							ClientCertificate:           ptr("/app/cert.pem"),
-							ClientKey:                   ptr("/app/cert.pem"),
-							Compression:                 ptr("gzip"),
-							DefaultHistogramAggregation: ptr(OTLPMetricDefaultHistogramAggregationBase2ExponentialBucketHistogram),
+							Certificate:                 new("/app/cert.pem"),
+							ClientCertificate:           new("/app/cert.pem"),
+							ClientKey:                   new("/app/cert.pem"),
+							Compression:                 new("gzip"),
+							DefaultHistogramAggregation: new(OTLPMetricDefaultHistogramAggregationBase2ExponentialBucketHistogram),
 							Endpoint:                    "http://localhost:4318",
 							Headers: Headers{
 								"api-key": "1234",
 							},
-							Insecure:              ptr(false),
+							Insecure:              new(false),
 							Protocol:              "http/protobuf",
-							TemporalityPreference: ptr("delta"),
-							Timeout:               ptr(10000),
+							TemporalityPreference: new("delta"),
+							Timeout:               new(10000),
 						},
 					},
-					Interval: ptr(5000),
-					Timeout:  ptr(30000),
+					Interval: new(5000),
+					Timeout:  new(30000),
 				},
 			},
 			{
@@ -174,23 +174,23 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 		Views: []View{
 			{
 				Selector: &ViewSelector{
-					InstrumentName: ptr("my-instrument"),
-					InstrumentType: ptr(ViewSelectorInstrumentTypeHistogram),
-					MeterName:      ptr("my-meter"),
-					MeterSchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
-					MeterVersion:   ptr("1.0.0"),
-					Unit:           ptr("ms"),
+					InstrumentName: new("my-instrument"),
+					InstrumentType: new(ViewSelectorInstrumentTypeHistogram),
+					MeterName:      new("my-meter"),
+					MeterSchemaUrl: new("https://opentelemetry.io/schemas/1.16.0"),
+					MeterVersion:   new("1.0.0"),
+					Unit:           new("ms"),
 				},
 				Stream: &ViewStream{
 					Aggregation: &ViewStreamAggregation{
 						ExplicitBucketHistogram: &ViewStreamAggregationExplicitBucketHistogram{
 							Boundaries:   []float64{0, 5, 10, 25, 50, 75, 100, 250, 500, 750, 1000, 2500, 5000, 7500, 10000},
-							RecordMinMax: ptr(true),
+							RecordMinMax: new(true),
 						},
 					},
 					AttributeKeys: []string{"key1", "key2"},
-					Description:   ptr("new_description"),
-					Name:          ptr("new_instrument_name"),
+					Description:   new("new_description"),
+					Name:          new("new_instrument_name"),
 				},
 			},
 		},
@@ -208,39 +208,39 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 				Included: []string{"process.*"},
 			},
 		},
-		SchemaUrl: ptr("https://opentelemetry.io/schemas/1.16.0"),
+		SchemaUrl: new("https://opentelemetry.io/schemas/1.16.0"),
 	},
 	TracerProvider: &TracerProvider{
 		Limits: &SpanLimits{
-			AttributeCountLimit:       ptr(128),
-			AttributeValueLengthLimit: ptr(4096),
-			EventCountLimit:           ptr(128),
-			EventAttributeCountLimit:  ptr(128),
-			LinkCountLimit:            ptr(128),
-			LinkAttributeCountLimit:   ptr(128),
+			AttributeCountLimit:       new(128),
+			AttributeValueLengthLimit: new(4096),
+			EventCountLimit:           new(128),
+			EventAttributeCountLimit:  new(128),
+			LinkCountLimit:            new(128),
+			LinkAttributeCountLimit:   new(128),
 		},
 		Processors: []SpanProcessor{
 			{
 				Batch: &BatchSpanProcessor{
-					ExportTimeout: ptr(30000),
+					ExportTimeout: new(30000),
 					Exporter: SpanExporter{
 						OTLP: &OTLP{
-							Certificate:       ptr("/app/cert.pem"),
-							ClientCertificate: ptr("/app/cert.pem"),
-							ClientKey:         ptr("/app/cert.pem"),
-							Compression:       ptr("gzip"),
+							Certificate:       new("/app/cert.pem"),
+							ClientCertificate: new("/app/cert.pem"),
+							ClientKey:         new("/app/cert.pem"),
+							Compression:       new("gzip"),
 							Endpoint:          "http://localhost:4318",
 							Headers: Headers{
 								"api-key": "1234",
 							},
-							Insecure: ptr(false),
+							Insecure: new(false),
 							Protocol: "http/protobuf",
-							Timeout:  ptr(10000),
+							Timeout:  new(10000),
 						},
 					},
-					MaxExportBatchSize: ptr(512),
-					MaxQueueSize:       ptr(2048),
-					ScheduleDelay:      ptr(5000),
+					MaxExportBatchSize: new(512),
+					MaxQueueSize:       new(2048),
+					ScheduleDelay:      new(5000),
 				},
 			},
 			{
@@ -248,7 +248,7 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 					Exporter: SpanExporter{
 						Zipkin: &Zipkin{
 							Endpoint: "http://localhost:9411/api/v2/spans",
-							Timeout:  ptr(10000),
+							Timeout:  new(10000),
 						},
 					},
 				},
@@ -277,7 +277,7 @@ var v02OpenTelemetryConfig = OpenTelemetryConfiguration{
 				},
 				Root: &Sampler{
 					TraceIDRatioBased: &SamplerTraceIDRatioBased{
-						Ratio: ptr(0.0001),
+						Ratio: new(0.0001),
 					},
 				},
 			},
@@ -297,7 +297,7 @@ func TestParseYAML(t *testing.T) {
 			input:   `valid_empty.yaml`,
 			wantErr: nil,
 			wantType: &OpenTelemetryConfiguration{
-				Disabled:   ptr(false),
+				Disabled:   new(false),
 				FileFormat: "0.1",
 			},
 		},
@@ -342,7 +342,7 @@ func TestSerializeJSON(t *testing.T) {
 			input:   `valid_empty.json`,
 			wantErr: nil,
 			wantType: OpenTelemetryConfiguration{
-				Disabled:   ptr(false),
+				Disabled:   new(false),
 				FileFormat: "0.1",
 			},
 		},
@@ -374,8 +374,4 @@ func TestSerializeJSON(t *testing.T) {
 			}
 		})
 	}
-}
-
-func ptr[T any](v T) *T {
-	return &v
 }
