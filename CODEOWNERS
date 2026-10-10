@@ -47,16 +47,17 @@ detectors/hetzner/                                                      @open-te
 detectors/docker/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/ibmcloud/vpc/                                                 @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/k8sapi/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa @dashpole
+detectors/kubeadm/                                                      @open-telemetry/go-approvers @paulojmdias @iblancasa
+detectors/openshift/                                                    @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/vultr/                                                        @open-telemetry/go-approvers @paulojmdias @iblancasa
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
 
-instrumentation/github.com/aws/aws-lambda-go/otellambda/                @open-telemetry/go-approvers
-instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/                   @open-telemetry/go-approvers
+instrumentation/github.com/aws/aws-lambda-go/otellambda/                @open-telemetry/go-approvers @srprash @wangzlei
+instrumentation/github.com/aws/aws-sdk-go-v2/otelaws/                   @open-telemetry/go-approvers @srprash @wangzlei
 instrumentation/github.com/emicklei/go-restful/otelrestful/             @open-telemetry/go-approvers @dashpole
 instrumentation/github.com/gin-gonic/gin/otelgin/                       @open-telemetry/go-approvers @flc1125
-instrumentation/github.com/gorilla/mux/otelmux/                         @open-telemetry/go-approvers
-instrumentation/github.com/labstack/echo/otelecho/                      @open-telemetry/go-approvers @flc1125
+instrumentation/github.com/gorilla/mux/otelmux/                         @open-telemetry/go-approvers @mahendrabishnoi2
 instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo/            @open-telemetry/go-approvers @prestonvasquez
 instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo/         @open-telemetry/go-approvers @prestonvasquez
 instrumentation/google.golang.org/grpc/otelgrpc/                        @open-telemetry/go-approvers @dashpole
