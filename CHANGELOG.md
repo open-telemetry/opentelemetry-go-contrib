@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add the opt-in `go.memory.gc.cycles`, `go.memory.gc.pause.duration`, and `go.cpu.time` metrics to `go.opentelemetry.io/contrib/instrumentation/runtime`, enabled with the `WithOptInMetrics` option or by listing them in the `OTEL_GO_X_RUNTIME_METRICS_OPTIN` environment variable. (#XXXX)
+- Add the opt-in `go.memory.gc.cycles`, `go.memory.gc.pause.duration`, and `go.cpu.time` metrics to `go.opentelemetry.io/contrib/instrumentation/runtime`, enabled with the `WithOptInMetrics` option or by listing them in the `OTEL_GO_X_RUNTIME_METRICS_OPTIN` environment variable. (#9882)
 
 ### Changed
 
