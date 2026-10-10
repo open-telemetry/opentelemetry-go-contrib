@@ -167,3 +167,16 @@ func BenchmarkSemanticConvWrite(b *testing.B) {
 		})
 	}
 }
+
+func BenchmarkCoreEnabled(b *testing.B) {
+	base := NewCore("name")
+	bound := base.With([]zapcore.Field{zap.Any("ctx", b.Context())})
+	for name, logger := range map[string]zapcore.Core{"Default": base, "WithContext": bound} {
+		b.Run(name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				logger.Enabled(zap.InfoLevel)
+			}
+		})
+	}
+}

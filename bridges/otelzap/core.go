@@ -164,7 +164,7 @@ func NewCore(name string, opts ...Option) *Core {
 // Enabled decides whether a given logging level is enabled when logging a message.
 func (o *Core) Enabled(level zapcore.Level) bool {
 	param := log.EnabledParameters{Severity: convertLevel(level)}
-	return o.logger.Enabled(context.Background(), param)
+	return o.logger.Enabled(o.ctx, param)
 }
 
 // With adds structured context to the Core.
@@ -209,7 +209,7 @@ func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.Check
 		logger = o.provider.Logger(ent.LoggerName, o.opts...)
 	}
 
-	if logger.Enabled(context.Background(), param) {
+	if logger.Enabled(o.ctx, param) {
 		return ce.AddCore(ent, o)
 	}
 	return ce
