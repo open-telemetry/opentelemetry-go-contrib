@@ -6,9 +6,12 @@ package otelhttptrace_test
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
+	"net/textproto"
 	"testing"
 	"time"
 
@@ -16,6 +19,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 
@@ -623,4 +627,248 @@ func TestHTTPRequestWithExpect100Continue(t *testing.T) {
 		}
 	}
 	require.True(t, found)
+}
+
+func TestWithTracerProvider(t *testing.T) {
+	t.Run("CustomTracerProvider", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		globalSR := tracetest.NewSpanRecorder()
+		globalTP := trace.NewTracerProvider(trace.WithSpanProcessor(globalSR))
+		otel.SetTracerProvider(globalTP)
+
+		ct := otelhttptrace.NewClientTrace(
+			t.Context(),
+			otelhttptrace.WithTracerProvider(tp),
+		)
+		ct.DNSStart(httptrace.DNSStartInfo{Host: "example.com"})
+		ct.DNSDone(httptrace.DNSDoneInfo{})
+
+		spans := getSpansFromRecorder(sr, "http.dns")
+		require.Len(t, spans, 1, "expected span in custom tracer provider")
+		require.Empty(t, globalSR.Ended(), "expected no spans in global tracer provider")
+	})
+
+	t.Run("NilTracerProviderIgnored", func(t *testing.T) {
+		globalSR := tracetest.NewSpanRecorder()
+		globalTP := trace.NewTracerProvider(trace.WithSpanProcessor(globalSR))
+		otel.SetTracerProvider(globalTP)
+
+		ct := otelhttptrace.NewClientTrace(
+			t.Context(),
+			otelhttptrace.WithTracerProvider(nil),
+		)
+		ct.DNSStart(httptrace.DNSStartInfo{Host: "example.com"})
+		ct.DNSDone(httptrace.DNSDoneInfo{})
+
+		spans := getSpansFromRecorder(globalSR, "http.dns")
+		require.Len(t, spans, 1, "nil provider should fall back to global provider")
+	})
+}
+
+func TestTLSHandshake(t *testing.T) {
+	testCases := []struct {
+		name          string
+		withoutSpans  bool
+		handshakeErr  error
+		expectedError bool
+	}{
+		{
+			name:          "SuccessWithSubSpans",
+			withoutSpans:  false,
+			handshakeErr:  nil,
+			expectedError: false,
+		},
+		{
+			name:          "ErrorWithSubSpans",
+			withoutSpans:  false,
+			handshakeErr:  errors.New("tls: handshake failed"),
+			expectedError: true,
+		},
+		{
+			name:          "SuccessWithoutSubSpans",
+			withoutSpans:  true,
+			handshakeErr:  nil,
+			expectedError: false,
+		},
+		{
+			name:          "ErrorWithoutSubSpans",
+			withoutSpans:  true,
+			handshakeErr:  errors.New("tls: bad certificate"),
+			expectedError: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+			otel.SetTracerProvider(tp)
+
+			opts := []otelhttptrace.ClientTraceOption{}
+			if tc.withoutSpans {
+				opts = append(opts, otelhttptrace.WithoutSubSpans())
+			}
+
+			ctx, root := tp.Tracer("test").Start(t.Context(), "root")
+			ct := otelhttptrace.NewClientTrace(ctx, opts...)
+
+			ct.TLSHandshakeStart()
+			ct.TLSHandshakeDone(tls.ConnectionState{}, tc.handshakeErr)
+
+			root.End()
+
+			if !tc.withoutSpans {
+				span, ok := getSpanFromRecorder(sr, "http.tls")
+				require.True(t, ok, "http.tls span should be created")
+				if tc.expectedError {
+					assert.Equal(t, codes.Error, span.Status().Code)
+					assert.Equal(t, tc.handshakeErr.Error(), span.Status().Description)
+				} else {
+					assert.Equal(t, codes.Unset, span.Status().Code)
+				}
+			} else {
+				// In withoutSubSpans mode, events should be recorded on root span.
+				rootSpan, ok := getSpanFromRecorder(sr, "root")
+				require.True(t, ok, "root span must exist")
+
+				eventNames := make([]string, 0, len(rootSpan.Events()))
+				for _, e := range rootSpan.Events() {
+					eventNames = append(eventNames, e.Name)
+				}
+				assert.Contains(t, eventNames, "http.tls.start")
+				assert.Contains(t, eventNames, "http.tls.done")
+
+				if tc.expectedError {
+					for _, e := range rootSpan.Events() {
+						if e.Name != "http.tls.done" {
+							continue
+						}
+						var hasErrMsg bool
+						for _, attr := range e.Attributes {
+							if attr.Key == attribute.Key("http.tls.error") && attr.Value.AsString() == tc.handshakeErr.Error() {
+								hasErrMsg = true
+								break
+							}
+						}
+						assert.True(t, hasErrMsg, "expected error attribute on http.tls.done event")
+					}
+				}
+			}
+		})
+	}
+}
+
+func TestHTTPSRequestWithClientTrace(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	otel.SetTracerProvider(tp)
+
+	ts := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	ctx, root := tp.Tracer("test").Start(t.Context(), "root")
+	client := ts.Client()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+	req = req.WithContext(httptrace.WithClientTrace(req.Context(), otelhttptrace.NewClientTrace(ctx)))
+
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	root.End()
+
+	tlsSpan, ok := getSpanFromRecorder(sr, "http.tls")
+	require.True(t, ok, "expected http.tls span for HTTPS request")
+	assert.Equal(t, codes.Unset, tlsSpan.Status().Code)
+}
+
+func TestClientTraceErrorAndInformationalBranches(t *testing.T) {
+	testCases := []struct {
+		name string
+		run  func(t *testing.T, ct *httptrace.ClientTrace, sr *tracetest.SpanRecorder)
+	}{
+		{
+			name: "DNSDoneWithError",
+			run: func(t *testing.T, ct *httptrace.ClientTrace, sr *tracetest.SpanRecorder) {
+				dnsErr := errors.New("dns lookup failed: no such host")
+				ct.DNSStart(httptrace.DNSStartInfo{Host: "invalid.domain"})
+				ct.DNSDone(httptrace.DNSDoneInfo{Err: dnsErr})
+
+				span, ok := getSpanFromRecorder(sr, "http.dns")
+				require.True(t, ok)
+				assert.Equal(t, codes.Error, span.Status().Code)
+				assert.Equal(t, dnsErr.Error(), span.Status().Description)
+			},
+		},
+		{
+			name: "WroteRequestWithError",
+			run: func(t *testing.T, ct *httptrace.ClientTrace, sr *tracetest.SpanRecorder) {
+				writeErr := errors.New("broken pipe writing body")
+				ct.WroteHeaders()
+				ct.WroteRequest(httptrace.WroteRequestInfo{Err: writeErr})
+
+				span, ok := getSpanFromRecorder(sr, "http.send")
+				require.True(t, ok)
+				assert.Equal(t, codes.Error, span.Status().Code)
+				assert.Equal(t, writeErr.Error(), span.Status().Description)
+			},
+		},
+		{
+			name: "Got1xxResponseWithHeaders",
+			run: func(t *testing.T, ct *httptrace.ClientTrace, sr *tracetest.SpanRecorder) {
+				ct.GotFirstResponseByte()
+
+				headers := textproto.MIMEHeader{
+					"Link": []string{"</style.css>; rel=preload"},
+				}
+				err := ct.Got1xxResponse(103, headers)
+				require.NoError(t, err)
+
+				ct.PutIdleConn(nil)
+
+				span, ok := getSpanFromRecorder(sr, "http.receive")
+				require.True(t, ok)
+
+				var foundEvent bool
+				for _, ev := range span.Events() {
+					if ev.Name != "GOT 1xx" {
+						continue
+					}
+					foundEvent = true
+					var hasStatus, hasHeader bool
+					for _, attr := range ev.Attributes {
+						if attr.Key == attribute.Key("http.status") && attr.Value.AsInt64() == 103 {
+							hasStatus = true
+						}
+						if attr.Key == attribute.Key("http.mime") && attr.Value.AsString() == "Link=</style.css>; rel=preload" {
+							hasHeader = true
+						}
+					}
+					assert.True(t, hasStatus, "expected http.status=103 in GOT 1xx event")
+					assert.True(t, hasHeader, "expected parsed MIME header in GOT 1xx event")
+					break
+				}
+				assert.True(t, foundEvent, "expected 'GOT 1xx' event on http.receive span")
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+			otel.SetTracerProvider(tp)
+
+			ctx, root := tp.Tracer("test").Start(t.Context(), "root")
+			ct := otelhttptrace.NewClientTrace(ctx)
+
+			tc.run(t, ct, sr)
+			root.End()
+		})
+	}
 }
