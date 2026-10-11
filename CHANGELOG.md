@@ -15,6 +15,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Preserve explicit Unix epoch timestamps (`TimestampMs = 0`) instead of replacing them with the current time in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9837)
+- Keep an existing query and fragment when the Jaeger remote sampler sets the `service` parameter in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#9886)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
