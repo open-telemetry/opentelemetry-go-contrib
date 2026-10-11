@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add `RouteMiddleware` to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to preserve matched route telemetry across request-copying middleware.
+
 ### Changed
 
 - Support build tags to omit resource detectors in `go.opentelemetry.io/contrib/otelconf/x`. (#9818)

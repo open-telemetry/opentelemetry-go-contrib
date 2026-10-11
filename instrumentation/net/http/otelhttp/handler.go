@@ -4,6 +4,7 @@
 package otelhttp
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -180,6 +181,8 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if !found {
 		ctx = ContextWithLabeler(ctx, labeler)
 	}
+	route := &routeContext{middleware: h, span: span}
+	ctx = context.WithValue(ctx, routeContextKey{}, route)
 	rCtx := r.WithContext(ctx)
 	defer func() {
 		// Copy MultipartForm back to the original request so net/http can
@@ -193,7 +196,10 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	}()
 	next.ServeHTTP(w, rCtx)
 
-	if rCtx.Pattern != "" {
+	routedRequest := rCtx
+	if route.request != nil {
+		routedRequest = route.request
+	} else if rCtx.Pattern != "" {
 		span.SetName(h.spanNameFormatter(h.operation, rCtx))
 	}
 
@@ -213,9 +219,9 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		ServerName:   h.server,
 		ResponseSize: bytesWritten,
 		MetricAttributes: semconv.MetricAttributes{
-			Req:                  rCtx,
+			Req:                  routedRequest,
 			StatusCode:           statusCode,
-			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(rCtx)...),
+			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(routedRequest)...),
 		},
 		MetricData: semconv.MetricData{
 			RequestSize:     bytesRead,
