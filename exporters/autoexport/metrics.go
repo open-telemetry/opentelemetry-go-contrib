@@ -36,6 +36,13 @@ func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (met
 	return withFallbackFactory[metric.Reader](metricReaderFactory)
 }
 
+// WithPrometheusGatherer adds a Prometheus gatherer to the /metrics endpoint
+// when OTEL_METRICS_EXPORTER is set to "prometheus". It can be specified
+// multiple times to include multiple gatherers.
+func WithPrometheusGatherer(gatherer prometheus.Gatherer) MetricOption {
+	return prometheusGathererOption{gatherer: gatherer}
+}
+
 // NewMetricReader returns a configured [go.opentelemetry.io/otel/sdk/metric.Reader]
 // defined using the environment variables described below.
 //
@@ -70,8 +77,22 @@ func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (met
 // Use [WithFallbackMetricReader] option to change the returned exporter
 // when OTEL_METRICS_EXPORTER is unset or empty.
 //
+// Use [WithPrometheusGatherer] to add native Prometheus metrics to the
+// Prometheus exporter endpoint.
+//
 // Use [IsNoneMetricReader] to check if the returned exporter is a "no operation" exporter.
 func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, error) {
+	if os.Getenv(metricsSignal.envKey) == "prometheus" {
+		gatherers := make([]prometheus.Gatherer, 0, len(opts))
+		for _, opt := range opts {
+			if gathererOption, ok := opt.(prometheusGathererOption); ok && gathererOption.gatherer != nil {
+				gatherers = append(gatherers, gathererOption.gatherer)
+			}
+		}
+		if len(gatherers) > 0 {
+			return newPrometheusMetricReader(ctx, gatherers)
+		}
+	}
 	return metricsSignal.create(ctx, opts...)
 }
 
@@ -158,62 +179,7 @@ func init() {
 		return newNoopMetricReader(), nil
 	})
 	RegisterMetricReader("prometheus", func(ctx context.Context) (metric.Reader, error) {
-		// create an isolated registry instead of using the global registry --
-		// the user might not want to mix OTel with non-OTel metrics.
-		// Those that want to comingle metrics from global registry can use
-		// OTEL_METRICS_PRODUCERS=prometheus
-		reg := prometheus.NewRegistry()
-
-		exporterOpts := []promexporter.Option{promexporter.WithRegisterer(reg)}
-
-		producers, err := metricsProducers.create(ctx)
-		if err != nil {
-			return nil, err
-		}
-		for _, producer := range producers {
-			if _, ok := producer.(myProducer); ok {
-				// Skip default prometheusbridge producer. Only add
-				// user-configured producers.
-				continue
-			}
-			exporterOpts = append(exporterOpts, promexporter.WithProducer(producer))
-		}
-
-		reader, err := promexporter.New(exporterOpts...)
-		if err != nil {
-			return nil, err
-		}
-
-		mux := http.NewServeMux()
-		mux.Handle("/metrics", promhttp.HandlerFor(reg, promhttp.HandlerOpts{Registry: reg}))
-		server := http.Server{
-			// Timeouts are necessary to make a server resilient to attacks, but ListenAndServe doesn't set any.
-			// We use values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
-			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 10 * time.Second,
-			IdleTimeout:  120 * time.Second,
-			Handler:      mux,
-		}
-
-		// environment variable names and defaults specified at https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter
-		host := getenv("OTEL_EXPORTER_PROMETHEUS_HOST", "localhost")
-		port := getenv("OTEL_EXPORTER_PROMETHEUS_PORT", "9464")
-		addr := host + ":" + port
-		lis, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", addr)
-		if err != nil {
-			return nil, errors.Join(
-				fmt.Errorf("binding address %s for Prometheus exporter: %w", addr, err),
-				reader.Shutdown(ctx),
-			)
-		}
-
-		go func() {
-			if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
-			}
-		}()
-
-		return readerWithServer{lis.Addr(), reader, &server}, nil
+		return newPrometheusMetricReader(ctx, nil)
 	})
 
 	RegisterMetricProducer("prometheus", func(context.Context) (metric.Producer, error) {
@@ -223,6 +189,79 @@ func init() {
 		return newNoopMetricProducer(), nil
 	})
 }
+
+func newPrometheusMetricReader(ctx context.Context, additionalGatherers []prometheus.Gatherer) (metric.Reader, error) {
+	// create an isolated registry instead of using the global registry --
+	// the user might not want to mix OTel with non-OTel metrics.
+	reg := prometheus.NewRegistry()
+
+	exporterOpts := []promexporter.Option{promexporter.WithRegisterer(reg)}
+
+	producers, err := metricsProducers.create(ctx)
+	if err != nil {
+		return nil, err
+	}
+	for _, producer := range producers {
+		if _, ok := producer.(myProducer); ok {
+			// Skip default prometheusbridge producer. Only add
+			// user-configured producers.
+			continue
+		}
+		exporterOpts = append(exporterOpts, promexporter.WithProducer(producer))
+	}
+
+	reader, err := promexporter.New(exporterOpts...)
+	if err != nil {
+		return nil, err
+	}
+
+	var gatherer prometheus.Gatherer = reg
+	if len(additionalGatherers) > 0 {
+		gatherers := make(prometheus.Gatherers, 0, len(additionalGatherers)+1)
+		gatherers = append(gatherers, reg)
+		gatherers = append(gatherers, additionalGatherers...)
+		gatherer = gatherers
+	}
+
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.HandlerFor(gatherer, promhttp.HandlerOpts{Registry: reg}))
+	server := http.Server{
+		// Timeouts are necessary to make a server resilient to attacks, but ListenAndServe doesn't set any.
+		// We use values from this example: https://blog.cloudflare.com/exposing-go-on-the-internet/#:~:text=There%20are%20three%20main%20timeouts
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		Handler:      mux,
+	}
+
+	// environment variable names and defaults specified at https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/#prometheus-exporter
+	host := getenv("OTEL_EXPORTER_PROMETHEUS_HOST", "localhost")
+	port := getenv("OTEL_EXPORTER_PROMETHEUS_PORT", "9464")
+	addr := host + ":" + port
+	lis, err := (&net.ListenConfig{}).Listen(context.Background(), "tcp", addr)
+	if err != nil {
+		return nil, errors.Join(
+			fmt.Errorf("binding address %s for Prometheus exporter: %w", addr, err),
+			reader.Shutdown(ctx),
+		)
+	}
+
+	go func() {
+		if err := server.Serve(lis); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			otel.Handle(fmt.Errorf("the Prometheus HTTP server exited unexpectedly: %w", err))
+		}
+	}()
+
+	return readerWithServer{lis.Addr(), reader, &server}, nil
+}
+
+// prometheusGathererOption is handled by NewMetricReader when constructing the
+// Prometheus HTTP endpoint; it does not affect the generic signal configuration.
+type prometheusGathererOption struct {
+	gatherer prometheus.Gatherer
+}
+
+func (prometheusGathererOption) apply(*config[metric.Reader]) {}
 
 type myProducer struct {
 	metric.Producer
