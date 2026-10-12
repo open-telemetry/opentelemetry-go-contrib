@@ -68,6 +68,8 @@ var _ detectorUtils = (*eksDetectorUtils)(nil)
 var containerIDRegex = regexp.MustCompile(`^.*/docker/(.+)$`)
 
 // NewResourceDetector returns a resource detector that will detect AWS EKS resources.
+// Kubernetes API requests use the context passed to Detect. To limit their
+// duration, callers should pass a context with a timeout or deadline.
 func NewResourceDetector() resource.Detector {
 	utils, err := newK8sDetectorUtils()
 	return &resourceDetector{utils: utils, err: err}
