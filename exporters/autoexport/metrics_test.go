@@ -5,6 +5,7 @@ package autoexport
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -183,6 +184,110 @@ func TestMetricExporterPrometheusInvalidPort(t *testing.T) {
 
 	_, err := NewMetricReader(t.Context())
 	assert.ErrorContains(t, err, "binding")
+}
+
+func TestMetricReaderFallback(t *testing.T) {
+	testErr := errors.New("reader factory failed")
+
+	testCases := []struct {
+		name        string
+		factory     func(context.Context) (metric.Reader, error)
+		expectedErr error
+		verify      func(*testing.T, metric.Reader)
+	}{
+		{
+			name: "success with manual reader",
+			factory: func(context.Context) (metric.Reader, error) {
+				return metric.NewManualReader(), nil
+			},
+			verify: func(t *testing.T, got metric.Reader) {
+				assert.NotNil(t, got)
+				assert.IsType(t, &metric.ManualReader{}, got)
+				assert.NoError(t, got.Shutdown(t.Context()))
+			},
+		},
+		{
+			name: "error propagation",
+			factory: func(context.Context) (metric.Reader, error) {
+				return nil, testErr
+			},
+			expectedErr: testErr,
+			verify: func(t *testing.T, got metric.Reader) {
+				assert.Nil(t, got)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_EXPORTER", "")
+
+			got, err := NewMetricReader(t.Context(), WithFallbackMetricReader(tc.factory))
+			if tc.expectedErr != nil {
+				assert.ErrorIs(t, err, tc.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+			tc.verify(t, got)
+		})
+	}
+}
+
+func TestMetricProducerFallback(t *testing.T) {
+	testErr := errors.New("producer factory failed")
+	noopProducer := newNoopMetricProducer()
+
+	// Ensure noopMetricProducer methods are covered deterministically
+	data, err := noopProducer.Produce(t.Context())
+	assert.NoError(t, err)
+	assert.Nil(t, data)
+
+	testCases := []struct {
+		name        string
+		factory     func(context.Context) (metric.Producer, error)
+		expectedErr error
+		verify      func(*testing.T, []metric.Producer)
+	}{
+		{
+			name: "success with fallback producer",
+			factory: func(context.Context) (metric.Producer, error) {
+				return noopProducer, nil
+			},
+			verify: func(t *testing.T, producers []metric.Producer) {
+				require.Len(t, producers, 1)
+				assert.Equal(t, noopProducer, producers[0])
+			},
+		},
+		{
+			name: "error propagation",
+			factory: func(context.Context) (metric.Producer, error) {
+				return nil, testErr
+			},
+			expectedErr: testErr,
+			verify: func(t *testing.T, producers []metric.Producer) {
+				assert.Nil(t, producers)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_METRICS_PRODUCERS", "")
+
+			WithFallbackMetricProducer(tc.factory)
+			t.Cleanup(func() {
+				WithFallbackMetricProducer(nil)
+			})
+
+			producers, err := metricsProducers.create(t.Context())
+			if tc.expectedErr != nil {
+				assert.ErrorIs(t, err, tc.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+			tc.verify(t, producers)
+		})
+	}
 }
 
 func TestMetricProducerPrometheusWithOTLPExporter(t *testing.T) {
