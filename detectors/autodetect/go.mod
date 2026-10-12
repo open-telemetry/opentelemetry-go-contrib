@@ -9,6 +9,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
 	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.19.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.72.0
+	go.opentelemetry.io/contrib/detectors/azure/azureaks v0.19.0
 	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.19.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.19.0
 	go.opentelemetry.io/contrib/detectors/docker v0.19.0
@@ -142,5 +143,7 @@ replace go.opentelemetry.io/contrib/detectors/docker => ../docker
 replace go.opentelemetry.io/contrib/detectors/kubeadm => ../kubeadm
 
 replace go.opentelemetry.io/contrib/detectors/openshift => ../openshift
+
+replace go.opentelemetry.io/contrib/detectors/azure/azureaks => ../azure/azureaks
 
 replace go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../instrumentation/net/http/otelhttp
