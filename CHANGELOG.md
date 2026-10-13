@@ -16,6 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithAttributeFilter` to `go.opentelemetry.io/contrib/detectors/aws/lambda` to select which detected attributes are included in the returned resource. (#9606)
 - Add `go.opentelemetry.io/contrib/detectors/azure/azureaks`, a new resource detector for Azure Kubernetes Service, ported from `processor/resourcedetectionprocessor/internal/azure/aks` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, and `k8s.cluster.name`. (#9501)
 - Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, Cloud Run Worker Pool parity, and `NewDetectorWithOptions` with `WithGKEHostType` to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
+- Add `go.opentelemetry.io/contrib/detectors/openstack/nova`, a new resource detector for OpenStack Nova compute instances, ported from `processor/resourcedetectionprocessor/internal/openstack/nova` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `host.id`, `host.name`, and `host.type`, and optionally emits `openstack.nova.meta.<key>` attributes for the instance metadata keys selected with `WithMetaKeyFilter`. (#9486)
 
 ### Changed
 
@@ -92,7 +93,6 @@ The next release will require at least [Go 1.26].
 - Support testing of [Go 1.27]. (#9524)
 - Add `go.opentelemetry.io/contrib/detectors/docker`, a resource detector for Docker, ported from `processor/resourcedetectionprocessor/internal/docker` in opentelemetry-collector-contrib. (#9001)
 - Add `S3AttributeBuilder` to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` that sets S3-specific span attributes following the OpenTelemetry S3 semantic conventions. (#9292)
-- Add `go.opentelemetry.io/contrib/detectors/openstack/nova`, a new resource detector for OpenStack Nova compute instances, ported from `processor/resourcedetectionprocessor/internal/openstack/nova` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `host.id`, `host.name`, and `host.type`, and optionally emits `openstack.nova.meta.<key>` attributes for the instance metadata keys selected with `WithMetaKeyFilter`. (#9486)
 
 ### Deprecated
 
