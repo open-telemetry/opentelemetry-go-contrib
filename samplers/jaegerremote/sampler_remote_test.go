@@ -23,6 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -32,13 +33,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/x"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/samplers/jaegerremote/internal/testutils"
 )
 
 func TestRemotelyControlledSampler_updateConcurrentSafe(*testing.T) {
-	initSampler := newProbabilisticSampler(0.123, false)
+	initSampler := newProbabilisticSampler(0.123, false, false)
 	fetcher := &testSamplingStrategyFetcher{response: []byte("probabilistic")}
 	parser := new(testSamplingStrategyParser)
 	sampler := New(
@@ -101,7 +103,7 @@ func (*testSamplingStrategyParser) Parse(response []byte) (any, error) {
 }
 
 func TestRemoteSamplerOptions(t *testing.T) {
-	initSampler := newProbabilisticSampler(0.123, false)
+	initSampler := newProbabilisticSampler(0.123, false, false)
 	fetcher := new(fakeSamplingFetcher)
 	parser := new(samplingStrategyParserImpl)
 	logger := testr.New(t)
@@ -116,6 +118,7 @@ func TestRemoteSamplerOptions(t *testing.T) {
 		withSamplingStrategyParser(parser),
 		WithLogger(logger),
 		WithAttributesDisabled(),
+		WithProbabilitySampling(true),
 	)
 	defer sampler.Close()
 	assert.Equal(t, 42, sampler.posParams.MaxOperations)
@@ -125,7 +128,8 @@ func TestRemoteSamplerOptions(t *testing.T) {
 	assert.Equal(t, 42*time.Second, sampler.samplingRefreshInterval)
 	assert.Same(t, fetcher, sampler.samplingFetcher)
 	assert.Same(t, parser, sampler.samplingParser)
-	assert.EqualValues(t, &perOperationSamplerUpdater{MaxOperations: 42, OperationNameLateBinding: true, attributesDisabled: true}, sampler.updaters[0])
+	assert.EqualValues(t, &perOperationSamplerUpdater{MaxOperations: 42, OperationNameLateBinding: true, attributesDisabled: true, probabilitySampling: true}, sampler.updaters[0])
+	assert.EqualValues(t, &probabilisticSamplerUpdater{attributesDisabled: true, probabilitySampling: true}, sampler.updaters[1])
 	assert.Equal(t, logger, sampler.logger)
 	assert.True(t, sampler.attributesDisabled)
 }
@@ -135,6 +139,8 @@ func TestRemoteSamplerOptionsDefaults(t *testing.T) {
 	sampler, ok := options.sampler.(*probabilisticSampler)
 	assert.True(t, ok)
 	assert.Equal(t, 0.001, sampler.samplingRate)
+	assert.False(t, options.probabilitySampling)
+	assert.Equal(t, trace.TraceIDRatioBased(0.001).Description(), sampler.Description())
 
 	assert.NotEmpty(t, options.samplingServerURL)
 	assert.NotZero(t, options.samplingRefreshInterval)
@@ -144,7 +150,7 @@ func initAgent(t *testing.T) (*testutils.MockAgent, *Sampler) {
 	agent, err := testutils.StartMockAgent()
 	require.NoError(t, err)
 
-	initialSampler := newProbabilisticSampler(0.001, false)
+	initialSampler := newProbabilisticSampler(0.001, false, false)
 	sampler := New(
 		"client app",
 		WithSamplingServerURL("http://"+agent.SamplingServerAddr()),
@@ -171,7 +177,7 @@ func TestRemotelyControlledSampler(t *testing.T) {
 	agent, remoteSampler := initAgent(t)
 	defer agent.Close()
 
-	defaultSampler := newProbabilisticSampler(0.001, false)
+	defaultSampler := newProbabilisticSampler(0.001, false, false)
 	remoteSampler.setSampler(defaultSampler)
 
 	agent.AddSamplingStrategy("client app",
@@ -304,7 +310,7 @@ func TestRemotelyControlledSampler_updateSampler(t *testing.T) {
 }
 
 func TestRemotelyControlledSampler_ImmediatelyUpdateOnStartup(t *testing.T) {
-	initSampler := newProbabilisticSampler(0.123, false)
+	initSampler := newProbabilisticSampler(0.123, false, false)
 	fetcher := &testSamplingStrategyFetcher{response: []byte("rateLimiting")}
 	parser := new(testSamplingStrategyParser)
 	sampler := New(
@@ -402,7 +408,7 @@ func TestRemotelyControlledSampler_updateSamplerFromAdaptiveSampler(t *testing.T
 	adaptiveSampler := newPerOperationSampler(perOperationSamplerParams{
 		MaxOperations: testDefaultMaxOperations,
 		Strategies:    strategies,
-	}, false)
+	}, false, false)
 
 	// Overwrite the sampler with an adaptive sampler
 	remoteSampler.setSampler(adaptiveSampler)
@@ -435,9 +441,9 @@ func TestRemotelyControlledSampler_updateSamplerFromAdaptiveSampler(t *testing.T
 }
 
 func TestRemotelyControlledSampler_updateRateLimitingOrProbabilisticSampler(t *testing.T) {
-	probabilisticSampler := newProbabilisticSampler(0.002, false)
-	otherProbabilisticSampler := newProbabilisticSampler(0.003, false)
-	maxProbabilisticSampler := newProbabilisticSampler(1.0, false)
+	probabilisticSampler := newProbabilisticSampler(0.002, false, false)
+	otherProbabilisticSampler := newProbabilisticSampler(0.003, false, false)
+	maxProbabilisticSampler := newProbabilisticSampler(1.0, false, false)
 
 	rateLimitingSampler := newRateLimitingSampler(2, false)
 	otherRateLimitingSampler := newRateLimitingSampler(3, false)
@@ -548,6 +554,36 @@ func getSamplingStrategyResponse(strategyType jaeger_api_v2.SamplingStrategyType
 	return nil
 }
 
+func TestSamplerUpdatersProbabilitySampling(t *testing.T) {
+	probabilistic := &jaeger_api_v2.SamplingStrategyResponse{
+		ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{SamplingRate: 0.25},
+	}
+	perOperation := &jaeger_api_v2.SamplingStrategyResponse{
+		OperationSampling: &jaeger_api_v2.PerOperationSamplingStrategies{DefaultSamplingProbability: 0.25},
+	}
+
+	for _, tc := range []struct {
+		probabilitySampling bool
+		want                string
+	}{
+		{probabilitySampling: false, want: "TraceIDRatioBased"},
+		{probabilitySampling: true, want: "ProbabilitySampler"},
+	} {
+		t.Run(tc.want, func(t *testing.T) {
+			s, err := (&probabilisticSamplerUpdater{probabilitySampling: tc.probabilitySampling}).Update(nil, probabilistic)
+			require.NoError(t, err)
+			require.IsType(t, &probabilisticSampler{}, s)
+			assert.True(t, strings.HasPrefix(s.Description(), tc.want), s.Description())
+
+			s, err = (&perOperationSamplerUpdater{probabilitySampling: tc.probabilitySampling}).Update(nil, perOperation)
+			require.NoError(t, err)
+			require.IsType(t, &perOperationSampler{}, s)
+			defaultSampler := s.(*perOperationSampler).defaultSampler
+			assert.True(t, strings.HasPrefix(defaultSampler.Description(), tc.want), defaultSampler.Description())
+		})
+	}
+}
+
 func TestSamplingStrategyParserImpl(t *testing.T) {
 	assertProbabilistic := func(t *testing.T, s *jaeger_api_v2.SamplingStrategyResponse) {
 		require.NotNil(t, s.GetProbabilisticSampling(), "output: %+v", s)
@@ -622,9 +658,9 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 			expErrs:              []string{},
 		},
 		{
-			otelTraceSamplerArgs: "endpointhttp://localhost:14250,pollingIntervalMs=5x000,initialSamplingRate=0.xyz25,invalidKey=invalidValue",
+			otelTraceSamplerArgs: "endpointlocalhost:14250,pollingIntervalMs=5x000,initialSamplingRate=0.xyz25,invalidKey=invalidValue",
 			expErrs: []string{
-				"argument endpointhttp://localhost:14250 is not of type '<key>=<value>'",
+				"argument endpointlocalhost:14250 is not of type '<key>=<value>'",
 				"pollingIntervalMs parsing failed",
 				"initialSamplingRate parsing failed",
 				"invalid argument invalidKey in OTEL_TRACE_SAMPLER_ARG",
@@ -662,6 +698,19 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("initial sampling rate honors probability sampling", func(t *testing.T) {
+		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "initialSamplingRate=0.25")
+
+		cfg := newConfig()
+		require.IsType(t, &probabilisticSampler{}, cfg.sampler)
+		assert.NotEmpty(t, cfg.sampler.(*probabilisticSampler).attributes)
+		assert.Equal(t, trace.TraceIDRatioBased(0.25).Description(), cfg.sampler.Description())
+		assert.Equal(t, x.ProbabilitySampler(0.25).Description(), newConfig(WithProbabilitySampling(true)).sampler.Description())
+
+		initSampler := newProbabilisticSampler(0.5, false, false)
+		assert.Same(t, initSampler, newConfig(WithInitialSampler(initSampler)).sampler, "code options override the env")
+	})
 
 	t.Run("No-op when env var not set or empty", func(t *testing.T) {
 		for _, test := range []struct {
