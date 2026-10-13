@@ -5,10 +5,12 @@ package scaleway
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -298,6 +300,28 @@ func TestClientBypassesProxy(t *testing.T) {
 	transport, ok := NewResourceDetector().client.Transport.(*http.Transport)
 	require.True(t, ok)
 	assert.Nil(t, transport.Proxy)
+}
+
+// The transport of a detector has no shutdown path, so a successful detection
+// must not leave a connection to the metadata service open.
+func TestDetect_ClosesConnection(t *testing.T) {
+	var open atomic.Int32
+	srv := httptest.NewUnstartedServer(metadataHandler(metadataSample))
+	srv.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		switch state {
+		case http.StateNew:
+			open.Add(1)
+		case http.StateClosed, http.StateHijacked:
+			open.Add(-1)
+		}
+	}
+	srv.Start()
+	t.Cleanup(srv.Close)
+
+	_, err := newTestDetector([]string{srv.URL}).Detect(t.Context())
+	require.NoError(t, err)
+
+	assert.Eventually(t, func() bool { return open.Load() == 0 }, time.Second, 10*time.Millisecond)
 }
 
 func TestDetect_WithAttributeFilter(t *testing.T) {
