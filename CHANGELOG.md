@@ -19,6 +19,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Preserve explicit Unix epoch timestamps (`TimestampMs = 0`) instead of replacing them with the current time in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9837)
+- Fix `go.schedule.duration` datapoints returned by `Producer` in `go.opentelemetry.io/contrib/instrumentation/runtime` having their bucket counts overwritten by later collections, and a data race between concurrent `Produce` calls. (#9882)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

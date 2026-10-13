@@ -8,6 +8,7 @@ import (
 	"errors"
 	"math"
 	"runtime/metrics"
+	"slices"
 	"sync"
 	"time"
 
@@ -61,11 +62,14 @@ func NewProducer(opts ...ProducerOption) *Producer {
 func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	p.lock.Lock()
 	p.collector.refresh()
-	schedHist := p.collector.getHistogram(goSchedLatencies)
-	pauseHist := p.collector.getHistogram(goGCPauses)
-	p.lock.Unlock()
+	// The runtime reuses histogram memory on later reads, so copy it while
+	// holding the lock to keep returned datapoints stable.
+	schedHist := cloneHistogram(p.collector.getHistogram(goSchedLatencies))
+	pauseHist := cloneHistogram(p.collector.getHistogram(goGCPauses))
 	// Use the last collection time (which may or may not be now) for the timestamp.
-	schedDp := convertRuntimeHistogram(schedHist, p.collector.lastCollect)
+	collectedAt := p.collector.lastCollect
+	p.lock.Unlock()
+	schedDp := convertRuntimeHistogram(schedHist, collectedAt)
 	if len(schedDp) == 0 {
 		return nil, errors.New("unable to obtain go.schedule.duration metric from the runtime")
 	}
@@ -81,7 +85,7 @@ func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 		},
 	}
 	if p.enableGCPauses {
-		pauseDp := convertRuntimeHistogram(pauseHist, p.collector.lastCollect)
+		pauseDp := convertRuntimeHistogram(pauseHist, collectedAt)
 		if len(pauseDp) == 0 {
 			return nil, errors.New("unable to obtain go.memory.gc.pause.duration metric from the runtime")
 		}
@@ -107,6 +111,16 @@ func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 }
 
 var emptySet = attribute.EmptySet()
+
+func cloneHistogram(h *metrics.Float64Histogram) *metrics.Float64Histogram {
+	if h == nil {
+		return nil
+	}
+	return &metrics.Float64Histogram{
+		Counts:  slices.Clone(h.Counts),
+		Buckets: slices.Clone(h.Buckets),
+	}
+}
 
 func convertRuntimeHistogram(runtimeHist *metrics.Float64Histogram, ts time.Time) []metricdata.HistogramDataPoint[float64] {
 	if runtimeHist == nil {
