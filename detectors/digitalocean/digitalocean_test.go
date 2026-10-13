@@ -5,11 +5,13 @@ package digitalocean
 
 import (
 	"context"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	do "github.com/digitalocean/go-metadata"
 	"github.com/stretchr/testify/assert"
@@ -257,6 +259,56 @@ func TestDetectWithAttributeFilter(t *testing.T) {
 		assert.True(t, ok, "expected %s to be present", kv.Key)
 		assert.Equal(t, kv.Value, val)
 	}
+}
+
+func TestDetectStalledResponse(t *testing.T) {
+	// The metadata service answers 200 but never finishes the body, so the
+	// internal deadline expires. The service answered: this is a failure, not
+	// "not on DigitalOcean".
+	release := make(chan struct{})
+	serveMetadata(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		select {
+		case <-r.Context().Done():
+		case <-release:
+		}
+	})
+	// Registered after serveMetadata so it runs before the server is closed.
+	t.Cleanup(func() { close(release) })
+
+	// t.Context carries no deadline, so only the internal one bounds the
+	// request.
+	res, err := NewResourceDetector().Detect(t.Context())
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Nil(t, res)
+}
+
+// Each detection creates its own transport with no shutdown path, so a
+// successful detection must not leave a connection to the metadata service
+// open.
+func TestDetectClosesConnection(t *testing.T) {
+	var open atomic.Int32
+	srv := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(metadataSample))
+	}))
+	srv.Config.ConnState = func(_ net.Conn, state http.ConnState) {
+		switch state {
+		case http.StateNew:
+			open.Add(1)
+		case http.StateClosed, http.StateHijacked:
+			open.Add(-1)
+		}
+	}
+	srv.Start()
+	t.Cleanup(srv.Close)
+	useBaseURL(t, srv.URL)
+
+	_, err := NewResourceDetector().Detect(t.Context())
+	require.NoError(t, err)
+
+	assert.Eventually(t, func() bool { return open.Load() == 0 }, time.Second, 10*time.Millisecond)
 }
 
 func TestDetectCanceledContext(t *testing.T) {

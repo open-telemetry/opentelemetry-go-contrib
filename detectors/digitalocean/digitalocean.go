@@ -118,7 +118,9 @@ func (*ResourceDetector) metadata(ctx context.Context) (*do.Metadata, int, error
 	// HTTP(S) proxy: doing so could leak instance metadata or break detection
 	// in environments where users set HTTP_PROXY/HTTPS_PROXY for outbound
 	// traffic. The client of the metadata package does not disable it.
-	tr := &statusTransport{base: &http.Transport{Proxy: nil}}
+	// Keep-alives are disabled because each transport serves one request: an
+	// idle connection would only stay open after Detect returns.
+	tr := &statusTransport{base: &http.Transport{Proxy: nil, DisableKeepAlives: true}}
 	client := newClient(do.WithHTTPClient(&http.Client{
 		Timeout:   defaultTimeout,
 		Transport: tr,
@@ -138,7 +140,9 @@ func (*ResourceDetector) metadata(ctx context.Context) (*do.Metadata, int, error
 
 	select {
 	case <-ctx.Done():
-		return nil, 0, ctx.Err()
+		// The status is kept so a response that started but stalled is not
+		// mistaken for nothing answering.
+		return nil, int(tr.status.Load()), ctx.Err()
 	case r := <-ch:
 		return r.md, int(tr.status.Load()), r.err
 	}
