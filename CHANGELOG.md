@@ -8,6 +8,26 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Added
+
+- Add the experimental `WithProbabilitySampling` option to `go.opentelemetry.io/contrib/samplers/jaegerremote`, which makes probabilistic strategies follow the [probability sampling specification](https://opentelemetry.io/docs/specs/otel/trace/tracestate-probability-sampling/) using `ProbabilitySampler` from `go.opentelemetry.io/otel/sdk/trace/x`.
+   It is disabled by default. (#9847)
+- Add the `cloud.platform`, `aws.log.group.names`, and `aws.log.stream.names` resource attributes to `go.opentelemetry.io/contrib/detectors/aws/lambda`, matching the `lambda` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#9606)
+- Add `WithAttributeFilter` to `go.opentelemetry.io/contrib/detectors/aws/lambda` to select which detected attributes are included in the returned resource. (#9606)
+- Add `go.opentelemetry.io/contrib/detectors/azure/azureaks`, a new resource detector for Azure Kubernetes Service, ported from `processor/resourcedetectionprocessor/internal/azure/aks` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, and `k8s.cluster.name`. (#9501)
+
+### Changed
+
+- Support build tags to omit resource detectors in `go.opentelemetry.io/contrib/otelconf/x`. (#9818)
+- `NewResourceDetector` in `go.opentelemetry.io/contrib/detectors/aws/lambda` returns the exported concrete type `*ResourceDetector` instead of `resource.Detector`. (#9606)
+
+### Fixed
+
+- Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
+- Preserve explicit Unix epoch timestamps (`TimestampMs = 0`) instead of replacing them with the current time in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9837)
+- Remove the inbound `th` tracestate value when a rate limiting strategy makes the sampling decision in `go.opentelemetry.io/contrib/samplers/jaegerremote`, since the decision is not probabilistic. (#9847)
+- `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer reports `cloud.region`, `faas.version`, and `faas.instance` as empty strings when their environment variables are unset; the attributes are omitted instead. (#9606)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
@@ -40,7 +60,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
 - Treat empty Prometheus exporter environment variable values as unset in `go.opentelemetry.io/contrib/exporters/autoexport`, restoring the documented defaults. (#9636)
 - Bound converter-owned recursive map, slice, array, and pointer traversal in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`.
   A field requiring more than 100 such levels is replaced with `<max-depth-exceeded>` and the record continues to be emitted. Existing `fmt` and user-method behavior remains unchanged. (#9691)
