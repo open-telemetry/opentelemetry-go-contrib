@@ -10,33 +10,21 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
-	ec2detector "go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
-	ecsdetector "go.opentelemetry.io/contrib/detectors/aws/ecs"
-	eksdetector "go.opentelemetry.io/contrib/detectors/aws/eks"
-	azurevmdetector "go.opentelemetry.io/contrib/detectors/azure/azurevm"
-	gcpdetector "go.opentelemetry.io/contrib/detectors/gcp"
-
+	"go.opentelemetry.io/contrib/otelconf/internal/detectors"
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
 
-func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
+func resourceOpts(resourceDetectors []ExperimentalResourceDetector) []resource.Option {
 	opts := []resource.Option{}
-	for _, d := range detectors {
-		if d.AWSEC2 != nil {
-			opts = append(opts, resource.WithDetectors(ec2detector.NewResourceDetector()))
-		}
-		if d.AWSECS != nil {
-			opts = append(opts, resource.WithDetectors(ecsdetector.NewResourceDetector()))
-		}
-		if d.AWSEKS != nil {
-			opts = append(opts, resource.WithDetectors(eksdetector.NewResourceDetector()))
-		}
-		if d.AzureVM != nil {
-			opts = append(opts, resource.WithDetectors(azurevmdetector.New()))
-		}
-		if d.GCP != nil {
-			opts = append(opts, resource.WithDetectors(gcpdetector.NewDetector()))
-		}
+	for _, d := range resourceDetectors {
+		opts = append(opts, detectors.Options(detectors.Detector{
+			AWSEC2:  d.AWSEC2 != nil,
+			AWSECS:  d.AWSECS != nil,
+			AWSEKS:  d.AWSEKS != nil,
+			AzureVM: d.AzureVM != nil,
+			GCP:     d.GCP != nil,
+		})...)
+
 		if d.Container != nil {
 			opts = append(opts, resource.WithContainer())
 		}

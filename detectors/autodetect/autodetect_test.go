@@ -11,7 +11,7 @@ import (
 func TestDetectorsWithDependenciesRegistered(t *testing.T) {
 	ids := []ID{
 		IDAWSEC2, IDAWSECS, IDAWSEKS, IDAWSLambda, IDAWSElasticBeanstalk,
-		IDAzureContainerApps, IDAzureVM, IDDocker, IDGCP, IDHetzner,
+		IDAzureAKS, IDAzureContainerApps, IDAzureVM, IDDocker, IDGCP, IDHetzner,
 		IDIBMCloudVPC, IDK8sAPI, IDKubeadm, IDOpenShift, IDVultr,
 	}
 

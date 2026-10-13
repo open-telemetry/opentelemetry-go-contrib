@@ -19,6 +19,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/aws/eks"
 	"go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk"
 	"go.opentelemetry.io/contrib/detectors/aws/lambda"
+	"go.opentelemetry.io/contrib/detectors/azure/azureaks"
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/docker"
@@ -84,6 +85,10 @@ var ( // IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
 	// attributes on Amazon Web Services (AWS) Elastic Beanstalk (see
 	// elasticbeanstalk.NewResourceDetector for details).
 	IDAWSElasticBeanstalk = registry.ID("aws.elasticbeanstalk")
+	// IDAzureAKS is the ID for the Azure Kubernetes Service detector that
+	// detects resource attributes on Microsoft Azure Kubernetes Service (see
+	// azureaks.NewResourceDetector for details).
+	IDAzureAKS = registry.ID("azure.aks")
 	// IDAzureContainerApps is the ID for the Azure Container Apps detector
 	// that detects resource attributes on Microsoft Azure Container Apps (see
 	// azurecontainerapps.NewResourceDetector for details).
@@ -130,8 +135,9 @@ func init() {
 	registry.Register(IDAWSEC2, ec2.NewResourceDetector)
 	registry.Register(IDAWSECS, ecs.NewResourceDetector)
 	registry.Register(IDAWSEKS, eks.NewResourceDetector)
-	registry.Register(IDAWSLambda, lambda.NewResourceDetector)
+	registry.Register(IDAWSLambda, func() resource.Detector { return lambda.NewResourceDetector() })
 	registry.Register(IDAWSElasticBeanstalk, func() resource.Detector { return elasticbeanstalk.NewResourceDetector() })
+	registry.Register(IDAzureAKS, func() resource.Detector { return azureaks.NewResourceDetector() })
 	registry.Register(IDAzureContainerApps, func() resource.Detector { return azurecontainerapps.NewResourceDetector() })
 	registry.Register(IDAzureVM, func() resource.Detector { return azurevm.New() })
 	registry.Register(IDDocker, func() resource.Detector { return docker.NewResourceDetector() })
