@@ -19,12 +19,16 @@ import (
 	"go.opentelemetry.io/contrib/detectors/aws/eks"
 	"go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk"
 	"go.opentelemetry.io/contrib/detectors/aws/lambda"
+	"go.opentelemetry.io/contrib/detectors/azure/azureaks"
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
+	"go.opentelemetry.io/contrib/detectors/docker"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
 	"go.opentelemetry.io/contrib/detectors/k8sapi"
+	"go.opentelemetry.io/contrib/detectors/kubeadm"
+	"go.opentelemetry.io/contrib/detectors/openshift"
 	"go.opentelemetry.io/contrib/detectors/openstack/nova"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
@@ -50,6 +54,10 @@ var (
 	// attributes on Amazon Web Services (AWS) Elastic Beanstalk (see
 	// elasticbeanstalk.NewResourceDetector for details).
 	IDAWSElasticBeanstalk = ID("aws.elasticbeanstalk")
+	// IDAzureAKS is the ID for the Azure Kubernetes Service detector that
+	// detects resource attributes on Microsoft Azure Kubernetes Service (see
+	// azureaks.NewResourceDetector for details).
+	IDAzureAKS = ID("azure.aks")
 	// IDAzureContainerApps is the ID for the Azure Container Apps detector
 	// that detects resource attributes on Microsoft Azure Container Apps (see
 	// azurecontainerapps.NewResourceDetector for details).
@@ -74,6 +82,14 @@ var (
 	// attributes from the Kubernetes API (see k8sapi.NewResourceDetector for
 	// details).
 	IDK8sAPI = ID("k8sapi")
+	// IDKubeadm is the ID for the kubeadm detector that detects resource
+	// attributes of the kubeadm-provisioned Kubernetes cluster the process is
+	// running in (see kubeadm.NewResourceDetector for details).
+	IDKubeadm = ID("kubeadm")
+	// IDOpenShift is the ID for the OpenShift detector that detects resource
+	// attributes of OpenShift 4 clusters (see openshift.NewResourceDetector
+	// for details).
+	IDOpenShift = ID("openshift")
 	// IDOpenStackNova is the ID for the OpenStack Nova detector that detects
 	// resource attributes on OpenStack Nova compute instances (see
 	// nova.NewResourceDetector for details).
@@ -148,6 +164,10 @@ var (
 	// identifying the container in which the process is running, especially in
 	// containerized environments like Kubernetes or Docker.
 	IDContainer = ID("container")
+	// IDDocker is the ID for the Docker detector that detects resource
+	// attributes on Docker containers (see docker.NewResourceDetector for
+	// details).
+	IDDocker = ID("docker")
 )
 
 var (
@@ -156,8 +176,10 @@ var (
 		IDAWSEC2:              ec2.NewResourceDetector,
 		IDAWSECS:              ecs.NewResourceDetector,
 		IDAWSEKS:              eks.NewResourceDetector,
-		IDAWSLambda:           lambda.NewResourceDetector,
+		IDAWSLambda:           func() resource.Detector { return lambda.NewResourceDetector() },
 		IDAWSElasticBeanstalk: func() resource.Detector { return elasticbeanstalk.NewResourceDetector() },
+
+		IDAzureAKS: func() resource.Detector { return azureaks.NewResourceDetector() },
 
 		IDAzureContainerApps: func() resource.Detector { return azurecontainerapps.NewResourceDetector() },
 
@@ -173,6 +195,8 @@ var (
 
 		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
 
+		IDKubeadm:       func() resource.Detector { return kubeadm.NewResourceDetector() },
+		IDOpenShift:     func() resource.Detector { return openshift.NewResourceDetector() },
 		IDOpenStackNova: func() resource.Detector { return nova.NewResourceDetector() },
 
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
@@ -195,6 +219,8 @@ var (
 		IDProcessRuntimeDescription: optFactory(resource.WithProcessRuntimeDescription()),
 
 		IDContainer: optFactory(resource.WithContainer()),
+
+		IDDocker: func() resource.Detector { return docker.NewResourceDetector() },
 	}
 )
 

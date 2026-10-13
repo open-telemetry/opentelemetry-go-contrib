@@ -16,7 +16,6 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"google.golang.org/protobuf/proto"
 )
 
 const (
@@ -487,26 +486,26 @@ func TestProducePartialSuccess(t *testing.T) {
 	p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
 		return []*dto.MetricFamily{
 			{
-				Name: proto.String("test_gauge_metric"),
-				Help: proto.String("A gauge metric for testing"),
+				Name: new("test_gauge_metric"),
+				Help: new("A gauge metric for testing"),
 				Type: dto.MetricType_GAUGE.Enum(),
 				Metric: []*dto.Metric{
 					{
 						Gauge: &dto.Gauge{
-							Value: proto.Float64(123.4),
+							Value: new(123.4),
 						},
 						Label: []*dto.LabelPair{
 							{
-								Name:  proto.String("foo"),
-								Value: proto.String("bar"),
+								Name:  new("foo"),
+								Value: new("bar"),
 							},
 						},
 					},
 				},
 			},
 			{
-				Name: proto.String("test_gauge_histogram_metric"),
-				Help: proto.String("A gauge histogram metric for testing"),
+				Name: new("test_gauge_histogram_metric"),
+				Help: new("A gauge histogram metric for testing"),
 				Type: dto.MetricType_GAUGE_HISTOGRAM.Enum(),
 				Metric: []*dto.Metric{
 					{},
@@ -678,4 +677,171 @@ type gathererFunc func() ([]*dto.MetricFamily, error)
 
 func (f gathererFunc) Gather() ([]*dto.MetricFamily, error) {
 	return f()
+}
+
+func TestProduceForTimestamp(t *testing.T) {
+	const suppliedMs int64 = 123456789000
+
+	histogramMetric := func(tsMs *int64) *dto.Metric {
+		return &dto.Metric{
+			Histogram: &dto.Histogram{
+				SampleCount: new(uint64(1)),
+				SampleSum:   new(1.0),
+				Bucket:      []*dto.Bucket{{UpperBound: new(1.0), CumulativeCount: new(uint64(1))}},
+			},
+			TimestampMs: tsMs,
+		}
+	}
+	expHistogramMetric := func(tsMs *int64) *dto.Metric {
+		return &dto.Metric{
+			Histogram: &dto.Histogram{
+				SampleCount:   new(uint64(1)),
+				SampleSum:     new(1.0),
+				ZeroThreshold: new(1.0),
+			},
+			TimestampMs: tsMs,
+		}
+	}
+	summaryMetric := func(tsMs *int64) *dto.Metric {
+		return &dto.Metric{
+			Summary: &dto.Summary{
+				SampleCount: new(uint64(1)),
+				SampleSum:   new(1.0),
+			},
+			TimestampMs: tsMs,
+		}
+	}
+
+	zeroMs := new(int64(0))
+	nonZeroMs := new(suppliedMs)
+
+	testCases := []struct {
+		name         string
+		metricFamily *dto.MetricFamily
+	}{
+		{
+			name: "gauge",
+			metricFamily: &dto.MetricFamily{
+				Name: new("test_gauge"),
+				Type: dto.MetricType_GAUGE.Enum(),
+				Metric: []*dto.Metric{
+					{Gauge: &dto.Gauge{Value: new(1.0)}},
+					{Gauge: &dto.Gauge{Value: new(2.0)}, TimestampMs: zeroMs},
+					{Gauge: &dto.Gauge{Value: new(3.0)}, TimestampMs: nonZeroMs},
+				},
+			},
+		},
+		{
+			name: "untyped",
+			metricFamily: &dto.MetricFamily{
+				Name: new("test_untyped"),
+				Type: dto.MetricType_UNTYPED.Enum(),
+				Metric: []*dto.Metric{
+					{Untyped: &dto.Untyped{Value: new(1.0)}},
+					{Untyped: &dto.Untyped{Value: new(2.0)}, TimestampMs: zeroMs},
+					{Untyped: &dto.Untyped{Value: new(3.0)}, TimestampMs: nonZeroMs},
+				},
+			},
+		},
+		{
+			name: "counter",
+			metricFamily: &dto.MetricFamily{
+				Name: new("test_counter"),
+				Type: dto.MetricType_COUNTER.Enum(),
+				Metric: []*dto.Metric{
+					{Counter: &dto.Counter{Value: new(1.0)}},
+					{Counter: &dto.Counter{Value: new(2.0)}, TimestampMs: zeroMs},
+					{Counter: &dto.Counter{Value: new(3.0)}, TimestampMs: nonZeroMs},
+				},
+			},
+		},
+		{
+			name: "histogram",
+			metricFamily: &dto.MetricFamily{
+				Name:   new("test_histogram"),
+				Type:   dto.MetricType_HISTOGRAM.Enum(),
+				Metric: []*dto.Metric{histogramMetric(nil), histogramMetric(zeroMs), histogramMetric(nonZeroMs)},
+			},
+		},
+		{
+			name: "exponential histogram",
+			metricFamily: &dto.MetricFamily{
+				Name:   new("test_exponential_histogram"),
+				Type:   dto.MetricType_HISTOGRAM.Enum(),
+				Metric: []*dto.Metric{expHistogramMetric(nil), expHistogramMetric(zeroMs), expHistogramMetric(nonZeroMs)},
+			},
+		},
+		{
+			name: "summary",
+			metricFamily: &dto.MetricFamily{
+				Name:   new("test_summary"),
+				Type:   dto.MetricType_SUMMARY.Enum(),
+				Metric: []*dto.Metric{summaryMetric(nil), summaryMetric(zeroMs), summaryMetric(nonZeroMs)},
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
+				return []*dto.MetricFamily{tt.metricFamily}, nil
+			})))
+			start := time.Now()
+			output, err := p.Produce(t.Context())
+			end := time.Now()
+			require.NoError(t, err)
+			require.Len(t, output, 1)
+			require.Len(t, output[0].Metrics, 1)
+
+			times := dataPointTimes(output[0].Metrics[0].Data)
+			require.Len(t, times, 3)
+
+			// No timestamp -> production time.
+			assert.False(t, times[0].Before(start), "expected production time >= start")
+			assert.False(t, times[0].After(end), "expected production time <= end")
+
+			// Explicit TimestampMs = 0 -> Unix epoch.
+			assert.Equal(t, time.UnixMilli(0), times[1])
+
+			// Non-zero TimestampMs -> supplied timestamp.
+			assert.Equal(t, time.UnixMilli(suppliedMs), times[2])
+		})
+	}
+}
+
+func dataPointTimes(aggr metricdata.Aggregation) []time.Time {
+	switch a := aggr.(type) {
+	case metricdata.Gauge[float64]:
+		times := make([]time.Time, len(a.DataPoints))
+		for i, dp := range a.DataPoints {
+			times[i] = dp.Time
+		}
+		return times
+	case metricdata.Sum[float64]:
+		times := make([]time.Time, len(a.DataPoints))
+		for i, dp := range a.DataPoints {
+			times[i] = dp.Time
+		}
+		return times
+	case metricdata.Histogram[float64]:
+		times := make([]time.Time, len(a.DataPoints))
+		for i, dp := range a.DataPoints {
+			times[i] = dp.Time
+		}
+		return times
+	case metricdata.ExponentialHistogram[float64]:
+		times := make([]time.Time, len(a.DataPoints))
+		for i, dp := range a.DataPoints {
+			times[i] = dp.Time
+		}
+		return times
+	case metricdata.Summary:
+		times := make([]time.Time, len(a.DataPoints))
+		for i, dp := range a.DataPoints {
+			times[i] = dp.Time
+		}
+		return times
+	default:
+		return nil
+	}
 }
