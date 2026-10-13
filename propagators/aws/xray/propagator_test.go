@@ -121,6 +121,24 @@ func TestExtract(t *testing.T) {
 			wantSpanID:  "1234567890abcdef",
 			wantSampled: true,
 		},
+		{
+			name:      "RootCause without Root: expect invalid context",
+			headerVal: "RootCause=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=1",
+			wantValid: false,
+		},
+		{
+			name:      "ParentType without Parent: expect invalid context",
+			headerVal: "Root=1-abcdef12-1234567890abcdef12345678;ParentType=1234567890abcdef;Sampled=1",
+			wantValid: false,
+		},
+		{
+			name:        "SampledBy without Sampled: expect valid unsampled context",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;SampledBy=1",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: false,
+		},
 	}
 
 	for _, tc := range tests {
@@ -129,8 +147,6 @@ func TestExtract(t *testing.T) {
 			if tc.headerVal != "" {
 				carrier.Set("X-Amzn-Trace-Id", tc.headerVal)
 			}
-
-			// prop := P
 
 			ctx := Propagator{}.Extract(t.Context(), carrier)
 			sc := trace.SpanContextFromContext(ctx)
@@ -147,7 +163,6 @@ func TestExtract(t *testing.T) {
 					t.Errorf("expected SpanID %q, got %q", tc.wantSpanID, got)
 				}
 				if got := sc.IsSampled(); got != tc.wantSampled {
-					t.Log("name-->> ", tc.name)
 					t.Errorf("expected sampled=%v, got %v", tc.wantSampled, got)
 				}
 			}
