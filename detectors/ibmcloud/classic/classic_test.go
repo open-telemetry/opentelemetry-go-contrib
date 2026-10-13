@@ -6,6 +6,7 @@ package classic
 import (
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -59,6 +60,11 @@ func TestNewResourceDetector(t *testing.T) {
 	d := NewResourceDetector()
 	require.NotNil(t, d)
 	assert.Equal(t, defaultEndpoint, d.endpoint)
+
+	tr, ok := d.client.Transport.(*http.Transport)
+	require.True(t, ok)
+	assert.Nil(t, tr.Proxy)
+	assert.Positive(t, tr.IdleConnTimeout)
 }
 
 func TestDetect_OK(t *testing.T) {
@@ -190,6 +196,41 @@ func TestDetect_PartialFailure(t *testing.T) {
 	} {
 		_, ok := res.Set().Value(k)
 		assert.False(t, ok, "expected %s to be absent", k)
+	}
+}
+
+func TestDetect_IDFailsOthersSucceed(t *testing.T) {
+	// getId.txt fails while every other field is served. The successful
+	// responses show this process is on IBM Cloud Classic, so their attributes
+	// must be kept and the failed ID reported as a partial resource, whatever
+	// the status of the failed request.
+	for _, status := range []int{http.StatusInternalServerError, http.StatusTooManyRequests} {
+		t.Run(strconv.Itoa(status), func(t *testing.T) {
+			bodies := fullMetadata()
+			srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				path := strings.TrimPrefix(r.URL.Path, "/")
+				if path == idPath {
+					http.Error(w, "boom", status)
+					return
+				}
+				_, _ = w.Write([]byte(bodies[path]))
+			}))
+			t.Cleanup(srv.Close)
+
+			res, err := newTestDetector(srv.URL).Detect(t.Context())
+			require.ErrorIs(t, err, resource.ErrPartialResource)
+
+			expected := resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderIBMCloud,
+				semconv.CloudPlatformKey.String("ibm_cloud.classic"),
+				semconv.HostName("test-classic-instance"),
+				semconv.CloudAvailabilityZone("dal10"),
+				semconv.CloudAccountID("3186058"),
+				semconv.CloudResourceID("06220b70-9072-4f83-ba16-d62f03106c1c"),
+			)
+			assert.Equal(t, expected, res)
+		})
 	}
 }
 

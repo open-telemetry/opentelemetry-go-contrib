@@ -104,6 +104,19 @@ func (w *RespWriterWrapper) Flush() {
 	}
 }
 
+// FlushWithError records the implicit successful response status before
+// invoking an error-returning flush operation.
+func (w *RespWriterWrapper) FlushWithError(flush func() error) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if !w.wroteHeader {
+		w.writeHeader(http.StatusOK)
+	}
+
+	return flush()
+}
+
 // BytesWritten returns the number of bytes written.
 func (w *RespWriterWrapper) BytesWritten() int64 {
 	w.mu.RLock()

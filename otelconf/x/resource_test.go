@@ -44,7 +44,7 @@ func TestNewResource(t *testing.T) {
 		{
 			name: "resource-with-schema",
 			config: &Resource{
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: new(semconv.SchemaURL),
 			},
 			wantSchemaURL: semconv.SchemaURL,
 		},
@@ -64,7 +64,7 @@ func TestNewResource(t *testing.T) {
 				Attributes: []AttributeNameValue{
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 				},
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: new(semconv.SchemaURL),
 			},
 			wantSchemaURL: semconv.SchemaURL,
 			wantAttrs:     []attribute.KeyValue{semconv.ServiceName("service-a")},
@@ -76,7 +76,7 @@ func TestNewResource(t *testing.T) {
 					{Name: string(semconv.ServiceNameKey), Value: "service-a"},
 					{Name: "attr-bool", Value: true},
 				},
-				SchemaUrl: ptr(semconv.SchemaURL),
+				SchemaUrl: new(semconv.SchemaURL),
 			},
 			wantSchemaURL: semconv.SchemaURL,
 			wantAttrs: []attribute.KeyValue{
@@ -148,34 +148,16 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			wantProcessAttribute: true,
 		},
 		{
-			name: "aws.ecs-detector-only",
-			detectors: []ExperimentalResourceDetector{
-				{AWSECS: ExperimentalAWSECSResourceDetector{}},
-			},
-		},
-		{
-			name: "aws.eks-detector-only",
-			detectors: []ExperimentalResourceDetector{
-				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
-			},
-		},
-		{
-			name: "all-cloud-detectors",
+			name: "aws.ec2-detector-only",
 			detectors: []ExperimentalResourceDetector{
 				{AWSEC2: ExperimentalAWSEC2ResourceDetector{}},
-				{AWSECS: ExperimentalAWSECSResourceDetector{}},
-				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
-				{GCP: ExperimentalGCPResourceDetector{}},
 			},
 			wantEC2Attributes:  true,
 			wantHostAttributes: true,
 		},
 		{
-			name: "all-detectors",
+			name: "all-local-detectors",
 			detectors: []ExperimentalResourceDetector{
-				{AWSECS: ExperimentalAWSECSResourceDetector{}},
-				{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
-				{GCP: ExperimentalGCPResourceDetector{}},
 				{Container: ExperimentalContainerResourceDetector{}},
 				{Host: ExperimentalHostResourceDetector{}},
 				{Process: ExperimentalProcessResourceDetector{}},
@@ -220,6 +202,39 @@ func TestResourceOptsWithDetectors(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestResourceOptsWithAWSDetectors(t *testing.T) {
+	tests := []struct {
+		name     string
+		detector ExperimentalResourceDetector
+	}{
+		{
+			name:     "aws.ec2",
+			detector: ExperimentalResourceDetector{AWSEC2: ExperimentalAWSEC2ResourceDetector{}},
+		},
+		{
+			name:     "aws.ecs",
+			detector: ExperimentalResourceDetector{AWSECS: ExperimentalAWSECSResourceDetector{}},
+		},
+		{
+			name:     "aws.eks",
+			detector: ExperimentalResourceDetector{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Len(t, resourceOpts([]ExperimentalResourceDetector{tt.detector}), 1)
+		})
+	}
+}
+
+func TestResourceOptsGCP(t *testing.T) {
+	opts := resourceOpts([]ExperimentalResourceDetector{
+		{GCP: ExperimentalGCPResourceDetector{}},
+	})
+	assert.Len(t, opts, 1)
 }
 
 func TestResourceOptsAzureVM(t *testing.T) {
@@ -306,7 +321,7 @@ func TestNewResourceWithDetectionAttributesFilterDoesNotApplyToConfiguredAttribu
 func TestNewResourceWithDetectionAttributesFilterRemovesDetectedSchema(t *testing.T) {
 	schemaURL := "https://example.com/schema"
 	got, err := newResource(t.Context(), &Resource{
-		SchemaUrl: ptr(schemaURL),
+		SchemaUrl: new(schemaURL),
 		DetectionDevelopment: &ExperimentalResourceDetection{
 			Detectors: []ExperimentalResourceDetector{
 				{Host: ExperimentalHostResourceDetector{}},

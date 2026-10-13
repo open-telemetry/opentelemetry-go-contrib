@@ -27,9 +27,9 @@ const (
 
 // The SoftLayer Resource Metadata service exposes one endpoint per field in its
 // plain-text (.txt) form; there is no aggregate instance document to fetch
-// instead. idPath doubles as the availability probe: it is the canonical
-// identity endpoint, so its response decides whether this process is running on
-// an IBM Cloud Classic instance at all.
+// instead. When no field is served, idPath, the canonical identity endpoint,
+// decides whether the metadata service is failing or this process is not
+// running on an IBM Cloud Classic instance at all.
 const (
 	idPath               = "getId.txt"
 	hostnamePath         = "getHostname.txt"
@@ -78,8 +78,9 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	// Use a transport with Proxy explicitly disabled. Instance metadata must
 	// never be routed through an HTTP(S) proxy: doing so could leak it to
 	// whatever the user configured in HTTP_PROXY/HTTPS_PROXY for outbound
-	// traffic.
-	transport := &http.Transport{Proxy: nil}
+	// traffic. The idle timeout bounds how long a discarded detector keeps its
+	// connections to the metadata service open.
+	transport := &http.Transport{Proxy: nil, IdleConnTimeout: 90 * time.Second}
 	return &ResourceDetector{
 		endpoint: defaultEndpoint,
 		cfg:      cfg,
@@ -175,13 +176,22 @@ func (d *ResourceDetector) instanceMetadata(ctx context.Context) map[string]fetc
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	results := d.instanceMetadata(ctx)
 
-	// getId.txt is the availability probe: if it did not come from the metadata
-	// service, this process is not on an IBM Cloud Classic instance.
-	if probe := results[idPath]; probe.err != nil {
-		if !probe.onClassic {
-			return resource.Empty(), nil
+	// Any successful response comes from the metadata service, so this process
+	// is on an IBM Cloud Classic instance and the failed fields make the
+	// resource partial. Without one, getId.txt decides between a failing
+	// metadata service and not running on IBM Cloud Classic at all.
+	answered := false
+	for _, r := range results {
+		if r.err == nil {
+			answered = true
+			break
 		}
-		return nil, probe.err
+	}
+	if !answered {
+		if probe := results[idPath]; probe.onClassic {
+			return nil, probe.err
+		}
+		return resource.Empty(), nil
 	}
 
 	attrs := []attribute.KeyValue{
