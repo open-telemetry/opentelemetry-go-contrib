@@ -74,8 +74,12 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	// a link-local address (169.254.169.254) that must never be reached via an
 	// HTTP(S) proxy: doing so could leak instance metadata or break detection
 	// in environments where users set HTTP_PROXY/HTTPS_PROXY for outbound
-	// traffic.
-	transport := &http.Transport{Proxy: nil}
+	// traffic. The idle timeout bounds how long a discarded detector keeps its
+	// connection to the metadata service open.
+	transport := &http.Transport{
+		Proxy:           nil,
+		IdleConnTimeout: 90 * time.Second,
+	}
 	return &ResourceDetector{
 		baseURL: defaultBaseURL,
 		cfg:     cfg,
