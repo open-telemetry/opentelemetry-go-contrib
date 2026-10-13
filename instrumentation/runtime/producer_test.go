@@ -51,19 +51,10 @@ func TestNewProducer(t *testing.T) {
 }
 
 func TestNewProducerOptInGCPauses(t *testing.T) {
-	t.Run("option", func(t *testing.T) {
-		testNewProducerOptInGCPauses(t, WithOptInMetrics(MemoryGCPauseDuration))
-	})
-	t.Run("environment", func(t *testing.T) {
-		t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.pause.duration")
-		testNewProducerOptInGCPauses(t)
-	})
-}
-
-func testNewProducerOptInGCPauses(t *testing.T, opts ...ProducerOption) {
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.pause.duration")
 	runtime.GC()
 
-	reader := metric.NewManualReader(metric.WithProducer(NewProducer(opts...)))
+	reader := metric.NewManualReader(metric.WithProducer(NewProducer()))
 	_ = metric.NewMeterProvider(metric.WithReader(reader))
 	rm := metricdata.ResourceMetrics{}
 	err := reader.Collect(t.Context(), &rm)
@@ -103,7 +94,8 @@ func testNewProducerOptInGCPauses(t *testing.T, opts ...ProducerOption) {
 }
 
 func TestNewProducerIgnoresStartOptInMetrics(t *testing.T) {
-	reader := metric.NewManualReader(metric.WithProducer(NewProducer(WithOptInMetrics(MemoryGCCycles, CPUTime))))
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.cycles,go.cpu.time")
+	reader := metric.NewManualReader(metric.WithProducer(NewProducer()))
 	_ = metric.NewMeterProvider(metric.WithReader(reader))
 	rm := metricdata.ResourceMetrics{}
 	err := reader.Collect(t.Context(), &rm)
@@ -124,7 +116,8 @@ func TestConvertRuntimeHistogram(t *testing.T) {
 }
 
 func TestProducerRetainedDataPointsAreStable(t *testing.T) {
-	p := NewProducer(WithOptInMetrics(MemoryGCPauseDuration))
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.pause.duration")
+	p := NewProducer()
 	p.collector.minimumInterval = 0
 
 	runtime.GC()
@@ -148,7 +141,8 @@ func TestProducerRetainedDataPointsAreStable(t *testing.T) {
 }
 
 func TestProducerConcurrentProduce(t *testing.T) {
-	p := NewProducer(WithOptInMetrics(MemoryGCPauseDuration))
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.pause.duration")
+	p := NewProducer()
 	p.collector.minimumInterval = 0
 
 	var wg sync.WaitGroup

@@ -180,21 +180,12 @@ func TestRuntimeWithLimit(t *testing.T) {
 }
 
 func TestRuntimeOptInMetrics(t *testing.T) {
-	t.Run("option", func(t *testing.T) {
-		testRuntimeOptInMetrics(t, WithOptInMetrics(MemoryGCCycles, CPUTime))
-	})
-	t.Run("environment", func(t *testing.T) {
-		t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.cycles, go.cpu.time")
-		testRuntimeOptInMetrics(t)
-	})
-}
-
-func testRuntimeOptInMetrics(t *testing.T, opts ...Option) {
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.cycles, go.cpu.time")
 	goruntime.GC()
 
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
-	err := Start(append(opts, WithMeterProvider(mp))...)
+	err := Start(WithMeterProvider(mp))
 	assert.NoError(t, err)
 	rm := metricdata.ResourceMetrics{}
 	err = reader.Collect(t.Context(), &rm)
@@ -248,7 +239,8 @@ func testRuntimeOptInMetrics(t *testing.T, opts ...Option) {
 func TestRuntimeIgnoresProducerOptInMetrics(t *testing.T) {
 	reader := metric.NewManualReader()
 	mp := metric.NewMeterProvider(metric.WithReader(reader))
-	err := Start(WithMeterProvider(mp), WithOptInMetrics(MemoryGCPauseDuration))
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.pause.duration")
+	err := Start(WithMeterProvider(mp))
 	assert.NoError(t, err)
 	rm := metricdata.ResourceMetrics{}
 	err = reader.Collect(t.Context(), &rm)

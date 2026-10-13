@@ -40,15 +40,14 @@ var _ metric.Producer = (*Producer)(nil)
 //
 //	go.schedule.duration    s             The time goroutines have spent in the scheduler in a runnable state before actually running.
 //
-// The following opt-in metrics are produced when enabled with
-// [WithOptInMetrics] or listed, comma-separated, in the
-// OTEL_GO_X_RUNTIME_METRICS_OPTIN environment variable:
+// The following opt-in metrics are produced when listed, comma-separated, in
+// the OTEL_GO_X_RUNTIME_METRICS_OPTIN environment variable:
 //
 //	go.memory.gc.pause.duration  s        Distribution of individual GC-related stop-the-world pause latencies.
 func NewProducer(opts ...ProducerOption) *Producer {
 	c := newProducerConfig(opts...)
 	histogramMetrics := []string{goSchedLatencies}
-	enableGCPauses := c.optInEnabled(MemoryGCPauseDuration)
+	enableGCPauses := optInGCPauses.enabled()
 	if enableGCPauses {
 		histogramMetrics = append(histogramMetrics, goGCPauses)
 	}

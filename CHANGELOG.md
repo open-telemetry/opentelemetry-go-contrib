@@ -16,7 +16,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithAttributeFilter` to `go.opentelemetry.io/contrib/detectors/aws/lambda` to select which detected attributes are included in the returned resource. (#9606)
 - Add `go.opentelemetry.io/contrib/detectors/azure/azureaks`, a new resource detector for Azure Kubernetes Service, ported from `processor/resourcedetectionprocessor/internal/azure/aks` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, and `k8s.cluster.name`. (#9501)
 - Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, Cloud Run Worker Pool parity, and `NewDetectorWithOptions` with `WithGKEHostType` to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
-- Add the opt-in `go.memory.gc.cycles`, `go.memory.gc.pause.duration`, and `go.cpu.time` metrics to `go.opentelemetry.io/contrib/instrumentation/runtime`, enabled with the `WithOptInMetrics` option or by listing them in the `OTEL_GO_X_RUNTIME_METRICS_OPTIN` environment variable. (#9882)
+- Add the opt-in `go.memory.gc.cycles`, `go.memory.gc.pause.duration`, and `go.cpu.time` metrics to `go.opentelemetry.io/contrib/instrumentation/runtime`, enabled by listing them in the `OTEL_GO_X_RUNTIME_METRICS_OPTIN` environment variable. (#9882)
 
 ### Changed
 

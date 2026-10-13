@@ -56,9 +56,8 @@ const (
 //	go.processor.limit      {thread}      The number of OS threads that can execute user-level Go code simultaneously.
 //	go.config.gogc          %             Heap size target percentage configured by the user, otherwise 100.
 //
-// The following opt-in metrics are produced when enabled with
-// [WithOptInMetrics] or listed, comma-separated, in the
-// OTEL_GO_X_RUNTIME_METRICS_OPTIN environment variable:
+// The following opt-in metrics are produced when listed, comma-separated, in
+// the OTEL_GO_X_RUNTIME_METRICS_OPTIN environment variable:
 //
 //	go.memory.gc.cycles     {gc_cycle}    Number of completed GC cycles.
 //	go.cpu.time             s             Estimated CPU time spent by the Go runtime.
@@ -142,7 +141,7 @@ func Start(opts ...Option) error {
 	}
 	metricNames := slices.Clone(runtimeMetrics)
 
-	enableGCCycles := c.optInEnabled(MemoryGCCycles)
+	enableGCCycles := optInGCCycles.enabled()
 	var gcCycles goconv.MemoryGCCyclesObservable
 	if enableGCCycles {
 		gcCycles, err = goconv.NewMemoryGCCyclesObservable(meter)
@@ -153,7 +152,7 @@ func Start(opts ...Option) error {
 		metricNames = append(metricNames, goGCCycles)
 	}
 
-	enableCPUTime := c.optInEnabled(CPUTime)
+	enableCPUTime := optInCPUTime.enabled()
 	var cpuTime goconv.CPUTimeObservable
 	var cpuStates []cpuState
 	if enableCPUTime {
