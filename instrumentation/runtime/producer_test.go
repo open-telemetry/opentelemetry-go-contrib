@@ -6,6 +6,7 @@ package runtime
 import (
 	"runtime"
 	"runtime/metrics"
+	"sync"
 	"testing"
 	"time"
 
@@ -120,4 +121,45 @@ func TestConvertRuntimeHistogram(t *testing.T) {
 	dps := convertRuntimeHistogram(rh, time.Now())
 	require.Len(t, dps, 1)
 	assert.Equal(t, float64(11), dps[0].Sum)
+}
+
+func TestProducerRetainedDataPointsAreStable(t *testing.T) {
+	p := NewProducer(WithOptInMetrics(MemoryGCPauseDuration))
+	p.collector.minimumInterval = 0
+
+	runtime.GC()
+	first, err := p.Produce(t.Context())
+	require.NoError(t, err)
+
+	for range 10 {
+		runtime.GC()
+	}
+	_, err = p.Produce(t.Context())
+	require.NoError(t, err)
+
+	for _, m := range first[0].Metrics {
+		dp := m.Data.(metricdata.Histogram[float64]).DataPoints[0]
+		var total uint64
+		for _, c := range dp.BucketCounts {
+			total += c
+		}
+		assert.Equalf(t, dp.Count, total, "%s bucket counts changed after a later collection", m.Name)
+	}
+}
+
+func TestProducerConcurrentProduce(t *testing.T) {
+	p := NewProducer(WithOptInMetrics(MemoryGCPauseDuration))
+	p.collector.minimumInterval = 0
+
+	var wg sync.WaitGroup
+	for range 4 {
+		wg.Go(func() {
+			for range 50 {
+				runtime.GC()
+				_, err := p.Produce(t.Context())
+				assert.NoError(t, err)
+			}
+		})
+	}
+	wg.Wait()
 }
