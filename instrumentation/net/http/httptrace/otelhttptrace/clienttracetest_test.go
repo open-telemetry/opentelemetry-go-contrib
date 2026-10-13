@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
@@ -256,6 +257,102 @@ func TestConnectErrorWithoutGotConn(t *testing.T) {
 	require.Len(t, getConnSpans, 1)
 
 	assert.Equal(t, getConnSpans[0].SpanContext().SpanID(), connectSpans[0].Parent().SpanID())
+}
+
+func TestConnectFallbackKeepsGetConnParent(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	otel.SetTracerProvider(tp)
+
+	client, server := net.Pipe()
+	t.Cleanup(func() {
+		_ = client.Close()
+		_ = server.Close()
+	})
+
+	ct := otelhttptrace.NewClientTrace(t.Context())
+	ct.GetConn("example.com:443")
+	ct.DNSStart(httptrace.DNSStartInfo{Host: "example.com"})
+	ct.DNSDone(httptrace.DNSDoneInfo{Addrs: []net.IPAddr{
+		{IP: net.ParseIP("192.0.2.1")},
+		{IP: net.ParseIP("192.0.2.2")},
+	}})
+	ct.ConnectStart("tcp", "192.0.2.1:443")
+	ct.ConnectDone("tcp", "192.0.2.1:443", errors.New("connection refused"))
+	require.Empty(t, getSpansFromRecorder(sr, "http.getconn"))
+
+	ct.ConnectStart("tcp", "192.0.2.2:443")
+	ct.ConnectDone("tcp", "192.0.2.2:443", nil)
+	ct.GotConn(httptrace.GotConnInfo{Conn: client})
+
+	getConnSpans := getSpansFromRecorder(sr, "http.getconn")
+	require.Len(t, getConnSpans, 1)
+	assert.Contains(t, getConnSpans[0].Attributes(), attribute.String("http.remote", client.RemoteAddr().String()))
+
+	connectSpans := getSpansFromRecorder(sr, "http.connect")
+	require.Len(t, connectSpans, 2)
+	for _, s := range connectSpans {
+		assert.Equal(t, getConnSpans[0].SpanContext().SpanID(), s.Parent().SpanID())
+	}
+}
+
+func TestGetConnEndsOnFailureWithoutConnectDone(t *testing.T) {
+	setup := func(t *testing.T) (*tracetest.SpanRecorder, *httptrace.ClientTrace) {
+		sr := tracetest.NewSpanRecorder()
+		otel.SetTracerProvider(trace.NewTracerProvider(trace.WithSpanProcessor(sr)))
+		return sr, otelhttptrace.NewClientTrace(t.Context())
+	}
+
+	t.Run("dns error", func(t *testing.T) {
+		sr, ct := setup(t)
+		ct.GetConn("example.com:443")
+		ct.DNSStart(httptrace.DNSStartInfo{Host: "example.com"})
+		ct.DNSDone(httptrace.DNSDoneInfo{Err: errors.New("no such host")})
+
+		getConnSpans := getSpansFromRecorder(sr, "http.getconn")
+		require.Len(t, getConnSpans, 1)
+		dnsSpans := getSpansFromRecorder(sr, "http.dns")
+		require.Len(t, dnsSpans, 1)
+		assert.Equal(t, getConnSpans[0].SpanContext().SpanID(), dnsSpans[0].Parent().SpanID())
+	})
+
+	t.Run("tls error", func(t *testing.T) {
+		sr, ct := setup(t)
+		ct.GetConn("example.com:443")
+		ct.ConnectStart("tcp", "192.0.2.1:443")
+		ct.ConnectDone("tcp", "192.0.2.1:443", nil)
+		ct.TLSHandshakeStart()
+		ct.TLSHandshakeDone(tls.ConnectionState{}, errors.New("bad certificate"))
+
+		getConnSpans := getSpansFromRecorder(sr, "http.getconn")
+		require.Len(t, getConnSpans, 1)
+		tlsSpans := getSpansFromRecorder(sr, "http.tls")
+		require.Len(t, tlsSpans, 1)
+		assert.Equal(t, getConnSpans[0].SpanContext().SpanID(), tlsSpans[0].Parent().SpanID())
+	})
+
+	t.Run("context canceled before remaining addresses are dialed", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		otel.SetTracerProvider(trace.NewTracerProvider(trace.WithSpanProcessor(sr)))
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		ct := otelhttptrace.NewClientTrace(ctx)
+		ct.GetConn("example.com:443")
+		ct.DNSStart(httptrace.DNSStartInfo{Host: "example.com"})
+		ct.DNSDone(httptrace.DNSDoneInfo{Addrs: []net.IPAddr{
+			{IP: net.ParseIP("192.0.2.1")},
+			{IP: net.ParseIP("192.0.2.2")},
+		}})
+		ct.ConnectStart("tcp", "192.0.2.1:443")
+		ct.ConnectDone("tcp", "192.0.2.1:443", errors.New("connection refused"))
+		require.Empty(t, getSpansFromRecorder(sr, "http.getconn"))
+
+		cancel()
+		require.Eventually(t, func() bool {
+			return len(getSpansFromRecorder(sr, "http.getconn")) == 1
+		}, 5*time.Second, 10*time.Millisecond)
+	})
 }
 
 func TestEndBeforeStartCreatesSpan(t *testing.T) {

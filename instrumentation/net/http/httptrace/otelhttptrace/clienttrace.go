@@ -139,6 +139,14 @@ type clientTracer struct {
 	addHeaders      bool
 	useSpans        bool
 	semconv         semconv.HTTPClient
+
+	// pendingDials is the number of dial attempts not yet finished; a literal
+	// IP has no DNS lookup and so defaults to one attempt.
+	pendingDials int
+	connected    bool
+
+	// stopGetConnWatch unregisters the context watcher for http.getconn.
+	stopGetConnWatch func() bool
 }
 
 // NewClientTrace returns an httptrace.ClientTrace implementation that will
@@ -160,9 +168,10 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 			"cookie":              {},
 			"set-cookie":          {},
 		},
-		addHeaders: true,
-		useSpans:   true,
-		semconv:    semconv.NewHTTPClient(nil),
+		addHeaders:   true,
+		useSpans:     true,
+		semconv:      semconv.NewHTTPClient(nil),
+		pendingDials: 1,
 	}
 
 	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {
@@ -276,18 +285,26 @@ func (ct *clientTracer) endIfActive(hook string, err error, attrs ...attribute.K
 		span.SetAttributes(attrs...)
 		span.End()
 		delete(ct.activeHooks, hook)
+		if hook == "http.getconn" && ct.stopGetConnWatch != nil {
+			ct.stopGetConnWatch()
+			ct.stopGetConnWatch = nil
+		}
 	}
 }
 
-func (ct *clientTracer) hasActiveConnect() bool {
+// lastDialFailed records a finished dial attempt and reports whether it was
+// the final one with no successful connection.
+func (ct *clientTracer) lastDialFailed(err error) bool {
 	ct.mtx.Lock()
 	defer ct.mtx.Unlock()
-	for hook := range ct.activeHooks {
-		if strings.HasPrefix(hook, "http.connect.") {
-			return true
-		}
+	if ct.pendingDials > 0 {
+		ct.pendingDials--
 	}
-	return false
+	if err == nil {
+		ct.connected = true
+		return false
+	}
+	return !ct.connected && ct.pendingDials == 0
 }
 
 func (ct *clientTracer) getParentContext(hook string) context.Context {
@@ -309,6 +326,19 @@ func (ct *clientTracer) span(hook string) trace.Span {
 
 func (ct *clientTracer) getConn(host string) {
 	ct.start("http.getconn", "http.getconn", ct.semconv.TraceAttributes(host)...)
+	if !ct.useSpans {
+		return
+	}
+
+	// Dial attempts abandoned on cancellation fire no hooks, so end the span here.
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+	if ct.stopGetConnWatch != nil {
+		ct.stopGetConnWatch()
+	}
+	ct.stopGetConnWatch = context.AfterFunc(ct.Context, func() {
+		ct.endIfActive("http.getconn", ct.Context.Err())
+	})
 }
 
 func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
@@ -341,7 +371,15 @@ func (ct *clientTracer) dnsDone(info httptrace.DNSDoneInfo) {
 	for _, netAddr := range info.Addrs {
 		addrs = append(addrs, netAddr.String())
 	}
+	if info.Err == nil && len(addrs) > 0 {
+		ct.mtx.Lock()
+		ct.pendingDials = len(addrs)
+		ct.mtx.Unlock()
+	}
 	ct.end("http.dns", info.Err, HTTPDNSAddrs.String(sliceToString(addrs)))
+	if info.Err != nil && ct.useSpans {
+		ct.endIfActive("http.getconn", info.Err)
+	}
 }
 
 func (ct *clientTracer) connectStart(network, addr string) {
@@ -358,7 +396,7 @@ func (ct *clientTracer) connectDone(network, addr string, err error) {
 		HTTPConnectionDoneAddr.String(addr),
 		HTTPConnectionDoneNetwork.String(network),
 	)
-	if err != nil && !ct.hasActiveConnect() {
+	if ct.useSpans && ct.lastDialFailed(err) {
 		ct.endIfActive("http.getconn", err)
 	}
 }
@@ -369,6 +407,9 @@ func (ct *clientTracer) tlsHandshakeStart() {
 
 func (ct *clientTracer) tlsHandshakeDone(_ tls.ConnectionState, err error) {
 	ct.end("http.tls", err)
+	if err != nil && ct.useSpans {
+		ct.endIfActive("http.getconn", err)
+	}
 }
 
 func (ct *clientTracer) wroteHeaderField(k string, v []string) {
