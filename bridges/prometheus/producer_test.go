@@ -8,8 +8,10 @@ import (
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
+	dto "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -26,7 +28,6 @@ func TestProduce(t *testing.T) {
 		name     string
 		testFn   func(*prometheus.Registry)
 		expected []metricdata.ScopeMetrics
-		wantErr  error
 	}{
 		{
 			name:   "no metrics registered",
@@ -422,24 +423,18 @@ func TestProduce(t *testing.T) {
 			}},
 		},
 		{
-			name: "partial success",
+			name: "untyped",
 			testFn: func(reg *prometheus.Registry) {
-				metric := prometheus.NewGauge(prometheus.GaugeOpts{
-					Name: "test_gauge_metric",
-					Help: "A gauge metric for testing",
+				metric := prometheus.NewUntypedFunc(prometheus.UntypedOpts{
+					Name: "test_untyped_metric",
+					Help: "An untyped metric for testing",
 					ConstLabels: prometheus.Labels(map[string]string{
 						"foo": "bar",
 					}),
-				})
-				reg.MustRegister(metric)
-				metric.Set(123.4)
-				unsupportedMetric := prometheus.NewUntypedFunc(prometheus.UntypedOpts{
-					Name: "test_untyped_metric",
-					Help: "An untyped metric for testing",
 				}, func() float64 {
 					return 135.8
 				})
-				reg.MustRegister(unsupportedMetric)
+				reg.MustRegister(metric)
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
@@ -447,20 +442,19 @@ func TestProduce(t *testing.T) {
 				},
 				Metrics: []metricdata.Metrics{
 					{
-						Name:        "test_gauge_metric",
-						Description: "A gauge metric for testing",
+						Name:        "test_untyped_metric",
+						Description: "An untyped metric for testing",
 						Data: metricdata.Gauge[float64]{
 							DataPoints: []metricdata.DataPoint[float64]{
 								{
 									Attributes: attribute.NewSet(attribute.String("foo", "bar")),
-									Value:      123.4,
+									Value:      135.8,
 								},
 							},
 						},
 					},
 				},
 			}},
-			wantErr: errUnsupportedType,
 		},
 	}
 	for _, tt := range testCases {
@@ -469,15 +463,83 @@ func TestProduce(t *testing.T) {
 			tt.testFn(reg)
 			p := NewMetricProducer(WithGatherer(reg))
 			output, err := p.Produce(t.Context())
-			if tt.wantErr == nil {
-				assert.NoError(t, err)
-			}
+			assert.NoError(t, err)
 			require.Len(t, output, len(tt.expected))
 			for i := range output {
 				metricdatatest.AssertEqual(t, tt.expected[i], output[i], metricdatatest.IgnoreTimestamp())
 			}
 		})
 	}
+}
+
+// This is separate from TestProduce because the Prometheus Go SDK does not
+// provide a function that generates a gauge histogram metric.
+func TestProducePartialSuccess(t *testing.T) {
+	previousHandler := otel.GetErrorHandler()
+	t.Cleanup(func() { otel.SetErrorHandler(previousHandler) })
+
+	var handledErr error
+	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+		handledErr = err
+	}))
+
+	p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
+		return []*dto.MetricFamily{
+			{
+				Name: new("test_gauge_metric"),
+				Help: new("A gauge metric for testing"),
+				Type: dto.MetricType_GAUGE.Enum(),
+				Metric: []*dto.Metric{
+					{
+						Gauge: &dto.Gauge{
+							Value: new(123.4),
+						},
+						Label: []*dto.LabelPair{
+							{
+								Name:  new("foo"),
+								Value: new("bar"),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: new("test_gauge_histogram_metric"),
+				Help: new("A gauge histogram metric for testing"),
+				Type: dto.MetricType_GAUGE_HISTOGRAM.Enum(),
+				Metric: []*dto.Metric{
+					{},
+				},
+			},
+		}, nil
+	})))
+
+	output, err := p.Produce(t.Context())
+	assert.NoError(t, err)
+	require.ErrorIs(t, handledErr, errUnsupportedType)
+	assert.Contains(t, handledErr.Error(), "test_gauge_histogram_metric")
+	require.Len(t, output, 1)
+
+	expected := metricdata.ScopeMetrics{
+		Scope: instrumentation.Scope{
+			Name: scopeName,
+		},
+		Metrics: []metricdata.Metrics{
+			{
+				Name:        "test_gauge_metric",
+				Description: "A gauge metric for testing",
+				Data: metricdata.Gauge[float64]{
+					DataPoints: []metricdata.DataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+							Value:      123.4,
+						},
+					},
+				},
+			},
+		},
+	}
+	metricdatatest.AssertEqual(t, expected, output[0], metricdatatest.IgnoreTimestamp())
 }
 
 func TestProduceForStartTime(t *testing.T) {
@@ -608,5 +670,178 @@ func TestProduceForStartTime(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+type gathererFunc func() ([]*dto.MetricFamily, error)
+
+func (f gathererFunc) Gather() ([]*dto.MetricFamily, error) {
+	return f()
+}
+
+func TestProduceForTimestamp(t *testing.T) {
+	const suppliedMs int64 = 123456789000
+
+	histogramMetric := func(tsMs *int64) *dto.Metric {
+		return &dto.Metric{
+			Histogram: &dto.Histogram{
+				SampleCount: new(uint64(1)),
+				SampleSum:   new(1.0),
+				Bucket:      []*dto.Bucket{{UpperBound: new(1.0), CumulativeCount: new(uint64(1))}},
+			},
+			TimestampMs: tsMs,
+		}
+	}
+	expHistogramMetric := func(tsMs *int64) *dto.Metric {
+		return &dto.Metric{
+			Histogram: &dto.Histogram{
+				SampleCount:   new(uint64(1)),
+				SampleSum:     new(1.0),
+				ZeroThreshold: new(1.0),
+			},
+			TimestampMs: tsMs,
+		}
+	}
+	summaryMetric := func(tsMs *int64) *dto.Metric {
+		return &dto.Metric{
+			Summary: &dto.Summary{
+				SampleCount: new(uint64(1)),
+				SampleSum:   new(1.0),
+			},
+			TimestampMs: tsMs,
+		}
+	}
+
+	zeroMs := new(int64(0))
+	nonZeroMs := new(suppliedMs)
+
+	testCases := []struct {
+		name         string
+		metricFamily *dto.MetricFamily
+	}{
+		{
+			name: "gauge",
+			metricFamily: &dto.MetricFamily{
+				Name: new("test_gauge"),
+				Type: dto.MetricType_GAUGE.Enum(),
+				Metric: []*dto.Metric{
+					{Gauge: &dto.Gauge{Value: new(1.0)}},
+					{Gauge: &dto.Gauge{Value: new(2.0)}, TimestampMs: zeroMs},
+					{Gauge: &dto.Gauge{Value: new(3.0)}, TimestampMs: nonZeroMs},
+				},
+			},
+		},
+		{
+			name: "untyped",
+			metricFamily: &dto.MetricFamily{
+				Name: new("test_untyped"),
+				Type: dto.MetricType_UNTYPED.Enum(),
+				Metric: []*dto.Metric{
+					{Untyped: &dto.Untyped{Value: new(1.0)}},
+					{Untyped: &dto.Untyped{Value: new(2.0)}, TimestampMs: zeroMs},
+					{Untyped: &dto.Untyped{Value: new(3.0)}, TimestampMs: nonZeroMs},
+				},
+			},
+		},
+		{
+			name: "counter",
+			metricFamily: &dto.MetricFamily{
+				Name: new("test_counter"),
+				Type: dto.MetricType_COUNTER.Enum(),
+				Metric: []*dto.Metric{
+					{Counter: &dto.Counter{Value: new(1.0)}},
+					{Counter: &dto.Counter{Value: new(2.0)}, TimestampMs: zeroMs},
+					{Counter: &dto.Counter{Value: new(3.0)}, TimestampMs: nonZeroMs},
+				},
+			},
+		},
+		{
+			name: "histogram",
+			metricFamily: &dto.MetricFamily{
+				Name:   new("test_histogram"),
+				Type:   dto.MetricType_HISTOGRAM.Enum(),
+				Metric: []*dto.Metric{histogramMetric(nil), histogramMetric(zeroMs), histogramMetric(nonZeroMs)},
+			},
+		},
+		{
+			name: "exponential histogram",
+			metricFamily: &dto.MetricFamily{
+				Name:   new("test_exponential_histogram"),
+				Type:   dto.MetricType_HISTOGRAM.Enum(),
+				Metric: []*dto.Metric{expHistogramMetric(nil), expHistogramMetric(zeroMs), expHistogramMetric(nonZeroMs)},
+			},
+		},
+		{
+			name: "summary",
+			metricFamily: &dto.MetricFamily{
+				Name:   new("test_summary"),
+				Type:   dto.MetricType_SUMMARY.Enum(),
+				Metric: []*dto.Metric{summaryMetric(nil), summaryMetric(zeroMs), summaryMetric(nonZeroMs)},
+			},
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
+				return []*dto.MetricFamily{tt.metricFamily}, nil
+			})))
+			start := time.Now()
+			output, err := p.Produce(t.Context())
+			end := time.Now()
+			require.NoError(t, err)
+			require.Len(t, output, 1)
+			require.Len(t, output[0].Metrics, 1)
+
+			times := dataPointTimes(output[0].Metrics[0].Data)
+			require.Len(t, times, 3)
+
+			// No timestamp -> production time.
+			assert.False(t, times[0].Before(start), "expected production time >= start")
+			assert.False(t, times[0].After(end), "expected production time <= end")
+
+			// Explicit TimestampMs = 0 -> Unix epoch.
+			assert.Equal(t, time.UnixMilli(0), times[1])
+
+			// Non-zero TimestampMs -> supplied timestamp.
+			assert.Equal(t, time.UnixMilli(suppliedMs), times[2])
+		})
+	}
+}
+
+func dataPointTimes(aggr metricdata.Aggregation) []time.Time {
+	switch a := aggr.(type) {
+	case metricdata.Gauge[float64]:
+		times := make([]time.Time, len(a.DataPoints))
+		for i, dp := range a.DataPoints {
+			times[i] = dp.Time
+		}
+		return times
+	case metricdata.Sum[float64]:
+		times := make([]time.Time, len(a.DataPoints))
+		for i, dp := range a.DataPoints {
+			times[i] = dp.Time
+		}
+		return times
+	case metricdata.Histogram[float64]:
+		times := make([]time.Time, len(a.DataPoints))
+		for i, dp := range a.DataPoints {
+			times[i] = dp.Time
+		}
+		return times
+	case metricdata.ExponentialHistogram[float64]:
+		times := make([]time.Time, len(a.DataPoints))
+		for i, dp := range a.DataPoints {
+			times[i] = dp.Time
+		}
+		return times
+	case metricdata.Summary:
+		times := make([]time.Time, len(a.DataPoints))
+		for i, dp := range a.DataPoints {
+			times[i] = dp.Time
+		}
+		return times
+	default:
+		return nil
 	}
 }
