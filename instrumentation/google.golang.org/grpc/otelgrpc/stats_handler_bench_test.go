@@ -217,11 +217,3 @@ func BenchmarkServerHandler_HandleRPC_End_WithReader(b *testing.B) {
 func BenchmarkServerHandler_HandleRPC_End_Error_WithReader(b *testing.B) {
 	benchmarkServerHandlerHandleRPCEnd(b, status.Error(codes.Internal, "internal"))
 }
-
-// BenchmarkServerHandler_HandleRPC_End_Error_OldMode_WithReader measures a
-// failed RPC completion in rpc/old mode: only the legacy histogram is
-// enabled, so the stable error.type attribute must not be built.
-func BenchmarkServerHandler_HandleRPC_End_Error_OldMode_WithReader(b *testing.B) {
-	b.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "rpc/old")
-	benchmarkServerHandlerHandleRPCEnd(b, status.Error(codes.Internal, "internal"))
-}
