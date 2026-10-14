@@ -26,6 +26,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray` to prevent auxiliary fields with prefix-sharing keys from dropping trace contexts. (#9879)
 - Preserve errors returned by `http.ResponseController.Flush` through `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9798)
 - Replace inherited debug and deferred sampling flags when extracting a new B3 context in `go.opentelemetry.io/contrib/propagators/b3`. (#9864)
 - Use a background context for entries without an explicit context in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#9865)
