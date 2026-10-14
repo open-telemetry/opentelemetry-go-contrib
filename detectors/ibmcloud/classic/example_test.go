@@ -1,0 +1,28 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package classic_test
+
+import (
+	"context"
+	"log"
+
+	"go.opentelemetry.io/otel/sdk/resource"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+
+	"go.opentelemetry.io/contrib/detectors/ibmcloud/classic"
+)
+
+func ExampleNewResourceDetector() {
+	res, err := resource.New(
+		context.Background(),
+		resource.WithDetectors(classic.NewResourceDetector()),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tp := sdktrace.NewTracerProvider(sdktrace.WithResource(res))
+	_ = tp.Shutdown(context.Background())
+	// Use tp to create tracers ...
+}
