@@ -19,15 +19,18 @@ import (
 	"go.opentelemetry.io/contrib/detectors/aws/eks"
 	"go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk"
 	"go.opentelemetry.io/contrib/detectors/aws/lambda"
+	"go.opentelemetry.io/contrib/detectors/azure/azureaks"
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/docker"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
+	"go.opentelemetry.io/contrib/detectors/ibmcloud/classic"
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
 	"go.opentelemetry.io/contrib/detectors/k8sapi"
 	"go.opentelemetry.io/contrib/detectors/kubeadm"
 	"go.opentelemetry.io/contrib/detectors/openshift"
+	"go.opentelemetry.io/contrib/detectors/openstack/nova"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -52,6 +55,10 @@ var (
 	// attributes on Amazon Web Services (AWS) Elastic Beanstalk (see
 	// elasticbeanstalk.NewResourceDetector for details).
 	IDAWSElasticBeanstalk = ID("aws.elasticbeanstalk")
+	// IDAzureAKS is the ID for the Azure Kubernetes Service detector that
+	// detects resource attributes on Microsoft Azure Kubernetes Service (see
+	// azureaks.NewResourceDetector for details).
+	IDAzureAKS = ID("azure.aks")
 	// IDAzureContainerApps is the ID for the Azure Container Apps detector
 	// that detects resource attributes on Microsoft Azure Container Apps (see
 	// azurecontainerapps.NewResourceDetector for details).
@@ -68,6 +75,10 @@ var (
 	// attributes on Hetzner Cloud servers (see hetzner.NewResourceDetector for
 	// details).
 	IDHetzner = ID("hetzner")
+	// IDIBMCloudClassic is the ID for the IBM Cloud Classic detector that
+	// detects resource attributes on IBM Cloud Classic Infrastructure
+	// (SoftLayer) instances (see classic.NewResourceDetector for details).
+	IDIBMCloudClassic = ID("ibmcloud.classic")
 	// IDIBMCloudVPC is the ID for the IBM Cloud VPC detector that detects
 	// resource attributes on IBM Cloud VPC virtual server instances (see
 	// vpc.NewResourceDetector for details).
@@ -84,6 +95,10 @@ var (
 	// attributes of OpenShift 4 clusters (see openshift.NewResourceDetector
 	// for details).
 	IDOpenShift = ID("openshift")
+	// IDOpenStackNova is the ID for the OpenStack Nova detector that detects
+	// resource attributes on OpenStack Nova compute instances (see
+	// nova.NewResourceDetector for details).
+	IDOpenStackNova = ID("openstack.nova")
 	// IDVultr is the ID for the Vultr detector that detects resource attributes
 	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
 	// details).
@@ -166,8 +181,10 @@ var (
 		IDAWSEC2:              ec2.NewResourceDetector,
 		IDAWSECS:              ecs.NewResourceDetector,
 		IDAWSEKS:              eks.NewResourceDetector,
-		IDAWSLambda:           lambda.NewResourceDetector,
+		IDAWSLambda:           func() resource.Detector { return lambda.NewResourceDetector() },
 		IDAWSElasticBeanstalk: func() resource.Detector { return elasticbeanstalk.NewResourceDetector() },
+
+		IDAzureAKS: func() resource.Detector { return azureaks.NewResourceDetector() },
 
 		IDAzureContainerApps: func() resource.Detector { return azurecontainerapps.NewResourceDetector() },
 
@@ -179,12 +196,15 @@ var (
 
 		IDHetzner: func() resource.Detector { return hetzner.NewResourceDetector() },
 
+		IDIBMCloudClassic: func() resource.Detector { return classic.NewResourceDetector() },
+
 		IDIBMCloudVPC: func() resource.Detector { return vpc.NewResourceDetector() },
 
 		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
 
-		IDKubeadm:   func() resource.Detector { return kubeadm.NewResourceDetector() },
-		IDOpenShift: func() resource.Detector { return openshift.NewResourceDetector() },
+		IDKubeadm:       func() resource.Detector { return kubeadm.NewResourceDetector() },
+		IDOpenShift:     func() resource.Detector { return openshift.NewResourceDetector() },
+		IDOpenStackNova: func() resource.Detector { return nova.NewResourceDetector() },
 
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 
