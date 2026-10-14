@@ -14,6 +14,7 @@ import (
 	"time"
 
 	aws "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
@@ -126,9 +127,11 @@ func TestNewResourceDetectorWithOptions(t *testing.T) {
 	logger := logging.NewStandardLogger(io.Discard)
 
 	testCases := []struct {
-		name           string
-		opts           []Option
-		expectedLogger logging.Logger
+		name                string
+		opts                []Option
+		expectedLogger      logging.Logger
+		expectedMaxAttempts *int
+		expectedMaxBackoff  *time.Duration
 	}{
 		{
 			name: "no options",
@@ -138,13 +141,25 @@ func TestNewResourceDetectorWithOptions(t *testing.T) {
 			opts:           []Option{WithAWSLogger(logger)},
 			expectedLogger: logger,
 		},
+		{
+			name: "with retry settings",
+			opts: []Option{
+				WithMaxAttempts(5),
+				WithMaxBackoff(3 * time.Second),
+			},
+			expectedMaxAttempts: new(5),
+			expectedMaxBackoff:  new(3 * time.Second),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			detector := NewResourceDetectorWithOptions(tc.opts...)
 			require.NotNil(t, detector)
-			assert.Equal(t, tc.expectedLogger, detector.(*resourceDetector).cfg.logger)
+			cfg := detector.(*resourceDetector).cfg
+			assert.Equal(t, tc.expectedLogger, cfg.logger)
+			assert.Equal(t, tc.expectedMaxAttempts, cfg.maxAttempts)
+			assert.Equal(t, tc.expectedMaxBackoff, cfg.maxBackoff)
 		})
 	}
 }
@@ -158,7 +173,7 @@ func TestDetectReturnsClientError(t *testing.T) {
 		func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 			return aws.Config{}, errLoad
 		},
-		func(aws.Config) client {
+		func(aws.Config, ...func(*imds.Options)) client {
 			t.Fatal("newIMDSClient should not be called")
 			return nil
 		},
@@ -175,7 +190,7 @@ func TestNewClient(t *testing.T) {
 			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 				return aws.Config{}, errors.New("load failed")
 			},
-			func(aws.Config) client {
+			func(aws.Config, ...func(*imds.Options)) client {
 				t.Fatal("newIMDSClient should not be called")
 				return nil
 			},
@@ -199,7 +214,7 @@ func TestNewClient(t *testing.T) {
 				actualLogger = lo.Logger
 				return aws.Config{}, nil
 			},
-			func(aws.Config) client { return new(mockClient) },
+			func(aws.Config, ...func(*imds.Options)) client { return new(mockClient) },
 		)
 
 		_, err := newClient(t.Context(), config{logger: logger})
@@ -214,8 +229,10 @@ func TestNewClient(t *testing.T) {
 			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 				return aws.Config{Region: "us-west-2"}, nil
 			},
-			func(cfg aws.Config) client {
+			func(cfg aws.Config, optFns ...func(*imds.Options)) client {
 				assert.Equal(t, "us-west-2", cfg.Region)
+				assert.Nil(t, cfg.Retryer)
+				assert.Empty(t, optFns)
 				return fakeClient
 			},
 		)
@@ -223,6 +240,101 @@ func TestNewClient(t *testing.T) {
 		c, err := newClient(t.Context(), config{})
 		require.NoError(t, err)
 		assert.Same(t, fakeClient, c)
+	})
+
+	t.Run("applies configured retry limits", func(t *testing.T) {
+		maxAttempts := 5
+		maxBackoff := 3 * time.Second
+		baseRetryer := retry.NewStandard()
+		testCases := []struct {
+			name                    string
+			cfg                     config
+			wantMaxAttempts         int
+			wantMaxBackoff          time.Duration
+			wantDisableDefaultLimit bool
+		}{
+			{
+				name:            "max attempts only",
+				cfg:             config{maxAttempts: &maxAttempts},
+				wantMaxAttempts: maxAttempts,
+			},
+			{
+				name:                    "max backoff only",
+				cfg:                     config{maxBackoff: &maxBackoff},
+				wantMaxAttempts:         baseRetryer.MaxAttempts(),
+				wantMaxBackoff:          maxBackoff,
+				wantDisableDefaultLimit: true,
+			},
+			{
+				name:                    "both limits",
+				cfg:                     config{maxAttempts: &maxAttempts, maxBackoff: &maxBackoff},
+				wantMaxAttempts:         maxAttempts,
+				wantMaxBackoff:          maxBackoff,
+				wantDisableDefaultLimit: true,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				var actualRetryer aws.Retryer
+				var imdsOptions imds.Options
+				stubClientSeams(
+					t,
+					func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+						return aws.Config{Retryer: func() aws.Retryer { return baseRetryer }}, nil
+					},
+					func(cfg aws.Config, optFns ...func(*imds.Options)) client {
+						actualRetryer = cfg.Retryer()
+						for _, fn := range optFns {
+							fn(&imdsOptions)
+						}
+						return new(mockClient)
+					},
+				)
+
+				_, err := newClient(t.Context(), tc.cfg)
+				require.NoError(t, err)
+				require.NotNil(t, actualRetryer)
+				assert.Equal(t, tc.wantMaxAttempts, actualRetryer.MaxAttempts())
+				assert.Equal(t, tc.wantDisableDefaultLimit, imdsOptions.DisableDefaultMaxBackoff)
+
+				if tc.wantMaxBackoff > 0 {
+					delay, err := actualRetryer.RetryDelay(10, nil)
+					require.NoError(t, err)
+					assert.LessOrEqual(t, delay, tc.wantMaxBackoff)
+				}
+			})
+		}
+	})
+
+	t.Run("rejects invalid retry limits", func(t *testing.T) {
+		testCases := []struct {
+			name string
+			cfg  config
+		}{
+			{name: "zero attempts", cfg: config{maxAttempts: new(0)}},
+			{name: "negative attempts", cfg: config{maxAttempts: new(-1)}},
+			{name: "zero backoff", cfg: config{maxBackoff: new(time.Duration(0))}},
+			{name: "negative backoff", cfg: config{maxBackoff: new(-time.Second)}},
+		}
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				stubClientSeams(
+					t,
+					func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+						t.Fatal("loadDefaultConfig should not be called")
+						return aws.Config{}, nil
+					},
+					func(aws.Config, ...func(*imds.Options)) client {
+						t.Fatal("newIMDSClient should not be called")
+						return nil
+					},
+				)
+
+				_, err := newClient(t.Context(), tc.cfg)
+				assert.Error(t, err)
+			})
+		}
 	})
 
 	t.Run("passes context to config load", func(t *testing.T) {
@@ -234,7 +346,7 @@ func TestNewClient(t *testing.T) {
 				gotCtx = c
 				return aws.Config{}, nil
 			},
-			func(aws.Config) client { return new(mockClient) },
+			func(aws.Config, ...func(*imds.Options)) client { return new(mockClient) },
 		)
 
 		_, err := newClient(ctx, config{})
@@ -257,7 +369,7 @@ func TestDetectCachesClient(t *testing.T) {
 			loadCalls++
 			return aws.Config{}, nil
 		},
-		func(aws.Config) client {
+		func(aws.Config, ...func(*imds.Options)) client {
 			newCalls++
 			return fake
 		},
@@ -291,7 +403,7 @@ func TestDetectRetriesFailedClientConstruction(t *testing.T) {
 			}
 			return aws.Config{}, nil
 		},
-		func(aws.Config) client {
+		func(aws.Config, ...func(*imds.Options)) client {
 			return fake
 		},
 	)
@@ -320,7 +432,7 @@ func TestDetectPassesContextToConfigLoad(t *testing.T) {
 			gotCtx = c
 			return aws.Config{}, nil
 		},
-		func(aws.Config) client { return fake },
+		func(aws.Config, ...func(*imds.Options)) client { return fake },
 	)
 
 	_, err := NewResourceDetector().Detect(ctx)
@@ -333,7 +445,7 @@ func TestDetectPassesContextToConfigLoad(t *testing.T) {
 func stubClientSeams(
 	t *testing.T,
 	load func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error),
-	newIMDS func(aws.Config) client,
+	newIMDS func(aws.Config, ...func(*imds.Options)) client,
 ) {
 	t.Helper()
 	origLoad, origNew := loadDefaultConfig, newIMDSClient
@@ -354,7 +466,7 @@ func detectWithClient(t *testing.T, c client) (*resource.Resource, error) {
 		func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 			return aws.Config{}, nil
 		},
-		func(aws.Config) client { return c },
+		func(aws.Config, ...func(*imds.Options)) client { return c },
 	)
 	return NewResourceDetector().Detect(t.Context())
 }

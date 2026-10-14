@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `WithMaxAttempts` and `WithMaxBackoff` options to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` to configure the AWS SDK retry policy. (#9796)
 - Add `Methods` filter to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/filters` to match multiple HTTP methods. (#9630)
 - Add the experimental `WithProbabilitySampling` option to `go.opentelemetry.io/contrib/samplers/jaegerremote`, which makes probabilistic strategies follow the [probability sampling specification](https://opentelemetry.io/docs/specs/otel/trace/tracestate-probability-sampling/) using `ProbabilitySampler` from `go.opentelemetry.io/otel/sdk/trace/x`.
    It is disabled by default. (#9847)
