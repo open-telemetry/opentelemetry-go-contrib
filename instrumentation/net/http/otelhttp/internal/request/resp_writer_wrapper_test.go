@@ -47,6 +47,23 @@ func TestRespWriterFlush(t *testing.T) {
 	assert.True(t, rw.wroteHeader)
 }
 
+func TestRespWriterFlushWithError(t *testing.T) {
+	wantErr := errors.New("flush failed")
+	responseRecorder := httptest.NewRecorder()
+	rw := NewRespWriterWrapper(responseRecorder, func(int64) {})
+	flushCalls := 0
+
+	err := rw.FlushWithError(func() error {
+		flushCalls++
+		return wantErr
+	})
+
+	assert.ErrorIs(t, err, wantErr)
+	assert.Equal(t, 1, flushCalls)
+	assert.Equal(t, http.StatusOK, rw.StatusCode())
+	assert.Equal(t, http.StatusOK, responseRecorder.Code)
+}
+
 type nonFlushableResponseWriter struct{}
 
 func (nonFlushableResponseWriter) Header() http.Header {
@@ -93,7 +110,7 @@ func (w *errorResponseWriter) Write(p []byte) (int, error) {
 	return w.ResponseRecorder.Write(p)
 }
 
-func TestRespWriterErrorKeepsFirstError(t *testing.T) {
+func TestRespWriterErrorKeepsLastNonNilError(t *testing.T) {
 	first := errors.New("first write failed")
 	second := errors.New("second write failed")
 	rw := NewRespWriterWrapper(&errorResponseWriter{
@@ -105,9 +122,9 @@ func TestRespWriterErrorKeepsFirstError(t *testing.T) {
 	require.ErrorIs(t, err, first)
 	_, err = rw.Write([]byte("b"))
 	require.ErrorIs(t, err, second)
-	assert.ErrorIs(t, rw.Error(), first)
+	assert.ErrorIs(t, rw.Error(), second)
 	_, err = rw.Write([]byte("c"))
 	require.NoError(t, err)
 
-	assert.ErrorIs(t, rw.Error(), first)
+	assert.ErrorIs(t, rw.Error(), second)
 }

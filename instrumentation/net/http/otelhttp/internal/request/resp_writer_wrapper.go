@@ -14,7 +14,7 @@ import (
 var _ http.ResponseWriter = &RespWriterWrapper{}
 
 // RespWriterWrapper wraps a http.ResponseWriter in order to track the number of
-// bytes written, the first write error, and to catch the first written statusCode.
+// bytes written, the last non-nil write error, and to catch the first written statusCode.
 // TODO: The wrapped http.ResponseWriter doesn't implement any of the optional
 // types (http.Hijacker, http.Pusher, http.CloseNotifier, etc)
 // that may be useful when using it in real life situations.
@@ -42,7 +42,7 @@ func NewRespWriterWrapper(w http.ResponseWriter, onWrite func(int64)) *RespWrite
 }
 
 // Write writes the bytes array into the [ResponseWriter], and tracks the
-// number of bytes written and the first error.
+// number of bytes written and the last non-nil error.
 func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -55,8 +55,8 @@ func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 	n1 := int64(n)
 	w.OnWrite(n1)
 	w.written += n1
-	// Keep the first error; later writes must not clear or replace it.
-	if w.err == nil {
+	// Keep the last non-nil error; a later successful write must not clear it.
+	if err != nil {
 		w.err = err
 	}
 	return n, err
@@ -107,6 +107,19 @@ func (w *RespWriterWrapper) Flush() {
 	}
 }
 
+// FlushWithError records the implicit successful response status before
+// invoking an error-returning flush operation.
+func (w *RespWriterWrapper) FlushWithError(flush func() error) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if !w.wroteHeader {
+		w.writeHeader(http.StatusOK)
+	}
+
+	return flush()
+}
+
 // BytesWritten returns the number of bytes written.
 func (w *RespWriterWrapper) BytesWritten() int64 {
 	w.mu.RLock()
@@ -123,7 +136,7 @@ func (w *RespWriterWrapper) StatusCode() int {
 	return w.statusCode
 }
 
-// Error returns the first write error.
+// Error returns the last non-nil write error.
 func (w *RespWriterWrapper) Error() error {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
