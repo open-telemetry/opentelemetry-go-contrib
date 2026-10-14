@@ -46,10 +46,12 @@ detectors/azure/azurevm                                                 @open-te
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 detectors/hetzner/                                                      @open-telemetry/go-approvers @paulojmdias
 detectors/docker/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
+detectors/ibmcloud/classic/                                             @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/ibmcloud/vpc/                                                 @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/k8sapi/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa @dashpole
 detectors/kubeadm/                                                      @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/openshift/                                                    @open-telemetry/go-approvers @paulojmdias @iblancasa
+detectors/openstack/nova/                                               @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/vultr/                                                        @open-telemetry/go-approvers @paulojmdias @iblancasa
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
