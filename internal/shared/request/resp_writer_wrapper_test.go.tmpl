@@ -110,26 +110,43 @@ func TestRespWriterReadFrom(t *testing.T) {
 	assert.NoError(t, rw.Error())
 }
 
+// errReaderFrom returns the queued errors from successive ReadFrom calls,
+// and nil once the queue is empty.
 type errReaderFrom struct {
 	http.ResponseWriter
-	err error
+	errs []error
 }
 
-func (e errReaderFrom) ReadFrom(io.Reader) (int64, error) {
-	return 0, e.err
+func (e *errReaderFrom) ReadFrom(io.Reader) (int64, error) {
+	if len(e.errs) == 0 {
+		return 0, nil
+	}
+	err := e.errs[0]
+	e.errs = e.errs[1:]
+	return 0, err
 }
 
 func TestRespWriterReadFromError(t *testing.T) {
-	want := errors.New("readfrom failed")
-	rw := NewRespWriterWrapper(errReaderFrom{
+	first := errors.New("first readfrom failed")
+	second := errors.New("second readfrom failed")
+	rw := NewRespWriterWrapper(&errReaderFrom{
 		ResponseWriter: &httptest.ResponseRecorder{},
-		err:            want,
+		errs:           []error{first, second},
 	}, func(int64) {})
+	src := func() io.Reader { return strings.NewReader(strings.Repeat("a", 2*sniffLen)) }
 
-	_, err := rw.ReadFrom(strings.NewReader(strings.Repeat("a", 2*sniffLen)))
-	require.ErrorIs(t, err, want)
-	assert.ErrorIs(t, rw.Error(), want)
+	_, err := rw.ReadFrom(src())
+	require.ErrorIs(t, err, first)
+	assert.ErrorIs(t, rw.Error(), first)
 	assert.Equal(t, http.StatusOK, rw.StatusCode())
+
+	_, err = rw.ReadFrom(src())
+	require.ErrorIs(t, err, second)
+	assert.ErrorIs(t, rw.Error(), second)
+
+	_, err = rw.ReadFrom(src())
+	require.NoError(t, err)
+	assert.ErrorIs(t, rw.Error(), second)
 }
 
 type readerFromRecorder struct {
