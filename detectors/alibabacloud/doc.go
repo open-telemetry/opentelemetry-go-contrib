@@ -11,7 +11,10 @@ Both ECS instances and ECI pods expose the same instance metadata service at
 100.100.100.200. On an ECI pod the hostname is the pod name and the
 instance-id is an "eci-" prefixed identifier. Because semantic conventions
 define no cloud platform value for ECI, containers report the same
-"alibaba_cloud_ecs" cloud.platform value as ECS instances.
+"alibaba_cloud_ecs" cloud.platform value as ECS instances. On pods scheduled
+to regular Alibaba Cloud Container Service for Kubernetes (ACK) nodes the
+service answers with the node's metadata, so host.id and host.name identify
+the underlying ECS instance.
 
 The metadata service is queried with the hardened IMDSv2 token flow when the
 instance supports it, falling back to unauthenticated IMDSv1 requests

@@ -9,6 +9,9 @@ The Alibaba Cloud resource detector supports detecting resources on:
 * Elastic Compute Service (ECS) instances
 * Elastic Container Instances (ECI), including pods on Alibaba Cloud
   Container Compute Service (ACS)
+* Pods on Alibaba Cloud Container Service for Kubernetes (ACK) clusters
+  running on ECS nodes, where it reports the metadata of the underlying
+  ECS node
 
 Both environments expose the same instance metadata service at
 `100.100.100.200`. On an ECI pod the `hostname` item is the pod name and the
@@ -96,10 +99,24 @@ The detection outcome depends on how the metadata service responds:
   attributes that could be retrieved are returned, together with
   `resource.ErrPartialResource`.
 
-## Kubernetes pod attributes
+## Kubernetes clusters
+
+The metadata service is reachable from pods on ACK clusters, and the
+detector works there with both the IMDSv2 and IMDSv1 flows. What it reports
+depends on where the pod runs:
+
+* **Regular ACK node pools (ECS nodes)**: the metadata service answers with
+  the node's metadata. `host.id` and `host.name` identify the underlying ECS
+  instance, not the pod.
+* **Serverless node pools (ECI, ACS)**: the metadata service answers with
+  pod-level metadata. The `hostname` item is the pod name and the
+  `instance-id` item is an `eci-` prefixed identifier.
+
+If the cluster restricts pod access to the metadata service (e.g. via ACK
+metadata access control), the detector reports an empty resource with no
+error, the same as when not running on Alibaba Cloud.
 
 Pod-level identity (`k8s.pod.name`, `k8s.namespace.name`) is not exposed by
-the metadata service. On ECI and ACS pods the `hostname` item doubles as the
-pod name, but for full Kubernetes attributes use the
+the metadata service. For full Kubernetes attributes use the
 [detectors/k8sapi](https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/k8sapi)
 detector in addition to this one.
