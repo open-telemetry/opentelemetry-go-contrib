@@ -137,6 +137,18 @@ func TestCloudPlatformBareMetalSolution(t *testing.T) {
 	assert.Equal(t, BareMetalSolution, platform)
 }
 
+func TestCloudPlatformBareMetalSolutionLocation(t *testing.T) {
+	d := NewTestDetector(&FakeMetadataTransport{Err: fmt.Errorf("no metadata server")}, &FakeOSProvider{
+		Vars: map[string]string{
+			bmsInstanceIDEnv: "foo",
+			bmsProjectIDEnv:  "bar",
+			bmsLocationEnv:   "qux",
+		},
+	})
+	platform := d.CloudPlatform()
+	assert.Equal(t, BareMetalSolution, platform)
+}
+
 func TestProjectID(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
 	project, err := d.ProjectID()

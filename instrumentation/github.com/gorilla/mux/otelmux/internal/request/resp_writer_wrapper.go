@@ -69,15 +69,15 @@ func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 
 // ReadFrom implements [io.ReaderFrom]. It uses the underlying
 // [ResponseWriter]'s ReadFrom when available (e.g. sendfile in net/http), and
-// tracks the number of bytes written and the first error.
+// tracks the number of bytes written and the last non-nil error.
 func (w *RespWriterWrapper) ReadFrom(src io.Reader) (int64, error) {
 	n, err := w.readFrom(src)
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
 
-	// Keep the first error; later writes must not clear or replace it.
-	if w.err == nil {
+	// Keep the last non-nil error; a later successful copy must not clear it.
+	if err != nil {
 		w.err = err
 	}
 	return n, err
@@ -167,6 +167,19 @@ func (w *RespWriterWrapper) Flush() {
 	if f, ok := w.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}
+}
+
+// FlushWithError records the implicit successful response status before
+// invoking an error-returning flush operation.
+func (w *RespWriterWrapper) FlushWithError(flush func() error) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if !w.wroteHeader {
+		w.writeHeader(http.StatusOK)
+	}
+
+	return flush()
 }
 
 // BytesWritten returns the number of bytes written.
