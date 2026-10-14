@@ -15,6 +15,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/docker v0.19.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.19.0
+	go.opentelemetry.io/contrib/detectors/ibmcloud/classic v0.19.0
 	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.19.0
 	go.opentelemetry.io/contrib/detectors/k8sapi v0.19.0
 	go.opentelemetry.io/contrib/detectors/kubeadm v0.19.0
@@ -137,6 +138,8 @@ replace go.opentelemetry.io/contrib/detectors/k8sapi => ../k8sapi
 replace go.opentelemetry.io/contrib/detectors/vultr => ../vultr
 
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
+
+replace go.opentelemetry.io/contrib/detectors/ibmcloud/classic => ../ibmcloud/classic
 
 replace go.opentelemetry.io/contrib/detectors/docker => ../docker
 
