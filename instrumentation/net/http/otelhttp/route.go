@@ -14,38 +14,39 @@ type routeContextKey struct{}
 type routeContext struct {
 	middleware *middleware
 	span       trace.Span
-	request    *http.Request
+	route      string
 }
 
 // RouteMiddleware records the matched route on the server span and metrics
-// created by [NewHandler] or [NewMiddleware]. Place it directly around an
+// created by [NewHandler] or [NewMiddleware] configured with [WithRouteTracking].
+// Place it directly around an
 // [http.ServeMux], inside any middleware that copies the request with
 // [http.Request.WithContext] or [http.Request.Clone].
 //
 // It uses the enclosing instrumentation's span name formatter. The innermost
 // matched route wins when multiple route middlewares wrap nested muxes. The route
 // is added to the server span before a handler panic propagates. Requests with no
-// matched pattern are left unchanged. Without enclosing otelhttp instrumentation, it
-// simply calls the next handler.
+// matched pattern are left unchanged. If the nearest enclosing instrumented
+// handler does not enable route tracking, it simply calls the next handler.
 func RouteMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, ok := r.Context().Value(routeContextKey{}).(*routeContext)
-		if !ok {
+		if !ok || route == nil {
 			next.ServeHTTP(w, r)
 			return
 		}
 		defer func() {
-			if route.request != nil {
+			if route.route != "" {
 				return
 			}
 			attr, matched := route.middleware.semconv.RouteFromRequest(r)
 			if !matched {
 				return
 			}
-			// Capture the routed request before an outer mux or middleware can
-			// change its pattern, and keep it local to this server request.
-			route.request = r.WithContext(r.Context())
-			route.span.SetName(route.middleware.spanNameFormatter(route.middleware.operation, route.request))
+			// Capture the route and format the span name before an outer mux or
+			// middleware can change the request's pattern.
+			route.route = attr.Value.AsString()
+			route.span.SetName(route.middleware.spanNameFormatter(route.middleware.operation, r))
 			route.span.SetAttributes(attr)
 		}()
 		next.ServeHTTP(w, r)

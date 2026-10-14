@@ -57,7 +57,6 @@ func TestRouteMiddlewareRequestCopy(t *testing.T) {
 				labeler.Add(attribute.String("application", "test"))
 				w.WriteHeader(http.StatusOK)
 			})
-			var metricPattern, metricID string
 			copyRequest := copyRouteRequest
 			if tt.clone {
 				copyRequest = func(next http.Handler) http.Handler {
@@ -68,11 +67,7 @@ func TestRouteMiddlewareRequestCopy(t *testing.T) {
 				}
 			}
 			h := NewHandler(copyRequest(RouteMiddleware(mux)), "server",
-				WithTracerProvider(tp), WithMeterProvider(mp),
-				WithMetricAttributesFn(func(r *http.Request) []attribute.KeyValue {
-					metricPattern, metricID = r.Pattern, r.PathValue("id")
-					return nil
-				}))
+				WithTracerProvider(tp), WithMeterProvider(mp), WithRouteTracking())
 			r := httptest.NewRequestWithContext(t.Context(), tt.method, "http://example.com/items/42", http.NoBody)
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, r)
@@ -84,8 +79,6 @@ func TestRouteMiddlewareRequestCopy(t *testing.T) {
 			}
 			assert.Equal(t, wantMethod+" /items/{id}", recorder.Ended()[0].Name())
 			assert.Contains(t, recorder.Ended()[0].Attributes(), attribute.String("http.route", "/items/{id}"))
-			assert.Equal(t, tt.pattern, metricPattern)
-			assert.Equal(t, "42", metricID)
 			assertRouteMetrics(t, reader, "/items/{id}", attribute.String("application", "test"))
 			assert.Empty(t, r.Pattern, "instrumentation must not change the original request")
 		})
@@ -123,6 +116,138 @@ func assertRouteMetrics(t *testing.T, reader *sdkmetric.ManualReader, route stri
 	}
 }
 
+func TestRouteTrackingOptIn(t *testing.T) {
+	for _, constructor := range []struct {
+		name string
+		wrap func(http.Handler, ...Option) http.Handler
+	}{
+		{name: "handler", wrap: func(next http.Handler, opts ...Option) http.Handler { return NewHandler(next, "server", opts...) }},
+		{name: "middleware", wrap: func(next http.Handler, opts ...Option) http.Handler { return NewMiddleware("server", opts...)(next) }},
+	} {
+		for _, tt := range []struct {
+			name     string
+			copy     bool
+			tracking bool
+			helper   bool
+			matched  bool
+		}{
+			{name: "default with copy", copy: true, helper: true},
+			{name: "default direct mux", helper: true, matched: true},
+			{name: "option without helper", copy: true, tracking: true},
+			{name: "option and helper", copy: true, tracking: true, helper: true, matched: true},
+		} {
+			t.Run(constructor.name+"/"+tt.name, func(t *testing.T) {
+				t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+				reader := sdkmetric.NewManualReader()
+				mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+				recorder := tracetest.NewSpanRecorder()
+				tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+				mux := http.NewServeMux()
+				mux.HandleFunc("GET /items/{id}", func(http.ResponseWriter, *http.Request) {})
+				var next http.Handler = mux
+				if tt.helper {
+					next = RouteMiddleware(next)
+				}
+				if tt.copy {
+					next = copyRouteRequest(next)
+				}
+				opts := []Option{WithTracerProvider(tp), WithMeterProvider(mp)}
+				if tt.tracking {
+					opts = append(opts, WithRouteTracking())
+				}
+				h := constructor.wrap(next, opts...)
+				h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/items/42", http.NoBody))
+				require.Len(t, recorder.Ended(), 1)
+				wantName, wantRoute := "GET", ""
+				if tt.matched {
+					wantName, wantRoute = "GET /items/{id}", "/items/{id}"
+				}
+				assert.Equal(t, wantName, recorder.Ended()[0].Name())
+				if tt.tracking && tt.helper {
+					assert.Contains(t, recorder.Ended()[0].Attributes(), attribute.String("http.route", wantRoute))
+				} else {
+					for _, attr := range recorder.Ended()[0].Attributes() {
+						assert.NotEqual(t, attribute.Key("http.route"), attr.Key)
+					}
+				}
+				assertRouteMetrics(t, reader, wantRoute)
+			})
+		}
+	}
+}
+
+func TestRouteTrackingMetricAttributesFnCompatibility(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	recorder := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /items/{id}", func(http.ResponseWriter, *http.Request) {})
+	var instrumentationRequest, callbackRequest *http.Request
+	next := RouteMiddleware(mux)
+	copyRequest := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		instrumentationRequest = r
+		ctx := context.WithValue(r.Context(), routeTestContextKey{}, "copied")
+		copied := r.Clone(ctx)
+		copied.Host, copied.URL.Host = "copied.example", "copied.example"
+		next.ServeHTTP(w, copied)
+	})
+	h := NewHandler(copyRequest, "server", WithTracerProvider(tp), WithMeterProvider(mp), WithRouteTracking(),
+		WithMetricAttributesFn(func(r *http.Request) []attribute.KeyValue {
+			callbackRequest = r
+			return []attribute.KeyValue{attribute.String("application", r.Context().Value(routeTestContextKey{}).(string))}
+		}))
+	ctx := context.WithValue(t.Context(), routeTestContextKey{}, "original")
+	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(ctx, http.MethodGet, "http://original.example/items/42", http.NoBody))
+	require.NotNil(t, callbackRequest)
+	assert.Same(t, instrumentationRequest, callbackRequest)
+	assert.Equal(t, "original", callbackRequest.Context().Value(routeTestContextKey{}))
+	assert.Empty(t, callbackRequest.Pattern)
+	assert.Empty(t, callbackRequest.PathValue("id"))
+	require.Len(t, recorder.Ended(), 1)
+	assert.Equal(t, "GET /items/{id}", recorder.Ended()[0].Name())
+	assertRouteMetrics(t, reader, "/items/{id}", attribute.String("application", "original"), attribute.String("server.address", "original.example"))
+}
+
+func TestRouteTrackingNestedInstrumentation(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+	innerReader, outerReader := sdkmetric.NewManualReader(), sdkmetric.NewManualReader()
+	innerMP := sdkmetric.NewMeterProvider(sdkmetric.WithReader(innerReader))
+	outerMP := sdkmetric.NewMeterProvider(sdkmetric.WithReader(outerReader))
+	recorder := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /items/{id}", func(http.ResponseWriter, *http.Request) {})
+	inner := NewHandler(copyRouteRequest(RouteMiddleware(mux)), "inner", WithTracerProvider(tp), WithMeterProvider(innerMP))
+	outer := NewHandler(inner, "outer", WithTracerProvider(tp), WithMeterProvider(outerMP), WithRouteTracking())
+	outer.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/items/42", http.NoBody))
+	require.Len(t, recorder.Ended(), 2)
+	for _, span := range recorder.Ended() {
+		assert.Equal(t, "GET", span.Name())
+		for _, attr := range span.Attributes() {
+			assert.NotEqual(t, attribute.Key("http.route"), attr.Key)
+		}
+	}
+	assertRouteMetrics(t, innerReader, "")
+	assertRouteMetrics(t, outerReader, "")
+}
+
+func TestRouteTrackingOptionOnTransport(t *testing.T) {
+	recorder := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	transport := NewTransport(roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+		assert.Nil(t, r.Context().Value(routeContextKey{}))
+		return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody}, nil
+	}), WithTracerProvider(tp), WithRouteTracking())
+	response, err := transport.RoundTrip(httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com/items/42", http.NoBody))
+	require.NoError(t, err)
+	require.NoError(t, response.Body.Close())
+	require.Len(t, recorder.Ended(), 1)
+	assert.Equal(t, trace.SpanKindClient, recorder.Ended()[0].SpanKind())
+	assert.Equal(t, "HTTP GET", recorder.Ended()[0].Name())
+}
+
 func TestRouteMiddlewareSpanNameFormatter(t *testing.T) {
 	recorder := tracetest.NewSpanRecorder()
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
@@ -130,7 +255,7 @@ func TestRouteMiddlewareSpanNameFormatter(t *testing.T) {
 	mux.HandleFunc("GET /items/{id}", func(http.ResponseWriter, *http.Request) {})
 	var patterns []string
 	h := NewHandler(copyRouteRequest(RouteMiddleware(mux)), "server",
-		WithTracerProvider(tp),
+		WithTracerProvider(tp), WithRouteTracking(),
 		WithSpanNameFormatter(func(operation string, r *http.Request) string {
 			patterns = append(patterns, r.Pattern)
 			return fmt.Sprintf("%s: %s", operation, r.Pattern)
@@ -151,7 +276,7 @@ func TestRouteMiddlewareNestedMux(t *testing.T) {
 	inner.HandleFunc("GET /api/items/{id}", func(http.ResponseWriter, *http.Request) {})
 	outer := http.NewServeMux()
 	outer.Handle("/api/", copyRouteRequest(RouteMiddleware(inner)))
-	h := NewHandler(RouteMiddleware(outer), "server", WithTracerProvider(tp), WithMeterProvider(mp))
+	h := NewHandler(RouteMiddleware(outer), "server", WithTracerProvider(tp), WithMeterProvider(mp), WithRouteTracking())
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/items/42", http.NoBody))
 	require.Len(t, recorder.Ended(), 1)
 	assert.Equal(t, "GET /api/items/{id}", recorder.Ended()[0].Name())
@@ -177,7 +302,7 @@ func TestRouteMiddlewareUnmatched(t *testing.T) {
 			tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
 			mux := http.NewServeMux()
 			mux.HandleFunc("GET /items/{id}", func(http.ResponseWriter, *http.Request) {})
-			h := NewHandler(copyRouteRequest(RouteMiddleware(mux)), "server", WithTracerProvider(tp), WithMeterProvider(mp))
+			h := NewHandler(copyRouteRequest(RouteMiddleware(mux)), "server", WithTracerProvider(tp), WithMeterProvider(mp), WithRouteTracking())
 			rr := httptest.NewRecorder()
 			h.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), tt.method, tt.path, http.NoBody))
 			assert.Equal(t, tt.status, rr.Code)
@@ -196,7 +321,7 @@ func TestRouteMiddlewarePanic(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /items/{id}", func(http.ResponseWriter, *http.Request) { panic("handler panic") })
-	h := NewHandler(copyRouteRequest(RouteMiddleware(mux)), "server", WithTracerProvider(tp))
+	h := NewHandler(copyRouteRequest(RouteMiddleware(mux)), "server", WithTracerProvider(tp), WithRouteTracking())
 	assert.PanicsWithValue(t, "handler panic", func() {
 		h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/items/42", http.NoBody))
 	})
@@ -222,7 +347,7 @@ func TestRouteMiddlewareRecoveredPanic(t *testing.T) {
 		}()
 		next.ServeHTTP(w, r)
 	})
-	h := NewHandler(recoverPanic, "server", WithTracerProvider(tp), WithMeterProvider(mp))
+	h := NewHandler(recoverPanic, "server", WithTracerProvider(tp), WithMeterProvider(mp), WithRouteTracking())
 	rr := httptest.NewRecorder()
 	h.ServeHTTP(rr, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/items/42", http.NoBody))
 	assert.Equal(t, http.StatusInternalServerError, rr.Code)
@@ -238,7 +363,7 @@ func TestRouteMiddlewareNoPatternPreservesSpanName(t *testing.T) {
 	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
 	h := NewHandler(RouteMiddleware(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
 		trace.SpanFromContext(r.Context()).SetName("application")
-	})), "server", WithTracerProvider(tp))
+	})), "server", WithTracerProvider(tp), WithRouteTracking())
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/items/42", http.NoBody))
 	require.Len(t, recorder.Ended(), 1)
 	assert.Equal(t, "application", recorder.Ended()[0].Name())
@@ -277,7 +402,7 @@ func TestRouteMiddlewareChildSpan(t *testing.T) {
 		defer span.End()
 		RouteMiddleware(mux).ServeHTTP(w, r.WithContext(ctx))
 	})
-	h := NewHandler(withChildSpan, "server", WithTracerProvider(tp))
+	h := NewHandler(withChildSpan, "server", WithTracerProvider(tp), WithRouteTracking())
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/items/42", http.NoBody))
 	require.Len(t, recorder.Ended(), 2)
 	assert.Equal(t, "child", recorder.Ended()[0].Name())
@@ -296,7 +421,7 @@ func TestRouteMiddlewareSharedLabeler(t *testing.T) {
 	ctx := ContextWithLabeler(t.Context(), labeler)
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /items/{id}", func(http.ResponseWriter, *http.Request) {})
-	h := NewHandler(copyRouteRequest(RouteMiddleware(mux)), "server", WithMeterProvider(mp))
+	h := NewHandler(copyRouteRequest(RouteMiddleware(mux)), "server", WithMeterProvider(mp), WithRouteTracking())
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(ctx, http.MethodGet, "/items/42", http.NoBody))
 	h.ServeHTTP(httptest.NewRecorder(), httptest.NewRequestWithContext(ctx, http.MethodGet, "/missing/42", http.NoBody))
 	assert.Equal(t, []attribute.KeyValue{appAttr}, labeler.Get(), "route capture must not mutate a reusable Labeler")
@@ -344,7 +469,8 @@ func BenchmarkHandlerRouteMiddleware(b *testing.B) {
 	}{
 		{name: "copying middleware", handler: copyRouteRequest(mux)},
 		{name: "otelhttp", handler: NewHandler(copyRouteRequest(mux), "server", WithTracerProvider(tp), WithMeterProvider(mp))},
-		{name: "otelhttp with route middleware", handler: NewHandler(copyRouteRequest(RouteMiddleware(mux)), "server", WithTracerProvider(tp), WithMeterProvider(mp))},
+		{name: "otelhttp with route tracking", handler: NewHandler(copyRouteRequest(mux), "server", WithTracerProvider(tp), WithMeterProvider(mp), WithRouteTracking())},
+		{name: "otelhttp with route middleware", handler: NewHandler(copyRouteRequest(RouteMiddleware(mux)), "server", WithTracerProvider(tp), WithMeterProvider(mp), WithRouteTracking())},
 	} {
 		b.Run(bb.name, func(b *testing.B) {
 			r := httptest.NewRequestWithContext(b.Context(), http.MethodGet, "/items/42", http.NoBody)

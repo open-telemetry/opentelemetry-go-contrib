@@ -29,6 +29,7 @@ type config struct {
 	PublicEndpointFn  func(*http.Request) bool
 	ReadEvent         bool
 	WriteEvent        bool
+	RouteTracking     bool
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
 	ClientTrace       func(context.Context) *httptrace.ClientTrace
@@ -170,11 +171,23 @@ func WithMessageEvents(events ...Event) Option {
 //
 // When a matched request pattern is available, for example with [http.ServeMux],
 // the span name formatter runs twice: once when the span is created, and again
-// after routing, so the pattern can be used. Use [RouteMiddleware] when intervening
-// middleware copies the request.
+// after routing, so the pattern can be used. Use [WithRouteTracking] together with
+// [RouteMiddleware] when intervening middleware copies the request.
 func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
+	})
+}
+
+// WithRouteTracking enables [RouteMiddleware] to record matched routes on the
+// server span and metrics created by [NewHandler] or [NewMiddleware]. Place
+// RouteMiddleware directly around the mux, inside any request-copying middleware.
+// The option alone cannot observe a pattern set on a copied request.
+//
+// Route tracking is disabled by default. This option has no effect on [NewTransport].
+func WithRouteTracking() Option {
+	return optionFunc(func(c *config) {
+		c.RouteTracking = true
 	})
 }
 

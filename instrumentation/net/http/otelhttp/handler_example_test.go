@@ -30,7 +30,7 @@ func ExampleRouteMiddleware() {
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
-	handler := otelhttp.NewHandler(withRequestID(otelhttp.RouteMiddleware(mux)), "server")
+	handler := otelhttp.NewHandler(withRequestID(otelhttp.RouteMiddleware(mux)), "server", otelhttp.WithRouteTracking())
 	r := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/items/42", http.NoBody)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, r)

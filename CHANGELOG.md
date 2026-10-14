@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `RouteMiddleware` to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to preserve matched route telemetry across request-copying middleware.
+- Add `RouteMiddleware` and the opt-in `WithRouteTracking` option to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to preserve matched route telemetry across request-copying middleware. (#9885)
 
 ### Changed
 
