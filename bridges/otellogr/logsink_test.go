@@ -11,10 +11,10 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 )
 
@@ -39,7 +39,7 @@ func TestNewConfig(t *testing.T) {
 			name: "with no options",
 
 			wantConfig: config{
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 			},
 		},
 		{
@@ -50,7 +50,7 @@ func TestNewConfig(t *testing.T) {
 
 			wantConfig: config{
 				version:  "42.0",
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 			},
 		},
 		{
@@ -279,6 +279,32 @@ func TestLogSink(t *testing.T) {
 						Attributes: []attribute.KeyValue{
 							attribute.String("key1", "value1"),
 							attribute.String("key2", "value2"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "info_with_recursive_attr",
+			f: func(l *logr.Logger) {
+				var recursive any
+				recursive = &recursive
+				l.Info(
+					"msg",
+					"before", "value",
+					"recursive", recursive,
+					"after", int64(42),
+				)
+			},
+			want: logtest.Recording{
+				logtest.Scope{Name: name}: {
+					{
+						Body:     attribute.StringValue("msg"),
+						Severity: log.SeverityInfo,
+						Attributes: []attribute.KeyValue{
+							attribute.String("before", "value"),
+							attribute.String("recursive", "<max-depth-exceeded>"),
+							attribute.Int64("after", 42),
 						},
 					},
 				},

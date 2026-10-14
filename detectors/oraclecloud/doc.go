@@ -20,6 +20,6 @@ each of the following attributes is added if it is available:
 
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
 [host]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/host.md
-[k8s]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/k8s.md
+[k8s]: https://opentelemetry.io/docs/specs/semconv/resource/k8s/
 */
 package oraclecloud
