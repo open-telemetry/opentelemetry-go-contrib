@@ -29,6 +29,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/k8sapi"
 	"go.opentelemetry.io/contrib/detectors/kubeadm"
 	"go.opentelemetry.io/contrib/detectors/openshift"
+	"go.opentelemetry.io/contrib/detectors/oraclecloud"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -81,6 +82,10 @@ var (
 	// attributes from the Kubernetes API (see k8sapi.NewResourceDetector for
 	// details).
 	IDK8sAPI = ID("k8sapi")
+	// IDOracleCloud is the ID for the Oracle Cloud Infrastructure detector that
+	// detects resource attributes on Oracle Cloud Infrastructure (OCI) instances
+	// (see oraclecloud.NewResourceDetector for details).
+	IDOracleCloud = ID("oraclecloud")
 	// IDKubeadm is the ID for the kubeadm detector that detects resource
 	// attributes of the kubeadm-provisioned Kubernetes cluster the process is
 	// running in (see kubeadm.NewResourceDetector for details).
@@ -190,8 +195,9 @@ var (
 
 		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
 
-		IDKubeadm:   func() resource.Detector { return kubeadm.NewResourceDetector() },
-		IDOpenShift: func() resource.Detector { return openshift.NewResourceDetector() },
+		IDOracleCloud: func() resource.Detector { return oraclecloud.NewResourceDetector() },
+		IDKubeadm:     func() resource.Detector { return kubeadm.NewResourceDetector() },
+		IDOpenShift:   func() resource.Detector { return openshift.NewResourceDetector() },
 
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 
