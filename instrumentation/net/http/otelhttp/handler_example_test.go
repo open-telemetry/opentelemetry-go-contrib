@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -15,6 +16,27 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
+
+func ExampleRouteMiddleware() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /items/{id}", func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintln(w, r.PathValue("id"))
+	})
+
+	type requestIDKey struct{}
+	withRequestID := func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			ctx := context.WithValue(r.Context(), requestIDKey{}, "request-123")
+			next.ServeHTTP(w, r.WithContext(ctx))
+		})
+	}
+	handler := otelhttp.NewHandler(withRequestID(otelhttp.RouteMiddleware(mux)), "server", otelhttp.WithRouteTracking())
+	r := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/items/42", http.NoBody)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, r)
+	fmt.Print(w.Body.String())
+	// Output: 42
+}
 
 func ExampleNewHandler() {
 	/* curl -v -d "a painting" http://localhost:7777/hello/bob/ross
