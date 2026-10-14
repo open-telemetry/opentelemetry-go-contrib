@@ -291,9 +291,13 @@ func newHTTPSamplingStrategyFetcher(serverURL string) *httpSamplingStrategyFetch
 }
 
 func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) {
-	v := url.Values{}
-	v.Set("service", serviceName)
-	uri := f.serverURL + "?" + v.Encode()
+	// The configured URL may already carry a query or a fragment.
+	// Appending "?service=" would fold the service name into the previous
+	// parameter, or into the fragment, so the server never sees it.
+	uri, err := samplingStrategyURL(f.serverURL, serviceName)
+	if err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, uri, http.NoBody)
 	if err != nil {
 		return nil, err
@@ -314,6 +318,17 @@ func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 	}
 
 	return body, nil
+}
+
+func samplingStrategyURL(serverURL, serviceName string) (string, error) {
+	u, err := url.Parse(serverURL)
+	if err != nil {
+		return "", fmt.Errorf("parse sampling server URL: %w", err)
+	}
+	q := u.Query()
+	q.Set("service", serviceName)
+	u.RawQuery = q.Encode()
+	return u.String(), nil
 }
 
 // -----------------------
