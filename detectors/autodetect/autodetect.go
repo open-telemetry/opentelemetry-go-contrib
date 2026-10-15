@@ -25,10 +25,12 @@ import (
 	"go.opentelemetry.io/contrib/detectors/docker"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
+	"go.opentelemetry.io/contrib/detectors/ibmcloud/classic"
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
 	"go.opentelemetry.io/contrib/detectors/k8sapi"
 	"go.opentelemetry.io/contrib/detectors/kubeadm"
 	"go.opentelemetry.io/contrib/detectors/openshift"
+	"go.opentelemetry.io/contrib/detectors/openstack/nova"
 	"go.opentelemetry.io/contrib/detectors/scaleway"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
@@ -74,6 +76,10 @@ var (
 	// attributes on Hetzner Cloud servers (see hetzner.NewResourceDetector for
 	// details).
 	IDHetzner = ID("hetzner")
+	// IDIBMCloudClassic is the ID for the IBM Cloud Classic detector that
+	// detects resource attributes on IBM Cloud Classic Infrastructure
+	// (SoftLayer) instances (see classic.NewResourceDetector for details).
+	IDIBMCloudClassic = ID("ibmcloud.classic")
 	// IDIBMCloudVPC is the ID for the IBM Cloud VPC detector that detects
 	// resource attributes on IBM Cloud VPC virtual server instances (see
 	// vpc.NewResourceDetector for details).
@@ -90,6 +96,10 @@ var (
 	// attributes of OpenShift 4 clusters (see openshift.NewResourceDetector
 	// for details).
 	IDOpenShift = ID("openshift")
+	// IDOpenStackNova is the ID for the OpenStack Nova detector that detects
+	// resource attributes on OpenStack Nova compute instances (see
+	// nova.NewResourceDetector for details).
+	IDOpenStackNova = ID("openstack.nova")
 	// IDScaleway is the ID for the Scaleway detector that detects resource
 	// attributes on Scaleway Instances (see scaleway.NewResourceDetector for
 	// details).
@@ -191,12 +201,15 @@ var (
 
 		IDHetzner: func() resource.Detector { return hetzner.NewResourceDetector() },
 
+		IDIBMCloudClassic: func() resource.Detector { return classic.NewResourceDetector() },
+
 		IDIBMCloudVPC: func() resource.Detector { return vpc.NewResourceDetector() },
 
 		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
 
-		IDKubeadm:   func() resource.Detector { return kubeadm.NewResourceDetector() },
-		IDOpenShift: func() resource.Detector { return openshift.NewResourceDetector() },
+		IDKubeadm:       func() resource.Detector { return kubeadm.NewResourceDetector() },
+		IDOpenShift:     func() resource.Detector { return openshift.NewResourceDetector() },
+		IDOpenStackNova: func() resource.Detector { return nova.NewResourceDetector() },
 
 		IDScaleway: func() resource.Detector { return scaleway.NewResourceDetector() },
 

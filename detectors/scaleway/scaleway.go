@@ -106,9 +106,9 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 		// Use a transport with Proxy explicitly disabled. The metadata service
 		// is reached over a link-local address that must never be contacted
 		// through an HTTP(S) proxy: a proxy set for outbound traffic would
-		// answer for it and make detection depend on that proxy. Keep-alives
-		// are disabled because the transport has no shutdown path: an idle
-		// connection would otherwise outlive the detector.
+		// answer for it and make detection depend on that proxy. Disable
+		// keep-alive connections because the transport has no shutdown path:
+		// an idle connection would otherwise outlive the detector.
 		client: &http.Client{Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}},
 	}
 }
