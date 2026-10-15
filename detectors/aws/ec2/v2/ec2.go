@@ -11,8 +11,10 @@ import (
 	"io"
 	"net/http"
 	"sync"
+	"time"
 
 	aws "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
@@ -24,8 +26,8 @@ import (
 
 var (
 	loadDefaultConfig = awsconfig.LoadDefaultConfig
-	newIMDSClient     = func(cfg aws.Config) client {
-		return imds.NewFromConfig(cfg)
+	newIMDSClient     = func(cfg aws.Config, optFns ...func(*imds.Options)) client {
+		return imds.NewFromConfig(cfg, optFns...)
 	}
 )
 
@@ -72,6 +74,24 @@ func WithAWSLogger(logger logging.Logger) Option {
 	})
 }
 
+// WithMaxAttempts sets the maximum number of attempts for EC2 metadata
+// requests. The value must be greater than zero; invalid values cause
+// resource detection to return an error.
+func WithMaxAttempts(attempts int) Option {
+	return optionFunc(func(c *config) {
+		c.maxAttempts = &attempts
+	})
+}
+
+// WithMaxBackoff sets the maximum delay between retries for EC2 metadata
+// requests. The value must be greater than zero; invalid values cause
+// resource detection to return an error.
+func WithMaxBackoff(backoff time.Duration) Option {
+	return optionFunc(func(c *config) {
+		c.maxBackoff = &backoff
+	})
+}
+
 // Option configures an AWS SDK client.
 type Option interface {
 	apply(*config)
@@ -82,7 +102,9 @@ type optionFunc func(*config)
 func (f optionFunc) apply(c *config) { f(c) }
 
 type config struct {
-	logger logging.Logger
+	logger      logging.Logger
+	maxAttempts *int
+	maxBackoff  *time.Duration
 }
 
 func (detector *resourceDetector) getClient(ctx context.Context) (client, error) {
@@ -137,6 +159,13 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 }
 
 func newClient(ctx context.Context, c config) (client, error) {
+	if c.maxAttempts != nil && *c.maxAttempts <= 0 {
+		return nil, fmt.Errorf("max attempts must be greater than zero: %d", *c.maxAttempts)
+	}
+	if c.maxBackoff != nil && *c.maxBackoff <= 0 {
+		return nil, fmt.Errorf("max backoff must be greater than zero: %s", *c.maxBackoff)
+	}
+
 	var optFns []func(*awsconfig.LoadOptions) error
 	if c.logger != nil {
 		optFns = append(optFns, awsconfig.WithLogger(c.logger))
@@ -147,7 +176,31 @@ func newClient(ctx context.Context, c config) (client, error) {
 		return nil, err
 	}
 
-	return newIMDSClient(cfg), nil
+	if c.maxAttempts != nil || c.maxBackoff != nil {
+		retryer := cfg.Retryer
+		if retryer == nil {
+			retryer = func() aws.Retryer { return retry.NewStandard() }
+		}
+		cfg.Retryer = func() aws.Retryer {
+			r := retryer()
+			if c.maxAttempts != nil {
+				r = retry.AddWithMaxAttempts(r, *c.maxAttempts)
+			}
+			if c.maxBackoff != nil {
+				r = retry.AddWithMaxBackoffDelay(r, *c.maxBackoff)
+			}
+			return r
+		}
+	}
+
+	var imdsOptFns []func(*imds.Options)
+	if c.maxBackoff != nil {
+		imdsOptFns = append(imdsOptFns, func(o *imds.Options) {
+			o.DisableDefaultMaxBackoff = true
+		})
+	}
+
+	return newIMDSClient(cfg, imdsOptFns...), nil
 }
 
 type metadata struct {
