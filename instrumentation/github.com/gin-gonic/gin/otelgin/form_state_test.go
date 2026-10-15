@@ -49,7 +49,7 @@ func TestMiddlewarePreservesBoundFormForOuterMiddleware(t *testing.T) {
 			r.Header.Set("Content-Type", contentType)
 			provider := sdktrace.NewTracerProvider()
 			t.Cleanup(func() {
-				assert.NoError(t, provider.Shutdown(context.Background()))
+				assert.NoError(t, provider.Shutdown(context.WithoutCancel(t.Context())))
 			})
 
 			router := gin.New()
