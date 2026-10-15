@@ -42,6 +42,11 @@ Notes:
 * Service name must be passed to the constructor. It will be used by the sampler to poll
   the backend for the sampling strategy for this service.
 * Both Jaeger Agent and OpenTelemetry Collector implement the Jaeger sampling service endpoint.
+* `WithProbabilitySampling(true)` makes probabilistic strategies follow the
+  [probability sampling specification](https://opentelemetry.io/docs/specs/otel/trace/tracestate-probability-sampling/):
+  sampled spans record their threshold (`th`) and a parent's randomness value (`rv`) is honored. This preview feature
+  uses the experimental `go.opentelemetry.io/otel/sdk/trace/x` module and is disabled by default.
+* Rate limited decisions remove any inbound `th`, since they are not probabilistic.
 
 ## Example
 
