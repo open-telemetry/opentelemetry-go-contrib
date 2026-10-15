@@ -92,7 +92,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			if c.Request != nil && c.Request.MultipartForm != nil {
 				origReq.MultipartForm = c.Request.MultipartForm
 			}
-			c.Request = origReq
+			c.Request = c.Request.WithContext(savedCtx)
 		}()
 		ctx := cfg.Propagators.Extract(savedCtx, propagation.HeaderCarrier(c.Request.Header))
 
