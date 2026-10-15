@@ -6,6 +6,7 @@ package otelzap
 import (
 	"context"
 	"errors"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -18,6 +19,7 @@ import (
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/logtest"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/trace"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
@@ -677,6 +679,44 @@ func TestCoreMalformedErrorFieldDoesNotPanic(t *testing.T) {
 			r := p.logger.lastRecord(t)
 			require.NoError(t, r.err)
 			require.Empty(t, r.attrs)
+		})
+	}
+}
+
+func TestCoreEnabledWithContext(t *testing.T) {
+	ctx := trace.ContextWithSpanContext(t.Context(), trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{1},
+		SpanID:     trace.SpanID{1},
+		TraceFlags: trace.FlagsSampled,
+	}))
+	enabledFunc := func(ctx context.Context, param log.EnabledParameters) bool {
+		return trace.SpanContextFromContext(ctx).IsSampled() && param.Severity >= log.SeverityInfo
+	}
+	for _, named := range []bool{false, true} {
+		t.Run(strconv.FormatBool(named), func(t *testing.T) {
+			rec := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
+			parent := zap.New(NewCore(loggerName, WithLoggerProvider(rec)))
+			logger := parent.With(zap.Any("ctx", ctx)).With(zap.String("key", "value"))
+			name := loggerName
+			if named {
+				name = "child"
+				logger = logger.Named(name)
+			}
+			require.True(t, logger.Core().Enabled(zap.InfoLevel))
+			require.False(t, logger.Core().Enabled(zap.DebugLevel))
+			require.NotNil(t, logger.Check(zap.InfoLevel, testMessage))
+			require.Nil(t, logger.Check(zap.DebugLevel, testMessage))
+			logger.Info(testMessage)
+			records := rec.Result()[logtest.Scope{Name: name}]
+			require.Len(t, records, 1)
+			require.Equal(t, ctx, records[0].Context)
+			require.Equal(t, attribute.StringValue(testMessage), records[0].Body)
+			require.Equal(t, []attribute.KeyValue{attribute.String("key", "value")}, records[0].Attributes)
+			require.False(t, parent.Core().Enabled(zap.InfoLevel))
+			require.Nil(t, parent.Check(zap.InfoLevel, testMessage))
+			rebound := logger.With(zap.Any("ctx", t.Context()))
+			require.False(t, rebound.Core().Enabled(zap.InfoLevel))
+			require.Nil(t, rebound.Check(zap.InfoLevel, testMessage))
 		})
 	}
 }

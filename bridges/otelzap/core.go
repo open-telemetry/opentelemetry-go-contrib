@@ -19,6 +19,10 @@
 //   - Field value of type [context.Context] is used as context when emitting log records.
 //   - For named loggers, LoggerName is used to access [log.Logger] from [log.LoggerProvider]
 //
+// A context bound with [Core.With] is also used by [Core.Enabled] and
+// [Core.Check]. A context supplied only to [Core.Write] is used when emitting
+// that record, but does not affect the earlier enablement checks.
+//
 // The Level is transformed to the OpenTelemetry Severity types in the following way.
 //
 //   - [zapcore.DebugLevel] is transformed to [log.SeverityDebug]
@@ -161,13 +165,16 @@ func NewCore(name string, opts ...Option) *Core {
 	}
 }
 
-// Enabled decides whether a given logging level is enabled when logging a message.
+// Enabled decides whether a given logging level is enabled when logging a message,
+// using the context bound with [Core.With].
 func (o *Core) Enabled(level zapcore.Level) bool {
 	param := log.EnabledParameters{Severity: convertLevel(level)}
-	return o.logger.Enabled(context.Background(), param)
+	return o.logger.Enabled(o.ctx, param)
 }
 
 // With adds structured context to the Core.
+// A field value of type [context.Context] sets the context used by [Core.Enabled],
+// [Core.Check], and log emission.
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	cloned := o.clone()
 	if len(fields) > 0 {
@@ -201,6 +208,7 @@ func (*Core) Sync() error {
 
 // Check determines whether the supplied Entry should be logged.
 // If the entry should be logged, the Core adds itself to the CheckedEntry and returns the result.
+// The enablement check uses the context bound with [Core.With].
 func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.CheckedEntry {
 	param := log.EnabledParameters{Severity: convertLevel(ent.Level)}
 
@@ -209,7 +217,7 @@ func (o *Core) Check(ent zapcore.Entry, ce *zapcore.CheckedEntry) *zapcore.Check
 		logger = o.provider.Logger(ent.LoggerName, o.opts...)
 	}
 
-	if logger.Enabled(context.Background(), param) {
+	if logger.Enabled(o.ctx, param) {
 		return ce.AddCore(ent, o)
 	}
 	return ce
