@@ -22,6 +22,9 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -639,6 +642,60 @@ func TestSamplingStrategyParserImpl_Error(t *testing.T) {
 func TestDefaultSamplingStrategyFetcher_Timeout(t *testing.T) {
 	fetcher := newHTTPSamplingStrategyFetcher("")
 	assert.Equal(t, defaultRemoteSamplingTimeout, fetcher.httpClient.Timeout)
+}
+
+func TestHTTPSamplingStrategyFetcherPreservesQuery(t *testing.T) {
+	var got *url.URL
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		got = r.URL
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	fetcher := newHTTPSamplingStrategyFetcher(srv.URL + "/sampling?cluster=east")
+	_, err := fetcher.Fetch("client app")
+	require.NoError(t, err)
+	require.NotNil(t, got)
+	assert.Equal(t, "client app", got.Query().Get("service"))
+	assert.Equal(t, "east", got.Query().Get("cluster"))
+
+	cases := []struct {
+		name    string
+		raw     string
+		service string
+		query   url.Values
+		frag    string
+	}{
+		{
+			name:    "empty query",
+			raw:     "http://localhost:5778/sampling?",
+			service: "svc",
+			query:   url.Values{"service": {"svc"}},
+		},
+		{
+			name:    "fragment",
+			raw:     "http://localhost:5778/sampling#fragment",
+			service: "svc",
+			query:   url.Values{"service": {"svc"}},
+			frag:    "fragment",
+		},
+		{
+			name:    "repeated values",
+			raw:     "http://localhost:5778/sampling?cluster=east&cluster=west",
+			service: "svc",
+			query:   url.Values{"cluster": {"east", "west"}, "service": {"svc"}},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			gotURL, err := samplingStrategyURL(tc.raw, tc.service)
+			require.NoError(t, err)
+			parsed, err := url.Parse(gotURL)
+			require.NoError(t, err)
+			assert.Equal(t, tc.query, parsed.Query())
+			assert.Equal(t, tc.frag, parsed.Fragment)
+		})
+	}
 }
 
 func TestEnvVarSettingForNewTracer(t *testing.T) {
