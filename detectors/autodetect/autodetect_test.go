@@ -12,7 +12,7 @@ func TestDetectorsWithDependenciesRegistered(t *testing.T) {
 	ids := []ID{
 		IDAWSEC2, IDAWSECS, IDAWSEKS, IDAWSLambda, IDAWSElasticBeanstalk,
 		IDAzureAKS, IDAzureContainerApps, IDAzureVM, IDDocker, IDGCP, IDHetzner,
-		IDIBMCloudVPC, IDK8sAPI, IDKubeadm, IDOpenShift, IDVultr,
+		IDIBMCloudClassic, IDIBMCloudVPC, IDK8sAPI, IDOpenStackNova, IDKubeadm, IDOpenShift, IDVultr,
 	}
 
 	registered := Registered()

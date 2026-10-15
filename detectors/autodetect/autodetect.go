@@ -25,10 +25,12 @@ import (
 	"go.opentelemetry.io/contrib/detectors/docker"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
+	"go.opentelemetry.io/contrib/detectors/ibmcloud/classic"
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
 	"go.opentelemetry.io/contrib/detectors/k8sapi"
 	"go.opentelemetry.io/contrib/detectors/kubeadm"
 	"go.opentelemetry.io/contrib/detectors/openshift"
+	"go.opentelemetry.io/contrib/detectors/openstack/nova"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -112,7 +114,15 @@ var ( // IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
 	// IDIBMCloudVPC is the ID for the IBM Cloud VPC detector that detects
 	// resource attributes on IBM Cloud VPC virtual server instances (see
 	// vpc.NewResourceDetector for details).
-	IDIBMCloudVPC = registry.ID("ibmcloud.vpc")
+	// IDIBMCloudClassic is the ID for the IBM Cloud Classic detector that
+	// detects resource attributes on IBM Cloud Classic Infrastructure
+	// (SoftLayer) instances (see classic.NewResourceDetector for details).
+	IDIBMCloudClassic = registry.ID("ibmcloud.classic")
+	IDIBMCloudVPC     = registry.ID("ibmcloud.vpc")
+	// IDOpenStackNova is the ID for the OpenStack Nova detector that detects
+	// resource attributes on OpenStack Nova compute instances (see
+	// nova.NewResourceDetector for details).
+	IDOpenStackNova = registry.ID("openstack.nova")
 	// IDK8sAPI is the ID for the Kubernetes API detector that detects resource
 	// attributes from the Kubernetes API (see k8sapi.NewResourceDetector for
 	// details).
@@ -143,6 +153,8 @@ func init() {
 	registry.Register(IDDocker, func() resource.Detector { return docker.NewResourceDetector() })
 	registry.Register(IDGCP, gcp.NewDetector)
 	registry.Register(IDHetzner, func() resource.Detector { return hetzner.NewResourceDetector() })
+	registry.Register(IDIBMCloudClassic, func() resource.Detector { return classic.NewResourceDetector() })
+	registry.Register(IDOpenStackNova, func() resource.Detector { return nova.NewResourceDetector() })
 	registry.Register(IDIBMCloudVPC, func() resource.Detector { return vpc.NewResourceDetector() })
 	registry.Register(IDK8sAPI, func() resource.Detector { return k8sapi.NewResourceDetector() })
 	registry.Register(IDKubeadm, func() resource.Detector { return kubeadm.NewResourceDetector() })
