@@ -31,6 +31,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/kubeadm"
 	"go.opentelemetry.io/contrib/detectors/openshift"
 	"go.opentelemetry.io/contrib/detectors/openstack/nova"
+	"go.opentelemetry.io/contrib/detectors/scaleway"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -99,6 +100,10 @@ var (
 	// resource attributes on OpenStack Nova compute instances (see
 	// nova.NewResourceDetector for details).
 	IDOpenStackNova = ID("openstack.nova")
+	// IDScaleway is the ID for the Scaleway detector that detects resource
+	// attributes on Scaleway Instances (see scaleway.NewResourceDetector for
+	// details).
+	IDScaleway = ID("scaleway")
 	// IDVultr is the ID for the Vultr detector that detects resource attributes
 	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
 	// details).
@@ -205,6 +210,8 @@ var (
 		IDKubeadm:       func() resource.Detector { return kubeadm.NewResourceDetector() },
 		IDOpenShift:     func() resource.Detector { return openshift.NewResourceDetector() },
 		IDOpenStackNova: func() resource.Detector { return nova.NewResourceDetector() },
+
+		IDScaleway: func() resource.Detector { return scaleway.NewResourceDetector() },
 
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 
