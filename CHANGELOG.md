@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `WithMaxAttempts` and `WithMaxBackoff` options to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` to configure the AWS SDK retry policy. (#9796)
 - Add `Methods` filter to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/filters` to match multiple HTTP methods. (#9630)
 - Add the experimental `WithProbabilitySampling` option to `go.opentelemetry.io/contrib/samplers/jaegerremote`, which makes probabilistic strategies follow the [probability sampling specification](https://opentelemetry.io/docs/specs/otel/trace/tracestate-probability-sampling/) using `ProbabilitySampler` from `go.opentelemetry.io/otel/sdk/trace/x`.
    It is disabled by default. (#9847)
@@ -17,6 +18,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithAttributeFilter` to `go.opentelemetry.io/contrib/detectors/aws/lambda` to select which detected attributes are included in the returned resource. (#9606)
 - Add `go.opentelemetry.io/contrib/detectors/azure/azureaks`, a new resource detector for Azure Kubernetes Service, ported from `processor/resourcedetectionprocessor/internal/azure/aks` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, and `k8s.cluster.name`. (#9501)
 - Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, Cloud Run Worker Pool parity, and `NewDetectorWithOptions` with `WithGKEHostType` to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
+- Add `go.opentelemetry.io/contrib/detectors/openstack/nova`, a new resource detector for OpenStack Nova compute instances, ported from `processor/resourcedetectionprocessor/internal/openstack/nova` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `host.id`, `host.name`, and `host.type`, and optionally emits `openstack.nova.meta.<key>` attributes for the instance metadata keys selected with `WithMetaKeyFilter`. (#9486)
 - Add `go.opentelemetry.io/contrib/detectors/ibmcloud/classic`, a new resource detector for IBM Cloud Classic Infrastructure (SoftLayer) instances, ported from `processor/resourcedetectionprocessor/internal/ibmcloud/classic` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `cloud.resource_id`, `host.id`, and `host.name`. (#9490)
 
 ### Changed
@@ -35,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Keep an existing query and fragment when the Jaeger remote sampler sets the `service` parameter in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#9886)
 - Remove the inbound `th` tracestate value when a rate limiting strategy makes the sampling decision in `go.opentelemetry.io/contrib/samplers/jaegerremote`, since the decision is not probabilistic. (#9847)
 - `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer reports `cloud.region`, `faas.version`, and `faas.instance` as empty strings when their environment variables are unset; the attributes are omitted instead. (#9606)
+- Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
 - Use the context bound to a logger when checking whether logs are enabled in `go.opentelemetry.io/contrib/bridges/otellogr` and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9878)
 
 <!-- Released section -->

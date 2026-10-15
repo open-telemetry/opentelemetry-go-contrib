@@ -20,6 +20,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/k8sapi v0.19.0
 	go.opentelemetry.io/contrib/detectors/kubeadm v0.19.0
 	go.opentelemetry.io/contrib/detectors/openshift v0.19.0
+	go.opentelemetry.io/contrib/detectors/openstack/nova v0.19.0
 	go.opentelemetry.io/contrib/detectors/vultr v0.19.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
@@ -146,6 +147,8 @@ replace go.opentelemetry.io/contrib/detectors/docker => ../docker
 replace go.opentelemetry.io/contrib/detectors/kubeadm => ../kubeadm
 
 replace go.opentelemetry.io/contrib/detectors/openshift => ../openshift
+
+replace go.opentelemetry.io/contrib/detectors/openstack/nova => ../openstack/nova
 
 replace go.opentelemetry.io/contrib/detectors/azure/azureaks => ../azure/azureaks
 
