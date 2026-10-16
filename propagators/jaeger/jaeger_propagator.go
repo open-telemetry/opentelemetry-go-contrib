@@ -85,8 +85,9 @@ func (Jaeger) Extract(ctx context.Context, carrier propagation.TextMapCarrier) c
 
 func extract(ctx context.Context, headerVal string) (context.Context, trace.SpanContext, error) {
 	var (
-		scc = trace.SpanContextConfig{}
-		err error
+		scc   = trace.SpanContextConfig{}
+		err   error
+		debug bool
 	)
 
 	parts := strings.Split(headerVal, separator)
@@ -141,12 +142,15 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 			// if sample bit is set, we check if debug bit is also set
 			if flag&flagsDebug == flagsDebug {
 				scc.TraceFlags |= trace.FlagsSampled
-				ctx = withDebug(ctx, true)
+				debug = true
 			} else {
 				scc.TraceFlags |= trace.FlagsSampled
 			}
 		}
 		// ignore other bit, including firehose since we don't have corresponding flag in trace context.
+	}
+	if debug != debugFromContext(ctx) {
+		ctx = withDebug(ctx, debug)
 	}
 	return ctx, trace.NewSpanContext(scc), nil
 }

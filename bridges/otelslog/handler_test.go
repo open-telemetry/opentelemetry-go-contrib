@@ -688,3 +688,48 @@ func TestKVBufferKeyValuesConcurrent(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestHandlerWithEmptyGroup(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		group string
+	}{
+		{name: "without group"},
+		{name: "with group", group: "outer"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, withAttrs := range []bool{false, true} {
+				t.Run(fmt.Sprintf("WithAttrs=%t", withAttrs), func(t *testing.T) {
+					r := &recorder{}
+					var handler slog.Handler = NewHandler("test", WithLoggerProvider(r))
+					if tt.group != "" {
+						handler = handler.WithGroup(tt.group)
+					}
+					handler = handler.WithGroup("")
+					record := slog.NewRecord(time.Time{}, slog.LevelInfo, "message", 0)
+					attr := slog.String("key", "value")
+					if withAttrs {
+						handler = handler.WithAttrs([]slog.Attr{attr})
+					} else {
+						record.AddAttrs(attr)
+					}
+
+					err := handler.Handle(t.Context(), record)
+
+					require.NoError(t, err)
+					require.Len(t, r.Records, 1)
+					var attrs []attribute.KeyValue
+					r.Records[0].WalkAttributes(func(kv attribute.KeyValue) bool {
+						attrs = append(attrs, kv)
+						return true
+					})
+					want := attribute.String("key", "value")
+					if tt.group != "" {
+						want = attribute.Map(tt.group, want)
+					}
+					assert.Equal(t, []attribute.KeyValue{want}, attrs)
+				})
+			}
+		})
+	}
+}
