@@ -221,6 +221,10 @@ func TestResourceOptsWithAWSDetectors(t *testing.T) {
 			name:     "aws.eks",
 			detector: ExperimentalResourceDetector{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
 		},
+		{
+			name:     "aws.lambda",
+			detector: ExperimentalResourceDetector{AWSLambda: ExperimentalAWSLambdaResourceDetector{}},
+		},
 	}
 
 	for _, tt := range tests {
