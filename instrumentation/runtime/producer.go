@@ -83,11 +83,9 @@ func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 			},
 		},
 	}
-	if p.enableGCPauses {
-		pauseDp := convertRuntimeHistogram(pauseHist, collectedAt)
-		if len(pauseDp) == 0 {
-			return nil, errors.New("unable to obtain go.memory.gc.pause.duration metric from the runtime")
-		}
+	// go.memory.gc.pause.duration is opt-in, so it is skipped instead of
+	// failing the collection of the always-on go.schedule.duration metric.
+	if pauseDp := convertRuntimeHistogram(pauseHist, collectedAt); p.enableGCPauses && len(pauseDp) > 0 {
 		scopeMetrics = append(scopeMetrics, metricdata.Metrics{
 			Name:        goconv.MemoryGCPauseDuration{}.Name(),
 			Description: goconv.MemoryGCPauseDuration{}.Description(),
