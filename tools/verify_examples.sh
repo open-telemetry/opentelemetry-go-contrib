@@ -6,9 +6,8 @@
 set -euo pipefail
 
 # Get the repository root directory (parent of tools directory)
-SCRIPT_DIR=$(dirname "$0")
+SCRIPT_DIR=$(cd -- "$(dirname -- "$0")" && pwd)
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
-TOOLS_DIR="$REPO_ROOT/.tools"
 
 GOPATH=$(go env GOPATH)
 if [ -z "${GOPATH}" ] ; then
@@ -33,28 +32,19 @@ if ! git diff --quiet; then \
 fi
 
 
-if [ "$(git tag --contains $(git log -1 --pretty=format:"%H"))" = "" ] ; then
+if ! git describe --tags --exact-match >/dev/null 2>&1; then
 	echo "$(git log -1)"
 	echo ""
 	echo "Error: HEAD is not pointing to a tagged version"
+	exit 1
 fi
 
 
-make ${TOOLS_DIR}/gojq
-
-DIR_TMP="${GOPATH}/src/oteltmp/"
-rm -rf $DIR_TMP
-mkdir -p $DIR_TMP
+DIR_TMP=$(mktemp -d "${GOPATH}/oteltmp.XXXXXX")
+trap 'rm -rf "${DIR_TMP}"' EXIT
 
 echo "Copy examples to ${DIR_TMP}"
-cp -a ./examples ${DIR_TMP}
-
-DIR_TMP="${GOPATH}/src/oteltmp/"
-rm -rf $DIR_TMP
-mkdir -p $DIR_TMP
-
-echo "Copy examples to ${DIR_TMP}"
-cp -a ./examples ${DIR_TMP}
+cp -a ./examples "${DIR_TMP}"
 
 # Update go.mod files
 echo "Update go.mod: rename module and remove replace"
@@ -71,8 +61,10 @@ for dir in $PACKAGE_DIRS; do
 	
 	(cd "${DIR_TMP}/${dir}" && \
 	 # Get replaces, handle case where there are no replaces (returns null)
-	 replaces_json=$(go mod edit -json | ${TOOLS_DIR}/gojq '.Replace // []' 2>/dev/null || echo '[]')
-	 replaces=($(echo "$replaces_json" | ${TOOLS_DIR}/gojq -r '.[].Old.Path' 2>/dev/null || true))
+	 replaces=($(go mod edit -json | awk -F '"' '
+		/"Old":/ { old = 1; next }
+		old && /"Path":/ { print $4; old = 0 }
+	'))
 	 
 	 # Only process if there are actual replaces
 	 if [ ${#replaces[@]} -gt 0 ] && [ "${replaces[0]}" != "" ]; then
@@ -101,4 +93,5 @@ done
 
 # Cleanup
 echo "Remove copied files."
-rm -rf $DIR_TMP
+rm -rf "${DIR_TMP}"
+trap - EXIT

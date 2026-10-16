@@ -6,8 +6,8 @@ package baggagecopy
 import (
 	"context"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
-	api "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/sdk/log"
 )
 
@@ -48,7 +48,7 @@ func (processor LogProcessor) OnEmit(ctx context.Context, record *log.Record) er
 
 	for _, member := range baggage.FromContext(ctx).Members() {
 		if filter(member) {
-			record.AddAttributes(api.String(member.Key(), member.Value()))
+			record.AddAttributes(attribute.String(member.Key(), member.Value()))
 		}
 	}
 

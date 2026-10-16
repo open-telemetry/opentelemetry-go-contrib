@@ -11,11 +11,12 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type mockLoggerProvider struct {
@@ -39,7 +40,7 @@ func TestNewConfig(t *testing.T) {
 			name: "with no options",
 
 			wantConfig: config{
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 			},
 		},
 		{
@@ -50,7 +51,7 @@ func TestNewConfig(t *testing.T) {
 
 			wantConfig: config{
 				version:  "42.0",
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 			},
 		},
 		{
@@ -285,6 +286,32 @@ func TestLogSink(t *testing.T) {
 			},
 		},
 		{
+			name: "info_with_recursive_attr",
+			f: func(l *logr.Logger) {
+				var recursive any
+				recursive = &recursive
+				l.Info(
+					"msg",
+					"before", "value",
+					"recursive", recursive,
+					"after", int64(42),
+				)
+			},
+			want: logtest.Recording{
+				logtest.Scope{Name: name}: {
+					{
+						Body:     attribute.StringValue("msg"),
+						Severity: log.SeverityInfo,
+						Attributes: []attribute.KeyValue{
+							attribute.String("before", "value"),
+							attribute.String("recursive", "<max-depth-exceeded>"),
+							attribute.Int64("after", 42),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "info_with_normal_attr_and_nil_pointer_attr",
 			f: func(l *logr.Logger) {
 				var p *int
@@ -427,6 +454,34 @@ func TestLogSinkContext(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestLogSinkEnabledWithContext(t *testing.T) {
+	ctx := trace.ContextWithSpanContext(t.Context(), trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{1},
+		SpanID:     trace.SpanID{1},
+		TraceFlags: trace.FlagsSampled,
+	}))
+	enabledFunc := func(ctx context.Context, param log.EnabledParameters) bool {
+		return trace.SpanContextFromContext(ctx).IsSampled() && param.Severity == log.SeverityInfo
+	}
+	rec := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
+	parent := logr.New(NewLogSink("name", WithLoggerProvider(rec)))
+	logger := parent.WithValues("ctx", ctx).WithValues("key", "value").WithName("child")
+	assert.True(t, logger.Enabled())
+	assert.False(t, logger.V(1).Enabled())
+	logger.Info("msg")
+	logtest.AssertEqual(t, logtest.Recording{
+		logtest.Scope{Name: "name"}: nil,
+		logtest.Scope{Name: "name/child"}: {{
+			Context:    ctx,
+			Body:       attribute.StringValue("msg"),
+			Severity:   log.SeverityInfo,
+			Attributes: []attribute.KeyValue{attribute.String("key", "value")},
+		}},
+	}, rec.Result())
+	assert.False(t, parent.Enabled())
+	assert.False(t, logger.WithValues("ctx", t.Context()).Enabled())
 }
 
 func TestLogSinkEnabled(t *testing.T) {

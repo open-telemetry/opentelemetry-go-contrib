@@ -11,6 +11,119 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `WithNonErrorCodes` option for `NewServerHandler` and `NewClientHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to prevent the handler from setting an error span status for specific gRPC codes. (#9209)
+- Add `WithMaxAttempts` and `WithMaxBackoff` options to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` to configure the AWS SDK retry policy. (#9796)
+- Add `Methods` filter to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/filters` to match multiple HTTP methods. (#9630)
+- Add the experimental `WithProbabilitySampling` option to `go.opentelemetry.io/contrib/samplers/jaegerremote`, which makes probabilistic strategies follow the [probability sampling specification](https://opentelemetry.io/docs/specs/otel/trace/tracestate-probability-sampling/) using `ProbabilitySampler` from `go.opentelemetry.io/otel/sdk/trace/x`.
+   It is disabled by default. (#9847)
+- Add the `cloud.platform`, `aws.log.group.names`, and `aws.log.stream.names` resource attributes to `go.opentelemetry.io/contrib/detectors/aws/lambda`, matching the `lambda` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#9606)
+- Add `WithAttributeFilter` to `go.opentelemetry.io/contrib/detectors/aws/lambda` to select which detected attributes are included in the returned resource. (#9606)
+- Add `go.opentelemetry.io/contrib/detectors/azure/azureaks`, a new resource detector for Azure Kubernetes Service, ported from `processor/resourcedetectionprocessor/internal/azure/aks` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, and `k8s.cluster.name`. (#9501)
+- Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, Cloud Run Worker Pool parity, and `NewDetectorWithOptions` with `WithGKEHostType` to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
+- Add `go.opentelemetry.io/contrib/detectors/akamai` — a new resource detector for Akamai Connected Cloud (formerly Linode) compute instances, ported from `processor/resourcedetectionprocessor/internal/akamai` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.region`, `host.id`, `host.name`, `host.type`, `host.image.id`, and `host.image.name`. (#9492)
+- Add `go.opentelemetry.io/contrib/detectors/openstack/nova`, a new resource detector for OpenStack Nova compute instances, ported from `processor/resourcedetectionprocessor/internal/openstack/nova` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `host.id`, `host.name`, and `host.type`, and optionally emits `openstack.nova.meta.<key>` attributes for the instance metadata keys selected with `WithMetaKeyFilter`. (#9486)
+- Add `go.opentelemetry.io/contrib/detectors/ibmcloud/classic`, a new resource detector for IBM Cloud Classic Infrastructure (SoftLayer) instances, ported from `processor/resourcedetectionprocessor/internal/ibmcloud/classic` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `cloud.resource_id`, `host.id`, and `host.name`. (#9490)
+- Add `go.opentelemetry.io/contrib/detectors/scaleway`, a new resource detector for Scaleway Instances, ported from `processor/resourcedetectionprocessor/internal/scaleway` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `cloud.region`, `host.id`, `host.image.id`, `host.image.name`, `host.name`, and `host.type`. (#9489)
+
+### Changed
+
+- Support build tags to omit resource detectors in `go.opentelemetry.io/contrib/otelconf/x`. (#9818)
+- `NewResourceDetector` in `go.opentelemetry.io/contrib/detectors/aws/lambda` returns the exported concrete type `*ResourceDetector` instead of `resource.Detector`. (#9606)
+- Remove the deprecation notice from `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9881)
+
+### Fixed
+
+- Prevent recording negative metric values for unknown request/response sizes in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#9433)
+- Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray` to prevent auxiliary fields with prefix-sharing keys from dropping trace contexts. (#9879)
+- Preserve errors returned by `http.ResponseController.Flush` through `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9798)
+- Replace inherited debug and deferred sampling flags when extracting a new B3 context in `go.opentelemetry.io/contrib/propagators/b3`. (#9864)
+- Use a background context for entries without an explicit context in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#9865)
+- Preserve explicit Unix epoch timestamps (`TimestampMs = 0`) instead of replacing them with the current time in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9837)
+- Keep an existing query and fragment when the Jaeger remote sampler sets the `service` parameter in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#9886)
+- Remove the inbound `th` tracestate value when a rate limiting strategy makes the sampling decision in `go.opentelemetry.io/contrib/samplers/jaegerremote`, since the decision is not probabilistic. (#9847)
+- Replace inherited debug state when extracting a valid header in `go.opentelemetry.io/contrib/propagators/jaeger`. (#9898)
+- `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer reports `cloud.region`, `faas.version`, and `faas.instance` as empty strings when their environment variables are unset; the attributes are omitted instead. (#9606)
+- Ignore empty group names in `go.opentelemetry.io/contrib/bridges/otelslog` as required by `slog.Handler`. (#9817)
+- Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
+- Use the context bound to a logger when checking whether logs are enabled in `go.opentelemetry.io/contrib/bridges/otellogr` and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9878)
+
+<!-- Released section -->
+<!-- Don't change this section unless doing release -->
+
+## [1.47.0/2.6.0/0.72.0/0.38.0/0.27.0/0.21.0/0.17.0/0.19.0] - 2026-10-03
+
+### Added
+
+- Add `NewResourceDetectorWithOptions` and the `WithAWSLogger` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2`, allowing a custom AWS SDK `logging.Logger` to be supplied to the EC2 resource detector. (#9132)
+- Add `go.opentelemetry.io/contrib/detectors/openshift`, a new resource detector for OpenShift 4 clusters, ported from `processor/resourcedetectionprocessor/internal/openshift` in `opentelemetry-collector-contrib`. Detects `k8s.cluster.name`, and `cloud.provider`, `cloud.platform` and `cloud.region` for clusters running on AWS, Google Cloud and IBM Cloud; Azure clusters report `cloud.provider` and `cloud.platform` only. (#9499)
+- Add `go.opentelemetry.io/contrib/detectors/kubeadm`, a new resource detector for kubeadm-provisioned Kubernetes clusters, ported from `processor/resourcedetectionprocessor/internal/kubeadm` in `opentelemetry-collector-contrib`. Detects `k8s.cluster.name` from the `ClusterConfiguration` document in the `kube-system/kubeadm-config` ConfigMap and `k8s.cluster.uid` from the `kube-system` namespace UID. (#9500)
+
+### Changed
+
+- Client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` no longer include attributes from the server-side `Labeler`, preventing attributes such as `http.route` from leaking into outbound requests.
+  This is a breaking change for applications that use `ContextWithLabeler` to add custom client metric attributes: use `ContextWithClientLabeler` / `ClientLabelerFromContext` or the `WithMetricAttributesFn` option instead.
+  Server-side use of `ContextWithLabeler` / `LabelerFromContext` is unchanged. (#8924)
+- Stop emitting the legacy `http.read_bytes` and `http.wrote_bytes` attributes on the per-operation span events enabled by `WithMessageEvents` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  The `read` and `write` events remain, while total body sizes continue to be recorded on the server span as `http.request.body.size` and `http.response.body.size` according to HTTP semantic conventions. (#9624)
+
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9707)
+- Deprecate `go.opentelemetry.io/contrib/propagators/aws`. (#9706)
+- Deprecate `go.opentelemetry.io/contrib/samplers/probability/consistent`. (#9633)
+- Deprecate `ReadBytesKey`, `ReadErrorKey`, `WroteBytesKey`, and `WriteErrorKey` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+  The identifiers remain available and their values are unchanged, but `WithMessageEvents` no longer emits `http.read_bytes` or `http.wrote_bytes`.
+  There is no semantic-convention replacement for per-read or per-write byte counts or the human-readable error fields.
+  Use `HTTPRequestBodySizeKey` and `HTTPResponseBodySizeKey` from `go.opentelemetry.io/otel/semconv/v1.43.0` to record total body sizes on the span.
+  If an error causes the HTTP request to fail, set the span status to Error and record `ErrorType(err)` from `go.opentelemetry.io/otel/semconv/v1.43.0` on the span. (#9624)
+
+### Fixed
+
+- Treat empty Prometheus exporter environment variable values as unset in `go.opentelemetry.io/contrib/exporters/autoexport`, restoring the documented defaults. (#9636)
+- Bound converter-owned recursive map, slice, array, and pointer traversal in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`.
+  A field requiring more than 100 such levels is replaced with `<max-depth-exceeded>` and the record continues to be emitted. Existing `fmt` and user-method behavior remains unchanged. (#9691)
+- Format span attributes in `go.opentelemetry.io/contrib/zpages` using `attribute.Value.String` instead of the deprecated `attribute.Value.Emit`, following the OpenTelemetry AnyValue representation for non-OTLP protocols. (#9453)
+- Set `error.type` on the span and on the request-duration, request-body-size, and response-body-size metrics when a client disconnects mid-request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, using the request context's cancellation error as the classification source when the handler has not already recorded an error via `c.Error`. Previously a disconnect was recorded with span status `Error` and no `error.type`, indistinguishable from a genuine server fault. (#9394)
+- Report Prometheus metrics HTTP server errors in `go.opentelemetry.io/contrib/otelconf` when using the `v0.2.0` configuration schema.
+  The error check was inverted, so a clean shutdown (`http.ErrServerClosed`) was reported as unexpected while real `Serve` errors were ignored. (#9653)
+- Fix temporary file cleanup for multipart requests in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` by copying the parsed multipart form back to the original request during deferred cleanup, preserving `net/http` cleanup during panic unwinding for HTTP/2 panic handling and outer recovery middleware paths. Unrecovered HTTP/1 handler panics remain uncleaned because `net/http` skips `finishRequest` in that path. (#9685)
+- Fix `http.client.request.body.size` recording for streaming request bodies in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8684)
+- Bound Kubernetes ConfigMap requests in `go.opentelemetry.io/contrib/detectors/aws/eks` with a 10-second timeout so `Detect` cannot hang indefinitely when the caller-provided context has no deadline. (#9419)
+
+### Removed
+
+- Drop support for [Go 1.25]. (#9584)
+- Remove `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`. Use `github.com/labstack/echo-opentelemetry` instead. (#9613)
+
+## [1.46.0/2.5.3/0.71.0/0.37.3/0.26.0/0.20.1/0.16.3/0.18.0] - 2026-08-25
+
+This release is the last to support [Go 1.25].
+The next release will require at least [Go 1.26].
+
+### Added
+
+- Add support for the `aws.ec2` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9139)
+- Support testing of [Go 1.27]. (#9524)
+- Add `go.opentelemetry.io/contrib/detectors/docker`, a resource detector for Docker, ported from `processor/resourcedetectionprocessor/internal/docker` in opentelemetry-collector-contrib. (#9001)
+- Add `S3AttributeBuilder` to `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws` that sets S3-specific span attributes following the OpenTelemetry S3 semantic conventions. (#9292)
+
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/contrib/instrumentation/github.com/labstack/echo/otelecho`.
+  Use `github.com/labstack/echo-opentelemetry` instead. (#9136)
+
+### Fixed
+
+- Record `error.type` attribute on server spans in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` when a request is cancelled or ends in a 5xx error. (#9387)
+- Report `ot-baggage-*` extraction errors from `go.opentelemetry.io/contrib/propagators/ot` to `otel.Handle` instead of silently discarding them, while still attaching the successfully parsed baggage members to the context. (#9395)
+- Set `error.type` on the `rpc.client.call.duration` and `rpc.server.call.duration` metrics in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` when the RPC fails with a non-OK status, per the RPC semantic conventions. (#9429)
+- Reject OTLP exporter headers with an empty `name` in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x`, and `go.opentelemetry.io/contrib/otelconf/v0.3.0`, instead of forwarding invalid header names to OTLP exporters. (#9102)
+- `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer returns an error when run outside of an AWS Lambda environment, matching the no-op behavior of other resource detectors. (#9464)
+- Convert Prometheus untyped metrics to OTLP Gauges in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9099)
+
+## [1.45.0/2.5.2/0.70.0/0.37.2/0.25.0/0.20.0/0.16.2/0.17.0] - 2026-08-03
+
+### Added
+
 - Add `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`, a new resource detector for IBM Cloud VPC virtual server instances, ported from `github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/ibmcloud/vpc`. Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `cloud.availability_zone`, `cloud.account.id`, `cloud.resource_id`, `host.id`, `host.image.id`, `host.image.name`, `host.name`, and `host.type`. (#9011)
 - Add `go.opentelemetry.io/contrib/detectors/k8sapi`, a new resource detector that queries the Kubernetes API. Detects `k8s.node.name` and `k8s.node.uid` when `K8S_NODE_NAME` is set via the downward API, and `k8s.cluster.uid` derived from the kube-system namespace UID (works on any Kubernetes distribution). (#9108)
 - Add new `elasticbeanstalk` resource detector for AWS Elastic Beanstalk, ported from `processor/resourcedetectionprocessor/internal/aws/elasticbeanstalk` in opentelemetry-collector-contrib. (#8993)
@@ -35,11 +148,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Update log bridge conversions to use attribute key-values instead of the removed log key-values in `go.opentelemetry.io/contrib/bridges/otellogr`, `go.opentelemetry.io/contrib/bridges/otellogrus`, `go.opentelemetry.io/contrib/bridges/otelslog`, and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9180)
 - The `Version()` function in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` has been replaced by `const Version`. (#9076)
 - Set `error.type` attribute instead of adding `exception` span events in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#8977)
+- Prefer the gRPC dial target over the resolved peer IP for the `server.address` and `server.port` attributes in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#8904)
 - The detector in `go.opentelemetry.io/contrib/detectors/azure/azurevm` now also detects `cloud.account.id`, `cloud.availability_zone`, `azure.vm.name`, `azure.vm.size`, `azure.vm.scaleset.name`, and `azure.resource_group.name`, and prefers `osProfile.computerName` for `host.name` (falling back to the VM name), reconciling it with the collector-contrib Azure resource detector. (#9162)
 
 ### Fixed
 
-- Fix Prometheus reader resource label filter configuration in `go.opentelemetry.io/contrib/otelconf/v0.2.0`. (#9045)
+- Fix Prometheus reader resource label filter configuration in `go.opentelemetry.io/contrib/otelconf/v0.2.0`. (#9062)
 - Apply `resource.detection/development.attributes.included` and `excluded` filtering to resource detector attributes in `go.opentelemetry.io/contrib/otelconf/x`. (#9131)
 - Honor the context configured with `WithContext` when constructing resources in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`. (#9160)
 - Handle nil response bodies from custom `RoundTripper` implementations in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` without panicking. (#9184)
@@ -49,10 +163,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `TextMapPropagator` in `go.opentelemetry.io/contrib/propagators/autoprop` returns the no-op propagator for empty input, matching the behavior of `none`. An unknown `OTEL_PROPAGATORS` value still returns an error with a nil propagator so `NewTextMapPropagator` falls back to the default TraceContext and Baggage propagators instead of disabling propagation. (#9163)
 - Preserve error-valued attributes nested in a group as grouped attributes instead of silently dropping them in `go.opentelemetry.io/contrib/bridges/otelslog`. (#9238)
 - Fix a data race in `go.opentelemetry.io/contrib/bridges/otelslog` where concurrent `Handle` calls could corrupt each other's log attributes because `kvBuffer.KeyValues` returned a slice aliasing a shared buffer. (#9229)
+- Avoid a panic in `go.opentelemetry.io/contrib/bridges/otelzap` when a malformed error field contains a nil or non-error value. (#9068)
+- Use `azure.container_app.instance.id` instead of `service.instance.id` for the replica name detected by `go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps`. (#9208)
+- Preserve the underlying metadata errors returned with partial resources from `go.opentelemetry.io/contrib/detectors/gcp`. (#9069)
+- Copy `MultipartForm` back to the request `otelmux.Middleware` was given after the wrapped handler returns, so `net/http` can find and remove the temp files `ParseMultipartForm` created on the context-derived request copy, when `otelmux.Middleware` wraps a handler directly, in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. This does not cover a handler panic, nor the common `router.Use(...)` integration, where `gorilla/mux`'s own routing step makes an additional request copy the middleware cannot write back through; see [gorilla/mux#777](https://github.com/gorilla/mux/pull/777). (#9361)
 - Report the `b3` header from `Fields()` for the default `B3Unspecified` single-header injection encoding, matching what `Inject` writes, in `go.opentelemetry.io/contrib/propagators/b3`. (#9273)
-
-<!-- Released section -->
-<!-- Don't change this section unless doing release -->
+- Fix `go.opentelemetry.io/contrib/propagators/aws/xray` producing deterministic trace and span IDs when the seed read from `crypto/rand` silently failed, by switching to `math/rand/v2`'s concurrency-safe top-level generator. (#9359)
+- Strip connection number suffix from connection ID in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo` to prevent unbounded metric cardinality. (#9352)
+- Strip connection number suffix from connection ID in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` so the `network.peer.address` and `net.peer.name` span attributes reflect the actual host instead of the raw connection ID. (#9352)
+- Record `network.protocol.version` (and `network.protocol.name`) from the response's negotiated protocol instead of the request's stamped `Proto` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, so an HTTP/1.1-shaped request that gets upgraded to HTTP/2 via ALPN is no longer misreported as HTTP/1.1 on the client span and request metrics. (#9371)
 
 ## [1.44.0/2.5.1/0.69.0/0.37.1/0.24.0/0.19.0/0.16.1/0.16.0] - 2026-05-28
 
@@ -1832,7 +1951,10 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.44.0...HEAD
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.47.0...HEAD
+[1.47.0/2.6.0/0.72.0/0.38.0/0.27.0/0.21.0/0.17.0/0.19.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.47.0
+[1.46.0/2.5.3/0.71.0/0.37.3/0.26.0/0.20.1/0.16.3/0.18.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.46.0
+[1.45.0/2.5.2/0.70.0/0.37.2/0.25.0/0.20.0/0.16.2/0.17.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.45.0
 [1.44.0/2.5.1/0.69.0/0.37.1/0.24.0/0.19.0/0.16.1/0.16.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.44.0
 [1.43.0/2.5.0/0.68.0/0.37.0/0.23.0/0.18.0/0.16.0/0.15.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.43.0
 [1.42.0/2.4.0/0.67.0/0.36.0/0.22.0/0.17.0/0.15.0/0.14.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.42.0
@@ -1912,6 +2034,7 @@ First official tagged release of `contrib` repository.
 
 <!-- Released section ended -->
 
+[Go 1.27]: https://go.dev/doc/go1.27
 [Go 1.26]: https://go.dev/doc/go1.26
 [Go 1.25]: https://go.dev/doc/go1.25
 [Go 1.24]: https://go.dev/doc/go1.24

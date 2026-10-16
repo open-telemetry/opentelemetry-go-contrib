@@ -13,8 +13,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/stats"
+	"google.golang.org/grpc/status"
 )
 
 func benchmarkStatsHandlerHandleRPC(b *testing.B, ctx context.Context, handler stats.Handler, stat stats.RPCStats) {
@@ -176,4 +178,50 @@ func BenchmarkClientHandler_TagRPCNoOp(b *testing.B) {
 	for b.Loop() {
 		_ = handler.TagRPC(ctx, tagInfo)
 	}
+}
+
+// benchmarkServerHandlerHandleRPCEnd runs the End path with a reader-enabled
+// meter provider so the duration histogram is actually recorded. The
+// existing End benchmarks use a meter provider without a reader, which
+// disables the instruments and cannot measure the record hot path.
+func benchmarkServerHandlerHandleRPCEnd(b *testing.B, endErr error) {
+	handler := NewServerHandler(
+		WithTracerProvider(trace.NewTracerProvider(trace.WithSampler(trace.AlwaysSample()))),
+		WithMeterProvider(metric.NewMeterProvider(metric.WithReader(metric.NewManualReader()))),
+	)
+	ctx := b.Context()
+	ctx = handler.TagRPC(ctx, &stats.RPCTagInfo{
+		FullMethodName: "/package.service/method",
+	})
+	ctx = peer.NewContext(ctx, &peer.Peer{
+		Addr: &net.TCPAddr{
+			IP:   net.IPv4(127, 0, 0, 1),
+			Port: 1234,
+		},
+	})
+	benchmarkStatsHandlerHandleRPC(b, ctx, handler, &stats.End{
+		EndTime: time.Now(),
+		Error:   endErr,
+	})
+}
+
+// BenchmarkServerHandler_HandleRPC_End_WithReader measures a successful RPC
+// completion with the duration histogram enabled.
+func BenchmarkServerHandler_HandleRPC_End_WithReader(b *testing.B) {
+	benchmarkServerHandlerHandleRPCEnd(b, nil)
+}
+
+// BenchmarkServerHandler_HandleRPC_End_Error_WithReader measures a failed RPC
+// completion (the error.type attribute path) with the duration histogram
+// enabled.
+func BenchmarkServerHandler_HandleRPC_End_Error_WithReader(b *testing.B) {
+	benchmarkServerHandlerHandleRPCEnd(b, status.Error(codes.Internal, "internal"))
+}
+
+// BenchmarkServerHandler_HandleRPC_End_Error_OldMode_WithReader measures a
+// failed RPC completion in rpc/old mode: only the legacy histogram is
+// enabled, so the stable error.type attribute must not be built.
+func BenchmarkServerHandler_HandleRPC_End_Error_OldMode_WithReader(b *testing.B) {
+	b.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "rpc/old")
+	benchmarkServerHandlerHandleRPCEnd(b, status.Error(codes.Internal, "internal"))
 }
