@@ -29,6 +29,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- End unfinished connection acquisition spans from `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace` when requests fail through `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, including dial timeouts that skip resolved addresses.
 - Prevent recording negative metric values for unknown request/response sizes in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#9433)
 - Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray` to prevent auxiliary fields with prefix-sharing keys from dropping trace contexts. (#9879)
 - Preserve errors returned by `http.ResponseController.Flush` through `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9798)

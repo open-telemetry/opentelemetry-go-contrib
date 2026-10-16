@@ -903,6 +903,52 @@ func TestWithHTTPTrace(t *testing.T) {
 	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[2].Parent().SpanID())
 }
 
+func TestClientTraceContextLifetime(t *testing.T) {
+	for _, test := range []struct {
+		name string
+		err  error
+	}{
+		{name: "success"},
+		{name: "failure", err: errors.New("round trip failed")},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			var traceCtx, requestCtx context.Context
+			base := roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+				requestCtx = req.Context()
+				require.NoError(t, requestCtx.Err())
+				require.NoError(t, traceCtx.Err())
+				assert.Equal(t, trace.SpanContextFromContext(requestCtx), trace.SpanContextFromContext(traceCtx))
+				if test.err != nil {
+					return nil, test.err
+				}
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader("response")),
+				}, nil
+			})
+			transport := NewTransport(base, WithClientTrace(func(ctx context.Context) *httptrace.ClientTrace {
+				traceCtx = ctx
+				return &httptrace.ClientTrace{}
+			}))
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
+			require.NoError(t, err)
+			resp, err := transport.RoundTrip(req)
+			require.ErrorIs(t, err, test.err)
+			require.NoError(t, req.Context().Err())
+			require.NoError(t, requestCtx.Err())
+			if test.err != nil {
+				assert.ErrorIs(t, context.Cause(traceCtx), test.err)
+			} else {
+				assert.ErrorIs(t, context.Cause(traceCtx), context.Canceled)
+				body, readErr := io.ReadAll(resp.Body)
+				require.NoError(t, readErr)
+				assert.Equal(t, "response", string(body))
+				require.NoError(t, resp.Body.Close())
+			}
+		})
+	}
+}
+
 func TestTransportMetrics(t *testing.T) {
 	requestBody := []byte("john")
 	responseBody := []byte("Hello, world!")
@@ -1897,6 +1943,17 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 				http.DefaultTransport,
 				WithTracerProvider(tp),
 				WithMeterProvider(mp),
+			),
+		},
+		{
+			name: "EnabledClientTrace",
+			rt: NewTransport(
+				http.DefaultTransport,
+				WithTracerProvider(tp),
+				WithMeterProvider(mp),
+				WithClientTrace(func(context.Context) *httptrace.ClientTrace {
+					return &httptrace.ClientTrace{}
+				}),
 			),
 		},
 	} {
