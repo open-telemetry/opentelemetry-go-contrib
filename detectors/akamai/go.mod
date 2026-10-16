@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/detectors/akamai
 go 1.25.0
 
 require (
-	github.com/linode/go-metadata v0.3.0
+	github.com/linode/go-metadata v0.3.1
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.45.0
 	go.opentelemetry.io/otel/sdk v1.45.0
