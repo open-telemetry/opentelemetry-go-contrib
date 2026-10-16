@@ -54,6 +54,10 @@ func (Jaeger) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 		return
 	}
 
+	carrier.Set(jaegerHeader, formatHeader(ctx, sc))
+}
+
+func formatHeader(ctx context.Context, sc trace.SpanContext) string {
 	var h [53]byte
 	traceID := sc.TraceID()
 	spanID := sc.SpanID()
@@ -73,7 +77,7 @@ func (Jaeger) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 		h[52] = '0'
 	}
 
-	carrier.Set(jaegerHeader, string(h[:]))
+	return string(h[:])
 }
 
 // Extract extracts a context from the carrier if it contains Jaeger headers.
