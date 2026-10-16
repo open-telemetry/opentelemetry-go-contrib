@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"slices"
 	"strings"
 	"time"
 
@@ -31,11 +30,6 @@ const (
 	// Metadata values are short identifiers (IDs, IPs, hostnames). Bound the
 	// response body size so a misbehaving service cannot amplify memory use.
 	maxBodySize = 4 << 10
-
-	// Alibaba Cloud network identifiers have no semantic-conventions
-	// counterparts in the current spec.
-	vpcIDKey     = attribute.Key("alibaba.cloud.vpc.id")
-	vswitchIDKey = attribute.Key("alibaba.cloud.vswitch.id")
 )
 
 // errMissing reports that the metadata service answered without the requested
@@ -49,17 +43,42 @@ var errUnreachable = errors.New("metadata service unreachable")
 // Compile-time interface assertion.
 var _ resource.Detector = (*ResourceDetector)(nil)
 
+type config struct {
+	filter attribute.Filter
+}
+
+// Option configures a [ResourceDetector].
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (f optionFunc) apply(c *config) { f(c) }
+
+// WithAttributeFilter sets a filter that controls which detected attributes are
+// included in the returned resource. Only attributes for which filter returns
+// true are included. By default all attributes are included.
+func WithAttributeFilter(filter attribute.Filter) Option {
+	return optionFunc(func(c *config) { c.filter = filter })
+}
+
 // ResourceDetector collects resource information of Alibaba Cloud ECS
 // instances and of containers running on ECI, including pods on Alibaba Cloud
 // Container Compute Service (ACS).
 type ResourceDetector struct {
 	endpoint string
+	cfg      config
 	client   *http.Client
 }
 
 // NewResourceDetector returns a [ResourceDetector] that detects resource
 // attributes on Alibaba Cloud ECS instances and ECI containers.
-func NewResourceDetector() *ResourceDetector {
+func NewResourceDetector(opts ...Option) *ResourceDetector {
+	var cfg config
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
 	// Use a transport with Proxy explicitly disabled. The metadata endpoint is
 	// a link-local address (100.100.100.200) that must never be reached via an
 	// HTTP(S) proxy: doing so could leak instance metadata or break detection
@@ -67,6 +86,7 @@ func NewResourceDetector() *ResourceDetector {
 	// traffic.
 	return &ResourceDetector{
 		endpoint: defaultEndpoint,
+		cfg:      cfg,
 		client: &http.Client{
 			Timeout:   2 * time.Second,
 			Transport: &http.Transport{Proxy: nil},
@@ -81,10 +101,16 @@ func NewResourceDetector() *ResourceDetector {
 // attributes cannot be retrieved, a partial resource is returned together
 // with [resource.ErrPartialResource].
 func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	// Prefer the hardened IMDSv2 token flow and fall back to IMDSv1 when the
-	// token endpoint is unavailable, e.g. on ECI containers.
+	// Prefer the hardened IMDSv2 token flow. Only fall back to IMDSv1 when the
+	// token endpoint answers with an HTTP error status, e.g. on ECI containers.
+	// An unreachable token endpoint means the metadata service itself is
+	// unreachable, so detection stops instead of issuing a second doomed
+	// request that would double the timeout.
 	token, err := d.fetchToken(ctx)
 	if err != nil {
+		if errors.Is(err, errUnreachable) {
+			return resource.Empty(), nil
+		}
 		token = ""
 	}
 
@@ -104,7 +130,6 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	attrs := []attribute.KeyValue{
 		semconv.CloudProviderAlibabaCloud,
 		semconv.CloudPlatformAlibabaCloudECS,
-		semconv.CloudResourceID(instanceID),
 		semconv.HostID(instanceID),
 	}
 
@@ -128,38 +153,29 @@ func (d *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	fetchAdd("hostname", semconv.HostName)
 	fetchAdd("instance/instance-type", semconv.HostType)
 	fetchAdd("image-id", semconv.HostImageID)
-	fetchAdd("mac", func(v string) attribute.KeyValue { return semconv.HostMac(v) })
-	fetchAdd("vpc-id", vpcIDKey.String)
-	fetchAdd("vswitch-id", vswitchIDKey.String)
 
-	var ips []string
-	fetchIP := func(path string) {
-		v, err := d.fetchMeta(ctx, token, path)
-		switch {
-		case errors.Is(err, errMissing):
-		case err != nil:
-			errs = append(errs, fmt.Errorf("%s: %w", path, err))
-		case v != "" && !slices.Contains(ips, v):
-			ips = append(ips, v)
+	if d.cfg.filter != nil {
+		filtered := attrs[:0]
+		for _, kv := range attrs {
+			if d.cfg.filter(kv) {
+				filtered = append(filtered, kv)
+			}
 		}
-	}
-	fetchIP("private-ipv4")
-	fetchIP("public-ipv4")
-	fetchIP("eipv4")
-	if len(ips) > 0 {
-		attrs = append(attrs, semconv.HostIP(ips...))
+		attrs = filtered
 	}
 
 	res := resource.NewWithAttributes(semconv.SchemaURL, attrs...)
 
 	if len(errs) > 0 {
-		return res, fmt.Errorf("%w: %v", resource.ErrPartialResource, errs)
+		return res, fmt.Errorf("%w: %w", resource.ErrPartialResource, errors.Join(errs...))
 	}
 	return res, nil
 }
 
 // fetchToken retrieves an IMDSv2 session token. A non-nil error means the
-// token flow is unavailable and the caller should fall back to IMDSv1.
+// token flow is unavailable: the caller falls back to IMDSv1 unless the error
+// reports [errUnreachable], in which case there is no metadata service to
+// talk to at all.
 func (d *ResourceDetector) fetchToken(ctx context.Context) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodPut, d.endpoint+tokenEndpoint, http.NoBody)
 	if err != nil {
