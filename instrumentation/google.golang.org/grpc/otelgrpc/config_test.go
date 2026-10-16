@@ -75,7 +75,19 @@ func TestWithNonErrorCodes(t *testing.T) {
 
 	t.Run("no input is ignored", func(t *testing.T) {
 		c := newConfig([]Option{WithNonErrorCodes()})
-		assert.Nil(t, c.NonErrorCodes)
+		assert.Empty(t, c.NonErrorCodes)
+	})
+
+	t.Run("repeated options are additive", func(t *testing.T) {
+		c := newConfig([]Option{
+			WithNonErrorCodes(grpc_codes.NotFound),
+			WithNonErrorCodes(grpc_codes.AlreadyExists),
+			WithNonErrorCodes(),
+		})
+		assert.Equal(t, newConfig([]Option{
+			WithNonErrorCodes(grpc_codes.NotFound, grpc_codes.AlreadyExists),
+		}).NonErrorCodes, c.NonErrorCodes)
+		assert.Len(t, c.NonErrorCodes, 2)
 	})
 
 	t.Run("duplicate entries are ignored", func(t *testing.T) {
