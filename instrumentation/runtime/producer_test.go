@@ -157,3 +157,15 @@ func TestProducerConcurrentProduce(t *testing.T) {
 	}
 	wg.Wait()
 }
+
+func TestProducerOptInGCPausesUnavailableKeepsScheduleDuration(t *testing.T) {
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.pause.duration")
+	p := NewProducer()
+	p.collector.sampleMap[goGCPauses].Name = "/unsupported/gc/pauses:seconds"
+
+	scopeMetrics, err := p.Produce(t.Context())
+	require.NoError(t, err)
+	require.Len(t, scopeMetrics, 1)
+	require.Len(t, scopeMetrics[0].Metrics, 1)
+	assert.Equal(t, goconv.ScheduleDuration{}.Name(), scopeMetrics[0].Metrics[0].Name)
+}
