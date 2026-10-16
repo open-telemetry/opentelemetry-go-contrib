@@ -288,8 +288,12 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 }
 
 // WithGroup returns a new [slog.Handler] based on h that will log all messages
-// and attributes within a group of the provided name.
+// and attributes within a group of the provided name. If name is empty,
+// WithGroup returns h.
 func (h *Handler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h
+	}
 	h2 := *h
 	h2.group = &group{name: name, next: h2.group}
 	return &h2

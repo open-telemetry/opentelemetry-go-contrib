@@ -18,9 +18,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `WithAttributeFilter` to `go.opentelemetry.io/contrib/detectors/aws/lambda` to select which detected attributes are included in the returned resource. (#9606)
 - Add `go.opentelemetry.io/contrib/detectors/azure/azureaks`, a new resource detector for Azure Kubernetes Service, ported from `processor/resourcedetectionprocessor/internal/azure/aks` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, and `k8s.cluster.name`. (#9501)
 - Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, Cloud Run Worker Pool parity, and `NewDetectorWithOptions` with `WithGKEHostType` to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
+- Add `go.opentelemetry.io/contrib/detectors/akamai` — a new resource detector for Akamai Connected Cloud (formerly Linode) compute instances, ported from `processor/resourcedetectionprocessor/internal/akamai` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.region`, `host.id`, `host.name`, `host.type`, `host.image.id`, and `host.image.name`. (#9492)
 - Add `go.opentelemetry.io/contrib/detectors/openstack/nova`, a new resource detector for OpenStack Nova compute instances, ported from `processor/resourcedetectionprocessor/internal/openstack/nova` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `host.id`, `host.name`, and `host.type`, and optionally emits `openstack.nova.meta.<key>` attributes for the instance metadata keys selected with `WithMetaKeyFilter`. (#9486)
 - Add `go.opentelemetry.io/contrib/detectors/ibmcloud/classic`, a new resource detector for IBM Cloud Classic Infrastructure (SoftLayer) instances, ported from `processor/resourcedetectionprocessor/internal/ibmcloud/classic` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `cloud.resource_id`, `host.id`, and `host.name`. (#9490)
 - Add the opt-in `go.memory.gc.cycles`, `go.memory.gc.pause.duration`, and `go.cpu.time` metrics to `go.opentelemetry.io/contrib/instrumentation/runtime`, enabled by listing them in the `OTEL_GO_X_RUNTIME_METRICS_OPTIN` environment variable. (#9882)
+- Add `go.opentelemetry.io/contrib/detectors/scaleway`, a new resource detector for Scaleway Instances, ported from `processor/resourcedetectionprocessor/internal/scaleway` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `cloud.region`, `host.id`, `host.image.id`, `host.image.name`, `host.name`, and `host.type`. (#9489)
 
 ### Changed
 
@@ -30,6 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Prevent recording negative metric values for unknown request/response sizes in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#9433)
 - Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray` to prevent auxiliary fields with prefix-sharing keys from dropping trace contexts. (#9879)
 - Preserve errors returned by `http.ResponseController.Flush` through `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9798)
 - Replace inherited debug and deferred sampling flags when extracting a new B3 context in `go.opentelemetry.io/contrib/propagators/b3`. (#9864)
@@ -37,7 +40,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Preserve explicit Unix epoch timestamps (`TimestampMs = 0`) instead of replacing them with the current time in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9837)
 - Keep an existing query and fragment when the Jaeger remote sampler sets the `service` parameter in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#9886)
 - Remove the inbound `th` tracestate value when a rate limiting strategy makes the sampling decision in `go.opentelemetry.io/contrib/samplers/jaegerremote`, since the decision is not probabilistic. (#9847)
+- Replace inherited debug state when extracting a valid header in `go.opentelemetry.io/contrib/propagators/jaeger`. (#9898)
 - `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer reports `cloud.region`, `faas.version`, and `faas.instance` as empty strings when their environment variables are unset; the attributes are omitted instead. (#9606)
+- Ignore empty group names in `go.opentelemetry.io/contrib/bridges/otelslog` as required by `slog.Handler`. (#9817)
 - Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
 - Use the context bound to a logger when checking whether logs are enabled in `go.opentelemetry.io/contrib/bridges/otellogr` and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9878)
 - Fix `go.schedule.duration` datapoints returned by `Producer` in `go.opentelemetry.io/contrib/instrumentation/runtime` having their bucket counts overwritten by later collections, and a data race between concurrent `Produce` calls. (#9882)
