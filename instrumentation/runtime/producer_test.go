@@ -169,3 +169,24 @@ func TestProducerOptInGCPausesUnavailableKeepsScheduleDuration(t *testing.T) {
 	require.Len(t, scopeMetrics[0].Metrics, 1)
 	assert.Equal(t, goconv.ScheduleDuration{}.Name(), scopeMetrics[0].Metrics[0].Name)
 }
+
+func TestConvertRuntimeHistogramWithoutBuckets(t *testing.T) {
+	for name, rh := range map[string]*metrics.Float64Histogram{
+		"nil":          nil,
+		"empty":        {},
+		"single bound": {Buckets: []float64{0}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			assert.Empty(t, convertRuntimeHistogram(rh, time.Now()))
+		})
+	}
+}
+
+func TestProducerScheduleDurationUnavailableFails(t *testing.T) {
+	p := NewProducer()
+	p.collector.sampleMap[goSchedLatencies].Name = "/unsupported/sched/latencies:seconds"
+
+	scopeMetrics, err := p.Produce(t.Context())
+	assert.EqualError(t, err, "unable to obtain go.schedule.duration metric from the runtime")
+	assert.Nil(t, scopeMetrics)
+}
