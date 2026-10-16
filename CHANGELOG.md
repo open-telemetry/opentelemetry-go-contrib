@@ -129,7 +129,7 @@ The next release will require at least [Go 1.26].
 - The resource created by `go.opentelemetry.io/contrib/otelconf` now includes [default SDK attributes](https://pkg.go.dev/go.opentelemetry.io/otel/sdk/resource#Default). (#8990)
 - Add support for the `aws.ecs` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#8915)
 - Add support for the `aws.eks` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9138)
-- Add support for the `aws.lambda` resource detector in `go.opentelemetry.io/contrib/otelconf/x`.
+- Add support for the `aws.lambda` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9924)
 - Add support for the `azure.vm` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9074)
 - Add support for the `gcp` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9137)
 - Add `go.opentelemetry.io/contrib/detectors/azure/azureappservice`, a new resource detector for Azure App Service. Detects `cloud.*`, `service.name`, `azure.resource_group.name`, `azure.app_service.instance.id`, and `deployment.environment.name` from the `WEBSITE_*` and `REGION_NAME` environment variables. (#9289)
