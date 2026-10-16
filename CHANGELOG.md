@@ -45,6 +45,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
 - Use the context bound to a logger when checking whether logs are enabled in `go.opentelemetry.io/contrib/bridges/otellogr` and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9878)
 
+### Fixed
+
+- Allow `endpoint` to be omitted or set to `null` for OTLP exporters in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`; the SDK exporter defaults are used in this case, matching the OpenTelemetry configuration schema. (#9052)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
