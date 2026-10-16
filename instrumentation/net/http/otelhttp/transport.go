@@ -242,8 +242,12 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	ctx, span := tracer.Start(r.Context(), t.spanNameFormatter("", r), t.spanStartOptions...)
 
+	var finishTrace context.CancelCauseFunc = func(err error) { /* default no-op implementation */ }
+	defer func() { finishTrace(nil) }()
 	if t.clientTrace != nil {
-		ctx = httptrace.WithClientTrace(ctx, t.clientTrace(ctx))
+		var traceCtx context.Context
+		traceCtx, finishTrace = context.WithCancelCause(ctx)
+		ctx = httptrace.WithClientTrace(ctx, t.clientTrace(traceCtx))
 	}
 
 	labeler, found := ClientLabelerFromContext(ctx)
@@ -269,6 +273,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	if err == nil {
 		res, err = ensureResponseBody(t.rt, r, res)
 	}
+	finishTrace(err)
 
 	requestDuration := time.Since(requestStartTime)
 	statusCode := 0

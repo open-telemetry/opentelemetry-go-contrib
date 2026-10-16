@@ -8,10 +8,13 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
 	"net/textproto"
+	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
@@ -22,8 +25,10 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	"golang.org/x/net/dns/dnsmessage"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
 
 func getSpanFromRecorder(sr *tracetest.SpanRecorder, name string) (trace.ReadOnlySpan, bool) {
@@ -238,6 +243,265 @@ func TestConcurrentConnectionStart(t *testing.T) {
 			assert.ElementsMatch(t, expectedRemotes, gotRemotes)
 		})
 	}
+}
+
+func TestConnectErrorWithoutGotConn(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+	server := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	server.Close()
+	transport := &http.Transport{}
+	t.Cleanup(transport.CloseIdleConnections)
+	client := &http.Client{Transport: otelhttp.NewTransport(transport,
+		otelhttp.WithTracerProvider(tp),
+		otelhttp.WithClientTrace(func(ctx context.Context) *httptrace.ClientTrace {
+			return otelhttptrace.NewClientTrace(ctx)
+		}),
+	)}
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL, http.NoBody)
+	require.NoError(t, err)
+	resp, err := client.Do(req)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	require.Error(t, err)
+	require.NoError(t, req.Context().Err())
+	require.Eventually(t, func() bool {
+		return len(getSpansFromRecorder(sr, "http.getconn")) == 1
+	}, time.Second, time.Millisecond)
+
+	connectSpans := getSpansFromRecorder(sr, "http.connect")
+	require.Len(t, connectSpans, 1)
+	getConnSpans := getSpansFromRecorder(sr, "http.getconn")
+	require.Len(t, getConnSpans, 1)
+
+	assert.Equal(t, codes.Error, getConnSpans[0].Status().Code)
+	assert.Equal(t, getConnSpans[0].SpanContext().SpanID(), connectSpans[0].Parent().SpanID())
+}
+
+func TestConnectFallbackKeepsGetConnParent(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	otel.SetTracerProvider(tp)
+
+	client, server := net.Pipe()
+	t.Cleanup(func() {
+		_ = client.Close()
+		_ = server.Close()
+	})
+
+	ct := otelhttptrace.NewClientTrace(t.Context())
+	ct.GetConn("example.com:443")
+	ct.DNSStart(httptrace.DNSStartInfo{Host: "example.com"})
+	ct.DNSDone(httptrace.DNSDoneInfo{Addrs: []net.IPAddr{
+		{IP: net.ParseIP("192.0.2.1")},
+		{IP: net.ParseIP("192.0.2.2")},
+	}})
+	ct.ConnectStart("tcp", "192.0.2.1:443")
+	ct.ConnectDone("tcp", "192.0.2.1:443", errors.New("connection refused"))
+	require.Empty(t, getSpansFromRecorder(sr, "http.getconn"))
+
+	ct.ConnectStart("tcp", "192.0.2.2:443")
+	ct.ConnectDone("tcp", "192.0.2.2:443", nil)
+	ct.GotConn(httptrace.GotConnInfo{Conn: client})
+
+	getConnSpans := getSpansFromRecorder(sr, "http.getconn")
+	require.Len(t, getConnSpans, 1)
+	assert.Contains(t, getConnSpans[0].Attributes(), attribute.String("http.remote", client.RemoteAddr().String()))
+
+	connectSpans := getSpansFromRecorder(sr, "http.connect")
+	require.Len(t, connectSpans, 2)
+	for _, s := range connectSpans {
+		assert.Equal(t, getConnSpans[0].SpanContext().SpanID(), s.Parent().SpanID())
+	}
+}
+
+func TestGetConnDialTimeoutSkipsRemainingAddresses(t *testing.T) {
+	listener, err := (&net.ListenConfig{}).ListenPacket(t.Context(), "udp4", "127.0.0.1:0")
+	require.NoError(t, err)
+	done := make(chan struct{})
+	t.Cleanup(func() {
+		_ = listener.Close()
+		<-done
+	})
+	go func() {
+		defer close(done)
+		buffer := make([]byte, 512)
+		for {
+			size, addr, readErr := listener.ReadFrom(buffer)
+			if readErr != nil {
+				return
+			}
+			var message dnsmessage.Message
+			if message.Unpack(buffer[:size]) != nil {
+				return
+			}
+			message.Response = true
+			message.RecursionAvailable = true
+			for _, question := range message.Questions {
+				if question.Type == dnsmessage.TypeA {
+					for _, address := range [][4]byte{{192, 0, 2, 1}, {192, 0, 2, 2}} {
+						message.Answers = append(message.Answers, dnsmessage.Resource{
+							Header: dnsmessage.ResourceHeader{Name: question.Name, Type: dnsmessage.TypeA, Class: dnsmessage.ClassINET},
+							Body:   &dnsmessage.AResource{A: address},
+						})
+					}
+				}
+			}
+			response, packErr := message.Pack()
+			if packErr != nil {
+				return
+			}
+			if _, writeErr := listener.WriteTo(response, addr); writeErr != nil {
+				return
+			}
+		}
+	}()
+	var attempts atomic.Int32
+	dialer := &net.Dialer{
+		Timeout: 100 * time.Millisecond,
+		Resolver: &net.Resolver{PreferGo: true, Dial: func(ctx context.Context, _, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, "udp4", listener.LocalAddr().String())
+		}},
+		ControlContext: func(ctx context.Context, _, _ string, _ syscall.RawConn) error {
+			attempts.Add(1)
+			<-ctx.Done()
+			return ctx.Err()
+		},
+	}
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	ctx := t.Context()
+	transport := &http.Transport{DialContext: dialer.DialContext}
+	t.Cleanup(transport.CloseIdleConnections)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://dial-timeout.test:80", http.NoBody)
+	require.NoError(t, err)
+	client := &http.Client{Transport: otelhttp.NewTransport(transport,
+		otelhttp.WithTracerProvider(tp),
+		otelhttp.WithClientTrace(func(traceCtx context.Context) *httptrace.ClientTrace {
+			return otelhttptrace.NewClientTrace(traceCtx)
+		}),
+	)}
+	resp, err := client.Do(req)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	require.Error(t, err)
+	require.NoError(t, ctx.Err())
+	require.Equal(t, int32(1), attempts.Load())
+	dnsSpans := getSpansFromRecorder(sr, "http.dns")
+	require.Len(t, dnsSpans, 1)
+	assert.Contains(t, dnsSpans[0].Attributes(), otelhttptrace.HTTPDNSAddrs.String("192.0.2.1,192.0.2.2"))
+	require.Eventually(t, func() bool {
+		return len(getSpansFromRecorder(sr, "http.getconn")) == 1
+	}, time.Second, time.Millisecond)
+	getConnSpans := getSpansFromRecorder(sr, "http.getconn")
+	require.Len(t, getConnSpans, 1)
+	connectSpans := getSpansFromRecorder(sr, "http.connect")
+	require.Len(t, connectSpans, 1)
+	assert.Equal(t, codes.Error, getConnSpans[0].Status().Code)
+	assert.Equal(t, getConnSpans[0].SpanContext().SpanID(), connectSpans[0].Parent().SpanID())
+}
+
+func TestGetConnRedirectConnectionFailure(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+	target := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
+	target.Close()
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, target.URL, http.StatusFound)
+	}))
+	t.Cleanup(server.Close)
+
+	transport := &http.Transport{}
+	t.Cleanup(transport.CloseIdleConnections)
+	client := &http.Client{Transport: otelhttp.NewTransport(transport,
+		otelhttp.WithTracerProvider(tp),
+		otelhttp.WithClientTrace(func(ctx context.Context) *httptrace.ClientTrace {
+			return otelhttptrace.NewClientTrace(ctx)
+		}),
+	)}
+	ctx := t.Context()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, http.NoBody)
+	require.NoError(t, err)
+	resp, err := client.Do(req)
+	if resp != nil {
+		_ = resp.Body.Close()
+	}
+	require.Error(t, err)
+	require.NoError(t, ctx.Err())
+
+	require.Eventually(t, func() bool {
+		return len(getSpansFromRecorder(sr, "http.getconn")) == 2
+	}, time.Second, time.Millisecond)
+	getConnSpans := getSpansFromRecorder(sr, "http.getconn")
+	require.Len(t, getConnSpans, 2)
+	connectSpans := getSpansFromRecorder(sr, "http.connect")
+	require.Len(t, connectSpans, 2)
+	for index, span := range connectSpans {
+		assert.Equal(t, getConnSpans[index].SpanContext().SpanID(), span.Parent().SpanID())
+	}
+}
+
+func TestGetConnEndsOnFailureWithoutConnectDone(t *testing.T) {
+	setup := func(t *testing.T) (*tracetest.SpanRecorder, *httptrace.ClientTrace) {
+		sr := tracetest.NewSpanRecorder()
+		otel.SetTracerProvider(trace.NewTracerProvider(trace.WithSpanProcessor(sr)))
+		return sr, otelhttptrace.NewClientTrace(t.Context())
+	}
+
+	t.Run("dns error", func(t *testing.T) {
+		sr, ct := setup(t)
+		ct.GetConn("example.com:443")
+		ct.DNSStart(httptrace.DNSStartInfo{Host: "example.com"})
+		ct.DNSDone(httptrace.DNSDoneInfo{Err: errors.New("no such host")})
+
+		getConnSpans := getSpansFromRecorder(sr, "http.getconn")
+		require.Len(t, getConnSpans, 1)
+		dnsSpans := getSpansFromRecorder(sr, "http.dns")
+		require.Len(t, dnsSpans, 1)
+		assert.Equal(t, getConnSpans[0].SpanContext().SpanID(), dnsSpans[0].Parent().SpanID())
+	})
+
+	t.Run("tls error", func(t *testing.T) {
+		sr, ct := setup(t)
+		ct.GetConn("example.com:443")
+		ct.ConnectStart("tcp", "192.0.2.1:443")
+		ct.ConnectDone("tcp", "192.0.2.1:443", nil)
+		ct.TLSHandshakeStart()
+		ct.TLSHandshakeDone(tls.ConnectionState{}, errors.New("bad certificate"))
+
+		getConnSpans := getSpansFromRecorder(sr, "http.getconn")
+		require.Len(t, getConnSpans, 1)
+		tlsSpans := getSpansFromRecorder(sr, "http.tls")
+		require.Len(t, tlsSpans, 1)
+		assert.Equal(t, getConnSpans[0].SpanContext().SpanID(), tlsSpans[0].Parent().SpanID())
+	})
+
+	t.Run("context canceled before remaining addresses are dialed", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		otel.SetTracerProvider(trace.NewTracerProvider(trace.WithSpanProcessor(sr)))
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		ct := otelhttptrace.NewClientTrace(ctx)
+		ct.GetConn("example.com:443")
+		ct.DNSStart(httptrace.DNSStartInfo{Host: "example.com"})
+		ct.DNSDone(httptrace.DNSDoneInfo{Addrs: []net.IPAddr{
+			{IP: net.ParseIP("192.0.2.1")},
+			{IP: net.ParseIP("192.0.2.2")},
+		}})
+		ct.ConnectStart("tcp", "192.0.2.1:443")
+		ct.ConnectDone("tcp", "192.0.2.1:443", errors.New("connection refused"))
+		require.Empty(t, getSpansFromRecorder(sr, "http.getconn"))
+
+		cancel()
+		require.Eventually(t, func() bool {
+			return len(getSpansFromRecorder(sr, "http.getconn")) == 1
+		}, 5*time.Second, 10*time.Millisecond)
+	})
 }
 
 func TestEndBeforeStartCreatesSpan(t *testing.T) {

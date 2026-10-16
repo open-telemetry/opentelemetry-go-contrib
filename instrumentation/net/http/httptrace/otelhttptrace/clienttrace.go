@@ -139,6 +139,9 @@ type clientTracer struct {
 	addHeaders      bool
 	useSpans        bool
 	semconv         semconv.HTTPClient
+
+	// stopGetConnWatch unregisters the context watcher for http.getconn.
+	stopGetConnWatch func() bool
 }
 
 // NewClientTrace returns an httptrace.ClientTrace implementation that will
@@ -151,6 +154,7 @@ type clientTracer struct {
 func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.ClientTrace {
 	ct := &clientTracer{
 		Context:     ctx,
+		root:        trace.SpanFromContext(ctx),
 		activeHooks: make(map[string]context.Context),
 		redactedHeaders: map[string]struct{}{
 			"authorization":       {},
@@ -260,6 +264,42 @@ func (ct *clientTracer) end(hook string, err error, attrs ...attribute.KeyValue)
 	}
 }
 
+func (ct *clientTracer) endGetConn(err error, attrs ...attribute.KeyValue) {
+	if !ct.useSpans {
+		ct.end("http.getconn", err, attrs...)
+		return
+	}
+
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+	ct.endGetConnLocked(err, attrs...)
+}
+
+func (ct *clientTracer) endGetConnLocked(err error, attrs ...attribute.KeyValue) {
+	const hook = "http.getconn"
+	if ctx, ok := ct.activeHooks[hook]; ok {
+		span := trace.SpanFromContext(ctx)
+		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
+		}
+		span.SetAttributes(attrs...)
+		span.End()
+		delete(ct.activeHooks, hook)
+		if ct.stopGetConnWatch != nil {
+			ct.stopGetConnWatch()
+			ct.stopGetConnWatch = nil
+		}
+	}
+}
+
+func (ct *clientTracer) endAcquisition(acquisition context.Context, err error) {
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+	if acquisition != nil && ct.activeHooks["http.getconn"] == acquisition {
+		ct.endGetConnLocked(err)
+	}
+}
+
 func (ct *clientTracer) getParentContext(hook string) context.Context {
 	ctx, ok := ct.activeHooks[parentHook(hook)]
 	if !ok {
@@ -279,6 +319,20 @@ func (ct *clientTracer) span(hook string) trace.Span {
 
 func (ct *clientTracer) getConn(host string) {
 	ct.start("http.getconn", "http.getconn", ct.semconv.TraceAttributes(host)...)
+	if !ct.useSpans {
+		return
+	}
+
+	// Dial attempts abandoned on cancellation fire no hooks, so end the span here.
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+	if ct.stopGetConnWatch != nil {
+		ct.stopGetConnWatch()
+	}
+	acquisition := ct.activeHooks["http.getconn"]
+	ct.stopGetConnWatch = context.AfterFunc(ct.Context, func() {
+		ct.endAcquisition(acquisition, context.Cause(ct.Context))
+	})
 }
 
 func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
@@ -291,7 +345,7 @@ func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
 	if info.WasIdle {
 		attrs = append(attrs, HTTPConnectionIdleTime.String(info.IdleTime.String()))
 	}
-	ct.end("http.getconn", nil, attrs...)
+	ct.endGetConn(nil, attrs...)
 }
 
 func (ct *clientTracer) putIdleConn(err error) {
@@ -312,6 +366,9 @@ func (ct *clientTracer) dnsDone(info httptrace.DNSDoneInfo) {
 		addrs = append(addrs, netAddr.String())
 	}
 	ct.end("http.dns", info.Err, HTTPDNSAddrs.String(sliceToString(addrs)))
+	if info.Err != nil && ct.useSpans {
+		ct.endGetConn(info.Err)
+	}
 }
 
 func (ct *clientTracer) connectStart(network, addr string) {
@@ -336,6 +393,9 @@ func (ct *clientTracer) tlsHandshakeStart() {
 
 func (ct *clientTracer) tlsHandshakeDone(_ tls.ConnectionState, err error) {
 	ct.end("http.tls", err)
+	if err != nil && ct.useSpans {
+		ct.endGetConn(err)
+	}
 }
 
 func (ct *clientTracer) wroteHeaderField(k string, v []string) {
