@@ -6,8 +6,9 @@
 package detectors
 
 import (
-	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
 	"go.opentelemetry.io/otel/sdk/resource"
+
+	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
 )
 
 func awsLambdaDetector() resource.Detector {
