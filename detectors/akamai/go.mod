@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/detectors/akamai
 
-go 1.25.0
+go 1.26.0
 
 require (
 	github.com/linode/go-metadata v0.3.0
@@ -19,6 +19,6 @@ require (
 	go.opentelemetry.io/otel/metric v1.45.0 // indirect
 	go.opentelemetry.io/otel/trace v1.45.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/net v0.55.0 // indirect
-	golang.org/x/sys v0.47.0 // indirect
+	golang.org/x/net v0.61.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 )
