@@ -20,27 +20,20 @@ The metadata service is queried with the hardened IMDSv2 token flow when the
 instance supports it, falling back to unauthenticated IMDSv1 requests
 otherwise.
 
-According to semantic conventions for [cloud] and [host] attributes, each of
-the following attributes is added if it is available:
+The detected attribute set matches the alibaba/ecs detector of the
+resourcedetectionprocessor in opentelemetry-collector-contrib. According to
+semantic conventions for [cloud] and [host] attributes, each of the
+following attributes is added if it is available:
 
   - cloud.provider
   - cloud.platform
   - cloud.region
   - cloud.availability_zone
   - cloud.account.id
-  - cloud.resource_id
   - host.id
   - host.name
   - host.type
   - host.image.id
-  - host.ip
-  - host.mac
-
-The Alibaba Cloud network identifiers, which have no semantic-conventions
-counterparts, are added if available:
-
-  - alibaba.cloud.vpc.id
-  - alibaba.cloud.vswitch.id
 
 [cloud]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/cloud.md
 [host]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/resource/host.md

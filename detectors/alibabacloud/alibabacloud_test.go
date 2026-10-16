@@ -77,14 +77,13 @@ func newFakeServer(t *testing.T, f fakeMetadata) (*httptest.Server, *[]*http.Req
 
 // newTestDetector returns a detector pointed at url instead of the real
 // link-local metadata endpoint.
-func newTestDetector(url string) *ResourceDetector {
-	d := NewResourceDetector()
+func newTestDetector(url string, opts ...Option) *ResourceDetector {
+	d := NewResourceDetector(opts...)
 	d.endpoint = url
 	return d
 }
 
-// fullFixture covers every metadata item the detector reads, with the EIP
-// equal to the public IP so IP de-duplication is exercised.
+// fullFixture covers every metadata item the detector reads.
 func fullFixture() fakeMetadata {
 	return fakeMetadata{
 		token: "test-token",
@@ -96,12 +95,6 @@ func fullFixture() fakeMetadata {
 			"hostname":               "iZbp13znx0m0me8cquu1234Z",
 			"instance/instance-type": "ecs.g6e.large",
 			"image-id":               "aliyun_3_x64_20G_alibase_20210425.vhd",
-			"mac":                    "00:16:3e:0f:d3:99",
-			"private-ipv4":           "192.168.1.10",
-			"public-ipv4":            "120.55.12.34",
-			"eipv4":                  "120.55.12.34",
-			"vpc-id":                 "vpc-bp1e0g399hkd7c8q1234",
-			"vswitch-id":             "vsw-bp1ygryo03m39xhsy1234",
 		},
 	}
 }
@@ -111,6 +104,12 @@ func TestNewResourceDetector(t *testing.T) {
 	require.NotNil(t, d)
 	assert.Equal(t, defaultEndpoint, d.endpoint)
 	assert.NotNil(t, d.client)
+	assert.Nil(t, d.cfg.filter)
+
+	filter := attribute.NewAllowKeysFilter(semconv.HostIDKey)
+	d = NewResourceDetector(WithAttributeFilter(filter))
+	require.NotNil(t, d)
+	assert.NotNil(t, d.cfg.filter)
 }
 
 func TestDetect_IMDSv2(t *testing.T) {
@@ -123,7 +122,6 @@ func TestDetect_IMDSv2(t *testing.T) {
 		semconv.SchemaURL,
 		semconv.CloudProviderAlibabaCloud,
 		semconv.CloudPlatformAlibabaCloudECS,
-		semconv.CloudResourceID("i-bp13znx0m0me8cquu1234"),
 		semconv.HostID("i-bp13znx0m0me8cquu1234"),
 		semconv.CloudRegion("cn-hangzhou"),
 		semconv.CloudAvailabilityZone("cn-hangzhou-i"),
@@ -131,10 +129,6 @@ func TestDetect_IMDSv2(t *testing.T) {
 		semconv.HostName("iZbp13znx0m0me8cquu1234Z"),
 		semconv.HostType("ecs.g6e.large"),
 		semconv.HostImageID("aliyun_3_x64_20G_alibase_20210425.vhd"),
-		semconv.HostMac("00:16:3e:0f:d3:99"),
-		vpcIDKey.String("vpc-bp1e0g399hkd7c8q1234"),
-		vswitchIDKey.String("vsw-bp1ygryo03m39xhsy1234"),
-		semconv.HostIP("192.168.1.10", "120.55.12.34"),
 	)
 	assert.Equal(t, expected, res)
 
@@ -201,6 +195,37 @@ func TestDetect_NotOnAlibabaCloud(t *testing.T) {
 	assert.Equal(t, resource.Empty(), res)
 }
 
+func TestDetect_TokenEndpointUnreachable(t *testing.T) {
+	// A transport failure on the token request means the metadata service
+	// itself is unreachable: detection must stop without issuing any metadata
+	// request, instead of doubling the timeout on a second doomed request.
+	var mu sync.Mutex
+	var metadataRequests int
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodPut {
+			// Abort the connection without a response: the client observes a
+			// transport error, not an HTTP status.
+			conn, _, err := w.(http.Hijacker).Hijack()
+			if err == nil {
+				_ = conn.Close()
+			}
+			return
+		}
+		mu.Lock()
+		metadataRequests++
+		mu.Unlock()
+	}))
+	t.Cleanup(srv.Close)
+
+	res, err := newTestDetector(srv.URL).Detect(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, resource.Empty(), res)
+
+	mu.Lock()
+	defer mu.Unlock()
+	assert.Zero(t, metadataRequests, "no metadata request must follow an unreachable token endpoint")
+}
+
 func TestDetect_InstanceIDServerError(t *testing.T) {
 	// The metadata service answered but failed on the anchor item: surface the
 	// error instead of silently reporting "not on Alibaba Cloud".
@@ -229,8 +254,6 @@ func TestDetect_OptionalItemsMissing(t *testing.T) {
 	f := fullFixture()
 	delete(f.fields, "instance/instance-type")
 	delete(f.fields, "image-id")
-	delete(f.fields, "public-ipv4")
-	delete(f.fields, "eipv4")
 	srv, _ := newFakeServer(t, f)
 
 	res, err := newTestDetector(srv.URL).Detect(t.Context())
@@ -240,23 +263,19 @@ func TestDetect_OptionalItemsMissing(t *testing.T) {
 		semconv.SchemaURL,
 		semconv.CloudProviderAlibabaCloud,
 		semconv.CloudPlatformAlibabaCloudECS,
-		semconv.CloudResourceID("i-bp13znx0m0me8cquu1234"),
 		semconv.HostID("i-bp13znx0m0me8cquu1234"),
 		semconv.CloudRegion("cn-hangzhou"),
 		semconv.CloudAvailabilityZone("cn-hangzhou-i"),
 		semconv.CloudAccountID("1609982529920000"),
 		semconv.HostName("iZbp13znx0m0me8cquu1234Z"),
-		semconv.HostMac("00:16:3e:0f:d3:99"),
-		vpcIDKey.String("vpc-bp1e0g399hkd7c8q1234"),
-		vswitchIDKey.String("vsw-bp1ygryo03m39xhsy1234"),
-		semconv.HostIP("192.168.1.10"),
 	)
 	assert.Equal(t, expected, res)
 }
 
 func TestDetect_PartialFailure(t *testing.T) {
 	// Two items fail while the rest succeed: return the partial resource
-	// together with [resource.ErrPartialResource].
+	// together with [resource.ErrPartialResource], wrapping the underlying
+	// errors so callers can inspect them.
 	f := fullFixture()
 	f.statuses = map[string]int{
 		"region-id": http.StatusInternalServerError,
@@ -267,12 +286,12 @@ func TestDetect_PartialFailure(t *testing.T) {
 	res, err := newTestDetector(srv.URL).Detect(t.Context())
 	require.Error(t, err)
 	assert.ErrorIs(t, err, resource.ErrPartialResource)
+	assert.ErrorContains(t, err, "region-id")
 
-	// host.id, host.type and host.ip must still be present.
+	// host.id and host.type must still be present.
 	for _, k := range []attribute.Key{
 		semconv.HostIDKey,
 		semconv.HostTypeKey,
-		semconv.HostIPKey,
 	} {
 		_, ok := res.Set().Value(k)
 		assert.True(t, ok, "expected %s to be present", k)
@@ -288,16 +307,32 @@ func TestDetect_PartialFailure(t *testing.T) {
 	}
 }
 
-func TestDetect_DistinctIPsAreAllReported(t *testing.T) {
-	f := fullFixture()
-	f.fields["public-ipv4"] = "120.55.12.34"
-	f.fields["eipv4"] = "120.55.56.78"
-	srv, _ := newFakeServer(t, f)
+func TestDetect_WithAttributeFilter(t *testing.T) {
+	url := newFakeServerURL(t, fullFixture())
 
-	res, err := newTestDetector(srv.URL).Detect(t.Context())
+	filter := attribute.NewDenyKeysFilter(semconv.CloudPlatformKey)
+	res, err := newTestDetector(url, WithAttributeFilter(filter)).Detect(t.Context())
 	require.NoError(t, err)
 
-	val, ok := res.Set().Value(semconv.HostIPKey)
-	require.True(t, ok)
-	assert.Equal(t, []string{"192.168.1.10", "120.55.12.34", "120.55.56.78"}, val.AsStringSlice())
+	_, ok := res.Set().Value(semconv.CloudPlatformKey)
+	assert.False(t, ok, "expected cloud.platform to be absent")
+
+	for _, kv := range []attribute.KeyValue{
+		semconv.CloudProviderAlibabaCloud,
+		semconv.HostID("i-bp13znx0m0me8cquu1234"),
+		semconv.HostName("iZbp13znx0m0me8cquu1234Z"),
+		semconv.HostType("ecs.g6e.large"),
+	} {
+		val, ok := res.Set().Value(kv.Key)
+		assert.True(t, ok, "expected %s to be present", kv.Key)
+		assert.Equal(t, kv.Value, val)
+	}
+}
+
+// newFakeServerURL is a convenience wrapper around newFakeServer for tests
+// that only need the server URL.
+func newFakeServerURL(t *testing.T, f fakeMetadata) string {
+	t.Helper()
+	srv, _ := newFakeServer(t, f)
+	return srv.URL
 }
