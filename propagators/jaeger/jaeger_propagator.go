@@ -22,11 +22,8 @@ const (
 
 	idPaddingChar = "0"
 
-	flagsDebug      = 0x02
-	flagsSampled    = 0x01
-	flagsNotSampled = 0x00
-
-	deprecatedParentSpanID = "0"
+	flagsDebug   = 0x02
+	flagsSampled = 0x01
 )
 
 var (
