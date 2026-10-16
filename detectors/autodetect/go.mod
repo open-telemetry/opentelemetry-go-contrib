@@ -4,6 +4,7 @@ go 1.26.0
 
 require (
 	github.com/stretchr/testify v1.12.1
+	go.opentelemetry.io/contrib/detectors/akamai v0.19.0
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.6.0
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.47.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
@@ -15,10 +16,13 @@ require (
 	go.opentelemetry.io/contrib/detectors/docker v0.19.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.19.0
+	go.opentelemetry.io/contrib/detectors/ibmcloud/classic v0.19.0
 	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.19.0
 	go.opentelemetry.io/contrib/detectors/k8sapi v0.19.0
 	go.opentelemetry.io/contrib/detectors/kubeadm v0.19.0
 	go.opentelemetry.io/contrib/detectors/openshift v0.19.0
+	go.opentelemetry.io/contrib/detectors/openstack/nova v0.19.0
+	go.opentelemetry.io/contrib/detectors/scaleway v0.19.0
 	go.opentelemetry.io/contrib/detectors/vultr v0.19.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
@@ -26,7 +30,7 @@ require (
 
 require (
 	cloud.google.com/go/compute/metadata v0.10.0 // indirect
-	github.com/Microsoft/go-winio v0.6.3 // indirect
+	github.com/Microsoft/go-winio v0.6.4 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.47.3 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.33.9 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.9 // indirect
@@ -69,10 +73,12 @@ require (
 	github.com/go-openapi/swag/stringutils v0.29.2 // indirect
 	github.com/go-openapi/swag/typeutils v0.29.2 // indirect
 	github.com/go-openapi/swag/yamlutils v0.29.2 // indirect
+	github.com/go-resty/resty/v2 v2.17.2 // indirect
 	github.com/google/gnostic-models v0.7.1 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hetznercloud/hcloud-go/v2 v2.52.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/linode/go-metadata v0.3.0 // indirect
 	github.com/moby/docker-image-spec v1.3.1 // indirect
 	github.com/moby/moby/api v1.56.1 // indirect
 	github.com/moby/moby/client v0.6.2 // indirect
@@ -138,11 +144,19 @@ replace go.opentelemetry.io/contrib/detectors/vultr => ../vultr
 
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
 
+replace go.opentelemetry.io/contrib/detectors/ibmcloud/classic => ../ibmcloud/classic
+
 replace go.opentelemetry.io/contrib/detectors/docker => ../docker
 
 replace go.opentelemetry.io/contrib/detectors/kubeadm => ../kubeadm
 
 replace go.opentelemetry.io/contrib/detectors/openshift => ../openshift
+
+replace go.opentelemetry.io/contrib/detectors/akamai => ../akamai
+
+replace go.opentelemetry.io/contrib/detectors/openstack/nova => ../openstack/nova
+
+replace go.opentelemetry.io/contrib/detectors/scaleway => ../scaleway
 
 replace go.opentelemetry.io/contrib/detectors/azure/azureaks => ../azure/azureaks
 
