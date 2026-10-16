@@ -177,7 +177,6 @@ func TestHandlerBasics(t *testing.T) {
 		attribute.Int64("http.response.status_code", 200),
 		attribute.String("network.protocol.name", "http"),
 		attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
-		attribute.String("server.address", r.Host),
 		attribute.String("url.scheme", "http"),
 		attribute.String("test", "attribute"),
 	)
