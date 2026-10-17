@@ -257,6 +257,14 @@ func extractMultiple(ctx context.Context, traceID, spanID, parentSpanID, sampled
 		}
 	}
 
+	if requiredCount == 2 {
+		if flags != "1" && debugFromContext(ctx) {
+			ctx = withDebug(ctx, false)
+		}
+		if sampled != "" && deferredFromContext(ctx) {
+			ctx = withDeferred(ctx, false)
+		}
+	}
 	return ctx, trace.NewSpanContext(scc), nil
 }
 
@@ -355,6 +363,14 @@ func extractSingle(ctx context.Context, contextHeader string) (context.Context, 
 		// Zero value for TraceFlags sample bit is unset.
 	default:
 		return ctx, empty, errInvalidSampledByte
+	}
+	if headerLen > samplingWidth {
+		if sampling != "d" && debugFromContext(ctx) {
+			ctx = withDebug(ctx, false)
+		}
+		if sampling != "" && deferredFromContext(ctx) {
+			ctx = withDeferred(ctx, false)
+		}
 	}
 
 	return ctx, trace.NewSpanContext(scc), nil

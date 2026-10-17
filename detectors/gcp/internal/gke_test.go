@@ -18,6 +18,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -84,7 +85,7 @@ func TestGKEHostType(t *testing.T) {
 	d.httpClient = computeServer.Client()
 	d.computeBaseURL = computeServer.URL
 
-	hostType, err := d.GKEHostType()
+	hostType, err := d.GKEHostType(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "e2-standard-4", hostType)
 	assert.Equal(t, "/projects/my-project/zones/us-central1-a/instances/my-instance", requestPath)
@@ -100,8 +101,25 @@ func TestGKEHostTypeErr(t *testing.T) {
 	d.httpClient = computeServer.Client()
 	d.computeBaseURL = computeServer.URL
 
-	hostType, err := d.GKEHostType()
+	hostType, err := d.GKEHostType(t.Context())
 	assert.Error(t, err)
+	assert.Empty(t, hostType)
+}
+
+func TestGKEHostTypeContextCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	computeServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		cancel()
+		<-r.Context().Done()
+	}))
+	defer computeServer.Close()
+
+	d := NewTestDetector(newGKEFakeMetadataTransport(t), &FakeOSProvider{})
+	d.httpClient = computeServer.Client()
+	d.computeBaseURL = computeServer.URL
+
+	hostType, err := d.GKEHostType(ctx)
+	assert.ErrorIs(t, err, context.Canceled)
 	assert.Empty(t, hostType)
 }
 
