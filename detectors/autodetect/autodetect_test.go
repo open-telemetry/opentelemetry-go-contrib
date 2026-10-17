@@ -91,6 +91,21 @@ func TestParseUnknown(t *testing.T) {
 	}
 }
 
+func TestAkamaiDetectorRegistered(t *testing.T) {
+	detector, err := Detector(IDAkamai)
+	if err != nil {
+		t.Fatalf("got error: %v, expected no error", err)
+	}
+
+	c, ok := detector.(*composite)
+	if !ok {
+		t.Fatalf("got %T, expected composite detector", detector)
+	}
+	if len(c.detectors) != 1 {
+		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
+	}
+}
+
 func TestAlibabaECSDetectorRegistered(t *testing.T) {
 	detector, err := Detector(IDAlibabaECS)
 	if err != nil {
@@ -183,6 +198,21 @@ func TestOpenShiftDetectorRegistered(t *testing.T) {
 
 func TestOpenStackNovaDetectorRegistered(t *testing.T) {
 	detector, err := Detector(IDOpenStackNova)
+	if err != nil {
+		t.Fatalf("got error: %v, expected no error", err)
+	}
+
+	c, ok := detector.(*composite)
+	if !ok {
+		t.Fatalf("got %T, expected composite detector", detector)
+	}
+	if len(c.detectors) != 1 {
+		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
+	}
+}
+
+func TestScalewayDetectorRegistered(t *testing.T) {
+	detector, err := Detector(IDScaleway)
 	if err != nil {
 		t.Fatalf("got error: %v, expected no error", err)
 	}

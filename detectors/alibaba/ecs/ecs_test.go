@@ -142,6 +142,11 @@ func TestNewResourceDetector(t *testing.T) {
 	d := NewResourceDetector()
 	require.NotNil(t, d)
 	assert.Equal(t, defaultEndpoint, d.endpoint)
+
+	tr, ok := d.client.Transport.(*http.Transport)
+	require.True(t, ok)
+	assert.Nil(t, tr.Proxy)
+	assert.Positive(t, tr.IdleConnTimeout)
 }
 
 func TestDetect_OK(t *testing.T) {

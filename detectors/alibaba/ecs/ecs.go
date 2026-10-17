@@ -97,7 +97,7 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	// reached via an HTTP(S) proxy: doing so could leak instance metadata or
 	// break detection in environments where users set HTTP_PROXY/HTTPS_PROXY
 	// for outbound traffic.
-	transport := &http.Transport{Proxy: nil}
+	transport := &http.Transport{Proxy: nil, IdleConnTimeout: 90 * time.Second}
 	return &ResourceDetector{
 		endpoint: defaultEndpoint,
 		cfg:      cfg,
