@@ -135,7 +135,13 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	routeStr := extractRoute(r)
 
 	if routeStr == "" {
-		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
+		// routeStr is recorded as http.route on metrics, so it must not
+		// carry the raw, client-controlled method.
+		method := r.Method
+		if _, ok := validMethods[method]; !ok {
+			method = "_OTHER"
+		}
+		routeStr = fmt.Sprintf("HTTP %s route not found", method)
 	} else {
 		rAttr := tw.semconv.Route(routeStr)
 		opts = append(opts, trace.WithAttributes(rAttr))
