@@ -50,6 +50,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Preserve explicit Unix epoch timestamps (`TimestampMs = 0`) instead of replacing them with the current time in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9837)
 - Keep an existing query and fragment when the Jaeger remote sampler sets the `service` parameter in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#9886)
 - Support bare IPv4 host-and-port endpoints (e.g., 127.0.0.1:4317) for OTLP gRPC exporters in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x` and `go.opentelemetry.io/contrib/otelconf/v0.3.0`. (#9936)
+- Use `_OTHER` instead of the raw request method in the `HTTP <method> route not found` fallback used as the `http.route` metric attribute and span name for routes without a path template in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, so client-chosen methods cannot create unbounded metric series. (#9939)
 - Remove the inbound `th` tracestate value when a rate limiting strategy makes the sampling decision in `go.opentelemetry.io/contrib/samplers/jaegerremote`, since the decision is not probabilistic. (#9847)
 - Replace inherited debug state when extracting a valid header in `go.opentelemetry.io/contrib/propagators/jaeger`. (#9898)
 - `go.opentelemetry.io/contrib/detectors/aws/lambda` no longer reports `cloud.region`, `faas.version`, and `faas.instance` as empty strings when their environment variables are unset; the attributes are omitted instead. (#9606)
