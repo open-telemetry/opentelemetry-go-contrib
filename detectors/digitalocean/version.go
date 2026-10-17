@@ -4,4 +4,4 @@
 package digitalocean
 
 // Version is the current release version of the DigitalOcean resource detector.
-const Version = "0.17.0"
+const Version = "0.19.0"
