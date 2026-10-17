@@ -420,6 +420,44 @@ func TestDefaultMetricAttributes(t *testing.T) {
 	}
 }
 
+func TestRouteNotFoundMetricAttributesUseNormalizedMethod(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware(
+		"foobar",
+		otelmux.WithMeterProvider(meterProvider),
+	))
+	// A route without a path template has no http.route.
+	router.Host("localhost").HandlerFunc(ok)
+
+	for i := range 10 {
+		r, err := http.NewRequestWithContext(t.Context(), fmt.Sprintf("CUSTOM%d", i), "http://localhost/", http.NoBody)
+		require.NoError(t, err)
+		router.ServeHTTP(httptest.NewRecorder(), r)
+	}
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name != "http.server.request.duration" {
+			continue
+		}
+		d, ok := m.Data.(metricdata.Histogram[float64])
+		require.True(t, ok)
+		require.Len(t, d.DataPoints, 1)
+		containsAttributes(t, d.DataPoints[0].Attributes, []attribute.KeyValue{
+			attribute.String("http.request.method", "_OTHER"),
+			attribute.String("http.route", "HTTP _OTHER route not found"),
+		})
+		return
+	}
+	t.Fatal("http.server.request.duration not recorded")
+}
+
 func TestHandlerWithMetricAttributesFn(t *testing.T) {
 	const (
 		serverRequestSize  = "http.server.request.body.size"
