@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/contrib/detectors/akamai v0.19.0
+	go.opentelemetry.io/contrib/detectors/alibaba/ecs v0.19.0
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.6.0
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.47.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
@@ -147,6 +148,8 @@ replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
 replace go.opentelemetry.io/contrib/detectors/ibmcloud/classic => ../ibmcloud/classic
 
 replace go.opentelemetry.io/contrib/detectors/docker => ../docker
+
+replace go.opentelemetry.io/contrib/detectors/alibaba/ecs => ../alibaba/ecs
 
 replace go.opentelemetry.io/contrib/detectors/kubeadm => ../kubeadm
 

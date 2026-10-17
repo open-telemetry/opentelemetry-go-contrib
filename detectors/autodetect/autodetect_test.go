@@ -106,6 +106,21 @@ func TestAkamaiDetectorRegistered(t *testing.T) {
 	}
 }
 
+func TestAlibabaECSDetectorRegistered(t *testing.T) {
+	detector, err := Detector(IDAlibabaECS)
+	if err != nil {
+		t.Fatalf("got error: %v, expected no error", err)
+	}
+
+	c, ok := detector.(*composite)
+	if !ok {
+		t.Fatalf("got %T, expected composite detector", detector)
+	}
+	if len(c.detectors) != 1 {
+		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
+	}
+}
+
 func TestIBMCloudClassicDetectorRegistered(t *testing.T) {
 	detector, err := Detector(IDIBMCloudClassic)
 	if err != nil {
