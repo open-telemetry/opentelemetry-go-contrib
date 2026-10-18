@@ -42,31 +42,94 @@ type ID = registry.ID
 // ErrUnknownDetector is returned when a detector is not registered.
 var ErrUnknownDetector = registry.ErrUnknownDetector
 
-// These functions are provided by
-// [go.opentelemetry.io/contrib/detectors/autodetect/registry].
-var (
-	Register   = registry.Register
-	Registered = registry.Registered
-	Detector   = registry.Detector
-)
+// Register registers a new resource detector function with the given ID.
+func Register(id ID, fn func() resource.Detector) {
+	registry.Register(id, fn)
+}
+
+// Registered returns a sorted slice of all registered resource detector IDs.
+func Registered() []ID {
+	return registry.Registered()
+}
+
+// Detector returns a [resource.Detector] composed of the detectors
+// identified by the provided IDs. If an ID is not recognized,
+// ErrUnknownDetector is returned. The returned detector merges all the
+// resource from each detector when Detect is called. The order of the merge is
+// not guaranteed.
+func Detector(ids ...ID) (resource.Detector, error) {
+	return registry.Detector(ids...)
+}
 
 // The detectors that need nothing beyond the SDK are registered by
 // [go.opentelemetry.io/contrib/detectors/autodetect/registry].
 var (
-	IDHost                      = registry.IDHost
-	IDHostID                    = registry.IDHostID
-	IDTelemetrySDK              = registry.IDTelemetrySDK
-	IDOSType                    = registry.IDOSType
-	IDOSDescription             = registry.IDOSDescription
-	IDProcessPID                = registry.IDProcessPID
-	IDProcessExecutableName     = registry.IDProcessExecutableName
-	IDProcessExecutablePath     = registry.IDProcessExecutablePath
-	IDProcessCommandArgs        = registry.IDProcessCommandArgs
-	IDProcessOwner              = registry.IDProcessOwner
-	IDProcessRuntimeName        = registry.IDProcessRuntimeName
-	IDProcessRuntimeVersion     = registry.IDProcessRuntimeVersion
+	// IDHost is the ID for the host detector. This detector detects the
+	// "host.name" attribute from the os.Hostname function.
+	IDHost = registry.IDHost
+	// IDHostID is the ID for the host ID detector. This detector detects the
+	// "host.id" attribute, which is a unique identifier for the host (e.g.,
+	// machine-id, UUID).
+	IDHostID = registry.IDHostID
+	// IDTelemetrySDK is the ID for the telemetry SDK detector. This detector
+	// detects the "telemetry.sdk.name", "telemetry.sdk.language", and
+	// "telemetry.sdk.version" attributes, which provide information about the
+	// SDK being used.
+	IDTelemetrySDK = registry.IDTelemetrySDK
+	// IDOSType is the ID for the OS type detector. This detector detects the
+	// "os.type" attribute, which indicates the type of operating system (e.g.,
+	// "linux", "windows", "darwin").
+	IDOSType = registry.IDOSType
+	// IDOSDescription is the ID for the OS description detector. This detector
+	// detects the "os.description" attribute, which provides a human-readable
+	// description of the operating system.
+	IDOSDescription = registry.IDOSDescription
+	// IDProcessPID is the ID for the process PID detector. This detector
+	// detects the "process.pid" attribute, which is the process ID of the
+	// current process.
+	IDProcessPID = registry.IDProcessPID
+	// IDProcessExecutableName is the ID for the process executable name
+	// detector. This detector detects the "process.executable.name" attribute,
+	// which is the name of the executable file for the current process.
+	IDProcessExecutableName = registry.IDProcessExecutableName
+	// IDProcessExecutablePath is the ID for the process executable path
+	// detector. This detector detects the "process.executable.path" attribute,
+	// which is the full path to the executable file for the current process.
+	IDProcessExecutablePath = registry.IDProcessExecutablePath
+	// IDProcessCommandArgs is the ID for the process command arguments
+	// detector. This detector detects the "process.command.args" attribute,
+	// which is the command line arguments used to start the current process.
+	//
+	// Warning! This detector will include process command line arguments. If
+	// these contain sensitive information it will be included in the exported
+	// resource.
+	IDProcessCommandArgs = registry.IDProcessCommandArgs
+	// IDProcessOwner is the ID for the process owner detector. This detector
+	// detects the "process.owner" attribute, which is the user who owns the
+	// current process.
+	IDProcessOwner = registry.IDProcessOwner
+	// IDProcessRuntimeName is the ID for the process runtime name detector.
+	// This detector detects the "process.runtime.name" attribute, which is the
+	// name of the runtime environment for the current process (e.g., "go",
+	// "python", "java").
+	IDProcessRuntimeName = registry.IDProcessRuntimeName
+	// IDProcessRuntimeVersion is the ID for the process runtime version
+	// detector. This detector detects the "process.runtime.version" attribute,
+	// which is the version of the runtime environment for the current process
+	// (e.g., "1.16.3", "3.8.5").
+	IDProcessRuntimeVersion = registry.IDProcessRuntimeVersion
+	// IDProcessRuntimeDescription is the ID for the process runtime
+	// description detector. This detector detects the
+	// "process.runtime.description" attribute, which provides an additional
+	// description of the runtime environment for the current process (e.g.,
+	// "Go runtime version 1.16.3", "Python 3.8.5").
 	IDProcessRuntimeDescription = registry.IDProcessRuntimeDescription
-	IDContainer                 = registry.IDContainer
+	// IDContainer is the ID for the container detector. This detector detects
+	// the "container.id" attribute, which is a unique identifier for the
+	// container in which the process is running. This is useful for
+	// identifying the container in which the process is running, especially in
+	// containerized environments like Kubernetes or Docker.
+	IDContainer = registry.IDContainer
 )
 
 var ( // IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
