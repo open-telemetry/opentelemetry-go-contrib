@@ -13,6 +13,7 @@ package autodetect
 import (
 	"go.opentelemetry.io/otel/sdk/resource"
 
+	"go.opentelemetry.io/contrib/detectors/akamai"
 	"go.opentelemetry.io/contrib/detectors/autodetect/registry"
 	"go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
 	"go.opentelemetry.io/contrib/detectors/aws/ecs"
@@ -31,6 +32,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/kubeadm"
 	"go.opentelemetry.io/contrib/detectors/openshift"
 	"go.opentelemetry.io/contrib/detectors/openstack/nova"
+	"go.opentelemetry.io/contrib/detectors/scaleway"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -70,6 +72,10 @@ var (
 var ( // IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
 	// attributes on Amazon Web Services (AWS) EC2 instances (see
 	// ec2.NewResourceDetector for details).
+	// IDAkamai is the ID for the Akamai detector that detects resource
+	// attributes on Akamai Connected Cloud compute instances (see
+	// akamai.NewResourceDetector for details).
+	IDAkamai = registry.ID("akamai")
 	IDAWSEC2 = registry.ID("aws.ec2")
 	// IDAWSECS is the ID for the AWS ECS detector that detects resource
 	// attributes on Amazon Web Services (AWS) ECS clusters (see
@@ -138,10 +144,15 @@ var ( // IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
 	// IDVultr is the ID for the Vultr detector that detects resource attributes
 	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
 	// details).
-	IDVultr = registry.ID("vultr")
+	// IDScaleway is the ID for the Scaleway detector that detects resource
+	// attributes on Scaleway Instances (see scaleway.NewResourceDetector for
+	// details).
+	IDScaleway = registry.ID("scaleway")
+	IDVultr    = registry.ID("vultr")
 )
 
 func init() {
+	registry.Register(IDAkamai, func() resource.Detector { return akamai.NewResourceDetector() })
 	registry.Register(IDAWSEC2, ec2.NewResourceDetector)
 	registry.Register(IDAWSECS, ecs.NewResourceDetector)
 	registry.Register(IDAWSEKS, eks.NewResourceDetector)
@@ -159,5 +170,6 @@ func init() {
 	registry.Register(IDK8sAPI, func() resource.Detector { return k8sapi.NewResourceDetector() })
 	registry.Register(IDKubeadm, func() resource.Detector { return kubeadm.NewResourceDetector() })
 	registry.Register(IDOpenShift, func() resource.Detector { return openshift.NewResourceDetector() })
+	registry.Register(IDScaleway, func() resource.Detector { return scaleway.NewResourceDetector() })
 	registry.Register(IDVultr, func() resource.Detector { return vultr.NewResourceDetector() })
 }
