@@ -90,6 +90,22 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 			},
 		},
 		{
+			name:       "omit server port without server address",
+			server:     ":8080",
+			req:        defaultRequest,
+			statusCode: 200,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 5)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("url.scheme", "http"),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "1.1"),
+					attribute.Int64("http.response.status_code", 200),
+				}, attrs)
+			},
+		},
+		{
 			name: "use route from request pattern",
 			req:  reqWithPattern,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {

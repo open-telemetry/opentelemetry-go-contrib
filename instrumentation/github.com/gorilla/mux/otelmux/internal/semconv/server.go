@@ -371,12 +371,14 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 	// the request Host is client-controlled and would let any client grow
 	// metric cardinality. Only the configured server name is used.
 	host, p := SplitHostPort(server)
+	hostPort := -1
 	if host != "" {
 		num++
-	}
-	hostPort := requiredHTTPPort(req.TLS != nil, p)
-	if hostPort > 0 {
-		num++
+		// server.port is only set alongside server.address.
+		hostPort = requiredHTTPPort(req.TLS != nil, p)
+		if hostPort > 0 {
+			num++
+		}
 	}
 	protoName, protoVersion := netProtocol(req.Proto)
 	if protoName != "" {

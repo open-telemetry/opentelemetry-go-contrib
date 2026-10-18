@@ -869,6 +869,48 @@ func TestHandlerServeMuxRouteMetric(t *testing.T) {
 	}
 }
 
+func TestHandlerMetricsIgnoreRequestHost(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}),
+		"test_handler",
+		WithMeterProvider(meterProvider),
+	)
+
+	for _, host := range []string{"a.example", "b.example:8080", "c.example:9090"} {
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
+		r.Host = host
+		h.ServeHTTP(httptest.NewRecorder(), r)
+	}
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var found bool
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name != "http.server.request.duration" {
+			continue
+		}
+		found = true
+		data, ok := m.Data.(metricdata.Histogram[float64])
+		require.True(t, ok)
+		require.Len(t, data.DataPoints, 1, "distinct Host values must not create new series")
+		assert.Equal(t, uint64(3), data.DataPoints[0].Count)
+		_, ok = data.DataPoints[0].Attributes.Value("server.address")
+		assert.False(t, ok)
+		_, ok = data.DataPoints[0].Attributes.Value("server.port")
+		assert.False(t, ok)
+	}
+	assert.True(t, found, "http.server.request.duration not recorded")
+}
+
 func TestHandlerMetricAttributesFnSeesRoutedRequest(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 
