@@ -309,12 +309,12 @@ func TestDetectHonorsLongerCallerDeadline(t *testing.T) {
 // bounded by the detection deadline on its own, without relying on the context
 // passed to DialContext.
 func TestTransportDialHonorsDeadline(t *testing.T) {
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = ln.Close() })
 
 	tr := newTransport(time.Now().Add(-time.Second))
-	_, err = tr.DialContext(context.Background(), "tcp", ln.Addr().String())
+	_, err = tr.DialContext(t.Context(), "tcp", ln.Addr().String())
 	var netErr net.Error
 	require.ErrorAs(t, err, &netErr)
 	assert.True(t, netErr.Timeout())
@@ -345,6 +345,47 @@ func TestDetectClosesConnection(t *testing.T) {
 	require.NoError(t, err)
 
 	assert.Eventually(t, func() bool { return open.Load() == 0 }, time.Second, 10*time.Millisecond)
+}
+
+func TestDetectCanceledInFlight(t *testing.T) {
+	// The metadata service sends headers and then stalls the body. Canceling
+	// the detection must abort the request on the server side too, not only
+	// stop waiting for it.
+	headersSent := make(chan struct{})
+	released := make(chan struct{})
+	stop := make(chan struct{})
+	serveMetadata(t, func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		close(headersSent)
+		select {
+		case <-r.Context().Done():
+			close(released)
+		case <-stop:
+		}
+	})
+	// Registered after serveMetadata so it runs before the server is closed.
+	t.Cleanup(func() { close(stop) })
+
+	// A long deadline, so only the cancellation can end the request promptly.
+	ctx, cancel := context.WithTimeout(t.Context(), time.Hour)
+	defer cancel()
+
+	errCh := make(chan error, 1)
+	go func() {
+		_, err := NewResourceDetector().Detect(ctx)
+		errCh <- err
+	}()
+
+	<-headersSent
+	cancel()
+
+	require.ErrorIs(t, <-errCh, context.Canceled)
+	select {
+	case <-released:
+	case <-time.After(time.Second):
+		t.Fatal("request still in flight after the detection was canceled")
+	}
 }
 
 func TestDetectCanceledContext(t *testing.T) {

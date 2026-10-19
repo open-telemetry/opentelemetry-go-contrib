@@ -46,13 +46,17 @@ var _ resource.Detector = (*ResourceDetector)(nil)
 // carry the status code, and Detect needs it to tell a client error (something
 // other than the metadata service answered the link-local address) from a
 // failure of the metadata service itself.
+//
+// The metadata client builds its requests without a context, so ctx is
+// attached here: canceling the detection aborts the request in flight.
 type statusTransport struct {
+	ctx    context.Context
 	base   http.RoundTripper
 	status atomic.Int64
 }
 
 func (t *statusTransport) RoundTrip(req *http.Request) (*http.Response, error) {
-	resp, err := t.base.RoundTrip(req)
+	resp, err := t.base.RoundTrip(req.WithContext(t.ctx))
 	if resp != nil {
 		t.status.Store(int64(resp.StatusCode))
 	}
@@ -99,8 +103,8 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 // when nothing answered.
 //
 // The client does not accept a [context.Context], so the request runs in its
-// own goroutine and ctx only cancels the wait. That goroutine, including the
-// TCP dial, is bounded by the deadline of ctx, but can still outlive this call.
+// own goroutine and ctx is attached to it by the transport. Canceling ctx or
+// reaching its deadline aborts the request, including the TCP dial.
 func (*ResourceDetector) metadata(ctx context.Context) (*do.Metadata, int, error) {
 	// Checked up front so an already canceled context does not race with a
 	// request that may complete before the select below observes it.
@@ -129,7 +133,7 @@ func (*ResourceDetector) metadata(ctx context.Context) (*do.Metadata, int, error
 	// traffic. The client of the metadata package does not disable it.
 	// Keep-alive is disabled because each transport serves one request: an
 	// idle connection would only stay open after Detect returns.
-	tr := &statusTransport{base: newTransport(deadline)}
+	tr := &statusTransport{ctx: ctx, base: newTransport(deadline)}
 	client := newClient(do.WithHTTPClient(&http.Client{
 		Timeout:   timeout,
 		Transport: tr,
