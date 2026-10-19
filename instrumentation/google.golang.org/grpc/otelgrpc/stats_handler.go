@@ -247,7 +247,7 @@ func (*clientHandler) HandleConn(context.Context, stats.ConnStats) {
 	// no-op
 }
 
-func (*config) handleRPC(
+func (c *config) handleRPC(
 	ctx context.Context,
 	rs stats.RPCStats,
 	duration metric.Float64Histogram,
@@ -310,8 +310,11 @@ func (*config) handleRPC(
 
 		if span.IsRecording() {
 			if s != nil {
-				c, m := recordStatus(s)
-				span.SetStatus(c, m)
+				// Suppress only the default status assignment for configured
+				// codes so any status set by the application is preserved.
+				if _, ok := c.NonErrorCodes[s.Code()]; !ok {
+					span.SetStatus(recordStatus(s))
+				}
 			}
 			span.SetAttributes(rpcStatusAttr)
 			span.End()
