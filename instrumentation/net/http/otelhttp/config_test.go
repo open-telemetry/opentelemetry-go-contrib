@@ -195,14 +195,13 @@ func TestWithServerName(t *testing.T) {
 	if !assert.Len(t, spans, 1) {
 		return
 	}
-		var found bool
-		for _, attr := range spans[0].Attributes() {
-			if attr.Key == "server.address" {
-				assert.Equal(t, expectedName, attr.Value.AsString())
-				found = true
-				break
-			}
+	var found bool
+	for _, attr := range spans[0].Attributes() {
+		if attr.Key == "server.address" {
+			assert.Equal(t, expectedName, attr.Value.AsString())
+			found = true
+			break
 		}
-		assert.True(t, found, "server.address attribute not found in span attributes")
 	}
+	assert.True(t, found, "server.address attribute not found in span attributes")
 }
