@@ -7,8 +7,8 @@ detecting attributes specific to Azure App Service.
 
 The detector gates on WEBSITE_SITE_NAME, WEBSITE_RESOURCE_GROUP, and
 WEBSITE_OWNER_NAME, and defers to the Functions detector when
-FUNCTIONS_WORKER_RUNTIME is also set, since Azure Functions runs on the
-same App Service infrastructure.
+FUNCTIONS_WORKER_RUNTIME or FUNCTIONS_EXTENSION_VERSION is also set,
+since Azure Functions runs on the same App Service infrastructure.
 
 According to semantic conventions for [cloud], [service], and [deployment]
 attributes, and a custom attribute for the Azure resource group and
