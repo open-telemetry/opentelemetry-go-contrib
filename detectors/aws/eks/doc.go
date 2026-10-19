@@ -10,10 +10,17 @@ if available:
 
   - cloud.provider ("aws")
   - cloud.platform ("aws_eks")
+  - cloud.account.id
+  - cloud.availability_zone
+  - cloud.region
+  - host.id
+  - host.image.id
+  - host.name
+  - host.type
   - k8s.cluster.name
   - container.id
 
 The detector can be configured using options such as [WithAttributeFilter],
-[WithNodeEnvVar], and [WithKubeClient].
+[WithNodeEnvVar], [WithKubeClient], and [WithAWSConfig].
 */
 package eks

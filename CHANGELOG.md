@@ -10,6 +10,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add node-level attributes (`cloud.account.id`, `cloud.availability_zone`, `cloud.region`, `host.id`, `host.image.id`, `host.name`, `host.type`) and EC2 instance tag cluster name resolution to `go.opentelemetry.io/contrib/detectors/aws/eks`.
+- Add options `WithAttributeFilter`, `WithNodeEnvVar`, `WithKubeClient`, and `WithAWSConfig` to `go.opentelemetry.io/contrib/detectors/aws/eks`.
+- Detect EKS environment via IAM Roles for Service Accounts (IRSA), EKS Pod Identity, and Kubernetes cluster server version in `go.opentelemetry.io/contrib/detectors/aws/eks`.
 - Add `WithNonErrorCodes` option for `NewServerHandler` and `NewClientHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to prevent the handler from setting an error span status for specific gRPC codes. (#9209)
 - Add `WithMaxAttempts` and `WithMaxBackoff` options to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` to configure the AWS SDK retry policy. (#9796)
 - Add `Methods` filter to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/filters` to match multiple HTTP methods. (#9630)
@@ -27,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- `NewResourceDetector` in `go.opentelemetry.io/contrib/detectors/aws/eks` returns the exported concrete type `*ResourceDetector` instead of `resource.Detector`.
 - Reduce allocations during context injection in `go.opentelemetry.io/contrib/propagators/jaeger`. (#9918)
 - Support build tags to omit resource detectors in `go.opentelemetry.io/contrib/otelconf/x`. (#9818)
 - `NewResourceDetector` in `go.opentelemetry.io/contrib/detectors/aws/lambda` returns the exported concrete type `*ResourceDetector` instead of `resource.Detector`. (#9606)
