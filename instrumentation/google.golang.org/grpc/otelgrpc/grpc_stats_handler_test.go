@@ -550,6 +550,10 @@ func checkClientMetrics(t *testing.T, reader metric.Reader, addr, stabilityOptIn
 	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
 }
 
+// serverMetricsDataPoints is the number of distinct RPC methods exercised by
+// the interop test suite, and so the number of expected data points per metric.
+const serverMetricsDataPoints = 5
+
 func checkServerMetrics(t *testing.T, reader metric.Reader, stabilityOptIn string) {
 	var rm metricdata.ResourceMetrics
 	require.Eventually(t, func() bool {
@@ -570,7 +574,18 @@ func checkServerMetrics(t *testing.T, reader metric.Reader, stabilityOptIn strin
 		if isNew {
 			expectedCount++
 		}
-		return len(rm.ScopeMetrics[0].Metrics) == expectedCount
+		if len(rm.ScopeMetrics[0].Metrics) != expectedCount {
+			return false
+		}
+		// The server records a call's duration on stats.End, which can fire
+		// after the client has observed the end of the call.
+		for _, m := range rm.ScopeMetrics[0].Metrics {
+			h, ok := m.Data.(metricdata.Histogram[float64])
+			if !ok || len(h.DataPoints) != serverMetricsDataPoints {
+				return false
+			}
+		}
+		return true
 	}, 1*time.Second, 10*time.Millisecond)
 
 	require.Len(t, rm.ScopeMetrics, 1)

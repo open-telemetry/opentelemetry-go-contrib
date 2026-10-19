@@ -22,6 +22,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/contrib/detectors/openstack/nova`, a new resource detector for OpenStack Nova compute instances, ported from `processor/resourcedetectionprocessor/internal/openstack/nova` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `host.id`, `host.name`, and `host.type`, and optionally emits `openstack.nova.meta.<key>` attributes for the instance metadata keys selected with `WithMetaKeyFilter`. (#9486)
 - Add `go.opentelemetry.io/contrib/detectors/ibmcloud/classic`, a new resource detector for IBM Cloud Classic Infrastructure (SoftLayer) instances, ported from `processor/resourcedetectionprocessor/internal/ibmcloud/classic` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `cloud.resource_id`, `host.id`, and `host.name`. (#9490)
 - Add `go.opentelemetry.io/contrib/detectors/scaleway`, a new resource detector for Scaleway Instances, ported from `processor/resourcedetectionprocessor/internal/scaleway` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `cloud.region`, `host.id`, `host.image.id`, `host.image.name`, `host.name`, and `host.type`. (#9489)
+- Add `go.opentelemetry.io/contrib/detectors/consul`, a new resource detector that reads attributes from a Consul agent, ported from `processor/resourcedetectionprocessor/internal/consul` in `opentelemetry-collector-contrib`. Detects `host.name`, `cloud.region`, and `host.id`, plus opt-in `consul.meta.<key>` attributes for the Consul node meta entries selected with `WithMetaKeyFilter`. (#9388)
 
 ### Changed
 
@@ -32,6 +33,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Type `AdditionalProperties` as `map[string]any` in the generated config structs of `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x` so `mapstructure`'s `,remain` decoder no longer fails on a bare `interface{}`. (#8850)
 - Prevent recording negative metric values for unknown request/response sizes in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#9433)
 - Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray` to prevent auxiliary fields with prefix-sharing keys from dropping trace contexts. (#9879)
 - Preserve errors returned by `http.ResponseController.Flush` through `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9798)
