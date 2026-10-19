@@ -119,3 +119,5 @@ replace go.opentelemetry.io/contrib/detectors/aws/eks => ../detectors/aws/eks
 replace go.opentelemetry.io/contrib/detectors/azure/azurevm => ../detectors/azure/azurevm
 
 replace go.opentelemetry.io/contrib/detectors/gcp => ../detectors/gcp
+
+replace go.opentelemetry.io/contrib/detectors/aws/lambda => ../detectors/aws/lambda
