@@ -103,8 +103,11 @@ func TestNewResourceDetector(t *testing.T) {
 	d := NewResourceDetector()
 	require.NotNil(t, d)
 	assert.Equal(t, defaultEndpoint, d.endpoint)
-	assert.NotNil(t, d.client)
-	assert.Nil(t, d.cfg.filter)
+
+	tr, ok := d.client.Transport.(*http.Transport)
+	require.True(t, ok)
+	assert.Nil(t, tr.Proxy)
+	assert.Positive(t, tr.IdleConnTimeout)
 
 	filter := attribute.NewAllowKeysFilter(semconv.HostIDKey)
 	d = NewResourceDetector(WithAttributeFilter(filter))
