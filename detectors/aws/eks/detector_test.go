@@ -19,8 +19,14 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/version"
+	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 )
 
@@ -44,6 +50,17 @@ func (detectorUtils *MockDetectorUtils) getConfigMap(_ context.Context, namespac
 func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 	args := detectorUtils.Called()
 	return args.String(0), args.Error(1)
+}
+
+// Mock function for getServerVersion().
+func (detectorUtils *MockDetectorUtils) getServerVersion() (string, error) {
+	for _, call := range detectorUtils.ExpectedCalls {
+		if call.Method == "getServerVersion" {
+			args := detectorUtils.Called()
+			return args.String(0), args.Error(1)
+		}
+	}
+	return "", errors.New("server version unavailable")
 }
 
 func TestResourceDetectorDetect(t *testing.T) {
@@ -333,4 +350,149 @@ func TestFileExists(t *testing.T) {
 			assert.Equal(t, tt.expected, utils.fileExists(tt.path))
 		})
 	}
+}
+
+func TestDetectWithIRSA(t *testing.T) {
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
+
+	utils := new(MockDetectorUtils)
+	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "irsa-cluster"}, nil)
+	utils.On("getContainerID").Return("irsa-container-123456789012345678901234567890123456789012345678901234", nil)
+
+	detector := ResourceDetector{utils: utils}
+	res, err := detector.Detect(t.Context())
+
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
+		semconv.K8SClusterName("irsa-cluster"),
+		semconv.ContainerID("irsa-container-123456789012345678901234567890123456789012345678901234"),
+	}, res.Attributes())
+	utils.AssertExpectations(t)
+}
+
+func TestDetectWithPodIdentity(t *testing.T) {
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsContainerAuthTokenFileEnvVar, "/var/run/secrets/eks-pod-identity/token")
+
+	utils := new(MockDetectorUtils)
+	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{}, nil)
+	utils.On("getContainerID").Return("", nil)
+
+	detector := ResourceDetector{utils: utils}
+	res, err := detector.Detect(t.Context())
+
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
+	}, res.Attributes())
+	utils.AssertExpectations(t)
+}
+
+func TestDetectWithServerVersion(t *testing.T) {
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+
+	utils := new(MockDetectorUtils)
+	utils.On("getServerVersion").Return("v1.30.2-eks-123456", nil)
+	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "ver-cluster"}, nil)
+	utils.On("getContainerID").Return("", nil)
+
+	detector := ResourceDetector{utils: utils}
+	res, err := detector.Detect(t.Context())
+
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
+		semconv.K8SClusterName("ver-cluster"),
+	}, res.Attributes())
+	utils.AssertExpectations(t)
+}
+
+func TestDetectWithAttributeFilter(t *testing.T) {
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
+
+	utils := new(MockDetectorUtils)
+	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "filtered-cluster"}, nil)
+	utils.On("getContainerID").Return("cid", nil)
+
+	detector := ResourceDetector{
+		cfg: config{
+			filter: func(kv attribute.KeyValue) bool {
+				return kv.Key == semconv.K8SClusterNameKey
+			},
+		},
+		utils: utils,
+	}
+	res, err := detector.Detect(t.Context())
+
+	require.NoError(t, err)
+	assert.Equal(t, []attribute.KeyValue{
+		semconv.K8SClusterName("filtered-cluster"),
+	}, res.Attributes())
+	utils.AssertExpectations(t)
+}
+
+func TestDetectWithKubeClient(t *testing.T) {
+	fakeClient := fake.NewSimpleClientset(
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: cwConfigmapNS,
+				Name:      cwConfigmapName,
+			},
+			Data: map[string]string{"cluster.name": "k8s-client-cluster"},
+		},
+	)
+	if fakeDisc, ok := fakeClient.Discovery().(*fakediscovery.FakeDiscovery); ok {
+		fakeDisc.FakedServerVersion = &version.Info{GitVersion: "v1.30.0-eks-7890"}
+	}
+
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+
+	detector := NewResourceDetector(
+		WithKubeClient(fakeClient),
+		WithNodeEnvVar("CUSTOM_NODE_NAME"),
+	)
+	require.NotNil(t, detector)
+	assert.Equal(t, "CUSTOM_NODE_NAME", detector.cfg.nodeEnvVar)
+
+	res, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+	assert.Contains(t, res.Attributes(), semconv.CloudProviderAWS)
+	assert.Contains(t, res.Attributes(), semconv.CloudPlatformAWSEKS)
+	assert.Contains(t, res.Attributes(), semconv.K8SClusterName("k8s-client-cluster"))
+}
+
+func TestComposition_MergeWithDefault(t *testing.T) {
+	fakeClient := fake.NewSimpleClientset()
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
+
+	detected, err := NewResourceDetector(WithKubeClient(fakeClient)).Detect(t.Context())
+	require.NoError(t, err)
+
+	merged, err := resource.Merge(resource.Default(), detected)
+	require.NoError(t, err)
+	assert.NotErrorIs(t, err, resource.ErrSchemaURLConflict)
+	assert.Equal(t, resource.Default().SchemaURL(), merged.SchemaURL())
+}
+
+func TestComposition_WithCoreDetectors(t *testing.T) {
+	fakeClient := fake.NewSimpleClientset()
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
+
+	res, err := resource.New(t.Context(),
+		resource.WithDetectors(NewResourceDetector(WithKubeClient(fakeClient))),
+		resource.WithHost(),
+		resource.WithOS(),
+		resource.WithProcessPID(),
+		resource.WithTelemetrySDK(),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, resource.Default().SchemaURL(), res.SchemaURL())
 }
