@@ -167,3 +167,40 @@ func TestEvent(t *testing.T) {
 		}
 	})
 }
+
+func TestWithServerName(t *testing.T) {
+	expectedName := "test-server-name"
+	opt := otelhttp.WithServerName(expectedName)
+	assert.NotNil(t, opt)
+
+	rr := httptest.NewRecorder()
+	spanRecorder := tracetest.NewSpanRecorder()
+	provider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
+
+	h := otelhttp.NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}),
+		"test_operation",
+		otelhttp.WithTracerProvider(provider),
+		opt,
+	)
+
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
+	assert.NoError(t, err)
+
+	h.ServeHTTP(rr, r)
+
+	spans := spanRecorder.Ended()
+	if assert.Len(t, spans, 1) {
+		var found bool
+		for _, attr := range spans[0].Attributes() {
+			if attr.Key == "server.address" {
+				assert.Equal(t, expectedName, attr.Value.AsString())
+				found = true
+				break
+			}
+		}
+		assert.True(t, found, "server.address attribute not found in span attributes")
+	}
+}
