@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/azure/azureaks"
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
+	"go.opentelemetry.io/contrib/detectors/consul"
 	"go.opentelemetry.io/contrib/detectors/digitalocean"
 	"go.opentelemetry.io/contrib/detectors/docker"
 	"go.opentelemetry.io/contrib/detectors/gcp"
@@ -74,6 +75,10 @@ var (
 	// attributes on Microsoft Azure virtual machines (see azurevm.New for
 	// details).
 	IDAzureVM = ID("azure.vm")
+	// IDConsul is the ID for the Consul detector that detects resource
+	// attributes from a Consul agent (see consul.NewResourceDetector for
+	// details).
+	IDConsul = ID("consul")
 	// IDDigitalOcean is the ID for the DigitalOcean detector that detects
 	// resource attributes on DigitalOcean Droplets (see
 	// digitalocean.NewResourceDetector for details).
@@ -209,6 +214,7 @@ var (
 			return azurevm.New()
 		},
 
+		IDConsul:       func() resource.Detector { return consul.NewResourceDetector() },
 		IDDigitalOcean: func() resource.Detector { return digitalocean.NewResourceDetector() },
 
 		IDGCP: gcp.NewDetector,
