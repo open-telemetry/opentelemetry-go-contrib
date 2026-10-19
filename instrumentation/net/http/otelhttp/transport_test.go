@@ -1807,12 +1807,7 @@ func TestDefaultAttributesHandling(t *testing.T) {
 		attribute.String("defaultBar", "barValue"),
 	}
 
-	transport := NewTransport(
-		http.DefaultTransport, WithMeterProvider(provider),
-		WithMetricAttributesFn(func(_ *http.Request) []attribute.KeyValue {
-			return defaultAttributes
-		}),
-	)
+	transport := NewTransport(http.DefaultTransport, WithMeterProvider(provider))
 	client := http.Client{Transport: transport}
 
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
@@ -1820,7 +1815,14 @@ func TestDefaultAttributesHandling(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	labeler := new(Labeler)
+	labeler.Add(defaultAttributes...)
+	r, err := http.NewRequestWithContext(
+		ContextWithClientLabeler(t.Context(), labeler),
+		http.MethodGet,
+		ts.URL,
+		http.NoBody,
+	)
 	require.NoError(t, err)
 
 	resp, err := client.Do(r)
