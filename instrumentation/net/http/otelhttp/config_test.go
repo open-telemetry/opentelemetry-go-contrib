@@ -192,7 +192,9 @@ func TestWithServerName(t *testing.T) {
 	h.ServeHTTP(rr, r)
 
 	spans := spanRecorder.Ended()
-	require.Len(t, spans, 1)
+	if !assert.Len(t, spans, 1) {
+		return
+	}
 		var found bool
 		for _, attr := range spans[0].Attributes() {
 			if attr.Key == "server.address" {
