@@ -211,13 +211,6 @@ func BenchmarkServerHandler_HandleRPC_End_WithReader(b *testing.B) {
 	benchmarkServerHandlerHandleRPCEnd(b, nil)
 }
 
-// BenchmarkServerHandler_HandleRPC_End_Error_WithReader measures a failed RPC
-// completion (the error.type attribute path) with the duration histogram
-// enabled.
-func BenchmarkServerHandler_HandleRPC_End_Error_WithReader(b *testing.B) {
-	benchmarkServerHandlerHandleRPCEnd(b, status.Error(codes.Internal, "internal"))
-}
-
 // BenchmarkServerHandler_HandleRPC_End_Error_OldMode_WithReader measures a
 // failed RPC completion in rpc/old mode: only the legacy histogram is
 // enabled, so the stable error.type attribute must not be built.
