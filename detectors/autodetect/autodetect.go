@@ -132,13 +132,14 @@ var (
 	IDContainer = registry.IDContainer
 )
 
-var ( // IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
-	// attributes on Amazon Web Services (AWS) EC2 instances (see
-	// ec2.NewResourceDetector for details).
+var (
 	// IDAkamai is the ID for the Akamai detector that detects resource
 	// attributes on Akamai Connected Cloud compute instances (see
 	// akamai.NewResourceDetector for details).
 	IDAkamai = registry.ID("akamai")
+	// IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
+	// attributes on Amazon Web Services (AWS) EC2 instances (see
+	// ec2.NewResourceDetector for details).
 	IDAWSEC2 = registry.ID("aws.ec2")
 	// IDAWSECS is the ID for the AWS ECS detector that detects resource
 	// attributes on Amazon Web Services (AWS) ECS clusters (see
@@ -180,14 +181,14 @@ var ( // IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
 	// attributes on Hetzner Cloud servers (see hetzner.NewResourceDetector for
 	// details).
 	IDHetzner = registry.ID("hetzner")
-	// IDIBMCloudVPC is the ID for the IBM Cloud VPC detector that detects
-	// resource attributes on IBM Cloud VPC virtual server instances (see
-	// vpc.NewResourceDetector for details).
 	// IDIBMCloudClassic is the ID for the IBM Cloud Classic detector that
 	// detects resource attributes on IBM Cloud Classic Infrastructure
 	// (SoftLayer) instances (see classic.NewResourceDetector for details).
 	IDIBMCloudClassic = registry.ID("ibmcloud.classic")
-	IDIBMCloudVPC     = registry.ID("ibmcloud.vpc")
+	// IDIBMCloudVPC is the ID for the IBM Cloud VPC detector that detects
+	// resource attributes on IBM Cloud VPC virtual server instances (see
+	// vpc.NewResourceDetector for details).
+	IDIBMCloudVPC = registry.ID("ibmcloud.vpc")
 	// IDOpenStackNova is the ID for the OpenStack Nova detector that detects
 	// resource attributes on OpenStack Nova compute instances (see
 	// nova.NewResourceDetector for details).
@@ -204,14 +205,14 @@ var ( // IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
 	// attributes of OpenShift 4 clusters (see openshift.NewResourceDetector
 	// for details).
 	IDOpenShift = registry.ID("openshift")
-	// IDVultr is the ID for the Vultr detector that detects resource attributes
-	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
-	// details).
 	// IDScaleway is the ID for the Scaleway detector that detects resource
 	// attributes on Scaleway Instances (see scaleway.NewResourceDetector for
 	// details).
 	IDScaleway = registry.ID("scaleway")
-	IDVultr    = registry.ID("vultr")
+	// IDVultr is the ID for the Vultr detector that detects resource attributes
+	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
+	// details).
+	IDVultr = registry.ID("vultr")
 )
 
 func init() {
