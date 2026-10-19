@@ -187,6 +187,9 @@ func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 
 // WithServerName returns an Option that sets the name of the (virtual) server
 // handling requests.
+//
+// It is the only source of the server.address and server.port attributes on
+// server metrics. The client-supplied Host header is never used for them.
 func WithServerName(server string) Option {
 	return optionFunc(func(c *config) {
 		c.ServerName = server
