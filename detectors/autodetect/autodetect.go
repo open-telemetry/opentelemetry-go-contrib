@@ -23,6 +23,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/azure/azureaks"
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
+	"go.opentelemetry.io/contrib/detectors/consul"
 	"go.opentelemetry.io/contrib/detectors/docker"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
@@ -169,6 +170,10 @@ var (
 	// attributes on Microsoft Azure virtual machines (see azurevm.New for
 	// details).
 	IDAzureVM = registry.ID("azure.vm")
+	// IDConsul is the ID for the Consul detector that detects resource
+	// attributes from a Consul agent (see consul.NewResourceDetector for
+	// details).
+	IDConsul = registry.ID("consul")
 	// IDDocker is the ID for the Docker detector that detects resource
 	// attributes on Docker containers (see docker.NewResourceDetector for
 	// details).
@@ -225,6 +230,7 @@ func init() {
 	registry.Register(IDAzureAKS, func() resource.Detector { return azureaks.NewResourceDetector() })
 	registry.Register(IDAzureContainerApps, func() resource.Detector { return azurecontainerapps.NewResourceDetector() })
 	registry.Register(IDAzureVM, func() resource.Detector { return azurevm.New() })
+	registry.Register(IDConsul, func() resource.Detector { return consul.NewResourceDetector() })
 	registry.Register(IDDocker, func() resource.Detector { return docker.NewResourceDetector() })
 	registry.Register(IDGCP, gcp.NewDetector)
 	registry.Register(IDHetzner, func() resource.Detector { return hetzner.NewResourceDetector() })

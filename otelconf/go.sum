@@ -77,6 +77,8 @@ github.com/go-openapi/swag/typeutils v0.29.2 h1:O7aVvkTs3pXwikgtrPLenigEMdQFgONK
 github.com/go-openapi/swag/typeutils v0.29.2/go.mod h1:7+GDG+uz9Ke+eVt4rClZg7wklSDp8hT/mKNh/pC26TE=
 github.com/go-openapi/swag/yamlutils v0.29.2 h1:IFKFFeDnuIwzfsuWRQU+rI8iL3g4XyAYjV/RlnlxPLM=
 github.com/go-openapi/swag/yamlutils v0.29.2/go.mod h1:7MGqtcrK73sxQ4ceiyIf8qiXS/s09JLMdR5esK5euYQ=
+github.com/go-viper/mapstructure/v2 v2.5.0 h1:vM5IJoUAy3d7zRSVtIwQgBj7BiWtMPfmPEgAXnvj1Ro=
+github.com/go-viper/mapstructure/v2 v2.5.0/go.mod h1:oJDH3BJKyqBA2TXFhDsKDGDTlndYOZ6rGS0BRZIxGhM=
 github.com/golang/protobuf v1.5.4 h1:i7eJL8qZTpSEXOPTxNKhASYpMn+8e5Q6AdndVa1dWek=
 github.com/golang/protobuf v1.5.4/go.mod h1:lnTiLA8Wa4RWRcIUkrtSVa5nRhsEGBg48fD6rSs7xps=
 github.com/google/gnostic-models v0.7.1 h1:SisTfuFKJSKM5CPZkffwi6coztzzeYUhc3v4yxLWH8c=
