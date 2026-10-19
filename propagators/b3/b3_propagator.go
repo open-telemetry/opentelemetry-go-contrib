@@ -5,6 +5,7 @@ package b3
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"strings"
 
@@ -82,22 +83,45 @@ func (b3 propagator) Inject(ctx context.Context, carrier propagation.TextMapCarr
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
 	if b3.cfg.InjectEncoding.supports(B3SingleHeader) || b3.cfg.InjectEncoding == B3Unspecified {
-		header := []string{}
+		var buf [64]byte
+		pos := 0
+
 		if sc.TraceID().IsValid() && sc.SpanID().IsValid() {
-			header = append(header, sc.TraceID().String(), sc.SpanID().String())
+			tid := sc.TraceID()
+			sid := sc.SpanID()
+			hex.Encode(buf[pos:pos+32], tid[:])
+			pos += 32
+			buf[pos] = '-'
+			pos++
+			hex.Encode(buf[pos:pos+16], sid[:])
+			pos += 16
 		}
 
 		if debugFromContext(ctx) {
-			header = append(header, "d")
-		} else if !deferredFromContext(ctx) {
-			if sc.IsSampled() {
-				header = append(header, "1")
-			} else {
-				header = append(header, "0")
+			if pos > 0 {
+				buf[pos] = '-'
+				pos++
 			}
+			buf[pos] = 'd'
+			pos++
+		} else if !deferredFromContext(ctx) {
+			if pos > 0 {
+				buf[pos] = '-'
+				pos++
+			}
+			if sc.IsSampled() {
+				buf[pos] = '1'
+			} else {
+				buf[pos] = '0'
+			}
+			pos++
 		}
 
-		carrier.Set(b3ContextHeader, strings.Join(header, "-"))
+		if pos > 0 {
+			carrier.Set(b3ContextHeader, string(buf[:pos]))
+		} else {
+			carrier.Set(b3ContextHeader, "")
+		}
 	}
 
 	if b3.cfg.InjectEncoding.supports(B3MultipleHeader) {
