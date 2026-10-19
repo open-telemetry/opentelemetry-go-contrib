@@ -756,9 +756,9 @@ func TestSpanStatus(t *testing.T) {
 
 func TestHandlerWithLabeler(t *testing.T) {
 	const (
-		serverRequestSize  = "http.server.request.size"
-		serverResponseSize = "http.server.response.size"
-		serverDuration     = "http.server.duration"
+		serverRequestSize  = "http.server.request.body.size"
+		serverResponseSize = "http.server.response.body.size"
+		serverDuration     = "http.server.request.duration"
 	)
 
 	additionalAttributes := []attribute.KeyValue{
@@ -795,7 +795,7 @@ func TestHandlerWithLabeler(t *testing.T) {
 	for _, m := range rm.ScopeMetrics[0].Metrics {
 		switch m.Name {
 		case serverRequestSize, serverResponseSize:
-			d, ok := m.Data.(metricdata.Sum[int64])
+			d, ok := m.Data.(metricdata.Histogram[int64])
 			require.True(t, ok)
 			require.Len(t, d.DataPoints, 1)
 			containsAttributes(t, d.DataPoints[0].Attributes, additionalAttributes)
@@ -804,6 +804,8 @@ func TestHandlerWithLabeler(t *testing.T) {
 			require.True(t, ok)
 			require.Len(t, d.DataPoints, 1)
 			containsAttributes(t, d.DataPoints[0].Attributes, additionalAttributes)
+		default:
+			t.Fatalf("unexpected metric: %s", m.Name)
 		}
 	}
 }

@@ -1688,8 +1688,8 @@ func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs at
 func TestCustomAttributesHandling(t *testing.T) {
 	var rm metricdata.ResourceMetrics
 	const (
-		clientRequestSize = "http.client.request.size"
-		clientDuration    = "http.client.duration"
+		clientRequestSize = "http.client.request.body.size"
+		clientDuration    = "http.client.request.duration"
 	)
 	ctx := t.Context()
 	reader := sdkmetric.NewManualReader()
@@ -1736,7 +1736,7 @@ func TestCustomAttributesHandling(t *testing.T) {
 	for _, m := range rm.ScopeMetrics[0].Metrics {
 		switch m.Name {
 		case clientRequestSize:
-			d, ok := m.Data.(metricdata.Sum[int64])
+			d, ok := m.Data.(metricdata.Histogram[int64])
 			assert.True(t, ok)
 			assert.Len(t, d.DataPoints, 1)
 			containsAttributes(t, d.DataPoints[0].Attributes, expectedAttributes)
@@ -1745,6 +1745,8 @@ func TestCustomAttributesHandling(t *testing.T) {
 			assert.True(t, ok)
 			assert.Len(t, d.DataPoints, 1)
 			containsAttributes(t, d.DataPoints[0].Attributes, expectedAttributes)
+		default:
+			t.Fatalf("unexpected metric: %s", m.Name)
 		}
 	}
 }
@@ -1789,8 +1791,8 @@ func TestMetricsExistenceOnRequestError(t *testing.T) {
 func TestDefaultAttributesHandling(t *testing.T) {
 	var rm metricdata.ResourceMetrics
 	const (
-		clientRequestSize = "http.client.request.size"
-		clientDuration    = "http.client.duration"
+		clientRequestSize = "http.client.request.body.size"
+		clientDuration    = "http.client.request.duration"
 	)
 	ctx := t.Context()
 	reader := sdkmetric.NewManualReader()
@@ -1837,7 +1839,7 @@ func TestDefaultAttributesHandling(t *testing.T) {
 	for _, m := range rm.ScopeMetrics[0].Metrics {
 		switch m.Name {
 		case clientRequestSize:
-			d, ok := m.Data.(metricdata.Sum[int64])
+			d, ok := m.Data.(metricdata.Histogram[int64])
 			assert.True(t, ok)
 			assert.Len(t, d.DataPoints, 1)
 			containsAttributes(t, d.DataPoints[0].Attributes, defaultAttributes)
@@ -1846,6 +1848,8 @@ func TestDefaultAttributesHandling(t *testing.T) {
 			assert.True(t, ok)
 			assert.Len(t, d.DataPoints, 1)
 			containsAttributes(t, d.DataPoints[0].Attributes, defaultAttributes)
+		default:
+			t.Fatalf("unexpected metric: %s", m.Name)
 		}
 	}
 }
