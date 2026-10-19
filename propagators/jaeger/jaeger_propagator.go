@@ -5,8 +5,8 @@ package jaeger
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -22,11 +22,8 @@ const (
 
 	idPaddingChar = "0"
 
-	flagsDebug      = 0x02
-	flagsSampled    = 0x01
-	flagsNotSampled = 0x00
-
-	deprecatedParentSpanID = "0"
+	flagsDebug   = 0x02
+	flagsSampled = 0x01
 )
 
 var (
@@ -53,21 +50,34 @@ var _ propagation.TextMapPropagator = &Jaeger{}
 // The parent span ID is set to an dummy parent span id as the most implementations do.
 func (Jaeger) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
-	headers := []string{}
 	if !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
 		return
 	}
-	headers = append(headers, sc.TraceID().String(), sc.SpanID().String(), deprecatedParentSpanID)
+
+	carrier.Set(jaegerHeader, formatHeader(ctx, sc))
+}
+
+func formatHeader(ctx context.Context, sc trace.SpanContext) string {
+	var h [53]byte
+	traceID := sc.TraceID()
+	spanID := sc.SpanID()
+	hex.Encode(h[:32], traceID[:])
+	h[32] = ':'
+	hex.Encode(h[33:49], spanID[:])
+	h[49] = ':'
+	h[50] = '0'
+	h[51] = ':'
+
 	switch {
 	case debugFromContext(ctx):
-		headers = append(headers, fmt.Sprintf("%x", flagsDebug|flagsSampled))
+		h[52] = '3'
 	case sc.IsSampled():
-		headers = append(headers, fmt.Sprintf("%x", flagsSampled))
+		h[52] = '1'
 	default:
-		headers = append(headers, fmt.Sprintf("%x", flagsNotSampled))
+		h[52] = '0'
 	}
 
-	carrier.Set(jaegerHeader, strings.Join(headers, separator))
+	return string(h[:])
 }
 
 // Extract extracts a context from the carrier if it contains Jaeger headers.
