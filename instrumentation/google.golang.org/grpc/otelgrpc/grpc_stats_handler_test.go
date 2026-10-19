@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	otelcodes "go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
@@ -1003,6 +1004,310 @@ func TestMetricsSemconvOptIn(t *testing.T) {
 			t.Run("ServerMetrics", func(t *testing.T) {
 				checkServerMetrics(t, serverMetricReader, tt.stabilityOptIn)
 			})
+		})
+	}
+}
+
+func TestNonErrorCodes(t *testing.T) {
+	end := func(err error) *stats.End {
+		now := time.Now()
+		return &stats.End{Error: err, BeginTime: now, EndTime: now}
+	}
+
+	t.Run("server: NotFound stays as Unset (server default)", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.NotFound),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Find"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "item not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("server: promotes Internal to Unset (overrides default error)", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.Internal),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Find"})
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("server: no mapping → default mapping for NotFound", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(tp))
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("server: no mapping → default mapping for Internal", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(otelgrpc.WithTracerProvider(tp))
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Error, spans[0].Status().Code)
+		assert.Equal(t, "internal error", spans[0].Status().Description)
+	})
+
+	t.Run("server: does nothing if application has set Ok", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.Internal),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+
+		span := oteltrace.SpanFromContext(ctx)
+		span.SetStatus(otelcodes.Ok, "")
+
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Ok, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("server: does nothing if application has set Error", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewServerHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.Internal),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+
+		span := oteltrace.SpanFromContext(ctx)
+		span.SetStatus(otelcodes.Error, "manually set by application")
+
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Error, spans[0].Status().Code)
+		assert.Equal(t, "manually set by application", spans[0].Status().Description)
+	})
+
+	t.Run("client: promotes NotFound to Unset (overrides default error)", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewClientHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.NotFound),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("client: no mapping → default mapping", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewClientHandler(otelgrpc.WithTracerProvider(tp))
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+		h.HandleRPC(ctx, end(status.Error(codes.NotFound, "not found")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Error, spans[0].Status().Code)
+		assert.Equal(t, "not found", spans[0].Status().Description)
+	})
+
+	t.Run("client: does nothing if application has set Ok", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewClientHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.Internal),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+
+		span := oteltrace.SpanFromContext(ctx)
+		span.SetStatus(otelcodes.Ok, "")
+
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Ok, spans[0].Status().Code)
+		assert.Empty(t, spans[0].Status().Description)
+	})
+
+	t.Run("client: does nothing if application has set Error", func(t *testing.T) {
+		sr := tracetest.NewSpanRecorder()
+		tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+		h := otelgrpc.NewClientHandler(
+			otelgrpc.WithTracerProvider(tp),
+			otelgrpc.WithNonErrorCodes(codes.Internal),
+		)
+
+		ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+
+		span := oteltrace.SpanFromContext(ctx)
+		span.SetStatus(otelcodes.Error, "manually set by application")
+
+		h.HandleRPC(ctx, end(status.Error(codes.Internal, "internal error")))
+
+		spans := sr.Ended()
+		require.Len(t, spans, 1)
+		assert.Equal(t, otelcodes.Error, spans[0].Status().Code)
+		assert.Equal(t, "manually set by application", spans[0].Status().Description)
+	})
+}
+
+// TestNonErrorCodesPerMethodWrapper verifies the stats.Handler wrapper from
+// ExampleWithNonErrorCodes_perMethod: an explicit Error status set before
+// forwarding stats.End is preserved, while other methods keep NotFound
+// suppressed.
+func TestNonErrorCodesPerMethodWrapper(t *testing.T) {
+	for _, tc := range []struct {
+		method   string
+		wantCode otelcodes.Code
+		wantDesc string
+	}{
+		{method: "/pkg.Svc/MustExist", wantCode: otelcodes.Error, wantDesc: "missing"},
+		{method: "/pkg.Svc/Lookup", wantCode: otelcodes.Unset},
+	} {
+		t.Run(tc.method, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			h := &strictNotFoundHandler{
+				Handler: otelgrpc.NewClientHandler(
+					otelgrpc.WithTracerProvider(trace.NewTracerProvider(trace.WithSpanProcessor(sr))),
+					otelgrpc.WithNonErrorCodes(codes.NotFound),
+				),
+				strict: map[string]struct{}{"/pkg.Svc/MustExist": {}},
+			}
+
+			ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: tc.method})
+			now := time.Now()
+			h.HandleRPC(ctx, &stats.End{Error: status.Error(codes.NotFound, "missing"), BeginTime: now, EndTime: now})
+
+			spans := sr.Ended()
+			require.Len(t, spans, 1)
+			assert.Equal(t, tc.wantCode, spans[0].Status().Code)
+			assert.Equal(t, tc.wantDesc, spans[0].Status().Description)
+			assert.Contains(t, spans[0].Attributes(), semconv.RPCResponseStatusCode("NOT_FOUND"))
+		})
+	}
+}
+
+// TestNonErrorCodesOnlyAffectSpanStatus verifies that WithNonErrorCodes
+// changes only the span status classification: the recorded gRPC status code
+// on spans and RPC metrics still reports the actual code.
+func TestNonErrorCodesOnlyAffectSpanStatus(t *testing.T) {
+	for _, tc := range []struct {
+		name       string
+		newHandler func(...otelgrpc.Option) stats.Handler
+		metricName string
+		code       codes.Code
+		// wantErrorType is the error.type expected on the duration metric,
+		// which follows the default classification regardless of the option.
+		wantErrorType string
+	}{
+		{
+			name:          "client",
+			newHandler:    otelgrpc.NewClientHandler,
+			metricName:    rpcconv.ClientCallDuration{}.Name(),
+			code:          codes.NotFound,
+			wantErrorType: "NOT_FOUND",
+		},
+		{
+			name:          "server",
+			newHandler:    otelgrpc.NewServerHandler,
+			metricName:    rpcconv.ServerCallDuration{}.Name(),
+			code:          codes.Internal,
+			wantErrorType: "INTERNAL",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			reader := metric.NewManualReader()
+			h := tc.newHandler(
+				otelgrpc.WithTracerProvider(trace.NewTracerProvider(trace.WithSpanProcessor(sr))),
+				otelgrpc.WithMeterProvider(metric.NewMeterProvider(metric.WithReader(reader))),
+				otelgrpc.WithNonErrorCodes(tc.code),
+			)
+
+			ctx := h.TagRPC(t.Context(), &stats.RPCTagInfo{FullMethodName: "/pkg.Svc/Get"})
+			now := time.Now()
+			h.HandleRPC(ctx, &stats.End{Error: status.Error(tc.code, "msg"), BeginTime: now, EndTime: now})
+
+			wantStatus := semconv.RPCResponseStatusCode(tc.wantErrorType)
+
+			spans := sr.Ended()
+			require.Len(t, spans, 1)
+			assert.Equal(t, otelcodes.Unset, spans[0].Status().Code)
+			assert.Contains(t, spans[0].Attributes(), wantStatus)
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+			var found bool
+			for _, sm := range rm.ScopeMetrics {
+				for _, m := range sm.Metrics {
+					if m.Name != tc.metricName {
+						continue
+					}
+					hist, ok := m.Data.(metricdata.Histogram[float64])
+					require.True(t, ok)
+					require.Len(t, hist.DataPoints, 1)
+					attrs := hist.DataPoints[0].Attributes
+					got, ok := attrs.Value(wantStatus.Key)
+					require.True(t, ok)
+					assert.Equal(t, wantStatus.Value, got)
+					errType, ok := attrs.Value(semconv.ErrorTypeKey)
+					require.True(t, ok)
+					assert.Equal(t, tc.wantErrorType, errType.AsString())
+					found = true
+				}
+			}
+			assert.True(t, found, "metric %s not recorded", tc.metricName)
 		})
 	}
 }

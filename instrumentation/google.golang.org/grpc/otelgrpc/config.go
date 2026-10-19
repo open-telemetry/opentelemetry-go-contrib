@@ -13,6 +13,7 @@ import (
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/stats"
 )
 
@@ -51,6 +52,7 @@ type config struct {
 	MetricAttributes   []attribute.KeyValue
 	MetricAttributesFn func(ctx context.Context) []attribute.KeyValue
 
+	NonErrorCodes    map[grpc_codes.Code]struct{}
 	PublicEndpoint   bool
 	PublicEndpointFn func(ctx context.Context, info *stats.RPCTagInfo) bool
 
@@ -78,6 +80,7 @@ func newConfig(opts []Option) *config {
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),
 		semconvMode:    parseSemconvMode(),
+		NonErrorCodes:  make(map[grpc_codes.Code]struct{}),
 	}
 	for _, o := range opts {
 		o.apply(c)
@@ -241,6 +244,26 @@ func WithMetricAttributesFn(fn func(ctx context.Context) []attribute.KeyValue) O
 	return optionFunc(func(c *config) {
 		if fn != nil {
 			c.MetricAttributesFn = fn
+		}
+	})
+}
+
+// WithNonErrorCodes returns an Option that prevents [NewClientHandler] and
+// [NewServerHandler] from setting an error span status for the provided gRPC
+// codes. The codes apply to every RPC. An existing span status set by the
+// application is left unchanged. Recorded gRPC status code attributes and
+// metrics are not affected.
+//
+// Repeated use of this option is additive: WithNonErrorCodes(a),
+// WithNonErrorCodes(b) is equivalent to WithNonErrorCodes(a, b).
+//
+// To classify a code differently per method, wrap the client or server
+// [stats.Handler] and set the span status before forwarding [stats.End].
+// See the ExampleWithNonErrorCodes_perMethod example.
+func WithNonErrorCodes(nonErrorCodes ...grpc_codes.Code) Option {
+	return optionFunc(func(c *config) {
+		for _, code := range nonErrorCodes {
+			c.NonErrorCodes[code] = struct{}{}
 		}
 	})
 }
