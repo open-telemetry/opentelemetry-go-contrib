@@ -31,6 +31,7 @@ bridges/prometheus/                                                     @open-te
 bridges/otelzap/                                                        @open-telemetry/go-approvers @pellared @khushijain21
 bridges/otellogr/                                                       @open-telemetry/go-approvers @pellared
 
+detectors/akamai/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/autodetect                                                    @open-telemetry/go-approvers @MrAlias
 detectors/aws/ec2/v2                                                    @open-telemetry/go-approvers @iblancasa
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes
@@ -43,6 +44,7 @@ detectors/azure/azureappservice                                         @open-te
 detectors/azure/azurecontainerapps                                      @open-telemetry/go-approvers @iblancasa
 detectors/azure/azurefunctions                                          @open-telemetry/go-approvers @Lewis-E
 detectors/azure/azurevm                                                 @open-telemetry/go-approvers @pyohannes @paulojmdias @iblancasa
+detectors/consul/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 detectors/hetzner/                                                      @open-telemetry/go-approvers @paulojmdias
 detectors/docker/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
@@ -52,6 +54,7 @@ detectors/k8sapi/                                                       @open-te
 detectors/kubeadm/                                                      @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/openshift/                                                    @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/openstack/nova/                                               @open-telemetry/go-approvers @paulojmdias @iblancasa
+detectors/scaleway/                                                     @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/vultr/                                                        @open-telemetry/go-approvers @paulojmdias @iblancasa
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared
