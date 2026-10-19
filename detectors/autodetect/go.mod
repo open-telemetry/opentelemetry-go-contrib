@@ -91,7 +91,7 @@ require (
 	github.com/hetznercloud/hcloud-go/v2 v2.52.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/linode/go-metadata v0.3.1 // indirect
-	github.com/mattn/go-colorable v0.1.13 // indirect
+	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
