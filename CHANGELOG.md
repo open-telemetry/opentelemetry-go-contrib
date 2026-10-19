@@ -44,6 +44,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Ignore empty group names in `go.opentelemetry.io/contrib/bridges/otelslog` as required by `slog.Handler`. (#9817)
 - Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
 - Use the context bound to a logger when checking whether logs are enabled in `go.opentelemetry.io/contrib/bridges/otellogr` and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9878)
+- Copy the parsed multipart form back onto the original request in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin` so net/http cleans up temporary files when the request is recycled. (#8851)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
