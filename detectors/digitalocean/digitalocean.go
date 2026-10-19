@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"strconv"
 	"sync/atomic"
@@ -98,8 +99,8 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 // when nothing answered.
 //
 // The client does not accept a [context.Context], so the request runs in its
-// own goroutine and ctx only cancels the wait. That goroutine is bounded by the
-// timeout of the HTTP client, but can still outlive this call.
+// own goroutine and ctx only cancels the wait. That goroutine, including the
+// TCP dial, is bounded by the deadline of ctx, but can still outlive this call.
 func (*ResourceDetector) metadata(ctx context.Context) (*do.Metadata, int, error) {
 	// Checked up front so an already canceled context does not race with a
 	// request that may complete before the select below observes it.
@@ -107,10 +108,18 @@ func (*ResourceDetector) metadata(ctx context.Context) (*do.Metadata, int, error
 		return nil, 0, err
 	}
 
-	if _, ok := ctx.Deadline(); !ok {
+	deadline, ok := ctx.Deadline()
+	if !ok {
 		var cancel context.CancelFunc
 		ctx, cancel = context.WithTimeout(ctx, defaultTimeout)
 		defer cancel()
+		deadline, _ = ctx.Deadline()
+	}
+	// A zero client timeout means no timeout, so an expired deadline must not
+	// reach it.
+	timeout := time.Until(deadline)
+	if timeout <= 0 {
+		return nil, 0, context.DeadlineExceeded
 	}
 
 	// Use a transport with Proxy explicitly disabled. The metadata endpoint is
@@ -120,9 +129,9 @@ func (*ResourceDetector) metadata(ctx context.Context) (*do.Metadata, int, error
 	// traffic. The client of the metadata package does not disable it.
 	// Keep-alive is disabled because each transport serves one request: an
 	// idle connection would only stay open after Detect returns.
-	tr := &statusTransport{base: &http.Transport{Proxy: nil, DisableKeepAlives: true}}
+	tr := &statusTransport{base: newTransport(deadline)}
 	client := newClient(do.WithHTTPClient(&http.Client{
-		Timeout:   defaultTimeout,
+		Timeout:   timeout,
 		Transport: tr,
 	}))
 
@@ -145,6 +154,17 @@ func (*ResourceDetector) metadata(ctx context.Context) (*do.Metadata, int, error
 		return nil, int(tr.status.Load()), ctx.Err()
 	case r := <-ch:
 		return r.md, int(tr.status.Load()), r.err
+	}
+}
+
+// newTransport returns a transport whose TCP dials end at deadline. The client
+// timeout does not stop a dial in progress, so without this an unanswered dial
+// would run until the operating system gives up.
+func newTransport(deadline time.Time) *http.Transport {
+	return &http.Transport{
+		Proxy:             nil,
+		DisableKeepAlives: true,
+		DialContext:       (&net.Dialer{Deadline: deadline}).DialContext,
 	}
 }
 

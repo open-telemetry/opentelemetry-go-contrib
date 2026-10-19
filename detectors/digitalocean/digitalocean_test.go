@@ -284,6 +284,42 @@ func TestDetectStalledResponse(t *testing.T) {
 	assert.Nil(t, res)
 }
 
+func TestDetectHonorsLongerCallerDeadline(t *testing.T) {
+	// The response arrives after the internal default but before the caller's
+	// deadline, so it must not be cut off by the default.
+	serveMetadata(t, func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-time.After(defaultTimeout + 500*time.Millisecond):
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(metadataSample))
+	})
+
+	ctx, cancel := context.WithTimeout(t.Context(), 2*defaultTimeout)
+	defer cancel()
+
+	res, err := NewResourceDetector().Detect(ctx)
+	require.NoError(t, err)
+	assert.Contains(t, res.Attributes(), semconv.HostName("sample-droplet"))
+}
+
+// The client timeout does not stop a TCP dial in progress, so the dial must be
+// bounded by the detection deadline on its own, without relying on the context
+// passed to DialContext.
+func TestTransportDialHonorsDeadline(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = ln.Close() })
+
+	tr := newTransport(time.Now().Add(-time.Second))
+	_, err = tr.DialContext(context.Background(), "tcp", ln.Addr().String())
+	var netErr net.Error
+	require.ErrorAs(t, err, &netErr)
+	assert.True(t, netErr.Timeout())
+}
+
 // Each detection creates its own transport with no shutdown path, so a
 // successful detection must not leave a connection to the metadata service
 // open.
