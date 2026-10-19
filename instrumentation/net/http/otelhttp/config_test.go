@@ -169,39 +169,59 @@ func TestEvent(t *testing.T) {
 }
 
 func TestWithServerName(t *testing.T) {
-	expectedName := "test-server-name"
-	opt := otelhttp.WithServerName(expectedName)
-	assert.NotNil(t, opt)
-
-	rr := httptest.NewRecorder()
-	spanRecorder := tracetest.NewSpanRecorder()
-	provider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
-
-	h := otelhttp.NewHandler(
-		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-			w.WriteHeader(http.StatusOK)
-		}),
-		"test_operation",
-		otelhttp.WithTracerProvider(provider),
-		opt,
-	)
-
-	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
-	assert.NoError(t, err)
-
-	h.ServeHTTP(rr, r)
-
-	spans := spanRecorder.Ended()
-	if !assert.Len(t, spans, 1) {
-		return
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "Valid server name",
+			input:    "test-server-name",
+			expected: "test-server-name",
+		},
+		{
+			name:     "Empty server name",
+			input:    "",
+			expected: "localhost",
+		},
 	}
-	var found bool
-	for _, attr := range spans[0].Attributes() {
-		if attr.Key == "server.address" {
-			assert.Equal(t, expectedName, attr.Value.AsString())
-			found = true
-			break
-		}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			opt := otelhttp.WithServerName(tt.input)
+			assert.NotNil(t, opt)
+
+			rr := httptest.NewRecorder()
+			spanRecorder := tracetest.NewSpanRecorder()
+			provider := trace.NewTracerProvider(trace.WithSpanProcessor(spanRecorder))
+
+			h := otelhttp.NewHandler(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				}),
+				"test_operation",
+				otelhttp.WithTracerProvider(provider),
+				opt,
+			)
+
+			r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
+			assert.NoError(t, err)
+
+			h.ServeHTTP(rr, r)
+
+			spans := spanRecorder.Ended()
+			if !assert.Len(t, spans, 1) {
+				return
+			}
+			var found bool
+			for _, attr := range spans[0].Attributes() {
+				if attr.Key == "server.address" {
+					assert.Equal(t, tt.expected, attr.Value.AsString())
+					found = true
+					break
+				}
+			}
+			assert.True(t, found, "server.address attribute not found in span attributes")
+		})
 	}
-	assert.True(t, found, "server.address attribute not found in span attributes")
 }
