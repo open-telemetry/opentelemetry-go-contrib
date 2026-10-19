@@ -183,3 +183,58 @@ func BenchmarkJaegerExtract(b *testing.B) {
 		}
 	}
 }
+
+func BenchmarkJaegerInject(b *testing.B) {
+	propagator := jaeger.Jaeger{}
+	carrier := propagation.MapCarrier{}
+
+	testCases := []struct {
+		name string
+		ctx  context.Context
+	}{
+		{
+			name: "Sampled",
+			ctx: trace.ContextWithRemoteSpanContext(
+				b.Context(),
+				trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+					SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+					TraceFlags: trace.FlagsSampled,
+				}),
+			),
+		},
+		{
+			name: "NotSampled",
+			ctx: trace.ContextWithRemoteSpanContext(
+				b.Context(),
+				trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+					SpanID:  trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+				}),
+			),
+		},
+		{
+			name: "Debug",
+			ctx: jaeger.WithDebug(
+				trace.ContextWithRemoteSpanContext(
+					b.Context(),
+					trace.NewSpanContext(trace.SpanContextConfig{
+						TraceID:    trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+						SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+						TraceFlags: trace.FlagsSampled,
+					}),
+				),
+				true,
+			),
+		},
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				propagator.Inject(tc.ctx, carrier)
+			}
+		})
+	}
+}
