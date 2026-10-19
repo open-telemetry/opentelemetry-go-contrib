@@ -113,12 +113,14 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 
 	var u string
 	if req.URL != nil {
-		// Remove any username/password info that may be in the URL.
-		userinfo := req.URL.User
+		// Remove any username/password info that may be in the URL and
+		// redact the values of sensitive query parameters.
+		userinfo, rawQuery := req.URL.User, req.URL.RawQuery
 		req.URL.User = nil
+		req.URL.RawQuery = redactQuery(rawQuery)
 		u = req.URL.String()
-		// Restore any username/password info that was removed.
-		req.URL.User = userinfo
+		// Restore the URL the request is sent with.
+		req.URL.User, req.URL.RawQuery = userinfo, rawQuery
 	}
 	attrs = append(attrs, semconv.URLFull(u), semconv.ServerAddress(requestHost))
 	if eligiblePort > 0 {
@@ -133,6 +135,55 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 	}
 
 	return attrs
+}
+
+// sensitiveQueryKey reports whether key is a query parameter key whose value
+// the semantic conventions require to be redacted from url.full by default.
+// Matching is case-sensitive.
+func sensitiveQueryKey(key string) bool {
+	switch key {
+	case "X-Amz-Signature", "X-Amz-Credential", "X-Amz-Security-Token", "sig", "X-Goog-Signature":
+		return true
+	}
+	return false
+}
+
+// redactQuery returns rawQuery with the value of every sensitive query
+// parameter replaced by "REDACTED". Keys, parameter order, and all other
+// values are preserved as-is. rawQuery is returned unchanged, without
+// allocating, when it has no sensitive parameter.
+func redactQuery(rawQuery string) string {
+	var b strings.Builder
+	redacted := false
+	for pos := 0; ; {
+		end := len(rawQuery)
+		if i := strings.IndexByte(rawQuery[pos:], '&'); i >= 0 {
+			end = pos + i
+		}
+		param := rawQuery[pos:end]
+		if key, _, hasValue := strings.Cut(param, "="); hasValue && sensitiveQueryKey(key) {
+			if !redacted {
+				redacted = true
+				b.Grow(len(rawQuery))
+				_, _ = b.WriteString(rawQuery[:pos])
+			}
+			_, _ = b.WriteString(key)
+			_, _ = b.WriteString("=REDACTED")
+		} else if redacted {
+			_, _ = b.WriteString(param)
+		}
+		if end == len(rawQuery) {
+			break
+		}
+		if redacted {
+			_ = b.WriteByte('&')
+		}
+		pos = end + 1
+	}
+	if !redacted {
+		return rawQuery
+	}
+	return b.String()
 }
 
 // ResponseTraceAttrs returns trace attributes for an HTTP response made by a client.
