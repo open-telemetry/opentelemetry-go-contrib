@@ -301,3 +301,36 @@ func TestRespWriterReadFromUsesUnderlyingReadFrom(t *testing.T) {
 		})
 	}
 }
+
+type errorResponseWriter struct {
+	*httptest.ResponseRecorder
+	errs []error
+}
+
+func (w *errorResponseWriter) Write(p []byte) (int, error) {
+	if len(w.errs) > 0 {
+		err := w.errs[0]
+		w.errs = w.errs[1:]
+		return 0, err
+	}
+	return w.ResponseRecorder.Write(p)
+}
+
+func TestRespWriterErrorKeepsLastNonNilError(t *testing.T) {
+	first := errors.New("first write failed")
+	second := errors.New("second write failed")
+	rw := NewRespWriterWrapper(&errorResponseWriter{
+		ResponseRecorder: httptest.NewRecorder(),
+		errs:             []error{first, second},
+	}, func(int64) {})
+
+	_, err := rw.Write([]byte("a"))
+	require.ErrorIs(t, err, first)
+	_, err = rw.Write([]byte("b"))
+	require.ErrorIs(t, err, second)
+	assert.ErrorIs(t, rw.Error(), second)
+	_, err = rw.Write([]byte("c"))
+	require.NoError(t, err)
+
+	assert.ErrorIs(t, rw.Error(), second)
+}

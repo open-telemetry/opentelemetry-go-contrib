@@ -22,7 +22,7 @@ var (
 const sniffLen = 512
 
 // RespWriterWrapper wraps a http.ResponseWriter in order to track the number of
-// bytes written, the last error, and to catch the first written statusCode.
+// bytes written, the last non-nil write error, and to catch the first written statusCode.
 // TODO: The wrapped http.ResponseWriter doesn't implement any of the optional
 // types (http.Hijacker, http.Pusher, http.CloseNotifier, etc)
 // that may be useful when using it in real life situations.
@@ -50,7 +50,7 @@ func NewRespWriterWrapper(w http.ResponseWriter, onWrite func(int64)) *RespWrite
 }
 
 // Write writes the bytes array into the [ResponseWriter], and tracks the
-// number of bytes written and last error.
+// number of bytes written and the last non-nil error.
 func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -63,7 +63,10 @@ func (w *RespWriterWrapper) Write(p []byte) (int, error) {
 	n1 := int64(n)
 	w.OnWrite(n1)
 	w.written += n1
-	w.err = err
+	// Keep the last non-nil error; a later successful write must not clear it.
+	if err != nil {
+		w.err = err
+	}
 	return n, err
 }
 
@@ -198,7 +201,7 @@ func (w *RespWriterWrapper) StatusCode() int {
 	return w.statusCode
 }
 
-// Error returns the last error.
+// Error returns the last non-nil write error.
 func (w *RespWriterWrapper) Error() error {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
