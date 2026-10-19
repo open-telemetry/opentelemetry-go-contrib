@@ -194,3 +194,49 @@ func TestOT_Fields(t *testing.T) {
 		assert.Contains(t, carrier, field, "Each field returned by Fields() should be set by Inject()")
 	}
 }
+
+func BenchmarkOTInject(b *testing.B) {
+	prop := OT{}
+	ctx := trace.ContextWithSpanContext(b.Context(), trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+		SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+		TraceFlags: trace.FlagsSampled,
+	}))
+
+	b.Run("Sampled", func(b *testing.B) {
+		carrier := propagation.MapCarrier{}
+		b.ReportAllocs()
+		b.ResetTimer()
+		for b.Loop() {
+			prop.Inject(ctx, carrier)
+		}
+	})
+
+	notSampledCtx := trace.ContextWithSpanContext(b.Context(), trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID: trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+		SpanID:  trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+	}))
+
+	b.Run("NotSampled", func(b *testing.B) {
+		carrier := propagation.MapCarrier{}
+		b.ReportAllocs()
+		b.ResetTimer()
+		for b.Loop() {
+			prop.Inject(notSampledCtx, carrier)
+		}
+	})
+
+	m1, _ := baggage.NewMember("user_id", "42")
+	m2, _ := baggage.NewMember("environment", "production")
+	bag, _ := baggage.New(m1, m2)
+	bagCtx := baggage.ContextWithBaggage(ctx, bag)
+
+	b.Run("WithBaggage", func(b *testing.B) {
+		carrier := propagation.MapCarrier{}
+		b.ReportAllocs()
+		b.ResetTimer()
+		for b.Loop() {
+			prop.Inject(bagCtx, carrier)
+		}
+	})
+}

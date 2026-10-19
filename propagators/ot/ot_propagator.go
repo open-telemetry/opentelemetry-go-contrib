@@ -5,8 +5,8 @@ package ot
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
-	"fmt"
 	"strings"
 
 	"go.opentelemetry.io/otel"
@@ -24,8 +24,6 @@ const (
 	baggageHeaderPrefix = "ot-baggage-"
 
 	otTraceIDPadding = "0000000000000000"
-
-	traceID64BitsWidth = 64 / 4 // 16 hex character Trace ID.
 )
 
 var (
@@ -47,13 +45,20 @@ var _ propagation.TextMapPropagator = OT{}
 func (OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
 
-	if !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
+	tid := sc.TraceID()
+	sid := sc.SpanID()
+	if !tid.IsValid() || !sid.IsValid() {
 		// don't bother injecting anything if either trace or span IDs are not valid
 		return
 	}
 
-	carrier.Set(traceIDHeader, sc.TraceID().String()[len(sc.TraceID().String())-traceID64BitsWidth:])
-	carrier.Set(spanIDHeader, sc.SpanID().String())
+	var tidBuf [16]byte
+	hex.Encode(tidBuf[:], tid[8:])
+	carrier.Set(traceIDHeader, string(tidBuf[:]))
+
+	var sidBuf [16]byte
+	hex.Encode(sidBuf[:], sid[:])
+	carrier.Set(spanIDHeader, string(sidBuf[:]))
 
 	if sc.IsSampled() {
 		carrier.Set(sampledHeader, "true")
@@ -62,7 +67,7 @@ func (OT) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	}
 
 	for _, m := range baggage.FromContext(ctx).Members() {
-		carrier.Set(fmt.Sprintf("%s%s", baggageHeaderPrefix, m.Key()), m.Value())
+		carrier.Set(baggageHeaderPrefix+m.Key(), m.Value())
 	}
 }
 
