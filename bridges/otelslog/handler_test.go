@@ -21,10 +21,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/global"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
@@ -478,9 +478,9 @@ func TestNewHandlerConfiguration(t *testing.T) {
 	name := "name"
 	t.Run("Default", func(t *testing.T) {
 		r := new(recorder)
-		prev := global.GetLoggerProvider()
-		defer global.SetLoggerProvider(prev)
-		global.SetLoggerProvider(r)
+		prev := otel.GetLoggerProvider()
+		defer otel.SetLoggerProvider(prev)
+		otel.SetLoggerProvider(r)
 
 		var h *Handler
 		require.NotPanics(t, func() { h = NewHandler(name) })
@@ -687,4 +687,49 @@ func TestKVBufferKeyValuesConcurrent(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+}
+
+func TestHandlerWithEmptyGroup(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		group string
+	}{
+		{name: "without group"},
+		{name: "with group", group: "outer"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, withAttrs := range []bool{false, true} {
+				t.Run(fmt.Sprintf("WithAttrs=%t", withAttrs), func(t *testing.T) {
+					r := &recorder{}
+					var handler slog.Handler = NewHandler("test", WithLoggerProvider(r))
+					if tt.group != "" {
+						handler = handler.WithGroup(tt.group)
+					}
+					handler = handler.WithGroup("")
+					record := slog.NewRecord(time.Time{}, slog.LevelInfo, "message", 0)
+					attr := slog.String("key", "value")
+					if withAttrs {
+						handler = handler.WithAttrs([]slog.Attr{attr})
+					} else {
+						record.AddAttrs(attr)
+					}
+
+					err := handler.Handle(t.Context(), record)
+
+					require.NoError(t, err)
+					require.Len(t, r.Records, 1)
+					var attrs []attribute.KeyValue
+					r.Records[0].WalkAttributes(func(kv attribute.KeyValue) bool {
+						attrs = append(attrs, kv)
+						return true
+					})
+					want := attribute.String("key", "value")
+					if tt.group != "" {
+						want = attribute.Map(tt.group, want)
+					}
+					assert.Equal(t, []attribute.KeyValue{want}, attrs)
+				})
+			}
+		})
+	}
 }
