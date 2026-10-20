@@ -27,6 +27,9 @@ func newFakeNode(uid types.UID) *corev1.Node {
 			Name: testNodeName,
 			UID:  uid,
 		},
+		Status: corev1.NodeStatus{
+			NodeInfo: corev1.NodeSystemInfo{MachineID: testMachineID},
+		},
 	}
 }
 
@@ -39,7 +42,10 @@ func newFakeNamespace(uid types.UID) *corev1.Namespace {
 	}
 }
 
-const testNodeName = "my-node"
+const (
+	testNodeName  = "my-node"
+	testMachineID = "fdbf79e8af94cb7f9e8df36789187052"
+)
 
 func TestDetect(t *testing.T) {
 	nodeUID := uuid.NewUUID()
@@ -79,6 +85,50 @@ func TestDetectWithFilter(t *testing.T) {
 
 	expected := resource.NewWithAttributes(
 		semconv.SchemaURL,
+		semconv.K8SClusterUID(string(clusterUID)),
+	)
+	assert.Equal(t, expected, res)
+}
+
+func TestDetectWithHostID(t *testing.T) {
+	nodeUID := uuid.NewUUID()
+	clusterUID := uuid.NewUUID()
+
+	client := k8sfake.NewClientset(
+		newFakeNode(nodeUID),
+		newFakeNamespace(clusterUID),
+	)
+	t.Setenv("K8S_NODE_NAME", testNodeName)
+
+	res, err := NewResourceDetector(WithKubeClient(client), WithHostID()).Detect(t.Context())
+	require.NoError(t, err)
+
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.K8SNodeName(testNodeName),
+		semconv.K8SNodeUID(string(nodeUID)),
+		semconv.HostID(testMachineID),
+		semconv.K8SClusterUID(string(clusterUID)),
+	)
+	assert.Equal(t, expected, res)
+}
+
+func TestDetectWithHostIDEmptyMachineID(t *testing.T) {
+	nodeUID := uuid.NewUUID()
+	clusterUID := uuid.NewUUID()
+
+	node := newFakeNode(nodeUID)
+	node.Status.NodeInfo.MachineID = ""
+	client := k8sfake.NewClientset(node, newFakeNamespace(clusterUID))
+	t.Setenv("K8S_NODE_NAME", testNodeName)
+
+	res, err := NewResourceDetector(WithKubeClient(client), WithHostID()).Detect(t.Context())
+	require.NoError(t, err)
+
+	expected := resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.K8SNodeName(testNodeName),
+		semconv.K8SNodeUID(string(nodeUID)),
 		semconv.K8SClusterUID(string(clusterUID)),
 	)
 	assert.Equal(t, expected, res)
