@@ -34,7 +34,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Redact the values of the `X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, `sig`, and `X-Goog-Signature` query parameters from the `url.full` attribute recorded on client spans by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, as required by the semantic conventions.
+- Redact the values of the `X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, `sig`, and `X-Goog-Signature` query parameters from the `url.full` attribute recorded on client spans by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, as required by the semantic conventions. (#9950)
 - Reduce heap allocations on `Inject` in `go.opentelemetry.io/contrib/propagators/b3`. (#9870)
 - Type `AdditionalProperties` as `map[string]any` in the generated config structs of `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x` so `mapstructure`'s `,remain` decoder no longer fails on a bare `interface{}`. (#8850)
 - Prevent recording negative metric values for unknown request/response sizes in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#9433)

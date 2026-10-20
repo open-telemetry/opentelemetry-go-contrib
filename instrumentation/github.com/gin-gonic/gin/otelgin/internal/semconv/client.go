@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"slices"
 	"strconv"
@@ -139,8 +140,14 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 
 // sensitiveQueryKey reports whether key is a query parameter key whose value
 // the semantic conventions require to be redacted from url.full by default.
-// Matching is case-sensitive.
+// Matching is case-sensitive and done on the decoded key, so a
+// percent-encoded name like "%73ig" is still matched.
 func sensitiveQueryKey(key string) bool {
+	if strings.IndexByte(key, '%') >= 0 {
+		if k, err := url.QueryUnescape(key); err == nil {
+			key = k
+		}
+	}
 	switch key {
 	case "X-Amz-Signature", "X-Amz-Credential", "X-Amz-Security-Token", "sig", "X-Goog-Signature":
 		return true

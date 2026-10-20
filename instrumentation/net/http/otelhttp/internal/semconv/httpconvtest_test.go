@@ -380,6 +380,11 @@ func TestClientRequest_SensitiveQueryRedacted(t *testing.T) {
 			want: "https://example.com/foo?sig&stuff=morestuff",
 		},
 		{
+			name: "percent-encoded key",
+			url:  "https://example.com/foo?%73ig=abc&X-Amz-%53ignature=def&stuff=morestuff",
+			want: "https://example.com/foo?%73ig=REDACTED&X-Amz-%53ignature=REDACTED&stuff=morestuff",
+		},
+		{
 			name: "empty value is redacted",
 			url:  "https://example.com/foo?sig=&stuff=morestuff",
 			want: "https://example.com/foo?sig=REDACTED&stuff=morestuff",
