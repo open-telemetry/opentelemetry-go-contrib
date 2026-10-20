@@ -716,6 +716,78 @@ func TestMetricAttributesFnErrorTypeTakesPrecedence(t *testing.T) {
 	assertMetricErrorType(t, reader, "custom")
 }
 
+// failingReaderFromWriter is a ResponseWriter whose ReadFrom fails, as when
+// the peer has gone away during io.Copy or sendfile.
+type failingReaderFromWriter struct {
+	*httptest.ResponseRecorder
+}
+
+func (*failingReaderFromWriter) ReadFrom(io.Reader) (int64, error) {
+	return 0, testError("read_from_error")
+}
+
+// TestReadFromWriteError verifies that a failed io.Copy into the response,
+// which goes through the writer's io.ReaderFrom, is reported like a Write
+// failure.
+func TestReadFromWriteError(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	reader := sdkmetric.NewManualReader()
+	handler := otelmux.Middleware("foobar",
+		otelmux.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))),
+		otelmux.WithMeterProvider(sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))),
+	)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Larger than the prefix the wrapper copies through Write, so the
+		// remainder reaches the underlying ReadFrom.
+		body := strings.Repeat("a", 1024)
+		_, err := io.Copy(w, io.LimitReader(strings.NewReader(body), int64(len(body))))
+		assert.ErrorContains(t, err, "read_from_error")
+	}))
+
+	handler.ServeHTTP(&failingReaderFromWriter{httptest.NewRecorder()},
+		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody))
+
+	require.Len(t, sr.Ended(), 1)
+	assert.Equal(t, codes.Error, sr.Ended()[0].Status().Code)
+	assert.Contains(t, sr.Ended()[0].Attributes(), semconv.ErrorTypeKey.String("read_from_error"))
+	assertMetricErrorType(t, reader, "read_from_error")
+}
+
+// TestEarlierWriteErrorSurvives verifies that a response write error is still
+// reported when a later write succeeds.
+func TestEarlierWriteErrorSurvives(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	reader := sdkmetric.NewManualReader()
+	writes := make(chan [2]error, 1)
+	handler := otelmux.Middleware("foobar",
+		otelmux.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))),
+		otelmux.WithMeterProvider(sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))),
+	)(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Writing past Content-Length fails; the following empty write succeeds.
+		w.Header().Set("Content-Length", "2")
+		_, first := w.Write([]byte("abc"))
+		_, second := w.Write(nil)
+		writes <- [2]error{first, second}
+	}))
+	srv := httptest.NewServer(handler)
+	defer srv.Close()
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL, http.NoBody)
+	require.NoError(t, err)
+	resp, err := srv.Client().Do(req)
+	require.NoError(t, err)
+	defer resp.Body.Close()
+	_, readErr := io.ReadAll(resp.Body)
+	require.ErrorIs(t, readErr, io.ErrUnexpectedEOF)
+	gotWrites := <-writes
+	require.ErrorIs(t, gotWrites[0], http.ErrContentLength)
+	require.NoError(t, gotWrites[1])
+
+	require.Len(t, sr.Ended(), 1)
+	assert.Equal(t, codes.Error, sr.Ended()[0].Status().Code)
+	assert.Contains(t, sr.Ended()[0].Attributes(), semconv.ErrorType(http.ErrContentLength))
+	assertMetricErrorType(t, reader, semconv.ErrorType(http.ErrContentLength).Value.AsString())
+}
+
 // assertMetricErrorType asserts that every server metric data point has
 // error.type set to want, or has none when want is empty.
 func assertMetricErrorType(t *testing.T, reader sdkmetric.Reader, want string) {
