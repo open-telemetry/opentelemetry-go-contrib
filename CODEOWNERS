@@ -33,6 +33,7 @@ bridges/otellogr/                                                       @open-te
 
 detectors/akamai/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/alibaba/ecs/                                                  @open-telemetry/go-approvers @paulojmdias @iblancasa
+detectors/alibabacloud/                                                 @open-telemetry/go-approvers @NameHaibinZhang @paulojmdias @iblancasa
 detectors/autodetect                                                    @open-telemetry/go-approvers @MrAlias
 detectors/aws/ec2/v2                                                    @open-telemetry/go-approvers @iblancasa
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes
