@@ -35,10 +35,8 @@ func New(level string) (logr.Logger, error) {
 		verbosity = 4
 	case "warn":
 		verbosity = 1
-	case "error":
+	case "error", "fatal":
 		verbosity = 0
-	case "fatal":
-		return logr.Discard(), nil
 	default:
 		return logr.Logger{}, fmt.Errorf("unsupported log_level %q", level)
 	}
