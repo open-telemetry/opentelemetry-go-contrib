@@ -722,3 +722,57 @@ func TestCreateHeadersConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestParseYAMLRejectsNullResourceAttribute(t *testing.T) {
+	inputs := map[string]string{
+		"explicit null": `file_format: "0.3"
+resource:
+  attributes:
+    - null
+`,
+		"empty sequence item": `file_format: "0.3"
+resource:
+  attributes:
+    -
+`,
+	}
+
+	for name, input := range inputs {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseYAML([]byte(input))
+			require.Error(t, err)
+		})
+	}
+}
+
+func TestUnmarshalJSONRejectsNullResourceAttribute(t *testing.T) {
+	input := `{
+		"file_format": "0.3",
+		"resource": {
+			"attributes": [null]
+		}
+	}`
+
+	var cfg OpenTelemetryConfiguration
+	err := json.Unmarshal([]byte(input), &cfg)
+	require.Error(t, err)
+}
+
+func TestParseYAMLAllowsEmptyResourceAttributes(t *testing.T) {
+	inputs := map[string]string{
+		"omitted": `file_format: "0.3"
+resource: {}
+`,
+		"empty list": `file_format: "0.3"
+resource:
+  attributes: []
+`,
+	}
+
+	for name, input := range inputs {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseYAML([]byte(input))
+			require.NoError(t, err)
+		})
+	}
+}

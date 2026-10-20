@@ -190,6 +190,41 @@ func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) Configurat
 	})
 }
 
+func findYAMLMappingValue(node *yaml.Node, key string) *yaml.Node {
+	if node == nil || node.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i+1 < len(node.Content); i += 2 {
+		if node.Content[i].Value == key {
+			return node.Content[i+1]
+		}
+	}
+	return nil
+}
+
+func validateNullResourceAttributes(file []byte) error {
+	var document yaml.Node
+	if err := yaml.Unmarshal(file, &document); err != nil {
+		return err
+	}
+	if len(document.Content) == 0 {
+		return nil
+	}
+
+	resource := findYAMLMappingValue(document.Content[0], "resource")
+	attributes := findYAMLMappingValue(resource, "attributes")
+	if attributes == nil || attributes.Kind != yaml.SequenceNode {
+		return nil
+	}
+
+	for i, attr := range attributes.Content {
+		if attr.ShortTag() == "!!null" {
+			return fmt.Errorf("resource.attributes[%d]: null attribute is invalid", i)
+		}
+	}
+	return nil
+}
+
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
 func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
 	file, err := provider.ReplaceEnvVars(file)
@@ -197,10 +232,22 @@ func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
 		return nil, err
 	}
 
+	if err := validateNullResourceAttributes(file); err != nil {
+		return nil, err
+	}
+
 	var cfg OpenTelemetryConfiguration
 	err = yaml.Unmarshal(file, &cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	if cfg.Resource != nil {
+		for i, attr := range cfg.Resource.Attributes {
+			if attr.Name == "" {
+				return nil, fmt.Errorf("resource.attributes[%d]: attribute name is required", i)
+			}
+		}
 	}
 
 	return &cfg, nil
