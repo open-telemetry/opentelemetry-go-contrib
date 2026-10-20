@@ -4,6 +4,7 @@
 package otelhttp
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -102,6 +103,36 @@ func TestHandler(t *testing.T) {
 			assert.Falsef(t, ok, "body should not be wrapped after request is processed")
 		})
 	}
+}
+
+func TestHandlerResponseControllerFlushError(t *testing.T) {
+	flushErr := errors.New("flush failed")
+	rw := &flushErrorResponseWriter{flushErr: flushErr}
+	h := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		assert.ErrorIs(t, http.NewResponseController(w).Flush(), flushErr)
+	}), "test_handler")
+
+	h.ServeHTTP(rw, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody))
+
+	assert.Equal(t, 1, rw.flushErrorCalls)
+	assert.Zero(t, rw.flushCalls)
+}
+
+func TestHandlerResponseControllerFlushErrorOnly(t *testing.T) {
+	flushErr := errors.New("flush failed")
+	rw := &flushErrorOnlyResponseWriter{
+		responseRecorder: httptest.NewRecorder(),
+		flushErr:         flushErr,
+	}
+	h := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		assert.ErrorIs(t, http.NewResponseController(w).Flush(), flushErr)
+	}), "test_handler")
+
+	h.ServeHTTP(rw, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody))
+
+	assert.Equal(t, 1, rw.flushErrorCalls)
+	assert.Equal(t, 1, rw.writeHeaderCalls)
+	assert.Equal(t, http.StatusOK, rw.responseRecorder.Code)
 }
 
 func TestHandlerBasics(t *testing.T) {
@@ -304,6 +335,50 @@ type respWriteHeaderCounter struct {
 	http.ResponseWriter
 
 	headersWritten []int
+}
+
+type flushErrorResponseWriter struct {
+	flushErr        error
+	flushCalls      int
+	flushErrorCalls int
+}
+
+type flushErrorOnlyResponseWriter struct {
+	responseRecorder *httptest.ResponseRecorder
+	flushErr         error
+	flushErrorCalls  int
+	writeHeaderCalls int
+}
+
+func (rw *flushErrorOnlyResponseWriter) Header() http.Header {
+	return rw.responseRecorder.Header()
+}
+
+func (rw *flushErrorOnlyResponseWriter) WriteHeader(statusCode int) {
+	rw.writeHeaderCalls++
+	rw.responseRecorder.WriteHeader(statusCode)
+}
+
+func (rw *flushErrorOnlyResponseWriter) Write(p []byte) (int, error) {
+	return rw.responseRecorder.Write(p)
+}
+
+func (rw *flushErrorOnlyResponseWriter) FlushError() error {
+	rw.flushErrorCalls++
+	return rw.flushErr
+}
+
+func (*flushErrorResponseWriter) Header() http.Header { return make(http.Header) }
+
+func (*flushErrorResponseWriter) WriteHeader(int) {}
+
+func (*flushErrorResponseWriter) Write(p []byte) (int, error) { return len(p), nil }
+
+func (rw *flushErrorResponseWriter) Flush() { rw.flushCalls++ }
+
+func (rw *flushErrorResponseWriter) FlushError() error {
+	rw.flushErrorCalls++
+	return rw.flushErr
 }
 
 func (rw *respWriteHeaderCounter) WriteHeader(statusCode int) {
@@ -749,6 +824,88 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestHandlerServeMuxRouteMetric(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	mux := http.NewServeMux()
+	mux.Handle("/foo/{id}", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	h := NewHandler(
+		mux,
+		"test_handler",
+		WithMeterProvider(meterProvider),
+		WithTracerProvider(tracerProvider),
+	)
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/foo/123", http.NoBody)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, r)
+	require.Equal(t, http.StatusOK, rr.Result().StatusCode)
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+
+	wantRoute := attribute.String("http.route", "/foo/{id}")
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch data := m.Data.(type) {
+		case metricdata.Histogram[int64]:
+			require.Len(t, data.DataPoints, 1)
+			assert.Contains(t, data.DataPoints[0].Attributes.ToSlice(), wantRoute, "metric %s should carry http.route", m.Name)
+		case metricdata.Histogram[float64]:
+			require.Len(t, data.DataPoints, 1)
+			assert.Contains(t, data.DataPoints[0].Attributes.ToSlice(), wantRoute, "metric %s should carry http.route", m.Name)
+		default:
+			t.Fatalf("unexpected metric data type %T for metric %s", m.Data, m.Name)
+		}
+	}
+}
+
+func TestHandlerMetricAttributesFnSeesRoutedRequest(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+
+	var gotPattern, gotID string
+	var spanValid bool
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	mux := http.NewServeMux()
+	mux.Handle("/foo/{id}", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	h := NewHandler(
+		mux,
+		"test_handler",
+		WithMeterProvider(meterProvider),
+		WithTracerProvider(tracerProvider),
+		WithMetricAttributesFn(func(r *http.Request) []attribute.KeyValue {
+			gotPattern = r.Pattern
+			gotID = r.PathValue("id")
+			spanValid = trace.SpanFromContext(r.Context()).SpanContext().IsValid()
+			return nil
+		}),
+	)
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/foo/123", http.NoBody)
+	rr := httptest.NewRecorder()
+	h.ServeHTTP(rr, r)
+	require.Equal(t, http.StatusOK, rr.Result().StatusCode)
+
+	assert.Equal(t, "/foo/{id}", gotPattern, "MetricAttributesFn should see the routed pattern")
+	assert.Equal(t, "123", gotID, "MetricAttributesFn should see the routed path value")
+	assert.True(t, spanValid, "MetricAttributesFn should see a request carrying a valid span context")
 }
 
 func TestMessageEventAttributes(t *testing.T) {
