@@ -14,6 +14,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.19.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.19.0
 	go.opentelemetry.io/contrib/detectors/consul v0.19.0
+	go.opentelemetry.io/contrib/detectors/digitalocean v0.19.0
 	go.opentelemetry.io/contrib/detectors/docker v0.19.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.19.0
@@ -53,6 +54,7 @@ require (
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/digitalocean/go-metadata v0.0.0-20250129100319-e3650a3df44b // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-connections v0.8.2 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -162,6 +164,8 @@ replace go.opentelemetry.io/contrib/detectors/vultr => ../vultr
 replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
 
 replace go.opentelemetry.io/contrib/detectors/consul => ../consul
+
+replace go.opentelemetry.io/contrib/detectors/digitalocean => ../digitalocean
 
 replace go.opentelemetry.io/contrib/detectors/ibmcloud/classic => ../ibmcloud/classic
 
