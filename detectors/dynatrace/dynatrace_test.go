@@ -63,8 +63,6 @@ func TestDetect(t *testing.T) {
 }
 
 func TestDetectSubsetOfAttributes(t *testing.T) {
-	// An older OneAgent does not write dt.smartscape.host. A partial result is
-	// returned without an error.
 	d, _ := newDetector(t, "dt.entity.host=HOST-1\nhost.name=example.com\n")
 
 	res, err := d.Detect(t.Context())

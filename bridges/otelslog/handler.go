@@ -51,9 +51,9 @@ import (
 	"runtime"
 	"slices"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/global"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
@@ -78,7 +78,7 @@ func newConfig(options []Option) config {
 	}
 
 	if c.provider == nil {
-		c.provider = global.GetLoggerProvider()
+		c.provider = otel.GetLoggerProvider()
 	}
 
 	return c
@@ -288,8 +288,12 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 }
 
 // WithGroup returns a new [slog.Handler] based on h that will log all messages
-// and attributes within a group of the provided name.
+// and attributes within a group of the provided name. If name is empty,
+// WithGroup returns h.
 func (h *Handler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h
+	}
 	h2 := *h
 	h2.group = &group{name: name, next: h2.group}
 	return &h2
