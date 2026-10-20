@@ -19,10 +19,52 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/version"
+	fakediscovery "k8s.io/client-go/discovery/fake"
+	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 )
+
+type mockIMDSClient struct {
+	mock.Mock
+}
+
+func (m *mockIMDSClient) GetInstanceIdentityDocument(ctx context.Context, params *imds.GetInstanceIdentityDocumentInput, _ ...func(*imds.Options)) (*imds.GetInstanceIdentityDocumentOutput, error) {
+	args := m.Called(ctx, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*imds.GetInstanceIdentityDocumentOutput), args.Error(1)
+}
+
+func (m *mockIMDSClient) GetMetadata(ctx context.Context, params *imds.GetMetadataInput, _ ...func(*imds.Options)) (*imds.GetMetadataOutput, error) {
+	args := m.Called(ctx, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*imds.GetMetadataOutput), args.Error(1)
+}
+
+type mockEC2Client struct {
+	mock.Mock
+}
+
+func (m *mockEC2Client) DescribeInstances(ctx context.Context, params *ec2.DescribeInstancesInput, _ ...func(*ec2.Options)) (*ec2.DescribeInstancesOutput, error) {
+	args := m.Called(ctx, params)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*ec2.DescribeInstancesOutput), args.Error(1)
+}
 
 type MockDetectorUtils struct {
 	mock.Mock
@@ -44,6 +86,17 @@ func (detectorUtils *MockDetectorUtils) getConfigMap(_ context.Context, namespac
 func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 	args := detectorUtils.Called()
 	return args.String(0), args.Error(1)
+}
+
+// Mock function for getServerVersion().
+func (detectorUtils *MockDetectorUtils) getServerVersion() (string, error) {
+	for _, call := range detectorUtils.ExpectedCalls {
+		if call.Method == "getServerVersion" {
+			args := detectorUtils.Called()
+			return args.String(0), args.Error(1)
+		}
+	}
+	return "", errors.New("server version unavailable")
 }
 
 func TestResourceDetectorDetect(t *testing.T) {
@@ -116,13 +169,13 @@ func TestResourceDetectorDetect(t *testing.T) {
 			expectedResource: resource.Empty(),
 		},
 		{
-			name: "auth configmap error",
+			name: "auth configmap error not EKS",
 			setupUtils: func(m *MockDetectorUtils) {
 				m.On("fileExists", k8sTokenPath).Return(true)
 				m.On("fileExists", k8sCertPath).Return(true)
 				m.On("getConfigMap", authConfigmapNS, authConfigmapName).Return(nilMap, errors.New("auth cm failure"))
 			},
-			expectedErrMsg: "isEks() error retrieving auth configmap",
+			expectedResource: resource.Empty(),
 		},
 		{
 			name: "cluster name lookup error",
@@ -333,4 +386,349 @@ func TestFileExists(t *testing.T) {
 			assert.Equal(t, tt.expected, utils.fileExists(tt.path))
 		})
 	}
+}
+
+func TestDetectWithIRSA(t *testing.T) {
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
+
+	utils := new(MockDetectorUtils)
+	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "irsa-cluster"}, nil)
+	utils.On("getContainerID").Return("irsa-container-123456789012345678901234567890123456789012345678901234", nil)
+
+	detector := ResourceDetector{utils: utils}
+	res, err := detector.Detect(t.Context())
+
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
+		semconv.K8SClusterName("irsa-cluster"),
+		semconv.ContainerID("irsa-container-123456789012345678901234567890123456789012345678901234"),
+	}, res.Attributes())
+	utils.AssertExpectations(t)
+}
+
+func TestDetectWithPodIdentity(t *testing.T) {
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsContainerAuthTokenFileEnvVar, "/var/run/secrets/eks-pod-identity/token")
+
+	utils := new(MockDetectorUtils)
+	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{}, nil)
+	utils.On("getContainerID").Return("", nil)
+
+	detector := ResourceDetector{utils: utils}
+	res, err := detector.Detect(t.Context())
+
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
+	}, res.Attributes())
+	utils.AssertExpectations(t)
+}
+
+func TestDetectWithServerVersion(t *testing.T) {
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+
+	utils := new(MockDetectorUtils)
+	utils.On("getServerVersion").Return("v1.30.2-eks-123456", nil)
+	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "ver-cluster"}, nil)
+	utils.On("getContainerID").Return("", nil)
+
+	detector := ResourceDetector{utils: utils}
+	res, err := detector.Detect(t.Context())
+
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
+		semconv.K8SClusterName("ver-cluster"),
+	}, res.Attributes())
+	utils.AssertExpectations(t)
+}
+
+func TestDetectWithAttributeFilter(t *testing.T) {
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
+
+	utils := new(MockDetectorUtils)
+	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "filtered-cluster"}, nil)
+	utils.On("getContainerID").Return("cid", nil)
+
+	detector := ResourceDetector{
+		cfg: config{
+			filter: func(kv attribute.KeyValue) bool {
+				return kv.Key == semconv.K8SClusterNameKey
+			},
+		},
+		utils: utils,
+	}
+	res, err := detector.Detect(t.Context())
+
+	require.NoError(t, err)
+	assert.Equal(t, []attribute.KeyValue{
+		semconv.K8SClusterName("filtered-cluster"),
+	}, res.Attributes())
+	utils.AssertExpectations(t)
+}
+
+func TestDetectWithKubeClient(t *testing.T) {
+	fakeClient := fake.NewSimpleClientset(
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: cwConfigmapNS,
+				Name:      cwConfigmapName,
+			},
+			Data: map[string]string{"cluster.name": "k8s-client-cluster"},
+		},
+	)
+	if fakeDisc, ok := fakeClient.Discovery().(*fakediscovery.FakeDiscovery); ok {
+		fakeDisc.FakedServerVersion = &version.Info{GitVersion: "v1.30.0-eks-7890"}
+	}
+
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+
+	detector := NewResourceDetector(
+		WithKubeClient(fakeClient),
+		WithNodeEnvVar("CUSTOM_NODE_NAME"),
+	)
+	require.NotNil(t, detector)
+	assert.Equal(t, "CUSTOM_NODE_NAME", detector.cfg.nodeEnvVar)
+
+	res, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+	assert.Contains(t, res.Attributes(), semconv.CloudProviderAWS)
+	assert.Contains(t, res.Attributes(), semconv.CloudPlatformAWSEKS)
+	assert.Contains(t, res.Attributes(), semconv.K8SClusterName("k8s-client-cluster"))
+}
+
+func TestComposition_MergeWithDefault(t *testing.T) {
+	fakeClient := fake.NewSimpleClientset()
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
+
+	detected, err := NewResourceDetector(WithKubeClient(fakeClient)).Detect(t.Context())
+	require.NoError(t, err)
+
+	merged, err := resource.Merge(resource.Default(), detected)
+	require.NoError(t, err)
+	assert.NotErrorIs(t, err, resource.ErrSchemaURLConflict)
+	assert.Equal(t, resource.Default().SchemaURL(), merged.SchemaURL())
+}
+
+func TestComposition_WithCoreDetectors(t *testing.T) {
+	fakeClient := fake.NewSimpleClientset()
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
+
+	res, err := resource.New(t.Context(),
+		resource.WithDetectors(NewResourceDetector(WithKubeClient(fakeClient))),
+		resource.WithHost(),
+		resource.WithOS(),
+		resource.WithProcessPID(),
+		resource.WithTelemetrySDK(),
+	)
+	require.NoError(t, err)
+	assert.Equal(t, resource.Default().SchemaURL(), res.SchemaURL())
+}
+
+func TestDetectFromIMDS_AllAttributes(t *testing.T) {
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
+
+	imdsMock := new(mockIMDSClient)
+	imdsMock.On("GetInstanceIdentityDocument", mock.Anything, mock.Anything).Return(
+		&imds.GetInstanceIdentityDocumentOutput{
+			InstanceIdentityDocument: imds.InstanceIdentityDocument{
+				InstanceID:       "i-0123456789abcdef0",
+				AvailabilityZone: "us-west-2a",
+				Region:           "us-west-2",
+				AccountID:        "123456789012",
+				ImageID:          "ami-0123456789abcdef0",
+				InstanceType:     "m5.large",
+			},
+		}, nil)
+	imdsMock.On("GetMetadata", mock.Anything, &imds.GetMetadataInput{Path: "hostname"}).Return(
+		&imds.GetMetadataOutput{
+			Content: io.NopCloser(strings.NewReader("ip-10-0-0-1.ec2.internal")),
+		}, nil)
+
+	ec2Mock := new(mockEC2Client)
+	tagKey := clusterNameAwsEksTag
+	tagVal := "imds-cluster"
+	ec2Mock.On("DescribeInstances", mock.Anything, &ec2.DescribeInstancesInput{
+		InstanceIds: []string{"i-0123456789abcdef0"},
+	}).Return(&ec2.DescribeInstancesOutput{
+		Reservations: []types.Reservation{
+			{
+				Instances: []types.Instance{
+					{
+						Tags: []types.Tag{
+							{Key: &tagKey, Value: &tagVal},
+						},
+					},
+				},
+			},
+		},
+	}, nil)
+
+	utils := new(MockDetectorUtils)
+	utils.On("getContainerID").Return("cid-12345", nil)
+
+	detector := NewResourceDetector(
+		withIMDSClient(imdsMock),
+		withEC2Client(ec2Mock),
+		WithKubeClient(fake.NewSimpleClientset()),
+	)
+	detector.utils = utils
+
+	res, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+
+	expectedAttrs := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
+		semconv.CloudAccountID("123456789012"),
+		semconv.CloudAvailabilityZone("us-west-2a"),
+		semconv.CloudRegion("us-west-2"),
+		semconv.HostID("i-0123456789abcdef0"),
+		semconv.HostImageID("ami-0123456789abcdef0"),
+		semconv.HostType("m5.large"),
+		semconv.HostNameKey.String("ip-10-0-0-1.ec2.internal"),
+		semconv.K8SClusterName("imds-cluster"),
+		semconv.ContainerID("cid-12345"),
+	}
+
+	assert.ElementsMatch(t, expectedAttrs, res.Attributes())
+	imdsMock.AssertExpectations(t)
+	ec2Mock.AssertExpectations(t)
+}
+
+func TestDetectFromK8sNode_IMDSDisabled(t *testing.T) {
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsContainerAuthTokenFileEnvVar, "/var/run/secrets/eks-pod-identity/token")
+	t.Setenv("TEST_NODE_NAME", "ip-10-0-0-2.ec2.internal")
+
+	imdsMock := new(mockIMDSClient)
+	imdsMock.On("GetInstanceIdentityDocument", mock.Anything, mock.Anything).Return(
+		(*imds.GetInstanceIdentityDocumentOutput)(nil), errors.New("imds unreachable"))
+
+	fakeClient := fake.NewSimpleClientset(
+		&corev1.Node{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "ip-10-0-0-2.ec2.internal",
+			},
+			Spec: corev1.NodeSpec{
+				ProviderID: "aws:///us-east-1b/i-0fedcba9876543210",
+			},
+		},
+	)
+
+	ec2Mock := new(mockEC2Client)
+	ownerID := "987654321098"
+	imgID := "ami-0987654321"
+	dnsName := "ip-10-0-0-2.ec2.internal"
+	tagKey := clusterNameEksTag
+	tagVal := "k8s-node-cluster"
+	ec2Mock.On("DescribeInstances", mock.Anything, &ec2.DescribeInstancesInput{
+		InstanceIds: []string{"i-0fedcba9876543210"},
+	}).Return(&ec2.DescribeInstancesOutput{
+		Reservations: []types.Reservation{
+			{
+				OwnerId: &ownerID,
+				Instances: []types.Instance{
+					{
+						ImageId:        &imgID,
+						InstanceType:   types.InstanceTypeC5Xlarge,
+						PrivateDnsName: &dnsName,
+						Tags: []types.Tag{
+							{Key: &tagKey, Value: &tagVal},
+						},
+					},
+				},
+			},
+		},
+	}, nil)
+
+	utils := new(MockDetectorUtils)
+	utils.On("getContainerID").Return("", nil)
+
+	detector := NewResourceDetector(
+		withIMDSClient(imdsMock),
+		withEC2Client(ec2Mock),
+		WithKubeClient(fakeClient),
+		WithNodeEnvVar("TEST_NODE_NAME"),
+	)
+	detector.utils = utils
+
+	res, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+
+	expectedAttrs := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEKS,
+		semconv.CloudAccountID("987654321098"),
+		semconv.CloudAvailabilityZone("us-east-1b"),
+		semconv.CloudRegion("us-east-1"),
+		semconv.HostID("i-0fedcba9876543210"),
+		semconv.HostImageID("ami-0987654321"),
+		semconv.HostType("c5.xlarge"),
+		semconv.HostNameKey.String("ip-10-0-0-2.ec2.internal"),
+		semconv.K8SClusterName("k8s-node-cluster"),
+	}
+
+	assert.ElementsMatch(t, expectedAttrs, res.Attributes())
+	imdsMock.AssertExpectations(t)
+	ec2Mock.AssertExpectations(t)
+}
+
+func TestDetectClusterName_ConfigMapFallback(t *testing.T) {
+	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
+	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
+
+	imdsMock := new(mockIMDSClient)
+	imdsMock.On("GetInstanceIdentityDocument", mock.Anything, mock.Anything).Return(
+		&imds.GetInstanceIdentityDocumentOutput{
+			InstanceIdentityDocument: imds.InstanceIdentityDocument{
+				InstanceID: "i-0123456789abcdef0",
+				Region:     "us-west-2",
+			},
+		}, nil)
+	imdsMock.On("GetMetadata", mock.Anything, mock.Anything).Return((*imds.GetMetadataOutput)(nil), errors.New("metadata unavailable"))
+
+	// EC2 DescribeInstances returns no cluster tag
+	ec2Mock := new(mockEC2Client)
+	ec2Mock.On("DescribeInstances", mock.Anything, mock.Anything).Return(&ec2.DescribeInstancesOutput{
+		Reservations: []types.Reservation{},
+	}, nil)
+
+	utils := new(MockDetectorUtils)
+	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{
+		"cluster.name": "configmap-fallback-cluster",
+	}, nil)
+	utils.On("getContainerID").Return("", nil)
+
+	detector := NewResourceDetector(
+		withIMDSClient(imdsMock),
+		withEC2Client(ec2Mock),
+		WithKubeClient(fake.NewSimpleClientset()),
+	)
+	detector.utils = utils
+
+	res, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+
+	assert.Contains(t, res.Attributes(), semconv.K8SClusterName("configmap-fallback-cluster"))
+	imdsMock.AssertExpectations(t)
+	ec2Mock.AssertExpectations(t)
+	utils.AssertExpectations(t)
+}
+
+func TestWithAWSConfig(t *testing.T) {
+	cfg := aws.Config{Region: "us-east-2"}
+	detector := NewResourceDetector(WithAWSConfig(cfg))
+	require.NotNil(t, detector)
+	require.NotNil(t, detector.cfg.awsConfig)
+	assert.Equal(t, "us-east-2", detector.cfg.awsConfig.Region)
 }
