@@ -24,7 +24,8 @@ const (
 
 	// Some Azure Functions run on the same App Service infrastructure.
 	// We need to distinguish Functions apps from App Service web apps.
-	functionsWorkerRuntimeEnvVar = "FUNCTIONS_WORKER_RUNTIME"
+	functionsWorkerRuntimeEnvVar    = "FUNCTIONS_WORKER_RUNTIME"
+	functionsExtensionVersionEnvVar = "FUNCTIONS_EXTENSION_VERSION"
 
 	instanceIDKey = attribute.Key("azure.app_service.instance.id")
 )
@@ -74,7 +75,7 @@ func (d *ResourceDetector) Detect(context.Context) (*resource.Resource, error) {
 		return resource.Empty(), nil
 	}
 	// Defer to the Functions detector.
-	if os.Getenv(functionsWorkerRuntimeEnvVar) != "" {
+	if os.Getenv(functionsWorkerRuntimeEnvVar) != "" || os.Getenv(functionsExtensionVersionEnvVar) != "" {
 		return resource.Empty(), nil
 	}
 

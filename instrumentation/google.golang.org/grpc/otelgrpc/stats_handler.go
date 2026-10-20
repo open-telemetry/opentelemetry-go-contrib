@@ -12,7 +12,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	oldrpcconv "go.opentelemetry.io/otel/semconv/v1.37.0/rpcconv" //nolint:depguard // Use of v1.37.0 is required for backward compatibility stability opt-in.
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/semconv/v1.43.0/rpcconv"
 	"go.opentelemetry.io/otel/trace"
@@ -41,8 +40,7 @@ type serverHandler struct {
 
 	tracer trace.Tracer
 
-	duration    rpcconv.ServerCallDuration
-	oldDuration oldrpcconv.ServerDuration
+	duration rpcconv.ServerCallDuration
 }
 
 // NewServerHandler creates a stats.Handler for a gRPC server.
@@ -66,26 +64,16 @@ func NewServerHandler(opts ...Option) stats.Handler {
 	)
 
 	var err error
-	if c.semconvMode == semconvModeOld || c.semconvMode == semconvModeDup {
-		oldDur, err := oldrpcconv.NewServerDuration(meter)
-		if err != nil {
-			otel.Handle(err)
-		} else {
-			h.oldDuration = oldDur
-		}
-	}
 
-	if c.semconvMode == semconvModeNew || c.semconvMode == semconvModeDup {
-		h.duration, err = rpcconv.NewServerCallDuration(
-			meter,
-			metric.WithExplicitBucketBoundaries(
-				0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
-				0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
-			),
-		)
-		if err != nil {
-			otel.Handle(err)
-		}
+	h.duration, err = rpcconv.NewServerCallDuration(
+		meter,
+		metric.WithExplicitBucketBoundaries(
+			0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
+			0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
+		),
+	)
+	if err != nil {
+		otel.Handle(err)
 	}
 
 	return h
@@ -107,20 +95,8 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	var name string
 	var attrs []attribute.KeyValue
 
-	switch h.semconvMode {
-	case semconvModeOld:
-		name, attrs = internal.ParseFullMethodOld(info.FullMethodName)
-	case semconvModeDup:
-		var attrsNew, attrsOld []attribute.KeyValue
-		name, attrsNew = internal.ParseFullMethod(info.FullMethodName)
-		_, attrsOld = internal.ParseFullMethodOld(info.FullMethodName)
-		// Combine both. We append New last so its rpc.method (fully qualified) wins when deduplicated.
-		attrs = append(append([]attribute.KeyValue{}, attrsOld...), attrsNew...)
-		attrs = append(attrs, semconv.RPCSystemNameGRPC) // New convention
-	default: // semconvModeNew
-		name, attrs = internal.ParseFullMethod(info.FullMethodName)
-		attrs = append(attrs, semconv.RPCSystemNameGRPC)
-	}
+	name, attrs = internal.ParseFullMethod(info.FullMethodName)
+	attrs = append(attrs, semconv.RPCSystemNameGRPC)
 
 	record := true
 	if h.Filter != nil {
@@ -164,21 +140,7 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 // HandleRPC processes the RPC stats.
 func (h *serverHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	var dur metric.Float64Histogram
-	if h.semconvMode == semconvModeNew || h.semconvMode == semconvModeDup {
-		dur = h.duration.Inst()
-	}
-	var oldDur metric.Float64Histogram
-	if h.semconvMode == semconvModeOld || h.semconvMode == semconvModeDup {
-		oldDur = h.oldDuration.Inst()
-	}
-	h.handleRPC(
-		ctx,
-		rs,
-		dur,
-		oldDur,
-		serverStatus,
-	)
+	h.handleRPC(ctx, rs, h.duration.Inst(), serverStatus)
 }
 
 type clientHandler struct {
@@ -186,8 +148,7 @@ type clientHandler struct {
 
 	tracer trace.Tracer
 
-	duration    rpcconv.ClientCallDuration
-	oldDuration oldrpcconv.ClientDuration
+	duration rpcconv.ClientCallDuration
 }
 
 // NewClientHandler creates a stats.Handler for a gRPC client.
@@ -211,26 +172,16 @@ func NewClientHandler(opts ...Option) stats.Handler {
 	)
 
 	var err error
-	if c.semconvMode == semconvModeOld || c.semconvMode == semconvModeDup {
-		oldDur, err := oldrpcconv.NewClientDuration(meter)
-		if err != nil {
-			otel.Handle(err)
-		} else {
-			h.oldDuration = oldDur
-		}
-	}
 
-	if c.semconvMode == semconvModeNew || c.semconvMode == semconvModeDup {
-		h.duration, err = rpcconv.NewClientCallDuration(
-			meter,
-			metric.WithExplicitBucketBoundaries(
-				0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
-				0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
-			),
-		)
-		if err != nil {
-			otel.Handle(err)
-		}
+	h.duration, err = rpcconv.NewClientCallDuration(
+		meter,
+		metric.WithExplicitBucketBoundaries(
+			0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
+			0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
+		),
+	)
+	if err != nil {
+		otel.Handle(err)
 	}
 
 	return h
@@ -241,20 +192,8 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	var name string
 	var attrs []attribute.KeyValue
 
-	switch h.semconvMode {
-	case semconvModeOld:
-		name, attrs = internal.ParseFullMethodOld(info.FullMethodName)
-	case semconvModeDup:
-		var attrsNew, attrsOld []attribute.KeyValue
-		name, attrsNew = internal.ParseFullMethod(info.FullMethodName)
-		_, attrsOld = internal.ParseFullMethodOld(info.FullMethodName)
-		// Combine both. We append New last so its rpc.method (fully qualified) wins when deduplicated.
-		attrs = append(append([]attribute.KeyValue{}, attrsOld...), attrsNew...)
-		attrs = append(attrs, semconv.RPCSystemNameGRPC) // New convention
-	default: // semconvModeNew
-		name, attrs = internal.ParseFullMethod(info.FullMethodName)
-		attrs = append(attrs, semconv.RPCSystemNameGRPC)
-	}
+	name, attrs = internal.ParseFullMethod(info.FullMethodName)
+	attrs = append(attrs, semconv.RPCSystemNameGRPC)
 
 	record := true
 	if h.Filter != nil {
@@ -288,19 +227,10 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 
 // HandleRPC processes the RPC stats.
 func (h *clientHandler) HandleRPC(ctx context.Context, rs stats.RPCStats) {
-	var dur metric.Float64Histogram
-	if h.semconvMode == semconvModeNew || h.semconvMode == semconvModeDup {
-		dur = h.duration.Inst()
-	}
-	var oldDur metric.Float64Histogram
-	if h.semconvMode == semconvModeOld || h.semconvMode == semconvModeDup {
-		oldDur = h.oldDuration.Inst()
-	}
 	h.handleRPC(
 		ctx,
 		rs,
-		dur,
-		oldDur,
+		h.duration.Inst(),
 		func(s *status.Status) (codes.Code, string) {
 			return codes.Error, s.Message()
 		},
@@ -317,11 +247,10 @@ func (*clientHandler) HandleConn(context.Context, stats.ConnStats) {
 	// no-op
 }
 
-func (*config) handleRPC(
+func (c *config) handleRPC(
 	ctx context.Context,
 	rs stats.RPCStats,
 	duration metric.Float64Histogram,
-	oldDuration metric.Float64Histogram,
 	recordStatus func(*status.Status) (codes.Code, string),
 ) {
 	gctx, _ := ctx.Value(gRPCContextKey{}).(*gRPCContext)
@@ -333,9 +262,7 @@ func (*config) handleRPC(
 
 	switch rs := rs.(type) {
 	case *stats.Begin:
-		// Set server.address early from the dial target when available (upcoming
-		// interceptors will seed this). Covers both success and failure paths since Begin
-		// fires on every RPC regardless of outcome.
+		// Set server.address early from the dial target when available.
 		if rs.Client {
 			if target, ok := ctx.Value(dialTargetContextKey{}).(string); ok && target != "" {
 				attrs := serverAddrAttrsFromCanonicalTarget(target)
@@ -358,9 +285,7 @@ func (*config) handleRPC(
 	case *stats.OutPayload:
 	case *stats.OutTrailer:
 	case *stats.OutHeader:
-		// Only use the resolved IP from RemoteAddr when no dial target was seeded
-		// (i.e. NewClientHandler callers without interceptors). When dialTargetContextKey
-		// is present, Begin already set server.address to the hostname.
+		// Only use the resolved IP from RemoteAddr when no dial target was seeded.
 		if rs.Client && rs.RemoteAddr != nil && (span.IsRecording() || gctx != nil) {
 			if target, ok := ctx.Value(dialTargetContextKey{}).(string); !ok || target == "" {
 				attrs := serverAddrAttrs(rs.RemoteAddr.String())
@@ -382,64 +307,44 @@ func (*config) handleRPC(
 		} else {
 			rpcStatusAttr = semconv.RPCResponseStatusCode(canonicalString(grpc_codes.OK))
 		}
+
 		if span.IsRecording() {
 			if s != nil {
-				c, m := recordStatus(s)
-				span.SetStatus(c, m)
+				// Suppress only the default status assignment for configured
+				// codes so any status set by the application is preserved.
+				if _, ok := c.NonErrorCodes[s.Code()]; !ok {
+					span.SetStatus(recordStatus(s))
+				}
 			}
 			span.SetAttributes(rpcStatusAttr)
 			span.End()
 		}
 
-		var durationEnabled bool
-		var oldDurationEnabled bool
-
-		if duration != nil {
-			durationEnabled = duration.Enabled(ctx)
-		}
-		if oldDuration != nil {
-			oldDurationEnabled = oldDuration.Enabled(ctx)
-		}
-
-		if durationEnabled || oldDurationEnabled {
+		if duration != nil && duration.Enabled(ctx) {
 			var metricAttrs []attribute.KeyValue
 			if gctx != nil {
-				// Don't use gctx.metricAttrSet here, because it requires passing
-				// multiple RecordOptions, which would call metric.mergeSets and
-				// allocate a new set for each Record call.
+				// Avoid creating a new attribute set for each Record call.
 				metricAttrs = make([]attribute.KeyValue, 0, len(gctx.metricAttrs)+2)
 				metricAttrs = append(metricAttrs, gctx.metricAttrs...)
 			}
 			metricAttrs = append(metricAttrs, rpcStatusAttr)
 
-			// error.type is Conditionally Required on the stable rpc.*.call.duration
-			// metrics when the RPC failed, and SHOULD be set to the returned status
-			// code. The failure classification is role-specific: clients treat every
-			// non-OK status as an error, while servers only classify Unknown,
-			// DeadlineExceeded, Unimplemented, Internal, Unavailable and DataLoss
-			// as errors. Use recordStatus so the client and server rules are applied
-			// independently (e.g. a client cancellation is not a server error).
-			// The legacy v1.37 rpc.*.duration conventions did not define error.type,
-			// so the compatibility instruments keep the unmodified attribute set.
-			// Build each record option only in its enabled branch: single-mode
-			// configurations (rpc, rpc/old) must not allocate the other set, and
-			// error.type is only appended after the legacy instruments recorded.
+			// error.type is conditionally required when an RPC fails.
+			// Use recordStatus to apply the role-specific client/server rules.
+			if s != nil {
+				if c, _ := recordStatus(s); c == codes.Error {
+					metricAttrs = append(metricAttrs, semconv.ErrorTypeKey.String(canonicalString(s.Code())))
+				}
+			}
 
-			// Use floating point division here for higher precision (instead of Millisecond method).
-			// Measure right before calling Record() to capture as much elapsed time as possible.
+			// Use floating-point division for higher precision.
 			elapsedTime := float64(rs.EndTime.Sub(rs.BeginTime)) / float64(time.Second)
 
-			if oldDurationEnabled {
-				oldDuration.Record(ctx, elapsedTime*1000.0, metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
-			}
-			if durationEnabled {
-				if s != nil {
-					if c, _ := recordStatus(s); c == codes.Error {
-						metricAttrs = append(metricAttrs, semconv.ErrorTypeKey.String(canonicalString(s.Code())))
-					}
-				}
-				duration.Record(ctx, elapsedTime, metric.WithAttributeSet(attribute.NewSet(metricAttrs...)))
-			}
+			duration.Record(
+				ctx,
+				elapsedTime,
+				metric.WithAttributeSet(attribute.NewSet(metricAttrs...)),
+			)
 		}
 
 	default:
