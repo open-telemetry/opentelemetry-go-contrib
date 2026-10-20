@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Package diaglogger provides a diagnostic logger configured by severity level.
 package diaglogger
 
 import (
@@ -19,7 +20,7 @@ func New(level string) (logr.Logger, error) {
 	}
 
 	base := level
-	if len(base) > 0 {
+	if base != "" {
 		last := base[len(base)-1]
 		if last >= '2' && last <= '4' {
 			base = base[:len(base)-1]
@@ -34,8 +35,10 @@ func New(level string) (logr.Logger, error) {
 		verbosity = 4
 	case "warn":
 		verbosity = 1
-	case "error", "fatal":
+	case "error":
 		verbosity = 0
+	case "fatal":
+		return logr.Discard(), nil
 	default:
 		return logr.Logger{}, fmt.Errorf("unsupported log_level %q", level)
 	}
