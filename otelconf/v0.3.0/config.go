@@ -191,27 +191,32 @@ func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) Configurat
 }
 
 func validateNullResourceAttributes(file []byte) error {
-	// Decode to generic maps so YAML aliases and merge keys are resolved
-	// before validating the effective resource attributes.
-	var root map[string]any
-	if err := yaml.Unmarshal(file, &root); err != nil {
+	var cfg struct {
+		Resource struct {
+			Attributes any `yaml:"attributes"`
+		} `yaml:"resource"`
+	}
+
+	// Decode the resource path while resolving YAML aliases and merge keys.
+	// Keep attributes untyped so malformed legacy values are handled by the
+	// normal config decoder instead of being rejected here.
+	if err := yaml.Unmarshal(file, &cfg); err != nil {
 		return err
 	}
 
-	resource, ok := root["resource"].(map[string]any)
-	if !ok {
-		return nil
-	}
-	attributes, ok := resource["attributes"].([]any)
+	attributes, ok := cfg.Resource.Attributes.([]any)
 	if !ok {
 		return nil
 	}
 
 	for i, attr := range attributes {
 		if attr == nil {
-			return fmt.Errorf("resource.attributes[%d]: null attribute is invalid", i)
+			return fmt.Errorf(
+				"resource.attributes[%d]: null attribute is invalid", i,
+			)
 		}
 	}
+
 	return nil
 }
 

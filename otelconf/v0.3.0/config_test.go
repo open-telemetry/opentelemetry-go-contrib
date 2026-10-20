@@ -791,6 +791,12 @@ null_attributes: &null_attributes
 resource:
   attributes: *null_attributes
 `,
+		"non-string resource key": `file_format: "0.3"
+resource:
+  1: ignored
+  attributes:
+    - null
+`,
 		"merged attributes": `file_format: "0.3"
 resource_defaults: &resource_defaults
   attributes:
