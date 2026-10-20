@@ -47,7 +47,7 @@ var _ http.RoundTripper = &transport{}
 //
 // If the provided http.RoundTripper is nil, http.DefaultTransport will be used
 // as the base http.RoundTripper.
-func NewTransport(base http.RoundTripper, opts ...Option) *transport {
+func NewTransport(base http.RoundTripper, opts ...Option) http.RoundTripper {
 	if base == nil {
 		base = http.DefaultTransport
 	}
