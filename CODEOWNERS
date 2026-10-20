@@ -57,6 +57,7 @@ detectors/kubeadm/                                                      @open-te
 detectors/openshift/                                                    @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/openstack/nova/                                               @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/scaleway/                                                     @open-telemetry/go-approvers @paulojmdias @iblancasa
+detectors/upcloud/                                                      @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/vultr/                                                        @open-telemetry/go-approvers @paulojmdias @iblancasa
 
 exporters/autoexport                                                    @open-telemetry/go-approvers @MikeGoldsmith @pellared

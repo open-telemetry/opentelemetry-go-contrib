@@ -25,6 +25,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/openshift v0.19.0
 	go.opentelemetry.io/contrib/detectors/openstack/nova v0.19.0
 	go.opentelemetry.io/contrib/detectors/scaleway v0.19.0
+	go.opentelemetry.io/contrib/detectors/upcloud v0.19.0
 	go.opentelemetry.io/contrib/detectors/vultr v0.19.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
@@ -179,6 +180,8 @@ replace go.opentelemetry.io/contrib/detectors/akamai => ../akamai
 replace go.opentelemetry.io/contrib/detectors/openstack/nova => ../openstack/nova
 
 replace go.opentelemetry.io/contrib/detectors/scaleway => ../scaleway
+
+replace go.opentelemetry.io/contrib/detectors/upcloud => ../upcloud
 
 replace go.opentelemetry.io/contrib/detectors/azure/azureaks => ../azure/azureaks
 
