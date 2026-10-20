@@ -111,6 +111,7 @@ github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
 github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/hashicorp/consul/api v1.32.1 h1:0+osr/3t/aZNAdJX558crU3PEjVrG4x6715aZHRgceE=
 github.com/hashicorp/consul/api v1.32.1/go.mod h1:mXUWLnxftwTmDv4W3lzxYCPD199iNLLUyLfLGFJbtl4=
+github.com/hashicorp/consul/api/v2 v2.0.0/go.mod h1:1gEhzpcnl4X4ui7JFpFQvn7QRYQ60IFm6BxBXjrv0dg=
 github.com/hashicorp/consul/sdk v0.16.1 h1:V8TxTnImoPD5cj0U9Spl0TUxcytjcbbJeADFF07KdHg=
 github.com/hashicorp/consul/sdk v0.16.1/go.mod h1:fSXvwxB2hmh1FMZCNl6PwX0Q/1wdWtHJcZ7Ea5tns0s=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=

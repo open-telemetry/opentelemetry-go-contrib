@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/detectors/consul
 go 1.26.0
 
 require (
-	github.com/hashicorp/consul/api v1.32.1
+	github.com/hashicorp/consul/api/v2 v2.0.0
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
