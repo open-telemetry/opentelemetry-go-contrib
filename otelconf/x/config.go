@@ -9,7 +9,6 @@ import (
 	"errors"
 	"os"
 
-	"go.opentelemetry.io/contrib/otelconf/internal/diaglogger"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
@@ -23,6 +22,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 	yaml "go.yaml.in/yaml/v3"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/diaglogger"
 
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
