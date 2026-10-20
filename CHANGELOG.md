@@ -54,6 +54,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
 - Use the context bound to a logger when checking whether logs are enabled in `go.opentelemetry.io/contrib/bridges/otellogr` and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9878)
 - Retain the last non-nil write error instead of letting a later successful write clear it in the response writer wrapper of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9790)
+- Set `error.type` on the server span and on the request-duration, request-body-size, and response-body-size metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` when a request fails.
+  A detected cause also sets span status to `Error`, even for non-5xx responses. (#9754)
 
 ### Removed
 
@@ -100,8 +102,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   The error check was inverted, so a clean shutdown (`http.ErrServerClosed`) was reported as unexpected while real `Serve` errors were ignored. (#9653)
 - Fix temporary file cleanup for multipart requests in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` by copying the parsed multipart form back to the original request during deferred cleanup, preserving `net/http` cleanup during panic unwinding for HTTP/2 panic handling and outer recovery middleware paths. Unrecovered HTTP/1 handler panics remain uncleaned because `net/http` skips `finishRequest` in that path. (#9685)
 - Fix `http.client.request.body.size` recording for streaming request bodies in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#8684)
-- Set `error.type` on the server span and on the request-duration, request-body-size, and response-body-size metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` when a request fails.
-  A detected cause also sets span status to `Error`, even for non-5xx responses. (#9754)
 - Bound Kubernetes ConfigMap requests in `go.opentelemetry.io/contrib/detectors/aws/eks` with a 10-second timeout so `Detect` cannot hang indefinitely when the caller-provided context has no deadline. (#9419)
 
 ### Removed
