@@ -190,35 +190,25 @@ func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) Configurat
 	})
 }
 
-func findYAMLMappingValue(node *yaml.Node, key string) *yaml.Node {
-	if node == nil || node.Kind != yaml.MappingNode {
-		return nil
-	}
-	for i := 0; i+1 < len(node.Content); i += 2 {
-		if node.Content[i].Value == key {
-			return node.Content[i+1]
-		}
-	}
-	return nil
-}
-
 func validateNullResourceAttributes(file []byte) error {
-	var document yaml.Node
-	if err := yaml.Unmarshal(file, &document); err != nil {
+	// Decode to generic maps so YAML aliases and merge keys are resolved
+	// before validating the effective resource attributes.
+	var root map[string]any
+	if err := yaml.Unmarshal(file, &root); err != nil {
 		return err
 	}
-	if len(document.Content) == 0 {
+
+	resource, ok := root["resource"].(map[string]any)
+	if !ok {
+		return nil
+	}
+	attributes, ok := resource["attributes"].([]any)
+	if !ok {
 		return nil
 	}
 
-	resource := findYAMLMappingValue(document.Content[0], "resource")
-	attributes := findYAMLMappingValue(resource, "attributes")
-	if attributes == nil || attributes.Kind != yaml.SequenceNode {
-		return nil
-	}
-
-	for i, attr := range attributes.Content {
-		if attr.ShortTag() == "!!null" {
+	for i, attr := range attributes {
+		if attr == nil {
 			return fmt.Errorf("resource.attributes[%d]: null attribute is invalid", i)
 		}
 	}

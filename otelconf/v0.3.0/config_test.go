@@ -776,3 +776,49 @@ resource:
 		})
 	}
 }
+
+func TestParseYAMLRejectsNullResourceAttributeAliasesAndMerges(t *testing.T) {
+	inputs := map[string]string{
+		"aliased resource": `file_format: "0.3"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource: *resource_defaults
+`,
+		"aliased attribute list": `file_format: "0.3"
+null_attributes: &null_attributes
+  - null
+resource:
+  attributes: *null_attributes
+`,
+		"merged attributes": `file_format: "0.3"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource:
+  <<: *resource_defaults
+`,
+	}
+
+	for name, input := range inputs {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseYAML([]byte(input))
+			require.ErrorContains(t, err, "null attribute is invalid")
+		})
+	}
+}
+
+func TestParseYAMLAllowsExplicitAttributesToOverrideMerge(t *testing.T) {
+	input := `file_format: "0.3"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource:
+  <<: *resource_defaults
+  attributes:
+    - name: service.name
+      value: demo
+`
+	_, err := ParseYAML([]byte(input))
+	require.NoError(t, err)
+}
