@@ -9,6 +9,8 @@ import (
 	"errors"
 	"os"
 
+	"go.opentelemetry.io/contrib/otelconf/internal/diaglogger"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
@@ -118,6 +120,16 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, nil
 	}
 
+	level := ""
+	if o.opentelemetryConfig.LogLevel != nil {
+		level = string(*o.opentelemetryConfig.LogLevel)
+	}
+
+	diagnosticLogger, err := diaglogger.New(level)
+	if err != nil {
+		return noopSDK, err
+	}
+
 	r, err := newResource(o.ctx, o.opentelemetryConfig.Resource)
 	if err != nil {
 		return noopSDK, err
@@ -143,7 +155,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, err
 	}
 
-	return SDK{
+	sdk := SDK{
 		meterProvider:  mp,
 		tracerProvider: tp,
 		loggerProvider: lp,
@@ -151,7 +163,11 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		shutdown: func(ctx context.Context) error {
 			return errors.Join(mpShutdown(ctx), tpShutdown(ctx), lpShutdown(ctx))
 		},
-	}, nil
+	}
+
+	otel.SetLogger(diagnosticLogger)
+
+	return sdk, nil
 }
 
 // ConfigurationOption configures options for providers.
