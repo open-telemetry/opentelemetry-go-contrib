@@ -5,14 +5,13 @@ package otelgrpc
 
 import (
 	"context"
-	"os"
-	"strings"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
+	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/stats"
 )
 
@@ -31,14 +30,6 @@ type InterceptorFilter func(*InterceptorInfo) bool
 // A Filter must return true if the request should be instrumented.
 type Filter func(*stats.RPCTagInfo) bool
 
-type semconvMode int
-
-const (
-	semconvModeNew semconvMode = iota // Default
-	semconvModeOld
-	semconvModeDup
-)
-
 // config is a group of options for this instrumentation.
 type config struct {
 	Filter             Filter
@@ -51,13 +42,12 @@ type config struct {
 	MetricAttributes   []attribute.KeyValue
 	MetricAttributesFn func(ctx context.Context) []attribute.KeyValue
 
+	NonErrorCodes    map[grpc_codes.Code]struct{}
 	PublicEndpoint   bool
 	PublicEndpointFn func(ctx context.Context, info *stats.RPCTagInfo) bool
 
 	ReceivedEvent bool
 	SentEvent     bool
-
-	semconvMode semconvMode
 }
 
 // Option applies an option value for a config.
@@ -77,31 +67,13 @@ func newConfig(opts []Option) *config {
 		Propagators:    otel.GetTextMapPropagator(),
 		TracerProvider: otel.GetTracerProvider(),
 		MeterProvider:  otel.GetMeterProvider(),
-		semconvMode:    parseSemconvMode(),
+		NonErrorCodes:  make(map[grpc_codes.Code]struct{}),
 	}
 	for _, o := range opts {
 		o.apply(c)
 	}
 
 	return c
-}
-
-func parseSemconvMode() semconvMode {
-	val := os.Getenv("OTEL_SEMCONV_STABILITY_OPT_IN")
-	if val == "" {
-		return semconvModeNew
-	}
-	parts := strings.SplitSeq(val, ",")
-	for p := range parts {
-		p = strings.TrimSpace(p)
-		if p == "rpc/dup" {
-			return semconvModeDup
-		}
-		if p == "rpc/old" {
-			return semconvModeOld
-		}
-	}
-	return semconvModeNew
 }
 
 // WithPublicEndpoint configures the Handler to link the span with an incoming
@@ -241,6 +213,26 @@ func WithMetricAttributesFn(fn func(ctx context.Context) []attribute.KeyValue) O
 	return optionFunc(func(c *config) {
 		if fn != nil {
 			c.MetricAttributesFn = fn
+		}
+	})
+}
+
+// WithNonErrorCodes returns an Option that prevents [NewClientHandler] and
+// [NewServerHandler] from setting an error span status for the provided gRPC
+// codes. The codes apply to every RPC. An existing span status set by the
+// application is left unchanged. Recorded gRPC status code attributes and
+// metrics are not affected.
+//
+// Repeated use of this option is additive: WithNonErrorCodes(a),
+// WithNonErrorCodes(b) is equivalent to WithNonErrorCodes(a, b).
+//
+// To classify a code differently per method, wrap the client or server
+// [stats.Handler] and set the span status before forwarding [stats.End].
+// See the ExampleWithNonErrorCodes_perMethod example.
+func WithNonErrorCodes(nonErrorCodes ...grpc_codes.Code) Option {
+	return optionFunc(func(c *config) {
+		for _, code := range nonErrorCodes {
+			c.NonErrorCodes[code] = struct{}{}
 		}
 	})
 }

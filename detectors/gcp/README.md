@@ -7,7 +7,9 @@ The GCP resource detector supports detecting resources on:
 * Google App Engine (GAE)
 * Cloud Run
 * Cloud Run jobs
+* Cloud Run worker pools
 * Cloud Functions
+* Bare Metal Solution (BMS)
 
 ## Usage
 
@@ -56,8 +58,8 @@ env:
   value: my-container-name
 - name: OTEL_RESOURCE_ATTRIBUTES
   value: k8s.pod.name=$(POD_NAME),k8s.namespace.name=$(NAMESPACE_NAME),k8s.container.name=$(CONTAINER_NAME)
-
 ```
+
 To have a detector unpack the `OTEL_RESOURCE_ATTRIBUTES` envvar, use the `WithFromEnv` option:
 
 ```golang
@@ -74,4 +76,24 @@ res, err := resource.New(ctx,
     ),
 )
 ...
+```
+
+## Bare Metal Solution (BMS)
+
+Bare Metal Solution hosts do not provide a Compute Engine metadata server. Detection on BMS is entirely environment-driven and requires all three of the following environment variables to be set and non-empty (matching the [Google Cloud Ops Agent BMS configuration](https://docs.cloud.google.com/bare-metal/docs/set-up-ops-agent-for-bms#authorize_the_ops_agent)):
+
+* `BMS_PROJECT_ID`: Mapped to `cloud.account.id`.
+* `BMS_LOCATION` (or `BMS_REGION` alias): Mapped to `cloud.region`.
+* `BMS_INSTANCE_ID`: Mapped to `host.id`.
+
+When detected, `cloud.provider` is set to `gcp` and `cloud.platform` is set to `gcp_bare_metal_solution`. Without all three non-empty environment variables configured, no BMS resource is detected.
+
+## GKE `host.type` Detection
+
+On Google Kubernetes Engine (GKE), detecting the node machine type (`host.type`) requires an additional call to the Compute Engine `instances.get` API, the `compute.instances.get` IAM permission, and access to `instance/name` metadata (which is unavailable under GKE Workload Identity). Because of this overhead and permission requirement, `host.type` detection on GKE is disabled by default and can be enabled via `NewDetectorWithOptions`:
+
+```golang
+res, err := resource.New(ctx,
+    resource.WithDetectors(gcp.NewDetectorWithOptions(gcp.WithGKEHostType())),
+)
 ```
