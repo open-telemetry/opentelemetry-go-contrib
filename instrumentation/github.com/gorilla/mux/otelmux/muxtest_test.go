@@ -520,13 +520,19 @@ type testError string
 func (e testError) Error() string     { return string(e) }
 func (e testError) ErrorType() string { return string(e) }
 
-// failingWriter is a ResponseWriter whose body writes fail.
+// failingWriter is a ResponseWriter whose non-empty body writes fail.
 type failingWriter struct {
 	*httptest.ResponseRecorder
 	err error
 }
 
-func (w failingWriter) Write([]byte) (int, error)         { return 0, w.err }
+func (w failingWriter) Write(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	return 0, w.err
+}
+
 func (w failingWriter) ReadFrom(io.Reader) (int64, error) { return 0, w.err }
 
 // failingBody is a request body whose reads fail.
@@ -628,6 +634,8 @@ func TestErrorType(t *testing.T) {
 				_, _ = io.ReadAll(r.Body)
 				w.WriteHeader(tc.status)
 				_, _ = w.Write([]byte("payload"))
+				// Succeeds after a failed write; must not clear that error.
+				_, _ = w.Write(nil)
 			})
 
 			ctx, cancel := context.WithCancel(t.Context())
