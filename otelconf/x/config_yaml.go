@@ -35,7 +35,6 @@ func yamlMappingToMap(node *yaml.Node) (map[string]any, error) {
 	if err := node.Decode(&raw); err != nil {
 		return nil, err
 	}
-
 	return raw, nil
 }
 
@@ -183,7 +182,7 @@ func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
 	delete(raw, "otlp_grpc")
 	delete(raw, "otlp_http")
 
-	unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
+	plain.AdditionalProperties = unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
 	*j = SpanExporter(plain)
 	return nil
 }
@@ -211,7 +210,7 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 	delete(raw, "otlp_grpc")
 	delete(raw, "otlp_http")
 
-	unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
+	plain.AdditionalProperties = unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
 
 	*j = LogRecordExporter(plain)
 	return nil
@@ -262,7 +261,7 @@ func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
 	delete(raw, "ottrace")
 	delete(raw, "tracecontext")
 
-	unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
+	plain.AdditionalProperties = unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
 
 	*j = TextMapPropagator(plain)
 	return nil

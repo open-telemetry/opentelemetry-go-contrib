@@ -427,7 +427,7 @@ func (j *SpanExporter) UnmarshalJSON(b []byte) error {
 	delete(raw, "otlp_grpc")
 	delete(raw, "otlp_http")
 
-	unmarshalAdditionalProperties(raw, sh.AdditionalProperties)
+	sh.AdditionalProperties = unmarshalAdditionalProperties(raw, sh.AdditionalProperties)
 	*j = SpanExporter(sh.Plain)
 	return nil
 }
@@ -463,7 +463,7 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 	delete(raw, "otlp_grpc")
 	delete(raw, "otlp_http")
 
-	unmarshalAdditionalProperties(raw, sh.AdditionalProperties)
+	sh.AdditionalProperties = unmarshalAdditionalProperties(raw, sh.AdditionalProperties)
 	*j = LogRecordExporter(sh.Plain)
 	return nil
 }
@@ -545,7 +545,7 @@ func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
 	delete(raw, "ottrace")
 	delete(raw, "tracecontext")
 
-	unmarshalAdditionalProperties(raw, sh.AdditionalProperties)
+	sh.AdditionalProperties = unmarshalAdditionalProperties(raw, sh.AdditionalProperties)
 
 	*j = TextMapPropagator(sh.Plain)
 	return nil

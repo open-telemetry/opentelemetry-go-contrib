@@ -127,7 +127,7 @@ func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
 	delete(raw, "console")
 	delete(raw, "otlp_grpc")
 	delete(raw, "otlp_http")
-	unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
+	plain.AdditionalProperties = unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
 
 	*j = SpanExporter(plain)
 	return nil
@@ -153,7 +153,7 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 	delete(raw, "console")
 	delete(raw, "otlp_grpc")
 	delete(raw, "otlp_http")
-	unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
+	plain.AdditionalProperties = unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
 
 	*j = LogRecordExporter(plain)
 	return nil

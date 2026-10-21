@@ -132,6 +132,26 @@ func TestUnmarshalCustomTextMapPropagator(t *testing.T) {
 	assert.Equal(t, want, fromYAML)
 }
 
+func TestUnmarshalCustomSpanExporterYAMLMergeKey(t *testing.T) {
+	input := []byte(`
+<<: {custom: {endpoint: http://localhost:4318}}
+`)
+
+	var got SpanExporter
+	err := yaml.Unmarshal(input, &got)
+	require.NoError(t, err)
+
+	want := SpanExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	require.Equal(t, want, got)
+}
+
 func TestUnmarshalTextMapPropagator(t *testing.T) {
 	for _, tt := range []struct {
 		name                  string
