@@ -828,3 +828,15 @@ resource:
 	_, err := ParseYAML([]byte(input))
 	require.NoError(t, err)
 }
+
+func TestParseYAMLAllowsEmptyResourceAttributeName(t *testing.T) {
+	input := `file_format: "0.3"
+resource:
+  attributes:
+    - name: ""
+      value: demo
+`
+
+	_, err := ParseYAML([]byte(input))
+	require.NoError(t, err)
+}
