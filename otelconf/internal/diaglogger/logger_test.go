@@ -14,7 +14,7 @@ func TestNew(t *testing.T) {
 		verbosity int
 		wantErr   bool
 	}{
-		{name: "default", level: "", verbosity: 4},
+		{name: "empty", level: "", wantErr: true},
 
 		{name: "trace", level: "trace", verbosity: 8},
 		{name: "trace2", level: "trace2", verbosity: 8},

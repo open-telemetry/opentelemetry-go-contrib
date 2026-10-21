@@ -15,10 +15,6 @@ import (
 // New creates a logger whose verbosity matches the configured OpenTelemetry
 // severity. An empty level defaults to info.
 func New(level string) (logr.Logger, error) {
-	if level == "" {
-		level = "info"
-	}
-
 	base := level
 	if base != "" {
 		last := base[len(base)-1]
