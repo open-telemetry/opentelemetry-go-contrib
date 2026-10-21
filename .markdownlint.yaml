@@ -12,7 +12,7 @@ MD013: false
 
 # no-duplicate-header
 MD024:
-  siblings_only: true
+  siblingsOnly: true
 
 #single-title
 MD025: false
