@@ -176,12 +176,13 @@ func unmarshalMetricProducer(raw map[string]any, plain *MetricProducer) {
 	}
 }
 
+// unmarshalAdditionalProperties preserves unknown component configuration.
 func unmarshalAdditionalProperties(
 	raw map[string]any,
-	additionalProperties *map[string]any,
-) *map[string]any {
+	additionalProperties map[string]any,
+) map[string]any {
 	if len(raw) > 0 {
-		*additionalProperties = raw
+		return raw
 	}
 	return additionalProperties
 }
