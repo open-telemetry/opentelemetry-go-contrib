@@ -147,7 +147,6 @@ func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
-
 func (j *SpanExporter) UnmarshalJSON(b []byte) error {
 	type Plain SpanExporter
 	type shadow struct {
@@ -176,7 +175,7 @@ func (j *SpanExporter) UnmarshalJSON(b []byte) error {
 	delete(raw, "console")
 	delete(raw, "otlp_grpc")
 	delete(raw, "otlp_http")
-	unmarshalAdditionalProperties(raw, &sh.Plain.AdditionalProperties)
+	unmarshalAdditionalProperties(raw, &sh.AdditionalProperties)
 
 	*j = SpanExporter(sh.Plain)
 	return nil
@@ -211,7 +210,7 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 	delete(raw, "console")
 	delete(raw, "otlp_grpc")
 	delete(raw, "otlp_http")
-	unmarshalAdditionalProperties(raw, &sh.Plain.AdditionalProperties)
+	unmarshalAdditionalProperties(raw, &sh.AdditionalProperties)
 
 	*j = LogRecordExporter(sh.Plain)
 	return nil
@@ -295,7 +294,7 @@ func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
 	delete(raw, "tracecontext")
 
 	if len(raw) > 0 {
-		sh.Plain.AdditionalProperties = raw
+		sh.AdditionalProperties = raw
 	}
 
 	*j = TextMapPropagator(sh.Plain)

@@ -174,10 +174,11 @@ func unmarshalMetricProducer(raw map[string]any, plain *MetricProducer) {
 	unmarshalAdditionalProperties(raw, &plain.AdditionalProperties)
 }
 
-func unmarshalAdditionalProperties(raw map[string]any, additionalProperties *map[string]any) {
+func unmarshalAdditionalProperties(raw map[string]any, additionalProperties *map[string]any) *map[string]any {
 	if len(raw) > 0 {
 		*additionalProperties = raw
 	}
+	return additionalProperties
 }
 
 // validatePeriodicMetricReader handles validation for PeriodicMetricReader.
