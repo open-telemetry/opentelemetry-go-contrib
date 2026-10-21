@@ -59,6 +59,21 @@ type resourceDetector struct {
 	clusterARN *clusterARNDetector
 }
 
+type config struct {
+	clusterARN bool
+}
+
+// Option configures EKS resource detection.
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (f optionFunc) apply(c *config) {
+	f(c)
+}
+
 // Compile time assertion that resourceDetector implements the resource.Detector interface.
 var _ resource.Detector = (*resourceDetector)(nil)
 

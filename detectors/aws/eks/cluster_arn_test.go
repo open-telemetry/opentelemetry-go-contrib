@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -394,7 +395,7 @@ func TestClusterARNOptionMakesNoRequestsOutsideEKS(t *testing.T) {
 	assert.Zero(t, client.calls)
 }
 
-func TestClusterARNHonorsCallerCancellation(t *testing.T) {
+func TestClusterARNPropagatesDescribeClusterCancellation(t *testing.T) {
 	utils := &arnTestUtils{issuer: testIssuer}
 	client := &mockEKSClient{returnContext: true}
 	detector := &clusterARNDetector{utils: utils, client: client}
@@ -406,4 +407,30 @@ func TestClusterARNHonorsCallerCancellation(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, context.Canceled)
 	assert.ErrorIs(t, err, errDescribeClusterFailed)
+}
+
+func TestGetOIDCIssuerHonorsCallerCancellation(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	_, err := (eksDetectorUtils{
+		host:   "https://kubernetes.invalid",
+		client: &http.Client{},
+	}).getOIDCIssuer(ctx)
+
+	require.Error(t, err)
+	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestGetOIDCIssuerRejectsOversizedDocument(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, err := w.Write([]byte(strings.Repeat(" ", maxOIDCDiscoveryBodySize+1)))
+		assert.NoError(t, err)
+	}))
+	t.Cleanup(srv.Close)
+
+	_, err := (eksDetectorUtils{host: srv.URL, client: srv.Client()}).getOIDCIssuer(t.Context())
+
+	require.Error(t, err)
+	assert.ErrorContains(t, err, "OIDC discovery document exceeds")
 }
