@@ -121,15 +121,17 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, nil
 	}
 
-	level := ""
+	level := string(SeverityNumberInfo)
 	if o.opentelemetryConfig.LogLevel != nil {
 		level = string(*o.opentelemetryConfig.LogLevel)
 	}
 
 	diagnosticLogger, err := diaglogger.New(level)
 	if err != nil {
-		return noopSDK, err
+		return noopSDK, newErrInvalid(err.Error())
 	}
+
+	otel.SetLogger(diagnosticLogger)
 
 	r, err := newResource(o.ctx, o.opentelemetryConfig.Resource)
 	if err != nil {
@@ -165,8 +167,6 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 			return errors.Join(mpShutdown(ctx), tpShutdown(ctx), lpShutdown(ctx))
 		},
 	}
-
-	otel.SetLogger(diagnosticLogger)
 
 	return sdk, nil
 }

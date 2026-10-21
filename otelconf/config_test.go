@@ -391,7 +391,17 @@ func TestNewSDK(t *testing.T) {
 					LogLevel: new(SeverityNumber("invalid")),
 				}),
 			},
-			wantErr: fmt.Errorf(`unsupported log_level "invalid"`),
+			wantErr: newErrInvalid(`unsupported log_level "invalid"`),
+		},
+		{
+			name: "empty-log-level",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: new(SeverityNumber("")),
+				}),
+			},
+			wantErr: newErrInvalid(`unsupported log_level ""`),
 		},
 		{
 			name: "with-sdk-disabled",

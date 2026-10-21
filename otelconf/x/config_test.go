@@ -357,7 +357,7 @@ func TestNewSDK(t *testing.T) {
 		wantMeterProvider  any
 		wantLoggerProvider any
 		wantPropagator     any
-		wantErr            bool
+		wantErr            error
 		wantShutdownErr    error
 	}{
 		{
@@ -375,7 +375,17 @@ func TestNewSDK(t *testing.T) {
 					LogLevel: new(SeverityNumber("invalid")),
 				}),
 			},
-			wantErr: true,
+			wantErr: newErrInvalid(`unsupported log_level "invalid"`),
+		},
+		{
+			name: "empty-log-level",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: new(SeverityNumber("")),
+				}),
+			},
+			wantErr: newErrInvalid(`unsupported log_level ""`),
 		},
 		{
 			name: "with-configuration",
@@ -413,7 +423,7 @@ func TestNewSDK(t *testing.T) {
 	for _, tt := range tests {
 		sdk, err := NewSDK(tt.cfg...)
 
-		if tt.wantErr {
+		if tt.wantErr != nil {
 			require.Error(t, err)
 			continue
 		}
