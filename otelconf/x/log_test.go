@@ -342,6 +342,28 @@ func TestLogProcessor(t *testing.T) {
 			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
 		},
 		{
+			name: "batch/otlp-grpc-exporter-ipv4-endpoint",
+			processor: LogRecordProcessor{
+				Batch: &BatchLogRecordProcessor{
+					MaxExportBatchSize: new(1),
+					ExportTimeout:      new(0),
+					MaxQueueSize:       new(1),
+					ScheduleDelay:      new(0),
+					Exporter: LogRecordExporter{
+						OTLPGrpc: &OTLPGrpcExporter{
+							Endpoint:    new("127.0.0.1:4317"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: new("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantProcessor: sdklog.NewBatchProcessor(otlpGRPCExporter),
+		},
+		{
 			name: "batch/otlp-grpc-invalid-endpoint",
 			processor: LogRecordProcessor{
 				Batch: &BatchLogRecordProcessor{
