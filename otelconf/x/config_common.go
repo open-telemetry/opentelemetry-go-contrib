@@ -176,6 +176,15 @@ func unmarshalMetricProducer(raw map[string]any, plain *MetricProducer) {
 	}
 }
 
+func unmarshalAdditionalProperties(
+	raw map[string]any,
+	additionalProperties *map[string]any,
+) {
+	if len(raw) > 0 {
+		*additionalProperties = raw
+	}
+}
+
 // validatePeriodicMetricReader handles validation for PeriodicMetricReader.
 func validatePeriodicMetricReader(plain *PeriodicMetricReader) error {
 	if plain.Timeout != nil && 0 > *plain.Timeout {

@@ -416,11 +416,24 @@ func (j *SpanExporter) UnmarshalJSON(b []byte) error {
 		}
 		sh.Plain.Console = c
 	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp_file/development")
+	delete(raw, "otlp_grpc")
+	delete(raw, "otlp_http")
+
+	unmarshalAdditionalProperties(raw, &sh.Plain.AdditionalProperties)
 	*j = SpanExporter(sh.Plain)
 	return nil
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+
 func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 	// Use a shadow struct with a RawMessage field to detect key presence.
 	type Plain LogRecordExporter
@@ -440,6 +453,18 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 		}
 		sh.Plain.Console = c
 	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp_file/development")
+	delete(raw, "otlp_grpc")
+	delete(raw, "otlp_http")
+
+	unmarshalAdditionalProperties(raw, &sh.Plain.AdditionalProperties)
 	*j = LogRecordExporter(sh.Plain)
 	return nil
 }
@@ -508,6 +533,20 @@ func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
 		}
 		sh.Plain.Tracecontext = p
 	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "b3")
+	delete(raw, "b3multi")
+	delete(raw, "baggage")
+	delete(raw, "jaeger")
+	delete(raw, "ottrace")
+	delete(raw, "tracecontext")
+
+	unmarshalAdditionalProperties(raw, &sh.Plain.AdditionalProperties)
 
 	*j = TextMapPropagator(sh.Plain)
 	return nil

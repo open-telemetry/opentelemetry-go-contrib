@@ -171,8 +171,12 @@ func unmarshalMetricProducer(raw map[string]any, plain *MetricProducer) {
 		delete(raw, "opencensus")
 		plain.Opencensus = OpenCensusMetricProducer{}
 	}
+	unmarshalAdditionalProperties(raw, &plain.AdditionalProperties)
+}
+
+func unmarshalAdditionalProperties(raw map[string]any, additionalProperties *map[string]any) {
 	if len(raw) > 0 {
-		plain.AdditionalProperties = raw
+		*additionalProperties = raw
 	}
 }
 

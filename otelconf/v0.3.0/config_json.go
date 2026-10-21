@@ -274,6 +274,77 @@ func (j *SimpleLogRecordProcessor) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+func (j *SpanExporter) UnmarshalJSON(b []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp")
+	delete(raw, "zipkin")
+
+	type Plain SpanExporter
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+	*j = SpanExporter(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp")
+
+	type Plain LogRecordExporter
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = LogRecordExporter(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (j *Propagator) UnmarshalJSON(b []byte) error {
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+
+	delete(raw, "composite")
+
+	type Plain Propagator
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = Propagator(plain)
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *SimpleSpanProcessor) UnmarshalJSON(b []byte) error {
 	var raw map[string]any
 	if err := json.Unmarshal(b, &raw); err != nil {

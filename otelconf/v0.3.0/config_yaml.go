@@ -68,3 +68,75 @@ func (j *LanguageSpecificInstrumentation) UnmarshalYAML(unmarshal func(any) erro
 	*j = raw
 	return nil
 }
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *SpanExporter) UnmarshalYAML(unmarshal func(any) error) error {
+	var raw map[string]any
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp")
+	delete(raw, "zipkin")
+
+	type Plain SpanExporter
+	var plain Plain
+	if err := unmarshal(&plain); err != nil {
+		return err
+	}
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = SpanExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *LogRecordExporter) UnmarshalYAML(unmarshal func(any) error) error {
+	var raw map[string]any
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp")
+
+	type Plain LogRecordExporter
+	var plain Plain
+	if err := unmarshal(&plain); err != nil {
+		return err
+	}
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = LogRecordExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *Propagator) UnmarshalYAML(unmarshal func(any) error) error {
+	var raw map[string]any
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	delete(raw, "composite")
+
+	type Plain Propagator
+	var plain Plain
+	if err := unmarshal(&plain); err != nil {
+		return err
+	}
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = Propagator(plain)
+	return nil
+}

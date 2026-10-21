@@ -722,3 +722,161 @@ func TestCreateHeadersConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestUnmarshalCustomSpanExporter(t *testing.T) {
+	jsonConfig := []byte(`{
+		"file_format": "1.0",
+		"tracer_provider": {
+			"processors": [{
+				"simple": {
+					"exporter": {
+						"custom": {
+							"endpoint": "http://localhost:4318"
+						}
+					}
+				}
+			}]
+		}
+	}`)
+
+	yamlConfig := []byte(`
+file_format: "1.0"
+tracer_provider:
+  processors:
+    - simple:
+        exporter:
+          custom:
+            endpoint: http://localhost:4318
+`)
+
+	t.Run("JSON", func(t *testing.T) {
+		var cfg OpenTelemetryConfiguration
+		require.NoError(t, json.Unmarshal(jsonConfig, &cfg))
+
+		exporter := cfg.TracerProvider.Processors[0].Simple.Exporter
+		properties, ok := exporter.AdditionalProperties.(map[string]any)
+		require.True(t, ok, "AdditionalProperties should be a map")
+		require.Contains(t, properties, "custom")
+
+		custom, ok := properties["custom"].(map[string]any)
+		require.True(t, ok, "custom configuration should be a map")
+		assert.Equal(t, "http://localhost:4318", custom["endpoint"])
+	})
+
+	t.Run("YAML", func(t *testing.T) {
+		cfg, err := ParseYAML(yamlConfig)
+		require.NoError(t, err)
+
+		exporter := cfg.TracerProvider.Processors[0].Simple.Exporter
+		properties, ok := exporter.AdditionalProperties.(map[string]any)
+		require.True(t, ok, "AdditionalProperties should be a map")
+		require.Contains(t, properties, "custom")
+
+		custom, ok := properties["custom"].(map[string]any)
+		require.True(t, ok, "custom configuration should be a map")
+		assert.Equal(t, "http://localhost:4318", custom["endpoint"])
+	})
+}
+
+func TestUnmarshalCustomLogRecordExporter(t *testing.T) {
+	jsonConfig := []byte(`{
+		"file_format": "1.0",
+		"logger_provider": {
+			"processors": [{
+				"simple": {
+					"exporter": {
+						"custom": {
+							"endpoint": "http://localhost:4318"
+						}
+					}
+				}
+			}]
+		}
+	}`)
+
+	yamlConfig := []byte(`
+file_format: "1.0"
+logger_provider:
+  processors:
+    - simple:
+        exporter:
+          custom:
+            endpoint: http://localhost:4318
+`)
+
+	t.Run("JSON", func(t *testing.T) {
+		var cfg OpenTelemetryConfiguration
+		require.NoError(t, json.Unmarshal(jsonConfig, &cfg))
+
+		exporter := cfg.LoggerProvider.Processors[0].Simple.Exporter
+		properties, ok := exporter.AdditionalProperties.(map[string]any)
+		require.True(t, ok, "AdditionalProperties should be a map")
+		require.Contains(t, properties, "custom")
+
+		custom, ok := properties["custom"].(map[string]any)
+		require.True(t, ok, "custom configuration should be a map")
+		assert.Equal(t, "http://localhost:4318", custom["endpoint"])
+	})
+
+	t.Run("YAML", func(t *testing.T) {
+		cfg, err := ParseYAML(yamlConfig)
+		require.NoError(t, err)
+
+		exporter := cfg.LoggerProvider.Processors[0].Simple.Exporter
+		properties, ok := exporter.AdditionalProperties.(map[string]any)
+		require.True(t, ok, "AdditionalProperties should be a map")
+		require.Contains(t, properties, "custom")
+
+		custom, ok := properties["custom"].(map[string]any)
+		require.True(t, ok, "custom configuration should be a map")
+		assert.Equal(t, "http://localhost:4318", custom["endpoint"])
+	})
+}
+
+func TestUnmarshalCustomPropagator(t *testing.T) {
+	jsonConfig := []byte(`{
+		"file_format": "1.0",
+		"propagator": {
+			"custom": {
+				"format": "custom-format"
+			}
+		}
+	}`)
+
+	yamlConfig := []byte(`
+file_format: "1.0"
+propagator:
+  custom:
+    format: custom-format
+`)
+
+	t.Run("JSON", func(t *testing.T) {
+		var cfg OpenTelemetryConfiguration
+		require.NoError(t, json.Unmarshal(jsonConfig, &cfg))
+
+		propagator := cfg.Propagator
+		require.NotNil(t, propagator)
+		properties, ok := propagator.AdditionalProperties.(map[string]any)
+		require.True(t, ok, "AdditionalProperties should be a map")
+		require.Contains(t, properties, "custom")
+
+		custom, ok := properties["custom"].(map[string]any)
+		require.True(t, ok, "custom configuration should be a map")
+		assert.Equal(t, "custom-format", custom["format"])
+	})
+
+	t.Run("YAML", func(t *testing.T) {
+		cfg, err := ParseYAML(yamlConfig)
+		require.NoError(t, err)
+
+		propagator := cfg.Propagator
+		require.NotNil(t, propagator)
+		properties, ok := propagator.AdditionalProperties.(map[string]any)
+		require.True(t, ok, "AdditionalProperties should be a map")
+		require.Contains(t, properties, "custom")
+
+		custom, ok := properties["custom"].(map[string]any)
+		require.True(t, ok, "custom configuration should be a map")
+		assert.Equal(t, "custom-format", custom["format"])
+	})
+}
