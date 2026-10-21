@@ -32,6 +32,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `NewResourceDetector` in `go.opentelemetry.io/contrib/detectors/aws/lambda` returns the exported concrete type `*ResourceDetector` instead of `resource.Detector`. (#9606)
 - Remove the deprecation notice from `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9881)
 
+<!-- markdownlint-enable MD024 -->
 ### Fixed
 
 - Type `AdditionalProperties` as `map[string]any` in the generated config structs of `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x` so `mapstructure`'s `,remain` decoder no longer fails on a bare `interface{}`. (#8850)
@@ -52,6 +53,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Remove the deprecated `WithMetricAttributesFn` option from `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Use `ContextWithLabeler` for server metric attributes and `ContextWithClientLabeler` for client metric attributes. (#9944)
+<!-- markdownlint-enable MD024 -->
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
