@@ -98,4 +98,7 @@ remains present on an issuer mismatch because its source is the in-cluster
 also mean the AWS credentials point at a different account or Region; the ARN
 check cannot distinguish those cases, so it does not change the existing
 cluster-name behavior. The default `NewResourceDetector()` behavior makes
-neither of these additional requests.
+neither of these additional requests. Each opted-in process calls
+`DescribeCluster` during detection, so large deployments should account for the
+shared EKS API quota. Throttled calls return the normal attributes with
+`resource.ErrPartialResource` and no cluster ARN.

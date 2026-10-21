@@ -42,21 +42,6 @@ var (
 	newEKSClient  = func(cfg aws.Config) eksClient { return eks.NewFromConfig(cfg) }
 )
 
-type config struct {
-	clusterARN bool
-}
-
-// Option configures EKS resource detection.
-type Option interface {
-	apply(*config)
-}
-
-type optionFunc func(*config)
-
-func (f optionFunc) apply(c *config) {
-	f(c)
-}
-
 // WithClusterARN enables detection of aws.eks.cluster.arn. The detector calls
 // EKS DescribeCluster and reports the ARN only when the returned OIDC issuer
 // matches the issuer published by the live Kubernetes API server.
@@ -179,8 +164,16 @@ func (eksUtils eksDetectorUtils) getOIDCIssuer(ctx context.Context) (string, err
 		return "", fmt.Errorf("failed to retrieve OIDC discovery document: unexpected status %s", resp.Status)
 	}
 
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxOIDCDiscoveryBodySize+1))
+	if err != nil {
+		return "", fmt.Errorf("failed to read OIDC discovery document: %w", err)
+	}
+	if len(body) > maxOIDCDiscoveryBodySize {
+		return "", fmt.Errorf("OIDC discovery document exceeds %d bytes", maxOIDCDiscoveryBodySize)
+	}
+
 	var discovery oidcDiscovery
-	if err := json.NewDecoder(io.LimitReader(resp.Body, maxOIDCDiscoveryBodySize)).Decode(&discovery); err != nil {
+	if err := json.Unmarshal(body, &discovery); err != nil {
 		return "", fmt.Errorf("failed to decode OIDC discovery document: %w", err)
 	}
 	return discovery.Issuer, nil
