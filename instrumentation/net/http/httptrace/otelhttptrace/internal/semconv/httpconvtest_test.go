@@ -385,6 +385,11 @@ func TestClientRequest_SensitiveQueryRedacted(t *testing.T) {
 			want: "https://example.com/foo?%73ig=REDACTED&X-Amz-%53ignature=REDACTED&stuff=morestuff",
 		},
 		{
+			name: "semicolon separator",
+			url:  "https://example.com/foo?a=1;sig=abc&stuff=morestuff;X-Amz-Signature=def",
+			want: "https://example.com/foo?a=1;sig=REDACTED&stuff=morestuff;X-Amz-Signature=REDACTED",
+		},
+		{
 			name: "empty value is redacted",
 			url:  "https://example.com/foo?sig=&stuff=morestuff",
 			want: "https://example.com/foo?sig=REDACTED&stuff=morestuff",
@@ -404,12 +409,13 @@ func TestClientRequest_SensitiveQueryRedacted(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.url, nil)
-			rawQuery := req.URL.RawQuery
+			rawQuery, user := req.URL.RawQuery, req.URL.User
 
 			got := semconv.HTTPClient{}.RequestTraceAttrs(req)
 			assert.Contains(t, got, attribute.String("url.full", tc.want))
-			// The request that is sent must keep its real query string.
+			// The request that is sent must not be modified.
 			assert.Equal(t, rawQuery, req.URL.RawQuery)
+			assert.Equal(t, user, req.URL.User)
 		})
 	}
 }

@@ -115,13 +115,12 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 	var u string
 	if req.URL != nil {
 		// Remove any username/password info that may be in the URL and
-		// redact the values of sensitive query parameters.
-		userinfo, rawQuery := req.URL.User, req.URL.RawQuery
-		req.URL.User = nil
-		req.URL.RawQuery = redactQuery(rawQuery)
-		u = req.URL.String()
-		// Restore the URL the request is sent with.
-		req.URL.User, req.URL.RawQuery = userinfo, rawQuery
+		// redact the values of sensitive query parameters. Work on a copy so
+		// the request, which a RoundTripper must not modify, is left as-is.
+		c := *req.URL
+		c.User = nil
+		c.RawQuery = redactQuery(c.RawQuery)
+		u = c.String()
 	}
 	attrs = append(attrs, semconv.URLFull(u), semconv.ServerAddress(requestHost))
 	if eligiblePort > 0 {
@@ -159,12 +158,16 @@ func sensitiveQueryKey(key string) bool {
 // parameter replaced by "REDACTED". Keys, parameter order, and all other
 // values are preserved as-is. rawQuery is returned unchanged, without
 // allocating, when it has no sensitive parameter.
+//
+// Parameters are split on ';' as well as '&'. net/url only uses '&', but
+// other servers and proxies may also accept ';', and splitting on it only
+// makes redaction of the recorded value more conservative.
 func redactQuery(rawQuery string) string {
 	var b strings.Builder
 	redacted := false
 	for pos := 0; ; {
 		end := len(rawQuery)
-		if i := strings.IndexByte(rawQuery[pos:], '&'); i >= 0 {
+		if i := strings.IndexAny(rawQuery[pos:], "&;"); i >= 0 {
 			end = pos + i
 		}
 		param := rawQuery[pos:end]
@@ -183,7 +186,7 @@ func redactQuery(rawQuery string) string {
 			break
 		}
 		if redacted {
-			_ = b.WriteByte('&')
+			_ = b.WriteByte(rawQuery[end])
 		}
 		pos = end + 1
 	}
