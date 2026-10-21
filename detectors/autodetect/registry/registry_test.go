@@ -6,6 +6,7 @@ package registry
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -61,6 +62,47 @@ func TestRegisterDuplicate(t *testing.T) {
 		}
 	}()
 	Register(id, testFactory())
+}
+
+// TestShippedAndApplicationRegistrationsCoexist covers the ownership model: the
+// detectors shipped with this package stay registered next to the ones an
+// application adds, and a single Detector call resolves both.
+func TestShippedAndApplicationRegistrationsCoexist(t *testing.T) {
+	id := ID("application.owned")
+	Register(id, testFactory())
+
+	registered := Registered()
+	for _, want := range []ID{IDHost, IDContainer, IDTelemetrySDK, id} {
+		if !slices.Contains(registered, want) {
+			t.Errorf("detector %q is not registered", want)
+		}
+	}
+
+	detector, err := Detector(IDHost, id)
+	if err != nil {
+		t.Fatalf("got error: %v, expected no error", err)
+	}
+
+	c, ok := detector.(*composite)
+	if !ok {
+		t.Fatalf("got %T, expected composite detector", detector)
+	}
+
+	if len(c.detectors) != 2 {
+		t.Errorf("got %d detectors, expected 2 detectors", len(c.detectors))
+	}
+}
+
+// TestRegisterShippedIDPanics covers the guard in the ownership model: an ID
+// owned by a shipped detector cannot be taken over.
+func TestRegisterShippedIDPanics(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("got no panic, expected panic when registering a shipped ID")
+		}
+	}()
+
+	Register(IDHost, testFactory())
 }
 
 func TestParse(t *testing.T) {

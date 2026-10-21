@@ -5,10 +5,23 @@
 // [go.opentelemetry.io/contrib/detectors/autodetect] and the detectors that
 // need nothing beyond the SDK.
 //
-// Import this package instead of autodetect to register only the detectors a
-// build needs: the detectors with third-party dependencies live in their own
-// modules and are not referenced from here, so they stay out of the module
-// graph.
+// Import this package instead of autodetect to keep the detectors with
+// third-party dependencies out of the module graph: they live in their own
+// modules and are not referenced from here.
+//
+// # Registration ownership
+//
+// Every ID has exactly one owner, which is the package that ships the
+// detector. This package registers the detectors that need nothing beyond the
+// SDK. [go.opentelemetry.io/contrib/detectors/autodetect] registers the
+// detectors that have third-party dependencies. An application registers only
+// the IDs it defines itself.
+//
+// [Register] panics when an ID is already registered, so two owners for one ID
+// fail at startup instead of silently replacing a detector. Code that needs
+// behavior different from a shipped detector does not register that ID. It
+// passes its own [resource.Detector] to
+// [go.opentelemetry.io/otel/sdk/resource.WithDetectors] instead.
 package registry
 
 import (
@@ -118,6 +131,10 @@ var (
 type ID string
 
 // Register registers a new resource detector function with the given ID.
+//
+// The caller must own the ID, which means registering only the IDs its own
+// package or application defines. Register panics if the ID is already
+// registered, because a second owner for one ID is a bug in one of the two.
 func Register(id ID, fn func() resource.Detector) {
 	registryMu.Lock()
 	defer registryMu.Unlock()

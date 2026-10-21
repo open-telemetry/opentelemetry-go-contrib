@@ -4,10 +4,12 @@
 // Package autodetect provides functionality to configures and use a set of
 // resource detectors at runtime.
 //
-// It registers every resource detector shipped in this repository. To register
-// only some of them, and keep the dependencies of the others out of the module
-// graph, use [go.opentelemetry.io/contrib/detectors/autodetect/registry]
-// instead and call [registry.Register] with the detectors the build needs.
+// It registers every resource detector shipped in this repository, so
+// importing it pulls every detector module into the build. To keep the
+// detectors with third-party dependencies out of the module graph, use
+// [go.opentelemetry.io/contrib/detectors/autodetect/registry] instead, and
+// read the registration ownership model documented there before registering
+// an ID.
 package autodetect
 
 import (
