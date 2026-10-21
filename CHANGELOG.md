@@ -49,7 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
 - Use the context bound to a logger when checking whether logs are enabled in `go.opentelemetry.io/contrib/bridges/otellogr` and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9878)
 
-## Removed
+### Removed
 
 - Remove the deprecated `WithMetricAttributesFn` option from `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Use `ContextWithLabeler` for server metric attributes and `ContextWithClientLabeler` for client metric attributes. (#9944)
 
