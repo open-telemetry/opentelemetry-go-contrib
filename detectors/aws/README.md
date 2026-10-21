@@ -62,9 +62,40 @@ eksResourceDetector := eks.NewResourceDetector()
 resource, err := eksResourceDetector.Detect(context.Background())
 ```
 
-EKS resource detector captures following EKS environment attributes
+EKS resource detector captures the following attributes by default:
 
 ```
 k8s.cluster.name
 container.id
 ```
+
+To also detect `aws.eks.cluster.arn`, enable the opt-in ARN lookup:
+
+```go
+eksResourceDetector := eks.NewResourceDetectorWithOptions(eks.WithClusterARN())
+resource, err := eksResourceDetector.Detect(context.Background())
+```
+
+The lookup calls `eks:DescribeCluster` and reports the ARN only when the OIDC
+issuer returned by EKS matches the issuer published by the live Kubernetes API
+server. It requires all of the following:
+
+- the `amazon-cloudwatch/cluster-info` ConfigMap contains `cluster.name`;
+- the AWS SDK can resolve credentials and a Region;
+- those credentials allow `eks:DescribeCluster` for that cluster; and
+- the Kubernetes service account can read
+  `/.well-known/openid-configuration`, for example through Kubernetes' built-in
+  `system:service-account-issuer-discovery` ClusterRole.
+
+The OIDC request is bounded to 10 seconds. AWS configuration and
+`DescribeCluster` share a separate 10-second bound, so enabling the option adds
+at most 20 seconds when no shorter caller deadline exists. If the ARN cannot be
+established, the detector returns the normal EKS attributes together with
+`resource.ErrPartialResource`; callers that treat any non-nil detector error as
+fatal should account for that before enabling the option. `k8s.cluster.name`
+remains present on an issuer mismatch because its source is the in-cluster
+`cluster-info` ConfigMap. A mismatch can mean that value is stale, but it can
+also mean the AWS credentials point at a different account or Region; the ARN
+check cannot distinguish those cases, so it does not change the existing
+cluster-name behavior. The default `NewResourceDetector()` behavior makes
+neither of these additional requests.
