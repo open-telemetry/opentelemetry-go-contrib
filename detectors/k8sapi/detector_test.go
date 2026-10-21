@@ -90,6 +90,19 @@ func TestDetectWithFilter(t *testing.T) {
 	assert.Equal(t, expected, res)
 }
 
+func TestDetectHostIDDisabledByDefault(t *testing.T) {
+	node := newFakeNode(uuid.NewUUID())
+	node.Status.NodeInfo.MachineID = testMachineID
+	client := k8sfake.NewClientset(node, newFakeNamespace(uuid.NewUUID()))
+	t.Setenv("K8S_NODE_NAME", testNodeName)
+
+	res, err := NewResourceDetector(WithKubeClient(client)).Detect(t.Context())
+	require.NoError(t, err)
+
+	_, ok := res.Set().Value(semconv.HostIDKey)
+	assert.False(t, ok, "host.id must not be detected unless WithHostID is passed")
+}
+
 func TestDetectWithHostID(t *testing.T) {
 	nodeUID := uuid.NewUUID()
 	clusterUID := uuid.NewUUID()
