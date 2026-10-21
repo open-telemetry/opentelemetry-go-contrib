@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 
 	"go.opentelemetry.io/contrib/detectors/akamai"
+	alibabaecs "go.opentelemetry.io/contrib/detectors/alibaba/ecs"
 	"go.opentelemetry.io/contrib/detectors/autodetect/registry"
 	"go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
 	"go.opentelemetry.io/contrib/detectors/aws/ecs"
@@ -25,6 +26,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/consul"
 	"go.opentelemetry.io/contrib/detectors/docker"
+	"go.opentelemetry.io/contrib/detectors/dynatrace"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/classic"
@@ -138,6 +140,10 @@ var (
 	// attributes on Akamai Connected Cloud compute instances (see
 	// akamai.NewResourceDetector for details).
 	IDAkamai = registry.ID("akamai")
+	// IDAlibabaECS is the ID for the Alibaba Cloud ECS detector that detects
+	// resource attributes on Alibaba Cloud Elastic Compute Service (ECS)
+	// instances (see alibabaecs.NewResourceDetector for details).
+	IDAlibabaECS = registry.ID("alibaba.ecs")
 	// IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
 	// attributes on Amazon Web Services (AWS) EC2 instances (see
 	// ec2.NewResourceDetector for details).
@@ -174,6 +180,10 @@ var (
 	// attributes from a Consul agent (see consul.NewResourceDetector for
 	// details).
 	IDConsul = registry.ID("consul")
+	// IDDynatrace is the ID for the Dynatrace detector that detects resource
+	// attributes from the enrichment files written by the Dynatrace OneAgent
+	// (see dynatrace.NewResourceDetector for details).
+	IDDynatrace = registry.ID("dynatrace")
 	// IDDocker is the ID for the Docker detector that detects resource
 	// attributes on Docker containers (see docker.NewResourceDetector for
 	// details).
@@ -222,6 +232,7 @@ var (
 
 func init() {
 	registry.Register(IDAkamai, func() resource.Detector { return akamai.NewResourceDetector() })
+	registry.Register(IDAlibabaECS, func() resource.Detector { return alibabaecs.NewResourceDetector() })
 	registry.Register(IDAWSEC2, ec2.NewResourceDetector)
 	registry.Register(IDAWSECS, ecs.NewResourceDetector)
 	registry.Register(IDAWSEKS, eks.NewResourceDetector)
@@ -231,6 +242,7 @@ func init() {
 	registry.Register(IDAzureContainerApps, func() resource.Detector { return azurecontainerapps.NewResourceDetector() })
 	registry.Register(IDAzureVM, func() resource.Detector { return azurevm.New() })
 	registry.Register(IDConsul, func() resource.Detector { return consul.NewResourceDetector() })
+	registry.Register(IDDynatrace, func() resource.Detector { return dynatrace.NewResourceDetector() })
 	registry.Register(IDDocker, func() resource.Detector { return docker.NewResourceDetector() })
 	registry.Register(IDGCP, gcp.NewDetector)
 	registry.Register(IDHetzner, func() resource.Detector { return hetzner.NewResourceDetector() })
