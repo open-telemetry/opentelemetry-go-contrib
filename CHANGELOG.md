@@ -30,6 +30,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Reduce heap allocations and latency during multi-header context injection in `go.opentelemetry.io/contrib/propagators/b3`. (#9983)
 - Reduce heap allocations and latency during context injection in `go.opentelemetry.io/contrib/propagators/aws/xray`. (#9938)
 - Reduce allocations during context injection in `go.opentelemetry.io/contrib/propagators/jaeger`. (#9918)
 - Support build tags to omit resource detectors in `go.opentelemetry.io/contrib/otelconf/x`. (#9818)
