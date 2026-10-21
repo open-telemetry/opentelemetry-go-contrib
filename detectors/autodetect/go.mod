@@ -16,6 +16,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.19.0
 	go.opentelemetry.io/contrib/detectors/consul v0.19.0
 	go.opentelemetry.io/contrib/detectors/docker v0.19.0
+	go.opentelemetry.io/contrib/detectors/dynatrace v0.19.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.19.0
 	go.opentelemetry.io/contrib/detectors/ibmcloud/classic v0.19.0
@@ -169,6 +170,8 @@ replace go.opentelemetry.io/contrib/detectors/ibmcloud/classic => ../ibmcloud/cl
 replace go.opentelemetry.io/contrib/detectors/docker => ../docker
 
 replace go.opentelemetry.io/contrib/detectors/alibaba/ecs => ../alibaba/ecs
+
+replace go.opentelemetry.io/contrib/detectors/dynatrace => ../dynatrace
 
 replace go.opentelemetry.io/contrib/detectors/kubeadm => ../kubeadm
 

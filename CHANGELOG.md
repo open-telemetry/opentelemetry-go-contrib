@@ -11,7 +11,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Add `WithHostID` option to `go.opentelemetry.io/contrib/detectors/k8sapi` to detect the `host.id` resource attribute from the machine ID reported by the node's kubelet. (#9973)
+- Add support for the `aws.lambda` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9924)
 - Add `WithNonErrorCodes` option for `NewServerHandler` and `NewClientHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to prevent the handler from setting an error span status for specific gRPC codes. (#9209)
+- Add `go.opentelemetry.io/contrib/detectors/alibabacloud`, a new resource detector for Alibaba Cloud ECS instances and containers running on ECI, including pods on Alibaba Cloud Container Compute Service (ACS). Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `cloud.availability_zone`, `cloud.account.id`, `host.id`, `host.name`, `host.type`, and `host.image.id`, matching the `alibaba/ecs` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#9905)
 - Add `WithMaxAttempts` and `WithMaxBackoff` options to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` to configure the AWS SDK retry policy. (#9796)
 - Add `Methods` filter to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/filters` to match multiple HTTP methods. (#9630)
 - Add the experimental `WithProbabilitySampling` option to `go.opentelemetry.io/contrib/samplers/jaegerremote`, which makes probabilistic strategies follow the [probability sampling specification](https://opentelemetry.io/docs/specs/otel/trace/tracestate-probability-sampling/) using `ProbabilitySampler` from `go.opentelemetry.io/otel/sdk/trace/x`.
@@ -26,6 +28,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/contrib/detectors/alibaba/ecs`, a new resource detector for Alibaba Cloud Elastic Compute Service (ECS) instances, ported from `processor/resourcedetectionprocessor/internal/alibaba/ecs` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.region`, `cloud.availability_zone`, `host.id`, `host.name`, `host.image.id`, and `host.type`. (#9495)
 - Add `go.opentelemetry.io/contrib/detectors/scaleway`, a new resource detector for Scaleway Instances, ported from `processor/resourcedetectionprocessor/internal/scaleway` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `cloud.region`, `host.id`, `host.image.id`, `host.image.name`, `host.name`, and `host.type`. (#9489)
 - Add `go.opentelemetry.io/contrib/detectors/consul`, a new resource detector that reads attributes from a Consul agent, ported from `processor/resourcedetectionprocessor/internal/consul` in `opentelemetry-collector-contrib`. Detects `host.name`, `cloud.region`, and `host.id`, plus opt-in `consul.meta.<key>` attributes for the Consul node meta entries selected with `WithMetaKeyFilter`. (#9388)
+- Add `go.opentelemetry.io/contrib/detectors/dynatrace`, a resource detector for hosts monitored by the Dynatrace OneAgent, ported from `processor/resourcedetectionprocessor/internal/dynatrace` in `opentelemetry-collector-contrib`. It reads the OneAgent host enrichment file `dt_host_metadata.properties` and sets the `dt.entity.host`, `host.name`, and `dt.smartscape.host` attributes. (#9491)
 
 ### Changed
 
