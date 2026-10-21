@@ -96,10 +96,10 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	}
 
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-	opts := []trace.SpanStartOption{
-		trace.WithAttributes(h.semconv.RequestTraceAttrs(h.server, r, semconv.RequestTraceAttrsOpts{})...),
-	}
-
+	// Pre-allocate with enough capacity to prevent slices.Grow allocations
+	// 1 (Attributes) + len(spanStartOptions) + 3 (possible NewRoot, Links, Timestamp)
+	opts := make([]trace.SpanStartOption, 0, len(h.spanStartOptions)+4)
+	opts = append(opts, trace.WithAttributes(h.semconv.RequestTraceAttrs(h.server, r, semconv.RequestTraceAttrsOpts{})...))
 	opts = append(opts, h.spanStartOptions...)
 	if h.publicEndpointFn != nil && h.publicEndpointFn(r.WithContext(ctx)) {
 		opts = append(opts, trace.WithNewRoot())
