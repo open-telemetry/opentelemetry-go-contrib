@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"strings"
 )
 
 // UnmarshalYAML implements yaml.Unmarshaler.
@@ -80,14 +81,31 @@ func (j *SpanExporter) UnmarshalYAML(unmarshal func(any) error) error {
 	delete(raw, "otlp")
 	delete(raw, "zipkin")
 
+	for key := range raw {
+		if strings.EqualFold(key, "additionalproperties") {
+			delete(raw, key)
+		}
+	}
+
 	type Plain SpanExporter
-	var plain Plain
+	plain := Plain(*j)
 	if err := unmarshal(&plain); err != nil {
 		return err
 	}
 
 	if len(raw) > 0 {
-		plain.AdditionalProperties = raw
+		properties, ok := plain.AdditionalProperties.(map[string]any)
+		if !ok || properties == nil {
+			properties = make(map[string]any)
+		}
+
+		for key, value := range raw {
+			if _, exists := properties[key]; !exists {
+				properties[key] = value
+			}
+		}
+
+		plain.AdditionalProperties = properties
 	}
 
 	*j = SpanExporter(plain)
@@ -104,14 +122,31 @@ func (j *LogRecordExporter) UnmarshalYAML(unmarshal func(any) error) error {
 	delete(raw, "console")
 	delete(raw, "otlp")
 
+	for key := range raw {
+		if strings.EqualFold(key, "additionalproperties") {
+			delete(raw, key)
+		}
+	}
+
 	type Plain LogRecordExporter
-	var plain Plain
+	plain := Plain(*j)
 	if err := unmarshal(&plain); err != nil {
 		return err
 	}
 
 	if len(raw) > 0 {
-		plain.AdditionalProperties = raw
+		properties, ok := plain.AdditionalProperties.(map[string]any)
+		if !ok || properties == nil {
+			properties = make(map[string]any)
+		}
+
+		for key, value := range raw {
+			if _, exists := properties[key]; !exists {
+				properties[key] = value
+			}
+		}
+
+		plain.AdditionalProperties = properties
 	}
 
 	*j = LogRecordExporter(plain)
@@ -126,15 +161,31 @@ func (j *Propagator) UnmarshalYAML(unmarshal func(any) error) error {
 	}
 
 	delete(raw, "composite")
+	for key := range raw {
+		if strings.EqualFold(key, "additionalproperties") {
+			delete(raw, key)
+		}
+	}
 
 	type Plain Propagator
-	var plain Plain
+	plain := Plain(*j)
 	if err := unmarshal(&plain); err != nil {
 		return err
 	}
 
 	if len(raw) > 0 {
-		plain.AdditionalProperties = raw
+		properties, ok := plain.AdditionalProperties.(map[string]any)
+		if !ok || properties == nil {
+			properties = make(map[string]any)
+		}
+
+		for key, value := range raw {
+			if _, exists := properties[key]; !exists {
+				properties[key] = value
+			}
+		}
+
+		plain.AdditionalProperties = properties
 	}
 
 	*j = Propagator(plain)

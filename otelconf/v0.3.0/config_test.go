@@ -19,6 +19,7 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
+	"go.yaml.in/yaml/v2"
 )
 
 func TestNewSDK(t *testing.T) {
@@ -879,4 +880,215 @@ propagator:
 		require.True(t, ok, "custom configuration should be a map")
 		assert.Equal(t, "custom-format", custom["format"])
 	})
+}
+
+func TestAdditionalPropertiesRoundTrip(t *testing.T) {
+	tests := []struct {
+		name string
+		new  func() (any, func() any)
+	}{
+		{
+			name: "SpanExporter",
+			new: func() (any, func() any) {
+				v := &SpanExporter{
+					AdditionalProperties: map[string]any{
+						"custom": map[string]any{"endpoint": "localhost"},
+					},
+				}
+				return v, func() any { return &SpanExporter{} }
+			},
+		},
+		{
+			name: "LogRecordExporter",
+			new: func() (any, func() any) {
+				v := &LogRecordExporter{
+					AdditionalProperties: map[string]any{
+						"custom": map[string]any{"endpoint": "localhost"},
+					},
+				}
+				return v, func() any { return &LogRecordExporter{} }
+			},
+		},
+		{
+			name: "Propagator",
+			new: func() (any, func() any) {
+				v := &Propagator{
+					AdditionalProperties: map[string]any{
+						"custom": map[string]any{"format": "custom-format"},
+					},
+				}
+				return v, func() any { return &Propagator{} }
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			original, newTarget := tt.new()
+
+			t.Run("JSON", func(t *testing.T) {
+				data, err := json.Marshal(original)
+				require.NoError(t, err)
+
+				target := newTarget()
+				require.NoError(t, json.Unmarshal(data, target))
+
+				roundTrip, err := json.Marshal(target)
+				require.NoError(t, err)
+
+				assert.JSONEq(t, string(data), string(roundTrip))
+			})
+
+			t.Run("YAML", func(t *testing.T) {
+				data, err := yaml.Marshal(original)
+				require.NoError(t, err)
+
+				target := newTarget()
+				require.NoError(t, yaml.Unmarshal(data, target))
+
+				roundTrip, err := yaml.Marshal(target)
+				require.NoError(t, err)
+
+				// Compare decoded YAML values rather than serialized text,
+				// since equivalent YAML can have different formatting.
+				var want any
+				require.NoError(t, yaml.Unmarshal(data, &want))
+
+				var got any
+				require.NoError(t, yaml.Unmarshal(roundTrip, &got))
+
+				assert.Equal(t, want, got)
+			})
+		})
+	}
+}
+
+func TestZeroValueAdditionalPropertiesRoundTrip(t *testing.T) {
+	tests := []struct {
+		name string
+		new  func() (any, func() any)
+	}{
+		{
+			name: "SpanExporter",
+			new: func() (any, func() any) {
+				return &SpanExporter{}, func() any { return &SpanExporter{} }
+			},
+		},
+		{
+			name: "LogRecordExporter",
+			new: func() (any, func() any) {
+				return &LogRecordExporter{}, func() any { return &LogRecordExporter{} }
+			},
+		},
+		{
+			name: "Propagator",
+			new: func() (any, func() any) {
+				return &Propagator{}, func() any { return &Propagator{} }
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			original, newTarget := tt.new()
+
+			data, err := json.Marshal(original)
+			require.NoError(t, err)
+
+			target := newTarget()
+			require.NoError(t, json.Unmarshal(data, target))
+
+			switch got := target.(type) {
+			case *SpanExporter:
+				assert.Nil(t, got.AdditionalProperties)
+			case *LogRecordExporter:
+				assert.Nil(t, got.AdditionalProperties)
+			case *Propagator:
+				assert.Nil(t, got.AdditionalProperties)
+			}
+		})
+	}
+}
+
+func TestUnmarshalEmptyInputPreservesReceiver(t *testing.T) {
+	t.Run("SpanExporter", func(t *testing.T) {
+		endpoint := "http://localhost:4318"
+		protocol := "http/protobuf"
+
+		original := &SpanExporter{
+			OTLP: &OTLP{
+				Endpoint: &endpoint,
+				Protocol: &protocol,
+			},
+		}
+
+		require.NoError(t, json.Unmarshal([]byte(`{}`), original))
+		require.NotNil(t, original.OTLP)
+		require.NotNil(t, original.OTLP.Endpoint)
+		require.NotNil(t, original.OTLP.Protocol)
+		assert.Equal(t, endpoint, *original.OTLP.Endpoint)
+		assert.Equal(t, protocol, *original.OTLP.Protocol)
+
+		require.NoError(t, json.Unmarshal([]byte(`null`), original))
+		require.NotNil(t, original.OTLP)
+		require.NotNil(t, original.OTLP.Endpoint)
+		require.NotNil(t, original.OTLP.Protocol)
+		assert.Equal(t, endpoint, *original.OTLP.Endpoint)
+		assert.Equal(t, protocol, *original.OTLP.Protocol)
+	})
+
+	t.Run("LogRecordExporter", func(t *testing.T) {
+		endpoint := "http://localhost:4318"
+		protocol := "http/protobuf"
+
+		original := &LogRecordExporter{
+			OTLP: &OTLP{
+				Endpoint: &endpoint,
+				Protocol: &protocol,
+			},
+		}
+
+		require.NoError(t, json.Unmarshal([]byte(`{}`), original))
+		require.NotNil(t, original.OTLP)
+		require.NotNil(t, original.OTLP.Endpoint)
+		require.NotNil(t, original.OTLP.Protocol)
+		assert.Equal(t, endpoint, *original.OTLP.Endpoint)
+		assert.Equal(t, protocol, *original.OTLP.Protocol)
+
+		require.NoError(t, json.Unmarshal([]byte(`null`), original))
+		require.NotNil(t, original.OTLP)
+		require.NotNil(t, original.OTLP.Endpoint)
+		require.NotNil(t, original.OTLP.Protocol)
+		assert.Equal(t, endpoint, *original.OTLP.Endpoint)
+		assert.Equal(t, protocol, *original.OTLP.Protocol)
+	})
+
+	t.Run("Propagator", func(t *testing.T) {
+		composite := "tracecontext"
+		original := &Propagator{
+			Composite: []*string{&composite},
+		}
+
+		require.NoError(t, json.Unmarshal([]byte(`{}`), original))
+		require.Equal(t, []*string{&composite}, original.Composite)
+
+		require.NoError(t, json.Unmarshal([]byte(`null`), original))
+		require.Equal(t, []*string{&composite}, original.Composite)
+	})
+}
+
+func TestExplicitAdditionalPropertiesWithUnknownField(t *testing.T) {
+	input := []byte(`{
+		"AdditionalProperties": {"existing": "value"},
+		"custom": {"endpoint": "localhost"}
+	}`)
+
+	var got SpanExporter
+	require.NoError(t, json.Unmarshal(input, &got))
+
+	properties, ok := got.AdditionalProperties.(map[string]any)
+	require.True(t, ok)
+	assert.Equal(t, "value", properties["existing"])
+	assert.Equal(t, map[string]any{"endpoint": "localhost"}, properties["custom"])
+	assert.NotContains(t, properties, "AdditionalProperties")
 }
