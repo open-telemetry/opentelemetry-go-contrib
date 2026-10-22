@@ -75,6 +75,10 @@ func getEnvOptions() ([]Option, []error) {
 				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", key, err))
 				continue
 			}
+			if intervalMs <= 0 {
+				errs = append(errs, fmt.Errorf("%s must be positive, got %d", key, intervalMs))
+				continue
+			}
 			options = append(options, WithSamplingRefreshInterval(time.Duration(intervalMs)*time.Millisecond))
 		case "initialSamplingRate":
 			samplingRate, err := strconv.ParseFloat(value, 64)
@@ -116,6 +120,10 @@ func newConfig(options ...Option) config {
 
 	for _, err := range errs {
 		c.logger.Error(err, "env variable parsing failure")
+	}
+	// time.NewTicker panics on a non-positive interval.
+	if c.samplingRefreshInterval <= 0 {
+		c.samplingRefreshInterval = defaultSamplingRefreshInterval
 	}
 	c.updaters = []samplerUpdater{
 		&perOperationSamplerUpdater{
@@ -182,6 +190,7 @@ func WithOperationNameLateBinding(enable bool) Option {
 
 // WithSamplingRefreshInterval creates a Option that sets how often the
 // sampler will poll local agent for the appropriate sampling strategy.
+// A non-positive value is ignored and the default interval is used.
 func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) Option {
 	return optionFunc(func(c *config) {
 		c.samplingRefreshInterval = samplingRefreshInterval
