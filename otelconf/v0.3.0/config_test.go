@@ -949,8 +949,6 @@ func TestAdditionalPropertiesRoundTrip(t *testing.T) {
 				roundTrip, err := yaml.Marshal(target)
 				require.NoError(t, err)
 
-				// Compare decoded YAML values rather than serialized text,
-				// since equivalent YAML can have different formatting.
 				var want any
 				require.NoError(t, yaml.Unmarshal(data, &want))
 
@@ -1091,4 +1089,106 @@ func TestExplicitAdditionalPropertiesWithUnknownField(t *testing.T) {
 	assert.Equal(t, "value", properties["existing"])
 	assert.Equal(t, map[string]any{"endpoint": "localhost"}, properties["custom"])
 	assert.NotContains(t, properties, "AdditionalProperties")
+}
+
+func TestMergeAdditionalPropertiesDoesNotMutateExistingMap(t *testing.T) {
+	existing := map[string]any{
+		"existing": "value",
+		"shared":   "original",
+	}
+	raw := map[string]any{
+		"custom": map[string]any{"endpoint": "localhost"},
+		"shared": "new",
+	}
+
+	got, ok := mergeAdditionalProperties(existing, raw).(map[string]any)
+	require.True(t, ok)
+
+	assert.Equal(t, "value", existing["existing"])
+	assert.Equal(t, "original", existing["shared"])
+	assert.NotContains(t, existing, "custom")
+
+	assert.Equal(t, "value", got["existing"])
+	assert.Equal(t, "new", got["shared"])
+	assert.Equal(t, map[string]any{"endpoint": "localhost"}, got["custom"])
+}
+
+func TestRepeatedJSONDecodeAdditionalProperties(t *testing.T) {
+	tests := []struct {
+		name string
+		new  func() (any, func(any) any)
+	}{
+		{
+			name: "SpanExporter",
+			new: func() (any, func(any) any) {
+				return &SpanExporter{}, func(v any) any {
+					return v.(*SpanExporter).AdditionalProperties
+				}
+			},
+		},
+		{
+			name: "LogRecordExporter",
+			new: func() (any, func(any) any) {
+				return &LogRecordExporter{}, func(v any) any {
+					return v.(*LogRecordExporter).AdditionalProperties
+				}
+			},
+		},
+		{
+			name: "Propagator",
+			new: func() (any, func(any) any) {
+				return &Propagator{}, func(v any) any {
+					return v.(*Propagator).AdditionalProperties
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Run("replacement", func(t *testing.T) {
+				target, getProperties := tt.new()
+
+				require.NoError(t, json.Unmarshal(
+					[]byte(`{"custom":{"endpoint":"old"}}`), target,
+				))
+				require.NoError(t, json.Unmarshal(
+					[]byte(`{"custom":{"endpoint":"new"}}`), target,
+				))
+
+				properties, ok := getProperties(target).(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, map[string]any{"endpoint": "new"}, properties["custom"])
+			})
+
+			t.Run("null replaces old value", func(t *testing.T) {
+				target, getProperties := tt.new()
+
+				require.NoError(t, json.Unmarshal(
+					[]byte(`{"custom":{"endpoint":"old"}}`), target,
+				))
+				require.NoError(t, json.Unmarshal(
+					[]byte(`{"custom":null}`), target,
+				))
+
+				properties, ok := getProperties(target).(map[string]any)
+				require.True(t, ok)
+				assert.Contains(t, properties, "custom")
+				assert.Nil(t, properties["custom"])
+			})
+
+			t.Run("omitted key is preserved", func(t *testing.T) {
+				target, getProperties := tt.new()
+
+				require.NoError(t, json.Unmarshal(
+					[]byte(`{"custom":{"endpoint":"old"}}`), target,
+				))
+				require.NoError(t, json.Unmarshal([]byte(`{}`), target))
+
+				properties, ok := getProperties(target).(map[string]any)
+				require.True(t, ok)
+				assert.Equal(t, map[string]any{"endpoint": "old"}, properties["custom"])
+			})
+		})
+	}
 }

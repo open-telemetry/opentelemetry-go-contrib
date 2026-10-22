@@ -81,8 +81,11 @@ func (j *SpanExporter) UnmarshalYAML(unmarshal func(any) error) error {
 	delete(raw, "otlp")
 	delete(raw, "zipkin")
 
+	hasExplicitAdditionalProperties := false
+
 	for key := range raw {
 		if strings.EqualFold(key, "additionalproperties") {
+			hasExplicitAdditionalProperties = true
 			delete(raw, key)
 		}
 	}
@@ -93,19 +96,16 @@ func (j *SpanExporter) UnmarshalYAML(unmarshal func(any) error) error {
 		return err
 	}
 
-	if len(raw) > 0 {
-		properties, ok := plain.AdditionalProperties.(map[string]any)
-		if !ok || properties == nil {
-			properties = make(map[string]any)
-		}
-
-		for key, value := range raw {
-			if _, exists := properties[key]; !exists {
-				properties[key] = value
-			}
-		}
-
-		plain.AdditionalProperties = properties
+	if hasExplicitAdditionalProperties {
+		plain.AdditionalProperties = mergeExplicitAdditionalProperties(
+			plain.AdditionalProperties,
+			raw,
+		)
+	} else {
+		plain.AdditionalProperties = mergeAdditionalProperties(
+			plain.AdditionalProperties,
+			raw,
+		)
 	}
 
 	*j = SpanExporter(plain)
@@ -122,8 +122,11 @@ func (j *LogRecordExporter) UnmarshalYAML(unmarshal func(any) error) error {
 	delete(raw, "console")
 	delete(raw, "otlp")
 
+	hasExplicitAdditionalProperties := false
+
 	for key := range raw {
 		if strings.EqualFold(key, "additionalproperties") {
+			hasExplicitAdditionalProperties = true
 			delete(raw, key)
 		}
 	}
@@ -134,19 +137,16 @@ func (j *LogRecordExporter) UnmarshalYAML(unmarshal func(any) error) error {
 		return err
 	}
 
-	if len(raw) > 0 {
-		properties, ok := plain.AdditionalProperties.(map[string]any)
-		if !ok || properties == nil {
-			properties = make(map[string]any)
-		}
-
-		for key, value := range raw {
-			if _, exists := properties[key]; !exists {
-				properties[key] = value
-			}
-		}
-
-		plain.AdditionalProperties = properties
+	if hasExplicitAdditionalProperties {
+		plain.AdditionalProperties = mergeExplicitAdditionalProperties(
+			plain.AdditionalProperties,
+			raw,
+		)
+	} else {
+		plain.AdditionalProperties = mergeAdditionalProperties(
+			plain.AdditionalProperties,
+			raw,
+		)
 	}
 
 	*j = LogRecordExporter(plain)
@@ -161,8 +161,11 @@ func (j *Propagator) UnmarshalYAML(unmarshal func(any) error) error {
 	}
 
 	delete(raw, "composite")
+	hasExplicitAdditionalProperties := false
+
 	for key := range raw {
 		if strings.EqualFold(key, "additionalproperties") {
+			hasExplicitAdditionalProperties = true
 			delete(raw, key)
 		}
 	}
@@ -173,19 +176,16 @@ func (j *Propagator) UnmarshalYAML(unmarshal func(any) error) error {
 		return err
 	}
 
-	if len(raw) > 0 {
-		properties, ok := plain.AdditionalProperties.(map[string]any)
-		if !ok || properties == nil {
-			properties = make(map[string]any)
-		}
-
-		for key, value := range raw {
-			if _, exists := properties[key]; !exists {
-				properties[key] = value
-			}
-		}
-
-		plain.AdditionalProperties = properties
+	if hasExplicitAdditionalProperties {
+		plain.AdditionalProperties = mergeExplicitAdditionalProperties(
+			plain.AdditionalProperties,
+			raw,
+		)
+	} else {
+		plain.AdditionalProperties = mergeAdditionalProperties(
+			plain.AdditionalProperties,
+			raw,
+		)
 	}
 
 	*j = Propagator(plain)

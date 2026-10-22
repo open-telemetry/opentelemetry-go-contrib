@@ -297,20 +297,10 @@ func (j *SpanExporter) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if len(raw) > 0 {
-		properties, ok := plain.AdditionalProperties.(map[string]any)
-		if !ok || properties == nil {
-			properties = make(map[string]any)
-		}
-
-		for key, value := range raw {
-			if _, exists := properties[key]; !exists {
-				properties[key] = value
-			}
-		}
-
-		plain.AdditionalProperties = properties
-	}
+	plain.AdditionalProperties = mergeAdditionalProperties(
+		plain.AdditionalProperties,
+		raw,
+	)
 
 	*j = SpanExporter(plain)
 	return nil
@@ -337,20 +327,10 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if len(raw) > 0 {
-		properties, ok := plain.AdditionalProperties.(map[string]any)
-		if !ok || properties == nil {
-			properties = make(map[string]any)
-		}
-
-		for key, value := range raw {
-			if _, exists := properties[key]; !exists {
-				properties[key] = value
-			}
-		}
-
-		plain.AdditionalProperties = properties
-	}
+	plain.AdditionalProperties = mergeAdditionalProperties(
+		plain.AdditionalProperties,
+		raw,
+	)
 
 	*j = LogRecordExporter(plain)
 	return nil
@@ -376,20 +356,10 @@ func (j *Propagator) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	if len(raw) > 0 {
-		properties, ok := plain.AdditionalProperties.(map[string]any)
-		if !ok || properties == nil {
-			properties = make(map[string]any)
-		}
-
-		for key, value := range raw {
-			if _, exists := properties[key]; !exists {
-				properties[key] = value
-			}
-		}
-
-		plain.AdditionalProperties = properties
-	}
+	plain.AdditionalProperties = mergeAdditionalProperties(
+		plain.AdditionalProperties,
+		raw,
+	)
 
 	*j = Propagator(plain)
 	return nil
