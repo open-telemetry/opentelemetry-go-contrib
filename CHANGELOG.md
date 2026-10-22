@@ -38,6 +38,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove the deprecation notice from `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9881)
 - Add `ReadFrom` support to the internal response writer wrapper template shared by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to track copied bytes and the last non-nil error. (#9804)
 
+<!-- markdownlint-enable MD024 -->
 ### Fixed
 
 - Reduce heap allocations on `Inject` in `go.opentelemetry.io/contrib/propagators/b3`. (#9870)
@@ -61,6 +62,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Removed
 
 - Remove support for the `rpc/old` and `rpc/dup` values of `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#9908)
+
+### Removed
+
+- Remove the deprecated `WithMetricAttributesFn` option from `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Use `ContextWithLabeler` for server metric attributes and `ContextWithClientLabeler` for client metric attributes. (#9944)
+<!-- markdownlint-enable MD024 -->
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
