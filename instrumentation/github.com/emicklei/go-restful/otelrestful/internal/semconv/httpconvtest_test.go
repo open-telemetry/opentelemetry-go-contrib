@@ -390,6 +390,11 @@ func TestClientRequest_SensitiveQueryRedacted(t *testing.T) {
 			want: "https://example.com/foo?a=1;sig=REDACTED&stuff=morestuff;X-Amz-Signature=REDACTED",
 		},
 		{
+			name: "semicolon inside sensitive value",
+			url:  "https://example.com/foo?sig=prefix;SECRET_SUFFIX&other=1",
+			want: "https://example.com/foo?sig=REDACTED&other=1",
+		},
+		{
 			name: "empty value is redacted",
 			url:  "https://example.com/foo?sig=&stuff=morestuff",
 			want: "https://example.com/foo?sig=REDACTED&stuff=morestuff",

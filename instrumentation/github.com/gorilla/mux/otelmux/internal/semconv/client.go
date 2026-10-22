@@ -159,9 +159,11 @@ func sensitiveQueryKey(key string) bool {
 // values are preserved as-is. rawQuery is returned unchanged, without
 // allocating, when it has no sensitive parameter.
 //
-// Parameters are split on ';' as well as '&'. net/url only uses '&', but
-// other servers and proxies may also accept ';', and splitting on it only
-// makes redaction of the recorded value more conservative.
+// Sensitive keys are detected after ';' as well as '&'. net/url only uses
+// '&', but other servers and proxies may also accept ';'. Since the
+// separator in use is ambiguous, a sensitive value is redacted up to the
+// next '&' or the end of the query, so any ';'-delimited content after it is
+// dropped rather than leaked.
 func redactQuery(rawQuery string) string {
 	var b strings.Builder
 	redacted := false
@@ -179,6 +181,10 @@ func redactQuery(rawQuery string) string {
 			}
 			_, _ = b.WriteString(key)
 			_, _ = b.WriteString("=REDACTED")
+			end = len(rawQuery)
+			if i := strings.IndexByte(rawQuery[pos:], '&'); i >= 0 {
+				end = pos + i
+			}
 		} else if redacted {
 			_, _ = b.WriteString(param)
 		}
