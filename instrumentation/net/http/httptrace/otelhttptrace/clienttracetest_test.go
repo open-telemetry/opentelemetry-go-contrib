@@ -321,7 +321,7 @@ func prepareClientTraceTest(t *testing.T) clientTraceTestFixture {
 
 func TestHTTPGetConnSpanAcrossAddressFallback(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
-	unavailableListener, err := net.Listen("tcp", "127.0.0.1:0")
+	unavailableListener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	unavailableAddress := unavailableListener.Addr().String()
 	require.NoError(t, unavailableListener.Close())
