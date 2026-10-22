@@ -5,6 +5,7 @@ go 1.26.0
 require (
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/contrib/detectors/akamai v0.19.0
+	go.opentelemetry.io/contrib/detectors/alibaba/ecs v0.19.0
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.6.0
 	go.opentelemetry.io/contrib/detectors/aws/ecs v1.47.0
 	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
@@ -15,6 +16,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.19.0
 	go.opentelemetry.io/contrib/detectors/consul v0.19.0
 	go.opentelemetry.io/contrib/detectors/docker v0.19.0
+	go.opentelemetry.io/contrib/detectors/dynatrace v0.19.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.19.0
 	go.opentelemetry.io/contrib/detectors/ibmcloud/classic v0.19.0
@@ -32,7 +34,6 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.10.0 // indirect
 	github.com/Microsoft/go-winio v0.6.4 // indirect
-	github.com/armon/go-metrics v0.4.1 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.47.3 // indirect
 	github.com/aws/aws-sdk-go-v2/config v1.33.9 // indirect
 	github.com/aws/aws-sdk-go-v2/credentials v1.20.9 // indirect
@@ -84,10 +85,11 @@ require (
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
+	github.com/hashicorp/go-metrics v0.7.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
-	github.com/hashicorp/golang-lru v0.5.4 // indirect
-	github.com/hashicorp/serf v0.10.1 // indirect
+	github.com/hashicorp/golang-lru v1.0.2 // indirect
+	github.com/hashicorp/serf v0.11.0 // indirect
 	github.com/hetznercloud/hcloud-go/v2 v2.52.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/linode/go-metadata v0.3.1 // indirect
@@ -166,6 +168,10 @@ replace go.opentelemetry.io/contrib/detectors/consul => ../consul
 replace go.opentelemetry.io/contrib/detectors/ibmcloud/classic => ../ibmcloud/classic
 
 replace go.opentelemetry.io/contrib/detectors/docker => ../docker
+
+replace go.opentelemetry.io/contrib/detectors/alibaba/ecs => ../alibaba/ecs
+
+replace go.opentelemetry.io/contrib/detectors/dynatrace => ../dynatrace
 
 replace go.opentelemetry.io/contrib/detectors/kubeadm => ../kubeadm
 
