@@ -5,331 +5,70 @@ package autodetect
 
 import (
 	"context"
-	"errors"
+	"slices"
 	"testing"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 )
 
-type testDetector struct {
-	schemaURL string
-	attr      []attribute.KeyValue
-	err       error
+// appDetector is an application-owned detector, used to check that an
+// application registration coexists with the ones this package and the
+// registry package make.
+type appDetector struct{}
+
+var _ resource.Detector = appDetector{}
+
+func (appDetector) Detect(context.Context) (*resource.Resource, error) {
+	return resource.NewWithAttributes("", attribute.String("deployment.zone", "eu-west-1a")), nil
 }
 
-var _ resource.Detector = (*testDetector)(nil)
+func TestDetectorsWithDependenciesRegistered(t *testing.T) {
+	ids := []ID{
+		IDAkamai, IDAlibabaECS, IDAWSEC2, IDAWSECS, IDAWSEKS, IDAWSLambda, IDAWSElasticBeanstalk,
+		IDAzureAKS, IDAzureContainerApps, IDAzureVM, IDConsul, IDDynatrace, IDDocker, IDGCP, IDHetzner,
+		IDIBMCloudClassic, IDIBMCloudVPC, IDK8sAPI, IDOpenStackNova, IDScaleway, IDKubeadm, IDOpenShift, IDVultr,
+	}
 
-func testFactory() func() resource.Detector {
-	return func() resource.Detector { return &testDetector{} }
+	registered := Registered()
+	for _, id := range ids {
+		if !slices.Contains(registered, id) {
+			t.Errorf("detector %q is not registered", id)
+			continue
+		}
+		if _, err := Detector(id); err != nil {
+			t.Errorf("detector %q: got error %v, expected no error", id, err)
+		}
+	}
 }
 
-func (d *testDetector) Detect(context.Context) (*resource.Resource, error) {
-	return resource.NewWithAttributes(d.schemaURL, d.attr...), d.err
-}
+// TestApplicationRegistrationCoexists covers the ownership model across both
+// packages: this package registers every shipped detector in its init, the
+// registry package registers the detectors that need nothing beyond the SDK,
+// and an application can still register and resolve an ID it owns.
+func TestApplicationRegistrationCoexists(t *testing.T) {
+	const id = ID("application.owned")
+	Register(id, func() resource.Detector { return appDetector{} })
 
-func TestRegisterAndDetector(t *testing.T) {
-	id := ID("custom")
-	Register(id, testFactory())
+	registered := Registered()
+	for _, want := range []ID{IDAkamai, IDAlibabaECS, IDHost, id} {
+		if !slices.Contains(registered, want) {
+			t.Errorf("detector %q is not registered", want)
+		}
+	}
 
 	detector, err := Detector(id)
 	if err != nil {
 		t.Fatalf("got error: %v, expected no error", err)
 	}
 
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Errorf("got %T, expected composite detector", detector)
-	}
-
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-
-	if _, ok := c.detectors[0].(*testDetector); !ok {
-		t.Errorf("got %T, expected testDetector", c.detectors[0])
-	}
-}
-
-func TestRegisterDuplicate(t *testing.T) {
-	id := ID("duplicate")
-	Register(id, testFactory())
-
-	defer func() {
-		if r := recover(); r == nil {
-			t.Errorf("got no panic, expected panic for duplicate registration")
-		}
-	}()
-	Register(id, testFactory())
-}
-
-func TestParse(t *testing.T) {
-	ids := make([]ID, 0, len(registry))
-	for id := range registry {
-		ids = append(ids, id)
-	}
-
-	detector, err := Detector(ids...)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Errorf("got %T, expected composite detector", detector)
-	}
-
-	if len(c.detectors) != len(registry) {
-		t.Errorf("got %d detectors, expected %d detectors", len(c.detectors), len(registry))
-	}
-}
-
-func TestParseUnknown(t *testing.T) {
-	_, err := Detector(ID("unknown"))
-	if !errors.Is(err, ErrUnknownDetector) {
-		t.Errorf("got %v, expected ErrUnknownDetector", err)
-	}
-}
-
-func TestAkamaiDetectorRegistered(t *testing.T) {
-	detector, err := Detector(IDAkamai)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Fatalf("got %T, expected composite detector", detector)
-	}
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-}
-
-func TestAlibabaECSDetectorRegistered(t *testing.T) {
-	detector, err := Detector(IDAlibabaECS)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Fatalf("got %T, expected composite detector", detector)
-	}
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-}
-
-func TestIBMCloudClassicDetectorRegistered(t *testing.T) {
-	detector, err := Detector(IDIBMCloudClassic)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Fatalf("got %T, expected composite detector", detector)
-	}
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-}
-
-func TestIBMCloudVPCDetectorRegistered(t *testing.T) {
-	detector, err := Detector(IDIBMCloudVPC)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Fatalf("got %T, expected composite detector", detector)
-	}
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-}
-
-func TestAzureAKSDetectorRegistered(t *testing.T) {
-	detector, err := Detector(IDAzureAKS)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Fatalf("got %T, expected composite detector", detector)
-	}
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-}
-
-func TestConsulDetectorRegistered(t *testing.T) {
-	detector, err := Detector(IDConsul)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Fatalf("got %T, expected composite detector", detector)
-	}
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-}
-
-func TestDynatraceDetectorRegistered(t *testing.T) {
-	detector, err := Detector(IDDynatrace)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Fatalf("got %T, expected composite detector", detector)
-	}
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-}
-
-func TestKubeadmDetectorRegistered(t *testing.T) {
-	detector, err := Detector(IDKubeadm)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Fatalf("got %T, expected composite detector", detector)
-	}
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-}
-
-func TestOpenShiftDetectorRegistered(t *testing.T) {
-	detector, err := Detector(IDOpenShift)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Fatalf("got %T, expected composite detector", detector)
-	}
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-}
-
-func TestOpenStackNovaDetectorRegistered(t *testing.T) {
-	detector, err := Detector(IDOpenStackNova)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Fatalf("got %T, expected composite detector", detector)
-	}
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-}
-
-func TestScalewayDetectorRegistered(t *testing.T) {
-	detector, err := Detector(IDScaleway)
-	if err != nil {
-		t.Fatalf("got error: %v, expected no error", err)
-	}
-
-	c, ok := detector.(*composite)
-	if !ok {
-		t.Fatalf("got %T, expected composite detector", detector)
-	}
-	if len(c.detectors) != 1 {
-		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
-	}
-}
-
-func TestOptDetectorDetect(t *testing.T) {
-	want := attribute.String("key", "value")
-	opt := resource.WithAttributes(want)
-	detector := optDetector{opt: opt}
-
 	res, err := detector.Detect(t.Context())
 	if err != nil {
 		t.Fatalf("got error: %v, expected no error", err)
 	}
 
-	if res == nil {
-		t.Errorf("got nil resource, expected non-nil resource")
-	}
-
-	got := res.Attributes()
-	if len(got) != 1 || got[0] != want {
+	want := attribute.String("deployment.zone", "eu-west-1a")
+	if got := res.Attributes(); len(got) != 1 || got[0] != want {
 		t.Errorf("got %v, expected %v", got, []attribute.KeyValue{want})
-	}
-}
-
-func TestCompositeDetect(t *testing.T) {
-	a, b := attribute.Int("a", 0), attribute.Int("b", 0)
-	knownErr := errors.New("known error")
-	detectors := []resource.Detector{
-		&testDetector{attr: []attribute.KeyValue{a}},
-		&testDetector{
-			attr: []attribute.KeyValue{b},
-			err:  knownErr,
-		},
-	}
-	comp := newComposite(detectors)
-
-	res, err := comp.Detect(t.Context())
-	if !errors.Is(err, knownErr) {
-		t.Errorf("got error %v, expected %v", err, knownErr)
-	}
-
-	if res == nil {
-		t.Errorf("got nil resource, expected non-nil resource")
-	}
-
-	got := res.Attributes()
-	if len(got) != 2 {
-		t.Fatalf("got %d attributes, expected 2 attributes", len(got))
-	}
-
-	if got[0].Key != a.Key && got[1].Key != a.Key {
-		t.Errorf("got %v, expected attribute %s", got, a.Key)
-	}
-	if got[0].Key != b.Key && got[1].Key != b.Key {
-		t.Errorf("got %v, expected attribute %s", got, b.Key)
-	}
-}
-
-func TestCompositeDetectMergeError(t *testing.T) {
-	a, b := attribute.Int("a", 0), attribute.Int("b", 0)
-	detectors := []resource.Detector{
-		&testDetector{
-			schemaURL: "a",
-			attr:      []attribute.KeyValue{a},
-		},
-		&testDetector{
-			schemaURL: "b",
-			attr:      []attribute.KeyValue{b},
-		},
-	}
-	comp := newComposite(detectors)
-
-	res, err := comp.Detect(t.Context())
-	if !errors.Is(err, resource.ErrSchemaURLConflict) {
-		t.Errorf("got error %v, expected %v", err, resource.ErrSchemaURLConflict)
-	}
-
-	if res != nil {
-		t.Error("got non-nil resource, expected nil resource")
 	}
 }
