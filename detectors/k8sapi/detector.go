@@ -60,7 +60,10 @@ func WithAttributeFilter(filter attribute.Filter) Option {
 }
 
 // WithHostID enables detection of the host.id resource attribute from the
-// machine ID reported by the node's kubelet.
+// machine ID reported by the node's kubelet. Semantic conventions prefer a
+// cloud provider instance ID over the machine ID for host.id, so when combined
+// with cloud detectors (e.g. ec2, gcp, azurevm), pass this detector before
+// them to [resource.WithDetectors].
 func WithHostID() Option {
 	return optionFunc(func(c *config) { c.hostID = true })
 }
