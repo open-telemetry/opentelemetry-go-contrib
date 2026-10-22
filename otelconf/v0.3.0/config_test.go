@@ -1192,3 +1192,56 @@ func TestRepeatedJSONDecodeAdditionalProperties(t *testing.T) {
 		})
 	}
 }
+
+func TestRepeatedYAMLDecodeExplicitAdditionalProperties(t *testing.T) {
+	tests := []struct {
+		name   string
+		target any
+	}{
+		{
+			name:   "SpanExporter",
+			target: &SpanExporter{},
+		},
+		{
+			name:   "LogRecordExporter",
+			target: &LogRecordExporter{},
+		},
+		{
+			name:   "Propagator",
+			target: &Propagator{},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// Decode explicit properties first, then an unknown field.
+			first := []byte("additionalproperties:\n  existing: value\n")
+			second := []byte("custom:\n  endpoint: localhost\n")
+
+			require.NoError(t, yaml.Unmarshal(first, tt.target))
+			require.NoError(t, yaml.Unmarshal(second, tt.target))
+
+			switch got := tt.target.(type) {
+			case *SpanExporter:
+				assertYamlV2Properties(t, got.AdditionalProperties)
+			case *LogRecordExporter:
+				assertYamlV2Properties(t, got.AdditionalProperties)
+			case *Propagator:
+				assertYamlV2Properties(t, got.AdditionalProperties)
+			}
+		})
+	}
+}
+
+func assertYamlV2Properties(t *testing.T, got any) {
+	t.Helper()
+
+	properties, ok := got.(map[any]any)
+	require.True(t, ok, "expected YAML v2 map[any]any, got %T", got)
+	assert.Equal(t, "value", properties["existing"])
+	assert.Equal(
+		t,
+		map[any]any{"endpoint": "localhost"},
+		properties["custom"],
+	)
+}
