@@ -103,8 +103,10 @@ func defaultSpanNameFunc(routeName string, r *http.Request) string {
 	return normalizeMethod(r.Method, "HTTP") + " " + routeName
 }
 
-// normalizeMethod returns m if it is a known HTTP method, otherwise fallback.
+// normalizeMethod returns the upper-cased m if it is a known HTTP method,
+// otherwise fallback. Upper-casing matches how http.request.method is recorded.
 func normalizeMethod(m, fallback string) string {
+	m = strings.ToUpper(m)
 	if _, ok := validMethods[m]; !ok {
 		return fallback
 	}
@@ -141,9 +143,8 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if routeStr == "" {
 		// routeStr is recorded as http.route on metrics, so it must not
-		// carry the raw, client-controlled method. It is upper-cased to
-		// match http.request.method.
-		method := normalizeMethod(strings.ToUpper(r.Method), "_OTHER")
+		// carry the raw, client-controlled method.
+		method := normalizeMethod(r.Method, "_OTHER")
 		routeStr = fmt.Sprintf("HTTP %s route not found", method)
 	} else {
 		rAttr := tw.semconv.Route(routeStr)
