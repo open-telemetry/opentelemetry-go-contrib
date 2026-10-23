@@ -40,6 +40,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Record client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the request body is read to EOF but never closed, as done by retrying `RoundTripper`s such as `go-retryablehttp`. (#10008)
 - Reduce heap allocations on `Inject` in `go.opentelemetry.io/contrib/propagators/b3`. (#9870)
 - Type `AdditionalProperties` as `map[string]any` in the generated config structs of `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x` so `mapstructure`'s `,remain` decoder no longer fails on a bare `interface{}`. (#8850)
 - Prevent recording negative metric values for unknown request/response sizes in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#9433)
