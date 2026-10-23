@@ -30,6 +30,7 @@ var (
 	errClusterNameUnavailable   = errors.New("EKS cluster name is unavailable")
 	errLiveIssuerUnavailable    = errors.New("live EKS OIDC issuer is unavailable")
 	errAWSConfigUnavailable     = errors.New("AWS configuration is unavailable")
+	errAWSRegionUnavailable     = errors.New("AWS Region is unavailable")
 	errDescribeClusterFailed    = errors.New("EKS DescribeCluster failed")
 	errClusterResponseMissing   = errors.New("EKS DescribeCluster response has no cluster")
 	errClusterIssuerUnavailable = errors.New("EKS DescribeCluster response has no OIDC issuer")
@@ -59,11 +60,18 @@ type eksClient interface {
 	DescribeCluster(context.Context, *eks.DescribeClusterInput, ...func(*eks.Options)) (*eks.DescribeClusterOutput, error)
 }
 
+type clientLoad struct {
+	done   chan struct{}
+	client eksClient
+	err    error
+}
+
 type clusterARNDetector struct {
 	utils oidcIssuerProvider
 
-	mu     sync.Mutex
-	client eksClient
+	mu      sync.Mutex
+	client  eksClient
+	loading *clientLoad
 }
 
 var (
@@ -120,17 +128,47 @@ func (d *clusterARNDetector) detect(ctx context.Context, clusterName string) (st
 
 func (d *clusterARNDetector) getClient(ctx context.Context) (eksClient, error) {
 	d.mu.Lock()
-	defer d.mu.Unlock()
 	if d.client != nil {
-		return d.client, nil
+		client := d.client
+		d.mu.Unlock()
+		return client, nil
+	}
+	if d.loading != nil {
+		loading := d.loading
+		d.mu.Unlock()
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-loading.done:
+			if err := ctx.Err(); err != nil {
+				return nil, err
+			}
+			return loading.client, loading.err
+		}
 	}
 
+	loading := &clientLoad{done: make(chan struct{})}
+	d.loading = loading
+	d.mu.Unlock()
+
 	cfg, err := loadAWSConfig(ctx)
-	if err != nil {
-		return nil, err
+	if err == nil && cfg.Region == "" {
+		err = errAWSRegionUnavailable
 	}
-	d.client = newEKSClient(cfg)
-	return d.client, nil
+	if err == nil {
+		loading.client = newEKSClient(cfg)
+	}
+	loading.err = err
+
+	d.mu.Lock()
+	if err == nil {
+		d.client = loading.client
+	}
+	d.loading = nil
+	close(loading.done)
+	d.mu.Unlock()
+
+	return loading.client, loading.err
 }
 
 func normalizeIssuer(issuer string) string {

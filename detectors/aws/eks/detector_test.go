@@ -334,3 +334,15 @@ func TestFileExists(t *testing.T) {
 		})
 	}
 }
+
+func TestGetClusterNameTrimsWhitespace(t *testing.T) {
+	m := new(MockDetectorUtils)
+	m.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(
+		map[string]string{"cluster.name": "  my-cluster\n"}, nil,
+	)
+
+	name, err := getClusterName(t.Context(), m)
+
+	require.NoError(t, err)
+	assert.Equal(t, "my-cluster", name)
+}
