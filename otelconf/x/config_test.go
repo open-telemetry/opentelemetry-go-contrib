@@ -368,6 +368,26 @@ func TestNewSDK(t *testing.T) {
 			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
 		{
+			name: "invalid-log-level",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: new(SeverityNumber("invalid")),
+				}),
+			},
+			wantErr: newErrInvalid(`unsupported log_level "invalid"`),
+		},
+		{
+			name: "empty-log-level",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: new(SeverityNumber("")),
+				}),
+			},
+			wantErr: newErrInvalid(`unsupported log_level ""`),
+		},
+		{
 			name: "with-configuration",
 			cfg: []ConfigurationOption{
 				WithContext(t.Context()),
@@ -402,7 +422,13 @@ func TestNewSDK(t *testing.T) {
 	}
 	for _, tt := range tests {
 		sdk, err := NewSDK(tt.cfg...)
-		require.Equal(t, tt.wantErr, err)
+
+		if tt.wantErr != nil {
+			require.Error(t, err)
+			continue
+		}
+		require.NoError(t, err)
+
 		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
 		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
 		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
@@ -20,6 +21,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 	yaml "go.yaml.in/yaml/v3"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/diaglogger"
 
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
@@ -118,6 +121,18 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, nil
 	}
 
+	level := string(SeverityNumberInfo)
+	if o.opentelemetryConfig.LogLevel != nil {
+		level = string(*o.opentelemetryConfig.LogLevel)
+	}
+
+	diagnosticLogger, err := diaglogger.New(level)
+	if err != nil {
+		return noopSDK, newErrInvalid(err.Error())
+	}
+
+	otel.SetLogger(diagnosticLogger)
+
 	r, err := newResource(o.ctx, o.opentelemetryConfig.Resource)
 	if err != nil {
 		return noopSDK, err
@@ -143,7 +158,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, err
 	}
 
-	return SDK{
+	sdk := SDK{
 		meterProvider:  mp,
 		tracerProvider: tp,
 		loggerProvider: lp,
@@ -151,7 +166,9 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		shutdown: func(ctx context.Context) error {
 			return errors.Join(mpShutdown(ctx), tpShutdown(ctx), lpShutdown(ctx))
 		},
-	}, nil
+	}
+
+	return sdk, nil
 }
 
 // ConfigurationOption configures options for providers.
