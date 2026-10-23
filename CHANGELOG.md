@@ -1989,10 +1989,9 @@ First official tagged release of `contrib` repository.
 - Prefix support for dogstatsd (#34)
 - Update Go Runtime package to use batch observer (#44)
 
-[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.47.0...HEAD
-[1.47.0/2.6.0/0.72.0/0.38.0/0.27.0/0.21.0/0.17.0/0.19.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.47.0
 [Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.48.0...HEAD
 [1.48.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.48.0
+[1.47.0/2.6.0/0.72.0/0.38.0/0.27.0/0.21.0/0.17.0/0.19.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.47.0
 [1.46.0/2.5.3/0.71.0/0.37.3/0.26.0/0.20.1/0.16.3/0.18.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.46.0
 [1.45.0/2.5.2/0.70.0/0.37.2/0.25.0/0.20.0/0.16.2/0.17.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.45.0
 [1.44.0/2.5.1/0.69.0/0.37.1/0.24.0/0.19.0/0.16.1/0.16.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.44.0
