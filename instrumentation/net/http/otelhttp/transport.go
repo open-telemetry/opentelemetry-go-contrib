@@ -243,7 +243,9 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	ctx, span := tracer.Start(r.Context(), t.spanNameFormatter("", r), t.spanStartOptions...)
 
 	if t.clientTrace != nil {
-		ctx = httptrace.WithClientTrace(ctx, t.clientTrace(ctx))
+		traceCtx, cancelTrace := context.WithCancel(ctx)
+		defer cancelTrace()
+		ctx = httptrace.WithClientTrace(ctx, t.clientTrace(traceCtx))
 	}
 
 	labeler, found := ClientLabelerFromContext(ctx)
