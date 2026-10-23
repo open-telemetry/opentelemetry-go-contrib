@@ -7,8 +7,8 @@ require (
 	go.opentelemetry.io/contrib/detectors/akamai v0.19.0
 	go.opentelemetry.io/contrib/detectors/alibaba/ecs v0.19.0
 	go.opentelemetry.io/contrib/detectors/aws/ec2/v2 v2.6.0
-	go.opentelemetry.io/contrib/detectors/aws/ecs v1.47.0
-	go.opentelemetry.io/contrib/detectors/aws/eks v1.47.0
+	go.opentelemetry.io/contrib/detectors/aws/ecs v1.48.0
+	go.opentelemetry.io/contrib/detectors/aws/eks v1.48.0
 	go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk v0.19.0
 	go.opentelemetry.io/contrib/detectors/aws/lambda v0.72.0
 	go.opentelemetry.io/contrib/detectors/azure/azureaks v0.19.0
@@ -17,7 +17,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/consul v0.19.0
 	go.opentelemetry.io/contrib/detectors/docker v0.19.0
 	go.opentelemetry.io/contrib/detectors/dynatrace v0.19.0
-	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
+	go.opentelemetry.io/contrib/detectors/gcp v1.48.0
 	go.opentelemetry.io/contrib/detectors/hetzner v0.19.0
 	go.opentelemetry.io/contrib/detectors/ibmcloud/classic v0.19.0
 	go.opentelemetry.io/contrib/detectors/ibmcloud/vpc v0.19.0

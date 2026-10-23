@@ -4,4 +4,4 @@
 package prometheus
 
 // Version is the current release version of the prometheus bridge.
-const Version = "0.72.0"
+const Version = "1.48.0"
