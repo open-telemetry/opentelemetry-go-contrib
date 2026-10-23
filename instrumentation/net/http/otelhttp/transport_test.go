@@ -903,6 +903,73 @@ func TestWithHTTPTrace(t *testing.T) {
 	assert.Equal(t, spans[1].SpanContext().SpanID(), spans[2].Parent().SpanID())
 }
 
+func TestClientTraceContextCanceledAfterDialFailure(t *testing.T) {
+	dialErr := errors.New("dial failed")
+	base := &http.Transport{
+		DialContext: func(context.Context, string, string) (net.Conn, error) {
+			return nil, dialErr
+		},
+	}
+	t.Cleanup(base.CloseIdleConnections)
+
+	var traceContexts []context.Context
+	transport := NewTransport(base, WithClientTrace(func(ctx context.Context) *httptrace.ClientTrace {
+		traceContexts = append(traceContexts, ctx)
+		return &httptrace.ClientTrace{}
+	}))
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com", http.NoBody)
+	require.NoError(t, err)
+	resp, err := (&http.Client{Transport: transport}).Do(req)
+	require.ErrorIs(t, err, dialErr)
+	if resp != nil {
+		require.NoError(t, resp.Body.Close())
+	}
+
+	require.Len(t, traceContexts, 1)
+	require.ErrorIs(t, traceContexts[0].Err(), context.Canceled)
+	require.NoError(t, req.Context().Err())
+}
+
+func TestClientTraceContextCanceledForEachRedirectRoundTrip(t *testing.T) {
+	const redirectURL = "http://unavailable.invalid:12345/final"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, redirectURL, http.StatusFound)
+	}))
+	t.Cleanup(server.Close)
+
+	base := &http.Transport{
+		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			if address == "unavailable.invalid:12345" {
+				return nil, errors.New("redirect target unavailable")
+			}
+			return (&net.Dialer{}).DialContext(ctx, network, address)
+		},
+	}
+	t.Cleanup(base.CloseIdleConnections)
+
+	var traceContexts []context.Context
+	transport := NewTransport(base, WithClientTrace(func(ctx context.Context) *httptrace.ClientTrace {
+		traceContexts = append(traceContexts, ctx)
+		return &httptrace.ClientTrace{}
+	}))
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, server.URL, http.NoBody)
+	require.NoError(t, err)
+	resp, err := (&http.Client{Transport: transport}).Do(req)
+	require.Error(t, err)
+	if resp != nil {
+		require.NoError(t, resp.Body.Close())
+	}
+
+	require.Len(t, traceContexts, 2)
+	for _, ctx := range traceContexts {
+		require.ErrorIs(t, ctx.Err(), context.Canceled)
+	}
+	require.NoError(t, req.Context().Err())
+}
+
 func TestTransportMetrics(t *testing.T) {
 	requestBody := []byte("john")
 	responseBody := []byte("Hello, world!")
