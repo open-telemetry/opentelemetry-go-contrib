@@ -203,7 +203,7 @@ func (HTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValue)
 }
 
 func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
-	num := 4
+	num := len(additionalAttributes) + 2
 	var h string
 	if req.URL != nil {
 		h = req.URL.Host
