@@ -63,6 +63,95 @@ func TestUnmarshalSpanExporterInvalidData(t *testing.T) {
 	assert.ErrorIs(t, err, newErrUnmarshal(&SpanExporter{}))
 }
 
+func TestUnmarshalCustomSpanExporter(t *testing.T) {
+	want := SpanExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{
+		"custom": {
+			"endpoint": "http://localhost:4318"
+		}
+	}`)
+	yamlConfig := []byte(`custom:
+  endpoint: http://localhost:4318
+`)
+
+	var fromJSON SpanExporter
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML SpanExporter
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalCustomLogRecordExporter(t *testing.T) {
+	want := LogRecordExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{"custom":{"endpoint":"http://localhost:4318"}}`)
+	yamlConfig := []byte("custom:\n  endpoint: http://localhost:4318\n")
+
+	var fromJSON LogRecordExporter
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML LogRecordExporter
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalCustomTextMapPropagator(t *testing.T) {
+	want := TextMapPropagator{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"header": "x-trace-id",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{"custom":{"header":"x-trace-id"}}`)
+	yamlConfig := []byte("custom:\n  header: x-trace-id\n")
+
+	var fromJSON TextMapPropagator
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML TextMapPropagator
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalCustomSpanExporterYAMLMergeKey(t *testing.T) {
+	input := []byte(`
+<<: {custom: {endpoint: http://localhost:4318}}
+`)
+
+	var got SpanExporter
+	err := yaml.Unmarshal(input, &got)
+	require.NoError(t, err)
+
+	want := SpanExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	require.Equal(t, want, got)
+}
+
 func TestUnmarshalTextMapPropagator(t *testing.T) {
 	for _, tt := range []struct {
 		name                  string
@@ -504,12 +593,24 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 				},
 				{
 					Batch: &BatchLogRecordProcessor{
-						Exporter: LogRecordExporter{},
+						Exporter: LogRecordExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "file:///var/log/logs.jsonl",
+								},
+							},
+						},
 					},
 				},
 				{
 					Batch: &BatchLogRecordProcessor{
-						Exporter: LogRecordExporter{},
+						Exporter: LogRecordExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "stdout",
+								},
+							},
+						},
 					},
 				},
 				{
@@ -750,12 +851,24 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 				},
 				{
 					Batch: &BatchSpanProcessor{
-						Exporter: SpanExporter{},
+						Exporter: SpanExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "file:///var/log/traces.jsonl",
+								},
+							},
+						},
 					},
 				},
 				{
 					Batch: &BatchSpanProcessor{
-						Exporter: SpanExporter{},
+						Exporter: SpanExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "stdout",
+								},
+							},
+						},
 					},
 				},
 				{

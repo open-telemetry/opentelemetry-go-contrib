@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -2517,5 +2518,128 @@ func TestUnmarshalResourceJson(t *testing.T) {
 			assert.ErrorIs(t, err, tt.wantErrT)
 			assert.Equal(t, tt.wantResource, r)
 		})
+	}
+}
+
+func TestUnmarshalCustomSpanExporter(t *testing.T) {
+	want := SpanExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{"custom":{"endpoint":"http://localhost:4318"}}`)
+	yamlConfig := []byte("custom:\n  endpoint: http://localhost:4318\n")
+
+	var fromJSON SpanExporter
+	if err := json.Unmarshal(jsonConfig, &fromJSON); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, fromJSON) {
+		t.Fatalf("JSON: got %#v, want %#v", fromJSON, want)
+	}
+
+	var fromYAML SpanExporter
+	if err := yaml.Unmarshal(yamlConfig, &fromYAML); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, fromYAML) {
+		t.Fatalf("YAML: got %#v, want %#v", fromYAML, want)
+	}
+
+	mergedYAML := []byte(
+		"<<: {custom: {endpoint: http://localhost:4318}}\n",
+	)
+
+	var fromMergedYAML SpanExporter
+	if err := yaml.Unmarshal(mergedYAML, &fromMergedYAML); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, fromMergedYAML) {
+		t.Fatalf("merged YAML: got %#v, want %#v", fromMergedYAML, want)
+	}
+}
+
+func TestUnmarshalCustomLogRecordExporter(t *testing.T) {
+	want := LogRecordExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{"custom":{"endpoint":"http://localhost:4318"}}`)
+	yamlConfig := []byte("custom:\n  endpoint: http://localhost:4318\n")
+
+	var fromJSON LogRecordExporter
+	if err := json.Unmarshal(jsonConfig, &fromJSON); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, fromJSON) {
+		t.Fatalf("JSON: got %#v, want %#v", fromJSON, want)
+	}
+
+	var fromYAML LogRecordExporter
+	if err := yaml.Unmarshal(yamlConfig, &fromYAML); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, fromYAML) {
+		t.Fatalf("YAML: got %#v, want %#v", fromYAML, want)
+	}
+
+	mergedYAML := []byte(
+		"<<: {custom: {endpoint: http://localhost:4318}}\n",
+	)
+
+	var fromMergedYAML LogRecordExporter
+	if err := yaml.Unmarshal(mergedYAML, &fromMergedYAML); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, fromMergedYAML) {
+		t.Fatalf("merged YAML: got %#v, want %#v", fromMergedYAML, want)
+	}
+}
+
+func TestUnmarshalCustomTextMapPropagator(t *testing.T) {
+	want := TextMapPropagator{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"header": "x-trace-id",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{"custom":{"header":"x-trace-id"}}`)
+	yamlConfig := []byte("custom:\n  header: x-trace-id\n")
+
+	var fromJSON TextMapPropagator
+	if err := json.Unmarshal(jsonConfig, &fromJSON); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, fromJSON) {
+		t.Fatalf("JSON: got %#v, want %#v", fromJSON, want)
+	}
+
+	var fromYAML TextMapPropagator
+	if err := yaml.Unmarshal(yamlConfig, &fromYAML); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, fromYAML) {
+		t.Fatalf("YAML: got %#v, want %#v", fromYAML, want)
+	}
+
+	mergedYAML := []byte(
+		"<<: {custom: {header: x-trace-id}}\n",
+	)
+
+	var fromMergedYAML TextMapPropagator
+	if err := yaml.Unmarshal(mergedYAML, &fromMergedYAML); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(want, fromMergedYAML) {
+		t.Fatalf("merged YAML: got %#v, want %#v", fromMergedYAML, want)
 	}
 }

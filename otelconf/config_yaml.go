@@ -118,6 +118,17 @@ func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
 	if hasYAMLMapKey(node, "console") && plain.Console == nil {
 		plain.Console = ConsoleExporter{}
 	}
+
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp_grpc")
+	delete(raw, "otlp_http")
+	plain.AdditionalProperties = unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
+
 	*j = SpanExporter(plain)
 	return nil
 }
@@ -133,6 +144,17 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 	if hasYAMLMapKey(node, "console") && plain.Console == nil {
 		plain.Console = ConsoleExporter{}
 	}
+
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp_grpc")
+	delete(raw, "otlp_http")
+	plain.AdditionalProperties = unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
+
 	*j = LogRecordExporter(plain)
 	return nil
 }
@@ -168,6 +190,23 @@ func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
 	if hasYAMLMapKey(node, "tracecontext") && plain.Tracecontext == nil {
 		plain.Tracecontext = TraceContextPropagator{}
 	}
+
+	var raw map[string]any
+	if err := node.Decode(&raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "b3")
+	delete(raw, "b3multi")
+	delete(raw, "baggage")
+	delete(raw, "jaeger")
+	delete(raw, "ottrace")
+	delete(raw, "tracecontext")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
 	*j = TextMapPropagator(plain)
 	return nil
 }

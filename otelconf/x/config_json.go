@@ -443,6 +443,18 @@ func (j *SpanExporter) UnmarshalJSON(b []byte) error {
 		}
 		sh.Plain.Console = c
 	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp_file/development")
+	delete(raw, "otlp_grpc")
+	delete(raw, "otlp_http")
+
+	sh.AdditionalProperties = unmarshalAdditionalProperties(raw, sh.AdditionalProperties)
 	*j = SpanExporter(sh.Plain)
 	return nil
 }
@@ -467,6 +479,18 @@ func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
 		}
 		sh.Plain.Console = c
 	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp_file/development")
+	delete(raw, "otlp_grpc")
+	delete(raw, "otlp_http")
+
+	sh.AdditionalProperties = unmarshalAdditionalProperties(raw, sh.AdditionalProperties)
 	*j = LogRecordExporter(sh.Plain)
 	return nil
 }
@@ -535,6 +559,20 @@ func (j *TextMapPropagator) UnmarshalJSON(b []byte) error {
 		}
 		sh.Plain.Tracecontext = p
 	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "b3")
+	delete(raw, "b3multi")
+	delete(raw, "baggage")
+	delete(raw, "jaeger")
+	delete(raw, "ottrace")
+	delete(raw, "tracecontext")
+
+	sh.AdditionalProperties = unmarshalAdditionalProperties(raw, sh.AdditionalProperties)
 
 	*j = TextMapPropagator(sh.Plain)
 	return nil
