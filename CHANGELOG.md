@@ -65,6 +65,28 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
+## [1.48.0] - 2026-10-23
+
+### Added
+
+- Promote `go.opentelemetry.io/contrib/bridges/prometheus` to stable v1. (#10012)
+- Add Bare Metal Solution detection, GCE Managed Instance Group attributes, Cloud Run Worker Pool support, and `WithGKEHostType` options to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
+
+### Changed
+
+- Reduce heap allocations and latency during context injection in `go.opentelemetry.io/contrib/propagators/aws/xray`. (#9938)
+- Reduce allocations during context injection in `go.opentelemetry.io/contrib/propagators/jaeger`. (#9918)
+
+### Fixed
+
+- Reduce heap allocations on `Inject` in `go.opentelemetry.io/contrib/propagators/b3`. (#9870)
+- Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray`. (#9879)
+- Replace inherited debug and deferred sampling flags when extracting a new B3 context in `go.opentelemetry.io/contrib/propagators/b3`. (#9864)
+- Preserve explicit Unix epoch timestamps (`TimestampMs = 0`) in `go.opentelemetry.io/contrib/bridges/prometheus`. (#9837)
+- Replace inherited debug state when extracting a valid header in `go.opentelemetry.io/contrib/propagators/jaeger`. (#9898)
+- Bound Kubernetes ConfigMap requests in `go.opentelemetry.io/contrib/detectors/aws/eks` with a 10-second timeout. (#9419)
+
+
 ## [1.47.0/2.6.0/0.72.0/0.38.0/0.27.0/0.21.0/0.17.0/0.19.0] - 2026-10-03
 
 ### Added
@@ -1969,6 +1991,8 @@ First official tagged release of `contrib` repository.
 
 [Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.47.0...HEAD
 [1.47.0/2.6.0/0.72.0/0.38.0/0.27.0/0.21.0/0.17.0/0.19.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.47.0
+[Unreleased]: https://github.com/open-telemetry/opentelemetry-go-contrib/compare/v1.48.0...HEAD
+[1.48.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.48.0
 [1.46.0/2.5.3/0.71.0/0.37.3/0.26.0/0.20.1/0.16.3/0.18.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.46.0
 [1.45.0/2.5.2/0.70.0/0.37.2/0.25.0/0.20.0/0.16.2/0.17.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.45.0
 [1.44.0/2.5.1/0.69.0/0.37.1/0.24.0/0.19.0/0.16.1/0.16.0]: https://github.com/open-telemetry/opentelemetry-go-contrib/releases/tag/v1.44.0
