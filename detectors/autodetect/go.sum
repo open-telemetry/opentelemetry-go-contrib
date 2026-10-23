@@ -145,8 +145,8 @@ github.com/hashicorp/memberlist v0.7.0 h1:JfqTDFUIAzDEYKMhSc3Gpwe05zvSU3/cYtiZ3y
 github.com/hashicorp/memberlist v0.7.0/go.mod h1:Qar5D5CgaQAb74gk8Ph/jVcATn4epSDOHOvbSKOLHwg=
 github.com/hashicorp/serf v0.11.0 h1:8PbIr0pQOHs5hpBAkbX0teVLckuLvG3qIZm7hZJO0gc=
 github.com/hashicorp/serf v0.11.0/go.mod h1:k7zXXBvdNnDT5F1xrC0uMJB/0FWf6erElwZNQq/SsBA=
-github.com/hetznercloud/hcloud-go/v2 v2.52.0 h1:BrQSFNuPhPZrWNdXKSEACX1hcS1TRzKSHMfFcXYRhDA=
-github.com/hetznercloud/hcloud-go/v2 v2.52.0/go.mod h1:J9QH6j8pRH0K3+HlqgOlQ8abXagWTD/GpTkfra2et+g=
+github.com/hetznercloud/hcloud-go/v2 v2.53.0 h1:GC8U/52bG7gTDB0pnwKrXcG0JsR5qnmVwuYnjHitcug=
+github.com/hetznercloud/hcloud-go/v2 v2.53.0/go.mod h1:K0kt2xJQO5cRpoU/JPy5JLRCG0Ua0hKyiawu2z2pkOY=
 github.com/jarcoal/httpmock v1.4.2 h1:dKwiP/9zITCPfBLsDn3kchbSOu16JrnxtVEmL0fPRcI=
 github.com/jarcoal/httpmock v1.4.2/go.mod h1:ftW1xULwo+j0R0JJkJIIi7UKigZUXCLLanykgjwBXL0=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
