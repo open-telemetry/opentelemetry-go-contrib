@@ -37,8 +37,10 @@ func (fn optionFunc) apply(cfg config) config {
 	return fn(cfg)
 }
 
-// WithGatherer configures which prometheus Gatherer the Bridge will gather
-// from. If no registerer is used the prometheus DefaultGatherer is used.
+// WithGatherer adds a Prometheus Gatherer for the bridge to collect metrics
+// from. If no WithGatherer option is provided, the bridge uses
+// prometheus.DefaultGatherer. Multiple WithGatherer options may be provided
+// to collect metrics from multiple gatherers.
 func WithGatherer(gatherer prometheus.Gatherer) Option {
 	return optionFunc(func(cfg config) config {
 		cfg.gatherers = append(cfg.gatherers, gatherer)

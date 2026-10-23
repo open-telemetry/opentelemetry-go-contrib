@@ -38,6 +38,10 @@ type producer struct {
 // NewMetricProducer returns a metric.Producer that fetches metrics from
 // Prometheus. This can be used to allow Prometheus instrumentation to be
 // added to an OpenTelemetry export pipeline.
+//
+// Errors encountered while gathering or converting metrics are reported
+// through the OpenTelemetry error handler rather than returned by Produce.
+// Processing continues with other gatherers and metric families when possible.
 func NewMetricProducer(opts ...Option) metric.Producer {
 	cfg := newConfig(opts...)
 	return &producer{

@@ -10,7 +10,7 @@ import (
 )
 
 func ExampleNewMetricProducer() {
-	// Create a Promethes bridge "Metric Producer" which adds metrics from the
+	// Create a Prometheus bridge "Metric Producer" which adds metrics from the
 	// prometheus.DefaultGatherer. Add the WithGatherer option to add metrics
 	// from other registries.
 	bridge := prometheus.NewMetricProducer()
