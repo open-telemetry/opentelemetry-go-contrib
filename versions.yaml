@@ -3,10 +3,11 @@
 
 module-sets:
   stable-v1:
-    version: v1.47.0
+    version: v1.48.0
     modules:
       - go.opentelemetry.io/contrib
       - go.opentelemetry.io/contrib/tools
+      - go.opentelemetry.io/contrib/bridges/prometheus
       - go.opentelemetry.io/contrib/propagators/aws
       - go.opentelemetry.io/contrib/propagators/ot
       - go.opentelemetry.io/contrib/propagators/jaeger
@@ -21,7 +22,6 @@ module-sets:
   experimental-instrumentation:
     version: v0.72.0
     modules:
-      - go.opentelemetry.io/contrib/bridges/prometheus
       - go.opentelemetry.io/contrib/detectors/aws/lambda
       - go.opentelemetry.io/contrib/exporters/autoexport
       - go.opentelemetry.io/contrib/propagators/autoprop
