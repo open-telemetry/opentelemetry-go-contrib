@@ -32,7 +32,6 @@ body:
         - 'Instrumentation: otelhttp'
         - 'Instrumentation: otelhttptrace'
         - 'Instrumentation: otellambda'
-        - 'Instrumentation: otelmacaron'
         - 'Instrumentation: otelmongo'
         - 'Instrumentation: otelmux'
         - 'Instrumentation: otelrestful'
@@ -44,7 +43,6 @@ body:
         - 'Propagator: Jaeger'
         - 'Propagator: OpenCensus'
         - 'Propagator: OT'
-        - 'Sampler: AWS X-Ray'
         - 'Sampler: JaegerRemote'
         - 'Sampler: probability:consistent'
         - zPages
