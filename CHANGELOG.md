@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add `WithHostID` option to `go.opentelemetry.io/contrib/detectors/k8sapi` to detect the `host.id` resource attribute from the machine ID reported by the node's kubelet. (#9973)
 - Add support for the `aws.lambda` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9924)
 - Add `WithNonErrorCodes` option for `NewServerHandler` and `NewClientHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to prevent the handler from setting an error span status for specific gRPC codes. (#9209)
 - Add `go.opentelemetry.io/contrib/detectors/alibabacloud`, a new resource detector for Alibaba Cloud ECS instances and containers running on ECI, including pods on Alibaba Cloud Container Compute Service (ACS). Detects `cloud.provider`, `cloud.platform`, `cloud.region`, `cloud.availability_zone`, `cloud.account.id`, `host.id`, `host.name`, `host.type`, and `host.image.id`, matching the `alibaba/ecs` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#9905)
