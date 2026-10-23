@@ -344,10 +344,13 @@ func (j *AttributeNameValue) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &raw); err != nil {
 		return err
 	}
-	if _, ok := raw["name"]; raw != nil && !ok {
+	if raw == nil {
+		return errors.New("null AttributeNameValue is invalid")
+	}
+	if _, ok := raw["name"]; !ok {
 		return errors.New("field name in AttributeNameValue: required")
 	}
-	if _, ok := raw["value"]; raw != nil && !ok {
+	if _, ok := raw["value"]; !ok {
 		return errors.New("field value in AttributeNameValue: required")
 	}
 	type Plain AttributeNameValue
