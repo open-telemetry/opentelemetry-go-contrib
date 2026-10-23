@@ -1,6 +1,6 @@
 module go.opentelemetry.io/contrib/detectors/autodetect
 
-go 1.26.0
+go 1.26.10
 
 require (
 	github.com/stretchr/testify v1.12.1
@@ -90,7 +90,7 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/hashicorp/serf v0.11.0 // indirect
-	github.com/hetznercloud/hcloud-go/v2 v2.52.0 // indirect
+	github.com/hetznercloud/hcloud-go/v2 v2.53.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/linode/go-metadata v0.3.1 // indirect
 	github.com/mattn/go-colorable v0.1.16 // indirect
