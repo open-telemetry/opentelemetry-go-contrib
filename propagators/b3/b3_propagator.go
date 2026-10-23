@@ -128,13 +128,12 @@ func (b3 propagator) Inject(ctx context.Context, carrier propagation.TextMapCarr
 		tid := sc.TraceID()
 		sid := sc.SpanID()
 		if tid.IsValid() && sid.IsValid() {
-			var tidBuf [32]byte
-			hex.Encode(tidBuf[:], tid[:])
-			carrier.Set(b3TraceIDHeader, string(tidBuf[:]))
-
-			var sidBuf [16]byte
-			hex.Encode(sidBuf[:], sid[:])
-			carrier.Set(b3SpanIDHeader, string(sidBuf[:]))
+			var buf [48]byte
+			hex.Encode(buf[:32], tid[:])
+			hex.Encode(buf[32:], sid[:])
+			s := string(buf[:])
+			carrier.Set(b3TraceIDHeader, s[:32])
+			carrier.Set(b3SpanIDHeader, s[32:])
 		}
 
 		if debugFromContext(ctx) {
