@@ -378,6 +378,7 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 		"aws.ec2",
 		"gcp",
 		"aws.ecs",
+		"aws.lambda",
 		"aws.eks",
 		"azure.vm",
 		"container",
