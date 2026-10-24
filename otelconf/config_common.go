@@ -166,10 +166,13 @@ func unmarshalSamplerTypes(raw map[string]any, plain *Sampler) {
 
 // unmarshalMetricProducer handles opencensus metric producer unmarshaling.
 func unmarshalMetricProducer(raw map[string]any, plain *MetricProducer) {
-	// opencensus can be nil, must check and set here
 	if v, ok := raw["opencensus"]; ok && v == nil {
 		delete(raw, "opencensus")
 		plain.Opencensus = OpenCensusMetricProducer{}
+	}
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
 	}
 }
 
