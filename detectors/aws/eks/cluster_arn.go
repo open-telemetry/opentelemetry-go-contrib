@@ -45,7 +45,10 @@ var (
 
 // WithClusterARN enables detection of aws.eks.cluster.arn. The detector calls
 // EKS DescribeCluster and reports the ARN only when the returned OIDC issuer
-// matches the issuer published by the live Kubernetes API server.
+// matches the issuer published by the live Kubernetes API server. The option
+// requires cluster.name from the amazon-cloudwatch/cluster-info ConfigMap and
+// valid AWS configuration for that cluster. If the ARN cannot be established,
+// Detect returns the other EKS attributes with resource.ErrPartialResource.
 func WithClusterARN() Option {
 	return optionFunc(func(c *config) {
 		c.clusterARN = true

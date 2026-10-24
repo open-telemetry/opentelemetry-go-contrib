@@ -257,7 +257,7 @@ func getClusterName(ctx context.Context, utils detectorUtils) (string, error) {
 		return "", fmt.Errorf("getClusterName() error: %w", err)
 	}
 
-	return resp["cluster.name"], nil
+	return strings.TrimSpace(resp["cluster.name"]), nil
 }
 
 // getContainerID returns the containerID if currently running within a container.
