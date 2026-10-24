@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
 	"reflect"
 
 	"go.opentelemetry.io/otel/baggage"
@@ -175,30 +174,6 @@ func unmarshalMetricProducer(raw map[string]any, plain *MetricProducer) {
 	if len(raw) > 0 {
 		plain.AdditionalProperties = raw
 	}
-}
-
-// unmarshalAdditionalProperties preserves unknown component configuration.
-func unmarshalAdditionalProperties(
-	raw map[string]any,
-	additionalProperties map[string]any,
-) map[string]any {
-	if len(raw) == 0 {
-		return additionalProperties
-	}
-
-	// Copy existing properties so a failed or subsequent decode cannot
-	// mutate the map held by the original receiver.
-	merged := make(map[string]any, len(additionalProperties)+len(raw))
-	maps.Copy(merged, additionalProperties)
-
-	// Preserve existing values when a key appears in both maps.
-	for key, value := range raw {
-		if _, exists := merged[key]; !exists {
-			merged[key] = value
-		}
-	}
-
-	return merged
 }
 
 // validatePeriodicMetricReader handles validation for PeriodicMetricReader.

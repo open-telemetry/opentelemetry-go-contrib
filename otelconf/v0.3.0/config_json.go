@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
-	"strings"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -271,97 +270,6 @@ func (j *SimpleLogRecordProcessor) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*j = SimpleLogRecordProcessor(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *SpanExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-
-	delete(raw, "console")
-	delete(raw, "otlp")
-	delete(raw, "zipkin")
-
-	for key := range raw {
-		if strings.EqualFold(key, "additionalproperties") {
-			delete(raw, key)
-		}
-	}
-
-	type Plain SpanExporter
-	plain := Plain(*j)
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-
-	plain.AdditionalProperties = mergeAdditionalProperties(
-		plain.AdditionalProperties,
-		raw,
-	)
-
-	*j = SpanExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *LogRecordExporter) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-
-	delete(raw, "console")
-	delete(raw, "otlp")
-	for key := range raw {
-		if strings.EqualFold(key, "additionalproperties") {
-			delete(raw, key)
-		}
-	}
-
-	type Plain LogRecordExporter
-	plain := Plain(*j)
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-
-	plain.AdditionalProperties = mergeAdditionalProperties(
-		plain.AdditionalProperties,
-		raw,
-	)
-
-	*j = LogRecordExporter(plain)
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (j *Propagator) UnmarshalJSON(b []byte) error {
-	var raw map[string]any
-	if err := json.Unmarshal(b, &raw); err != nil {
-		return err
-	}
-
-	delete(raw, "composite")
-	for key := range raw {
-		if strings.EqualFold(key, "additionalproperties") {
-			delete(raw, key)
-		}
-	}
-
-	type Plain Propagator
-	plain := Plain(*j)
-	if err := json.Unmarshal(b, &plain); err != nil {
-		return err
-	}
-
-	plain.AdditionalProperties = mergeAdditionalProperties(
-		plain.AdditionalProperties,
-		raw,
-	)
-
-	*j = Propagator(plain)
 	return nil
 }
 

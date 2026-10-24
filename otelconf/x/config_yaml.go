@@ -182,7 +182,9 @@ func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
 	delete(raw, "otlp_grpc")
 	delete(raw, "otlp_http")
 
-	plain.AdditionalProperties = unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
 	*j = SpanExporter(plain)
 	return nil
 }
@@ -210,7 +212,9 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 	delete(raw, "otlp_grpc")
 	delete(raw, "otlp_http")
 
-	plain.AdditionalProperties = unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
 
 	*j = LogRecordExporter(plain)
 	return nil
@@ -261,7 +265,9 @@ func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
 	delete(raw, "ottrace")
 	delete(raw, "tracecontext")
 
-	plain.AdditionalProperties = unmarshalAdditionalProperties(raw, plain.AdditionalProperties)
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
 
 	*j = TextMapPropagator(plain)
 	return nil
