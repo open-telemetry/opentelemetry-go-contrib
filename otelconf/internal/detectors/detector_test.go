@@ -12,10 +12,11 @@ import (
 func TestOptions(t *testing.T) {
 	assert.Empty(t, Options(Detector{}))
 	assert.Len(t, Options(Detector{
-		AWSEC2:  true,
-		AWSECS:  true,
-		AWSEKS:  true,
-		AzureVM: true,
-		GCP:     true,
-	}), 5)
+		AWSEC2:    true,
+		AWSECS:    true,
+		AWSEKS:    true,
+		AWSLambda: true,
+		AzureVM:   true,
+		GCP:       true,
+	}), 6)
 }
