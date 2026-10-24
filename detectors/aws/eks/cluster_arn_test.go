@@ -371,6 +371,45 @@ func TestClusterARNClientInitialization(t *testing.T) {
 		assert.EqualValues(t, 1, newCalls.Load())
 	})
 
+	t.Run("healthy waiter survives leader cancellation", func(t *testing.T) {
+		var loadCalls atomic.Int32
+		started := make(chan struct{})
+		release := make(chan struct{})
+		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			loadCalls.Add(1)
+			select {
+			case <-started:
+			default:
+				close(started)
+			}
+			<-release
+			return aws.Config{Region: "us-west-2"}, nil
+		}
+		client := &mockEKSClient{output: describedCluster(testClusterARN, testIssuer)}
+		newEKSClient = func(aws.Config) eksClient { return client }
+		detector := &clusterARNDetector{utils: &arnTestUtils{issuer: testIssuer}}
+
+		leaderCtx, cancelLeader := context.WithTimeout(t.Context(), 20*time.Millisecond)
+		defer cancelLeader()
+		leaderDone := make(chan error, 1)
+		go func() {
+			_, err := detector.getClient(leaderCtx)
+			leaderDone <- err
+		}()
+		<-started
+
+		waiterDone := make(chan error, 1)
+		go func() {
+			_, err := detector.getClient(t.Context())
+			waiterDone <- err
+		}()
+
+		require.ErrorIs(t, <-leaderDone, context.DeadlineExceeded)
+		close(release)
+		require.NoError(t, <-waiterDone)
+		assert.EqualValues(t, 1, loadCalls.Load())
+	})
+
 	t.Run("client is initialized once", func(t *testing.T) {
 		loadCalls := 0
 		newCalls := 0
@@ -394,6 +433,43 @@ func TestClusterARNClientInitialization(t *testing.T) {
 		assert.Equal(t, 1, newCalls)
 		assert.Equal(t, 2, client.calls)
 	})
+}
+
+func TestClusterARNClientInitializationCancellation(t *testing.T) {
+	originalLoad := loadAWSConfig
+	originalNew := newEKSClient
+	t.Cleanup(func() {
+		loadAWSConfig = originalLoad
+		newEKSClient = originalNew
+	})
+
+	started := make(chan struct{})
+	release := make(chan struct{})
+	loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+		close(started)
+		<-release
+		return aws.Config{Region: "us-west-2"}, nil
+	}
+	newEKSClient = func(aws.Config) eksClient {
+		return &mockEKSClient{output: describedCluster(testClusterARN, testIssuer)}
+	}
+	detector := &clusterARNDetector{utils: &arnTestUtils{issuer: testIssuer}}
+	leaderDone := make(chan error, 1)
+	go func() {
+		_, err := detector.getClient(t.Context())
+		leaderDone <- err
+	}()
+	<-started
+
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	_, err := detector.detect(ctx, testClusterName)
+	close(release)
+	leaderErr := <-leaderDone
+
+	require.NoError(t, leaderErr)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.NotErrorIs(t, err, errAWSConfigUnavailable)
 }
 
 func TestNewResourceDetectorWithOptionsWiresClusterARN(t *testing.T) {

@@ -92,5 +92,6 @@ The OIDC request is bounded to 10 seconds. AWS configuration and
 limits the whole call, including concurrent client initialization. If identity
 cannot be established, the detector returns the normal EKS attributes with
 `resource.ErrPartialResource` and no ARN. The default constructor makes no
-additional requests. Enabling the option adds the AWS SDK dependencies to this
-module and performs one `DescribeCluster` call per detection.
+additional requests. This module now depends on the AWS SDK; enabling the option
+controls the additional requests and performs one `DescribeCluster` call per
+detection.

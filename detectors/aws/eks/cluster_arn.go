@@ -98,6 +98,9 @@ func (d *clusterARNDetector) detect(ctx context.Context, clusterName string) (st
 
 	client, err := d.getClient(awsCtx)
 	if err != nil {
+		if ctxErr := awsCtx.Err(); ctxErr != nil {
+			return "", ctxErr
+		}
 		return "", fmt.Errorf("%w: %w", errAWSConfigUnavailable, err)
 	}
 	out, err := client.DescribeCluster(awsCtx, &eks.DescribeClusterInput{Name: aws.String(clusterName)})
@@ -133,23 +136,29 @@ func (d *clusterARNDetector) getClient(ctx context.Context) (eksClient, error) {
 		d.mu.Unlock()
 		return client, nil
 	}
-	if d.loading != nil {
-		loading := d.loading
-		d.mu.Unlock()
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-loading.done:
-			if err := ctx.Err(); err != nil {
-				return nil, err
-			}
-			return loading.client, loading.err
-		}
-	}
 
-	loading := &clientLoad{done: make(chan struct{})}
-	d.loading = loading
+	loading := d.loading
+	if loading == nil {
+		loading = &clientLoad{done: make(chan struct{})}
+		d.loading = loading
+		loadCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), clusterARNTimeout)
+		go d.loadClient(loadCtx, cancel, loading)
+	}
 	d.mu.Unlock()
+
+	select {
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	case <-loading.done:
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		return loading.client, loading.err
+	}
+}
+
+func (d *clusterARNDetector) loadClient(ctx context.Context, cancel context.CancelFunc, loading *clientLoad) {
+	defer cancel()
 
 	cfg, err := loadAWSConfig(ctx)
 	if err == nil && cfg.Region == "" {
@@ -167,8 +176,6 @@ func (d *clusterARNDetector) getClient(ctx context.Context) (eksClient, error) {
 	d.loading = nil
 	close(loading.done)
 	d.mu.Unlock()
-
-	return loading.client, loading.err
 }
 
 func normalizeIssuer(issuer string) string {
