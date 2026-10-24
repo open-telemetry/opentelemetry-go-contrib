@@ -2623,3 +2623,130 @@ func TestUnmarshalCustomTextMapPropagator(t *testing.T) {
 		t.Fatalf("merged YAML: got %#v, want %#v", fromMergedYAML, want)
 	}
 }
+
+func TestAdditionalPropertiesPreserved(t *testing.T) {
+	tests := []struct {
+		name          string
+		jsonConfig    string
+		yamlConfig    string
+		unmarshalJSON func() (map[string]any, error)
+		unmarshalYAML func() (map[string]any, error)
+	}{
+		{
+			name:       "PushMetricExporter",
+			jsonConfig: `{"otlp_file/development":{"path":"/tmp/metrics.json"},"custom_component":{"enabled":true}}`,
+			yamlConfig: "otlp_file/development:\n  path: /tmp/metrics.json\ncustom_component:\n  enabled: true\n",
+			unmarshalJSON: func() (map[string]any, error) {
+				var v PushMetricExporter
+				err := json.Unmarshal([]byte(`{"otlp_file/development":{"path":"/tmp/metrics.json"},"custom_component":{"enabled":true}}`), &v)
+				return v.AdditionalProperties, err
+			},
+			unmarshalYAML: func() (map[string]any, error) {
+				var v PushMetricExporter
+				err := yaml.Unmarshal([]byte("otlp_file/development:\n  path: /tmp/metrics.json\ncustom_component:\n  enabled: true\n"), &v)
+				return v.AdditionalProperties, err
+			},
+		},
+		{
+			name:       "PullMetricExporter",
+			jsonConfig: `{"prometheus/development":{},"custom_component":{"enabled":true}}`,
+			yamlConfig: "prometheus/development: {}\ncustom_component:\n  enabled: true\n",
+			unmarshalJSON: func() (map[string]any, error) {
+				var v PullMetricExporter
+				err := json.Unmarshal([]byte(`{"prometheus/development":{},"custom_component":{"enabled":true}}`), &v)
+				return v.AdditionalProperties, err
+			},
+			unmarshalYAML: func() (map[string]any, error) {
+				var v PullMetricExporter
+				err := yaml.Unmarshal([]byte("prometheus/development: {}\ncustom_component:\n  enabled: true\n"), &v)
+				return v.AdditionalProperties, err
+			},
+		},
+		{
+			name:       "SpanProcessor",
+			jsonConfig: `{"simple":{"exporter":{"console":{}}},"custom_component":{"enabled":true}}`,
+			yamlConfig: "simple:\n  exporter:\n    console: {}\ncustom_component:\n  enabled: true\n",
+			unmarshalJSON: func() (map[string]any, error) {
+				var v SpanProcessor
+				err := json.Unmarshal([]byte(`{"simple":{"exporter":{"console":{}}},"custom_component":{"enabled":true}}`), &v)
+				return v.AdditionalProperties, err
+			},
+			unmarshalYAML: func() (map[string]any, error) {
+				var v SpanProcessor
+				err := yaml.Unmarshal([]byte("simple:\n  exporter:\n    console: {}\ncustom_component:\n  enabled: true\n"), &v)
+				return v.AdditionalProperties, err
+			},
+		},
+		{
+			name:       "LogRecordProcessor",
+			jsonConfig: `{"simple":{"exporter":{"console":{}}},"custom_component":{"enabled":true}}`,
+			yamlConfig: "simple:\n  exporter:\n    console: {}\ncustom_component:\n  enabled: true\n",
+			unmarshalJSON: func() (map[string]any, error) {
+				var v LogRecordProcessor
+				err := json.Unmarshal([]byte(`{"simple":{"exporter":{"console":{}}},"custom_component":{"enabled":true}}`), &v)
+				return v.AdditionalProperties, err
+			},
+			unmarshalYAML: func() (map[string]any, error) {
+				var v LogRecordProcessor
+				err := yaml.Unmarshal([]byte("simple:\n  exporter:\n    console: {}\ncustom_component:\n  enabled: true\n"), &v)
+				return v.AdditionalProperties, err
+			},
+		},
+		{
+			name:       "Sampler",
+			jsonConfig: `{"always_on":{},"custom_component":{"enabled":true}}`,
+			yamlConfig: "always_on: {}\ncustom_component:\n  enabled: true\n",
+			unmarshalJSON: func() (map[string]any, error) {
+				var v Sampler
+				err := json.Unmarshal([]byte(`{"always_on":{},"custom_component":{"enabled":true}}`), &v)
+				return v.AdditionalProperties, err
+			},
+			unmarshalYAML: func() (map[string]any, error) {
+				var v Sampler
+				err := yaml.Unmarshal([]byte("always_on: {}\ncustom_component:\n  enabled: true\n"), &v)
+				return v.AdditionalProperties, err
+			},
+		},
+		{
+			name:       "ExperimentalResourceDetector",
+			jsonConfig: `{"host":{},"custom_component":{"enabled":true}}`,
+			yamlConfig: "host: {}\ncustom_component:\n  enabled: true\n",
+			unmarshalJSON: func() (map[string]any, error) {
+				var v ExperimentalResourceDetector
+				err := json.Unmarshal([]byte(`{"host":{},"custom_component":{"enabled":true}}`), &v)
+				return v.AdditionalProperties, err
+			},
+			unmarshalYAML: func() (map[string]any, error) {
+				var v ExperimentalResourceDetector
+				err := yaml.Unmarshal([]byte("host: {}\ncustom_component:\n  enabled: true\n"), &v)
+				return v.AdditionalProperties, err
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name+"/JSON", func(t *testing.T) {
+			got, err := tt.unmarshalJSON()
+			require.NoError(t, err)
+			require.Contains(t, got, "custom_component")
+			assert.Equal(t, map[string]any{"enabled": true}, got["custom_component"])
+			assert.NotContains(t, got, "otlp_file/development")
+			assert.NotContains(t, got, "prometheus/development")
+			assert.NotContains(t, got, "simple")
+			assert.NotContains(t, got, "always_on")
+			assert.NotContains(t, got, "host")
+		})
+
+		t.Run(tt.name+"/YAML", func(t *testing.T) {
+			got, err := tt.unmarshalYAML()
+			require.NoError(t, err)
+			require.Contains(t, got, "custom_component")
+			assert.Equal(t, map[string]any{"enabled": true}, got["custom_component"])
+			assert.NotContains(t, got, "otlp_file/development")
+			assert.NotContains(t, got, "prometheus/development")
+			assert.NotContains(t, got, "simple")
+			assert.NotContains(t, got, "always_on")
+			assert.NotContains(t, got, "host")
+		})
+	}
+}

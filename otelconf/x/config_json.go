@@ -368,6 +368,30 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 		}
 		sh.Plain.Service = c
 	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	for _, key := range []string{
+		"aws.ec2",
+		"gcp",
+		"aws.ecs",
+		"aws.eks",
+		"azure.vm",
+		"container",
+		"host",
+		"process",
+		"service",
+	} {
+		delete(raw, key)
+	}
+
+	if len(raw) > 0 {
+		sh.Plain.AdditionalProperties = raw
+	}
+
 	*j = ExperimentalResourceDetector(sh.Plain)
 	return nil
 }
@@ -392,7 +416,45 @@ func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
 		}
 		sh.Plain.Console = &c
 	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp_file/development")
+	delete(raw, "otlp_grpc")
+	delete(raw, "otlp_http")
+
+	if len(raw) > 0 {
+		sh.Plain.AdditionalProperties = raw
+	}
+
 	*j = PushMetricExporter(sh.Plain)
+	return nil
+}
+
+func (j *PullMetricExporter) UnmarshalJSON(b []byte) error {
+	type Plain PullMetricExporter
+
+	var plain Plain
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "prometheus/development")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = PullMetricExporter(plain)
 	return nil
 }
 
@@ -604,6 +666,54 @@ func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	*j = BatchSpanProcessor(sh.Plain)
+	return nil
+}
+
+func (j *LogRecordProcessor) UnmarshalJSON(b []byte) error {
+	type Plain LogRecordProcessor
+	var plain Plain
+
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+
+	delete(raw, "batch")
+	delete(raw, "simple")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = LogRecordProcessor(plain)
+	return nil
+}
+
+func (j *SpanProcessor) UnmarshalJSON(b []byte) error {
+	type Plain SpanProcessor
+	var plain Plain
+
+	if err := json.Unmarshal(b, &plain); err != nil {
+		return err
+	}
+
+	var raw map[string]any
+	if err := json.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+
+	delete(raw, "batch")
+	delete(raw, "simple")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = SpanProcessor(plain)
 	return nil
 }
 
