@@ -377,6 +377,7 @@ func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *LogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 	type Plain LogRecordProcessor
 	var plain Plain
@@ -401,6 +402,7 @@ func (j *LogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *SpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 	type Plain SpanProcessor
 	var plain Plain
@@ -710,6 +712,7 @@ func (j *PullMetricReader) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PullMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	type Plain PullMetricExporter
 
