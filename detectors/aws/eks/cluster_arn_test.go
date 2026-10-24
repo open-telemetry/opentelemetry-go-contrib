@@ -62,6 +62,7 @@ type mockEKSClient struct {
 	err           error
 	calls         int
 	name          string
+	deadline      time.Time
 	hasDeadline   bool
 	returnContext bool
 }
@@ -69,7 +70,7 @@ type mockEKSClient struct {
 func (m *mockEKSClient) DescribeCluster(ctx context.Context, input *eks.DescribeClusterInput, _ ...func(*eks.Options)) (*eks.DescribeClusterOutput, error) {
 	m.calls++
 	m.name = aws.ToString(input.Name)
-	_, m.hasDeadline = ctx.Deadline()
+	m.deadline, m.hasDeadline = ctx.Deadline()
 	if m.returnContext {
 		return nil, ctx.Err()
 	}
@@ -96,7 +97,9 @@ func TestDetectWithClusterARN(t *testing.T) {
 		},
 	}
 
+	before := time.Now()
 	res, err := detector.Detect(t.Context())
+	after := time.Now()
 
 	require.NoError(t, err)
 	assert.Equal(t, resource.NewWithAttributes(
@@ -110,7 +113,8 @@ func TestDetectWithClusterARN(t *testing.T) {
 	assert.Equal(t, 1, utils.issuerCalls)
 	assert.Equal(t, 1, client.calls)
 	assert.Equal(t, testClusterName, client.name)
-	assert.True(t, client.hasDeadline)
+	require.True(t, client.hasDeadline)
+	assert.WithinRange(t, client.deadline, before.Add(clusterARNTimeout), after.Add(clusterARNTimeout))
 }
 
 func TestDetectWithClusterARNMismatchReturnsPartialResource(t *testing.T) {
