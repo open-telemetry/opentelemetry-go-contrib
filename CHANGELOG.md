@@ -60,6 +60,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
 - Use the context bound to a logger when checking whether logs are enabled in `go.opentelemetry.io/contrib/bridges/otellogr` and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9878)
 - Retain the last non-nil write error instead of letting a later successful write clear it in the response writer wrapper of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9790)
+- Resolve `slog.LogValuer` values before applying the empty-key rules in `go.opentelemetry.io/contrib/bridges/otelslog`, so a valuer with an empty key that resolves to a group is inlined and one that resolves to an empty value is dropped, as required by `slog.Handler`. (#10014)
 
 ### Removed
 
