@@ -390,7 +390,7 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 	}
 
 	if len(raw) > 0 {
-		sh.Plain.AdditionalProperties = raw
+		sh.AdditionalProperties = raw
 	}
 
 	*j = ExperimentalResourceDetector(sh.Plain)
@@ -429,13 +429,14 @@ func (j *PushMetricExporter) UnmarshalJSON(b []byte) error {
 	delete(raw, "otlp_http")
 
 	if len(raw) > 0 {
-		sh.Plain.AdditionalProperties = raw
+		sh.AdditionalProperties = raw
 	}
 
 	*j = PushMetricExporter(sh.Plain)
 	return nil
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *PullMetricExporter) UnmarshalJSON(b []byte) error {
 	type Plain PullMetricExporter
 
@@ -670,6 +671,7 @@ func (j *BatchSpanProcessor) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *LogRecordProcessor) UnmarshalJSON(b []byte) error {
 	type Plain LogRecordProcessor
 	var plain Plain
@@ -694,6 +696,7 @@ func (j *LogRecordProcessor) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *SpanProcessor) UnmarshalJSON(b []byte) error {
 	type Plain SpanProcessor
 	var plain Plain
