@@ -76,29 +76,22 @@ eksResourceDetector := eks.NewResourceDetectorWithOptions(eks.WithClusterARN())
 resource, err := eksResourceDetector.Detect(context.Background())
 ```
 
-The lookup calls `eks:DescribeCluster` and reports the ARN only when the OIDC
-issuer returned by EKS matches the issuer published by the live Kubernetes API
-server. It requires all of the following:
+The lookup calls `eks:DescribeCluster` and reports the ARN only when the
+returned OIDC issuer matches the issuer published by the live Kubernetes API
+server. This prevents a stale or copied cluster name from producing an ARN for
+a different cluster.
 
-- the `amazon-cloudwatch/cluster-info` ConfigMap contains `cluster.name`;
-- the AWS SDK can resolve credentials and a Region;
-- those credentials allow `eks:DescribeCluster` for that cluster; and
-- the Kubernetes service account can read
-  `/.well-known/openid-configuration`, for example through Kubernetes' built-in
-  `system:service-account-issuer-discovery` ClusterRole.
+The option requires `cluster.name` in the `amazon-cloudwatch/cluster-info`
+ConfigMap, AWS credentials and the EKS cluster's Region, `eks:DescribeCluster`
+permission, and access to `/.well-known/openid-configuration`. Kubernetes'
+built-in `system:service-account-issuer-discovery` ClusterRole provides the
+last permission.
 
 The OIDC request is bounded to 10 seconds. AWS configuration and
-`DescribeCluster` share a separate 10-second bound, so enabling the option adds
-at most 20 seconds when no shorter caller deadline exists. If the ARN cannot be
-established, the detector returns the normal EKS attributes together with
-`resource.ErrPartialResource`; callers that treat any non-nil detector error as
-fatal should account for that before enabling the option. `k8s.cluster.name`
-remains present on an issuer mismatch because its source is the in-cluster
-`cluster-info` ConfigMap. A mismatch can mean that value is stale, but it can
-also mean the AWS credentials point at a different account or Region; the ARN
-check cannot distinguish those cases, so it does not change the existing
-cluster-name behavior. The default `NewResourceDetector()` behavior makes
-neither of these additional requests. Each opted-in process calls
-`DescribeCluster` during detection, so large deployments should account for the
-shared EKS API quota. Throttled calls return the normal attributes with
-`resource.ErrPartialResource` and no cluster ARN.
+`DescribeCluster` share another 10-second bound. A shorter caller deadline
+limits the whole call, including concurrent client initialization. If identity
+cannot be established, the detector returns the normal EKS attributes with
+`resource.ErrPartialResource` and no ARN. The default constructor makes no
+additional requests. This module now depends on the AWS SDK; enabling the option
+controls the additional requests and performs one `DescribeCluster` call per
+detection.

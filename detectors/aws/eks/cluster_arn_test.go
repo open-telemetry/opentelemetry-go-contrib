@@ -9,7 +9,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -302,7 +304,7 @@ func TestClusterARNClientInitialization(t *testing.T) {
 
 	t.Run("configuration failure", func(t *testing.T) {
 		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
-			return aws.Config{}, errors.New("no region")
+			return aws.Config{}, errors.New("configuration failed")
 		}
 		detector := &clusterARNDetector{utils: &arnTestUtils{issuer: testIssuer}}
 
@@ -312,13 +314,109 @@ func TestClusterARNClientInitialization(t *testing.T) {
 		assert.ErrorIs(t, err, errAWSConfigUnavailable)
 	})
 
+	t.Run("missing Region", func(t *testing.T) {
+		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			return aws.Config{}, nil
+		}
+		detector := &clusterARNDetector{utils: &arnTestUtils{issuer: testIssuer}}
+
+		_, err := detector.detect(t.Context(), testClusterName)
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, errAWSConfigUnavailable)
+		assert.ErrorIs(t, err, errAWSRegionUnavailable)
+	})
+
+	t.Run("concurrent waiter honors its context", func(t *testing.T) {
+		var loadCalls atomic.Int32
+		var newCalls atomic.Int32
+		started := make(chan struct{})
+		release := make(chan struct{})
+		loadAWSConfig = func(ctx context.Context, _ ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			loadCalls.Add(1)
+			select {
+			case <-started:
+			default:
+				close(started)
+			}
+			select {
+			case <-release:
+				return aws.Config{Region: "us-west-2"}, nil
+			case <-ctx.Done():
+				return aws.Config{}, ctx.Err()
+			}
+		}
+		client := &mockEKSClient{output: describedCluster(testClusterARN, testIssuer)}
+		newEKSClient = func(aws.Config) eksClient {
+			newCalls.Add(1)
+			return client
+		}
+		detector := &clusterARNDetector{utils: &arnTestUtils{issuer: testIssuer}}
+		firstDone := make(chan error, 1)
+		go func() {
+			_, err := detector.getClient(t.Context())
+			firstDone <- err
+		}()
+		<-started
+
+		ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+		defer cancel()
+		_, err := detector.getClient(ctx)
+		close(release)
+		firstErr := <-firstDone
+
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		assert.EqualValues(t, 1, loadCalls.Load())
+		require.NoError(t, firstErr)
+		assert.EqualValues(t, 1, newCalls.Load())
+	})
+
+	t.Run("healthy waiter survives leader cancellation", func(t *testing.T) {
+		var loadCalls atomic.Int32
+		started := make(chan struct{})
+		release := make(chan struct{})
+		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			loadCalls.Add(1)
+			select {
+			case <-started:
+			default:
+				close(started)
+			}
+			<-release
+			return aws.Config{Region: "us-west-2"}, nil
+		}
+		client := &mockEKSClient{output: describedCluster(testClusterARN, testIssuer)}
+		newEKSClient = func(aws.Config) eksClient { return client }
+		detector := &clusterARNDetector{utils: &arnTestUtils{issuer: testIssuer}}
+
+		leaderCtx, cancelLeader := context.WithTimeout(t.Context(), 20*time.Millisecond)
+		defer cancelLeader()
+		leaderDone := make(chan error, 1)
+		go func() {
+			_, err := detector.getClient(leaderCtx)
+			leaderDone <- err
+		}()
+		<-started
+
+		waiterDone := make(chan error, 1)
+		go func() {
+			_, err := detector.getClient(t.Context())
+			waiterDone <- err
+		}()
+
+		require.ErrorIs(t, <-leaderDone, context.DeadlineExceeded)
+		close(release)
+		require.NoError(t, <-waiterDone)
+		assert.EqualValues(t, 1, loadCalls.Load())
+	})
+
 	t.Run("client is initialized once", func(t *testing.T) {
 		loadCalls := 0
 		newCalls := 0
 		client := &mockEKSClient{output: describedCluster(testClusterARN, testIssuer)}
 		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 			loadCalls++
-			return aws.Config{}, nil
+			return aws.Config{Region: "us-west-2"}, nil
 		}
 		newEKSClient = func(aws.Config) eksClient {
 			newCalls++
@@ -337,11 +435,49 @@ func TestClusterARNClientInitialization(t *testing.T) {
 	})
 }
 
+func TestClusterARNClientInitializationCancellation(t *testing.T) {
+	originalLoad := loadAWSConfig
+	originalNew := newEKSClient
+	t.Cleanup(func() {
+		loadAWSConfig = originalLoad
+		newEKSClient = originalNew
+	})
+
+	started := make(chan struct{})
+	release := make(chan struct{})
+	loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+		close(started)
+		<-release
+		return aws.Config{Region: "us-west-2"}, nil
+	}
+	newEKSClient = func(aws.Config) eksClient {
+		return &mockEKSClient{output: describedCluster(testClusterARN, testIssuer)}
+	}
+	detector := &clusterARNDetector{utils: &arnTestUtils{issuer: testIssuer}}
+	leaderDone := make(chan error, 1)
+	go func() {
+		_, err := detector.getClient(t.Context())
+		leaderDone <- err
+	}()
+	<-started
+
+	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+	defer cancel()
+	_, err := detector.detect(ctx, testClusterName)
+	close(release)
+	leaderErr := <-leaderDone
+
+	require.NoError(t, leaderErr)
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.NotErrorIs(t, err, errAWSConfigUnavailable)
+}
+
 func TestNewResourceDetectorWithOptionsWiresClusterARN(t *testing.T) {
 	utils := &eksDetectorUtils{host: "https://kubernetes.invalid", client: &http.Client{}}
 	detector, ok := newResourceDetector(utils, nil, WithClusterARN()).(*resourceDetector)
 	require.True(t, ok)
-	assert.NotNil(t, detector.clusterARN)
+	require.NotNil(t, detector.clusterARN)
+	assert.Same(t, utils, detector.clusterARN.utils)
 }
 
 func TestNewResourceDetectorDoesNotWireClusterARNAfterInitializationFailure(t *testing.T) {
@@ -365,15 +501,11 @@ func TestGetOIDCIssuerRejectsMalformedDocument(t *testing.T) {
 	assert.ErrorContains(t, err, "failed to decode OIDC discovery document")
 }
 
-func TestDefaultConstructorsLeaveClusterARNDisabled(t *testing.T) {
-	for _, detector := range []resource.Detector{
-		NewResourceDetector(),
-		NewResourceDetectorWithOptions(),
-	} {
-		internal, ok := detector.(*resourceDetector)
-		require.True(t, ok)
-		assert.Nil(t, internal.clusterARN)
-	}
+func TestDefaultLeavesClusterARNDisabled(t *testing.T) {
+	utils := &eksDetectorUtils{host: "https://kubernetes.invalid", client: &http.Client{}}
+	detector, ok := newResourceDetector(utils, nil).(*resourceDetector)
+	require.True(t, ok)
+	assert.Nil(t, detector.clusterARN)
 }
 
 func TestClusterARNOptionMakesNoRequestsOutsideEKS(t *testing.T) {
@@ -407,6 +539,36 @@ func TestClusterARNPropagatesDescribeClusterCancellation(t *testing.T) {
 	require.Error(t, err)
 	assert.ErrorIs(t, err, context.Canceled)
 	assert.ErrorIs(t, err, errDescribeClusterFailed)
+}
+
+func TestGetOIDCIssuerRequestDeadline(t *testing.T) {
+	t.Run("no caller deadline is bounded by oidcDiscoveryTimeout", func(t *testing.T) {
+		rt := &deadlineRoundTripper{}
+		utils := &eksDetectorUtils{host: "http://k8s.invalid", client: &http.Client{Transport: rt}}
+
+		before := time.Now()
+		_, err := utils.getOIDCIssuer(context.WithoutCancel(t.Context()))
+		after := time.Now()
+		require.NoError(t, err)
+
+		require.True(t, rt.ok, "request context must carry a deadline")
+		assert.WithinRange(t, rt.deadline, before.Add(oidcDiscoveryTimeout), after.Add(oidcDiscoveryTimeout))
+	})
+
+	t.Run("shorter caller deadline is preserved", func(t *testing.T) {
+		rt := &deadlineRoundTripper{}
+		utils := &eksDetectorUtils{host: "http://k8s.invalid", client: &http.Client{Transport: rt}}
+
+		callerDeadline := time.Now().Add(time.Second)
+		ctx, cancel := context.WithDeadline(t.Context(), callerDeadline)
+		defer cancel()
+
+		_, err := utils.getOIDCIssuer(ctx)
+		require.NoError(t, err)
+
+		require.True(t, rt.ok, "request context must carry a deadline")
+		assert.Equal(t, callerDeadline, rt.deadline)
+	})
 }
 
 func TestGetOIDCIssuerHonorsCallerCancellation(t *testing.T) {
