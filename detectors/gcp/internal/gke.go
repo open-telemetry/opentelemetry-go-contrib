@@ -19,14 +19,9 @@ package internal
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"net/http"
-	"net/url"
 	"strings"
-
-	"golang.org/x/oauth2/google"
 )
 
 const (
@@ -38,8 +33,6 @@ const (
 	// https://cloud.google.com/kubernetes-engine/docs/concepts/workload-identity#instance_metadata
 	clusterNameMetadataAttr     = "cluster-name"
 	clusterLocationMetadataAttr = "cluster-location"
-	computeInstancesGetScope    = "https://www.googleapis.com/auth/compute.readonly"
-	defaultComputeBaseURL       = "https://compute.googleapis.com/compute/v1"
 )
 
 func (d *Detector) onGKE() bool {
@@ -66,79 +59,14 @@ func (d *Detector) GKEClusterName() (string, error) {
 
 // GKEHostType returns the machine type of the instance on which this program is running.
 func (d *Detector) GKEHostType(ctx context.Context) (string, error) {
-	projectID, err := d.metadata.GetWithContext(ctx, "project/project-id")
+	instance, err := d.computeInstance(ctx)
 	if err != nil {
-		return "", err
-	}
-	projectID = strings.TrimSpace(projectID)
-	zone, err := d.metadata.ZoneWithContext(ctx)
-	if err != nil {
-		return "", err
-	}
-	instanceName, err := d.metadata.InstanceNameWithContext(ctx)
-	if err != nil {
-		return "", err
-	}
-
-	machineType, err := d.computeInstanceMachineType(ctx, projectID, lastPathSegment(zone), instanceName)
-	if err != nil {
-		return "", err
-	}
-	return lastPathSegment(machineType), nil
-}
-
-func (d *Detector) computeInstanceMachineType(ctx context.Context, projectID, zone, instanceName string) (string, error) {
-	client, err := d.computeHTTPClient(ctx)
-	if err != nil {
-		return "", err
-	}
-	baseURL := d.computeBaseURL
-	if baseURL == "" {
-		baseURL = defaultComputeBaseURL
-	}
-	reqURL := fmt.Sprintf("%s/projects/%s/zones/%s/instances/%s",
-		strings.TrimRight(baseURL, "/"),
-		url.PathEscape(projectID),
-		url.PathEscape(zone),
-		url.PathEscape(instanceName),
-	)
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, http.NoBody)
-	if err != nil {
-		return "", err
-	}
-	res, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer func() { _ = res.Body.Close() }()
-	if res.StatusCode < 200 || res.StatusCode >= 300 {
-		return "", fmt.Errorf("compute instances.get returned %s", res.Status)
-	}
-	var instance struct {
-		MachineType string `json:"machineType"`
-	}
-	if err := json.NewDecoder(res.Body).Decode(&instance); err != nil {
 		return "", err
 	}
 	if instance.MachineType == "" {
 		return "", errors.New("compute instances.get response missing machineType")
 	}
-	return instance.MachineType, nil
-}
-
-func (d *Detector) computeHTTPClient(ctx context.Context) (*http.Client, error) {
-	if d.httpClient != nil {
-		return d.httpClient, nil
-	}
-	return google.DefaultClient(ctx, computeInstancesGetScope)
-}
-
-func lastPathSegment(s string) string {
-	s = strings.TrimRight(s, "/")
-	if i := strings.LastIndex(s, "/"); i >= 0 {
-		return s[i+1:]
-	}
-	return s
+	return lastPathSegment(instance.MachineType), nil
 }
 
 // LocationType represents the type of location (zone or region).

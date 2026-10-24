@@ -18,7 +18,10 @@
 package internal
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -185,4 +188,82 @@ func TestGCEManagedInstanceGroup(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestGCEInstanceLabels(t *testing.T) {
+	var requestPath string
+	computeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requestPath = r.URL.Path
+		_, _ = w.Write([]byte(`{"labels":{"env":"prod","team":"instrumentation"}}`))
+	}))
+	defer computeServer.Close()
+
+	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
+	d.httpClient = computeServer.Client()
+	d.computeBaseURL = computeServer.URL
+
+	labels, err := d.GCEInstanceLabels(t.Context())
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{
+		"env":  "prod",
+		"team": "instrumentation",
+	}, labels)
+	assert.Equal(t, "/projects/my-project/zones/us-central1-a/instances/my-instance", requestPath)
+}
+
+func TestGCEInstanceLabelsEmpty(t *testing.T) {
+	computeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{"machineType":"n1-standard-1"}`))
+	}))
+	defer computeServer.Close()
+
+	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
+	d.httpClient = computeServer.Client()
+	d.computeBaseURL = computeServer.URL
+
+	labels, err := d.GCEInstanceLabels(t.Context())
+	assert.NoError(t, err)
+	assert.Empty(t, labels)
+}
+
+func TestGCEInstanceLabelsErr(t *testing.T) {
+	computeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+	}))
+	defer computeServer.Close()
+
+	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
+	d.httpClient = computeServer.Client()
+	d.computeBaseURL = computeServer.URL
+
+	labels, err := d.GCEInstanceLabels(t.Context())
+	assert.Error(t, err)
+	assert.Nil(t, labels)
+}
+
+func TestGCEInstanceLabelsMetadataErr(t *testing.T) {
+	d := NewTestDetector(&FakeMetadataTransport{
+		Err: fmt.Errorf("fake metadata error"),
+	}, &FakeOSProvider{})
+
+	labels, err := d.GCEInstanceLabels(t.Context())
+	assert.Error(t, err)
+	assert.Nil(t, labels)
+}
+
+func TestGCEInstanceLabelsContextCanceled(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	computeServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		cancel()
+		<-r.Context().Done()
+	}))
+	defer computeServer.Close()
+
+	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
+	d.httpClient = computeServer.Client()
+	d.computeBaseURL = computeServer.URL
+
+	labels, err := d.GCEInstanceLabels(ctx)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Nil(t, labels)
 }
