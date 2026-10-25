@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Resolve the Docker container ID from cgroup data, with a `/proc/self/mountinfo` fallback for private cgroup namespaces, so custom hostnames do not disable detection. Fall back to hostname lookup when neither source provides an ID or the Docker daemon does not recognize it. (`go.opentelemetry.io/contrib/detectors/docker`)
+- Resolve the Docker container ID from cgroup data, with a `/proc/self/mountinfo` fallback for private cgroup namespaces, so custom hostnames do not disable detection. Fall back to hostname lookup when neither source provides an ID or the Docker daemon does not recognize it. (`go.opentelemetry.io/contrib/detectors/docker`) (#10019)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
