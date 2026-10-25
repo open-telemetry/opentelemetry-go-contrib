@@ -361,8 +361,8 @@ func TestClientRequest_SensitiveQueryRedacted(t *testing.T) {
 		},
 		{
 			name: "azure sas token",
-			url:  "https://account.blob.core.windows.net/container/blob?sv=2024-11-04&sig=abc%2F123%3D&se=2026-01-01",
-			want: "https://account.blob.core.windows.net/container/blob?sv=2024-11-04&sig=REDACTED&se=2026-01-01",
+			url:  "https://example.com/container/blob?sv=2024-11-04&sig=abc%2F123%3D&se=2026-01-01",
+			want: "https://example.com/container/blob?sv=2024-11-04&sig=REDACTED&se=2026-01-01",
 		},
 		{
 			name: "gcs signed url",
@@ -421,6 +421,45 @@ func TestClientRequest_SensitiveQueryRedacted(t *testing.T) {
 			// The request that is sent must not be modified.
 			assert.Equal(t, rawQuery, req.URL.RawQuery)
 			assert.Equal(t, user, req.URL.User)
+		})
+	}
+}
+
+func TestClientRequest_SensitiveOpaqueQueryRedacted(t *testing.T) {
+	testCases := []struct {
+		name     string
+		opaque   string
+		rawQuery string
+		want     string
+	}{
+		{
+			name:   "query in opaque",
+			opaque: "//example.com/foo?sig=abc&stuff=morestuff",
+			want:   "https://example.com/foo?sig=REDACTED&stuff=morestuff",
+		},
+		{
+			name:     "query in opaque and raw query",
+			opaque:   "//example.com/foo?sig=abc",
+			rawQuery: "X-Amz-Signature=def&other=1",
+			want:     "https://example.com/foo?sig=REDACTED?X-Amz-Signature=REDACTED&other=1",
+		},
+		{
+			name:   "no sensitive parameters in opaque",
+			opaque: "//example.com/foo?stuff=morestuff",
+			want:   "https://example.com/foo?stuff=morestuff",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/", nil)
+			req.URL.Opaque, req.URL.RawQuery = tc.opaque, tc.rawQuery
+
+			got := semconv.HTTPClient{}.RequestTraceAttrs(req)
+			assert.Contains(t, got, attribute.String("url.full", tc.want))
+			// The request that is sent must not be modified.
+			assert.Equal(t, tc.opaque, req.URL.Opaque)
+			assert.Equal(t, tc.rawQuery, req.URL.RawQuery)
 		})
 	}
 }

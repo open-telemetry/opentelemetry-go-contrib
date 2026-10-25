@@ -120,6 +120,13 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 		c := *req.URL
 		c.User = nil
 		c.RawQuery = redactQuery(c.RawQuery)
+		// An opaque URL can carry its own query, which String and the
+		// request both emit as-is.
+		if path, query, ok := strings.Cut(c.Opaque, "?"); ok {
+			if r := redactQuery(query); r != query {
+				c.Opaque = path + "?" + r
+			}
+		}
 		u = c.String()
 	}
 	attrs = append(attrs, semconv.URLFull(u), semconv.ServerAddress(requestHost))
