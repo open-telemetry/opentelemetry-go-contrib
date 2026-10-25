@@ -4,6 +4,7 @@
 package otelhttp
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -104,6 +105,36 @@ func TestHandler(t *testing.T) {
 	}
 }
 
+func TestHandlerResponseControllerFlushError(t *testing.T) {
+	flushErr := errors.New("flush failed")
+	rw := &flushErrorResponseWriter{flushErr: flushErr}
+	h := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		assert.ErrorIs(t, http.NewResponseController(w).Flush(), flushErr)
+	}), "test_handler")
+
+	h.ServeHTTP(rw, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody))
+
+	assert.Equal(t, 1, rw.flushErrorCalls)
+	assert.Zero(t, rw.flushCalls)
+}
+
+func TestHandlerResponseControllerFlushErrorOnly(t *testing.T) {
+	flushErr := errors.New("flush failed")
+	rw := &flushErrorOnlyResponseWriter{
+		responseRecorder: httptest.NewRecorder(),
+		flushErr:         flushErr,
+	}
+	h := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		assert.ErrorIs(t, http.NewResponseController(w).Flush(), flushErr)
+	}), "test_handler")
+
+	h.ServeHTTP(rw, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody))
+
+	assert.Equal(t, 1, rw.flushErrorCalls)
+	assert.Equal(t, 1, rw.writeHeaderCalls)
+	assert.Equal(t, http.StatusOK, rw.responseRecorder.Code)
+}
+
 func TestHandlerBasics(t *testing.T) {
 	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 	rr := httptest.NewRecorder()
@@ -172,6 +203,40 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatalf("got %q, expected %q", got, expected)
 	}
 	assert.Equal(t, startTime, spans[0].StartTime())
+}
+
+type readerFromResponseRecorder struct{ *httptest.ResponseRecorder }
+
+func (w readerFromResponseRecorder) ReadFrom(r io.Reader) (int64, error) {
+	return io.Copy(w.ResponseRecorder, r)
+}
+
+func TestHandlerResponseBodySizeReadFrom(t *testing.T) {
+	body := "test"
+	bodysize := int64(len(body))
+
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	h := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// NewHandler passes a httpsnoop-wrapped writer here.
+		// Without the ReadFrom hook, this call bypasses byte accounting.
+		_, err := w.(io.ReaderFrom).ReadFrom(strings.NewReader(body))
+		assert.NoError(t, err)
+	}), "test_handler", WithMeterProvider(provider))
+	// Expose ReadFrom so httpsnoop preserves it on the wrapped writer.
+	w := readerFromResponseRecorder{httptest.NewRecorder()}
+	h.ServeHTTP(w, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody))
+
+	var metrics metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &metrics))
+	for _, metric := range metrics.ScopeMetrics[0].Metrics {
+		if metric.Name == "http.server.response.body.size" {
+			histogram := metric.Data.(metricdata.Histogram[int64])
+			assert.Equal(t, bodysize, histogram.DataPoints[0].Sum)
+			return
+		}
+	}
+	t.Fatal("response body size metric missing")
 }
 
 func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
@@ -304,6 +369,50 @@ type respWriteHeaderCounter struct {
 	http.ResponseWriter
 
 	headersWritten []int
+}
+
+type flushErrorResponseWriter struct {
+	flushErr        error
+	flushCalls      int
+	flushErrorCalls int
+}
+
+type flushErrorOnlyResponseWriter struct {
+	responseRecorder *httptest.ResponseRecorder
+	flushErr         error
+	flushErrorCalls  int
+	writeHeaderCalls int
+}
+
+func (rw *flushErrorOnlyResponseWriter) Header() http.Header {
+	return rw.responseRecorder.Header()
+}
+
+func (rw *flushErrorOnlyResponseWriter) WriteHeader(statusCode int) {
+	rw.writeHeaderCalls++
+	rw.responseRecorder.WriteHeader(statusCode)
+}
+
+func (rw *flushErrorOnlyResponseWriter) Write(p []byte) (int, error) {
+	return rw.responseRecorder.Write(p)
+}
+
+func (rw *flushErrorOnlyResponseWriter) FlushError() error {
+	rw.flushErrorCalls++
+	return rw.flushErr
+}
+
+func (*flushErrorResponseWriter) Header() http.Header { return make(http.Header) }
+
+func (*flushErrorResponseWriter) WriteHeader(int) {}
+
+func (*flushErrorResponseWriter) Write(p []byte) (int, error) { return len(p), nil }
+
+func (rw *flushErrorResponseWriter) Flush() { rw.flushCalls++ }
+
+func (rw *flushErrorResponseWriter) FlushError() error {
+	rw.flushErrorCalls++
+	return rw.flushErr
 }
 
 func (rw *respWriteHeaderCounter) WriteHeader(statusCode int) {

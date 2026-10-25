@@ -2,6 +2,13 @@
 # map[string]interface{}, for more specific types, they must
 # be replaced here
 s+type Headers.*+type Headers map[string]string+g
+
+# go-jsonschema emits `AdditionalProperties interface{}` for the
+# `,remain` field, but mapstructure's `,remain` decoder only accepts
+# map types and hard-fails on a bare interface{}. Rewrite to
+# map[string]any, and hide the field from json/yaml so round-tripping
+# still only emits the named keys (#8842).
+s+AdditionalProperties interface{} `mapstructure:",remain"`+AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`+g
 /^type ExperimentalResourceDetector struct {/a\
 \	// Enable the AWS EC2 resource detector.\
 \	// If omitted, ignore.\
@@ -23,6 +30,11 @@ s+type Headers.*+type Headers map[string]string+g
 \	//\
 \	AWSEKS ExperimentalAWSEKSResourceDetector `json:"aws.eks,omitempty,omitzero" yaml:"aws.eks,omitempty" mapstructure:"aws.eks,omitempty"`\
 \
+\	// Enable the AWS Lambda resource detector.\
+\	// If omitted, ignore.\
+\	//\
+\	AWSLambda ExperimentalAWSLambdaResourceDetector `json:"aws.lambda,omitempty,omitzero" yaml:"aws.lambda,omitempty" mapstructure:"aws.lambda,omitempty"`\
+\
 \	// Enable the Azure VM resource detector.\
 \	// If omitted, ignore.\
 \	//\
@@ -36,5 +48,7 @@ type ExperimentalGCPResourceDetector map[string]interface{}\
 type ExperimentalAWSECSResourceDetector map[string]interface{}\
 \
 type ExperimentalAWSEKSResourceDetector map[string]interface{}\
+\
+type ExperimentalAWSLambdaResourceDetector map[string]interface{}\
 \
 type ExperimentalAzureVMResourceDetector map[string]interface{}

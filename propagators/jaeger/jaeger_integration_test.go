@@ -4,11 +4,13 @@
 package jaeger_test
 
 import (
+	"context"
 	"net/http"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 
@@ -92,5 +94,147 @@ func TestInjectJaeger(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestExtractJaegerReplacesDebugFlag(t *testing.T) {
+	propagator := jaeger.Jaeger{}
+	type contextKey struct{}
+	key := contextKey{}
+	for _, previousFlags := range []string{"1", "3"} {
+		for _, flags := range []string{"", "0", "1", "2", "3", "8", "9"} {
+			t.Run(previousFlags+"/"+flags, func(t *testing.T) {
+				ctx := propagator.Extract(context.WithValue(t.Context(), key, "preserved"), propagation.MapCarrier{
+					"uber-trace-id": "11111111111111111111111111111111:1111111111111111:0:" + previousFlags,
+				})
+				header := "22222222222222222222222222222222:2222222222222222:0:"
+				ctx = propagator.Extract(ctx, propagation.MapCarrier{"uber-trace-id": header + flags})
+				sc := trace.SpanContextFromContext(ctx)
+				require.True(t, sc.IsValid())
+				assert.True(t, sc.IsRemote())
+				assert.Equal(t, flags == "1" || flags == "3" || flags == "9", sc.IsSampled())
+				assert.Equal(t, "22222222222222222222222222222222", sc.TraceID().String())
+				assert.Equal(t, "2222222222222222", sc.SpanID().String())
+				assert.Equal(t, flags == "3", jaeger.DebugFromContext(ctx))
+				assert.Equal(t, "preserved", ctx.Value(key))
+				expectedFlags := "0"
+				switch flags {
+				case "1", "9":
+					expectedFlags = "1"
+				case "3":
+					expectedFlags = "3"
+				}
+				carrier := propagation.MapCarrier{}
+				propagator.Inject(ctx, carrier)
+				assert.Equal(t, header+expectedFlags, carrier["uber-trace-id"])
+			})
+		}
+	}
+}
+
+func TestExtractJaegerInvalidHeaderPreservesContext(t *testing.T) {
+	propagator := jaeger.Jaeger{}
+	type contextKey struct{}
+	key := contextKey{}
+	header := "11111111111111111111111111111111:1111111111111111:0:3"
+	ctx := propagator.Extract(context.WithValue(t.Context(), key, "preserved"), propagation.MapCarrier{
+		"uber-trace-id": header,
+	})
+	for _, tc := range []struct {
+		name    string
+		carrier propagation.MapCarrier
+	}{
+		{"absent", propagation.MapCarrier{}},
+		{"empty", propagation.MapCarrier{"uber-trace-id": ""}},
+		{"malformed", propagation.MapCarrier{"uber-trace-id": "invalid"}},
+		{"zero trace ID", propagation.MapCarrier{"uber-trace-id": "00000000000000000000000000000000:2222222222222222:0:0"}},
+		{"missing span ID", propagation.MapCarrier{"uber-trace-id": "22222222222222222222222222222222::0:0"}},
+		{"malformed flags", propagation.MapCarrier{"uber-trace-id": "22222222222222222222222222222222:2222222222222222:0:invalid"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := propagator.Extract(ctx, tc.carrier)
+			assert.Same(t, ctx, got)
+			assert.True(t, trace.SpanContextFromContext(ctx).Equal(trace.SpanContextFromContext(got)))
+			assert.True(t, jaeger.DebugFromContext(got))
+			assert.Equal(t, "preserved", got.Value(key))
+			carrier := propagation.MapCarrier{}
+			propagator.Inject(got, carrier)
+			assert.Equal(t, header, carrier["uber-trace-id"])
+		})
+	}
+}
+
+func BenchmarkJaegerExtract(b *testing.B) {
+	propagator := jaeger.Jaeger{}
+	for _, previousFlags := range []string{"1", "3"} {
+		ctx := propagator.Extract(b.Context(), propagation.MapCarrier{
+			"uber-trace-id": "11111111111111111111111111111111:1111111111111111:0:" + previousFlags,
+		})
+		for _, flags := range []string{"0", "1", "3"} {
+			carrier := propagation.MapCarrier{
+				"uber-trace-id": "22222222222222222222222222222222:2222222222222222:0:" + flags,
+			}
+			b.Run(previousFlags+"/"+flags, func(b *testing.B) {
+				b.ReportAllocs()
+				for b.Loop() {
+					propagator.Extract(ctx, carrier)
+				}
+			})
+		}
+	}
+}
+
+func BenchmarkJaegerInject(b *testing.B) {
+	propagator := jaeger.Jaeger{}
+	carrier := propagation.MapCarrier{}
+
+	testCases := []struct {
+		name string
+		ctx  context.Context
+	}{
+		{
+			name: "Sampled",
+			ctx: trace.ContextWithRemoteSpanContext(
+				b.Context(),
+				trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID:    trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+					SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+					TraceFlags: trace.FlagsSampled,
+				}),
+			),
+		},
+		{
+			name: "NotSampled",
+			ctx: trace.ContextWithRemoteSpanContext(
+				b.Context(),
+				trace.NewSpanContext(trace.SpanContextConfig{
+					TraceID: trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+					SpanID:  trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+				}),
+			),
+		},
+		{
+			name: "Debug",
+			ctx: jaeger.WithDebug(
+				trace.ContextWithRemoteSpanContext(
+					b.Context(),
+					trace.NewSpanContext(trace.SpanContextConfig{
+						TraceID:    trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+						SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+						TraceFlags: trace.FlagsSampled,
+					}),
+				),
+				true,
+			),
+		},
+	}
+
+	for _, tc := range testCases {
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for b.Loop() {
+				propagator.Inject(tc.ctx, carrier)
+			}
+		})
 	}
 }
