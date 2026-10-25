@@ -106,6 +106,21 @@ func TestGKEHostTypeErr(t *testing.T) {
 	assert.Empty(t, hostType)
 }
 
+func TestGKEHostTypeMissingMachineType(t *testing.T) {
+	computeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer computeServer.Close()
+
+	d := NewTestDetector(newGKEFakeMetadataTransport(t), &FakeOSProvider{})
+	d.httpClient = computeServer.Client()
+	d.computeBaseURL = computeServer.URL
+
+	hostType, err := d.GKEHostType(t.Context())
+	assert.Error(t, err)
+	assert.Empty(t, hostType)
+}
+
 func TestGKEHostTypeContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	computeServer := httptest.NewServer(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {

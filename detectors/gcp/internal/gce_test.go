@@ -20,8 +20,10 @@ package internal
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -242,9 +244,76 @@ func TestGCEInstanceLabelsErr(t *testing.T) {
 }
 
 func TestGCEInstanceLabelsMetadataErr(t *testing.T) {
-	d := NewTestDetector(&FakeMetadataTransport{
-		Err: fmt.Errorf("fake metadata error"),
-	}, &FakeOSProvider{})
+	for _, missingKey := range []string{
+		"project/project-id",
+		"instance/zone",
+		"instance/name",
+	} {
+		t.Run(missingKey, func(t *testing.T) {
+			fmpi := newFakeMetadataTransport(t)
+			delete(fmpi.Metadata, missingKey)
+			d := NewTestDetector(fmpi, &FakeOSProvider{})
+
+			labels, err := d.GCEInstanceLabels(t.Context())
+			assert.Error(t, err)
+			assert.Nil(t, labels)
+		})
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
+}
+
+func TestGCEInstanceLabelsDefaultBaseURL(t *testing.T) {
+	var requestURL string
+	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
+	d.httpClient = &http.Client{
+		Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+			requestURL = req.URL.String()
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(strings.NewReader(`{"labels":{"env":"prod"}}`)),
+			}, nil
+		}),
+	}
+
+	labels, err := d.GCEInstanceLabels(t.Context())
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]string{"env": "prod"}, labels)
+	assert.Equal(t, "https://compute.googleapis.com/compute/v1/projects/my-project/zones/us-central1-a/instances/my-instance", requestURL)
+}
+
+func TestGCEInstanceLabelsInvalidJSON(t *testing.T) {
+	computeServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte(`{invalid`))
+	}))
+	defer computeServer.Close()
+
+	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
+	d.httpClient = computeServer.Client()
+	d.computeBaseURL = computeServer.URL
+
+	labels, err := d.GCEInstanceLabels(t.Context())
+	assert.Error(t, err)
+	assert.Nil(t, labels)
+}
+
+func TestGCEInstanceLabelsInvalidBaseURL(t *testing.T) {
+	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
+	d.httpClient = &http.Client{}
+	d.computeBaseURL = "://invalid-url"
+
+	labels, err := d.GCEInstanceLabels(t.Context())
+	assert.Error(t, err)
+	assert.Nil(t, labels)
+}
+
+func TestGCEInstanceLabelsDefaultClientErr(t *testing.T) {
+	t.Setenv("GOOGLE_APPLICATION_CREDENTIALS", "/nonexistent/credentials.json")
+	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
 
 	labels, err := d.GCEInstanceLabels(t.Context())
 	assert.Error(t, err)
