@@ -21,6 +21,6 @@ if available:
   - container.id
 
 The detector can be configured using options such as [WithAttributeFilter],
-[WithNodeEnvVar], [WithKubeClient], and [WithAWSConfig].
+[WithNodeEnvVar], and [WithAWSConfig].
 */
 package eks

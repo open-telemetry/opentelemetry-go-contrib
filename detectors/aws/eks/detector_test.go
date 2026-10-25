@@ -26,13 +26,33 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/version"
-	fakediscovery "k8s.io/client-go/discovery/fake"
-	"k8s.io/client-go/kubernetes/fake"
 	"k8s.io/client-go/rest"
 )
+
+// errIMDSClient is an imdsClient that is always unreachable. It keeps tests
+// from querying the real IMDS endpoint.
+type errIMDSClient struct{}
+
+func (errIMDSClient) GetInstanceIdentityDocument(context.Context, *imds.GetInstanceIdentityDocumentInput, ...func(*imds.Options)) (*imds.GetInstanceIdentityDocumentOutput, error) {
+	return nil, errors.New("imds unreachable")
+}
+
+func (errIMDSClient) GetMetadata(context.Context, *imds.GetMetadataInput, ...func(*imds.Options)) (*imds.GetMetadataOutput, error) {
+	return nil, errors.New("imds unreachable")
+}
+
+// newTestDetector returns a ResourceDetector that does not reach any real
+// IMDS, EC2, or Kubernetes endpoint unless overridden by opts.
+func newTestDetector(t *testing.T, utils detectorUtils, opts ...Option) *ResourceDetector {
+	t.Helper()
+	t.Setenv(defaultNodeEnvVar, "")
+
+	cfg := config{nodeEnvVar: defaultNodeEnvVar, imdsClient: errIMDSClient{}}
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+	return &ResourceDetector{cfg: cfg, utils: utils}
+}
 
 type mockIMDSClient struct {
 	mock.Mock
@@ -89,7 +109,7 @@ func (detectorUtils *MockDetectorUtils) getContainerID() (string, error) {
 }
 
 // Mock function for getServerVersion().
-func (detectorUtils *MockDetectorUtils) getServerVersion() (string, error) {
+func (detectorUtils *MockDetectorUtils) getServerVersion(context.Context) (string, error) {
 	for _, call := range detectorUtils.ExpectedCalls {
 		if call.Method == "getServerVersion" {
 			args := detectorUtils.Called()
@@ -97,6 +117,12 @@ func (detectorUtils *MockDetectorUtils) getServerVersion() (string, error) {
 		}
 	}
 	return "", errors.New("server version unavailable")
+}
+
+// Mock function for getNodeProviderID().
+func (detectorUtils *MockDetectorUtils) getNodeProviderID(_ context.Context, nodeName string) (string, error) {
+	args := detectorUtils.Called(nodeName)
+	return args.String(0), args.Error(1)
 }
 
 func TestResourceDetectorDetect(t *testing.T) {
@@ -207,7 +233,8 @@ func TestResourceDetectorDetect(t *testing.T) {
 				tt.setupUtils(detectorUtils)
 			}
 
-			detector := resourceDetector{utils: detectorUtils, err: tt.detectorErr}
+			detector := newTestDetector(t, detectorUtils)
+			detector.err = tt.detectorErr
 			res, err := detector.Detect(t.Context())
 
 			switch {
@@ -396,7 +423,7 @@ func TestDetectWithIRSA(t *testing.T) {
 	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "irsa-cluster"}, nil)
 	utils.On("getContainerID").Return("irsa-container-123456789012345678901234567890123456789012345678901234", nil)
 
-	detector := ResourceDetector{utils: utils}
+	detector := newTestDetector(t, utils)
 	res, err := detector.Detect(t.Context())
 
 	require.NoError(t, err)
@@ -417,7 +444,7 @@ func TestDetectWithPodIdentity(t *testing.T) {
 	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{}, nil)
 	utils.On("getContainerID").Return("", nil)
 
-	detector := ResourceDetector{utils: utils}
+	detector := newTestDetector(t, utils)
 	res, err := detector.Detect(t.Context())
 
 	require.NoError(t, err)
@@ -436,7 +463,7 @@ func TestDetectWithServerVersion(t *testing.T) {
 	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "ver-cluster"}, nil)
 	utils.On("getContainerID").Return("", nil)
 
-	detector := ResourceDetector{utils: utils}
+	detector := newTestDetector(t, utils)
 	res, err := detector.Detect(t.Context())
 
 	require.NoError(t, err)
@@ -456,14 +483,9 @@ func TestDetectWithAttributeFilter(t *testing.T) {
 	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "filtered-cluster"}, nil)
 	utils.On("getContainerID").Return("cid", nil)
 
-	detector := ResourceDetector{
-		cfg: config{
-			filter: func(kv attribute.KeyValue) bool {
-				return kv.Key == semconv.K8SClusterNameKey
-			},
-		},
-		utils: utils,
-	}
+	detector := newTestDetector(t, utils, WithAttributeFilter(func(kv attribute.KeyValue) bool {
+		return kv.Key == semconv.K8SClusterNameKey
+	}))
 	res, err := detector.Detect(t.Context())
 
 	require.NoError(t, err)
@@ -473,42 +495,21 @@ func TestDetectWithAttributeFilter(t *testing.T) {
 	utils.AssertExpectations(t)
 }
 
-func TestDetectWithKubeClient(t *testing.T) {
-	fakeClient := fake.NewSimpleClientset(
-		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: cwConfigmapNS,
-				Name:      cwConfigmapName,
-			},
-			Data: map[string]string{"cluster.name": "k8s-client-cluster"},
-		},
-	)
-	if fakeDisc, ok := fakeClient.Discovery().(*fakediscovery.FakeDiscovery); ok {
-		fakeDisc.FakedServerVersion = &version.Info{GitVersion: "v1.30.0-eks-7890"}
-	}
-
-	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
-
-	detector := NewResourceDetector(
-		WithKubeClient(fakeClient),
-		WithNodeEnvVar("CUSTOM_NODE_NAME"),
-	)
+func TestWithNodeEnvVar(t *testing.T) {
+	detector := NewResourceDetector(WithNodeEnvVar("CUSTOM_NODE_NAME"))
 	require.NotNil(t, detector)
 	assert.Equal(t, "CUSTOM_NODE_NAME", detector.cfg.nodeEnvVar)
-
-	res, err := detector.Detect(t.Context())
-	require.NoError(t, err)
-	assert.Contains(t, res.Attributes(), semconv.CloudProviderAWS)
-	assert.Contains(t, res.Attributes(), semconv.CloudPlatformAWSEKS)
-	assert.Contains(t, res.Attributes(), semconv.K8SClusterName("k8s-client-cluster"))
 }
 
 func TestComposition_MergeWithDefault(t *testing.T) {
-	fakeClient := fake.NewSimpleClientset()
 	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
 	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
 
-	detected, err := NewResourceDetector(WithKubeClient(fakeClient)).Detect(t.Context())
+	utils := new(MockDetectorUtils)
+	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "merge-cluster"}, nil)
+	utils.On("getContainerID").Return("", nil)
+
+	detected, err := newTestDetector(t, utils).Detect(t.Context())
 	require.NoError(t, err)
 
 	merged, err := resource.Merge(resource.Default(), detected)
@@ -518,12 +519,15 @@ func TestComposition_MergeWithDefault(t *testing.T) {
 }
 
 func TestComposition_WithCoreDetectors(t *testing.T) {
-	fakeClient := fake.NewSimpleClientset()
 	t.Setenv(kubernetesServiceHostEnvVar, "10.0.0.1")
 	t.Setenv(awsWebIdentityTokenFileEnvVar, "/var/run/secrets/eks.amazonaws.com/serviceaccount/token")
 
+	utils := new(MockDetectorUtils)
+	utils.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(map[string]string{"cluster.name": "core-cluster"}, nil)
+	utils.On("getContainerID").Return("", nil)
+
 	res, err := resource.New(t.Context(),
-		resource.WithDetectors(NewResourceDetector(WithKubeClient(fakeClient))),
+		resource.WithDetectors(newTestDetector(t, utils)),
 		resource.WithHost(),
 		resource.WithOS(),
 		resource.WithProcessPID(),
@@ -548,11 +552,13 @@ func TestDetectFromIMDS_AllAttributes(t *testing.T) {
 				ImageID:          "ami-0123456789abcdef0",
 				InstanceType:     "m5.large",
 			},
-		}, nil)
+		}, nil,
+	)
 	imdsMock.On("GetMetadata", mock.Anything, &imds.GetMetadataInput{Path: "hostname"}).Return(
 		&imds.GetMetadataOutput{
 			Content: io.NopCloser(strings.NewReader("ip-10-0-0-1.ec2.internal")),
-		}, nil)
+		}, nil,
+	)
 
 	ec2Mock := new(mockEC2Client)
 	tagKey := clusterNameAwsEksTag
@@ -576,12 +582,7 @@ func TestDetectFromIMDS_AllAttributes(t *testing.T) {
 	utils := new(MockDetectorUtils)
 	utils.On("getContainerID").Return("cid-12345", nil)
 
-	detector := NewResourceDetector(
-		withIMDSClient(imdsMock),
-		withEC2Client(ec2Mock),
-		WithKubeClient(fake.NewSimpleClientset()),
-	)
-	detector.utils = utils
+	detector := newTestDetector(t, utils, withIMDSClient(imdsMock), withEC2Client(ec2Mock))
 
 	res, err := detector.Detect(t.Context())
 	require.NoError(t, err)
@@ -612,17 +613,7 @@ func TestDetectFromK8sNode_IMDSDisabled(t *testing.T) {
 
 	imdsMock := new(mockIMDSClient)
 	imdsMock.On("GetInstanceIdentityDocument", mock.Anything, mock.Anything).Return(
-		(*imds.GetInstanceIdentityDocumentOutput)(nil), errors.New("imds unreachable"))
-
-	fakeClient := fake.NewSimpleClientset(
-		&corev1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "ip-10-0-0-2.ec2.internal",
-			},
-			Spec: corev1.NodeSpec{
-				ProviderID: "aws:///us-east-1b/i-0fedcba9876543210",
-			},
-		},
+		(*imds.GetInstanceIdentityDocumentOutput)(nil), errors.New("imds unreachable"),
 	)
 
 	ec2Mock := new(mockEC2Client)
@@ -652,15 +643,14 @@ func TestDetectFromK8sNode_IMDSDisabled(t *testing.T) {
 	}, nil)
 
 	utils := new(MockDetectorUtils)
+	utils.On("getNodeProviderID", "ip-10-0-0-2.ec2.internal").Return("aws:///us-east-1b/i-0fedcba9876543210", nil)
 	utils.On("getContainerID").Return("", nil)
 
-	detector := NewResourceDetector(
+	detector := newTestDetector(t, utils,
 		withIMDSClient(imdsMock),
 		withEC2Client(ec2Mock),
-		WithKubeClient(fakeClient),
 		WithNodeEnvVar("TEST_NODE_NAME"),
 	)
-	detector.utils = utils
 
 	res, err := detector.Detect(t.Context())
 	require.NoError(t, err)
@@ -694,7 +684,8 @@ func TestDetectClusterName_ConfigMapFallback(t *testing.T) {
 				InstanceID: "i-0123456789abcdef0",
 				Region:     "us-west-2",
 			},
-		}, nil)
+		}, nil,
+	)
 	imdsMock.On("GetMetadata", mock.Anything, mock.Anything).Return((*imds.GetMetadataOutput)(nil), errors.New("metadata unavailable"))
 
 	// EC2 DescribeInstances returns no cluster tag
@@ -709,12 +700,7 @@ func TestDetectClusterName_ConfigMapFallback(t *testing.T) {
 	}, nil)
 	utils.On("getContainerID").Return("", nil)
 
-	detector := NewResourceDetector(
-		withIMDSClient(imdsMock),
-		withEC2Client(ec2Mock),
-		WithKubeClient(fake.NewSimpleClientset()),
-	)
-	detector.utils = utils
+	detector := newTestDetector(t, utils, withIMDSClient(imdsMock), withEC2Client(ec2Mock))
 
 	res, err := detector.Detect(t.Context())
 	require.NoError(t, err)
@@ -723,6 +709,55 @@ func TestDetectClusterName_ConfigMapFallback(t *testing.T) {
 	imdsMock.AssertExpectations(t)
 	ec2Mock.AssertExpectations(t)
 	utils.AssertExpectations(t)
+}
+
+func TestGetK8sAPI(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		assert.Equal(t, http.MethodGet, r.Method)
+		assert.Equal(t, "application/json", r.Header.Get("Accept"))
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.EscapedPath() {
+		case "/version":
+			_, _ = w.Write([]byte(`{"gitVersion":"v1.30.2-eks-123456"}`))
+		case "/api/v1/nodes/ip-10-0-0-1.ec2.internal":
+			_, _ = w.Write([]byte(`{"spec":{"providerID":"aws:///us-west-2a/i-049ca2df511bec762"}}`))
+		case "/api/v1/nodes/bad%2Fnode":
+			_, _ = w.Write([]byte(`invalid-json`))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	t.Cleanup(srv.Close)
+
+	utils := &eksDetectorUtils{host: srv.URL, client: srv.Client()}
+
+	v, err := utils.getServerVersion(t.Context())
+	require.NoError(t, err)
+	assert.Equal(t, "v1.30.2-eks-123456", v)
+
+	id, err := utils.getNodeProviderID(t.Context(), "ip-10-0-0-1.ec2.internal")
+	require.NoError(t, err)
+	assert.Equal(t, "aws:///us-west-2a/i-049ca2df511bec762", id)
+
+	_, err = utils.getNodeProviderID(t.Context(), "missing-node")
+	assert.ErrorContains(t, err, "unexpected status")
+
+	// Node names are path-escaped so they cannot alter the request path.
+	_, err = utils.getNodeProviderID(t.Context(), "bad/node")
+	assert.ErrorContains(t, err, "failed to decode response")
+}
+
+func TestGetK8sAPIRequestDeadline(t *testing.T) {
+	rt := &deadlineRoundTripper{}
+	utils := &eksDetectorUtils{host: "http://k8s.invalid", client: &http.Client{Transport: rt}}
+
+	before := time.Now()
+	_, err := utils.getServerVersion(context.WithoutCancel(t.Context()))
+	after := time.Now()
+	require.NoError(t, err)
+
+	require.True(t, rt.ok, "request context must carry a deadline")
+	assert.WithinRange(t, rt.deadline, before.Add(k8sAPITimeout), after.Add(k8sAPITimeout))
 }
 
 func TestWithAWSConfig(t *testing.T) {

@@ -27,9 +27,6 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
@@ -43,6 +40,7 @@ const (
 	defaultCgroupPath               = "/proc/self/cgroup"
 	containerIDLength               = 64
 	configMapTimeout                = 10 * time.Second
+	k8sAPITimeout                   = 10 * time.Second
 	imdsTimeout                     = 2 * time.Second
 	kubernetesServiceHostEnvVar     = "KUBERNETES_SERVICE_HOST"
 	eksClusterStringIdentifier      = "-eks-"
@@ -62,7 +60,8 @@ type detectorUtils interface {
 	fileExists(filename string) bool
 	getConfigMap(ctx context.Context, namespace, name string) (map[string]string, error)
 	getContainerID() (string, error)
-	getServerVersion() (string, error)
+	getServerVersion(ctx context.Context) (string, error)
+	getNodeProviderID(ctx context.Context, nodeName string) (string, error)
 }
 
 // imdsClient captures the subset of EC2 IMDS methods needed by the detector.
@@ -78,14 +77,25 @@ type ec2Client interface {
 
 // This struct will implement the detectorUtils interface.
 type eksDetectorUtils struct {
-	host       string
-	client     *http.Client
-	kubeClient kubernetes.Interface
+	host   string
+	client *http.Client
 }
 
 // configMap is the subset of a Kubernetes ConfigMap response needed by the detector.
 type configMap struct {
 	Data map[string]string `json:"data"`
+}
+
+// node is the subset of a Kubernetes Node response needed by the detector.
+type node struct {
+	Spec struct {
+		ProviderID string `json:"providerID"`
+	} `json:"spec"`
+}
+
+// serverVersion is the subset of a Kubernetes /version response needed by the detector.
+type serverVersion struct {
+	GitVersion string `json:"gitVersion"`
 }
 
 type nodeMetadata struct {
@@ -101,7 +111,6 @@ type nodeMetadata struct {
 
 type config struct {
 	nodeEnvVar string
-	kubeClient kubernetes.Interface
 	filter     attribute.Filter
 	awsConfig  *aws.Config
 	imdsClient imdsClient
@@ -132,13 +141,6 @@ func WithNodeEnvVar(name string) Option {
 	return optionFunc(func(c *config) { c.nodeEnvVar = name })
 }
 
-// WithKubeClient sets the Kubernetes client used to query the Kubernetes API.
-// If not set, an in-cluster client is created automatically during
-// [ResourceDetector.Detect].
-func WithKubeClient(client kubernetes.Interface) Option {
-	return optionFunc(func(c *config) { c.kubeClient = client })
-}
-
 // WithAWSConfig sets the AWS SDK configuration used to query AWS APIs.
 func WithAWSConfig(cfg aws.Config) Option {
 	return optionFunc(func(c *config) { c.awsConfig = &cfg })
@@ -159,9 +161,6 @@ type ResourceDetector struct {
 	err   error
 }
 
-// Backwards-compatible type alias.
-type resourceDetector = ResourceDetector
-
 // Compile time assertion that ResourceDetector implements the resource.Detector interface.
 var _ resource.Detector = (*ResourceDetector)(nil)
 
@@ -178,18 +177,7 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 		opt.apply(&cfg)
 	}
 
-	var (
-		utils detectorUtils
-		err   error
-	)
-	if cfg.kubeClient != nil {
-		utils = &eksDetectorUtils{
-			kubeClient: cfg.kubeClient,
-		}
-	} else {
-		utils, err = newK8sDetectorUtils()
-	}
-
+	utils, err := newK8sDetectorUtils()
 	return &ResourceDetector{cfg: cfg, utils: utils, err: err}
 }
 
@@ -311,16 +299,6 @@ func (detector *ResourceDetector) getEC2Client(ctx context.Context, optFns ...fu
 	return ec2.NewFromConfig(cfg, optFns...), nil
 }
 
-func (detector *ResourceDetector) getKubeClient() kubernetes.Interface {
-	if detector.cfg.kubeClient != nil {
-		return detector.cfg.kubeClient
-	}
-	if eksUtils, ok := detector.utils.(*eksDetectorUtils); ok {
-		return eksUtils.kubeClient
-	}
-	return nil
-}
-
 func (detector *ResourceDetector) detectNodeMetadata(ctx context.Context) nodeMetadata {
 	var meta nodeMetadata
 
@@ -385,19 +363,14 @@ func (detector *ResourceDetector) getK8sNodeMetadata(ctx context.Context) (nodeM
 		return nodeMetadata{}, errors.New("node name is empty")
 	}
 
-	client := detector.getKubeClient()
-	if client == nil {
-		return nodeMetadata{}, errors.New("kubernetes client is not available")
-	}
-
-	node, err := client.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
+	providerID, err := detector.utils.getNodeProviderID(ctx, nodeName)
 	if err != nil {
 		return nodeMetadata{}, fmt.Errorf("failed to retrieve k8s node: %w", err)
 	}
 
-	region, availabilityZone, instanceID := parseRegionAndInstanceID(node.Spec.ProviderID)
+	region, availabilityZone, instanceID := parseRegionAndInstanceID(providerID)
 	if region == "" || instanceID == "" {
-		return nodeMetadata{}, fmt.Errorf("failed to parse region or instanceID from providerID: %s", node.Spec.ProviderID)
+		return nodeMetadata{}, fmt.Errorf("failed to parse region or instanceID from providerID: %s", providerID)
 	}
 
 	return nodeMetadata{
@@ -475,7 +448,7 @@ func isEKS(ctx context.Context, utils detectorUtils) bool {
 	}
 
 	// Check cluster server version for -eks- identifier
-	if version, err := utils.getServerVersion(); err == nil && strings.Contains(version, eksClusterStringIdentifier) {
+	if version, err := utils.getServerVersion(ctx); err == nil && strings.Contains(version, eksClusterStringIdentifier) {
 		return true
 	}
 
@@ -497,12 +470,7 @@ func newK8sDetectorUtils() (*eksDetectorUtils, error) {
 		return nil, fmt.Errorf("failed to create HTTP client for Kubernetes: %w", err)
 	}
 
-	kubeClient, err := kubernetes.NewForConfig(confs)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create Kubernetes client: %w", err)
-	}
-
-	return &eksDetectorUtils{host: confs.Host, client: client, kubeClient: kubeClient}, nil
+	return &eksDetectorUtils{host: confs.Host, client: client}, nil
 }
 
 // isK8s checks if the current environment is running in a Kubernetes environment.
@@ -523,14 +491,6 @@ func (eksDetectorUtils) fileExists(filename string) bool {
 func (eksUtils eksDetectorUtils) getConfigMap(ctx context.Context, namespace, name string) (map[string]string, error) {
 	ctx, cancel := context.WithTimeout(ctx, configMapTimeout)
 	defer cancel()
-
-	if eksUtils.kubeClient != nil {
-		cm, err := eksUtils.kubeClient.CoreV1().ConfigMaps(namespace).Get(ctx, name, metav1.GetOptions{})
-		if err != nil {
-			return nil, fmt.Errorf("failed to retrieve ConfigMap %s/%s: %w", namespace, name, err)
-		}
-		return cm.Data, nil
-	}
 
 	u, err := url.JoinPath(eksUtils.host, "api", "v1", "namespaces", namespace, "configmaps", name)
 	if err != nil {
@@ -562,15 +522,53 @@ func (eksUtils eksDetectorUtils) getConfigMap(ctx context.Context, namespace, na
 }
 
 // getServerVersion retrieves the Kubernetes cluster server version.
-func (eksUtils eksDetectorUtils) getServerVersion() (string, error) {
-	if eksUtils.kubeClient == nil {
-		return "", errors.New("kubernetes client not configured")
+func (eksUtils eksDetectorUtils) getServerVersion(ctx context.Context) (string, error) {
+	var v serverVersion
+	if err := eksUtils.getK8sAPI(ctx, &v, "version"); err != nil {
+		return "", fmt.Errorf("failed to retrieve server version: %w", err)
 	}
-	info, err := eksUtils.kubeClient.Discovery().ServerVersion()
+	return v.GitVersion, nil
+}
+
+// getNodeProviderID retrieves the provider ID of the named Kubernetes node.
+func (eksUtils eksDetectorUtils) getNodeProviderID(ctx context.Context, nodeName string) (string, error) {
+	var n node
+	if err := eksUtils.getK8sAPI(ctx, &n, "api", "v1", "nodes", url.PathEscape(nodeName)); err != nil {
+		return "", fmt.Errorf("failed to retrieve node %s: %w", nodeName, err)
+	}
+	return n.Spec.ProviderID, nil
+}
+
+// getK8sAPI performs a GET request against the Kubernetes API and decodes the JSON response into out.
+func (eksUtils eksDetectorUtils) getK8sAPI(ctx context.Context, out any, elem ...string) error {
+	ctx, cancel := context.WithTimeout(ctx, k8sAPITimeout)
+	defer cancel()
+
+	u, err := url.JoinPath(eksUtils.host, elem...)
 	if err != nil {
-		return "", err
+		return fmt.Errorf("failed to build URL: %w", err)
 	}
-	return info.GitVersion, nil
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, http.NoBody)
+	if err != nil {
+		return fmt.Errorf("failed to create request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := eksUtils.client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return fmt.Errorf("unexpected status %s", resp.Status)
+	}
+
+	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+		return fmt.Errorf("failed to decode response: %w", err)
+	}
+	return nil
 }
 
 // getClusterName retrieves the clusterName resource attribute.
@@ -587,9 +585,6 @@ func getClusterName(ctx context.Context, utils detectorUtils) (string, error) {
 }
 
 func isNotFound(err error) bool {
-	if apierrors.IsNotFound(err) {
-		return true
-	}
 	errStr := err.Error()
 	return strings.Contains(errStr, "404") || strings.Contains(errStr, "not found")
 }
