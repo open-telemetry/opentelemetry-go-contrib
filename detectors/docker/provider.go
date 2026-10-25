@@ -6,6 +6,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -51,8 +52,8 @@ type provider interface {
 }
 
 type dockerProviderImpl struct {
-	dockerClient        *client.Client
-	containerIDProvider func(context.Context) (string, error)
+	dockerClient *client.Client
+	openFile     func(string) (io.ReadCloser, error)
 }
 
 func (d *dockerProviderImpl) Info(ctx context.Context) (hostInfo, error) {
@@ -64,7 +65,7 @@ func (d *dockerProviderImpl) Info(ctx context.Context) (hostInfo, error) {
 }
 
 func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (containerInfo, error) {
-	containerRef, err := d.containerIDProvider(ctx)
+	containerRef, err := d.containerIDFromFiles()
 	if err != nil || containerRef == "" {
 		// Fall back to the hostname for platforms where cgroup detection is
 		// unavailable and to preserve support for older Docker setups.
@@ -144,7 +145,9 @@ func newProvider(opts ...client.Opt) (provider, error) {
 		return nil, fmt.Errorf("could not initialize Docker client: %w", err)
 	}
 	return &dockerProviderImpl{
-		dockerClient:        cli,
-		containerIDProvider: getContainerID,
+		dockerClient: cli,
+		openFile: func(path string) (io.ReadCloser, error) {
+			return os.Open(path)
+		},
 	}, nil
 }

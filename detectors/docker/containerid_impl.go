@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package internal
+package docker
 
 import (
 	"bufio"
@@ -16,20 +16,12 @@ const cgroupPath = "/proc/self/cgroup"
 
 const mountInfoPath = "/proc/self/mountinfo"
 
-var cgroupContainerIDRe = regexp.MustCompile(`^.*/(?:.*[-:])?([0-9a-f]{64})(?:\.|\s*$)`)
+var cgroupContainerIDRegEx = regexp.MustCompile(`^.*/(?:.*[-:])?([0-9a-f]{64})(?:\.|\s*$)`)
 
-var dockerHostnamePathRe = regexp.MustCompile(`(?:^|/)containers/([0-9a-f]{64})/hostname$`)
+var dockerHostnamePathRegEx = regexp.MustCompile(`(?:^|/)containers/([0-9a-f]{64})/hostname$`)
 
-// ContainerID returns the container ID from cgroup data or Docker's hostname
-// mount. If neither contains a container ID, it returns an empty string.
-func ContainerID() (string, error) {
-	return containerIDFromFiles(func(path string) (io.ReadCloser, error) {
-		return os.Open(path)
-	})
-}
-
-func containerIDFromFiles(openFile func(string) (io.ReadCloser, error)) (string, error) {
-	cgroupFile, cgroupErr := openFile(cgroupPath)
+func (d *dockerProviderImpl) containerIDFromFiles() (string, error) {
+	cgroupFile, cgroupErr := d.openFile(cgroupPath)
 	if cgroupErr == nil {
 		id, parseErr := containerIDFromReader(cgroupFile)
 		_ = cgroupFile.Close()
@@ -39,7 +31,7 @@ func containerIDFromFiles(openFile func(string) (io.ReadCloser, error)) (string,
 		cgroupErr = parseErr
 	}
 
-	mountInfoFile, mountInfoErr := openFile(mountInfoPath)
+	mountInfoFile, mountInfoErr := d.openFile(mountInfoPath)
 	if mountInfoErr == nil {
 		id, parseErr := containerIDFromMountInfo(mountInfoFile)
 		_ = mountInfoFile.Close()
@@ -69,7 +61,7 @@ func containerIDFromReader(reader io.Reader) (string, error) {
 }
 
 func containerIDFromLine(line string) string {
-	matches := cgroupContainerIDRe.FindStringSubmatch(line)
+	matches := cgroupContainerIDRegEx.FindStringSubmatch(line)
 	if len(matches) <= 1 {
 		return ""
 	}
@@ -84,7 +76,7 @@ func containerIDFromMountInfo(reader io.Reader) (string, error) {
 			continue
 		}
 
-		matches := dockerHostnamePathRe.FindStringSubmatch(fields[3])
+		matches := dockerHostnamePathRegEx.FindStringSubmatch(fields[3])
 		if len(matches) > 1 {
 			return matches[1], nil
 		}

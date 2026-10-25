@@ -5,11 +5,11 @@ package docker
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/moby/moby/api/types/container"
@@ -42,6 +42,7 @@ func jsonResponse(t *testing.T, status int, body any) *http.Response {
 // (URL/version construction, JSON decoding) instead of a hand-rolled mock
 // interface. Pinning the API version skips the implicit /_ping
 // version-negotiation request the client otherwise makes on first use.
+
 func newTestProvider(t *testing.T, rt roundTripFunc) *dockerProviderImpl {
 	t.Helper()
 	cli, err := client.New(
@@ -49,7 +50,29 @@ func newTestProvider(t *testing.T, rt roundTripFunc) *dockerProviderImpl {
 		client.WithHTTPClient(&http.Client{Transport: rt}),
 	)
 	require.NoError(t, err)
-	return &dockerProviderImpl{dockerClient: cli, containerIDProvider: getContainerID}
+
+	p := &dockerProviderImpl{
+		dockerClient: cli,
+	}
+	setContainerID(p, "")
+	return p
+}
+
+func setContainerID(p *dockerProviderImpl, id string) {
+	p.openFile = func(path string) (io.ReadCloser, error) {
+		switch path {
+		case "/proc/self/cgroup":
+			content := "0::/\n"
+			if id != "" {
+				content = "1:name=systemd:/docker/" + id + "\n"
+			}
+			return io.NopCloser(strings.NewReader(content)), nil
+		case "/proc/self/mountinfo":
+			return io.NopCloser(strings.NewReader("")), nil
+		default:
+			return nil, os.ErrNotExist
+		}
+	}
 }
 
 func TestNewProvider(t *testing.T) {
@@ -60,7 +83,7 @@ func TestNewProvider(t *testing.T) {
 	dockerProvider, ok := p.(*dockerProviderImpl)
 	require.True(t, ok)
 	assert.NotNil(t, dockerProvider.dockerClient)
-	assert.NotNil(t, dockerProvider.containerIDProvider)
+	assert.NotNil(t, dockerProvider.openFile)
 }
 
 func TestNewProvider_InvalidHost(t *testing.T) {
@@ -92,18 +115,14 @@ const testImageID = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495
 
 func TestDockerProviderImpl_ContainerInfo(t *testing.T) {
 	p := newTestProvider(t, func(req *http.Request) (*http.Response, error) {
-		assert.Equal(t, "/v"+client.MaxAPIVersion+"/containers/container-id/json", req.URL.Path)
+		assert.Equal(t, "/v"+client.MaxAPIVersion+"/containers/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/json", req.URL.Path)
 		return jsonResponse(t, http.StatusOK, container.InspectResponse{
 			Name:   "/my-container",
 			Image:  testImageID,
 			Config: &container.Config{Image: "golang:1.25"},
 		}), nil
 	})
-	previousContainerIDProvider := p.containerIDProvider
-	p.containerIDProvider = func(context.Context) (string, error) {
-		return "container-id", nil
-	}
-	t.Cleanup(func() { p.containerIDProvider = previousContainerIDProvider })
+	setContainerID(p, "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
 
 	info, err := p.ContainerInfo(t.Context())
 	require.NoError(t, err)
@@ -125,7 +144,7 @@ func TestDockerProviderImpl_ContainerInfo_FallbackToHostname(t *testing.T) {
 			Config: &container.Config{Image: "golang:1.25"},
 		}), nil
 	})
-	p.containerIDProvider = func(context.Context) (string, error) { return "", nil }
+	setContainerID(p, "")
 
 	info, err := p.ContainerInfo(t.Context())
 	require.NoError(t, err)
@@ -138,7 +157,7 @@ func TestDockerProviderImpl_ContainerInfo_FallbackToHostnameAfterNotFound(t *tes
 
 	p := newTestProvider(t, func(req *http.Request) (*http.Response, error) {
 		switch req.URL.Path {
-		case "/v" + client.MaxAPIVersion + "/containers/container-id/json":
+		case "/v" + client.MaxAPIVersion + "/containers/0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef/json":
 			return jsonResponse(t, http.StatusNotFound, map[string]string{"message": "no such container"}), nil
 		case "/v" + client.MaxAPIVersion + "/containers/" + hostname + "/json":
 			return jsonResponse(t, http.StatusOK, container.InspectResponse{Name: "/my-container", Image: testImageID}), nil
@@ -147,7 +166,7 @@ func TestDockerProviderImpl_ContainerInfo_FallbackToHostnameAfterNotFound(t *tes
 			return nil, nil
 		}
 	})
-	p.containerIDProvider = func(context.Context) (string, error) { return "container-id", nil }
+	setContainerID(p, "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef")
 
 	info, err := p.ContainerInfo(t.Context())
 	require.NoError(t, err)
