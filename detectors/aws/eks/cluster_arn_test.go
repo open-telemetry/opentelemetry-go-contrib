@@ -26,7 +26,7 @@ import (
 const (
 	testClusterName = "example-cluster"
 	testClusterARN  = "arn:aws:eks:us-west-2:123456789012:cluster/example-cluster"
-	testIssuer      = "https://oidc.eks.us-west-2.amazonaws.com/id/EXAMPLE"
+	testIssuer      = "https://oidc.eks.invalid/id/EXAMPLE"
 )
 
 type arnTestUtils struct {
