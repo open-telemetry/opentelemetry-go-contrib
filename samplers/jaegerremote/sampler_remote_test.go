@@ -26,6 +26,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -810,6 +811,10 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 	})
 
 	t.Run("maximum valid polling interval", func(t *testing.T) {
+		if strconv.IntSize < 64 {
+			t.Skip("requires 64-bit int")
+		}
+
 		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "pollingIntervalMs=9223372036854")
 
 		cfg := newConfig()
