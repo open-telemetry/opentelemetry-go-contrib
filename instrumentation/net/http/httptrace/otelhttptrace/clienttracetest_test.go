@@ -8,6 +8,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
@@ -316,6 +317,114 @@ func prepareClientTraceTest(t *testing.T) clientTraceTestFixture {
 	fixture.URL = ts.URL
 	fixture.Address = ts.Listener.Addr().String()
 	return fixture
+}
+
+func TestHTTPGetConnSpanAcrossAddressFallback(t *testing.T) {
+	fixture := prepareClientTraceTest(t)
+	unavailableListener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	unavailableAddress := unavailableListener.Addr().String()
+	require.NoError(t, unavailableListener.Close())
+
+	dialer := &net.Dialer{}
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			conn, err := dialer.DialContext(ctx, network, unavailableAddress)
+			if err == nil {
+				require.NoError(t, conn.Close())
+				return nil, errors.New("expected the first address to be unavailable")
+			}
+			return dialer.DialContext(ctx, network, fixture.Address)
+		},
+	}
+	t.Cleanup(transport.CloseIdleConnections)
+
+	ctx, root := otel.Tracer("test").Start(t.Context(), "root")
+	defer root.End()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, http.NoBody)
+	require.NoError(t, err)
+	req = req.WithContext(httptrace.WithClientTrace(ctx, otelhttptrace.NewClientTrace(ctx)))
+
+	resp, err := (&http.Client{Transport: transport}).Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	getConnSpans := getSpansFromRecorder(fixture.SpanRecorder, "http.getconn")
+	require.Len(t, getConnSpans, 1)
+	connectSpans := getSpansFromRecorder(fixture.SpanRecorder, "http.connect")
+	require.Len(t, connectSpans, 2)
+	for _, span := range connectSpans {
+		assert.Equal(t, getConnSpans[0].SpanContext().SpanID(), span.Parent().SpanID())
+	}
+	assert.Equal(t, codes.Error, connectSpans[0].Status().Code)
+	assert.Equal(t, codes.Unset, connectSpans[1].Status().Code)
+}
+
+func TestHTTPGetConnSpanEndsAfterDialFailureAndContextCleanup(t *testing.T) {
+	fixture := prepareClientTraceTest(t)
+	dialErr := errors.New("dial failed before a connection attempt")
+	transport := &http.Transport{
+		DialContext: func(context.Context, string, string) (net.Conn, error) {
+			return nil, dialErr
+		},
+	}
+	t.Cleanup(transport.CloseIdleConnections)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	ctx, root := otel.Tracer("test").Start(ctx, "root")
+	defer root.End()
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fixture.URL, http.NoBody)
+	require.NoError(t, err)
+	req = req.WithContext(httptrace.WithClientTrace(ctx, otelhttptrace.NewClientTrace(ctx)))
+
+	resp, err := (&http.Client{Transport: transport}).Do(req)
+	require.ErrorIs(t, err, dialErr)
+	if resp != nil {
+		require.NoError(t, resp.Body.Close())
+	}
+	cancel()
+
+	require.Eventually(t, func() bool {
+		return len(getSpansFromRecorder(fixture.SpanRecorder, "http.getconn")) == 1
+	}, time.Second, time.Millisecond)
+}
+
+func TestHTTPRedirectGetConnSpanEndsAfterDialFailureAndContextCleanup(t *testing.T) {
+	fixture := prepareClientTraceTest(t)
+	redirectURL := "http://unreachable.invalid:12345/final"
+	transport := &http.Transport{
+		DialContext: func(ctx context.Context, network, address string) (net.Conn, error) {
+			if address == "unreachable.invalid:12345" {
+				return nil, errors.New("redirect target unavailable")
+			}
+			return (&net.Dialer{}).DialContext(ctx, network, address)
+		},
+	}
+	t.Cleanup(transport.CloseIdleConnections)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, redirectURL, http.StatusFound)
+	}))
+	t.Cleanup(server.Close)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	ctx, root := otel.Tracer("test").Start(ctx, "root")
+	defer root.End()
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, server.URL, http.NoBody)
+	require.NoError(t, err)
+	req = req.WithContext(httptrace.WithClientTrace(ctx, otelhttptrace.NewClientTrace(ctx)))
+
+	resp, err := (&http.Client{Transport: transport}).Do(req)
+	require.Error(t, err)
+	if resp != nil {
+		require.NoError(t, resp.Body.Close())
+	}
+	cancel()
+
+	require.Eventually(t, func() bool {
+		return len(getSpansFromRecorder(fixture.SpanRecorder, "http.getconn")) == 2
+	}, time.Second, time.Millisecond)
 }
 
 func TestWithoutSubSpans(t *testing.T) {

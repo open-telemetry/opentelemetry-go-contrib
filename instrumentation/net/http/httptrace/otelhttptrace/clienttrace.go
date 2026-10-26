@@ -132,13 +132,15 @@ type clientTracer struct {
 
 	tr trace.Tracer
 
-	activeHooks     map[string]context.Context
-	root            trace.Span
-	mtx             sync.Mutex
-	redactedHeaders map[string]struct{}
-	addHeaders      bool
-	useSpans        bool
-	semconv         semconv.HTTPClient
+	activeHooks       map[string]context.Context
+	root              trace.Span
+	mtx               sync.Mutex
+	stopGetConnWatch  func() bool
+	getConnGeneration uint64
+	redactedHeaders   map[string]struct{}
+	addHeaders        bool
+	useSpans          bool
+	semconv           semconv.HTTPClient
 }
 
 // NewClientTrace returns an httptrace.ClientTrace implementation that will
@@ -148,6 +150,9 @@ type clientTracer struct {
 // added as attributes to spans, although several headers will be automatically
 // redacted: Authorization, WWW-Authenticate, Proxy-Authenticate,
 // Proxy-Authorization, Cookie, and Set-Cookie.
+// If a request fails before acquiring a connection, net/http does not provide
+// a trace callback for that failure. Callers using this trace directly should
+// cancel ctx when the request completes to finish any pending http.getconn span.
 func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.ClientTrace {
 	ct := &clientTracer{
 		Context:     ctx,
@@ -260,6 +265,45 @@ func (ct *clientTracer) end(hook string, err error, attrs ...attribute.KeyValue)
 	}
 }
 
+func (ct *clientTracer) endGetConn(err error, attrs ...attribute.KeyValue) {
+	if !ct.useSpans {
+		ct.end("http.getconn", err, attrs...)
+		return
+	}
+
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+	ct.endGetConnLocked(err, attrs...)
+}
+
+func (ct *clientTracer) endGetConnIfActive(generation uint64, err error) {
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+	if generation == ct.getConnGeneration {
+		ct.endGetConnLocked(err)
+	}
+}
+
+func (ct *clientTracer) endGetConnLocked(err error, attrs ...attribute.KeyValue) {
+	ctx, ok := ct.activeHooks["http.getconn"]
+	if !ok {
+		return
+	}
+
+	span := trace.SpanFromContext(ctx)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+	}
+	span.SetAttributes(attrs...)
+	span.End()
+	delete(ct.activeHooks, "http.getconn")
+	ct.getConnGeneration++
+	if ct.stopGetConnWatch != nil {
+		ct.stopGetConnWatch()
+		ct.stopGetConnWatch = nil
+	}
+}
+
 func (ct *clientTracer) getParentContext(hook string) context.Context {
 	ctx, ok := ct.activeHooks[parentHook(hook)]
 	if !ok {
@@ -278,7 +322,28 @@ func (ct *clientTracer) span(hook string) trace.Span {
 }
 
 func (ct *clientTracer) getConn(host string) {
+	if ct.useSpans {
+		// A new acquisition supersedes one that ended without GotConn.
+		ct.endGetConn(nil)
+	}
 	ct.start("http.getconn", "http.getconn", ct.semconv.TraceAttributes(host)...)
+	if !ct.useSpans {
+		return
+	}
+
+	ct.mtx.Lock()
+	defer ct.mtx.Unlock()
+	if ct.stopGetConnWatch != nil {
+		ct.stopGetConnWatch()
+		ct.stopGetConnWatch = nil
+	}
+	if _, active := ct.activeHooks["http.getconn"]; active {
+		ct.getConnGeneration++
+		generation := ct.getConnGeneration
+		ct.stopGetConnWatch = context.AfterFunc(ct.Context, func() {
+			ct.endGetConnIfActive(generation, context.Cause(ct.Context))
+		})
+	}
 }
 
 func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
@@ -291,7 +356,7 @@ func (ct *clientTracer) gotConn(info httptrace.GotConnInfo) {
 	if info.WasIdle {
 		attrs = append(attrs, HTTPConnectionIdleTime.String(info.IdleTime.String()))
 	}
-	ct.end("http.getconn", nil, attrs...)
+	ct.endGetConn(nil, attrs...)
 }
 
 func (ct *clientTracer) putIdleConn(err error) {
