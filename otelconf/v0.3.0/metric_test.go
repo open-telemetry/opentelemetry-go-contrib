@@ -406,6 +406,25 @@ func TestReader(t *testing.T) {
 			wantReader: sdkmetric.NewPeriodicReader(otlpGRPCExporter),
 		},
 		{
+			name: "periodic/otlp-grpc-exporter-ipv4-endpoint",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    new("grpc"),
+							Endpoint:    new("127.0.0.1:4318"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: new("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(otlpGRPCExporter),
+		},
+		{
 			name: "periodic/otlp-grpc-invalid-endpoint",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
