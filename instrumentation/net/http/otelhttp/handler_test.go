@@ -205,6 +205,40 @@ func TestHandlerBasics(t *testing.T) {
 	assert.Equal(t, startTime, spans[0].StartTime())
 }
 
+type readerFromResponseRecorder struct{ *httptest.ResponseRecorder }
+
+func (w readerFromResponseRecorder) ReadFrom(r io.Reader) (int64, error) {
+	return io.Copy(w.ResponseRecorder, r)
+}
+
+func TestHandlerResponseBodySizeReadFrom(t *testing.T) {
+	body := "test"
+	bodysize := int64(len(body))
+
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	h := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// NewHandler passes a httpsnoop-wrapped writer here.
+		// Without the ReadFrom hook, this call bypasses byte accounting.
+		_, err := w.(io.ReaderFrom).ReadFrom(strings.NewReader(body))
+		assert.NoError(t, err)
+	}), "test_handler", WithMeterProvider(provider))
+	// Expose ReadFrom so httpsnoop preserves it on the wrapped writer.
+	w := readerFromResponseRecorder{httptest.NewRecorder()}
+	h.ServeHTTP(w, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody))
+
+	var metrics metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &metrics))
+	for _, metric := range metrics.ScopeMetrics[0].Metrics {
+		if metric.Name == "http.server.response.body.size" {
+			histogram := metric.Data.(metricdata.Histogram[int64])
+			assert.Equal(t, bodysize, histogram.DataPoints[0].Sum)
+			return
+		}
+	}
+	t.Fatal("response body size metric missing")
+}
+
 func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
 	assert.Equal(t, instrumentation.Scope{
 		Name:    "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",

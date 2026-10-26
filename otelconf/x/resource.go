@@ -18,11 +18,12 @@ func resourceOpts(resourceDetectors []ExperimentalResourceDetector) []resource.O
 	opts := []resource.Option{}
 	for _, d := range resourceDetectors {
 		opts = append(opts, detectors.Options(detectors.Detector{
-			AWSEC2:  d.AWSEC2 != nil,
-			AWSECS:  d.AWSECS != nil,
-			AWSEKS:  d.AWSEKS != nil,
-			AzureVM: d.AzureVM != nil,
-			GCP:     d.GCP != nil,
+			AWSEC2:    d.AWSEC2 != nil,
+			AWSECS:    d.AWSECS != nil,
+			AWSEKS:    d.AWSEKS != nil,
+			AWSLambda: d.AWSLambda != nil,
+			AzureVM:   d.AzureVM != nil,
+			GCP:       d.GCP != nil,
 		})...)
 
 		if d.Container != nil {
