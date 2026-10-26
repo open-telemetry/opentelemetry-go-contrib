@@ -2294,8 +2294,8 @@ func TestUnmarshalResourceJson(t *testing.T) {
 	}{
 		{
 			name:       "valid with all detectors",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.ec2": null},{"gcp": null},{"aws.ecs": null},{"aws.eks": null},{"azure.vm": null},{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.ec2:\n    - gcp:\n    - aws.ecs:\n    - aws.eks:\n    - azure.vm:\n    - container:\n    - host:\n    - process:\n    - service:"),
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.ec2": null},{"gcp": null},{"aws.ecs": null},{"aws.eks": null},{"aws.lambda": null},{"azure.vm": null},{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.ec2:\n    - gcp:\n    - aws.ecs:\n    - aws.eks:\n    - aws.lambda:\n    - azure.vm:\n    - container:\n    - host:\n    - process:\n    - service:"),
 			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
@@ -2310,6 +2310,9 @@ func TestUnmarshalResourceJson(t *testing.T) {
 						},
 						{
 							AWSEKS: ExperimentalAWSEKSResourceDetector{},
+						},
+						{
+							AWSLambda: ExperimentalAWSLambdaResourceDetector{},
 						},
 						{
 							AzureVM: ExperimentalAzureVMResourceDetector{},
@@ -2332,8 +2335,9 @@ func TestUnmarshalResourceJson(t *testing.T) {
 		},
 		{
 			name:       "valid non-nil with all detectors",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.ec2": {}},{"gcp": {}},{"aws.ecs": {}},{"aws.eks": {}},{"azure.vm": {}},{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.ec2: {}\n    - gcp: {}\n    - aws.ecs: {}\n    - aws.eks: {}\n    - azure.vm: {}\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.ec2": {}},{"gcp": {}},{"aws.ecs": {}},{"aws.eks": {}},{"aws.lambda": {}},{"azure.vm": {}},{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.ec2: {}\n    - gcp: {}\n    - aws.ecs: {}\n    - aws.eks: {}\n    - aws.lambda: {}\n    - azure.vm: {}\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
+
 			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
@@ -2348,6 +2352,9 @@ func TestUnmarshalResourceJson(t *testing.T) {
 						},
 						{
 							AWSEKS: ExperimentalAWSEKSResourceDetector{},
+						},
+						{
+							AWSLambda: ExperimentalAWSLambdaResourceDetector{},
 						},
 						{
 							AzureVM: ExperimentalAzureVMResourceDetector{},
@@ -2411,6 +2418,19 @@ func TestUnmarshalResourceJson(t *testing.T) {
 			name:       "invalid aws eks detector",
 			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.eks": 1}]}}`),
 			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.eks: 1"),
+			wantResource: Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{},
+					},
+				},
+			},
+			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
+		},
+		{
+			name:       "invalid aws lambda detector",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.lambda": 1}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.lambda: 1"),
 			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
