@@ -8,6 +8,7 @@ import (
 	"errors"
 	"math"
 	"runtime/metrics"
+	"slices"
 	"sync"
 	"time"
 
@@ -15,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/goconv"
 )
 
 var startTime time.Time
@@ -23,12 +25,11 @@ func init() {
 	startTime = time.Now()
 }
 
-var histogramMetrics = []string{goSchedLatencies}
-
 // Producer is a metric.Producer, which provides precomputed histogram metrics from the go runtime.
 type Producer struct {
-	lock      sync.Mutex
-	collector *goCollector
+	lock           sync.Mutex
+	collector      *goCollector
+	enableGCPauses bool
 }
 
 var _ metric.Producer = (*Producer)(nil)
@@ -38,10 +39,21 @@ var _ metric.Producer = (*Producer)(nil)
 // Metrics emitted by NewProducer include:
 //
 //	go.schedule.duration    s             The time goroutines have spent in the scheduler in a runnable state before actually running.
+//
+// The following opt-in metrics are produced when listed, comma-separated, in
+// the OTEL_GO_X_RUNTIME_METRICS_OPTIN environment variable:
+//
+//	go.memory.gc.pause.duration  s        Distribution of individual GC-related stop-the-world pause latencies.
 func NewProducer(opts ...ProducerOption) *Producer {
 	c := newProducerConfig(opts...)
+	histogramMetrics := []string{goSchedLatencies}
+	enableGCPauses := optInGCPauses.enabled()
+	if enableGCPauses {
+		histogramMetrics = append(histogramMetrics, goGCPauses)
+	}
 	return &Producer{
-		collector: newCollector(c.MinimumReadMemStatsInterval, histogramMetrics),
+		collector:      newCollector(c.MinimumReadMemStatsInterval, histogramMetrics),
+		enableGCPauses: enableGCPauses,
 	}
 }
 
@@ -49,12 +61,40 @@ func NewProducer(opts ...ProducerOption) *Producer {
 func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	p.lock.Lock()
 	p.collector.refresh()
-	schedHist := p.collector.getHistogram(goSchedLatencies)
-	p.lock.Unlock()
+	// The runtime reuses histogram memory on later reads, so copy it while
+	// holding the lock to keep returned datapoints stable.
+	schedHist := cloneHistogram(p.collector.getHistogram(goSchedLatencies))
+	pauseHist := cloneHistogram(p.collector.getHistogram(goGCPauses))
 	// Use the last collection time (which may or may not be now) for the timestamp.
-	histDp := convertRuntimeHistogram(schedHist, p.collector.lastCollect)
-	if len(histDp) == 0 {
+	collectedAt := p.collector.lastCollect
+	p.lock.Unlock()
+	schedDp := convertRuntimeHistogram(schedHist, collectedAt)
+	if len(schedDp) == 0 {
 		return nil, errors.New("unable to obtain go.schedule.duration metric from the runtime")
+	}
+	scopeMetrics := []metricdata.Metrics{
+		{
+			Name:        goconv.ScheduleDuration{}.Name(),
+			Description: goconv.ScheduleDuration{}.Description(),
+			Unit:        goconv.ScheduleDuration{}.Unit(),
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints:  schedDp,
+			},
+		},
+	}
+	// go.memory.gc.pause.duration is opt-in, so it is skipped instead of
+	// failing the collection of the always-on go.schedule.duration metric.
+	if pauseDp := convertRuntimeHistogram(pauseHist, collectedAt); p.enableGCPauses && len(pauseDp) > 0 {
+		scopeMetrics = append(scopeMetrics, metricdata.Metrics{
+			Name:        goconv.MemoryGCPauseDuration{}.Name(),
+			Description: goconv.MemoryGCPauseDuration{}.Description(),
+			Unit:        goconv.MemoryGCPauseDuration{}.Unit(),
+			Data: metricdata.Histogram[float64]{
+				Temporality: metricdata.CumulativeTemporality,
+				DataPoints:  pauseDp,
+			},
+		})
 	}
 	return []metricdata.ScopeMetrics{
 		{
@@ -62,22 +102,22 @@ func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 				Name:    ScopeName,
 				Version: Version,
 			},
-			Metrics: []metricdata.Metrics{
-				{
-					Name:        "go.schedule.duration",
-					Description: "The time goroutines have spent in the scheduler in a runnable state before actually running.",
-					Unit:        "s",
-					Data: metricdata.Histogram[float64]{
-						Temporality: metricdata.CumulativeTemporality,
-						DataPoints:  histDp,
-					},
-				},
-			},
+			Metrics: scopeMetrics,
 		},
 	}, nil
 }
 
 var emptySet = attribute.EmptySet()
+
+func cloneHistogram(h *metrics.Float64Histogram) *metrics.Float64Histogram {
+	if h == nil {
+		return nil
+	}
+	return &metrics.Float64Histogram{
+		Counts:  slices.Clone(h.Counts),
+		Buckets: slices.Clone(h.Buckets),
+	}
+}
 
 func convertRuntimeHistogram(runtimeHist *metrics.Float64Histogram, ts time.Time) []metricdata.HistogramDataPoint[float64] {
 	if runtimeHist == nil {
