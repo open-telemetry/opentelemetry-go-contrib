@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+
 	"os"
 	"path/filepath"
 	"testing"
@@ -424,7 +425,7 @@ func TestNewSDK(t *testing.T) {
 		sdk, err := NewSDK(tt.cfg...)
 
 		if tt.wantErr != nil {
-			require.Error(t, err)
+			require.Equal(t, tt.wantErr, err)
 			continue
 		}
 		require.NoError(t, err)
@@ -434,6 +435,37 @@ func TestNewSDK(t *testing.T) {
 		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
 		assert.IsType(t, tt.wantPropagator, sdk.Propagator())
 		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
+	}
+}
+
+func TestNewSDKDiagnosticLogger(t *testing.T) {
+	tests := []struct {
+		name     string
+		logLevel *SeverityNumber
+		wantErr  bool
+	}{
+		{
+			name:     "explicit log level",
+			logLevel: new(SeverityNumberWarn),
+		},
+		{
+			name: "omitted log level defaults to info",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := OpenTelemetryConfiguration{
+				LogLevel: tt.logLevel,
+			}
+
+			sdk, err := NewSDK(
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(cfg),
+			)
+			require.NoError(t, err)
+			require.NoError(t, sdk.Shutdown(t.Context()))
+		})
 	}
 }
 

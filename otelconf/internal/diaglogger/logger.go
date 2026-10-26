@@ -13,7 +13,7 @@ import (
 )
 
 // New creates a logger whose verbosity matches the configured OpenTelemetry
-// severity. An empty level defaults to info.
+// severity. Unsupported or empty levels return an error.
 func New(level string) (logr.Logger, error) {
 	base := level
 	if base != "" {
@@ -31,8 +31,10 @@ func New(level string) (logr.Logger, error) {
 		verbosity = 4
 	case "warn":
 		verbosity = 1
-	case "error", "fatal":
+	case "error":
 		verbosity = 0
+	case "fatal":
+		return logr.Discard(), nil
 	default:
 		return logr.Logger{}, fmt.Errorf("unsupported log_level %q", level)
 	}
