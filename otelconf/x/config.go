@@ -134,8 +134,6 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, newErrInvalid(err.Error())
 	}
 
-	otel.SetLogger(diagnosticLogger)
-
 	r, err := newResource(o.ctx, o.opentelemetryConfig.Resource)
 	if err != nil {
 		return noopSDK, err
@@ -171,6 +169,8 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 			return errors.Join(mpShutdown(ctx), tpShutdown(ctx), lpShutdown(ctx))
 		},
 	}
+
+	otel.SetLogger(diagnosticLogger)
 
 	return sdk, nil
 }
