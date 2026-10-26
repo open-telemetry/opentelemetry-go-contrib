@@ -211,7 +211,7 @@ func (j *Resource) UnmarshalYAML(unmarshal func(any) error) error {
 	}
 
 	type Plain Resource
-	var plain Plain
+	plain := Plain(*j)
 
 	err := unmarshal(&plain)
 	*j = Resource(plain)

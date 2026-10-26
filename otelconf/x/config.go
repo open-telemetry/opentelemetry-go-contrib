@@ -235,7 +235,7 @@ func (j *Resource) UnmarshalYAML(node *yaml.Node) error {
 	}
 
 	type Plain Resource
-	var plain Plain
+	plain := Plain(*j)
 
 	err := node.Decode(&plain)
 	if err != nil {
