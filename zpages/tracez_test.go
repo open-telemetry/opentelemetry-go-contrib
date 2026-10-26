@@ -45,7 +45,7 @@ func TestTracezHandler_ServeHTTP(t *testing.T) {
 	completedSpan.End()
 
 	_, errorSpan := tracer.Start(ctx, "error-span")
-	errorSpan.RecordError(context.DeadlineExceeded) //nolint:forbidigo // existing usage of Span.RecordError
+	errorSpan.SetStatus(codes.Error, context.DeadlineExceeded.Error())
 	errorSpan.End()
 
 	_, querySpan := tracer.Start(ctx, "query-span")
@@ -97,7 +97,7 @@ func TestTracezHandler_ServeHTTP(t *testing.T) {
 			name:         "error spans (type=2)",
 			url:          "/tracez?zspanname=error-span&ztype=2",
 			wantStatus:   http.StatusOK,
-			wantContains: []string{},
+			wantContains: []string{"1 Requests", context.DeadlineExceeded.Error()},
 		},
 		{
 			name:       "with latency bucket",
