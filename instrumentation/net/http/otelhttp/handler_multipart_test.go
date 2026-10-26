@@ -107,10 +107,9 @@ func TestHandlerMultipartTempFileCleanup(t *testing.T) {
 		if os.IsNotExist(statErr) {
 			break
 		}
-		require.NoError(t, statErr)
 		if time.Now().After(deadline) {
 			_ = os.Remove(tmpPath)
-			t.Fatalf("multipart temp file was not cleaned up: %s", tmpPath)
+			t.Fatalf("multipart temp file was not cleaned up: %s (last stat error: %v)", tmpPath, statErr)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
@@ -177,10 +176,9 @@ func TestHandlerMultipartTempFileCleanupOnPanic(t *testing.T) {
 		if os.IsNotExist(statErr) {
 			break
 		}
-		require.NoError(t, statErr)
 		if time.Now().After(deadline) {
 			_ = os.Remove(tmpPath)
-			t.Fatalf("multipart temp file was not cleaned up after panic: %s", tmpPath)
+			t.Fatalf("multipart temp file was not cleaned up after panic: %s (last stat error: %v)", tmpPath, statErr)
 		}
 		time.Sleep(20 * time.Millisecond)
 	}
