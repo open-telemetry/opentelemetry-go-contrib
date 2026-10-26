@@ -42,7 +42,6 @@ func jsonResponse(t *testing.T, status int, body any) *http.Response {
 // (URL/version construction, JSON decoding) instead of a hand-rolled mock
 // interface. Pinning the API version skips the implicit /_ping
 // version-negotiation request the client otherwise makes on first use.
-
 func newTestProvider(t *testing.T, rt roundTripFunc) *dockerProviderImpl {
 	t.Helper()
 	cli, err := client.New(
@@ -144,7 +143,6 @@ func TestDockerProviderImpl_ContainerInfo_FallbackToHostname(t *testing.T) {
 			Config: &container.Config{Image: "golang:1.25"},
 		}), nil
 	})
-	setContainerID(p, "")
 
 	info, err := p.ContainerInfo(t.Context())
 	require.NoError(t, err)
