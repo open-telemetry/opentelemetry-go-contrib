@@ -152,15 +152,22 @@ func newErrInvalid(id string) error {
 	return &errInvalid{Identifier: id}
 }
 
-// unmarshalSamplerTypes handles always_on and always_off sampler unmarshaling.
+// unmarshalSamplerTypes handles built-in sampler unmarshaling.
 func unmarshalSamplerTypes(raw map[string]any, plain *Sampler) {
-	// always_on can be nil, must check and set here
 	if _, ok := raw["always_on"]; ok {
 		plain.AlwaysOn = AlwaysOnSampler{}
 	}
-	// always_off can be nil, must check and set here
 	if _, ok := raw["always_off"]; ok {
 		plain.AlwaysOff = AlwaysOffSampler{}
+	}
+
+	delete(raw, "always_on")
+	delete(raw, "always_off")
+	delete(raw, "parent_based")
+	delete(raw, "trace_id_ratio_based")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
 	}
 }
 

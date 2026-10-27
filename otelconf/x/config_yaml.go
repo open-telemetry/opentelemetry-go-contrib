@@ -81,6 +81,7 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	delete(raw, "aws.ec2")
 	delete(raw, "gcp")
 	delete(raw, "aws.ecs")
+	delete(raw, "aws.lambda")
 	delete(raw, "aws.eks")
 	delete(raw, "azure.vm")
 	delete(raw, "container")

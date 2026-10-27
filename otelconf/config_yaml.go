@@ -26,6 +26,18 @@ func hasYAMLMapKey(node *yaml.Node, key string) bool {
 	return false
 }
 
+func yamlMappingToMap(node *yaml.Node) (map[string]any, error) {
+	raw := make(map[string]any)
+	if node == nil || node.Kind != yaml.MappingNode {
+		return raw, nil
+	}
+
+	if err := node.Decode(&raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
 // UnmarshalYAML implements yaml.Unmarshaler.
 
 // UnmarshalYAML implements yaml.Unmarshaler.
@@ -39,7 +51,43 @@ func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	if hasYAMLMapKey(node, "console") && plain.Console == nil {
 		plain.Console = &ConsoleMetricExporter{}
 	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp_grpc")
+	delete(raw, "otlp_http")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
 	*j = PushMetricExporter(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *PullMetricExporter) UnmarshalYAML(node *yaml.Node) error {
+	type Plain PullMetricExporter
+
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = PullMetricExporter(plain)
 	return nil
 }
 
@@ -229,6 +277,56 @@ func (j *BatchLogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
 		return err
 	}
 	*j = BatchLogRecordProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *SpanProcessor) UnmarshalYAML(node *yaml.Node) error {
+	type Plain SpanProcessor
+
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "batch")
+	delete(raw, "simple")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = SpanProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *LogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
+	type Plain LogRecordProcessor
+
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "batch")
+	delete(raw, "simple")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = LogRecordProcessor(plain)
 	return nil
 }
 
