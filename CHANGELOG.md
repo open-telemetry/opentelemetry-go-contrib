@@ -45,7 +45,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Reduce heap allocations on `Inject` in `go.opentelemetry.io/contrib/propagators/b3`. (#9870)
+### Fixed
+
+- Reduce heap allocations on `Inject` in `go.opentelemetry.io/contrib/propagators/b3`. (#9870, #9983)
 - Reject null entries in `resource.attributes` during YAML and JSON parsing in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x` and `go.opentelemetry.io/contrib/otelconf/v0.3.0`. (#9970)
 - Record client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the request body is read to EOF but never closed, as done by retrying `RoundTripper`s such as `go-retryablehttp`. (#10008)
 - Reduce heap allocations on `Inject` in `go.opentelemetry.io/contrib/propagators/b3`. (#9870, #9983)
