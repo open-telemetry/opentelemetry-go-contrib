@@ -34,7 +34,7 @@ func TestWithPrometheusRegisterer(t *testing.T) {
 		WithPrometheusRegisterer(reg),
 	)
 	require.NoError(t, err)
-	t.Cleanup(func() { assert.NoError(t, sdk.Shutdown(t.Context())) })
+	defer func() { assert.NoError(t, sdk.Shutdown(t.Context())) }()
 
 	counter, err := sdk.MeterProvider().Meter("test").Int64Counter("registerer_test_requests")
 	require.NoError(t, err)
