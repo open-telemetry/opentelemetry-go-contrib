@@ -543,11 +543,10 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 	// Clear the current variable before testing the deprecated variable.
 	require.NoError(t, os.Unsetenv(envVarConfigFile))
 
-	// Validate that use of the deprecated environment variable returns an error.
+	// Validate that the deprecated environment variable is still supported.
 	t.Setenv("OTEL_EXPERIMENTAL_CONFIG_FILE", filepath.Join("..", "testdata", "v1.0.0_invalid_nil_name.yaml"))
 	_, err = NewSDK(cfg...)
-	require.ErrorContains(t, err,
-		"OTEL_EXPERIMENTAL_CONFIG_FILE is no longer supported, use OTEL_CONFIG_FILE instead")
+	require.ErrorIs(t, err, newErrRequired(&NameStringValuePair{}, "name"))
 }
 
 func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfiguration {

@@ -81,10 +81,6 @@ func (s *SDK) Shutdown(ctx context.Context) error {
 	return s.shutdown(ctx)
 }
 
-var errDeprecatedEnvVarUsed = errors.New(
-	"OTEL_EXPERIMENTAL_CONFIG_FILE is no longer supported, use OTEL_CONFIG_FILE instead",
-)
-
 var noopSDK = SDK{
 	loggerProvider: nooplog.LoggerProvider{},
 	meterProvider:  noopmetric.MeterProvider{},
@@ -111,19 +107,19 @@ func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error
 }
 
 // NewSDK creates SDK providers based on the configuration model. It checks the local environment and
-// uses the file set in the variable `OTEL_EXPERIMENTAL_CONFIG_FILE` to configure the SDK automatically.
-// Any file defined by `OTEL_EXPERIMENTAL_CONFIG_FILE` will supersede all files passed with
+// uses the file set in the variable `OTEL_CONFIG_FILE` to configure the SDK automatically.
+// Any file defined by `OTEL_CONFIG_FILE` will supersede all files passed with
 // [WithOpenTelemetryConfiguration].
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	return newSDKWithDiagnosticWriter(os.Stderr, otel.SetLogger, opts...)
 }
 
 func newSDKWithDiagnosticWriter(output io.Writer, setLogger func(logr.Logger), opts ...ConfigurationOption) (SDK, error) {
-	if _, ok := os.LookupEnv(envVarConfigFileDeprecated); ok {
-		return noopSDK, errDeprecatedEnvVarUsed
+	filename, ok := os.LookupEnv(envVarConfigFile)
+	if !ok {
+		filename, ok = os.LookupEnv(envVarConfigFileDeprecated)
 	}
 
-	filename, ok := os.LookupEnv(envVarConfigFile)
 	if ok {
 		opt, err := parseConfigFileFromEnvironment(filename)
 		if err != nil {
