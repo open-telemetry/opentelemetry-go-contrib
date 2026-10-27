@@ -16,9 +16,7 @@ type config struct {
 func newConfig(opts ...Option) config {
 	cfg := config{}
 	for _, opt := range opts {
-		if opt != nil {
-			cfg = opt.apply(cfg)
-		}
+		cfg = opt.apply(cfg)
 	}
 
 	if len(cfg.gatherers) == 0 {
@@ -43,9 +41,7 @@ func (fn optionFunc) apply(cfg config) config {
 // from. If no registerer is used the prometheus DefaultGatherer is used.
 func WithGatherer(gatherer prometheus.Gatherer) Option {
 	return optionFunc(func(cfg config) config {
-		if gatherer != nil {
-			cfg.gatherers = append(cfg.gatherers, gatherer)
-		}
+		cfg.gatherers = append(cfg.gatherers, gatherer)
 		return cfg
 	})
 }

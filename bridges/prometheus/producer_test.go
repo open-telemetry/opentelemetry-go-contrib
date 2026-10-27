@@ -725,6 +725,170 @@ func TestProducePartialSuccess(t *testing.T) {
 	metricdatatest.AssertEqual(t, expected, output[0], metricdatatest.IgnoreTimestamp())
 }
 
+func TestProduceUnsupportedHistograms(t *testing.T) {
+	testCases := []struct {
+		name     string
+		metrics  []*dto.Metric
+		expected []metricdata.ScopeMetrics
+	}{
+		{
+			name: "float histogram with SampleCountFloat",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCountFloat: new(1.0),
+						SampleSum:        new(1.0),
+						Schema:           new(int32(1)),
+					},
+				},
+			},
+		},
+		{
+			name: "float histogram with ZeroCountFloat",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						ZeroCountFloat: new(1.0),
+						SampleSum:      new(0.0),
+						Schema:         new(int32(1)),
+					},
+				},
+			},
+		},
+		{
+			name: "float histogram with PositiveCount",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						PositiveSpan:  []*dto.BucketSpan{{Offset: new(int32(0)), Length: new(uint32(1))}},
+						PositiveCount: []float64{1.5},
+						Schema:        new(int32(1)),
+					},
+				},
+			},
+		},
+		{
+			name: "float histogram with NegativeCount",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						NegativeSpan:  []*dto.BucketSpan{{Offset: new(int32(0)), Length: new(uint32(1))}},
+						NegativeCount: []float64{1.5},
+						Schema:        new(int32(1)),
+					},
+				},
+			},
+		},
+		{
+			name: "schema below minimum (-5)",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(1.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(-5)),
+					},
+				},
+			},
+		},
+		{
+			name: "schema above maximum (9)",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(1.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(9)),
+					},
+				},
+			},
+		},
+		{
+			name: "partial datapoint filtering within histogram family",
+			metrics: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("valid")}},
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(2.0),
+						ZeroCount:     new(uint64(1)),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+					},
+				},
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("float")}},
+					Histogram: &dto.Histogram{
+						SampleCountFloat: new(1.0),
+						SampleSum:        new(2.0),
+						Schema:           new(int32(1)),
+					},
+				},
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A native histogram metric for testing",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{
+									Attributes:    attribute.NewSet(attribute.String("status", "valid")),
+									Count:         1,
+									Sum:           2.0,
+									Scale:         1,
+									ZeroCount:     1,
+									ZeroThreshold: 1e-128,
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			previousHandler := otel.GetErrorHandler()
+			t.Cleanup(func() { otel.SetErrorHandler(previousHandler) })
+
+			var handledErr error
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+				handledErr = err
+			}))
+
+			p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
+				return []*dto.MetricFamily{
+					{
+						Name:   new("test_histogram_metric"),
+						Help:   new("A native histogram metric for testing"),
+						Type:   dto.MetricType_HISTOGRAM.Enum(),
+						Metric: tc.metrics,
+					},
+				}, nil
+			})))
+
+			output, err := p.Produce(t.Context())
+			require.NoError(t, err)
+			require.ErrorIs(t, handledErr, errUnsupportedType)
+			assert.Contains(t, handledErr.Error(), "test_histogram_metric")
+			if tc.expected == nil {
+				assert.Empty(t, output)
+			} else {
+				require.Len(t, output, len(tc.expected))
+				metricdatatest.AssertEqual(t, tc.expected[0], output[0], metricdatatest.IgnoreTimestamp())
+			}
+		})
+	}
+}
+
 func TestProduceForStartTime(t *testing.T) {
 	testCases := []struct {
 		name        string
