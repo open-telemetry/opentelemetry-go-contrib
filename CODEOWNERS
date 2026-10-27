@@ -32,6 +32,8 @@ bridges/otelzap/                                                        @open-te
 bridges/otellogr/                                                       @open-telemetry/go-approvers @pellared
 
 detectors/akamai/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
+detectors/alibaba/ecs/                                                  @open-telemetry/go-approvers @paulojmdias @iblancasa
+detectors/alibabacloud/                                                 @open-telemetry/go-approvers @NameHaibinZhang @paulojmdias @iblancasa
 detectors/autodetect                                                    @open-telemetry/go-approvers @MrAlias
 detectors/aws/ec2/v2                                                    @open-telemetry/go-approvers @iblancasa
 detectors/aws/ecs                                                       @open-telemetry/go-approvers @pyohannes
@@ -44,6 +46,8 @@ detectors/azure/azureappservice                                         @open-te
 detectors/azure/azurecontainerapps                                      @open-telemetry/go-approvers @iblancasa
 detectors/azure/azurefunctions                                          @open-telemetry/go-approvers @Lewis-E
 detectors/azure/azurevm                                                 @open-telemetry/go-approvers @pyohannes @paulojmdias @iblancasa
+detectors/consul/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
+detectors/dynatrace/                                                    @open-telemetry/go-approvers @evan-bradley @paulojmdias @iblancasa
 detectors/gcp/                                                          @open-telemetry/go-approvers @dashpole
 detectors/hetzner/                                                      @open-telemetry/go-approvers @paulojmdias
 detectors/docker/                                                       @open-telemetry/go-approvers @paulojmdias @iblancasa
