@@ -69,6 +69,14 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 
 		// pass the span through the request context
 		req.Request = req.Request.WithContext(ctx)
+		// Copy MultipartForm back to the original request so net/http's
+		// finishRequest can find and remove any temp files ParseMultipartForm
+		// created on the context-derived request copy.
+		defer func() {
+			if req.Request != nil && req.Request.MultipartForm != nil {
+				r.MultipartForm = req.Request.MultipartForm
+			}
+		}()
 
 		chain.ProcessFilter(req, resp)
 
