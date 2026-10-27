@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -209,7 +210,12 @@ func convertExponentialHistogram(metrics []*dto.Metric, now time.Time) metricdat
 				m.GetHistogram().GetNegativeSpan(),
 				m.GetHistogram().GetNegativeDelta(),
 			),
-			// TODO: Support exemplars
+		}
+		if exs := m.GetHistogram().GetExemplars(); len(exs) > 0 {
+			dp.Exemplars = make([]metricdata.Exemplar[float64], len(exs))
+			for j, ex := range exs {
+				dp.Exemplars[j] = convertExemplar(ex)
+			}
 		}
 		createdTs := m.GetHistogram().GetCreatedTimestamp()
 		if createdTs.IsValid() {
@@ -388,9 +394,13 @@ func convertExemplar(exemplar *dto.Exemplar) metricdata.Exemplar[float64] {
 	for _, label := range exemplar.GetLabel() {
 		switch label.GetName() {
 		case traceIDLabel:
-			traceID = []byte(label.GetValue())
+			if tid, err := trace.TraceIDFromHex(label.GetValue()); err == nil {
+				traceID = tid[:]
+			}
 		case spanIDLabel:
-			spanID = []byte(label.GetValue())
+			if sid, err := trace.SpanIDFromHex(label.GetValue()); err == nil {
+				spanID = sid[:]
+			}
 		default:
 			attrs = append(attrs, attribute.String(label.GetName(), label.GetValue()))
 		}
