@@ -46,7 +46,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Deprecated
 
 - Deprecate `go.opentelemetry.io/contrib/propagators/ot`, which will be removed in v1.49.0.
-  Migrate to native OpenTelemetry APIs and SDKs with W3C Trace Context and W3C Baggage propagation.
+  Migrate to native OpenTelemetry APIs and SDKs with W3C Trace Context and W3C Baggage propagation. (#10047)
 
 ### Fixed
 
