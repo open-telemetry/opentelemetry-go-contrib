@@ -6,6 +6,7 @@ package diaglogger
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/go-logr/logr"
@@ -13,8 +14,14 @@ import (
 )
 
 // New creates a logger whose verbosity matches the configured OpenTelemetry
-// severity. Unsupported or empty levels return an error.
-func New(level string) (logr.Logger, error) {
+// severity. Unsupported or empty levels return an error. If an output writer
+// is provided, log messages are written to it; otherwise, os.Stderr is used.
+func New(level string, outputs ...io.Writer) (logr.Logger, error) {
+	output := io.Writer(os.Stderr)
+	if len(outputs) > 0 && outputs[0] != nil {
+		output = outputs[0]
+	}
+
 	base := level
 	if base != "" {
 		last := base[len(base)-1]
@@ -40,7 +47,7 @@ func New(level string) (logr.Logger, error) {
 	}
 
 	logger := funcr.NewJSON(func(obj string) {
-		_, _ = fmt.Fprintln(os.Stderr, obj)
+		_, _ = fmt.Fprintln(output, obj)
 	}, funcr.Options{Verbosity: verbosity})
 
 	return logger, nil

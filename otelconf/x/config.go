@@ -7,8 +7,10 @@ package x
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 
+	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
@@ -28,7 +30,10 @@ import (
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
 
-const envVarConfigFile = "OTEL_EXPERIMENTAL_CONFIG_FILE"
+const (
+	envVarConfigFileDeprecated = "OTEL_EXPERIMENTAL_CONFIG_FILE"
+	envVarConfigFile           = "OTEL_CONFIG_FILE"
+)
 
 // SDK is a struct that contains all the providers
 // configured via the configuration model.
@@ -76,6 +81,10 @@ func (s *SDK) Shutdown(ctx context.Context) error {
 	return s.shutdown(ctx)
 }
 
+var errDeprecatedEnvVarUsed = errors.New(
+	"OTEL_EXPERIMENTAL_CONFIG_FILE is no longer supported, use OTEL_CONFIG_FILE instead",
+)
+
 var noopSDK = SDK{
 	loggerProvider: nooplog.LoggerProvider{},
 	meterProvider:  noopmetric.MeterProvider{},
@@ -106,6 +115,14 @@ func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error
 // Any file defined by `OTEL_EXPERIMENTAL_CONFIG_FILE` will supersede all files passed with
 // [WithOpenTelemetryConfiguration].
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
+	return newSDKWithDiagnosticWriter(os.Stderr, otel.SetLogger, opts...)
+}
+
+func newSDKWithDiagnosticWriter(output io.Writer, setLogger func(logr.Logger), opts ...ConfigurationOption) (SDK, error) {
+	if _, ok := os.LookupEnv(envVarConfigFileDeprecated); ok {
+		return noopSDK, errDeprecatedEnvVarUsed
+	}
+
 	filename, ok := os.LookupEnv(envVarConfigFile)
 	if ok {
 		opt, err := parseConfigFileFromEnvironment(filename)
@@ -129,7 +146,7 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		level = string(*o.opentelemetryConfig.LogLevel)
 	}
 
-	diagnosticLogger, err := diaglogger.New(level)
+	diagnosticLogger, err := diaglogger.New(level, output)
 	if err != nil {
 		return noopSDK, newErrInvalid(err.Error())
 	}
@@ -159,6 +176,8 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, err
 	}
 
+	setLogger(diagnosticLogger)
+
 	sdk := SDK{
 		meterProvider:  mp,
 		tracerProvider: tp,
@@ -169,8 +188,6 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 			return errors.Join(mpShutdown(ctx), tpShutdown(ctx), lpShutdown(ctx))
 		},
 	}
-
-	otel.SetLogger(diagnosticLogger)
 
 	return sdk, nil
 }

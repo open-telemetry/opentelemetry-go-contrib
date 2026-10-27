@@ -9,8 +9,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.yaml.in/yaml/v3"
@@ -23,6 +25,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
 
+	"go.opentelemetry.io/contrib/otelconf/internal/diaglogger"
 	"go.opentelemetry.io/contrib/otelconf/internal/testtls"
 )
 
@@ -392,7 +395,11 @@ func TestNewSDK(t *testing.T) {
 					LogLevel: new(SeverityNumber("invalid")),
 				}),
 			},
-			wantErr: newErrInvalid(`unsupported log_level "invalid"`),
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
+			wantErr:            newErrInvalid(`unsupported log_level "invalid"`),
 		},
 		{
 			name: "empty-log-level",
@@ -402,7 +409,11 @@ func TestNewSDK(t *testing.T) {
 					LogLevel: new(SeverityNumber("")),
 				}),
 			},
-			wantErr: newErrInvalid(`unsupported log_level ""`),
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
+			wantErr:            newErrInvalid(`unsupported log_level ""`),
 		},
 		{
 			name: "with-sdk-disabled",
@@ -421,52 +432,94 @@ func TestNewSDK(t *testing.T) {
 			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
 	}
+
 	for _, tt := range tests {
-		sdk, err := NewSDK(tt.cfg...)
+		t.Run(tt.name, func(t *testing.T) {
+			sdk, err := NewSDK(tt.cfg...)
 
-		if tt.wantErr != nil {
-			require.Equal(t, tt.wantErr, err)
-			continue
-		}
-		require.NoError(t, err)
+			if tt.wantErr != nil {
+				require.Equal(t, tt.wantErr, err)
 
-		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
-		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
-		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
-		assert.IsType(t, tt.wantPropagator, sdk.Propagator())
-		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
+				// NewSDK returns noopSDK when configuration is invalid.
+				assert.IsType(t, tracenoop.NewTracerProvider(), sdk.TracerProvider())
+				assert.IsType(t, metricnoop.NewMeterProvider(), sdk.MeterProvider())
+				assert.IsType(t, lognoop.NewLoggerProvider(), sdk.LoggerProvider())
+				assert.IsType(t, propagation.NewCompositeTextMapPropagator(), sdk.Propagator())
+				require.NoError(t, sdk.Shutdown(t.Context()))
+				return
+			}
+
+			require.NoError(t, err)
+			assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
+			assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
+			assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
+			assert.IsType(t, tt.wantPropagator, sdk.Propagator())
+			require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
+		})
 	}
 }
 
 func TestNewSDKDiagnosticLogger(t *testing.T) {
 	tests := []struct {
-		name     string
-		logLevel *SeverityNumber
-		wantErr  bool
+		name            string
+		logLevel        *SeverityNumber
+		wantInfoEnabled bool
+		wantWarnEnabled bool
 	}{
 		{
-			name:     "explicit log level",
-			logLevel: new(SeverityNumberWarn),
+			name:            "explicit warn level",
+			logLevel:        new(SeverityNumberWarn),
+			wantInfoEnabled: false,
+			wantWarnEnabled: true,
 		},
 		{
-			name: "omitted log level defaults to info",
+			name:            "omitted level defaults to info",
+			wantInfoEnabled: true,
+			wantWarnEnabled: true,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			var output bytes.Buffer
+			var installedLogger logr.Logger
+
 			cfg := OpenTelemetryConfiguration{
 				LogLevel: tt.logLevel,
 			}
 
-			sdk, err := NewSDK(
+			sdk, err := newSDKWithDiagnosticWriter(
+				&output,
+				func(logger logr.Logger) {
+					installedLogger = logger
+				},
 				WithContext(t.Context()),
 				WithOpenTelemetryConfiguration(cfg),
 			)
 			require.NoError(t, err)
 			require.NoError(t, sdk.Shutdown(t.Context()))
+
+			// Verify that the configured logger was installed.
+			require.True(t, installedLogger.Enabled())
+
+			installedLogger.V(4).Info("info marker")
+			installedLogger.V(1).Info("warn marker")
+
+			got := output.String()
+			assert.Equal(t, tt.wantInfoEnabled, strings.Contains(got, "info marker"))
+			assert.Equal(t, tt.wantWarnEnabled, strings.Contains(got, "warn marker"))
 		})
 	}
+}
+
+func TestWriterCapture(t *testing.T) {
+	var output bytes.Buffer
+
+	logger, err := diaglogger.New("info", &output)
+	require.NoError(t, err)
+
+	logger.Info("capture test")
+	require.Contains(t, output.String(), "capture test")
 }
 
 func TestNewSDKWithEnvVar(t *testing.T) {
@@ -476,23 +529,26 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 			TracerProvider: nil,
 		}),
 	}
-	// test a non existent file
+
+	// Test a non-existent file.
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "file_missing.yaml"))
 	_, err := NewSDK(cfg...)
 	require.Error(t, err)
-	// test a file that causes a parse error
+
+	// Test a file that causes a parse error.
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))
 	_, err = NewSDK(cfg...)
 	require.Error(t, err)
 	require.ErrorIs(t, err, newErrRequired(&NameStringValuePair{}, "name"))
-	// test a valid file, error is returned from the SDK instantiation
-	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0.yaml"))
+
+	// Clear the current variable before testing the deprecated variable.
+	require.NoError(t, os.Unsetenv(envVarConfigFile))
+
+	// Validate that use of the deprecated environment variable returns an error.
+	t.Setenv("OTEL_EXPERIMENTAL_CONFIG_FILE", filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))
 	_, err = NewSDK(cfg...)
-	require.ErrorIs(t, err, newErrInvalid("otlp_file/development"))
-	// validate that use of deprecated env var returns an error
-	t.Setenv(envVarConfigFileDeprecated, filepath.Join("testdata", "v1.0.0.yaml"))
-	_, err = NewSDK(cfg...)
-	require.ErrorIs(t, err, errDeprecatedEnvVarUsed)
+	require.ErrorContains(t, err,
+		"OTEL_EXPERIMENTAL_CONFIG_FILE is no longer supported, use OTEL_CONFIG_FILE instead")
 }
 
 func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfiguration {
