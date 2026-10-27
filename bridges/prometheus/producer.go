@@ -32,21 +32,26 @@ var (
 	processStartTime   = time.Now()
 )
 
-type producer struct {
+// Producer is a [metric.Producer] that fetches metrics from Prometheus.
+type Producer struct {
 	gatherers prometheus.Gatherers
 }
 
-// NewMetricProducer returns a metric.Producer that fetches metrics from
+var _ metric.Producer = (*Producer)(nil)
+
+// NewMetricProducer returns a [Producer] that fetches metrics from
 // Prometheus. This can be used to allow Prometheus instrumentation to be
 // added to an OpenTelemetry export pipeline.
-func NewMetricProducer(opts ...Option) metric.Producer {
+func NewMetricProducer(opts ...Option) *Producer {
 	cfg := newConfig(opts...)
-	return &producer{
+	return &Producer{
 		gatherers: cfg.gatherers,
 	}
 }
 
-func (p *producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
+// Produce fetches metrics from the configured Prometheus gatherers and
+// converts them to OpenTelemetry metrics.
+func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	now := time.Now()
 	var errs multierr
 	otelMetrics := make([]metricdata.Metrics, 0)
