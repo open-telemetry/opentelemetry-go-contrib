@@ -1,3 +1,7 @@
+// Copyright The OpenTelemetry Authors
+// SPDX-License-Identifier: Apache-2.0
+
+// Package diaglogger provides a diagnostic logger configured by severity level.
 package diaglogger
 
 import (
