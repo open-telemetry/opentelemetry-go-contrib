@@ -39,6 +39,13 @@ func TestNewConfig(t *testing.T) {
 				gatherers: []prometheus.Gatherer{otherRegistry, prometheus.DefaultGatherer},
 			},
 		},
+		{
+			name:    "Nil gatherer and option ignored",
+			options: []Option{nil, WithGatherer(nil)},
+			wantConfig: config{
+				gatherers: []prometheus.Gatherer{prometheus.DefaultGatherer},
+			},
+		},
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {

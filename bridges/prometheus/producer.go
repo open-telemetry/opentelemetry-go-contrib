@@ -59,7 +59,6 @@ func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 		promMetrics, err := gatherer.Gather()
 		if err != nil {
 			errs = append(errs, err)
-			continue
 		}
 		m, err := convertPrometheusMetricsInto(promMetrics, now)
 		otelMetrics = append(otelMetrics, m...)
@@ -105,7 +104,14 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 			newMetric.Data = convertSummary(pm.GetMetric(), now)
 		case dto.MetricType_HISTOGRAM:
 			if isExponentialHistogram(pm.GetMetric()[0].GetHistogram()) {
-				newMetric.Data = convertExponentialHistogram(pm.GetMetric(), now)
+				data, err := convertExponentialHistogram(pm.GetName(), pm.GetMetric(), now)
+				if err != nil {
+					errs = append(errs, err)
+				}
+				if len(data.DataPoints) == 0 {
+					continue
+				}
+				newMetric.Data = data
 			} else {
 				newMetric.Data = convertHistogram(pm.GetMetric(), now)
 			}
@@ -126,7 +132,15 @@ func isExponentialHistogram(hist *dto.Histogram) bool {
 	return hist.GetZeroThreshold() > 0 ||
 		hist.GetZeroCount() > 0 ||
 		len(hist.GetPositiveSpan()) > 0 ||
-		len(hist.GetNegativeSpan()) > 0
+		len(hist.GetNegativeSpan()) > 0 ||
+		isFloatHistogram(hist)
+}
+
+func isFloatHistogram(hist *dto.Histogram) bool {
+	return hist.GetSampleCountFloat() > 0 ||
+		hist.GetZeroCountFloat() > 0 ||
+		len(hist.GetPositiveCount()) > 0 ||
+		len(hist.GetNegativeCount()) > 0
 }
 
 func convertGauge(metrics []*dto.Metric, now time.Time) metricdata.Gauge[float64] {
@@ -193,28 +207,38 @@ func convertCounter(metrics []*dto.Metric, now time.Time) metricdata.Sum[float64
 	return otelCounter
 }
 
-func convertExponentialHistogram(metrics []*dto.Metric, now time.Time) metricdata.ExponentialHistogram[float64] {
+func convertExponentialHistogram(metricName string, metrics []*dto.Metric, now time.Time) (metricdata.ExponentialHistogram[float64], error) {
+	var errs multierr
 	otelExpHistogram := metricdata.ExponentialHistogram[float64]{
-		DataPoints:  make([]metricdata.ExponentialHistogramDataPoint[float64], len(metrics)),
+		DataPoints:  make([]metricdata.ExponentialHistogramDataPoint[float64], 0, len(metrics)),
 		Temporality: metricdata.CumulativeTemporality,
 	}
-	for i, m := range metrics {
+	for _, m := range metrics {
+		hist := m.GetHistogram()
+		if isFloatHistogram(hist) {
+			errs = append(errs, fmt.Errorf("%w: float histogram for metric %v", errUnsupportedType, metricName))
+			continue
+		}
+		if schema := hist.GetSchema(); schema < -4 || schema > 8 {
+			errs = append(errs, fmt.Errorf("%w: schema %d for metric %v", errUnsupportedType, schema, metricName))
+			continue
+		}
 		dp := metricdata.ExponentialHistogramDataPoint[float64]{
 			Attributes:    convertLabels(m.GetLabel()),
 			StartTime:     processStartTime,
 			Time:          now,
-			Count:         m.GetHistogram().GetSampleCount(),
-			Sum:           m.GetHistogram().GetSampleSum(),
-			Scale:         m.GetHistogram().GetSchema(),
-			ZeroCount:     m.GetHistogram().GetZeroCount(),
-			ZeroThreshold: m.GetHistogram().GetZeroThreshold(),
+			Count:         hist.GetSampleCount(),
+			Sum:           hist.GetSampleSum(),
+			Scale:         hist.GetSchema(),
+			ZeroCount:     hist.GetZeroCount(),
+			ZeroThreshold: hist.GetZeroThreshold(),
 			PositiveBucket: convertExponentialBuckets(
-				m.GetHistogram().GetPositiveSpan(),
-				m.GetHistogram().GetPositiveDelta(),
+				hist.GetPositiveSpan(),
+				hist.GetPositiveDelta(),
 			),
 			NegativeBucket: convertExponentialBuckets(
-				m.GetHistogram().GetNegativeSpan(),
-				m.GetHistogram().GetNegativeDelta(),
+				hist.GetNegativeSpan(),
+				hist.GetNegativeDelta(),
 			),
 		}
 		if exs := m.GetHistogram().GetExemplars(); len(exs) > 0 {
@@ -223,20 +247,20 @@ func convertExponentialHistogram(metrics []*dto.Metric, now time.Time) metricdat
 				dp.Exemplars[j] = convertExemplar(ex)
 			}
 		}
-		createdTs := m.GetHistogram().GetCreatedTimestamp()
+		createdTs := hist.GetCreatedTimestamp()
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
 		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
-		otelExpHistogram.DataPoints[i] = dp
+		otelExpHistogram.DataPoints = append(otelExpHistogram.DataPoints, dp)
 	}
-	return otelExpHistogram
+	return otelExpHistogram, errs.errOrNil()
 }
 
 func convertExponentialBuckets(bucketSpans []*dto.BucketSpan, deltas []int64) metricdata.ExponentialBucket {
-	if len(bucketSpans) == 0 {
+	if len(bucketSpans) == 0 || len(deltas) == 0 {
 		return metricdata.ExponentialBucket{}
 	}
 	// Prometheus Native Histograms buckets are indexed by upper boundary
@@ -508,4 +532,8 @@ func (e multierr) Error() string {
 		es[i] = fmt.Sprintf("* %s", err)
 	}
 	return strings.Join(es, "\n\t")
+}
+
+func (e multierr) Unwrap() []error {
+	return e
 }
