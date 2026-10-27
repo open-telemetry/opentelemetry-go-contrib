@@ -9,6 +9,7 @@ import (
 	"errors"
 	"os"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
@@ -209,6 +210,17 @@ func WithMeterProviderOptions(opts ...sdkmetric.Option) ConfigurationOption {
 func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) ConfigurationOption {
 	return configurationOptionFunc(func(c configOptions) configOptions {
 		c.tracerProviderOptions = append(c.tracerProviderOptions, opts...)
+		return c
+	})
+}
+
+// WithPrometheusRegisterer registers the collectors of configured Prometheus
+// pull readers with registerer instead of serving them over HTTP. No listener
+// is started and the host and port of the Prometheus exporter configuration
+// are ignored, so the application can serve the metrics on its own HTTP server.
+func WithPrometheusRegisterer(registerer prometheus.Registerer) ConfigurationOption {
+	return configurationOptionFunc(func(c configOptions) configOptions {
+		c.prometheusRegisterer = registerer
 		return c
 	})
 }

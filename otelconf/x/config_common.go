@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/baggage"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
@@ -53,6 +54,7 @@ type configOptions struct {
 	loggerProviderOptions []sdklog.LoggerProviderOption
 	meterProviderOptions  []sdkmetric.Option
 	tracerProviderOptions []sdktrace.TracerProviderOption
+	prometheusRegisterer  prometheus.Registerer
 }
 
 type shutdownFunc func(context.Context) error

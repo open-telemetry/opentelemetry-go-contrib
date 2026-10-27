@@ -953,7 +953,7 @@ func TestReader(t *testing.T) {
 	}
 	for _, tt := range testCases {
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := metricReader(t.Context(), tt.reader)
+			got, err := metricReader(t.Context(), tt.reader, nil)
 			require.ErrorIs(t, err, tt.wantErrT)
 			if tt.wantReader == nil {
 				require.Nil(t, got)
@@ -1071,7 +1071,7 @@ func TestMetricReaderCardinalityLimitsWired(t *testing.T) {
 				Console: &ConsoleMetricExporter{},
 			},
 		},
-	})
+	}, nil)
 	require.NoError(t, err)
 
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
@@ -1632,7 +1632,7 @@ func TestPrometheusIPv6(t *testing.T) {
 				WithResourceConstantLabels: &IncludeExclude{},
 			}
 
-			rs, err := prometheusReader(t.Context(), &cfg)
+			rs, err := prometheusReader(t.Context(), &cfg, nil)
 			require.NoError(t, err)
 
 			mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(rs))
