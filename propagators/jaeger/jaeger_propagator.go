@@ -95,6 +95,7 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 	var (
 		scc   = trace.SpanContextConfig{}
 		debug bool
+		err   error
 	)
 
 	part0, part1, _, part3, ok := splitHeader(headerVal)
@@ -107,17 +108,18 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 		if len(part0) > traceID128bitsWidth {
 			return ctx, empty, errInvalidTraceIDLength
 		}
-		if !isLowerHex(part0) {
-			return ctx, empty, errMalformedTraceID
+		if len(part0) < traceID128bitsWidth {
+			var buf [traceID128bitsWidth]byte
+			padCharCount := traceID128bitsWidth - len(part0)
+			for j := range padCharCount {
+				buf[j] = '0'
+			}
+			copy(buf[padCharCount:], part0)
+			part0 = string(buf[:])
 		}
-		var buf [traceID128bitsWidth]byte
-		padCharCount := traceID128bitsWidth - len(part0)
-		for j := range padCharCount {
-			buf[j] = '0'
-		}
-		copy(buf[padCharCount:], part0)
 
-		if _, decErr := hex.Decode(scc.TraceID[:], buf[:]); decErr != nil || !scc.TraceID.IsValid() {
+		scc.TraceID, err = trace.TraceIDFromHex(part0)
+		if err != nil {
 			return ctx, empty, errMalformedTraceID
 		}
 	}
@@ -127,17 +129,18 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 		if len(part1) > spanIDWidth {
 			return ctx, empty, errInvalidSpanIDLength
 		}
-		if !isLowerHex(part1) {
-			return ctx, empty, errMalformedSpanID
+		if len(part1) < spanIDWidth {
+			var buf [spanIDWidth]byte
+			padCharCount := spanIDWidth - len(part1)
+			for j := range padCharCount {
+				buf[j] = '0'
+			}
+			copy(buf[padCharCount:], part1)
+			part1 = string(buf[:])
 		}
-		var buf [spanIDWidth]byte
-		padCharCount := spanIDWidth - len(part1)
-		for j := range padCharCount {
-			buf[j] = '0'
-		}
-		copy(buf[padCharCount:], part1)
 
-		if _, decErr := hex.Decode(scc.SpanID[:], buf[:]); decErr != nil || !scc.SpanID.IsValid() {
+		scc.SpanID, err = trace.SpanIDFromHex(part1)
+		if err != nil {
 			return ctx, empty, errMalformedSpanID
 		}
 	}
@@ -146,8 +149,8 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 
 	// extract flag
 	if part3 != "" {
-		flag, err := strconv.ParseInt(part3, 16, 64)
-		if err != nil {
+		flag, parseErr := strconv.ParseInt(part3, 16, 64)
+		if parseErr != nil {
 			return ctx, empty, errMalformedFlag
 		}
 		if flag&flagsSampled == flagsSampled {
@@ -165,16 +168,6 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 		ctx = withDebug(ctx, debug)
 	}
 	return ctx, trace.NewSpanContext(scc), nil
-}
-
-func isLowerHex(s string) bool {
-	for i := range len(s) {
-		c := s[i]
-		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
-			return false
-		}
-	}
-	return true
 }
 
 func splitHeader(val string) (p0, p1, p2, p3 string, ok bool) {
