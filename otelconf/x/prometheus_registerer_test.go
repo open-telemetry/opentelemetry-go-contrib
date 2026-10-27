@@ -4,6 +4,7 @@
 package x
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -59,4 +60,22 @@ func TestPrometheusReaderWithRegistererNeedsNoListener(t *testing.T) {
 	_, isServer := reader.(readerWithServer)
 	assert.False(t, isServer)
 	require.NoError(t, reader.Shutdown(t.Context()))
+}
+
+func TestPrometheusReaderWithRegistererInvalidConfig(t *testing.T) {
+	strategy := ExperimentalPrometheusTranslationStrategy("invalid")
+	_, err := prometheusReader(t.Context(), &ExperimentalPrometheusMetricExporter{
+		TranslationStrategy: &strategy,
+	}, prometheus.NewRegistry())
+	assert.ErrorIs(t, err, &errInvalid{})
+}
+
+// failingRegisterer rejects every collector.
+type failingRegisterer struct{ prometheus.Registerer }
+
+func (failingRegisterer) Register(prometheus.Collector) error { return errors.New("register failed") }
+
+func TestPrometheusReaderWithRegistererRegisterError(t *testing.T) {
+	_, err := prometheusReader(t.Context(), &ExperimentalPrometheusMetricExporter{}, failingRegisterer{})
+	assert.ErrorContains(t, err, "register failed")
 }
