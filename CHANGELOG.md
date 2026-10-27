@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
-- Add `WithPrometheusRegisterer` option to `go.opentelemetry.io/contrib/otelconf/x` to register the collectors of configured Prometheus pull readers with an application-provided `prometheus.Registerer` instead of starting an HTTP listener. (#10013)
+- Add `WithPrometheusRegisterer` option to `go.opentelemetry.io/contrib/otelconf/x` to register the collectors of configured Prometheus pull readers with an application-provided `prometheus.Registerer` instead of starting an HTTP listener. (#10031)
 - Add `WithHostID` option to `go.opentelemetry.io/contrib/detectors/k8sapi` to detect the `host.id` resource attribute from the machine ID reported by the node's kubelet. (#9973)
 - Add support for the `aws.lambda` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9924)
 - Add `WithNonErrorCodes` option for `NewServerHandler` and `NewClientHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to prevent the handler from setting an error span status for specific gRPC codes. (#9209)
