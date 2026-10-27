@@ -536,6 +536,44 @@ func TestProduce(t *testing.T) {
 			}},
 		},
 		{
+			name: "exponential histogram with no observations",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
+					Name: "test_empty_exponential_histogram_metric",
+					Help: "An empty exponential histogram metric for testing",
+					// This enables collection of native histograms in the prometheus client.
+					NativeHistogramBucketFactor:  1.5,
+					NativeHistogramZeroThreshold: prometheus.NativeHistogramZeroThresholdZero,
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_empty_exponential_histogram_metric",
+						Description: "An empty exponential histogram metric for testing",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{
+									Scale:          1,
+									PositiveBucket: metricdata.ExponentialBucket{},
+									NegativeBucket: metricdata.ExponentialBucket{},
+									Attributes:     attribute.NewSet(attribute.String("foo", "bar")),
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
 			name: "untyped",
 			testFn: func(reg *prometheus.Registry) {
 				metric := prometheus.NewUntypedFunc(prometheus.UntypedOpts{
@@ -624,13 +662,45 @@ func TestProducePartialSuccess(t *testing.T) {
 					{},
 				},
 			},
-		}, nil
+			{
+				Name: new("test_float_histogram_metric"),
+				Help: new("A float native histogram metric for testing"),
+				Type: dto.MetricType_HISTOGRAM.Enum(),
+				Metric: []*dto.Metric{
+					{
+						Histogram: &dto.Histogram{
+							SampleCountFloat: new(1.0),
+							SampleSum:        new(1.0),
+							Schema:           new(int32(1)),
+						},
+					},
+				},
+			},
+			{
+				Name: new("test_invalid_schema_histogram_metric"),
+				Help: new("A native histogram with unsupported schema for testing"),
+				Type: dto.MetricType_HISTOGRAM.Enum(),
+				Metric: []*dto.Metric{
+					{
+						Histogram: &dto.Histogram{
+							SampleCount:   new(uint64(1)),
+							SampleSum:     new(1.0),
+							ZeroThreshold: new(1e-128),
+							Schema:        new(int32(9)),
+						},
+					},
+				},
+			},
+		}, assert.AnError
 	})))
 
 	output, err := p.Produce(t.Context())
 	assert.NoError(t, err)
 	require.ErrorIs(t, handledErr, errUnsupportedType)
+	require.ErrorIs(t, handledErr, assert.AnError)
 	assert.Contains(t, handledErr.Error(), "test_gauge_histogram_metric")
+	assert.Contains(t, handledErr.Error(), "test_float_histogram_metric")
+	assert.Contains(t, handledErr.Error(), "test_invalid_schema_histogram_metric")
 	require.Len(t, output, 1)
 
 	expected := metricdata.ScopeMetrics{
