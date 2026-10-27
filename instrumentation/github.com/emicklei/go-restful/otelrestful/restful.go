@@ -56,7 +56,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 			opts = append(opts, oteltrace.WithAttributes(rAttr))
 		}
 
-		if cfg.PublicEndpoint || (cfg.PublicEndpointFn != nil && cfg.PublicEndpointFn(r.WithContext(ctx))) {
+		if cfg.PublicEndpointFn != nil && cfg.PublicEndpointFn(r.WithContext(ctx)) {
 			opts = append(opts, oteltrace.WithNewRoot())
 			// Linking incoming span context if any for public endpoint.
 			if s := oteltrace.SpanContextFromContext(ctx); s.IsValid() && s.IsRemote() {

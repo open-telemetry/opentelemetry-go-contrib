@@ -91,6 +91,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `WithValues` in `go.opentelemetry.io/contrib/bridges/otellogr` so loggers derived from the same parent no longer overwrite each other's attributes or race on them. (#9994)
 - Accept any 2xx status for the instance identity token request in `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`. The IMDS Identity API returns 201 Created for the token PUT, which the detector previously rejected, silently returning an empty resource on real IBM Cloud VPC instances. (#9671)
 
+### Deprecated
+
+- `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` is deprecated.
+  Use `WithPublicEndpointFn` instead. (#10048)
+
 ### Removed
 
 - Remove support for the `rpc/old` and `rpc/dup` values of `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#9908)
