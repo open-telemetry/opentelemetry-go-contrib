@@ -744,6 +744,14 @@ type emptyLogValuer struct{}
 
 func (emptyLogValuer) LogValue() slog.Value { return slog.Value{} }
 
+type stringLogValuer struct{}
+
+func (stringLogValuer) LogValue() slog.Value { return slog.StringValue("value") }
+
+type nestedLogValuer struct{}
+
+func (nestedLogValuer) LogValue() slog.Value { return slog.AnyValue(groupLogValuer{}) }
+
 func TestHandlerResolvesEmptyKeyLogValuer(t *testing.T) {
 	t.Run("GroupIsInlined", func(t *testing.T) {
 		r := new(recorder)
@@ -776,6 +784,29 @@ func TestHandlerResolvesEmptyKeyLogValuer(t *testing.T) {
 
 		require.Len(t, r.Records, 1)
 		assert.NotContains(t, r.Results()[0], "", "an empty Attr must be ignored")
+	})
+
+	t.Run("PlainValueIsKept", func(t *testing.T) {
+		r := new(recorder)
+		l := slog.New(NewHandler("", WithLoggerProvider(r)))
+
+		l.Info("msg", slog.Any("", stringLogValuer{}))
+
+		require.Len(t, r.Records, 1)
+		assert.Equal(t, "value", r.Results()[0][""], "a non-group value with an empty key must be kept")
+	})
+
+	t.Run("NestedLogValuerIsResolved", func(t *testing.T) {
+		r := new(recorder)
+		l := slog.New(NewHandler("", WithLoggerProvider(r)))
+
+		l.Info("msg", slog.Any("", nestedLogValuer{}))
+
+		require.Len(t, r.Records, 1)
+		got := r.Results()[0]
+		assert.NotContains(t, got, "", "a group with an empty key must be inlined")
+		assert.Equal(t, int64(1), got["a"])
+		assert.Equal(t, int64(2), got["b"])
 	})
 
 	t.Run("WithAttrs", func(t *testing.T) {
