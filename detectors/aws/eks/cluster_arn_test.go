@@ -330,6 +330,40 @@ func TestClusterARNClientInitialization(t *testing.T) {
 		assert.ErrorIs(t, err, errAWSRegionUnavailable)
 	})
 
+	t.Run("waiter honors its own deadline", func(t *testing.T) {
+		loadCalls := 0
+		started := make(chan struct{})
+		release := make(chan struct{})
+		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			loadCalls++
+			close(started)
+			<-release
+			return aws.Config{Region: "us-west-2"}, nil
+		}
+		client := &mockEKSClient{output: describedCluster(testClusterARN, testIssuer)}
+		newEKSClient = func(aws.Config) eksClient { return client }
+		detector := &clusterARNDetector{utils: &arnTestUtils{issuer: testIssuer}}
+
+		leaderDone := make(chan error, 1)
+		go func() {
+			_, err := detector.getClient(t.Context())
+			leaderDone <- err
+		}()
+		<-started
+
+		ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
+		defer cancel()
+		start := time.Now()
+		_, err := detector.getClient(ctx)
+		elapsed := time.Since(start)
+		close(release)
+
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		assert.Less(t, elapsed, time.Second)
+		require.NoError(t, <-leaderDone)
+		assert.Equal(t, 1, loadCalls)
+	})
+
 	t.Run("failed load is retried", func(t *testing.T) {
 		loadCalls := 0
 		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {

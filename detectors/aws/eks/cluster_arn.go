@@ -66,8 +66,14 @@ type eksClient interface {
 type clusterARNDetector struct {
 	utils oidcIssuerProvider
 
-	mu     sync.Mutex
-	client eksClient
+	initOnce sync.Once
+	sem      chan struct{}
+	client   eksClient
+}
+
+func (d *clusterARNDetector) lock() chan struct{} {
+	d.initOnce.Do(func() { d.sem = make(chan struct{}, 1) })
+	return d.sem
 }
 
 var (
@@ -125,9 +131,21 @@ func (d *clusterARNDetector) detect(ctx context.Context, clusterName string) (st
 	return arn, nil
 }
 
+// getClient loads the AWS configuration synchronously with the caller's ctx.
+// Callers are serialized by a lock that is acquired with select so a caller
+// waiting on another caller's initialization still honors its own ctx.
 func (d *clusterARNDetector) getClient(ctx context.Context) (eksClient, error) {
-	d.mu.Lock()
-	defer d.mu.Unlock()
+	sem := d.lock()
+	select {
+	case sem <- struct{}{}:
+	default:
+		select {
+		case sem <- struct{}{}:
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		}
+	}
+	defer func() { <-sem }()
 
 	if d.client != nil {
 		return d.client, nil
