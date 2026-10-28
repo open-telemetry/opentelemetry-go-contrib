@@ -889,6 +889,170 @@ func TestProduceUnsupportedHistograms(t *testing.T) {
 	}
 }
 
+func TestProduceInconsistentExponentialBuckets(t *testing.T) {
+	testCases := []struct {
+		name     string
+		metrics  []*dto.Metric
+		expected []metricdata.ScopeMetrics
+	}{
+		{
+			name: "positive span lengths exceed deltas length",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(3))},
+						},
+						PositiveDelta: []int64{1, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "positive span lengths shorter than deltas length",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(1))},
+						},
+						PositiveDelta: []int64{1, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "negative offset on subsequent positive span",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(1))},
+							{Offset: new(int32(-2)), Length: new(uint32(1))},
+						},
+						PositiveDelta: []int64{1, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "negative span lengths exceed deltas length",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(-2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						NegativeSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(3))},
+						},
+						NegativeDelta: []int64{1, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "partial datapoint filtering when one datapoint has inconsistent spans",
+			metrics: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("valid")}},
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(2.0),
+						ZeroCount:     new(uint64(1)),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+					},
+				},
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("malformed")}},
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(3))},
+						},
+						PositiveDelta: []int64{1, 1},
+					},
+				},
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A native histogram metric for testing",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{
+									Attributes:    attribute.NewSet(attribute.String("status", "valid")),
+									Count:         1,
+									Sum:           2.0,
+									Scale:         1,
+									ZeroCount:     1,
+									ZeroThreshold: 1e-128,
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			previousHandler := otel.GetErrorHandler()
+			t.Cleanup(func() { otel.SetErrorHandler(previousHandler) })
+
+			var handledErr error
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+				handledErr = err
+			}))
+
+			p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
+				return []*dto.MetricFamily{
+					{
+						Name:   new("test_histogram_metric"),
+						Help:   new("A native histogram metric for testing"),
+						Type:   dto.MetricType_HISTOGRAM.Enum(),
+						Metric: tc.metrics,
+					},
+				}, nil
+			})))
+
+			output, err := p.Produce(t.Context())
+			require.NoError(t, err)
+			require.ErrorIs(t, handledErr, errInvalidHistogram)
+			assert.Contains(t, handledErr.Error(), "test_histogram_metric")
+			if tc.expected == nil {
+				assert.Empty(t, output)
+			} else {
+				require.Len(t, output, len(tc.expected))
+				metricdatatest.AssertEqual(t, tc.expected[0], output[0], metricdatatest.IgnoreTimestamp())
+			}
+		})
+	}
+}
+
 func TestProduceForStartTime(t *testing.T) {
 	testCases := []struct {
 		name        string
