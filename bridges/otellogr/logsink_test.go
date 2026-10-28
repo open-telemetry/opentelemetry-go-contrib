@@ -456,6 +456,41 @@ func TestLogSinkContext(t *testing.T) {
 	}
 }
 
+func TestLogSinkWithValuesSiblings(t *testing.T) {
+	rec := logtest.NewRecorder()
+	parent := logr.New(NewLogSink("name", WithLoggerProvider(rec))).
+		WithValues("a", 1).
+		WithValues("b", 2).
+		WithValues("c", 3)
+
+	c1 := parent.WithValues("child", "one")
+	c2 := parent.WithValues("child", "two")
+	c1.Info("msg")
+	c2.Info("msg")
+
+	want := logtest.Recording{
+		logtest.Scope{Name: "name"}: {
+			{Attributes: []attribute.KeyValue{
+				attribute.Int64("a", 1),
+				attribute.Int64("b", 2),
+				attribute.Int64("c", 3),
+				attribute.String("child", "one"),
+			}},
+			{Attributes: []attribute.KeyValue{
+				attribute.Int64("a", 1),
+				attribute.Int64("b", 2),
+				attribute.Int64("c", 3),
+				attribute.String("child", "two"),
+			}},
+		},
+	}
+	logtest.AssertEqual(t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			return logtest.Record{Attributes: r.Attributes}
+		}),
+	)
+}
+
 func TestLogSinkEnabledWithContext(t *testing.T) {
 	ctx := trace.ContextWithSpanContext(t.Context(), trace.NewSpanContext(trace.SpanContextConfig{
 		TraceID:    trace.TraceID{1},
