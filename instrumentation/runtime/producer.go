@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/semconv/v1.43.0/goconv"
 )
 
@@ -99,8 +100,9 @@ func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	return []metricdata.ScopeMetrics{
 		{
 			Scope: instrumentation.Scope{
-				Name:    ScopeName,
-				Version: Version,
+				Name:      ScopeName,
+				Version:   Version,
+				SchemaURL: semconv.SchemaURL,
 			},
 			Metrics: scopeMetrics,
 		},

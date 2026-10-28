@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	metricx "go.opentelemetry.io/otel/metric/x"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/semconv/v1.43.0/goconv"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime/internal/deprecatedruntime"
@@ -98,6 +99,7 @@ func Start(opts ...Option) error {
 	meter := c.MeterProvider.Meter(
 		ScopeName,
 		metric.WithInstrumentationVersion(Version),
+		metric.WithSchemaURL(semconv.SchemaURL),
 	)
 	if x.DeprecatedRuntimeMetrics.Enabled() {
 		if err := deprecatedruntime.Start(meter, c.MinimumReadMemStatsInterval); err != nil {
