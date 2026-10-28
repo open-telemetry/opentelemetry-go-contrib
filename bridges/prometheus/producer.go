@@ -452,12 +452,12 @@ var wordToUCUM = map[string]string{
 
 var perWordToUCUM = map[string]string{
 	"second": "s",
-	"minute": "m",
+	"minute": "min",
 	"hour":   "h",
 	"day":    "d",
-	"week":   "w",
+	"week":   "wk",
 	"month":  "mo",
-	"year":   "y",
+	"year":   "a",
 }
 
 func unitWordToUCUM(unit string) string {
