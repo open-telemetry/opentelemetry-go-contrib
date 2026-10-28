@@ -119,13 +119,18 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 		// the request, which a RoundTripper must not modify, is left as-is.
 		c := *req.URL
 		c.User = nil
-		c.RawQuery = redactQuery(c.RawQuery)
 		// An opaque URL can carry its own query, which String and the
-		// request both emit as-is.
+		// request both emit as-is, joined to RawQuery by '?'. Redact them as
+		// one query so a sensitive value spanning the join is covered.
 		if path, query, ok := strings.Cut(c.Opaque, "?"); ok {
-			if r := redactQuery(query); r != query {
-				c.Opaque = path + "?" + r
+			if c.RawQuery != "" || c.ForceQuery {
+				query += "?" + c.RawQuery
 			}
+			if r := redactQuery(query); r != query {
+				c.Opaque, c.RawQuery, c.ForceQuery = path+"?"+r, "", false
+			}
+		} else {
+			c.RawQuery = redactQuery(c.RawQuery)
 		}
 		u = c.String()
 	}
@@ -166,17 +171,18 @@ func sensitiveQueryKey(key string) bool {
 // values are preserved as-is. rawQuery is returned unchanged, without
 // allocating, when it has no sensitive parameter.
 //
-// Sensitive keys are detected after ';' as well as '&'. net/url only uses
-// '&', but other servers and proxies may also accept ';'. Since the
-// separator in use is ambiguous, a sensitive value is redacted up to the
-// next '&' or the end of the query, so any ';'-delimited content after it is
-// dropped rather than leaked.
+// Sensitive keys are detected after ';' and '?' as well as '&'. net/url only
+// uses '&', but other servers and proxies may also accept ';', and an opaque
+// URL joins its own query to RawQuery with '?'. Since the separator in use is
+// ambiguous, a sensitive value is redacted up to the next '&' or the end of
+// the query, so any ';'- or '?'-delimited content after it is dropped rather
+// than leaked.
 func redactQuery(rawQuery string) string {
 	var b strings.Builder
 	redacted := false
 	for pos := 0; ; {
 		end := len(rawQuery)
-		if i := strings.IndexAny(rawQuery[pos:], "&;"); i >= 0 {
+		if i := strings.IndexAny(rawQuery[pos:], "&;?"); i >= 0 {
 			end = pos + i
 		}
 		param := rawQuery[pos:end]

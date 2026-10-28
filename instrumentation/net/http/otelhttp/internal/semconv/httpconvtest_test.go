@@ -395,6 +395,11 @@ func TestClientRequest_SensitiveQueryRedacted(t *testing.T) {
 			want: "https://example.com/foo?sig=REDACTED&other=1",
 		},
 		{
+			name: "question mark separator",
+			url:  "https://example.com/foo?a=1?sig=abc&stuff=morestuff",
+			want: "https://example.com/foo?a=1?sig=REDACTED&stuff=morestuff",
+		},
+		{
 			name: "empty value is redacted",
 			url:  "https://example.com/foo?sig=&stuff=morestuff",
 			want: "https://example.com/foo?sig=REDACTED&stuff=morestuff",
@@ -441,7 +446,19 @@ func TestClientRequest_SensitiveOpaqueQueryRedacted(t *testing.T) {
 			name:     "query in opaque and raw query",
 			opaque:   "//example.com/foo?sig=abc",
 			rawQuery: "X-Amz-Signature=def&other=1",
-			want:     "https://example.com/foo?sig=REDACTED?X-Amz-Signature=REDACTED&other=1",
+			want:     "https://example.com/foo?sig=REDACTED&other=1",
+		},
+		{
+			name:     "sensitive value spans opaque and raw query",
+			opaque:   "//example.com/foo?sig=prefix",
+			rawQuery: "SECRET_SUFFIX&other=1",
+			want:     "https://example.com/foo?sig=REDACTED&other=1",
+		},
+		{
+			name:     "sensitive key only in raw query",
+			opaque:   "//example.com/foo?a=1",
+			rawQuery: "sig=abc&other=1",
+			want:     "https://example.com/foo?a=1?sig=REDACTED&other=1",
 		},
 		{
 			name:   "no sensitive parameters in opaque",
