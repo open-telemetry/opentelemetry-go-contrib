@@ -28,8 +28,9 @@ const (
 )
 
 var (
-	errUnsupportedType = errors.New("unsupported metric type")
-	processStartTime   = time.Now()
+	errUnsupportedType  = errors.New("unsupported metric type")
+	errInvalidHistogram = errors.New("invalid exponential histogram")
+	processStartTime    = time.Now()
 )
 
 // Producer is a [metric.Producer] that fetches metrics from Prometheus.
@@ -223,23 +224,33 @@ func convertExponentialHistogram(metricName string, metrics []*dto.Metric, now t
 			errs = append(errs, fmt.Errorf("%w: schema %d for metric %v", errUnsupportedType, schema, metricName))
 			continue
 		}
+		positiveBucket, err := convertExponentialBuckets(
+			hist.GetPositiveSpan(),
+			hist.GetPositiveDelta(),
+		)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%w for metric %v", err, metricName))
+			continue
+		}
+		negativeBucket, err := convertExponentialBuckets(
+			hist.GetNegativeSpan(),
+			hist.GetNegativeDelta(),
+		)
+		if err != nil {
+			errs = append(errs, fmt.Errorf("%w for metric %v", err, metricName))
+			continue
+		}
 		dp := metricdata.ExponentialHistogramDataPoint[float64]{
-			Attributes:    convertLabels(m.GetLabel()),
-			StartTime:     processStartTime,
-			Time:          now,
-			Count:         hist.GetSampleCount(),
-			Sum:           hist.GetSampleSum(),
-			Scale:         hist.GetSchema(),
-			ZeroCount:     hist.GetZeroCount(),
-			ZeroThreshold: hist.GetZeroThreshold(),
-			PositiveBucket: convertExponentialBuckets(
-				hist.GetPositiveSpan(),
-				hist.GetPositiveDelta(),
-			),
-			NegativeBucket: convertExponentialBuckets(
-				hist.GetNegativeSpan(),
-				hist.GetNegativeDelta(),
-			),
+			Attributes:     convertLabels(m.GetLabel()),
+			StartTime:      processStartTime,
+			Time:           now,
+			Count:          hist.GetSampleCount(),
+			Sum:            hist.GetSampleSum(),
+			Scale:          hist.GetSchema(),
+			ZeroCount:      hist.GetZeroCount(),
+			ZeroThreshold:  hist.GetZeroThreshold(),
+			PositiveBucket: positiveBucket,
+			NegativeBucket: negativeBucket,
 		}
 		if exs := m.GetHistogram().GetExemplars(); len(exs) > 0 {
 			dp.Exemplars = make([]metricdata.Exemplar[float64], len(exs))
@@ -259,32 +270,43 @@ func convertExponentialHistogram(metricName string, metrics []*dto.Metric, now t
 	return otelExpHistogram, errs.errOrNil()
 }
 
-func convertExponentialBuckets(bucketSpans []*dto.BucketSpan, deltas []int64) metricdata.ExponentialBucket {
-	if len(bucketSpans) == 0 || len(deltas) == 0 {
-		return metricdata.ExponentialBucket{}
+func convertExponentialBuckets(bucketSpans []*dto.BucketSpan, deltas []int64) (metricdata.ExponentialBucket, error) {
+	// We will have one bucket count for each delta, and zeros for the offsets
+	// after the initial offset.
+	lenCounts := len(deltas)
+	totalLength := 0
+	for i, bs := range bucketSpans {
+		if i != 0 {
+			if bs.GetOffset() < 0 {
+				return metricdata.ExponentialBucket{}, fmt.Errorf("%w: negative bucket span offset %d", errInvalidHistogram, bs.GetOffset())
+			}
+			lenCounts += int(bs.GetOffset())
+		}
+		if uint64(bs.GetLength()) > uint64(len(deltas)-totalLength) {
+			return metricdata.ExponentialBucket{}, fmt.Errorf("%w: bucket span lengths exceed deltas length %d", errInvalidHistogram, len(deltas))
+		}
+		totalLength += int(bs.GetLength())
+	}
+	if totalLength != len(deltas) {
+		return metricdata.ExponentialBucket{}, fmt.Errorf("%w: bucket span lengths (%d) do not match deltas length (%d)", errInvalidHistogram, totalLength, len(deltas))
+	}
+	if totalLength == 0 {
+		return metricdata.ExponentialBucket{}, nil
 	}
 	// Prometheus Native Histograms buckets are indexed by upper boundary
 	// while Exponential Histograms are indexed by lower boundary, the result
 	// being that the Offset fields are different-by-one.
 	initialOffset := bucketSpans[0].GetOffset() - 1
-	// We will have one bucket count for each delta, and zeros for the offsets
-	// after the initial offset.
-	lenCounts := len(deltas)
-	for i, bs := range bucketSpans {
-		if i != 0 {
-			lenCounts += int(bs.GetOffset())
-		}
-	}
 	counts := make([]uint64, lenCounts)
 	deltaIndex := 0
-	countIndex := int32(0)
+	countIndex := 0
 	count := int64(0)
 	for i, bs := range bucketSpans {
 		// Do not insert zeroes if this is the first bucketSpan, since those
 		// zeroes are accounted for in the Offset field.
 		if i != 0 {
 			// Increase the count index by the Offset to insert Offset zeroes
-			countIndex += bs.GetOffset()
+			countIndex += int(bs.GetOffset())
 		}
 		for range bs.GetLength() {
 			// Convert deltas to the cumulative number of observations
@@ -300,7 +322,7 @@ func convertExponentialBuckets(bucketSpans []*dto.BucketSpan, deltas []int64) me
 	return metricdata.ExponentialBucket{
 		Offset: initialOffset,
 		Counts: counts,
-	}
+	}, nil
 }
 
 func convertHistogram(metrics []*dto.Metric, now time.Time) metricdata.Histogram[float64] {
