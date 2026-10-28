@@ -63,18 +63,11 @@ type eksClient interface {
 	DescribeCluster(context.Context, *eks.DescribeClusterInput, ...func(*eks.Options)) (*eks.DescribeClusterOutput, error)
 }
 
-type clientLoad struct {
-	done   chan struct{}
-	client eksClient
-	err    error
-}
-
 type clusterARNDetector struct {
 	utils oidcIssuerProvider
 
-	mu      sync.Mutex
-	client  eksClient
-	loading *clientLoad
+	mu     sync.Mutex
+	client eksClient
 }
 
 var (
@@ -134,51 +127,21 @@ func (d *clusterARNDetector) detect(ctx context.Context, clusterName string) (st
 
 func (d *clusterARNDetector) getClient(ctx context.Context) (eksClient, error) {
 	d.mu.Lock()
+	defer d.mu.Unlock()
+
 	if d.client != nil {
-		client := d.client
-		d.mu.Unlock()
-		return client, nil
+		return d.client, nil
 	}
-
-	loading := d.loading
-	if loading == nil {
-		loading = &clientLoad{done: make(chan struct{})}
-		d.loading = loading
-		loadCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), clusterARNTimeout)
-		go d.loadClient(loadCtx, cancel, loading)
-	}
-	d.mu.Unlock()
-
-	select {
-	case <-ctx.Done():
-		return nil, ctx.Err()
-	case <-loading.done:
-		if err := ctx.Err(); err != nil {
-			return nil, err
-		}
-		return loading.client, loading.err
-	}
-}
-
-func (d *clusterARNDetector) loadClient(ctx context.Context, cancel context.CancelFunc, loading *clientLoad) {
-	defer cancel()
 
 	cfg, err := loadAWSConfig(ctx)
-	if err == nil && cfg.Region == "" {
-		err = errAWSRegionUnavailable
+	if err != nil {
+		return nil, err
 	}
-	if err == nil {
-		loading.client = newEKSClient(cfg)
+	if cfg.Region == "" {
+		return nil, errAWSRegionUnavailable
 	}
-	loading.err = err
-
-	d.mu.Lock()
-	if err == nil {
-		d.client = loading.client
-	}
-	d.loading = nil
-	close(loading.done)
-	d.mu.Unlock()
+	d.client = newEKSClient(cfg)
+	return d.client, nil
 }
 
 func normalizeIssuer(issuer string) string {
