@@ -991,7 +991,17 @@ func TestProduceUnit(t *testing.T) {
 		{unit: "hertz", expectedUnit: "Hz"},
 		{unit: "percent", expectedUnit: "%"},
 		{unit: "bytes_per_second", expectedUnit: "By/s"},
+		{unit: "requests_per_minute", expectedUnit: "requests/min"},
 		{unit: "meters_per_hour", expectedUnit: "m/h"},
+		{unit: "bytes_per_day", expectedUnit: "By/d"},
+		{unit: "bytes_per_week", expectedUnit: "By/wk"},
+		{unit: "bytes_per_month", expectedUnit: "By/mo"},
+		{unit: "bytes_per_year", expectedUnit: "By/a"},
+		{unit: "bytes_per_", expectedUnit: "By"},
+		{unit: "per_second", expectedUnit: "per_second"},
+		{unit: "_per_second", expectedUnit: "/s"},
+		{unit: "bytes_per_request", expectedUnit: "By/request"},
+		{unit: "meters_per_second_per_second", expectedUnit: "m/second_per_second"},
 		{unit: "requests", expectedUnit: "requests"},
 	}
 
