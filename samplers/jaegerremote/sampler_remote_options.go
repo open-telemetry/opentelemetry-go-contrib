@@ -186,7 +186,8 @@ func WithOperationNameLateBinding(enable bool) Option {
 
 // WithSamplingRefreshInterval creates a Option that sets how often the
 // sampler will poll local agent for the appropriate sampling strategy.
-// A non-positive value is ignored and the default interval is used.
+// A non-positive value is ignored, preserving the previously configured
+// interval, or the default when none was configured.
 func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) Option {
 	return optionFunc(func(c *config) {
 		// time.NewTicker panics on a non-positive interval, so ignore one here
