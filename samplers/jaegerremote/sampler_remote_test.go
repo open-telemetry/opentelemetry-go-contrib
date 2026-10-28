@@ -157,6 +157,12 @@ func TestRemoteSamplerNonPositiveRefreshInterval(t *testing.T) {
 		assert.Equal(t, defaultSamplingRefreshInterval, cfg.samplingRefreshInterval, "option %v", d)
 	}
 
+	// A non-positive value must be ignored, not overwrite an earlier valid one.
+	for _, d := range []time.Duration{0, -time.Second} {
+		cfg := newConfig(WithSamplingRefreshInterval(5*time.Second), WithSamplingRefreshInterval(d))
+		assert.Equal(t, 5*time.Second, cfg.samplingRefreshInterval, "option %v", d)
+	}
+
 	for _, v := range []string{"0", "-5"} {
 		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "pollingIntervalMs="+v)
 

@@ -121,10 +121,6 @@ func newConfig(options ...Option) config {
 	for _, err := range errs {
 		c.logger.Error(err, "env variable parsing failure")
 	}
-	// time.NewTicker panics on a non-positive interval.
-	if c.samplingRefreshInterval <= 0 {
-		c.samplingRefreshInterval = defaultSamplingRefreshInterval
-	}
 	c.updaters = []samplerUpdater{
 		&perOperationSamplerUpdater{
 			MaxOperations:            c.posParams.MaxOperations,
@@ -193,7 +189,11 @@ func WithOperationNameLateBinding(enable bool) Option {
 // A non-positive value is ignored and the default interval is used.
 func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) Option {
 	return optionFunc(func(c *config) {
-		c.samplingRefreshInterval = samplingRefreshInterval
+		// time.NewTicker panics on a non-positive interval, so ignore one here
+		// rather than overwriting the default or an earlier valid value.
+		if samplingRefreshInterval > 0 {
+			c.samplingRefreshInterval = samplingRefreshInterval
+		}
 	})
 }
 
