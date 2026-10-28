@@ -14,6 +14,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Convert Prometheus `UNIT` metadata to UCUM units in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10042)
 - Add the opt-in `go.memory.detailed_type` attribute to `go.memory.used` and `go.cpu.detailed_state` attribute to `go.cpu.time` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10021)
 - Add `WithMeterProvider` and HTTP server metrics (`http.server.request.duration`, `http.server.request.body.size`, `http.server.response.body.size`), and record `http.response.body.size` on server spans in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#10055)
+- Add `DefaultMinimumRefreshInterval` and `WithMinimumRefreshInterval` to `go.opentelemetry.io/contrib/instrumentation/runtime`. (#8417)
 - Add `WithHostID` option to `go.opentelemetry.io/contrib/detectors/k8sapi` to detect the `host.id` resource attribute from the machine ID reported by the node's kubelet. (#9973)
 - Add support for the `aws.lambda` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9924)
 - Add `WithNonErrorCodes` option for `NewServerHandler` and `NewClientHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to prevent the handler from setting an error span status for specific gRPC codes. (#9209)
@@ -56,6 +57,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The `go.opentelemetry.io/contrib/propagators/opencensus` module and package are deprecated and will be removed in v0.74.0.
   v0.73.0 is the final planned release of this module.
   Use native OpenTelemetry propagators instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#10030)
+- Deprecate `DefaultMinimumReadMemStatsInterval` and `WithMinimumReadMemStatsInterval` in `go.opentelemetry.io/contrib/instrumentation/runtime` in favor of `DefaultMinimumRefreshInterval` and `WithMinimumRefreshInterval`. (#8417)
 
 ### Fixed
 
