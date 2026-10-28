@@ -745,6 +745,13 @@ func TestGetK8sAPI(t *testing.T) {
 	// Node names are path-escaped so they cannot alter the request path.
 	_, err = utils.getNodeProviderID(t.Context(), "bad/node")
 	assert.ErrorContains(t, err, "failed to decode response")
+
+	// Dot segments are not escaped by url.PathEscape and would otherwise
+	// resolve to a different API path.
+	for _, name := range []string{"", ".", ".."} {
+		_, err = utils.getNodeProviderID(t.Context(), name)
+		assert.ErrorContains(t, err, "invalid node name", "node name %q", name)
+	}
 }
 
 func TestGetK8sAPIRequestDeadline(t *testing.T) {

@@ -524,7 +524,7 @@ func (eksUtils eksDetectorUtils) getConfigMap(ctx context.Context, namespace, na
 // getServerVersion retrieves the Kubernetes cluster server version.
 func (eksUtils eksDetectorUtils) getServerVersion(ctx context.Context) (string, error) {
 	var v serverVersion
-	if err := eksUtils.getK8sAPI(ctx, &v, "version"); err != nil {
+	if err := eksUtils.getK8sAPI(ctx, &v, "/version"); err != nil {
 		return "", fmt.Errorf("failed to retrieve server version: %w", err)
 	}
 	return v.GitVersion, nil
@@ -532,23 +532,25 @@ func (eksUtils eksDetectorUtils) getServerVersion(ctx context.Context) (string, 
 
 // getNodeProviderID retrieves the provider ID of the named Kubernetes node.
 func (eksUtils eksDetectorUtils) getNodeProviderID(ctx context.Context, nodeName string) (string, error) {
+	// url.PathEscape leaves dot segments intact, so reject names that would
+	// resolve to a different API path.
+	if nodeName == "" || nodeName == "." || nodeName == ".." {
+		return "", fmt.Errorf("invalid node name %q", nodeName)
+	}
 	var n node
-	if err := eksUtils.getK8sAPI(ctx, &n, "api", "v1", "nodes", url.PathEscape(nodeName)); err != nil {
+	if err := eksUtils.getK8sAPI(ctx, &n, "/api/v1/nodes/"+url.PathEscape(nodeName)); err != nil {
 		return "", fmt.Errorf("failed to retrieve node %s: %w", nodeName, err)
 	}
 	return n.Spec.ProviderID, nil
 }
 
 // getK8sAPI performs a GET request against the Kubernetes API and decodes the JSON response into out.
-func (eksUtils eksDetectorUtils) getK8sAPI(ctx context.Context, out any, elem ...string) error {
+// path must be an absolute, already-escaped request path.
+func (eksUtils eksDetectorUtils) getK8sAPI(ctx context.Context, out any, path string) error {
 	ctx, cancel := context.WithTimeout(ctx, k8sAPITimeout)
 	defer cancel()
 
-	u, err := url.JoinPath(eksUtils.host, elem...)
-	if err != nil {
-		return fmt.Errorf("failed to build URL: %w", err)
-	}
-
+	u := strings.TrimSuffix(eksUtils.host, "/") + path
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, http.NoBody)
 	if err != nil {
 		return fmt.Errorf("failed to create request: %w", err)
