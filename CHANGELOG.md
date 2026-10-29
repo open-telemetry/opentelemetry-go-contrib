@@ -7,7 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-
+  
 ### Added
 
 - Add `WithHostID` option to `go.opentelemetry.io/contrib/detectors/k8sapi` to detect the `host.id` resource attribute from the machine ID reported by the node's kubelet. (#9973)
@@ -45,6 +45,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Do not record HTTP/2 pseudo-header fields (`:authority`, `:method`, `:path`, `:scheme`) as `http.request.header.*` span attributes in `NewClientTrace` of `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, so the query string in `:path` is no longer exported unredacted. (#10015)
+- Omit source attributes in `go.opentelemetry.io/contrib/bridges/otelslog` when `WithSource(true)` is enabled but no caller frame is available. (#9991)
+- Redact the values of the `X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, `sig`, and `X-Goog-Signature` query parameters from the `url.full` attribute recorded on client spans by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, as required by the semantic conventions. (#9950)
+- Resolve the Docker container ID from cgroup data, with a `/proc/self/mountinfo` fallback for private cgroup namespaces, so custom hostnames do not disable detection. Fall back to hostname lookup when neither source provides an ID or the Docker daemon does not recognize it. (`go.opentelemetry.io/contrib/detectors/docker`) (#10019)
 - Record client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` when the request body is read to EOF but never closed, as done by retrying `RoundTripper`s such as `go-retryablehttp`. (#10008)
 - Reduce heap allocations on `Inject` in `go.opentelemetry.io/contrib/propagators/b3`. (#9870, #9983)
 - Fix response body size accounting for copies through `ReadFrom` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#9998)
@@ -52,6 +56,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Type `AdditionalProperties` as `map[string]any` in the generated config structs of `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x` so `mapstructure`'s `,remain` decoder no longer fails on a bare `interface{}`. (#8850)
 - Prevent recording negative metric values for unknown request/response sizes in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#9433)
 - Configure the global diagnostic logger from `log_level` in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`, defaulting to `info` when unspecified and rejecting unsupported levels. (#9965)
+- Prevent integer overflow when configuring the polling interval for the Jaeger remote sampler via the `OTEL_TRACES_SAMPLER_ARG` environment variable in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#10027)
 - Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray` to prevent auxiliary fields with prefix-sharing keys from dropping trace contexts. (#9879)
 - Preserve errors returned by `http.ResponseController.Flush` through `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9798)
 - Replace inherited debug and deferred sampling flags when extracting a new B3 context in `go.opentelemetry.io/contrib/propagators/b3`. (#9864)
@@ -72,6 +77,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `go.schedule.duration` datapoints returned by `Producer` in `go.opentelemetry.io/contrib/instrumentation/runtime` having their bucket counts overwritten by later collections, and a data race between concurrent `Produce` calls. (#9882)
 - Retain the last non-nil write error instead of letting a later successful write clear it in the response writer wrapper of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9790)
 - Fix `WithValues` in `go.opentelemetry.io/contrib/bridges/otellogr` so loggers derived from the same parent no longer overwrite each other's attributes or race on them. (#9994)
+- Accept any 2xx status for the instance identity token request in `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`. The IMDS Identity API returns 201 Created for the token PUT, which the detector previously rejected, silently returning an empty resource on real IBM Cloud VPC instances. (#9671)
 
 ### Removed
 
