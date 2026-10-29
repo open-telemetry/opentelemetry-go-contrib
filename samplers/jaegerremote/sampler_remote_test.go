@@ -797,4 +797,31 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 			})
 		}
 	})
+
+	t.Run("polling interval overflow uses default", func(t *testing.T) {
+		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "pollingIntervalMs=18446744073710")
+		_, errs := getEnvOptions()
+		require.NotEmpty(t, errs)
+		assert.ErrorContains(t, errs[0], "pollingIntervalMs")
+
+		cfg := newConfig()
+
+		assert.Equal(t, defaultSamplingRefreshInterval, cfg.samplingRefreshInterval)
+	})
+
+	t.Run("maximum valid polling interval", func(t *testing.T) {
+		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "pollingIntervalMs=9223372036854")
+
+		cfg := newConfig()
+
+		assert.Equal(t, time.Duration(9223372036854)*time.Millisecond, cfg.samplingRefreshInterval)
+	})
+
+	t.Run("explicit option overrides overflowing environment value", func(t *testing.T) {
+		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "pollingIntervalMs=18446744073710")
+
+		cfg := newConfig(WithSamplingRefreshInterval(5 * time.Second))
+
+		assert.Equal(t, 5*time.Second, cfg.samplingRefreshInterval)
+	})
 }

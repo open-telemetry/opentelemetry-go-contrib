@@ -406,6 +406,25 @@ func TestReader(t *testing.T) {
 			wantReader: sdkmetric.NewPeriodicReader(otlpGRPCExporter),
 		},
 		{
+			name: "periodic/otlp-grpc-exporter-ipv4-endpoint",
+			reader: MetricReader{
+				Periodic: &PeriodicMetricReader{
+					Exporter: PushMetricExporter{
+						OTLP: &OTLPMetric{
+							Protocol:    new("grpc"),
+							Endpoint:    new("127.0.0.1:4318"),
+							Compression: new("gzip"),
+							Timeout:     new(1000),
+							Headers: []NameStringValuePair{
+								{Name: "test", Value: new("test1")},
+							},
+						},
+					},
+				},
+			},
+			wantReader: sdkmetric.NewPeriodicReader(otlpGRPCExporter),
+		},
+		{
 			name: "periodic/otlp-grpc-invalid-endpoint",
 			reader: MetricReader{
 				Periodic: &PeriodicMetricReader{
@@ -1625,7 +1644,7 @@ func TestPrometheusReaderDotStyleLabels(t *testing.T) {
 	addr := reader.(readerWithServer).server.Addr
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/metrics", http.NoBody)
 	require.NoError(t, err)
-	req.Header.Set("Accept", "application/openmetrics-text; version=1.0.0; escaping=allow-utf-8")
+	req.Header.Set("Accept", "text/plain; version=0.0.4; escaping=allow-utf-8")
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()
