@@ -209,9 +209,16 @@ func TestResourceDetectorDetect(t *testing.T) {
 				m.On("fileExists", k8sTokenPath).Return(true)
 				m.On("fileExists", k8sCertPath).Return(true)
 				m.On("getConfigMap", authConfigmapNS, authConfigmapName).Return(map[string]string{"not": "nil"}, nil)
-				m.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(nilMap, errors.New("cw lookup failure"))
+				m.On("getConfigMap", cwConfigmapNS, cwConfigmapName).Return(nilMap, errors.New("403 Forbidden"))
+				m.On("getContainerID").Return("0123456789A", nil)
 			},
-			expectedErrMsg: "getClusterName() error",
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderAWS,
+				semconv.CloudPlatformAWSEKS,
+				semconv.ContainerID("0123456789A"),
+			),
+			expectedErrIs: resource.ErrPartialResource,
 		},
 		{
 			name: "container ID lookup error",
@@ -240,7 +247,7 @@ func TestResourceDetectorDetect(t *testing.T) {
 			switch {
 			case tt.expectedErrIs != nil:
 				assert.ErrorIs(t, err, tt.expectedErrIs)
-				assert.Nil(t, res)
+				assert.Equal(t, tt.expectedResource, res)
 			case tt.expectedErrMsg != "":
 				require.Error(t, err)
 				assert.ErrorContains(t, err, tt.expectedErrMsg)
@@ -765,6 +772,61 @@ func TestGetK8sAPIRequestDeadline(t *testing.T) {
 
 	require.True(t, rt.ok, "request context must carry a deadline")
 	assert.WithinRange(t, rt.deadline, before.Add(k8sAPITimeout), after.Add(k8sAPITimeout))
+}
+
+func TestDetectNodeMetadataEC2Deadline(t *testing.T) {
+	imdsMock := new(mockIMDSClient)
+	imdsMock.On("GetInstanceIdentityDocument", mock.Anything, mock.Anything).Return(
+		&imds.GetInstanceIdentityDocumentOutput{
+			InstanceIdentityDocument: imds.InstanceIdentityDocument{
+				InstanceID: "i-0123456789abcdef0",
+				Region:     "us-west-2",
+			},
+		}, nil,
+	)
+	imdsMock.On("GetMetadata", mock.Anything, mock.Anything).Return((*imds.GetMetadataOutput)(nil), errors.New("metadata unavailable"))
+
+	var deadline time.Time
+	ec2Mock := new(mockEC2Client)
+	ec2Mock.On("DescribeInstances", mock.MatchedBy(func(ctx context.Context) bool {
+		var ok bool
+		deadline, ok = ctx.Deadline()
+		return ok
+	}), mock.Anything).Return(&ec2.DescribeInstancesOutput{}, nil)
+
+	detector := newTestDetector(t, new(MockDetectorUtils), withIMDSClient(imdsMock), withEC2Client(ec2Mock))
+
+	before := time.Now()
+	detector.detectNodeMetadata(context.WithoutCancel(t.Context()))
+	after := time.Now()
+
+	ec2Mock.AssertExpectations(t)
+	assert.WithinRange(t, deadline, before.Add(ec2Timeout), after.Add(ec2Timeout))
+}
+
+func TestParseRegionAndInstanceID(t *testing.T) {
+	tests := []struct {
+		providerID string
+		region     string
+		az         string
+		instanceID string
+	}{
+		{"aws:///us-west-2a/i-049ca2df511bec762", "us-west-2", "us-west-2a", "i-049ca2df511bec762"},
+		{"aws:///us-gov-west-1a/i-049ca2df511bec762", "us-gov-west-1", "us-gov-west-1a", "i-049ca2df511bec762"},
+		{"aws:///us-west-2-lax-1a/i-0123456789abcdef0", "us-west-2", "us-west-2-lax-1a", "i-0123456789abcdef0"},
+		{"aws:///us-east-1-wl1-bos-wlz-1/i-0123456789abcdef0", "us-east-1", "us-east-1-wl1-bos-wlz-1", "i-0123456789abcdef0"},
+		{"aws:///invalid/i-0123456789abcdef0", "", "", ""},
+		{"aws:////i-0123456789abcdef0", "", "", ""},
+		{"gce://project/us-central1-a/node", "", "", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.providerID, func(t *testing.T) {
+			region, az, instanceID := parseRegionAndInstanceID(tt.providerID)
+			assert.Equal(t, tt.region, region)
+			assert.Equal(t, tt.az, az)
+			assert.Equal(t, tt.instanceID, instanceID)
+		})
+	}
 }
 
 func TestWithAWSConfig(t *testing.T) {

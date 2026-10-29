@@ -42,6 +42,7 @@ const (
 	configMapTimeout                = 10 * time.Second
 	k8sAPITimeout                   = 10 * time.Second
 	imdsTimeout                     = 2 * time.Second
+	ec2Timeout                      = 5 * time.Second
 	kubernetesServiceHostEnvVar     = "KUBERNETES_SERVICE_HOST"
 	eksClusterStringIdentifier      = "-eks-"
 	eksIRSATokenPathIdentifier      = "eks.amazonaws.com" //nolint:gosec // not a credential
@@ -170,6 +171,10 @@ var _ detectorUtils = (*eksDetectorUtils)(nil)
 // is this going to stop working with 1.20 when Docker is deprecated?
 var containerIDRegex = regexp.MustCompile(`^.*/docker/(.+)$`)
 
+// regionRegex matches the parent region prefix of an availability zone, including
+// Local Zones (us-west-2-lax-1a) and Wavelength Zones (us-east-1-wl1-bos-wlz-1).
+var regionRegex = regexp.MustCompile(`^[a-z]{2}(?:-[a-z]+)+-\d+`)
+
 // NewResourceDetector returns a resource detector that will detect AWS EKS resources.
 func NewResourceDetector(opts ...Option) *ResourceDetector {
 	cfg := config{nodeEnvVar: defaultNodeEnvVar}
@@ -227,11 +232,12 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 	// Cluster name: prefer EC2 instance tags, fallback to CloudWatch ConfigMap.
 	clusterName := nodeMeta.clusterName
+	var partialErr error
 	if clusterName == "" {
 		var err error
 		clusterName, err = getClusterName(ctx, detector.utils)
 		if err != nil {
-			return nil, err
+			partialErr = fmt.Errorf("%w: %w", resource.ErrPartialResource, err)
 		}
 	}
 	if clusterName != "" {
@@ -258,7 +264,7 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	}
 
 	// Return new resource object with attributes
-	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
+	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), partialErr
 }
 
 func (detector *ResourceDetector) getAWSConfig(ctx context.Context) (aws.Config, error) {
@@ -329,8 +335,11 @@ func (detector *ResourceDetector) detectNodeMetadata(ctx context.Context) nodeMe
 
 	// 3. If instanceID and region are available, query EC2 DescribeInstances for tags and missing fields.
 	if meta.instanceID != "" && meta.region != "" {
-		if ec2Cl, err := detector.getEC2Client(ctx, func(o *ec2.Options) { o.Region = meta.region }); err == nil {
-			descOut, err := ec2Cl.DescribeInstances(ctx, &ec2.DescribeInstancesInput{
+		ec2Ctx, cancel := context.WithTimeout(ctx, ec2Timeout)
+		defer cancel()
+
+		if ec2Cl, err := detector.getEC2Client(ec2Ctx, func(o *ec2.Options) { o.Region = meta.region }); err == nil {
+			descOut, err := ec2Cl.DescribeInstances(ec2Ctx, &ec2.DescribeInstancesInput{
 				InstanceIds: []string{meta.instanceID},
 			})
 			if err == nil && descOut != nil {
@@ -388,10 +397,10 @@ func parseRegionAndInstanceID(input string) (string, string, string) {
 	}
 
 	availabilityZone := parts[3]
-	if len(availabilityZone) < 2 {
+	region := regionRegex.FindString(availabilityZone)
+	if region == "" {
 		return "", "", ""
 	}
-	region := availabilityZone[:len(availabilityZone)-1]
 	instanceID := parts[4]
 
 	return region, availabilityZone, instanceID
