@@ -1622,6 +1622,22 @@ func TestTransportActiveRequests(t *testing.T) {
 			assertActiveRequests(t, reader, attrs, 0)
 		})
 	}
+
+	t.Run("panic", func(t *testing.T) {
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+		tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+			assertActiveRequests(t, reader, attrs, 1)
+			panic("round trip panic")
+		}), WithMeterProvider(meterProvider))
+
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com:8080/path", http.NoBody)
+		require.NoError(t, err)
+
+		assert.PanicsWithValue(t, "round trip panic", func() { _, _ = tr.RoundTrip(req) }) //nolint:bodyclose // no response is returned on panic
+		assertActiveRequests(t, reader, attrs, 0)
+	})
 }
 
 func TestTransportActiveRequestsDisabled(t *testing.T) {
@@ -2051,6 +2067,18 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 				WithTracerProvider(tp),
 				WithMeterProvider(mp),
 			),
+		},
+		{
+			name: "OptInMetrics",
+			rt: func() http.RoundTripper {
+				// The variable is read when the Transport is created.
+				b.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.active_requests")
+				return NewTransport(
+					http.DefaultTransport,
+					WithTracerProvider(tp),
+					WithMeterProvider(mp),
+				)
+			}(),
 		},
 	} {
 		for _, shape := range []string{"NoBody", "KnownLength", "Streaming"} {

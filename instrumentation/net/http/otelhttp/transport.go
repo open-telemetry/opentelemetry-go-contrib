@@ -50,6 +50,15 @@ var _ http.RoundTripper = &Transport{}
 //
 // If the provided http.RoundTripper is nil, http.DefaultTransport will be used
 // as the base http.RoundTripper.
+//
+// The following opt-in metrics are produced when listed, comma-separated, in
+// the OTEL_GO_X_HTTP_METRICS_OPTIN environment variable when NewTransport is
+// called:
+//
+//	http.client.active_requests  {request}  Number of active HTTP requests.
+//
+// A request is counted from the start of RoundTrip until the base
+// http.RoundTripper returns. This feature is experimental and may change.
 func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 	if base == nil {
 		base = http.DefaultTransport
