@@ -117,6 +117,7 @@ func RegisterTextMapPropagator(name string, p propagation.TextMapPropagator) {
 // already registered TextMapPropagator (see the RegisterTextMapPropagator
 // function for more information) or a default (tracecontext, baggage, b3,
 // b3multi, jaeger, xray, or ottrace).
+// Duplicate names are ignored, preserving the order of their first occurrence.
 //
 // If "none" is included in the arguments, or no names are provided, the
 // returned TextMapPropagator will be a no-operation implementation.
@@ -130,6 +131,7 @@ func TextMapPropagator(names ...string) (propagation.TextMapPropagator, error) {
 		props   []propagation.TextMapPropagator
 		unknown []string
 	)
+	seen := make(map[string]struct{}, len(names))
 
 	for _, name := range names {
 		if name == none {
@@ -138,12 +140,16 @@ func TextMapPropagator(names ...string) (propagation.TextMapPropagator, error) {
 			// short-circuit here.
 			return noopPropagator, nil
 		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
 
 		p, ok := propagators.load(name)
 		if !ok {
 			unknown = append(unknown, name)
 			continue
 		}
+		seen[name] = struct{}{}
 		props = append(props, p)
 	}
 

@@ -50,7 +50,8 @@ type optionFunc func(*config)
 func (f optionFunc) apply(c *config) { f(c) }
 
 type config struct {
-	gkeHostType bool
+	gkeHostType       bool
+	gceLabelKeyFilter func(key string) bool
 }
 
 // WithGKEHostType enables detection of the host.type resource attribute on
@@ -61,6 +62,21 @@ type config struct {
 func WithGKEHostType() Option {
 	return optionFunc(func(c *config) {
 		c.gkeHostType = true
+	})
+}
+
+// WithGCEInstanceLabelKeyFilter emits a gcp.gce.instance.labels.<key>
+// attribute on Google Compute Engine (GCE) for every instance label whose key
+// satisfies filter. The filter receives the raw GCE instance label key, without
+// the "gcp.gce.instance.labels." prefix.
+//
+// It is disabled by default (when filter is nil) because it makes an
+// additional call to the Compute Engine instances.get API and requires the
+// compute.instances.get IAM permission. For regexp matching, pass
+// re.MatchString.
+func WithGCEInstanceLabelKeyFilter(filter func(key string) bool) Option {
+	return optionFunc(func(c *config) {
+		c.gceLabelKeyFilter = filter
 	})
 }
 
@@ -145,6 +161,11 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		b.add(semconv.GCPGCEInstanceNameKey, d.detector.GCEInstanceName)
 		b.add(semconv.GCPGCEInstanceHostnameKey, d.detector.GCEInstanceHostname)
 		b.addManagedInstanceGroup(d.detector.GCEManagedInstanceGroup)
+		if d.cfg.gceLabelKeyFilter != nil {
+			b.addGCEInstanceLabels(func() (map[string]string, error) {
+				return d.detector.GCEInstanceLabels(ctx)
+			}, d.cfg.gceLabelKeyFilter)
+		}
 	default:
 		// We don't support this platform yet, so just return with what we have
 	}
@@ -217,6 +238,18 @@ func (r *resourceBuilder) addManagedInstanceGroup(detect func() (internal.Manage
 				r.attrs = append(r.attrs, semconv.GCPGCEInstanceGroupManagerRegion(mig.Location))
 			default:
 				r.errs = append(r.errs, fmt.Errorf("managed instance group location must be zone or region. Got %v", mig.Type))
+			}
+		}
+	} else {
+		r.errs = append(r.errs, err)
+	}
+}
+
+func (r *resourceBuilder) addGCEInstanceLabels(detect func() (map[string]string, error), filter func(key string) bool) {
+	if labels, err := detect(); err == nil {
+		for k, v := range labels {
+			if filter(k) {
+				r.attrs = append(r.attrs, semconv.GCPGCEInstanceLabels(k, v))
 			}
 		}
 	} else {

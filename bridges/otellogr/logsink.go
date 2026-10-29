@@ -60,6 +60,7 @@ package otellogr
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel"
@@ -272,7 +273,9 @@ func (l LogSink) WithName(name string) logr.LogSink {
 // and log emission.
 func (l LogSink) WithValues(keysAndValues ...any) logr.LogSink {
 	ctx, attr := convertKVs(l.ctx, keysAndValues...)
-	l.attr = append(l.attr, attr...)
+	// Clip so sibling sinks derived from the same parent do not share and
+	// overwrite the backing array.
+	l.attr = append(slices.Clip(l.attr), attr...)
 	l.ctx = ctx
 	return &l
 }

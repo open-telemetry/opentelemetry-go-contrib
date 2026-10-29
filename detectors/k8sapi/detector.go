@@ -24,6 +24,7 @@ type config struct {
 	nodeEnvVar string
 	kubeClient kubernetes.Interface
 	filter     attribute.Filter
+	hostID     bool
 }
 
 // Option configures a [ResourceDetector].
@@ -56,6 +57,15 @@ func WithKubeClient(client kubernetes.Interface) Option {
 // returns true are included. By default all attributes are included.
 func WithAttributeFilter(filter attribute.Filter) Option {
 	return optionFunc(func(c *config) { c.filter = filter })
+}
+
+// WithHostID enables detection of the host.id resource attribute from the
+// machine ID reported by the node's kubelet. Semantic conventions prefer a
+// cloud provider instance ID over the machine ID for host.id, so when combined
+// with cloud detectors (e.g. ec2, gcp, azurevm), pass this detector before
+// them to [resource.WithDetectors].
+func WithHostID() Option {
+	return optionFunc(func(c *config) { c.hostID = true })
 }
 
 // ResourceDetector collects resource attributes from the Kubernetes node the
@@ -102,6 +112,9 @@ func (rd *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, err
 			errs = append(errs, fmt.Errorf("node %q: %w", nodeName, err))
 		} else {
 			attrs = append(attrs, semconv.K8SNodeName(node.Name), semconv.K8SNodeUID(string(node.UID)))
+			if machineID := node.Status.NodeInfo.MachineID; rd.cfg.hostID && machineID != "" {
+				attrs = append(attrs, semconv.HostID(machineID))
+			}
 		}
 	}
 

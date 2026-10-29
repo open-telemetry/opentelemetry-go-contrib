@@ -46,3 +46,43 @@ func BenchmarkHTTPServerRequest(b *testing.B) {
 		benchHTTPServerRequestResults = serv.RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
 	}
 }
+
+var benchHTTPClientRequestResults []attribute.KeyValue
+
+func BenchmarkHTTPClientRequest(b *testing.B) {
+	testCases := []struct {
+		name     string
+		rawQuery string
+	}{
+		{name: "NoQuery"},
+		{name: "Query", rawQuery: "stuff=morestuff&other=1"},
+		{name: "SensitiveQuery", rawQuery: "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAEXAMPLE%2F20260101%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=abc123"},
+	}
+	client := NewHTTPClient(nil)
+
+	for _, tc := range testCases {
+		req := &http.Request{
+			Method: http.MethodGet,
+			URL: &url.URL{
+				Scheme:   "https",
+				Host:     "example.com:8888",
+				Path:     "/foo/bar",
+				RawQuery: tc.rawQuery,
+			},
+			Proto:      "HTTP/1.1",
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+			Header: http.Header{
+				"User-Agent": []string{"Go-http-client/1.1"},
+			},
+			Body: http.NoBody,
+			Host: "example.com:8888",
+		}
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for range b.N {
+				benchHTTPClientRequestResults = client.RequestTraceAttrs(req)
+			}
+		})
+	}
+}

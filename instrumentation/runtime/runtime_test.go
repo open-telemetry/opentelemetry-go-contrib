@@ -5,6 +5,7 @@ package runtime
 
 import (
 	"math"
+	goruntime "runtime"
 	"runtime/debug"
 	"testing"
 	"time"
@@ -176,6 +177,227 @@ func TestRuntimeWithLimit(t *testing.T) {
 	}
 	metricdatatest.AssertEqual(t, expectedScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
 	assertNonZeroValues(t, rm.ScopeMetrics[0])
+}
+
+func TestRuntimeOptInMetrics(t *testing.T) {
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.cycles, go.cpu.time")
+	goruntime.GC()
+
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	err := Start(WithMeterProvider(mp))
+	assert.NoError(t, err)
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(t.Context(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	metrics := map[string]metricdata.Metrics{}
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		metrics[m.Name] = m
+	}
+
+	metricdatatest.AssertEqual(t, metricdata.Metrics{
+		Name:        goconv.MemoryGCCyclesObservable{}.Name(),
+		Description: goconv.MemoryGCCyclesObservable{}.Description(),
+		Unit:        goconv.MemoryGCCyclesObservable{}.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints:  []metricdata.DataPoint[int64]{{}},
+		},
+	}, metrics[goconv.MemoryGCCyclesObservable{}.Name()], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+	gcCycles := metrics[goconv.MemoryGCCyclesObservable{}.Name()].Data.(metricdata.Sum[int64])
+	assert.Positive(t, gcCycles.DataPoints[0].Value)
+
+	cpuTime := goconv.CPUTimeObservable{}
+	metricdatatest.AssertEqual(t, metricdata.Metrics{
+		Name:        cpuTime.Name(),
+		Description: cpuTime.Description(),
+		Unit:        cpuTime.Unit(),
+		Data: metricdata.Sum[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints: []metricdata.DataPoint[float64]{
+				{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateUser))},
+				{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateGC))},
+				{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateScavenge))},
+				{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateIdle))},
+			},
+		},
+	}, metrics[cpuTime.Name()], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+	var totalCPUTime float64
+	for _, dp := range metrics[cpuTime.Name()].Data.(metricdata.Sum[float64]).DataPoints {
+		state, _ := dp.Attributes.Value("go.cpu.state")
+		assert.GreaterOrEqualf(t, dp.Value, float64(0), "go.cpu.state %q", state.AsString())
+		totalCPUTime += dp.Value
+	}
+	assert.Positive(t, totalCPUTime)
+}
+
+func TestRuntimeIgnoresProducerOptInMetrics(t *testing.T) {
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.memory.gc.pause.duration")
+	err := Start(WithMeterProvider(mp))
+	assert.NoError(t, err)
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(t.Context(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		assert.NotEqual(t, goconv.MemoryGCPauseDuration{}.Name(), m.Name)
+	}
+}
+
+func TestGoCollectorGetFloat(t *testing.T) {
+	collector := newCollector(0, []string{goCPUUser, goGCCycles})
+	goruntime.GC()
+	collector.refresh()
+	assert.Positive(t, collector.getFloat(goCPUUser))
+	assert.Zero(t, collector.getFloat(goGCCycles), "a uint64 sample is not read as a float")
+	assert.Zero(t, collector.getFloat(goCPUIdle), "an unread sample is zero")
+}
+
+func TestRuntimeWithoutOptInMetrics(t *testing.T) {
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(metric.WithReader(reader))
+	err := Start(WithMeterProvider(mp))
+	assert.NoError(t, err)
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(t.Context(), &rm)
+	assert.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		assert.NotEqual(t, goconv.MemoryGCCyclesObservable{}.Name(), m.Name)
+		assert.NotEqual(t, goconv.CPUTimeObservable{}.Name(), m.Name)
+	}
+}
+
+func TestRuntimeDetailedMemoryAttributes(t *testing.T) {
+	memoryUsed := goconv.MemoryUsed{}
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(
+		metric.WithReader(reader),
+		metric.WithView(metric.NewView(
+			metric.Instrument{Name: memoryUsed.Name()},
+			metric.Stream{AttributeFilter: func(_ attribute.KeyValue) bool { return true }},
+		)),
+	)
+	err := Start(WithMeterProvider(mp))
+	require.NoError(t, err)
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(t.Context(), &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var got metricdata.Metrics
+	var found bool
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == memoryUsed.Name() {
+			got = m
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "go.memory.used metric not found")
+
+	expected := []metricdata.DataPoint[int64]{
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeStack), memoryUsed.AttrMemoryDetailedType("heap/stacks"))},
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther), memoryUsed.AttrMemoryDetailedType("heap/free"))},
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther), memoryUsed.AttrMemoryDetailedType("heap/objects"))},
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther), memoryUsed.AttrMemoryDetailedType("heap/unused"))},
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther), memoryUsed.AttrMemoryDetailedType("metadata/mcache/free"))},
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther), memoryUsed.AttrMemoryDetailedType("metadata/mcache/inuse"))},
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther), memoryUsed.AttrMemoryDetailedType("metadata/mspan/free"))},
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther), memoryUsed.AttrMemoryDetailedType("metadata/mspan/inuse"))},
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther), memoryUsed.AttrMemoryDetailedType("metadata/other"))},
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther), memoryUsed.AttrMemoryDetailedType("os-stacks"))},
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther), memoryUsed.AttrMemoryDetailedType("other"))},
+		{Attributes: attribute.NewSet(memoryUsed.AttrMemoryType(goconv.MemoryTypeOther), memoryUsed.AttrMemoryDetailedType("profiling/buckets"))},
+	}
+	metricdatatest.AssertEqual(t, metricdata.Metrics{
+		Name:        memoryUsed.Name(),
+		Description: memoryUsed.Description(),
+		Unit:        memoryUsed.Unit(),
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: false,
+			DataPoints:  expected,
+		},
+	}, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+	var totalMemory int64
+	for _, dp := range got.Data.(metricdata.Sum[int64]).DataPoints {
+		detailedType, _ := dp.Attributes.Value("go.memory.detailed_type")
+		assert.GreaterOrEqualf(t, dp.Value, int64(0), "go.memory.detailed_type %q", detailedType.AsString())
+		totalMemory += dp.Value
+	}
+	assert.Positive(t, totalMemory)
+}
+
+func TestRuntimeDetailedCPUAttributes(t *testing.T) {
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.cpu.time")
+	goruntime.GC()
+
+	cpuTime := goconv.CPUTimeObservable{}
+	reader := metric.NewManualReader()
+	mp := metric.NewMeterProvider(
+		metric.WithReader(reader),
+		metric.WithView(metric.NewView(
+			metric.Instrument{Name: cpuTime.Name()},
+			metric.Stream{AttributeFilter: func(_ attribute.KeyValue) bool { return true }},
+		)),
+	)
+	err := Start(WithMeterProvider(mp))
+	require.NoError(t, err)
+	rm := metricdata.ResourceMetrics{}
+	err = reader.Collect(t.Context(), &rm)
+	require.NoError(t, err)
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var got metricdata.Metrics
+	var found bool
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == cpuTime.Name() {
+			got = m
+			found = true
+			break
+		}
+	}
+	require.True(t, found, "go.cpu.time metric not found")
+
+	expected := []metricdata.DataPoint[float64]{
+		{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateUser), cpuTime.AttrCPUDetailedState("user"))},
+		{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateGC), cpuTime.AttrCPUDetailedState("gc/mark/assist"))},
+		{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateGC), cpuTime.AttrCPUDetailedState("gc/mark/dedicated"))},
+		{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateGC), cpuTime.AttrCPUDetailedState("gc/mark/idle"))},
+		{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateGC), cpuTime.AttrCPUDetailedState("gc/pause"))},
+		{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateScavenge), cpuTime.AttrCPUDetailedState("scavenge/assist"))},
+		{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateScavenge), cpuTime.AttrCPUDetailedState("scavenge/background"))},
+		{Attributes: attribute.NewSet(cpuTime.AttrCPUState(goconv.CPUStateIdle), cpuTime.AttrCPUDetailedState("idle"))},
+	}
+	metricdatatest.AssertEqual(t, metricdata.Metrics{
+		Name:        cpuTime.Name(),
+		Description: cpuTime.Description(),
+		Unit:        cpuTime.Unit(),
+		Data: metricdata.Sum[float64]{
+			Temporality: metricdata.CumulativeTemporality,
+			IsMonotonic: true,
+			DataPoints:  expected,
+		},
+	}, got, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+	var totalCPUTime float64
+	for _, dp := range got.Data.(metricdata.Sum[float64]).DataPoints {
+		detailedState, _ := dp.Attributes.Value("go.cpu.detailed_state")
+		assert.GreaterOrEqualf(t, dp.Value, float64(0), "go.cpu.detailed_state %q", detailedState.AsString())
+		totalCPUTime += dp.Value
+	}
+	assert.Positive(t, totalCPUTime)
 }
 
 func assertNonZeroValues(t *testing.T, sm metricdata.ScopeMetrics) {

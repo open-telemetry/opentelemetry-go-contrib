@@ -33,6 +33,7 @@ type gcpDetector interface {
 	GCEHostName() (string, error)
 	GCEInstanceHostname() (string, error)
 	GCEInstanceName() (string, error)
+	GCEInstanceLabels(context.Context) (map[string]string, error)
 	CloudRunJobExecution() (string, error)
 	CloudRunJobTaskIndex() (string, error)
 	GCEManagedInstanceGroup() (internal.ManagedInstanceGroup, error)

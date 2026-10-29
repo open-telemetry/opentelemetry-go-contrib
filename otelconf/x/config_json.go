@@ -183,6 +183,21 @@ func (j *ExperimentalAWSEKSResourceDetector) UnmarshalJSON(b []byte) error {
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
+func (j *ExperimentalAWSLambdaResourceDetector) UnmarshalJSON(b []byte) error {
+	type plain ExperimentalAWSLambdaResourceDetector
+	var p plain
+	if err := json.Unmarshal(b, &p); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if p == nil {
+		*j = ExperimentalAWSLambdaResourceDetector{}
+	} else {
+		*j = ExperimentalAWSLambdaResourceDetector(p)
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
 func (j *ExperimentalAzureVMResourceDetector) UnmarshalJSON(b []byte) error {
 	type plain ExperimentalAzureVMResourceDetector
 	var p plain
@@ -271,6 +286,7 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 		GCP       json.RawMessage `json:"gcp"`
 		AWSECS    json.RawMessage `json:"aws.ecs"`
 		AWSEKS    json.RawMessage `json:"aws.eks"`
+		AWSLambda json.RawMessage `json:"aws.lambda"`
 		AzureVM   json.RawMessage `json:"azure.vm"`
 		Container json.RawMessage `json:"container"`
 		Host      json.RawMessage `json:"host"`
@@ -324,6 +340,17 @@ func (j *ExperimentalResourceDetector) UnmarshalJSON(b []byte) error {
 			c = ExperimentalAWSEKSResourceDetector{}
 		}
 		sh.Plain.AWSEKS = c
+	}
+
+	if sh.AWSLambda != nil {
+		var c ExperimentalAWSLambdaResourceDetector
+		if err := json.Unmarshal(sh.AWSLambda, &c); err != nil {
+			return errors.Join(newErrUnmarshal(j), err)
+		}
+		if c == nil {
+			c = ExperimentalAWSLambdaResourceDetector{}
+		}
+		sh.Plain.AWSLambda = c
 	}
 
 	if sh.AzureVM != nil {

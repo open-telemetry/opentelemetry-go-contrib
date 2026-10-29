@@ -63,7 +63,8 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 // container:
 //
 //   - the Docker daemon is unreachable, or
-//   - the daemon is reachable but no container matches this process's hostname.
+//   - the daemon is reachable but no container matches this process's
+//     container ID or hostname.
 //
 // If the container is identified but some attributes cannot be retrieved, a
 // partial resource is returned with [resource.ErrPartialResource].
@@ -74,9 +75,9 @@ func (r *ResourceDetector) Detect(ctx context.Context) (*resource.Resource, erro
 	}
 	defer func() { _ = dockerProvider.Close() }()
 
-	// ContainerInfo is the only call tied to this process's own identity (via
-	// hostname), so it is the sole signal for whether we're in a container; a
-	// reachable daemon alone doesn't mean that (e.g. running on the Docker host).
+	// ContainerInfo is the only call tied to this process's own identity.
+	// The provider first tries to resolve the container ID from cgroup data,
+	// then falls back to the hostname.
 	containerInfo, err := dockerProvider.ContainerInfo(ctx)
 	if err != nil {
 		if client.IsErrConnectionFailed(err) || cerrdefs.IsNotFound(err) {

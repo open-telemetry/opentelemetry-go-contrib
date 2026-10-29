@@ -338,6 +338,149 @@ func TestClientRequest(t *testing.T) {
 	assert.ElementsMatch(t, want, got)
 }
 
+func TestClientRequest_SensitiveQueryRedacted(t *testing.T) {
+	testCases := []struct {
+		name string
+		url  string
+		want string
+	}{
+		{
+			name: "no query",
+			url:  "https://example.com/foo",
+			want: "https://example.com/foo",
+		},
+		{
+			name: "no sensitive parameters",
+			url:  "https://example.com/foo?stuff=morestuff&other=1",
+			want: "https://example.com/foo?stuff=morestuff&other=1",
+		},
+		{
+			name: "aws sigv4 presigned url",
+			url:  "https://bucket.s3.amazonaws.com/key?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAEXAMPLE%2F20260101%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Security-Token=token&X-Amz-Signature=abc123",
+			want: "https://bucket.s3.amazonaws.com/key?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=REDACTED&X-Amz-Security-Token=REDACTED&X-Amz-Signature=REDACTED",
+		},
+		{
+			name: "azure sas token",
+			url:  "https://example.com/container/blob?sv=2024-11-04&sig=abc%2F123%3D&se=2026-01-01",
+			want: "https://example.com/container/blob?sv=2024-11-04&sig=REDACTED&se=2026-01-01",
+		},
+		{
+			name: "gcs signed url",
+			url:  "https://storage.googleapis.com/bucket/object?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Signature=abc123",
+			want: "https://storage.googleapis.com/bucket/object?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Signature=REDACTED",
+		},
+		{
+			name: "matching is case sensitive",
+			url:  "https://example.com/foo?SIG=abc&Sig=def&x-amz-signature=ghi",
+			want: "https://example.com/foo?SIG=abc&Sig=def&x-amz-signature=ghi",
+		},
+		{
+			name: "key without value is preserved",
+			url:  "https://example.com/foo?sig&stuff=morestuff",
+			want: "https://example.com/foo?sig&stuff=morestuff",
+		},
+		{
+			name: "percent-encoded key",
+			url:  "https://example.com/foo?%73ig=abc&X-Amz-%53ignature=def&stuff=morestuff",
+			want: "https://example.com/foo?%73ig=REDACTED&X-Amz-%53ignature=REDACTED&stuff=morestuff",
+		},
+		{
+			name: "semicolon separator",
+			url:  "https://example.com/foo?a=1;sig=abc&stuff=morestuff;X-Amz-Signature=def",
+			want: "https://example.com/foo?a=1;sig=REDACTED&stuff=morestuff;X-Amz-Signature=REDACTED",
+		},
+		{
+			name: "semicolon inside sensitive value",
+			url:  "https://example.com/foo?sig=prefix;SECRET_SUFFIX&other=1",
+			want: "https://example.com/foo?sig=REDACTED&other=1",
+		},
+		{
+			name: "question mark separator",
+			url:  "https://example.com/foo?a=1?sig=abc&stuff=morestuff",
+			want: "https://example.com/foo?a=1?sig=REDACTED&stuff=morestuff",
+		},
+		{
+			name: "empty value is redacted",
+			url:  "https://example.com/foo?sig=&stuff=morestuff",
+			want: "https://example.com/foo?sig=REDACTED&stuff=morestuff",
+		},
+		{
+			name: "repeated key",
+			url:  "https://example.com/foo?sig=abc&sig=def",
+			want: "https://example.com/foo?sig=REDACTED&sig=REDACTED",
+		},
+		{
+			name: "userinfo is also removed",
+			url:  "https://user:password@example.com/foo?sig=abc",
+			want: "https://example.com/foo?sig=REDACTED",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.url, nil)
+			rawQuery, user := req.URL.RawQuery, req.URL.User
+
+			got := semconv.HTTPClient{}.RequestTraceAttrs(req)
+			assert.Contains(t, got, attribute.String("url.full", tc.want))
+			// The request that is sent must not be modified.
+			assert.Equal(t, rawQuery, req.URL.RawQuery)
+			assert.Equal(t, user, req.URL.User)
+		})
+	}
+}
+
+func TestClientRequest_SensitiveOpaqueQueryRedacted(t *testing.T) {
+	testCases := []struct {
+		name     string
+		opaque   string
+		rawQuery string
+		want     string
+	}{
+		{
+			name:   "query in opaque",
+			opaque: "//example.com/foo?sig=abc&stuff=morestuff",
+			want:   "https://example.com/foo?sig=REDACTED&stuff=morestuff",
+		},
+		{
+			name:     "query in opaque and raw query",
+			opaque:   "//example.com/foo?sig=abc",
+			rawQuery: "X-Amz-Signature=def&other=1",
+			want:     "https://example.com/foo?sig=REDACTED&other=1",
+		},
+		{
+			name:     "sensitive value spans opaque and raw query",
+			opaque:   "//example.com/foo?sig=prefix",
+			rawQuery: "SECRET_SUFFIX&other=1",
+			want:     "https://example.com/foo?sig=REDACTED&other=1",
+		},
+		{
+			name:     "sensitive key only in raw query",
+			opaque:   "//example.com/foo?a=1",
+			rawQuery: "sig=abc&other=1",
+			want:     "https://example.com/foo?a=1?sig=REDACTED&other=1",
+		},
+		{
+			name:   "no sensitive parameters in opaque",
+			opaque: "//example.com/foo?stuff=morestuff",
+			want:   "https://example.com/foo?stuff=morestuff",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "https://example.com/", nil)
+			req.URL.Opaque, req.URL.RawQuery = tc.opaque, tc.rawQuery
+
+			got := semconv.HTTPClient{}.RequestTraceAttrs(req)
+			assert.Contains(t, got, attribute.String("url.full", tc.want))
+			// The request that is sent must not be modified.
+			assert.Equal(t, tc.opaque, req.URL.Opaque)
+			assert.Equal(t, tc.rawQuery, req.URL.RawQuery)
+		})
+	}
+}
+
 func TestClientResponse(t *testing.T) {
 	testcases := []struct {
 		resp http.Response

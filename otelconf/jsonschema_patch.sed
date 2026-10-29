@@ -30,6 +30,11 @@ s+AdditionalProperties interface{} `mapstructure:",remain"`+AdditionalProperties
 \	//\
 \	AWSEKS ExperimentalAWSEKSResourceDetector `json:"aws.eks,omitempty,omitzero" yaml:"aws.eks,omitempty" mapstructure:"aws.eks,omitempty"`\
 \
+\	// Enable the AWS Lambda resource detector.\
+\	// If omitted, ignore.\
+\	//\
+\	AWSLambda ExperimentalAWSLambdaResourceDetector `json:"aws.lambda,omitempty,omitzero" yaml:"aws.lambda,omitempty" mapstructure:"aws.lambda,omitempty"`\
+\
 \	// Enable the Azure VM resource detector.\
 \	// If omitted, ignore.\
 \	//\
@@ -43,5 +48,7 @@ type ExperimentalGCPResourceDetector map[string]interface{}\
 type ExperimentalAWSECSResourceDetector map[string]interface{}\
 \
 type ExperimentalAWSEKSResourceDetector map[string]interface{}\
+\
+type ExperimentalAWSLambdaResourceDetector map[string]interface{}\
 \
 type ExperimentalAzureVMResourceDetector map[string]interface{}

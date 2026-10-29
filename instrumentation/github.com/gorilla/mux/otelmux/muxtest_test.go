@@ -163,6 +163,15 @@ func TestSDKIntegration(t *testing.T) {
 			wantRoute:    "/book/{custom}",
 		},
 		{
+			name:         "lowercase HTTP Method",
+			method:       "post",
+			path:         "/book/foo",
+			reqFunc:      nil,
+			wantSpanName: "POST /book/{title}",
+			wantMethod:   http.MethodPost,
+			wantRoute:    "/book/{title}",
+		},
+		{
 			name:         "Invalid HTTP Method",
 			method:       "INVALID",
 			path:         "/book/bar",
@@ -417,6 +426,94 @@ func TestDefaultMetricAttributes(t *testing.T) {
 			// Intentional failure to keep the test updated with changes in metrics
 			t.Errorf("Unexpected metric type")
 		}
+	}
+}
+
+func TestRouteNotFoundMetricAttributesUseNormalizedMethod(t *testing.T) {
+	tests := []struct {
+		name       string
+		methods    []string
+		wantMethod string
+		wantRoute  string
+		wantSpan   string
+	}{
+		{
+			name:       "standard",
+			methods:    []string{http.MethodGet},
+			wantMethod: http.MethodGet,
+			wantRoute:  "HTTP GET route not found",
+			wantSpan:   "GET HTTP GET route not found",
+		},
+		{
+			name:       "lowercase",
+			methods:    []string{"get"},
+			wantMethod: http.MethodGet,
+			wantRoute:  "HTTP GET route not found",
+			wantSpan:   "GET HTTP GET route not found",
+		},
+		{
+			name: "non-standard",
+			methods: func() []string {
+				m := make([]string, 10)
+				for i := range m {
+					m[i] = fmt.Sprintf("CUSTOM%d", i)
+				}
+				return m
+			}(),
+			wantMethod: "_OTHER",
+			wantRoute:  "HTTP _OTHER route not found",
+			wantSpan:   "HTTP HTTP _OTHER route not found",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+			reader := sdkmetric.NewManualReader()
+			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			router := mux.NewRouter()
+			router.Use(otelmux.Middleware(
+				"foobar",
+				otelmux.WithTracerProvider(tracerProvider),
+				otelmux.WithMeterProvider(meterProvider),
+			))
+			// A route without a path template has no http.route.
+			router.Host("localhost").HandlerFunc(ok)
+
+			for _, method := range tt.methods {
+				r, err := http.NewRequestWithContext(t.Context(), method, "http://localhost/", http.NoBody)
+				require.NoError(t, err)
+				router.ServeHTTP(httptest.NewRecorder(), r)
+			}
+
+			spans := sr.Ended()
+			require.Len(t, spans, len(tt.methods))
+			for _, s := range spans {
+				assert.Equal(t, tt.wantSpan, s.Name())
+			}
+
+			rm := metricdata.ResourceMetrics{}
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+			require.Len(t, rm.ScopeMetrics, 1)
+
+			var found bool
+			for _, m := range rm.ScopeMetrics[0].Metrics {
+				if m.Name != "http.server.request.duration" {
+					continue
+				}
+				found = true
+				d, ok := m.Data.(metricdata.Histogram[float64])
+				require.True(t, ok)
+				require.Len(t, d.DataPoints, 1)
+				containsAttributes(t, d.DataPoints[0].Attributes, []attribute.KeyValue{
+					attribute.String("http.request.method", tt.wantMethod),
+					attribute.String("http.route", tt.wantRoute),
+				})
+			}
+			assert.True(t, found, "http.server.request.duration not recorded")
+		})
 	}
 }
 

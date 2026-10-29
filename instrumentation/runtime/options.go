@@ -8,6 +8,9 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/goconv"
+
+	"go.opentelemetry.io/contrib/instrumentation/runtime/internal/x"
 )
 
 // config contains optional settings for reporting runtime metrics.
@@ -21,6 +24,20 @@ type config struct {
 	// Provider will be used.
 	MeterProvider metric.MeterProvider
 }
+
+// optInMetric is a runtime metric that is only produced when listed in the
+// OTEL_GO_X_RUNTIME_METRICS_OPTIN environment variable.
+type optInMetric struct {
+	name string
+}
+
+var (
+	optInGCCycles = optInMetric{name: goconv.MemoryGCCyclesObservable{}.Name()}
+	optInCPUTime  = optInMetric{name: goconv.CPUTimeObservable{}.Name()}
+	optInGCPauses = optInMetric{name: goconv.MemoryGCPauseDuration{}.Name()}
+)
+
+func (m optInMetric) enabled() bool { return x.OptInMetrics.Enabled(m.name) }
 
 // Option supports configuring optional settings for runtime metrics.
 type Option interface {

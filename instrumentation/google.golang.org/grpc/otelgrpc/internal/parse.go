@@ -23,5 +23,7 @@ func ParseFullMethod(fullMethod string) (string, []attribute.KeyValue) {
 		return fullMethod, nil
 	}
 	name := fullMethod[1:]
-	return name, []attribute.KeyValue{semconv.RPCMethod(name)}
+	attrs := make([]attribute.KeyValue, 1, 2)
+	attrs[0] = semconv.RPCMethod(name)
+	return name, attrs
 }
