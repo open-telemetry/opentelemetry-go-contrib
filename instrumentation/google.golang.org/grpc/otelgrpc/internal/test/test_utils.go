@@ -24,7 +24,7 @@
 // Copied from https://github.com/grpc/grpc-go/tree/v1.61.0/interop
 // That package was not intended to be used by external code.
 // See https://github.com/open-telemetry/opentelemetry-go-contrib/issues/4896
-package test // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/internal/test"
+package test
 
 import (
 	"context"

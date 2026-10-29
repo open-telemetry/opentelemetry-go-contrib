@@ -509,7 +509,7 @@ type ExperimentalComposableSampler struct {
 	//
 	RuleBased *ExperimentalComposableRuleBasedSampler `json:"rule_based,omitempty,omitzero" yaml:"rule_based,omitempty" mapstructure:"rule_based,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type ExperimentalContainerResourceDetector map[string]interface{}
@@ -976,6 +976,36 @@ type ExperimentalResourceDetection struct {
 }
 
 type ExperimentalResourceDetector struct {
+	// Enable the AWS EC2 resource detector.
+	// If omitted, ignore.
+	//
+	AWSEC2 ExperimentalAWSEC2ResourceDetector `json:"aws.ec2,omitempty,omitzero" yaml:"aws.ec2,omitempty" mapstructure:"aws.ec2,omitempty"`
+
+	// Enable the GCP resource detector.
+	// If omitted, ignore.
+	//
+	GCP ExperimentalGCPResourceDetector `json:"gcp,omitempty,omitzero" yaml:"gcp,omitempty" mapstructure:"gcp,omitempty"`
+
+	// Enable the AWS ECS resource detector.
+	// If omitted, ignore.
+	//
+	AWSECS ExperimentalAWSECSResourceDetector `json:"aws.ecs,omitempty,omitzero" yaml:"aws.ecs,omitempty" mapstructure:"aws.ecs,omitempty"`
+
+	// Enable the AWS EKS resource detector.
+	// If omitted, ignore.
+	//
+	AWSEKS ExperimentalAWSEKSResourceDetector `json:"aws.eks,omitempty,omitzero" yaml:"aws.eks,omitempty" mapstructure:"aws.eks,omitempty"`
+
+	// Enable the AWS Lambda resource detector.
+	// If omitted, ignore.
+	//
+	AWSLambda ExperimentalAWSLambdaResourceDetector `json:"aws.lambda,omitempty,omitzero" yaml:"aws.lambda,omitempty" mapstructure:"aws.lambda,omitempty"`
+
+	// Enable the Azure VM resource detector.
+	// If omitted, ignore.
+	//
+	AzureVM ExperimentalAzureVMResourceDetector `json:"azure.vm,omitempty,omitzero" yaml:"azure.vm,omitempty" mapstructure:"azure.vm,omitempty"`
+
 	// Enable the container resource detector, which populates container.* attributes.
 	// If omitted, ignore.
 	//
@@ -997,8 +1027,20 @@ type ExperimentalResourceDetector struct {
 	//
 	Service ExperimentalServiceResourceDetector `json:"service,omitempty,omitzero" yaml:"service,omitempty" mapstructure:"service,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
+
+type ExperimentalAWSEC2ResourceDetector map[string]interface{}
+
+type ExperimentalGCPResourceDetector map[string]interface{}
+
+type ExperimentalAWSECSResourceDetector map[string]interface{}
+
+type ExperimentalAWSEKSResourceDetector map[string]interface{}
+
+type ExperimentalAWSLambdaResourceDetector map[string]interface{}
+
+type ExperimentalAzureVMResourceDetector map[string]interface{}
 
 type ExperimentalServiceResourceDetector map[string]interface{}
 
@@ -1224,7 +1266,7 @@ type LogRecordExporter struct {
 	//
 	OTLPHttp *OTLPHttpExporter `json:"otlp_http,omitempty,omitzero" yaml:"otlp_http,omitempty" mapstructure:"otlp_http,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type LogRecordLimits struct {
@@ -1266,7 +1308,7 @@ type LogRecordProcessor struct {
 	//
 	Simple *SimpleLogRecordProcessor `json:"simple,omitempty,omitzero" yaml:"simple,omitempty" mapstructure:"simple,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type LoggerProvider struct {
@@ -1325,7 +1367,7 @@ type MetricProducer struct {
 	//
 	Opencensus OpenCensusMetricProducer `json:"opencensus,omitempty,omitzero" yaml:"opencensus,omitempty" mapstructure:"opencensus,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type MetricReader struct {
@@ -1781,7 +1823,7 @@ type OpenTelemetryConfiguration struct {
 	//
 	TracerProvider *TracerProvider `json:"tracer_provider,omitempty,omitzero" yaml:"tracer_provider,omitempty" mapstructure:"tracer_provider,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 // Configure if the SDK is disabled or not.
@@ -1899,7 +1941,7 @@ type PullMetricExporter struct {
 	//
 	PrometheusDevelopment *ExperimentalPrometheusMetricExporter `json:"prometheus/development,omitempty,omitzero" yaml:"prometheus/development,omitempty" mapstructure:"prometheus/development,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type PullMetricReader struct {
@@ -1940,7 +1982,7 @@ type PushMetricExporter struct {
 	//
 	OTLPHttp *OTLPHttpMetricExporter `json:"otlp_http,omitempty,omitzero" yaml:"otlp_http,omitempty" mapstructure:"otlp_http,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type Resource struct {
@@ -2020,7 +2062,7 @@ type Sampler struct {
 	//
 	TraceIDRatioBased *TraceIDRatioBasedSampler `json:"trace_id_ratio_based,omitempty,omitzero" yaml:"trace_id_ratio_based,omitempty" mapstructure:"trace_id_ratio_based,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type SeverityNumber string
@@ -2085,7 +2127,7 @@ type SpanExporter struct {
 	//
 	OTLPHttp *OTLPHttpExporter `json:"otlp_http,omitempty,omitzero" yaml:"otlp_http,omitempty" mapstructure:"otlp_http,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type SpanKind string
@@ -2179,7 +2221,7 @@ type SpanProcessor struct {
 	//
 	Simple *SimpleSpanProcessor `json:"simple,omitempty,omitzero" yaml:"simple,omitempty" mapstructure:"simple,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type SumAggregation map[string]interface{}
@@ -2215,7 +2257,7 @@ type TextMapPropagator struct {
 	//
 	Tracecontext TraceContextPropagator `json:"tracecontext,omitempty,omitzero" yaml:"tracecontext,omitempty" mapstructure:"tracecontext,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type TraceContextPropagator map[string]interface{}

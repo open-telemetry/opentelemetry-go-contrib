@@ -4,6 +4,7 @@
 package otelhttp
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
@@ -16,7 +17,9 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,7 +32,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -203,7 +206,85 @@ func TestNilTransport(t *testing.T) {
 	}
 }
 
+func TestTransportNilResponse(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return nil, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	if res != nil {
+		defer func() {
+			assert.NoError(t, res.Body.Close())
+		}()
+	}
+	require.Error(t, err)
+	assert.Nil(t, res)
+	assert.Contains(t, err.Error(), "returned a nil *Response with a nil error")
+}
+
+func TestTransportNilResponseBody(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{StatusCode: http.StatusOK}, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	require.NoError(t, err)
+	require.NotNil(t, res.Body)
+
+	body, err := io.ReadAll(res.Body)
+	require.NoError(t, err)
+	assert.Empty(t, body)
+	assert.NoError(t, res.Body.Close())
+}
+
+func TestTransportNilResponseBodyWithContentLength(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			ContentLength: 1,
+		}, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	if res != nil {
+		defer func() {
+			assert.NoError(t, res.Body.Close())
+		}()
+	}
+	require.Error(t, err)
+	assert.Nil(t, res)
+	assert.Contains(t, err.Error(), "returned a *Response with content length 1 but a nil Body")
+}
+
+func TestTransportNilResponseBodyWithHeadContentLength(t *testing.T) {
+	tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode:    http.StatusOK,
+			ContentLength: 1,
+		}, nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodHead, "http://localhost/", http.NoBody)
+	require.NoError(t, err)
+
+	res, err := tr.RoundTrip(req)
+	require.NoError(t, err)
+	require.NotNil(t, res.Body)
+	assert.NoError(t, res.Body.Close())
+}
+
 const readSize = 42
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (fn roundTripperFunc) RoundTrip(r *http.Request) (*http.Response, error) {
+	return fn(r)
+}
 
 type readCloser struct {
 	readErr, closeErr error
@@ -221,6 +302,7 @@ type span struct {
 	trace.Span
 
 	ended      bool
+	endCalls   int
 	attributes []attribute.KeyValue
 
 	statusCode codes.Code
@@ -229,6 +311,7 @@ type span struct {
 
 func (s *span) End(...trace.SpanEndOption) {
 	s.ended = true
+	s.endCalls++
 }
 
 func (s *span) SetAttributes(kv ...attribute.KeyValue) {
@@ -326,16 +409,184 @@ func TestWrappedBodyCloseError(t *testing.T) {
 	assert.True(t, called, "record should have been called")
 }
 
+type eofReadCloser struct {
+	closeCalls int
+}
+
+func (*eofReadCloser) Read([]byte) (int, error) {
+	return readSize, io.EOF
+}
+
+func (rc *eofReadCloser) Close() error {
+	rc.closeCalls++
+	return nil
+}
+
+func TestWrappedBodyReadEOFThenCloseRecordsOnce(t *testing.T) {
+	s := new(span)
+	body := &eofReadCloser{}
+	recordCalls := 0
+	recordedBytes := int64(0)
+	wb := newWrappedBody(s, func(n int64) {
+		recordCalls++
+		recordedBytes = n
+	}, body)
+
+	n, err := wb.Read([]byte{})
+	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
+	assert.Equal(t, io.EOF, err)
+	assert.NoError(t, wb.Close())
+
+	s.assert(t, true, nil, codes.Unset, "")
+	assert.Equal(t, 1, s.endCalls, "span should only end once")
+	assert.Equal(t, 1, recordCalls, "record should only have been called once")
+	assert.Equal(t, int64(readSize), recordedBytes, "record recorded wrong number of bytes")
+	assert.Equal(t, 1, body.closeCalls, "body should only have been closed once")
+}
+
 type readWriteCloser struct {
 	readCloser
 
 	writeErr error
 }
 
+type eofReadWriteCloser struct {
+	readWriteCloser
+
+	closeCalls int
+}
+
+func (*eofReadWriteCloser) Read([]byte) (int, error) {
+	return readSize, io.EOF
+}
+
+func (rwc *eofReadWriteCloser) Close() error {
+	rwc.closeCalls++
+	return rwc.readWriteCloser.Close()
+}
+
+type slowRequestBody struct {
+	totalBytes int64
+	chunkSize  int64
+	delay      time.Duration
+
+	bytesRead atomic.Int64
+	closed    chan struct{}
+}
+
+func newSlowRequestBody(totalBytes int64, delay time.Duration) *slowRequestBody {
+	return &slowRequestBody{
+		totalBytes: totalBytes,
+		chunkSize:  1024,
+		delay:      delay,
+		closed:     make(chan struct{}),
+	}
+}
+
+func (b *slowRequestBody) Read(p []byte) (int, error) {
+	time.Sleep(b.delay)
+
+	read := b.bytesRead.Load()
+	if read >= b.totalBytes {
+		return 0, io.EOF
+	}
+
+	n := b.chunkSize
+	if remaining := b.totalBytes - read; remaining < n {
+		n = remaining
+	}
+	if int64(len(p)) < n {
+		n = int64(len(p))
+	}
+
+	for i := range n {
+		p[i] = 'a'
+	}
+	b.bytesRead.Add(n)
+
+	return int(n), nil
+}
+
+func (b *slowRequestBody) Close() error {
+	select {
+	case <-b.closed:
+	default:
+		close(b.closed)
+	}
+	return nil
+}
+
+func requestBodySizeMetricValue(t *testing.T, rm metricdata.ResourceMetrics) int64 {
+	t.Helper()
+
+	for _, sm := range rm.ScopeMetrics {
+		for _, metric := range sm.Metrics {
+			if metric.Name != "http.client.request.body.size" {
+				continue
+			}
+
+			data, ok := metric.Data.(metricdata.Histogram[int64])
+			require.True(t, ok)
+			require.Len(t, data.DataPoints, 1)
+			return data.DataPoints[0].Sum
+		}
+	}
+
+	t.Fatal("http.client.request.body.size metric not found")
+	return 0
+}
+
+// requireEventuallyRequestBodySize waits for the request body size metric to
+// report want, tolerating asynchronous recording from body Close callbacks.
+func requireEventuallyRequestBodySize(t *testing.T, reader *sdkmetric.ManualReader, want int64) {
+	t.Helper()
+
+	require.Eventually(t, func() bool {
+		var rm metricdata.ResourceMetrics
+		if err := reader.Collect(t.Context(), &rm); err != nil {
+			return false
+		}
+		for _, sm := range rm.ScopeMetrics {
+			for _, metric := range sm.Metrics {
+				if metric.Name != "http.client.request.body.size" {
+					continue
+				}
+				data, ok := metric.Data.(metricdata.Histogram[int64])
+				if !ok || len(data.DataPoints) != 1 {
+					return false
+				}
+				return data.DataPoints[0].Sum == want
+			}
+		}
+		return false
+	}, 5*time.Second, 10*time.Millisecond, "metric should report the final request body size")
+}
+
 const writeSize = 1
 
 func (rwc readWriteCloser) Write([]byte) (int, error) {
 	return writeSize, rwc.writeErr
+}
+
+func TestWrappedBodyReadEOFKeepsReadWriteCloserOpenUntilClose(t *testing.T) {
+	s := new(span)
+	body := &eofReadWriteCloser{}
+	recordCalls := 0
+
+	rwc := newWrappedBody(s, func(int64) { recordCalls++ }, body).(io.ReadWriteCloser)
+	n, err := rwc.Read([]byte{})
+	assert.Equal(t, readSize, n, "wrappedBody returned wrong bytes")
+	assert.Equal(t, io.EOF, err)
+	assert.Equal(t, 0, body.closeCalls, "EOF should not close the underlying body")
+
+	written, writeErr := rwc.Write([]byte{})
+	assert.Equal(t, writeSize, written, "wrappedBody returned wrong bytes")
+	assert.NoError(t, writeErr)
+
+	assert.NoError(t, rwc.Close())
+	s.assert(t, true, nil, codes.Unset, "")
+	assert.Equal(t, 1, recordCalls, "record should only have been called once")
+	assert.Equal(t, 1, body.closeCalls, "explicit Close should close the underlying body once")
 }
 
 func TestNewWrappedBodyReadWriteCloserImplementation(t *testing.T) {
@@ -656,6 +907,26 @@ func TestTransportMetrics(t *testing.T) {
 	requestBody := []byte("john")
 	responseBody := []byte("Hello, world!")
 
+	collectClientMetrics := func(t *testing.T, reader sdkmetric.Reader) metricdata.ScopeMetrics {
+		t.Helper()
+		var sm metricdata.ScopeMetrics
+		// Request-body metrics may be recorded asynchronously when the
+		// transport continues uploading after RoundTrip returns. Wait until
+		// both the response body is finalized and the request body settles.
+		require.Eventually(t, func() bool {
+			var rm metricdata.ResourceMetrics
+			if err := reader.Collect(t.Context(), &rm); err != nil {
+				return false
+			}
+			if len(rm.ScopeMetrics) != 1 {
+				return false
+			}
+			sm = rm.ScopeMetrics[0]
+			return true
+		}, 2*time.Second, 5*time.Millisecond, "client metrics should be recorded after request/response bodies finish")
+		return sm
+	}
+
 	t.Run("make http request and read entire response at once", func(t *testing.T) {
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
@@ -702,10 +973,6 @@ func TestTransportMetrics(t *testing.T) {
 			port = 0
 		}
 
-		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(t.Context(), &rm)
-		require.NoError(t, err)
-		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
 			attribute.String("http.request.method", "GET"),
 			attribute.Int("http.response.status_code", 200),
@@ -715,7 +982,7 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.String("network.protocol.name", "http"),
 			attribute.String("network.protocol.version", "1.1"),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+		assertClientScopeMetrics(t, collectClientMetrics(t, reader), attrs)
 	})
 
 	t.Run("make http request and buffer response", func(t *testing.T) {
@@ -774,10 +1041,6 @@ func TestTransportMetrics(t *testing.T) {
 			port = 0
 		}
 
-		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(t.Context(), &rm)
-		require.NoError(t, err)
-		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
 			attribute.String("http.request.method", "GET"),
 			attribute.Int("http.response.status_code", 200),
@@ -787,7 +1050,7 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.String("network.protocol.name", "http"),
 			attribute.String("network.protocol.version", "1.1"),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+		assertClientScopeMetrics(t, collectClientMetrics(t, reader), attrs)
 	})
 
 	t.Run("make http request and close body before reading completely", func(t *testing.T) {
@@ -841,10 +1104,6 @@ func TestTransportMetrics(t *testing.T) {
 			port = 0
 		}
 
-		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(t.Context(), &rm)
-		require.NoError(t, err)
-		require.Len(t, rm.ScopeMetrics, 1)
 		attrs := attribute.NewSet(
 			attribute.String("http.request.method", "GET"),
 			attribute.Int("http.response.status_code", 200),
@@ -854,8 +1113,590 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.String("network.protocol.name", "http"),
 			attribute.String("network.protocol.version", "1.1"),
 		)
-		assertClientScopeMetrics(t, rm.ScopeMetrics[0], attrs)
+		assertClientScopeMetrics(t, collectClientMetrics(t, reader), attrs)
 	})
+}
+
+func TestTransportMetricsReportFinalRequestBodySize(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, listener.Close()) })
+
+	serverErr := make(chan error, 1)
+	go func() {
+		var serverErrValue error
+		defer func() { serverErr <- serverErrValue }()
+
+		conn, err := listener.Accept()
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+		defer func() {
+			if err := conn.Close(); serverErrValue == nil {
+				serverErrValue = err
+			}
+		}()
+
+		req, err := http.ReadRequest(bufio.NewReader(conn))
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+		_ = req
+
+		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: keep-alive\r\n\r\nok"))
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+
+		time.Sleep(250 * time.Millisecond)
+	}()
+
+	body := newSlowRequestBody(256*1024, 20*time.Millisecond)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://"+listener.Addr().String(), body)
+	require.NoError(t, err)
+	req.ContentLength = body.totalBytes
+
+	client := http.Client{Transport: NewTransport(http.DefaultTransport, WithMeterProvider(meterProvider))}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+
+	bytesWhenResponseReturned := body.bytesRead.Load()
+	require.Eventually(t, func() bool {
+		return body.bytesRead.Load() > bytesWhenResponseReturned
+	}, 5*time.Second, 10*time.Millisecond, "request body bytes should continue increasing after the response is returned")
+
+	require.NoError(t, resp.Body.Close())
+
+	select {
+	case <-body.closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("request body was not closed")
+	}
+
+	select {
+	case err := <-serverErr:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("server did not finish")
+	}
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+
+	actualBytesRead := body.bytesRead.Load()
+	require.Greater(t, actualBytesRead, bytesWhenResponseReturned)
+	assert.Equal(t, actualBytesRead, requestBodySizeMetricValue(t, rm))
+}
+
+func TestTransportMetricsReportFinalRequestBodySizeUnknownLength(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	listener, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	t.Cleanup(func() { require.NoError(t, listener.Close()) })
+
+	serverErr := make(chan error, 1)
+	go func() {
+		var serverErrValue error
+		defer func() { serverErr <- serverErrValue }()
+
+		conn, err := listener.Accept()
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+		defer func() {
+			if err := conn.Close(); serverErrValue == nil {
+				serverErrValue = err
+			}
+		}()
+
+		req, err := http.ReadRequest(bufio.NewReader(conn))
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+		_ = req
+
+		_, err = conn.Write([]byte("HTTP/1.1 200 OK\r\nContent-Length: 2\r\nConnection: keep-alive\r\n\r\nok"))
+		if err != nil {
+			serverErrValue = err
+			return
+		}
+
+		time.Sleep(250 * time.Millisecond)
+	}()
+
+	// Do not set req.ContentLength: a non-nil streaming body with
+	// ContentLength == 0 means the length is unknown, so only the request
+	// body Close callback may publish the final size.
+	body := newSlowRequestBody(256*1024, 20*time.Millisecond)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://"+listener.Addr().String(), body)
+	require.NoError(t, err)
+	require.Equal(t, int64(0), req.ContentLength)
+
+	client := http.Client{Transport: NewTransport(http.DefaultTransport, WithMeterProvider(meterProvider))}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+
+	bytesWhenResponseReturned := body.bytesRead.Load()
+	require.Eventually(t, func() bool {
+		return body.bytesRead.Load() > bytesWhenResponseReturned
+	}, 5*time.Second, 10*time.Millisecond, "request body bytes should continue increasing after the response is returned")
+
+	require.NoError(t, resp.Body.Close())
+
+	select {
+	case <-body.closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("request body was not closed")
+	}
+
+	select {
+	case err := <-serverErr:
+		require.NoError(t, err)
+	case <-time.After(5 * time.Second):
+		t.Fatal("server did not finish")
+	}
+
+	actualBytesRead := body.bytesRead.Load()
+	require.Greater(t, actualBytesRead, bytesWhenResponseReturned)
+	requireEventuallyRequestBodySize(t, reader, actualBytesRead)
+}
+
+func TestTransportMetricsRecordedBeforeResponseBodyFinalized(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	release := make(chan struct{})
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		w.(http.Flusher).Flush()
+		<-release
+	}))
+	t.Cleanup(func() {
+		close(release)
+		ts.Close()
+	})
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	client := http.Client{Transport: NewTransport(http.DefaultTransport, WithMeterProvider(meterProvider))}
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { assert.NoError(t, resp.Body.Close()) })
+
+	// The request has no body, so metrics must be recorded when RoundTrip
+	// returns instead of being deferred for the lifetime of a long-lived
+	// response body.
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	assert.Len(t, rm.ScopeMetrics[0].Metrics, 2)
+}
+
+// errAsyncBodyCloseTransport fails RoundTrip after a partial request body
+// read and finishes reading and closing the body on another goroutine,
+// mimicking RoundTrippers that close the request body asynchronously.
+type errAsyncBodyCloseTransport struct {
+	roundTripErr error
+	done         chan struct{}
+}
+
+func (tr *errAsyncBodyCloseTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	buf := make([]byte, 1024)
+	_, _ = r.Body.Read(buf)
+	go func() {
+		defer close(tr.done)
+		_, _ = io.Copy(io.Discard, r.Body)
+		_ = r.Body.Close()
+	}()
+	return nil, tr.roundTripErr
+}
+
+func TestTransportErrorReportsFinalRequestBodySize(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	body := newSlowRequestBody(16*1024, time.Millisecond)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://localhost", body)
+	require.NoError(t, err)
+	req.ContentLength = body.totalBytes
+
+	base := &errAsyncBodyCloseTransport{
+		roundTripErr: errors.New("round trip failed"),
+		done:         make(chan struct{}),
+	}
+	tr := NewTransport(base, WithMeterProvider(meterProvider))
+
+	resp, err := tr.RoundTrip(req) //nolint:bodyclose // no response is returned on error
+	require.ErrorIs(t, err, base.roundTripErr)
+	require.Nil(t, resp)
+
+	select {
+	case <-base.done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("request body was not closed")
+	}
+
+	assert.Equal(t, body.totalBytes, body.bytesRead.Load())
+	requireEventuallyRequestBodySize(t, reader, body.totalBytes)
+}
+
+// overDeclaredBodyTransport reads the request body through its declared
+// ContentLength, returns a response, and then drains and closes the body on
+// another goroutine, mimicking RoundTrippers that keep reading a body that
+// yields more bytes than it declared.
+type overDeclaredBodyTransport struct {
+	declared int64
+	done     chan struct{}
+}
+
+func (tr *overDeclaredBodyTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if _, err := io.CopyN(io.Discard, r.Body, tr.declared); err != nil {
+		return nil, err
+	}
+	go func() {
+		defer close(tr.done)
+		_, _ = io.Copy(io.Discard, r.Body)
+		_ = r.Body.Close()
+	}()
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Status:     "200 OK",
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Header:     http.Header{},
+		Body:       io.NopCloser(strings.NewReader("ok")),
+		Request:    r,
+	}, nil
+}
+
+func TestTransportMetricsReportActualSizeOverDeclaredContentLength(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	// The body yields more bytes than the declared ContentLength, so a read
+	// count reaching the declared length is not proof of completion; only
+	// the request body Close callback may publish the final size.
+	body := newSlowRequestBody(16*1024, time.Millisecond)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://localhost", body)
+	require.NoError(t, err)
+	req.ContentLength = 4 * 1024
+
+	base := &overDeclaredBodyTransport{
+		declared: req.ContentLength,
+		done:     make(chan struct{}),
+	}
+	tr := NewTransport(base, WithMeterProvider(meterProvider))
+
+	resp, err := tr.RoundTrip(req)
+	require.NoError(t, err)
+
+	// Finalize the response body while the request body is still being
+	// drained; this must not publish the declared-length prefix.
+	_, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	select {
+	case <-base.done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("request body was not closed")
+	}
+
+	assert.Equal(t, body.totalBytes, body.bytesRead.Load())
+	requireEventuallyRequestBodySize(t, reader, body.totalBytes)
+}
+
+// blockingCloseBody is a request body whose Close blocks until unblock is
+// closed, mimicking bodies whose close path can stall.
+type blockingCloseBody struct {
+	io.Reader
+
+	closing chan struct{}
+	unblock chan struct{}
+}
+
+func (b *blockingCloseBody) Close() error {
+	close(b.closing)
+	<-b.unblock
+	return nil
+}
+
+// asyncBlockedCloseTransport reads the declared request body length without
+// observing io.EOF, returns a response, and then closes the request body on
+// another goroutine, where the underlying Close blocks.
+type asyncBlockedCloseTransport struct{}
+
+func (asyncBlockedCloseTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	if _, err := io.CopyN(io.Discard, r.Body, r.ContentLength); err != nil {
+		return nil, err
+	}
+	go func() { _ = r.Body.Close() }()
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Status:     "200 OK",
+		Proto:      "HTTP/1.1",
+		ProtoMajor: 1,
+		ProtoMinor: 1,
+		Header:     http.Header{},
+		Body:       io.NopCloser(strings.NewReader("ok")),
+		Request:    r,
+	}, nil
+}
+
+func TestTransportMetricsRecordedWhenRequestBodyCloseBlocks(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	payload := strings.Repeat("a", 8*1024)
+	body := &blockingCloseBody{
+		Reader:  strings.NewReader(payload),
+		closing: make(chan struct{}),
+		unblock: make(chan struct{}),
+	}
+	t.Cleanup(func() { close(body.unblock) })
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, "http://localhost", body)
+	require.NoError(t, err)
+	req.ContentLength = int64(len(payload))
+
+	tr := NewTransport(asyncBlockedCloseTransport{}, WithMeterProvider(meterProvider))
+
+	resp, err := tr.RoundTrip(req)
+	require.NoError(t, err)
+
+	_, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	// Wait until the request body Close has been entered and is blocked.
+	select {
+	case <-body.closing:
+	case <-time.After(5 * time.Second):
+		t.Fatal("request body Close was not called")
+	}
+
+	// Metrics must be finalized even though the underlying Close never
+	// returned.
+	requireEventuallyRequestBodySize(t, reader, int64(len(payload)))
+}
+
+// bodyReplayingTransport mimics retrying RoundTrippers such as
+// go-retryablehttp: it reads the request body to EOF, sends a buffered copy
+// to the base RoundTripper, and never closes the original body.
+type bodyReplayingTransport struct {
+	base http.RoundTripper
+}
+
+func (tr bodyReplayingTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	buf, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	replay := r.Clone(r.Context())
+	replay.Body = io.NopCloser(bytes.NewReader(buf))
+	return tr.base.RoundTrip(replay)
+}
+
+func TestTransportMetricsRecordedWhenRequestBodyDrainedWithoutClose(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	tr := NewTransport(bodyReplayingTransport{base: http.DefaultTransport}, WithMeterProvider(meterProvider))
+
+	payload := strings.Repeat("a", 8*1024)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL, strings.NewReader(payload))
+	require.NoError(t, err)
+
+	resp, err := (&http.Client{Transport: tr}).Do(req)
+	require.NoError(t, err)
+	_, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var duration metricdata.Metrics
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == "http.client.request.duration" {
+			duration = m
+			break
+		}
+	}
+	require.Equal(t, "http.client.request.duration", duration.Name)
+	hist, ok := duration.Data.(metricdata.Histogram[float64])
+	require.True(t, ok)
+	require.Len(t, hist.DataPoints, 1)
+	assert.Equal(t, uint64(1), hist.DataPoints[0].Count)
+
+	assert.Equal(t, int64(len(payload)), requestBodySizeMetricValue(t, rm))
+}
+
+func TestTransportFilterPassThrough(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	tr := NewTransport(
+		http.DefaultTransport,
+		WithMeterProvider(meterProvider),
+		WithFilter(func(*http.Request) bool { return false }),
+	)
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := (&http.Client{Transport: tr}).Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	// A rejected request passes through to the base RoundTripper without
+	// recording any metrics.
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	assert.Empty(t, rm.ScopeMetrics)
+}
+
+func TestRequestTrackerGetBody(t *testing.T) {
+	newTrackedRequest := func(t *testing.T, getBody func() (io.ReadCloser, error)) (*http.Request, *requestTracker) {
+		t.Helper()
+		req, err := http.NewRequestWithContext(
+			t.Context(),
+			http.MethodPost,
+			"http://localhost",
+			io.NopCloser(strings.NewReader("body")),
+		)
+		require.NoError(t, err)
+		req.GetBody = getBody
+		tracker := newRequestTracker(NewTransport(http.DefaultTransport), req)
+		return req, tracker
+	}
+
+	t.Run("wraps replayed body", func(t *testing.T) {
+		replay := io.NopCloser(strings.NewReader("replayed"))
+		req, tracker := newTrackedRequest(t, func() (io.ReadCloser, error) {
+			return replay, nil
+		})
+
+		b, err := req.GetBody()
+		require.NoError(t, err)
+		tb, ok := b.(*trackedRequestBody)
+		require.True(t, ok, "replayed body should be tracked")
+
+		tracker.mu.Lock()
+		current := tracker.body
+		tracker.mu.Unlock()
+		assert.Same(t, tb, current, "tracker should follow the replayed body")
+	})
+
+	t.Run("propagates error and records no data", func(t *testing.T) {
+		getBodyErr := errors.New("GetBody error")
+		req, tracker := newTrackedRequest(t, func() (io.ReadCloser, error) {
+			return nil, getBodyErr
+		})
+
+		b, err := req.GetBody()
+		require.ErrorIs(t, err, getBodyErr)
+		require.Nil(t, b)
+
+		tracker.mu.Lock()
+		current := tracker.body
+		tracker.mu.Unlock()
+		assert.Nil(t, current, "tracker should record no data after a GetBody error")
+	})
+
+	t.Run("passes through NoBody untracked", func(t *testing.T) {
+		req, _ := newTrackedRequest(t, func() (io.ReadCloser, error) {
+			return http.NoBody, nil
+		})
+
+		b, err := req.GetBody()
+		require.NoError(t, err)
+		assert.Equal(t, http.NoBody, b)
+	})
+}
+
+func TestTransportNetworkProtocolVersionFromResponse(t *testing.T) {
+	spanRecorder := tracetest.NewSpanRecorder()
+	tracerProvider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(spanRecorder))
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	ts.EnableHTTP2 = true
+	ts.StartTLS()
+	defer ts.Close()
+
+	tr := NewTransport(
+		ts.Client().Transport,
+		WithTracerProvider(tracerProvider),
+		WithMeterProvider(meterProvider),
+	)
+	c := http.Client{Transport: tr}
+
+	// http.NewRequestWithContext always stamps Proto as "HTTP/1.1", regardless
+	// of what the transport ends up negotiating over ALPN.
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	res, err := c.Do(r)
+	require.NoError(t, err)
+	require.NoError(t, res.Body.Close())
+	require.Equal(t, "HTTP/2.0", res.Proto)
+
+	spans := spanRecorder.Ended()
+	require.Len(t, spans, 1)
+
+	var gotVersion string
+	for _, kv := range spans[0].Attributes() {
+		if kv.Key == "network.protocol.version" {
+			gotVersion = kv.Value.AsString()
+		}
+	}
+	assert.Equal(t, "2.0", gotVersion, "span should report the negotiated wire protocol, not req.Proto")
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.NotEmpty(t, rm.ScopeMetrics[0].Metrics)
+
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		hist, ok := m.Data.(metricdata.Histogram[int64])
+		if !ok {
+			continue
+		}
+		require.NotEmpty(t, hist.DataPoints)
+		_, ok = hist.DataPoints[0].Attributes.Value(attribute.Key("network.protocol.version"))
+		require.True(t, ok, "metric %s missing network.protocol.version", m.Name)
+		version, _ := hist.DataPoints[0].Attributes.Value(attribute.Key("network.protocol.version"))
+		assert.Equal(t, "2.0", version.AsString(), "metric %s should report the negotiated wire protocol, not req.Proto", m.Name)
+	}
 }
 
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
@@ -936,15 +1777,14 @@ func TestCustomAttributesHandling(t *testing.T) {
 	require.NoError(t, err)
 	labeler := &Labeler{}
 	labeler.Add(expectedAttributes...)
-	ctx = ContextWithLabeler(ctx, labeler)
+	ctx = ContextWithClientLabeler(ctx, labeler)
 	r = r.WithContext(ctx)
 
 	// test bonus: intententionally ignoring response to confirm that
-	// http.client.response.size metric is not recorded
-	// by the Transport.RoundTrip logic
+	// metrics are recorded when the response body lifecycle finishes
 	resp, err := client.Do(r)
 	require.NoError(t, err)
-	defer func() { assert.NoError(t, resp.Body.Close()) }()
+	require.NoError(t, resp.Body.Close())
 
 	err = reader.Collect(ctx, &rm)
 	assert.NoError(t, err)
@@ -1076,7 +1916,8 @@ func containsAttributes(t *testing.T, attrSet attribute.Set, expected []attribut
 }
 
 func BenchmarkTransportRoundTrip(b *testing.B) {
-	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
 		fmt.Fprint(w, "Hello World")
 	}))
 	defer ts.Close()
@@ -1084,36 +1925,56 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()
 
-	r, err := http.NewRequestWithContext(b.Context(), http.MethodGet, ts.URL, http.NoBody)
-	require.NoError(b, err)
+	payload := strings.Repeat("a", 1024)
 
-	for _, bb := range []struct {
-		name      string
-		transport http.RoundTripper
+	newRequest := func(b *testing.B, shape string) *http.Request {
+		b.Helper()
+		var body io.Reader
+		switch shape {
+		case "NoBody":
+			body = http.NoBody
+		case "KnownLength":
+			// *bytes.Reader lets NewRequest set ContentLength.
+			body = bytes.NewReader([]byte(payload))
+		case "Streaming":
+			// Hide the concrete reader so the length stays unknown.
+			body = io.NopCloser(strings.NewReader(payload))
+		}
+		r, err := http.NewRequestWithContext(b.Context(), http.MethodPost, ts.URL, body)
+		require.NoError(b, err)
+		return r
+	}
+
+	for _, transport := range []struct {
+		name string
+		rt   http.RoundTripper
 	}{
+		{name: "Disabled", rt: http.DefaultTransport},
 		{
-			name:      "without the otelhttp transport",
-			transport: http.DefaultTransport,
-		},
-		{
-			name: "with the otelhttp transport",
-			transport: NewTransport(
+			name: "Enabled",
+			rt: NewTransport(
 				http.DefaultTransport,
 				WithTracerProvider(tp),
 				WithMeterProvider(mp),
 			),
 		},
 	} {
-		b.Run(bb.name, func(b *testing.B) {
-			c := http.Client{Transport: bb.transport}
+		for _, shape := range []string{"NoBody", "KnownLength", "Streaming"} {
+			b.Run(transport.name+"/"+shape, func(b *testing.B) {
+				c := http.Client{Transport: transport.rt}
 
-			b.ReportAllocs()
-			b.ResetTimer()
-			for range b.N {
-				resp, _ := c.Do(r)
-				resp.Body.Close()
-			}
-		})
+				b.ReportAllocs()
+				b.ResetTimer()
+				for range b.N {
+					resp, err := c.Do(newRequest(b, shape))
+					if err != nil {
+						b.Fatal(err)
+					}
+					_, _ = io.Copy(io.Discard, resp.Body)
+					resp.Body.Close()
+				}
+			})
+		}
 	}
 }
 

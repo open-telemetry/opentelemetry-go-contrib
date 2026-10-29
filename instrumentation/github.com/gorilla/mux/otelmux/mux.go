@@ -1,11 +1,12 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelmux // import "go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+package otelmux
 
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/felixge/httpsnoop"
@@ -38,7 +39,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	}
 	tracer := cfg.TracerProvider.Tracer(
 		ScopeName,
-		trace.WithInstrumentationVersion(Version()),
+		trace.WithInstrumentationVersion(Version),
 	)
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
@@ -51,7 +52,7 @@ func Middleware(service string, opts ...Option) mux.MiddlewareFunc {
 	}
 	meter := cfg.MeterProvider.Meter(
 		ScopeName,
-		metric.WithInstrumentationVersion(Version()),
+		metric.WithInstrumentationVersion(Version),
 	)
 	return func(handler http.Handler) http.Handler {
 		return traceware{
@@ -99,11 +100,17 @@ var validMethods = map[string]struct{}{
 
 // defaultSpanNameFunc returns the semconv based default span name.
 func defaultSpanNameFunc(routeName string, r *http.Request) string {
-	method := r.Method
-	if _, ok := validMethods[method]; !ok {
-		method = "HTTP"
+	return normalizeMethod(r.Method, "HTTP") + " " + routeName
+}
+
+// normalizeMethod returns the upper-cased m if it is a known HTTP method,
+// otherwise fallback. Upper-casing matches how http.request.method is recorded.
+func normalizeMethod(m, fallback string) string {
+	m = strings.ToUpper(m)
+	if _, ok := validMethods[m]; !ok {
+		return fallback
 	}
-	return method + " " + routeName
+	return m
 }
 
 // ServeHTTP implements the http.Handler interface. It does the actual
@@ -135,7 +142,10 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	routeStr := extractRoute(r)
 
 	if routeStr == "" {
-		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
+		// routeStr is recorded as http.route on metrics, so it must not
+		// carry the raw, client-controlled method.
+		method := normalizeMethod(r.Method, "_OTHER")
+		routeStr = fmt.Sprintf("HTTP %s route not found", method)
 	} else {
 		rAttr := tw.semconv.Route(routeStr)
 		opts = append(opts, trace.WithAttributes(rAttr))
@@ -149,7 +159,12 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
 	bw := request.NewBodyWrapper(r.Body, readRecordFunc)
 	if r.Body != nil && r.Body != http.NoBody {
+		prevBody := r.Body
 		r.Body = bw
+
+		// Restore the original body after the request is processed to avoid issues
+		// with extra wrapper since `http/server.go` later checks type of `r.Body`.
+		defer func() { r.Body = prevBody }()
 	}
 
 	writeRecordFunc := func(int64) {}
@@ -171,9 +186,22 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Flush: func(httpsnoop.FlushFunc) httpsnoop.FlushFunc {
 			return rww.Flush
 		},
+		FlushError: func(flush httpsnoop.FlushErrorFunc) httpsnoop.FlushErrorFunc {
+			return func() error {
+				return rww.FlushWithError(flush)
+			}
+		},
 	})
 
-	tw.handler.ServeHTTP(w, r.WithContext(ctx))
+	rCtx := r.WithContext(ctx)
+	tw.handler.ServeHTTP(w, rCtx)
+	// Copy MultipartForm back to the original request so net/http's
+	// finishRequest can find and remove any temp files ParseMultipartForm
+	// created on the context-derived request copy.
+	// See https://github.com/open-telemetry/opentelemetry-go-contrib/issues/9070
+	if rCtx.MultipartForm != nil {
+		r.MultipartForm = rCtx.MultipartForm
+	}
 	statusCode := rww.StatusCode()
 	span.SetStatus(tw.semconv.Status(statusCode))
 	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{

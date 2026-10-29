@@ -1,20 +1,31 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package x // import "go.opentelemetry.io/contrib/otelconf/x"
+package x
 
 import (
 	"context"
+	"errors"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
+	"go.opentelemetry.io/contrib/otelconf/internal/detectors"
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
 
-func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
+func resourceOpts(resourceDetectors []ExperimentalResourceDetector) []resource.Option {
 	opts := []resource.Option{}
-	for _, d := range detectors {
+	for _, d := range resourceDetectors {
+		opts = append(opts, detectors.Options(detectors.Detector{
+			AWSEC2:    d.AWSEC2 != nil,
+			AWSECS:    d.AWSECS != nil,
+			AWSEKS:    d.AWSEKS != nil,
+			AWSLambda: d.AWSLambda != nil,
+			AzureVM:   d.AzureVM != nil,
+			GCP:       d.GCP != nil,
+		})...)
+
 		if d.Container != nil {
 			opts = append(opts, resource.WithContainer())
 		}
@@ -31,9 +42,15 @@ func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
 	return opts
 }
 
-func newResource(r *Resource) (*resource.Resource, error) {
+type resourceBuilder func(context.Context, ...resource.Option) (*resource.Resource, error)
+
+func newResource(ctx context.Context, r *Resource) (*resource.Resource, error) {
+	return newResourceWithBuilder(ctx, r, resource.New)
+}
+
+func newResourceWithBuilder(ctx context.Context, r *Resource, build resourceBuilder) (*resource.Resource, error) {
 	if r == nil {
-		return resource.Default(), nil
+		return resource.DefaultWithContext(ctx), nil
 	}
 
 	attrs := make([]attribute.KeyValue, 0, len(r.Attributes))
@@ -46,13 +63,55 @@ func newResource(r *Resource) (*resource.Resource, error) {
 		schema = *r.SchemaUrl
 	}
 	opts := []resource.Option{
+		resource.WithAttributes(resource.DefaultWithContext(ctx).Attributes()...),
 		resource.WithAttributes(attrs...),
 		resource.WithSchemaURL(schema),
 	}
 
-	if r.DetectionDevelopment != nil {
-		opts = append(opts, resourceOpts(r.DetectionDevelopment.Detectors)...)
+	result, err := build(ctx, opts...)
+	if err != nil {
+		return nil, err
 	}
 
-	return resource.New(context.Background(), opts...)
+	if r.DetectionDevelopment == nil {
+		return result, nil
+	}
+
+	detected, err := newDetectedResource(ctx, r.DetectionDevelopment, build)
+	if detected == nil {
+		return result, err
+	}
+
+	merged, mergeErr := resource.Merge(detected, result)
+	return merged, errors.Join(err, mergeErr)
+}
+
+func newDetectedResource(ctx context.Context, detection *ExperimentalResourceDetection, build resourceBuilder) (*resource.Resource, error) {
+	filter, err := newIncludeExcludeFilter(detection.Attributes)
+	if err != nil {
+		return nil, err
+	}
+
+	opts := resourceOpts(detection.Detectors)
+	if len(opts) == 0 {
+		return resource.NewSchemaless(), nil
+	}
+
+	detected, err := build(ctx, opts...)
+	if detected == nil {
+		return nil, err
+	}
+
+	attrs := detected.Attributes()
+	filtered := make([]attribute.KeyValue, 0, len(attrs))
+	for _, attr := range attrs {
+		if filter(attr) {
+			filtered = append(filtered, attr)
+		}
+	}
+	if len(filtered) == 0 {
+		return resource.NewSchemaless(), err
+	}
+
+	return resource.NewWithAttributes(detected.SchemaURL(), filtered...), err
 }

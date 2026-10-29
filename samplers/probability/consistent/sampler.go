@@ -2,7 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package consistent provides a consistent probability based sampler.
-package consistent // import "go.opentelemetry.io/contrib/samplers/probability/consistent"
+//
+// Deprecated: This package is no longer supported.
+package consistent
 
 import (
 	"fmt"

@@ -14,17 +14,18 @@ import (
 	"log/slog"
 	"reflect"
 	"runtime"
+	"sync"
 	"testing"
 	"testing/slogtest"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 var now = time.Now()
@@ -100,11 +101,11 @@ func (r *recorder) Results() []map[string]any {
 		if err := r.Err(); err != nil {
 			m["error"] = err
 		}
-		if body := r.Body(); body.Kind() != log.KindEmpty {
+		if body := r.Body(); body.Type() != attribute.EMPTY {
 			m[slog.MessageKey] = value2Result(body)
 		}
-		r.WalkAttributes(func(kv log.KeyValue) bool {
-			m[kv.Key] = value2Result(kv.Value)
+		r.WalkAttributes(func(kv attribute.KeyValue) bool {
+			m[string(kv.Key)] = value2Result(kv.Value)
 			return true
 		})
 
@@ -113,24 +114,32 @@ func (r *recorder) Results() []map[string]any {
 	return out
 }
 
-func value2Result(v log.Value) any {
-	switch v.Kind() {
-	case log.KindBool:
+func value2Result(v attribute.Value) any {
+	switch v.Type() {
+	case attribute.BOOL:
 		return v.AsBool()
-	case log.KindFloat64:
+	case attribute.FLOAT64:
 		return v.AsFloat64()
-	case log.KindInt64:
+	case attribute.INT64:
 		return v.AsInt64()
-	case log.KindString:
+	case attribute.STRING:
 		return v.AsString()
-	case log.KindBytes:
-		return v.AsBytes()
-	case log.KindSlice:
+	case attribute.BOOLSLICE:
+		return v.AsBoolSlice()
+	case attribute.INT64SLICE:
+		return v.AsInt64Slice()
+	case attribute.FLOAT64SLICE:
+		return v.AsFloat64Slice()
+	case attribute.STRINGSLICE:
+		return v.AsStringSlice()
+	case attribute.BYTESLICE:
+		return v.AsByteSlice()
+	case attribute.SLICE:
 		return v
-	case log.KindMap:
+	case attribute.MAP:
 		m := make(map[string]any)
 		for _, val := range v.AsMap() {
-			m[val.Key] = value2Result(val.Value)
+			m[string(val.Key)] = value2Result(val.Value)
 		}
 		return m
 	}
@@ -270,7 +279,7 @@ func TestSLogHandler(t *testing.T) {
 				hasAttr("time", now.UnixNano()),
 				hasAttr("uint64", int64(3)),
 				hasAttr("nil", nil),
-				hasAttr("slice", log.SliceValue(log.StringValue("foo"), log.StringValue("bar"))),
+				hasAttr("slice", attribute.SliceValue(attribute.StringValue("foo"), attribute.StringValue("bar"))),
 			}},
 		},
 		{
@@ -465,13 +474,29 @@ func TestSlogtest(t *testing.T) {
 	})
 }
 
+func TestHandlerWithSourceWithoutPC(t *testing.T) {
+	r := new(recorder)
+	h := NewHandler("", WithLoggerProvider(r), WithSource(true))
+	record := slog.NewRecord(time.Time{}, slog.LevelInfo, "msg", 0)
+
+	require.NoError(t, h.Handle(t.Context(), record))
+	require.Len(t, r.Records, 1)
+	for _, key := range []string{
+		string(semconv.CodeFilePathKey),
+		string(semconv.CodeFunctionNameKey),
+		string(semconv.CodeLineNumberKey),
+	} {
+		assert.NotContains(t, r.Results()[0], key)
+	}
+}
+
 func TestNewHandlerConfiguration(t *testing.T) {
 	name := "name"
 	t.Run("Default", func(t *testing.T) {
 		r := new(recorder)
-		prev := global.GetLoggerProvider()
-		defer global.SetLoggerProvider(prev)
-		global.SetLoggerProvider(r)
+		prev := otel.GetLoggerProvider()
+		defer otel.SetLoggerProvider(prev)
+		otel.SetLoggerProvider(r)
 
 		var h *Handler
 		require.NotPanics(t, func() { h = NewHandler(name) })
@@ -612,4 +637,115 @@ func TestHandlerErrorFieldSetErr(t *testing.T) {
 		assert.ErrorIs(t, got["error"].(error), recordErr)
 		assert.Equal(t, map[string]any{"value": "x"}, got["grp"])
 	})
+
+	t.Run("NestedGroupValueErrorPreserved", func(t *testing.T) {
+		r := new(recorder)
+		l := slog.New(NewHandler("", WithLoggerProvider(r)))
+		wantErr := errors.New("nested group error")
+
+		l.Info("msg", slog.Group("grp", slog.Any("err", wantErr), slog.String("keep", "yes")))
+
+		require.Len(t, r.Records, 1)
+		got := r.Results()[0]
+		_, isRecordErr := got["error"]
+		assert.False(t, isRecordErr, "a nested group error must not be promoted to the record error")
+		assert.Equal(t, map[string]any{"err": wantErr.Error(), "keep": "yes"}, got["grp"])
+	})
+
+	t.Run("NestedGroupValueErrorOnlyPreserved", func(t *testing.T) {
+		r := new(recorder)
+		l := slog.New(NewHandler("", WithLoggerProvider(r)))
+		wantErr := errors.New("only error")
+
+		l.Info("msg", slog.Group("grp", slog.Any("err", wantErr)))
+
+		require.Len(t, r.Records, 1)
+		got := r.Results()[0]
+		_, isRecordErr := got["error"]
+		assert.False(t, isRecordErr, "a nested group error must not be promoted to the record error")
+		assert.Equal(t, map[string]any{"err": wantErr.Error()}, got["grp"])
+	})
+}
+
+func TestKVBufferKeyValuesDoesNotAliasBackingArray(t *testing.T) {
+	// A buffer with spare capacity is the condition under which appending kvs
+	// used to write into b.data's backing array and return an aliasing slice.
+	b := &kvBuffer{data: make([]attribute.KeyValue, 1, 4)}
+	b.data[0] = attribute.String("shared", "base")
+
+	first := b.KeyValues(attribute.String("id", "first"))
+	second := b.KeyValues(attribute.String("id", "second"))
+
+	// The second call must not have overwritten the slice returned by the first.
+	assert.Equal(t, "first", first[1].Value.AsString(),
+		"KeyValues returned a slice aliasing the shared buffer")
+	assert.Equal(t, "second", second[1].Value.AsString())
+	// The shared buffer itself must be untouched.
+	require.Len(t, b.data, 1)
+	assert.Equal(t, "base", b.data[0].Value.AsString())
+}
+
+func TestKVBufferKeyValuesConcurrent(t *testing.T) {
+	// Concurrent KeyValues calls on a buffer shared across Handle calls must not
+	// race on b.data's backing array. Run under -race to detect the regression.
+	b := &kvBuffer{data: make([]attribute.KeyValue, 1, 8)}
+	b.data[0] = attribute.String("shared", "base")
+
+	const goroutines = 100
+	var wg sync.WaitGroup
+	wg.Add(goroutines)
+	for i := range goroutines {
+		go func(i int) {
+			defer wg.Done()
+			got := b.KeyValues(attribute.Int("id", i))
+			// Each goroutine must observe the value it appended, not another's.
+			assert.Equal(t, int64(i), got[1].Value.AsInt64())
+		}(i)
+	}
+	wg.Wait()
+}
+
+func TestHandlerWithEmptyGroup(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		group string
+	}{
+		{name: "without group"},
+		{name: "with group", group: "outer"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, withAttrs := range []bool{false, true} {
+				t.Run(fmt.Sprintf("WithAttrs=%t", withAttrs), func(t *testing.T) {
+					r := &recorder{}
+					var handler slog.Handler = NewHandler("test", WithLoggerProvider(r))
+					if tt.group != "" {
+						handler = handler.WithGroup(tt.group)
+					}
+					handler = handler.WithGroup("")
+					record := slog.NewRecord(time.Time{}, slog.LevelInfo, "message", 0)
+					attr := slog.String("key", "value")
+					if withAttrs {
+						handler = handler.WithAttrs([]slog.Attr{attr})
+					} else {
+						record.AddAttrs(attr)
+					}
+
+					err := handler.Handle(t.Context(), record)
+
+					require.NoError(t, err)
+					require.Len(t, r.Records, 1)
+					var attrs []attribute.KeyValue
+					r.Records[0].WalkAttributes(func(kv attribute.KeyValue) bool {
+						attrs = append(attrs, kv)
+						return true
+					})
+					want := attribute.String("key", "value")
+					if tt.group != "" {
+						want = attribute.Map(tt.group, want)
+					}
+					assert.Equal(t, []attribute.KeyValue{want}, attrs)
+				})
+			}
+		})
+	}
 }

@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf // import "go.opentelemetry.io/contrib/otelconf"
+package otelconf
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"net"
 	"net/url"
 	"os"
 	"time"
@@ -78,6 +79,10 @@ func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error)
 		if r.Periodic.Timeout != nil {
 			opts = append(opts, sdkmetric.WithTimeout(time.Duration(*r.Periodic.Timeout)*time.Millisecond))
 		}
+
+		if r.Periodic.CardinalityLimits != nil {
+			opts = append(opts, sdkmetric.WithCardinalityLimitSelector(cardinalityLimitSelector(r.Periodic.CardinalityLimits)))
+		}
 		return periodicExporter(ctx, r.Periodic.Exporter, opts...)
 	}
 
@@ -89,6 +94,49 @@ func metricReader(ctx context.Context, r MetricReader) (sdkmetric.Reader, error)
 
 func pullReader(_ context.Context, _ PullMetricExporter) (sdkmetric.Reader, error) {
 	return nil, newErrInvalid("no valid metric exporter")
+}
+
+// cardinalityLimitSelector returns a CardinalityLimitSelector for the given CardinalityLimits config.
+// Note: this function is intentionally duplicated in otelconf/x because the two packages define
+// their own CardinalityLimits types. Changes here must be mirrored there.
+func cardinalityLimitSelector(cl *CardinalityLimits) sdkmetric.CardinalityLimitSelector {
+	return func(ik sdkmetric.InstrumentKind) (int, bool) {
+		switch ik {
+		case sdkmetric.InstrumentKindCounter:
+			if cl.Counter != nil {
+				return *cl.Counter, false
+			}
+		case sdkmetric.InstrumentKindUpDownCounter:
+			if cl.UpDownCounter != nil {
+				return *cl.UpDownCounter, false
+			}
+		case sdkmetric.InstrumentKindHistogram:
+			if cl.Histogram != nil {
+				return *cl.Histogram, false
+			}
+		case sdkmetric.InstrumentKindObservableCounter:
+			if cl.ObservableCounter != nil {
+				return *cl.ObservableCounter, false
+			}
+		case sdkmetric.InstrumentKindObservableUpDownCounter:
+			if cl.ObservableUpDownCounter != nil {
+				return *cl.ObservableUpDownCounter, false
+			}
+		case sdkmetric.InstrumentKindObservableGauge:
+			if cl.ObservableGauge != nil {
+				return *cl.ObservableGauge, false
+			}
+		case sdkmetric.InstrumentKindGauge:
+			if cl.Gauge != nil {
+				return *cl.Gauge, false
+			}
+		}
+		if cl.Default != nil {
+			return *cl.Default, false
+		}
+		// fallback=true; defer to the SDK/provider global cardinality limit
+		return 0, true
+	}
 }
 
 func periodicExporter(ctx context.Context, exporter PushMetricExporter, opts ...sdkmetric.PeriodicReaderOption) (sdkmetric.Reader, error) {
@@ -209,9 +257,14 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPGrpcMetricExpor
 	var opts []otlpmetricgrpc.Option
 
 	if otlpConfig.Endpoint != nil {
-		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
+		endpoint := *otlpConfig.Endpoint
+		u, err := url.ParseRequestURI(endpoint)
 		if err != nil {
-			return nil, errors.Join(newErrInvalid("endpoint parsing failed"), err)
+			if _, _, splitErr := net.SplitHostPort(endpoint); splitErr != nil {
+				return nil, errors.Join(newErrInvalid("endpoint parsing failed"), err)
+			}
+
+			u = &url.URL{Host: endpoint}
 		}
 		// ParseRequestURI leaves the Host field empty when no
 		// scheme is specified (i.e. localhost:4317). This check is

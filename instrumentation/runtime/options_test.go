@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package runtime // import "go.opentelemetry.io/contrib/instrumentation/runtime"
+package runtime
 
 import (
 	"testing"
@@ -36,6 +36,15 @@ func TestNewConfig(t *testing.T) {
 			assert.True(t, configEqual(got, tt.expect))
 		})
 	}
+}
+
+func TestOptInMetricEnabled(t *testing.T) {
+	assert.False(t, optInGCCycles.enabled())
+	assert.False(t, optInCPUTime.enabled())
+
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.cpu.time")
+	assert.False(t, optInGCCycles.enabled())
+	assert.True(t, optInCPUTime.enabled())
 }
 
 func configEqual(a, b config) bool {

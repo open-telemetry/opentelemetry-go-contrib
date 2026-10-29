@@ -9,7 +9,7 @@
 // The logr records are converted to OpenTelemetry [log.Record] in the following
 // way:
 //
-//   - Message is set as the Body using a [log.StringValue].
+//   - Message is set as the Body using an [attribute.StringValue].
 //   - Level is transformed and set as the Severity. The SeverityText is not
 //     set.
 //   - KeyAndValues are transformed and set as Attributes.
@@ -19,6 +19,10 @@
 //     log record. All non-nested [context.Context] values are ignored and not
 //     added as attributes. If there are multiple [context.Context] the last one
 //     is used.
+//
+// A context bound with [LogSink.WithValues] is also used by [LogSink.Enabled].
+// A context supplied only to [LogSink.Info] or [LogSink.Error] is used when
+// emitting that record, but does not affect the earlier enablement check.
 //
 // The V-level is transformed by using the [WithLevelSeverity] option. If option is
 // not provided then V-level is transformed in the following way:
@@ -30,37 +34,38 @@
 // KeysAndValues values are transformed based on their type. The following types are
 // supported:
 //
-//   - [bool] are transformed to [log.BoolValue].
-//   - [string] are transformed to [log.StringValue].
-//   - [int], [int8], [int16], [int32], [int64] are transformed to
-//     [log.Int64Value].
-//   - [uint], [uint8], [uint16], [uint32], [uint64], [uintptr] are transformed
-//     to [log.Int64Value] or [log.StringValue] if the value is too large.
-//   - [float32], [float64] are transformed to [log.Float64Value].
-//   - [time.Duration] are transformed to [log.Int64Value] with the nanoseconds.
-//   - [complex64], [complex128] are transformed to [log.MapValue] with the keys
+//   - bool are transformed to [attribute.BoolValue].
+//   - string are transformed to [attribute.StringValue].
+//   - int, int8, int16, int32, int64 are transformed to
+//     [attribute.Int64Value].
+//   - uint, uint8, uint16, uint32, uint64, uintptr are transformed
+//     to [attribute.Int64Value] or [attribute.StringValue] if the value is too large.
+//   - float32, float64 are transformed to [attribute.Float64Value].
+//   - [time.Duration] are transformed to [attribute.Int64Value] with the nanoseconds.
+//   - complex64, complex128 are transformed to [attribute.MapValue] with the keys
 //     "r" and "i" for the real and imaginary parts. The values are
-//     [log.Float64Value].
-//   - [time.Time] are transformed to [log.Int64Value] with the nanoseconds.
-//   - [[]byte] are transformed to [log.BytesValue].
-//   - [error] are transformed to [log.StringValue] with the error message.
-//   - [nil] are transformed to an empty [log.Value].
-//   - [struct] are transformed to [log.StringValue] with the struct fields.
-//   - [slice], [array] are transformed to [log.SliceValue] with the elements.
-//   - [map] are transformed to [log.MapValue] with the key-value pairs.
-//   - [pointer], [interface] are transformed to the dereferenced value.
+//     [attribute.Float64Value].
+//   - [time.Time] are transformed to [attribute.Int64Value] with the nanoseconds.
+//   - []byte are transformed to [attribute.ByteSliceValue].
+//   - error are transformed to [attribute.StringValue] with the error message.
+//   - nil are transformed to an empty [attribute.Value].
+//   - struct are transformed to [attribute.StringValue] with the struct fields.
+//   - slice, array are transformed to [attribute.SliceValue] with the elements.
+//   - map are transformed to [attribute.MapValue] with the key-value pairs.
+//   - pointer, interface are transformed to the dereferenced value.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
-package otellogr // import "go.opentelemetry.io/contrib/bridges/otellogr"
+package otellogr
 
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/global"
 )
 
 type config struct {
@@ -79,7 +84,7 @@ func newConfig(options []Option) config {
 	}
 
 	if c.provider == nil {
-		c.provider = global.GetLoggerProvider()
+		c.provider = otel.GetLoggerProvider()
 	}
 
 	if c.levelSeverity == nil {
@@ -203,7 +208,7 @@ type LogSink struct {
 	logger        log.Logger
 	levelSeverity func(int) log.Severity
 	opts          []log.LoggerOption
-	attr          []log.KeyValue
+	attr          []attribute.KeyValue
 	ctx           context.Context
 }
 
@@ -213,16 +218,16 @@ var _ logr.LogSink = (*LogSink)(nil)
 // Enabled tests whether this LogSink is enabled at the specified V-level.
 // For example, commandline flags might be used to set the logging
 // verbosity and disable some info logs.
+// The enablement check uses the context bound with [LogSink.WithValues].
 func (l *LogSink) Enabled(level int) bool {
-	ctx := context.Background()
 	param := log.EnabledParameters{Severity: l.levelSeverity(level)}
-	return l.logger.Enabled(ctx, param)
+	return l.logger.Enabled(l.ctx, param)
 }
 
 // Error logs an error, with the given message and key/value pairs.
 func (l *LogSink) Error(err error, msg string, keysAndValues ...any) {
 	var record log.Record
-	record.SetBody(log.StringValue(msg))
+	record.SetBody(attribute.StringValue(msg))
 	record.SetSeverity(log.SeverityError)
 	record.SetErr(err)
 
@@ -237,7 +242,7 @@ func (l *LogSink) Error(err error, msg string, keysAndValues ...any) {
 // Info logs a non-error message with the given key/value pairs.
 func (l *LogSink) Info(level int, msg string, keysAndValues ...any) {
 	var record log.Record
-	record.SetBody(log.StringValue(msg))
+	record.SetBody(attribute.StringValue(msg))
 	record.SetSeverity(l.levelSeverity(level))
 
 	record.AddAttributes(l.attr...)
@@ -264,17 +269,21 @@ func (l LogSink) WithName(name string) logr.LogSink {
 }
 
 // WithValues returns a new LogSink with additional key/value pairs.
+// A value of type [context.Context] sets the context used by [LogSink.Enabled]
+// and log emission.
 func (l LogSink) WithValues(keysAndValues ...any) logr.LogSink {
 	ctx, attr := convertKVs(l.ctx, keysAndValues...)
-	l.attr = append(l.attr, attr...)
+	// Clip so sibling sinks derived from the same parent do not share and
+	// overwrite the backing array.
+	l.attr = append(slices.Clip(l.attr), attr...)
 	l.ctx = ctx
 	return &l
 }
 
-// convertKVs converts a list of key-value pairs to a list of [log.KeyValue].
+// convertKVs converts a list of key-value pairs to a list of [attribute.KeyValue].
 // The last [context.Context] value is returned as the context.
 // If no context is found, the original context is returned.
-func convertKVs(ctx context.Context, keysAndValues ...any) (context.Context, []log.KeyValue) {
+func convertKVs(ctx context.Context, keysAndValues ...any) (context.Context, []attribute.KeyValue) {
 	if len(keysAndValues) == 0 {
 		return ctx, nil
 	}
@@ -283,7 +292,7 @@ func convertKVs(ctx context.Context, keysAndValues ...any) (context.Context, []l
 		keysAndValues = append(keysAndValues, nil)
 	}
 
-	kvs := make([]log.KeyValue, 0, len(keysAndValues)/2)
+	kvs := make([]attribute.KeyValue, 0, len(keysAndValues)/2)
 	for i := 0; i < len(keysAndValues); i += 2 {
 		k, ok := keysAndValues[i].(string)
 		if !ok {
@@ -298,8 +307,8 @@ func convertKVs(ctx context.Context, keysAndValues ...any) (context.Context, []l
 			continue
 		}
 
-		kvs = append(kvs, log.KeyValue{
-			Key:   k,
+		kvs = append(kvs, attribute.KeyValue{
+			Key:   attribute.Key(k),
 			Value: convertValue(v),
 		})
 	}

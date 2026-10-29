@@ -3,7 +3,7 @@
 
 // Package minsev provides an [log.Processor] that will not log any record with
 // a severity below a configured threshold.
-package minsev // import "go.opentelemetry.io/contrib/processors/minsev"
+package minsev
 
 import (
 	"context"

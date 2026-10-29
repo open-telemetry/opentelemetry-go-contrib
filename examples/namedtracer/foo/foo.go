@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package foo is an example sub-package.
-package foo // import "go.opentelemetry.io/contrib/examples/namedtracer/foo"
+package foo
 
 import (
 	"context"

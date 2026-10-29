@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelhttp // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+package otelhttp
 
 import (
 	"net/http"
@@ -129,8 +129,8 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	readRecordFunc := func(int64) {}
 	if h.readEvent {
-		readRecordFunc = func(n int64) {
-			span.AddEvent("read", trace.WithAttributes(ReadBytesKey.Int64(n)))
+		readRecordFunc = func(int64) {
+			span.AddEvent("read")
 		}
 	}
 
@@ -139,13 +139,19 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
 	bw := request.NewBodyWrapper(r.Body, readRecordFunc)
 	if r.Body != nil && r.Body != http.NoBody {
+		origReq := r
+		prevBody := r.Body
 		r.Body = bw
+
+		// Restore the original body after the request is processed to avoid issues
+		// with extra wrapper since `http/server.go` later checks type of `r.Body`.
+		defer func() { origReq.Body = prevBody }()
 	}
 
 	writeRecordFunc := func(int64) {}
 	if h.writeEvent {
-		writeRecordFunc = func(n int64) {
-			span.AddEvent("write", trace.WithAttributes(WroteBytesKey.Int64(n)))
+		writeRecordFunc = func(int64) {
+			span.AddEvent("write")
 		}
 	}
 
@@ -162,11 +168,19 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		Write: func(httpsnoop.WriteFunc) httpsnoop.WriteFunc {
 			return rww.Write
 		},
+		ReadFrom: func(httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
+			return rww.ReadFrom
+		},
 		WriteHeader: func(httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
 			return rww.WriteHeader
 		},
 		Flush: func(httpsnoop.FlushFunc) httpsnoop.FlushFunc {
 			return rww.Flush
+		},
+		FlushError: func(flush httpsnoop.FlushErrorFunc) httpsnoop.FlushErrorFunc {
+			return func() error {
+				return rww.FlushWithError(flush)
+			}
 		},
 	})
 
@@ -174,12 +188,21 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if !found {
 		ctx = ContextWithLabeler(ctx, labeler)
 	}
+	rCtx := r.WithContext(ctx)
+	defer func() {
+		// Copy MultipartForm back to the original request so net/http can
+		// find and remove any temp files ParseMultipartForm created on the
+		// copy. Deferred so the copy-back also runs during panic unwinding,
+		// letting net/http cleanup paths that still run (HTTP/2 handler
+		// recovery, outer recovery middleware) find the form.
+		if rCtx.MultipartForm != nil {
+			r.MultipartForm = rCtx.MultipartForm
+		}
+	}()
+	next.ServeHTTP(w, rCtx)
 
-	r = r.WithContext(ctx)
-	next.ServeHTTP(w, r)
-
-	if r.Pattern != "" {
-		span.SetName(h.spanNameFormatter(h.operation, r))
+	if rCtx.Pattern != "" {
+		span.SetName(h.spanNameFormatter(h.operation, rCtx))
 	}
 
 	statusCode := rww.StatusCode()
@@ -198,9 +221,9 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		ServerName:   h.server,
 		ResponseSize: bytesWritten,
 		MetricAttributes: semconv.MetricAttributes{
-			Req:                  r,
+			Req:                  rCtx,
 			StatusCode:           statusCode,
-			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(r)...),
+			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(rCtx)...),
 		},
 		MetricData: semconv.MetricData{
 			RequestSize:     bytesRead,

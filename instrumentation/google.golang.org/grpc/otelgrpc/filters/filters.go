@@ -3,7 +3,7 @@
 
 // Package filters provides a set of filters useful with the
 // [otelgrpc.WithFilter] option to control which inbound requests are instrumented.
-package filters // import "go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc/filters"
+package filters
 
 import (
 	"path"

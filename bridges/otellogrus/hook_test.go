@@ -4,16 +4,17 @@
 package otellogrus
 
 import (
-	"slices"
+	"context"
+	"io"
 	"testing"
 	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
 )
 
@@ -23,6 +24,36 @@ type mockLoggerProvider struct {
 
 func (mockLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
 	return nil
+}
+
+func TestHookFireContext(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		ctx  context.Context
+	}{
+		{name: "default"},
+		{name: "explicit", ctx: t.Context()},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := logtest.NewRecorder()
+			logger := logrus.New()
+			logger.SetOutput(io.Discard)
+			logger.AddHook(NewHook("test", WithLoggerProvider(recorder)))
+			entry := logrus.NewEntry(logger)
+			if tt.ctx != nil {
+				entry = entry.WithContext(tt.ctx)
+			}
+			entry.Info("message")
+			ctx := recorder.Result()[logtest.Scope{Name: "test"}][0].Context
+			if tt.ctx == nil {
+				if assert.NotNil(t, ctx) {
+					assert.Nil(t, ctx.Done())
+				}
+			} else {
+				assert.Same(t, tt.ctx, ctx)
+			}
+		})
+	}
 }
 
 func TestNewConfig(t *testing.T) {
@@ -38,7 +69,7 @@ func TestNewConfig(t *testing.T) {
 			name: "with no options",
 
 			wantConfig: config{
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 				levels:   logrus.AllLevels,
 			},
 		},
@@ -50,7 +81,7 @@ func TestNewConfig(t *testing.T) {
 
 			wantConfig: config{
 				version:  "42.0",
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 				levels:   logrus.AllLevels,
 			},
 		},
@@ -72,7 +103,7 @@ func TestNewConfig(t *testing.T) {
 			},
 
 			wantConfig: config{
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 				levels:   []logrus.Level{logrus.FatalLevel},
 			},
 		},
@@ -85,7 +116,7 @@ func TestNewConfig(t *testing.T) {
 
 func TestNewHook(t *testing.T) {
 	const name = "name"
-	provider := global.GetLoggerProvider()
+	provider := otel.GetLoggerProvider()
 
 	for _, tt := range []struct {
 		name    string
@@ -151,6 +182,7 @@ func TestHookLevels(t *testing.T) {
 
 func TestHookFire(t *testing.T) {
 	const name = "name"
+	ctx := t.Context()
 	now := time.Now()
 	var nilPointer *struct{}
 
@@ -168,9 +200,10 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal4,
 						SeverityText: "panic",
-						Body:         log.StringValue(""),
+						Body:         attribute.StringValue(""),
 					},
 				},
 			},
@@ -183,9 +216,10 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal4,
 						SeverityText: "panic",
-						Body:         log.StringValue(""),
+						Body:         attribute.StringValue(""),
 						Timestamp:    now,
 					},
 				},
@@ -199,9 +233,10 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal4,
 						SeverityText: "panic",
-						Body:         log.StringValue(""),
+						Body:         attribute.StringValue(""),
 					},
 				},
 			},
@@ -214,9 +249,10 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal,
 						SeverityText: "fatal",
-						Body:         log.StringValue(""),
+						Body:         attribute.StringValue(""),
 					},
 				},
 			},
@@ -229,9 +265,10 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityError,
 						SeverityText: "error",
-						Body:         log.StringValue(""),
+						Body:         attribute.StringValue(""),
 					},
 				},
 			},
@@ -244,9 +281,10 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityWarn,
 						SeverityText: "warning",
-						Body:         log.StringValue(""),
+						Body:         attribute.StringValue(""),
 					},
 				},
 			},
@@ -259,9 +297,10 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityInfo,
 						SeverityText: "info",
-						Body:         log.StringValue(""),
+						Body:         attribute.StringValue(""),
 					},
 				},
 			},
@@ -274,9 +313,10 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityDebug,
 						SeverityText: "debug",
-						Body:         log.StringValue(""),
+						Body:         attribute.StringValue(""),
 					},
 				},
 			},
@@ -289,9 +329,10 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityTrace,
 						SeverityText: "trace",
-						Body:         log.StringValue(""),
+						Body:         attribute.StringValue(""),
 					},
 				},
 			},
@@ -306,12 +347,13 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal4,
 						SeverityText: "panic",
-						Attributes: []log.KeyValue{
-							log.String("hello", "world"),
+						Attributes: []attribute.KeyValue{
+							attribute.String("hello", "world"),
 						},
-						Body: log.StringValue(""),
+						Body: attribute.StringValue(""),
 					},
 				},
 			},
@@ -326,12 +368,13 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal4,
 						SeverityText: "panic",
-						Attributes: []log.KeyValue{
-							log.Empty("nil_pointer"),
+						Attributes: []attribute.KeyValue{
+							{Key: attribute.Key("nil_pointer"), Value: attribute.Value{}},
 						},
-						Body: log.StringValue(""),
+						Body: attribute.StringValue(""),
 					},
 				},
 			},
@@ -348,13 +391,14 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityError,
 						SeverityText: "error",
 						Error:        assert.AnError,
-						Attributes: []log.KeyValue{
-							log.String("other", "value"),
+						Attributes: []attribute.KeyValue{
+							attribute.String("other", "value"),
 						},
-						Body: log.StringValue(""),
+						Body: attribute.StringValue(""),
 					},
 				},
 			},
@@ -370,12 +414,13 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityInfo,
 						SeverityText: "info",
-						Attributes: []log.KeyValue{
-							log.String("key", "val"),
+						Attributes: []attribute.KeyValue{
+							attribute.String("key", "val"),
 						},
-						Body: log.StringValue(""),
+						Body: attribute.StringValue(""),
 					},
 				},
 			},
@@ -384,6 +429,7 @@ func TestHookFire(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := logtest.NewRecorder()
 
+			tt.entry.Context = ctx
 			err := NewHook(name, WithLoggerProvider(rec)).Fire(tt.entry)
 			assert.Equal(t, tt.wantErr, err)
 
@@ -397,155 +443,154 @@ func TestConvertFields(t *testing.T) {
 		name string
 
 		fields  logrus.Fields
-		want    []log.KeyValue
+		want    []attribute.KeyValue
 		wantErr error
 	}{
 		{
 			name:   "with a boolean",
 			fields: logrus.Fields{"hello": true},
-			want: []log.KeyValue{
-				log.Bool("hello", true),
+			want: []attribute.KeyValue{
+				attribute.Bool("hello", true),
 			},
 		},
 		{
 			name:   "with a bytes array",
 			fields: logrus.Fields{"hello": []byte("world")},
-			want: []log.KeyValue{
-				log.Bytes("hello", []byte("world")),
+			want: []attribute.KeyValue{
+				attribute.ByteSlice("hello", []byte("world")),
 			},
 		},
 		{
 			name:   "with a float64",
 			fields: logrus.Fields{"hello": 6.5},
-			want: []log.KeyValue{
-				log.Float64("hello", 6.5),
+			want: []attribute.KeyValue{
+				attribute.Float64("hello", 6.5),
 			},
 		},
 		{
 			name:   "with an int",
 			fields: logrus.Fields{"hello": 42},
-			want: []log.KeyValue{
-				log.Int("hello", 42),
+			want: []attribute.KeyValue{
+				attribute.Int("hello", 42),
 			},
 		},
 		{
 			name:   "with an int64",
 			fields: logrus.Fields{"hello": int64(42)},
-			want: []log.KeyValue{
-				log.Int64("hello", 42),
+			want: []attribute.KeyValue{
+				attribute.Int64("hello", 42),
 			},
 		},
 		{
 			name:   "with a string",
 			fields: logrus.Fields{"hello": "world"},
-			want: []log.KeyValue{
-				log.String("hello", "world"),
+			want: []attribute.KeyValue{
+				attribute.String("hello", "world"),
 			},
 		},
 		{
 			name:   "with nil",
 			fields: logrus.Fields{"hello": nil},
-			want: []log.KeyValue{
-				{Key: "hello", Value: log.Value{}},
+			want: []attribute.KeyValue{
+				{Key: attribute.Key("hello"), Value: attribute.Value{}},
 			},
 		},
 		{
 			name:   "with a struct",
 			fields: logrus.Fields{"hello": struct{ Name string }{Name: "foobar"}},
-			want: []log.KeyValue{
-				log.String("hello", "{Name:foobar}"),
+			want: []attribute.KeyValue{
+				attribute.String("hello", "{Name:foobar}"),
 			},
 		},
 		{
 			name:   "with a slice",
 			fields: logrus.Fields{"hello": []string{"foo", "bar"}},
-			want: []log.KeyValue{
-				log.Slice(
+			want: []attribute.KeyValue{
+				attribute.Slice(
 					"hello",
-					log.StringValue("foo"),
-					log.StringValue("bar"),
+					attribute.StringValue("foo"),
+					attribute.StringValue("bar"),
 				),
 			},
 		},
 		{
 			name:   "with an interface slice",
 			fields: logrus.Fields{"hello": []any{"foo", 42}},
-			want: []log.KeyValue{
-				log.Slice(
+			want: []attribute.KeyValue{
+				attribute.Slice(
 					"hello",
-					log.StringValue("foo"),
-					log.Int64Value(42),
+					attribute.StringValue("foo"),
+					attribute.Int64Value(42),
 				),
 			},
 		},
 		{
 			name:   "with a map",
 			fields: logrus.Fields{"hello": map[string]int{"answer": 42}},
-			want: []log.KeyValue{
-				log.Map("hello", log.Int("answer", 42)),
+			want: []attribute.KeyValue{
+				attribute.Map("hello", attribute.Int("answer", 42)),
 			},
 		},
 		{
 			name:   "with an interface map",
 			fields: logrus.Fields{"hello": map[any]any{1: "question", "answer": 42}},
-			want: []log.KeyValue{
-				log.Map("hello", log.Int("answer", 42), log.String("1", "question")),
+			want: []attribute.KeyValue{
+				attribute.Map("hello", attribute.Int("answer", 42), attribute.String("1", "question")),
 			},
 		},
 		{
 			name:   "with a nested map",
 			fields: logrus.Fields{"hello": map[string]map[string]int{"sublevel": {"answer": 42}}},
-			want: []log.KeyValue{
-				log.Map("hello", log.Map("sublevel", log.Int("answer", 42))),
+			want: []attribute.KeyValue{
+				attribute.Map("hello", attribute.Map("sublevel", attribute.Int("answer", 42))),
 			},
 		},
 		{
 			name:   "with a struct map",
 			fields: logrus.Fields{"hello": map[struct{ name string }]string{{name: "hello"}: "world"}},
-			want: []log.KeyValue{
-				log.Map("hello", log.String("{name:hello}", "world")),
+			want: []attribute.KeyValue{
+				attribute.Map("hello", attribute.String("{name:hello}", "world")),
 			},
 		},
 		{
 			name:   "with a pointer to struct",
 			fields: logrus.Fields{"hello": &struct{ Name string }{Name: "foobar"}},
-			want: []log.KeyValue{
-				log.String("hello", "{Name:foobar}"),
+			want: []attribute.KeyValue{
+				attribute.String("hello", "{Name:foobar}"),
 			},
 		},
 		{
-			name:   "with log attribute",
-			fields: logrus.Fields{"hello": log.MapValue(log.String("foo", "bar"))},
-			want: []log.KeyValue{
-				log.Map("hello", log.String("foo", "bar")),
+			name:   "with attribute value",
+			fields: logrus.Fields{"hello": attribute.MapValue(attribute.String("foo", "bar"))},
+			want: []attribute.KeyValue{
+				attribute.Map("hello", attribute.String("foo", "bar")),
 			},
 		},
 		{
 			name:   "with standard attribute",
 			fields: logrus.Fields{"hello": attribute.StringSliceValue([]string{"one", "two"})},
-			want: []log.KeyValue{
-				log.Slice("hello", log.StringValue("one"), log.StringValue("two")),
+			want: []attribute.KeyValue{
+				attribute.StringSlice("hello", []string{"one", "two"}),
 			},
 		},
 		{
 			name:    "with an error field",
 			fields:  logrus.Fields{logrus.ErrorKey: assert.AnError},
+			want:    []attribute.KeyValue{},
 			wantErr: assert.AnError,
 		},
 		{
 			name:   "with a non-error value in error key",
 			fields: logrus.Fields{logrus.ErrorKey: "not an error"},
-			want: []log.KeyValue{
-				log.String(logrus.ErrorKey, "not an error"),
+			want: []attribute.KeyValue{
+				attribute.String(logrus.ErrorKey, "not an error"),
 			},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			got, gotErr := convertFields(tt.fields)
 			assert.Equal(t, tt.wantErr, gotErr)
-			if !slices.EqualFunc(tt.want, got, log.KeyValue.Equal) {
-				t.Errorf("KeyValues are not equal:\nwant: %v\ngot:  %v", tt.want, got)
-			}
+			assert.Equal(t, tt.want, got)
 		})
 	}
 }

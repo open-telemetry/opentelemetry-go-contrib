@@ -3,7 +3,7 @@
 
 // Based on https://github.com/DataDog/dd-trace-go/blob/8fb554ff7cf694267f9077ae35e27ce4689ed8b6/contrib/gin-gonic/gin/gintrace.go
 
-package otelgin // import "go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin"
+package otelgin
 
 import (
 	"fmt"
@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
@@ -112,21 +113,53 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Next()
 
 		status := c.Writer.Status()
-		span.SetStatus(sc.Status(status))
+		spanCode, spanMsg := sc.Status(status)
+		span.SetStatus(spanCode, spanMsg)
 		span.SetAttributes(sc.ResponseTraceAttrs(semconv.ResponseTelemetry{
 			StatusCode: status,
 			WriteBytes: int64(c.Writer.Size()),
 		})...)
 
-		if len(c.Errors) > 0 {
+		var errorTypeAttr attribute.KeyValue
+		switch {
+		case len(c.Errors) > 0:
 			span.SetStatus(codes.Error, c.Errors.String())
-			for _, err := range c.Errors {
-				span.RecordError(err.Err) //nolint:forbidigo // TODO: https://github.com/open-telemetry/opentelemetry-go-contrib/issues/8441
+			if len(c.Errors) == 1 {
+				errorTypeAttr = otelsemconv.ErrorType(c.Errors[0].Err)
+			} else {
+				errorTypeAttr = otelsemconv.ErrorTypeOther
+			}
+			span.SetAttributes(errorTypeAttr)
+		default:
+			// No explicit c.Errors entry. If the client disconnected
+			// mid-request, the original request context carries the real
+			// cause even when the handler never wrote a response that would
+			// surface it as a 5xx (e.g. the handler returned after observing
+			// cancellation without writing a status). Classify it
+			// independent of the response status: per the HTTP semantic
+			// conventions, span status is Error whenever a detected error
+			// exists, even if the response status itself is not an error
+			// (e.g. http.response.status_code stays 200).
+			//
+			// Use savedCtx, not c.Request.Context(): a handler may replace
+			// c.Request with one wrapping a differently-scoped context (e.g.
+			// its own cancelable child), whose Err() would reflect that
+			// handler's own lifecycle instead of an actual client disconnect.
+			if reqErr := savedCtx.Err(); reqErr != nil {
+				span.SetStatus(codes.Error, reqErr.Error())
+				errorTypeAttr = otelsemconv.ErrorType(reqErr)
+				span.SetAttributes(errorTypeAttr)
 			}
 		}
 
-		// Record the server-side attributes.
+		// Record the server-side attributes. errorTypeAttr is appended first
+		// so a caller-supplied error.type from MetricAttributeFn or
+		// GinMetricAttributeFn takes precedence over it, consistent with
+		// those options' existing last-write-wins precedence over each other.
 		var additionalAttributes []attribute.KeyValue
+		if errorTypeAttr.Valid() {
+			additionalAttributes = append(additionalAttributes, errorTypeAttr)
+		}
 		if cfg.MetricAttributeFn != nil {
 			additionalAttributes = append(additionalAttributes, cfg.MetricAttributeFn(c.Request)...)
 		}
@@ -134,9 +167,11 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			additionalAttributes = append(additionalAttributes, cfg.GinMetricAttributeFn(c)...)
 		}
 
+		respSize := max(int64(c.Writer.Size()), 0)
+
 		sc.RecordMetrics(ctx, semconv.ServerMetricData{
 			ServerName:   service,
-			ResponseSize: int64(c.Writer.Size()),
+			ResponseSize: respSize,
 			MetricAttributes: semconv.MetricAttributes{
 				Req:                  c.Request,
 				StatusCode:           status,

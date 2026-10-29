@@ -11,11 +11,12 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/log/logtest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type mockLoggerProvider struct {
@@ -39,7 +40,7 @@ func TestNewConfig(t *testing.T) {
 			name: "with no options",
 
 			wantConfig: config{
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 			},
 		},
 		{
@@ -50,7 +51,7 @@ func TestNewConfig(t *testing.T) {
 
 			wantConfig: config{
 				version:  "42.0",
-				provider: global.GetLoggerProvider(),
+				provider: otel.GetLoggerProvider(),
 			},
 		},
 		{
@@ -140,7 +141,7 @@ func TestLogSink(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Body: log.StringValue("msg"), Severity: log.SeverityInfo},
+					{Body: attribute.StringValue("msg"), Severity: log.SeverityInfo},
 				},
 			},
 		},
@@ -154,10 +155,10 @@ func TestLogSink(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Body: log.StringValue("msg"), Severity: log.SeverityInfo},
-					{Body: log.StringValue("msg"), Severity: log.SeverityDebug},
-					{Body: log.StringValue("msg"), Severity: log.SeverityTrace},
-					{Body: log.StringValue("msg"), Severity: log.SeverityTrace},
+					{Body: attribute.StringValue("msg"), Severity: log.SeverityInfo},
+					{Body: attribute.StringValue("msg"), Severity: log.SeverityDebug},
+					{Body: attribute.StringValue("msg"), Severity: log.SeverityTrace},
+					{Body: attribute.StringValue("msg"), Severity: log.SeverityTrace},
 				},
 			},
 		},
@@ -180,9 +181,9 @@ func TestLogSink(t *testing.T) {
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
-					{Body: log.StringValue("msg"), Severity: log.SeverityInfo},
-					{Body: log.StringValue("msg"), Severity: log.SeverityError},
-					{Body: log.StringValue("msg"), Severity: log.SeverityWarn},
+					{Body: attribute.StringValue("msg"), Severity: log.SeverityInfo},
+					{Body: attribute.StringValue("msg"), Severity: log.SeverityError},
+					{Body: attribute.StringValue("msg"), Severity: log.SeverityWarn},
 				},
 			},
 		},
@@ -199,26 +200,26 @@ func TestLogSink(t *testing.T) {
 					"string", "str",
 					"time", time.Unix(1000, 1000),
 					"uint64", uint64(3),
-					"log-attribute", log.MapValue(log.String("foo", "bar")),
+					"attribute-value", attribute.MapValue(attribute.String("foo", "bar")),
 					"standard-attribute", attribute.StringSliceValue([]string{"one", "two"}),
 				)
 			},
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
-						Body:     log.StringValue("msg"),
+						Body:     attribute.StringValue("msg"),
 						Severity: log.SeverityInfo,
-						Attributes: []log.KeyValue{
-							log.String("struct", "{data:1}"),
-							log.Bool("bool", true),
-							log.Int64("duration", 60_000_000_000),
-							log.Float64("float64", 3.14159),
-							log.Int64("int64", -2),
-							log.String("string", "str"),
-							log.Int64("time", time.Unix(1000, 1000).UnixNano()),
-							log.Int64("uint64", 3),
-							log.Map("log-attribute", log.String("foo", "bar")),
-							log.Slice("standard-attribute", log.StringValue("one"), log.StringValue("two")),
+						Attributes: []attribute.KeyValue{
+							attribute.String("struct", "{data:1}"),
+							attribute.Bool("bool", true),
+							attribute.Int64("duration", 60_000_000_000),
+							attribute.Float64("float64", 3.14159),
+							attribute.Int64("int64", -2),
+							attribute.String("string", "str"),
+							attribute.Int64("time", time.Unix(1000, 1000).UnixNano()),
+							attribute.Int64("uint64", 3),
+							attribute.Map("attribute-value", attribute.String("foo", "bar")),
+							attribute.StringSlice("standard-attribute", []string{"one", "two"}),
 						},
 					},
 				},
@@ -232,7 +233,7 @@ func TestLogSink(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: nil,
 				logtest.Scope{Name: name + "/test"}: {
-					{Body: log.StringValue("info message with name"), Severity: log.SeverityInfo},
+					{Body: attribute.StringValue("info message with name"), Severity: log.SeverityInfo},
 				},
 			},
 		},
@@ -245,7 +246,7 @@ func TestLogSink(t *testing.T) {
 				logtest.Scope{Name: name}:           nil,
 				logtest.Scope{Name: name + "/test"}: nil,
 				logtest.Scope{Name: name + "/test/test"}: {
-					{Body: log.StringValue("info message with name"), Severity: log.SeverityInfo},
+					{Body: attribute.StringValue("info message with name"), Severity: log.SeverityInfo},
 				},
 			},
 		},
@@ -257,10 +258,10 @@ func TestLogSink(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
-						Body:     log.StringValue("info message with attrs"),
+						Body:     attribute.StringValue("info message with attrs"),
 						Severity: log.SeverityInfo,
-						Attributes: []log.KeyValue{
-							log.String("key", "value"),
+						Attributes: []attribute.KeyValue{
+							attribute.String("key", "value"),
 						},
 					},
 				},
@@ -274,11 +275,37 @@ func TestLogSink(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
-						Body:     log.StringValue("info message with attrs"),
+						Body:     attribute.StringValue("info message with attrs"),
 						Severity: log.SeverityInfo,
-						Attributes: []log.KeyValue{
-							log.String("key1", "value1"),
-							log.String("key2", "value2"),
+						Attributes: []attribute.KeyValue{
+							attribute.String("key1", "value1"),
+							attribute.String("key2", "value2"),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "info_with_recursive_attr",
+			f: func(l *logr.Logger) {
+				var recursive any
+				recursive = &recursive
+				l.Info(
+					"msg",
+					"before", "value",
+					"recursive", recursive,
+					"after", int64(42),
+				)
+			},
+			want: logtest.Recording{
+				logtest.Scope{Name: name}: {
+					{
+						Body:     attribute.StringValue("msg"),
+						Severity: log.SeverityInfo,
+						Attributes: []attribute.KeyValue{
+							attribute.String("before", "value"),
+							attribute.String("recursive", "<max-depth-exceeded>"),
+							attribute.Int64("after", 42),
 						},
 					},
 				},
@@ -293,11 +320,11 @@ func TestLogSink(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
-						Body:     log.StringValue("info message with attrs"),
+						Body:     attribute.StringValue("info message with attrs"),
 						Severity: log.SeverityInfo,
-						Attributes: []log.KeyValue{
-							log.String("key", "value"),
-							log.Empty("nil_pointer"),
+						Attributes: []attribute.KeyValue{
+							attribute.String("key", "value"),
+							{Key: attribute.Key("nil_pointer"), Value: attribute.Value{}},
 						},
 					},
 				},
@@ -311,7 +338,7 @@ func TestLogSink(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: []logtest.Record{
 					{
-						Body:     log.StringValue("error message"),
+						Body:     attribute.StringValue("error message"),
 						Error:    testErr,
 						Severity: log.SeverityError,
 					},
@@ -336,18 +363,18 @@ func TestLogSink(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: []logtest.Record{
 					{
-						Body:     log.StringValue("msg"),
+						Body:     attribute.StringValue("msg"),
 						Error:    testErr,
 						Severity: log.SeverityError,
-						Attributes: []log.KeyValue{
-							log.String("struct", "{data:1}"),
-							log.Bool("bool", true),
-							log.Int64("duration", 60_000_000_000),
-							log.Float64("float64", 3.14159),
-							log.Int64("int64", -2),
-							log.String("string", "str"),
-							log.Int64("time", time.Unix(1000, 1000).UnixNano()),
-							log.Int64("uint64", 3),
+						Attributes: []attribute.KeyValue{
+							attribute.String("struct", "{data:1}"),
+							attribute.Bool("bool", true),
+							attribute.Int64("duration", 60_000_000_000),
+							attribute.Float64("float64", 3.14159),
+							attribute.Int64("int64", -2),
+							attribute.String("string", "str"),
+							attribute.Int64("time", time.Unix(1000, 1000).UnixNano()),
+							attribute.Int64("uint64", 3),
 						},
 					},
 				},
@@ -429,6 +456,69 @@ func TestLogSinkContext(t *testing.T) {
 	}
 }
 
+func TestLogSinkWithValuesSiblings(t *testing.T) {
+	rec := logtest.NewRecorder()
+	parent := logr.New(NewLogSink("name", WithLoggerProvider(rec))).
+		WithValues("a", 1).
+		WithValues("b", 2).
+		WithValues("c", 3)
+
+	c1 := parent.WithValues("child", "one")
+	c2 := parent.WithValues("child", "two")
+	c1.Info("msg")
+	c2.Info("msg")
+
+	want := logtest.Recording{
+		logtest.Scope{Name: "name"}: {
+			{Attributes: []attribute.KeyValue{
+				attribute.Int64("a", 1),
+				attribute.Int64("b", 2),
+				attribute.Int64("c", 3),
+				attribute.String("child", "one"),
+			}},
+			{Attributes: []attribute.KeyValue{
+				attribute.Int64("a", 1),
+				attribute.Int64("b", 2),
+				attribute.Int64("c", 3),
+				attribute.String("child", "two"),
+			}},
+		},
+	}
+	logtest.AssertEqual(t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			return logtest.Record{Attributes: r.Attributes}
+		}),
+	)
+}
+
+func TestLogSinkEnabledWithContext(t *testing.T) {
+	ctx := trace.ContextWithSpanContext(t.Context(), trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{1},
+		SpanID:     trace.SpanID{1},
+		TraceFlags: trace.FlagsSampled,
+	}))
+	enabledFunc := func(ctx context.Context, param log.EnabledParameters) bool {
+		return trace.SpanContextFromContext(ctx).IsSampled() && param.Severity == log.SeverityInfo
+	}
+	rec := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
+	parent := logr.New(NewLogSink("name", WithLoggerProvider(rec)))
+	logger := parent.WithValues("ctx", ctx).WithValues("key", "value").WithName("child")
+	assert.True(t, logger.Enabled())
+	assert.False(t, logger.V(1).Enabled())
+	logger.Info("msg")
+	logtest.AssertEqual(t, logtest.Recording{
+		logtest.Scope{Name: "name"}: nil,
+		logtest.Scope{Name: "name/child"}: {{
+			Context:    ctx,
+			Body:       attribute.StringValue("msg"),
+			Severity:   log.SeverityInfo,
+			Attributes: []attribute.KeyValue{attribute.String("key", "value")},
+		}},
+	}, rec.Result())
+	assert.False(t, parent.Enabled())
+	assert.False(t, logger.WithValues("ctx", t.Context()).Enabled())
+}
+
 func TestLogSinkEnabled(t *testing.T) {
 	enabledFunc := func(_ context.Context, param log.EnabledParameters) bool {
 		return param.Severity == log.SeverityInfo
@@ -458,7 +548,7 @@ func TestConvertKVs(t *testing.T) {
 	for _, tt := range []struct {
 		name    string
 		kvs     []any
-		wantKVs []log.KeyValue
+		wantKVs []attribute.KeyValue
 		wantCtx context.Context
 	}{
 		{
@@ -468,43 +558,43 @@ func TestConvertKVs(t *testing.T) {
 		{
 			name: "single_value",
 			kvs:  []any{"key", "value"},
-			wantKVs: []log.KeyValue{
-				log.String("key", "value"),
+			wantKVs: []attribute.KeyValue{
+				attribute.String("key", "value"),
 			},
 		},
 		{
 			name: "multiple_values",
 			kvs:  []any{"key1", "value1", "key2", "value2"},
-			wantKVs: []log.KeyValue{
-				log.String("key1", "value1"),
-				log.String("key2", "value2"),
+			wantKVs: []attribute.KeyValue{
+				attribute.String("key1", "value1"),
+				attribute.String("key2", "value2"),
 			},
 		},
 		{
 			name: "missing_value",
 			kvs:  []any{"key1", "value1", "key2"},
-			wantKVs: []log.KeyValue{
-				log.String("key1", "value1"),
-				{Key: "key2", Value: log.Value{}},
+			wantKVs: []attribute.KeyValue{
+				attribute.String("key1", "value1"),
+				{Key: attribute.Key("key2"), Value: attribute.Value{}},
 			},
 		},
 		{
 			name: "key_not_string",
 			kvs:  []any{42, "value"},
-			wantKVs: []log.KeyValue{
-				log.String("42", "value"),
+			wantKVs: []attribute.KeyValue{
+				attribute.String("42", "value"),
 			},
 		},
 		{
 			name:    "context",
 			kvs:     []any{"ctx", ctx, "key", "value"},
-			wantKVs: []log.KeyValue{log.String("key", "value")},
+			wantKVs: []attribute.KeyValue{attribute.String("key", "value")},
 			wantCtx: ctx,
 		},
 		{
 			name:    "last_context",
 			kvs:     []any{"key", t.Context(), "ctx", ctx},
-			wantKVs: []log.KeyValue{},
+			wantKVs: []attribute.KeyValue{},
 			wantCtx: ctx,
 		},
 	} {

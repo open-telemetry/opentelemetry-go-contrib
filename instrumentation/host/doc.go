@@ -22,4 +22,4 @@
 //
 // See https://github.com/open-telemetry/oteps/blob/main/text/0119-standard-system-metrics.md
 // for the definition of these metric instruments.
-package host // import "go.opentelemetry.io/contrib/instrumentation/host"
+package host

@@ -16,7 +16,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package jaegerremote // import "go.opentelemetry.io/contrib/samplers/jaegerremote"
+package jaegerremote
 
 import (
 	"bytes"
@@ -71,7 +71,7 @@ type samplerUpdater interface {
 type Sampler struct {
 	// These fields must be first in the struct because `sync/atomic` expects 64-bit alignment.
 	// Cf. https://github.com/jaegertracing/jaeger-client-go/issues/155, https://pkg.go.dev/sync/atomic#pkg-note-BUG
-	closed int64 // 0 - not closed, 1 - closed
+	closed atomic.Int64 // 0 - not closed, 1 - closed
 
 	sync.RWMutex // used to serialize access to samplerConfig.sampler
 	config
@@ -107,7 +107,7 @@ func (s *Sampler) ShouldSample(p trace.SamplingParameters) trace.SamplingResult 
 // Close does a clean shutdown of the sampler, stopping any background
 // go-routines it may have started.
 func (s *Sampler) Close() {
-	if swapped := atomic.CompareAndSwapInt64(&s.closed, 0, 1); !swapped {
+	if swapped := s.closed.CompareAndSwap(0, 1); !swapped {
 		s.logger.Info("repeated attempt to close the sampler is ignored")
 		return
 	}
@@ -191,7 +191,8 @@ func (s *Sampler) updateSamplerViaUpdaters(strategy any) error {
 
 // probabilisticSamplerUpdater is used by Sampler to parse sampling configuration.
 type probabilisticSamplerUpdater struct {
-	attributesDisabled bool
+	attributesDisabled  bool
+	probabilitySampling bool
 }
 
 // Update implements Update of samplerUpdater.
@@ -208,7 +209,7 @@ func (u *probabilisticSamplerUpdater) Update(sampler trace.Sampler, strategy any
 				}
 				return sampler, nil
 			}
-			return newProbabilisticSampler(probabilistic.SamplingRate, u.attributesDisabled), nil
+			return newProbabilisticSampler(probabilistic.SamplingRate, u.attributesDisabled, u.probabilitySampling), nil
 		}
 	}
 	return nil, nil
@@ -248,6 +249,7 @@ type perOperationSamplerUpdater struct {
 	MaxOperations            int
 	OperationNameLateBinding bool
 	attributesDisabled       bool
+	probabilitySampling      bool
 }
 
 // Update implements Update of samplerUpdater.
@@ -266,7 +268,7 @@ func (u *perOperationSamplerUpdater) Update(sampler trace.Sampler, strategy any)
 				MaxOperations:            u.MaxOperations,
 				OperationNameLateBinding: u.OperationNameLateBinding,
 				Strategies:               operations,
-			}, u.attributesDisabled), nil
+			}, u.attributesDisabled, u.probabilitySampling), nil
 		}
 	}
 	return nil, nil
@@ -289,9 +291,13 @@ func newHTTPSamplingStrategyFetcher(serverURL string) *httpSamplingStrategyFetch
 }
 
 func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) {
-	v := url.Values{}
-	v.Set("service", serviceName)
-	uri := f.serverURL + "?" + v.Encode()
+	// The configured URL may already carry a query or a fragment.
+	// Appending "?service=" would fold the service name into the previous
+	// parameter, or into the fragment, so the server never sees it.
+	uri, err := samplingStrategyURL(f.serverURL, serviceName)
+	if err != nil {
+		return nil, err
+	}
 	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, uri, http.NoBody)
 	if err != nil {
 		return nil, err
@@ -312,6 +318,17 @@ func (f *httpSamplingStrategyFetcher) Fetch(serviceName string) ([]byte, error) 
 	}
 
 	return body, nil
+}
+
+func samplingStrategyURL(serverURL, serviceName string) (string, error) {
+	u, err := url.Parse(serverURL)
+	if err != nil {
+		return "", fmt.Errorf("parse sampling server URL: %w", err)
+	}
+	q := u.Query()
+	q.Set("service", serviceName)
+	u.RawQuery = q.Encode()
+	return u.String(), nil
 }
 
 // -----------------------

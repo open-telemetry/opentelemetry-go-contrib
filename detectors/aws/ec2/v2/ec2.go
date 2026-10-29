@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package ec2 provides a resource detector for EC2 instances using aws-sdk-go-v2.
-package ec2 // import "go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
+package ec2
 
 import (
 	"context"
@@ -10,16 +10,26 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"sync"
+	"time"
 
+	aws "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
+	"github.com/aws/smithy-go/logging"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
-var errClient = errors.New("EC2 Client Error")
+var (
+	loadDefaultConfig = awsconfig.LoadDefaultConfig
+	newIMDSClient     = func(cfg aws.Config, optFns ...func(*imds.Options)) client {
+		return imds.NewFromConfig(cfg, optFns...)
+	}
+)
 
 // client implements methods to capture EC2 environment metadata information.
 type client interface {
@@ -29,7 +39,10 @@ type client interface {
 
 // resource detector collects resource information from EC2 environment.
 type resourceDetector struct {
-	c client
+	cfg config
+
+	mu sync.Mutex
+	c  client
 }
 
 // compile time assertion that imds.Client implements client.
@@ -40,19 +53,80 @@ var _ resource.Detector = (*resourceDetector)(nil)
 
 // NewResourceDetector returns a resource detector that will detect AWS EC2 resources.
 func NewResourceDetector() resource.Detector {
-	return &resourceDetector{c: newClient()}
+	return &resourceDetector{}
 }
 
-func (detector *resourceDetector) getClient() client {
-	return detector.c
+// NewResourceDetectorWithOptions returns a resource detector that will detect
+// AWS EC2 resources. The options configure the AWS SDK client.
+func NewResourceDetectorWithOptions(opts ...Option) resource.Detector {
+	var c config
+	for _, opt := range opts {
+		opt.apply(&c)
+	}
+	return &resourceDetector{cfg: c}
+}
+
+// WithAWSLogger passes the AWS SDK [logging.Logger] to the AWS SDK client.
+// Note this is the AWS SDK's logger, not an OpenTelemetry logger.
+func WithAWSLogger(logger logging.Logger) Option {
+	return optionFunc(func(c *config) {
+		c.logger = logger
+	})
+}
+
+// WithMaxAttempts sets the maximum number of attempts for EC2 metadata
+// requests. The value must be greater than zero; invalid values cause
+// resource detection to return an error.
+func WithMaxAttempts(attempts int) Option {
+	return optionFunc(func(c *config) {
+		c.maxAttempts = &attempts
+	})
+}
+
+// WithMaxBackoff sets the maximum delay between retries for EC2 metadata
+// requests. The value must be greater than zero; invalid values cause
+// resource detection to return an error.
+func WithMaxBackoff(backoff time.Duration) Option {
+	return optionFunc(func(c *config) {
+		c.maxBackoff = &backoff
+	})
+}
+
+// Option configures an AWS SDK client.
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (f optionFunc) apply(c *config) { f(c) }
+
+type config struct {
+	logger      logging.Logger
+	maxAttempts *int
+	maxBackoff  *time.Duration
+}
+
+func (detector *resourceDetector) getClient(ctx context.Context) (client, error) {
+	detector.mu.Lock()
+	defer detector.mu.Unlock()
+	if detector.c != nil {
+		return detector.c, nil
+	}
+
+	c, err := newClient(ctx, detector.cfg)
+	if err != nil {
+		return nil, err
+	}
+	detector.c = c
+	return c, nil
 }
 
 // Detect detects associated resources when running in AWS environment.
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
-	// Return nil if not able to establish valid client
-	client := detector.getClient()
-	if client == nil {
-		return nil, errClient
+	client, err := detector.getClient(ctx)
+	if err != nil {
+		return nil, err
 	}
 
 	// Available method removed in aws-sdk-go-v2, return empty resource if client returns error
@@ -84,13 +158,49 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), err
 }
 
-func newClient() client {
-	cfg, err := awsconfig.LoadDefaultConfig(context.Background())
-	if err != nil {
-		return nil
+func newClient(ctx context.Context, c config) (client, error) {
+	if c.maxAttempts != nil && *c.maxAttempts <= 0 {
+		return nil, fmt.Errorf("max attempts must be greater than zero: %d", *c.maxAttempts)
+	}
+	if c.maxBackoff != nil && *c.maxBackoff <= 0 {
+		return nil, fmt.Errorf("max backoff must be greater than zero: %s", *c.maxBackoff)
 	}
 
-	return imds.NewFromConfig(cfg)
+	var optFns []func(*awsconfig.LoadOptions) error
+	if c.logger != nil {
+		optFns = append(optFns, awsconfig.WithLogger(c.logger))
+	}
+
+	cfg, err := loadDefaultConfig(ctx, optFns...)
+	if err != nil {
+		return nil, err
+	}
+
+	if c.maxAttempts != nil || c.maxBackoff != nil {
+		retryer := cfg.Retryer
+		if retryer == nil {
+			retryer = func() aws.Retryer { return retry.NewStandard() }
+		}
+		cfg.Retryer = func() aws.Retryer {
+			r := retryer()
+			if c.maxAttempts != nil {
+				r = retry.AddWithMaxAttempts(r, *c.maxAttempts)
+			}
+			if c.maxBackoff != nil {
+				r = retry.AddWithMaxBackoffDelay(r, *c.maxBackoff)
+			}
+			return r
+		}
+	}
+
+	var imdsOptFns []func(*imds.Options)
+	if c.maxBackoff != nil {
+		imdsOptFns = append(imdsOptFns, func(o *imds.Options) {
+			o.DisableDefaultMaxBackoff = true
+		})
+	}
+
+	return newIMDSClient(cfg, imdsOptFns...), nil
 }
 
 type metadata struct {

@@ -3,7 +3,7 @@
 
 // Package autodetect provides functionality to configures and use a set of
 // resource detectors at runtime.
-package autodetect // import "go.opentelemetry.io/contrib/detectors/autodetect"
+package autodetect
 
 import (
 	"context"
@@ -14,16 +14,40 @@ import (
 
 	"go.opentelemetry.io/otel/sdk/resource"
 
+	"go.opentelemetry.io/contrib/detectors/akamai"
+	alibabaecs "go.opentelemetry.io/contrib/detectors/alibaba/ecs"
 	"go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
 	"go.opentelemetry.io/contrib/detectors/aws/ecs"
 	"go.opentelemetry.io/contrib/detectors/aws/eks"
+	"go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk"
 	"go.opentelemetry.io/contrib/detectors/aws/lambda"
+	"go.opentelemetry.io/contrib/detectors/azure/azureaks"
+	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
+	"go.opentelemetry.io/contrib/detectors/consul"
+	"go.opentelemetry.io/contrib/detectors/docker"
+	"go.opentelemetry.io/contrib/detectors/dynatrace"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
+	"go.opentelemetry.io/contrib/detectors/ibmcloud/classic"
+	"go.opentelemetry.io/contrib/detectors/ibmcloud/vpc"
+	"go.opentelemetry.io/contrib/detectors/k8sapi"
+	"go.opentelemetry.io/contrib/detectors/kubeadm"
+	"go.opentelemetry.io/contrib/detectors/openshift"
+	"go.opentelemetry.io/contrib/detectors/openstack/nova"
+	"go.opentelemetry.io/contrib/detectors/scaleway"
+	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
 var (
+	// IDAkamai is the ID for the Akamai detector that detects resource
+	// attributes on Akamai Connected Cloud compute instances (see
+	// akamai.NewResourceDetector for details).
+	IDAkamai = ID("akamai")
+	// IDAlibabaECS is the ID for the Alibaba Cloud ECS detector that detects
+	// resource attributes on Alibaba Cloud Elastic Compute Service (ECS)
+	// instances (see alibabaecs.NewResourceDetector for details).
+	IDAlibabaECS = ID("alibaba.ecs")
 	// IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
 	// attributes on Amazon Web Services (AWS) EC2 instances (see
 	// ec2.NewResourceDetector for details).
@@ -40,10 +64,30 @@ var (
 	// attributes on Amazon Web Services (AWS) Lambda functions (see
 	// lambda.NewResourceDetector for details).
 	IDAWSLambda = ID("aws.lambda")
+	// IDAWSElasticBeanstalk is the ID for the AWS Elastic Beanstalk detector that detects resource
+	// attributes on Amazon Web Services (AWS) Elastic Beanstalk (see
+	// elasticbeanstalk.NewResourceDetector for details).
+	IDAWSElasticBeanstalk = ID("aws.elasticbeanstalk")
+	// IDAzureAKS is the ID for the Azure Kubernetes Service detector that
+	// detects resource attributes on Microsoft Azure Kubernetes Service (see
+	// azureaks.NewResourceDetector for details).
+	IDAzureAKS = ID("azure.aks")
+	// IDAzureContainerApps is the ID for the Azure Container Apps detector
+	// that detects resource attributes on Microsoft Azure Container Apps (see
+	// azurecontainerapps.NewResourceDetector for details).
+	IDAzureContainerApps = ID("azure.container_apps")
 	// IDAzureVM is the ID for the Azure VM detector that detects resource
 	// attributes on Microsoft Azure virtual machines (see azurevm.New for
 	// details).
 	IDAzureVM = ID("azure.vm")
+	// IDConsul is the ID for the Consul detector that detects resource
+	// attributes from a Consul agent (see consul.NewResourceDetector for
+	// details).
+	IDConsul = ID("consul")
+	// IDDynatrace is the ID for the Dynatrace detector that detects resource
+	// attributes from the enrichment files written by the Dynatrace OneAgent
+	// (see dynatrace.NewResourceDetector for details).
+	IDDynatrace = ID("dynatrace")
 	// IDGCP is the ID for the GCP detector that detects resource attributes on
 	// Google Cloud Platform (GCP) environments (see gcp.NewDetector for
 	// details).
@@ -52,6 +96,38 @@ var (
 	// attributes on Hetzner Cloud servers (see hetzner.NewResourceDetector for
 	// details).
 	IDHetzner = ID("hetzner")
+	// IDIBMCloudClassic is the ID for the IBM Cloud Classic detector that
+	// detects resource attributes on IBM Cloud Classic Infrastructure
+	// (SoftLayer) instances (see classic.NewResourceDetector for details).
+	IDIBMCloudClassic = ID("ibmcloud.classic")
+	// IDIBMCloudVPC is the ID for the IBM Cloud VPC detector that detects
+	// resource attributes on IBM Cloud VPC virtual server instances (see
+	// vpc.NewResourceDetector for details).
+	IDIBMCloudVPC = ID("ibmcloud.vpc")
+	// IDK8sAPI is the ID for the Kubernetes API detector that detects resource
+	// attributes from the Kubernetes API (see k8sapi.NewResourceDetector for
+	// details).
+	IDK8sAPI = ID("k8sapi")
+	// IDKubeadm is the ID for the kubeadm detector that detects resource
+	// attributes of the kubeadm-provisioned Kubernetes cluster the process is
+	// running in (see kubeadm.NewResourceDetector for details).
+	IDKubeadm = ID("kubeadm")
+	// IDOpenShift is the ID for the OpenShift detector that detects resource
+	// attributes of OpenShift 4 clusters (see openshift.NewResourceDetector
+	// for details).
+	IDOpenShift = ID("openshift")
+	// IDOpenStackNova is the ID for the OpenStack Nova detector that detects
+	// resource attributes on OpenStack Nova compute instances (see
+	// nova.NewResourceDetector for details).
+	IDOpenStackNova = ID("openstack.nova")
+	// IDScaleway is the ID for the Scaleway detector that detects resource
+	// attributes on Scaleway Instances (see scaleway.NewResourceDetector for
+	// details).
+	IDScaleway = ID("scaleway")
+	// IDVultr is the ID for the Vultr detector that detects resource attributes
+	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
+	// details).
+	IDVultr = ID("vultr")
 	// IDHost is the ID for the host detector. This detector detects the
 	// "host.name" attribute from the os.Hostname function.
 	IDHost = ID("host")
@@ -118,23 +194,52 @@ var (
 	// identifying the container in which the process is running, especially in
 	// containerized environments like Kubernetes or Docker.
 	IDContainer = ID("container")
+	// IDDocker is the ID for the Docker detector that detects resource
+	// attributes on Docker containers (see docker.NewResourceDetector for
+	// details).
+	IDDocker = ID("docker")
 )
 
 var (
 	registryMu sync.Mutex
 	registry   = map[ID]func() resource.Detector{
-		IDAWSEC2:    ec2.NewResourceDetector,
-		IDAWSECS:    ecs.NewResourceDetector,
-		IDAWSEKS:    eks.NewResourceDetector,
-		IDAWSLambda: lambda.NewResourceDetector,
+		IDAkamai:     func() resource.Detector { return akamai.NewResourceDetector() },
+		IDAlibabaECS: func() resource.Detector { return alibabaecs.NewResourceDetector() },
+
+		IDAWSEC2:              ec2.NewResourceDetector,
+		IDAWSECS:              ecs.NewResourceDetector,
+		IDAWSEKS:              eks.NewResourceDetector,
+		IDAWSLambda:           func() resource.Detector { return lambda.NewResourceDetector() },
+		IDAWSElasticBeanstalk: func() resource.Detector { return elasticbeanstalk.NewResourceDetector() },
+
+		IDAzureAKS: func() resource.Detector { return azureaks.NewResourceDetector() },
+
+		IDAzureContainerApps: func() resource.Detector { return azurecontainerapps.NewResourceDetector() },
 
 		IDAzureVM: func() resource.Detector {
 			return azurevm.New()
 		},
 
+		IDConsul:    func() resource.Detector { return consul.NewResourceDetector() },
+		IDDynatrace: func() resource.Detector { return dynatrace.NewResourceDetector() },
+
 		IDGCP: gcp.NewDetector,
 
 		IDHetzner: func() resource.Detector { return hetzner.NewResourceDetector() },
+
+		IDIBMCloudClassic: func() resource.Detector { return classic.NewResourceDetector() },
+
+		IDIBMCloudVPC: func() resource.Detector { return vpc.NewResourceDetector() },
+
+		IDK8sAPI: func() resource.Detector { return k8sapi.NewResourceDetector() },
+
+		IDKubeadm:       func() resource.Detector { return kubeadm.NewResourceDetector() },
+		IDOpenShift:     func() resource.Detector { return openshift.NewResourceDetector() },
+		IDOpenStackNova: func() resource.Detector { return nova.NewResourceDetector() },
+
+		IDScaleway: func() resource.Detector { return scaleway.NewResourceDetector() },
+
+		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 
 		IDHost:   optFactory(resource.WithHost()),
 		IDHostID: optFactory(resource.WithHostID()),
@@ -154,6 +259,8 @@ var (
 		IDProcessRuntimeDescription: optFactory(resource.WithProcessRuntimeDescription()),
 
 		IDContainer: optFactory(resource.WithContainer()),
+
+		IDDocker: func() resource.Detector { return docker.NewResourceDetector() },
 	}
 )
 

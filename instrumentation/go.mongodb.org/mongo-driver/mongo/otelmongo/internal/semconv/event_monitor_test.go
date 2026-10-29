@@ -13,7 +13,7 @@ import (
 	"go.mongodb.org/mongo-driver/event"
 	"go.opentelemetry.io/otel/attribute"
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 func TestNewEventMonitor(t *testing.T) {
@@ -54,6 +54,12 @@ func TestPeerInfo(t *testing.T) {
 	}{
 		{"No Port", "localhost", "localhost", 27017},
 		{"With Port", "localhost:12345", "localhost", 12345},
+		{"IPv4 with port and connection number", "10.0.0.1:27017[-13]", "10.0.0.1", 27017},
+		{"IPv4 without port and connection number", "127.0.0.1[-3]", "127.0.0.1", 27017},
+		{"IPv6 with port and connection number", "[::1]:27019[-42]", "::1", 27019},
+		{"IPv6 without port with square brackets and connection number", "[::1][-5]", "[::1]", 27017},
+		{"Hostname with port and connection number", "example.com:27020[-1708]", "example.com", 27020},
+		{"Hostname without port and connection number", "example.com[-99]", "example.com", 27017},
 	}
 
 	for _, tt := range tests {

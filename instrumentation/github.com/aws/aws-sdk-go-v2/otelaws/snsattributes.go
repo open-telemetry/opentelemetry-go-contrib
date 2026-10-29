@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelaws // import "go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws"
+package otelaws
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns"
 	"github.com/aws/smithy-go/middleware"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.40.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // SNSAttributeBuilder sets SNS specific attributes depending on the SNS operation is being performed.
@@ -26,6 +26,9 @@ func SNSAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ mid
 			semconv.MessagingOperationName("publish_batch_input"),
 			semconv.MessagingBatchMessageCount(len(v.PublishBatchRequestEntries)),
 		)
+		if v.TopicArn != nil && *v.TopicArn != "" {
+			snsAttributes = append(snsAttributes, semconv.AWSSNSTopicARN(*v.TopicArn))
+		}
 	case *sns.PublishInput:
 		snsAttributes = append(
 			snsAttributes,
@@ -33,6 +36,9 @@ func SNSAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ mid
 			semconv.MessagingOperationTypeSend,
 			semconv.MessagingOperationName("publish_input"),
 		)
+		if v.TopicArn != nil && *v.TopicArn != "" {
+			snsAttributes = append(snsAttributes, semconv.AWSSNSTopicARN(*v.TopicArn))
+		}
 	}
 
 	return snsAttributes

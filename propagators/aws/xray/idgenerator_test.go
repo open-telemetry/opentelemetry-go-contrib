@@ -5,7 +5,10 @@ package xray
 
 import (
 	"bytes"
+	crand "crypto/rand"
+	"errors"
 	"strconv"
+	"sync"
 	"testing"
 	"time"
 
@@ -87,4 +90,64 @@ func TestSpanIDIsNotNil(t *testing.T) {
 
 	assert.False(t, bytes.Equal(spanID1[:], nilSpanID[:]), "SpanID cannot be empty.")
 	assert.False(t, bytes.Equal(spanID2[:], nilSpanID[:]), "SpanID cannot be empty.")
+}
+
+// failingReader stands in for a crypto/rand.Reader that always errors.
+type failingReader struct{}
+
+func (failingReader) Read([]byte) (int, error) {
+	return 0, errors.New("read failed")
+}
+
+// TestIDGeneratorSeedReadFailure is the regression test for the bug this
+// package originally had: NewIDGenerator seeded a per-instance math/rand.Rand
+// from crypto/rand and discarded the read error, so a failing read left every
+// generator seeded with 0 and emitting an identical, predictable ID sequence.
+//
+// ID generation no longer consults crypto/rand at all, so independently
+// constructed generators must still diverge while that read would fail.
+func TestIDGeneratorSeedReadFailure(t *testing.T) {
+	orig := crand.Reader
+	t.Cleanup(func() { crand.Reader = orig })
+	crand.Reader = failingReader{}
+
+	ctx := t.Context()
+	traceID1, spanID1 := NewIDGenerator().NewIDs(ctx)
+	traceID2, spanID2 := NewIDGenerator().NewIDs(ctx)
+
+	assert.NotEqual(t, traceID1, traceID2, "TraceIDs must not repeat when the crypto/rand seed read fails")
+	assert.NotEqual(t, spanID1, spanID2, "SpanIDs must not repeat when the crypto/rand seed read fails")
+}
+
+// TestIDGeneratorLockUnlockCompat guards against removing the embedded
+// sync.Mutex, which is unused internally but kept so IDGenerator.Lock,
+// Unlock, and TryLock remain part of the public API for existing callers.
+func TestIDGeneratorLockUnlockCompat(t *testing.T) {
+	idg := NewIDGenerator()
+
+	idg.Lock()
+	stillLocked := !idg.TryLock()
+	idg.Unlock()
+
+	assert.True(t, stillLocked, "TryLock should fail while the mutex is held")
+}
+
+// TestIDGeneratorConcurrentUse guards against reintroducing a shared,
+// unsynchronized random source: IDGenerator no longer holds a mutex, so this
+// only stays safe as long as ID generation goes through math/rand/v2's
+// top-level functions, which are documented as safe for concurrent use.
+// Run with -race to catch a regression.
+func TestIDGeneratorConcurrentUse(t *testing.T) {
+	idg := NewIDGenerator()
+	ctx := t.Context()
+
+	var wg sync.WaitGroup
+	for range 50 {
+		wg.Go(func() {
+			traceID, spanID := idg.NewIDs(ctx)
+			_ = idg.NewSpanID(ctx, traceID)
+			_ = spanID
+		})
+	}
+	wg.Wait()
 }

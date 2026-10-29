@@ -3,7 +3,7 @@
 
 // Package filters provides a set of filters useful with the
 // otelhttp.WithFilter() option to control which inbound requests are traced.
-package filters // import "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/filters"
+package filters
 
 import (
 	"net/http"
@@ -109,5 +109,13 @@ func QueryContains(k, v string) otelhttp.Filter {
 func Method(m string) otelhttp.Filter {
 	return func(r *http.Request) bool {
 		return m == r.Method
+	}
+}
+
+// Methods returns a Filter that returns true if the request
+// method matches any of the provided values ms.
+func Methods(ms ...string) otelhttp.Filter {
+	return func(r *http.Request) bool {
+		return slices.Contains(ms, r.Method)
 	}
 }

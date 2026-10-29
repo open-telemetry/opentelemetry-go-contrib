@@ -1,12 +1,13 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-package otelconf // import "go.opentelemetry.io/contrib/otelconf/v0.3.0"
+package otelconf
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"time"
 
@@ -173,9 +174,14 @@ func otlpGRPCLogExporter(ctx context.Context, otlpConfig *OTLP) (sdklog.Exporter
 	var opts []otlploggrpc.Option
 
 	if otlpConfig.Endpoint != nil {
-		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
+		endpoint := *otlpConfig.Endpoint
+		u, err := url.ParseRequestURI(endpoint)
 		if err != nil {
-			return nil, err
+			if _, _, splitErr := net.SplitHostPort(endpoint); splitErr != nil {
+				return nil, err
+			}
+
+			u = &url.URL{Host: endpoint}
 		}
 		// ParseRequestURI leaves the Host field empty when no
 		// scheme is specified (i.e. localhost:4317). This check is

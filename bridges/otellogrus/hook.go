@@ -11,7 +11,7 @@
 // the following way:
 //
 //   - Time is set as the Timestamp.
-//   - Message is set as the Body using a [log.StringValue].
+//   - Message is set as the Body using an [attribute.StringValue].
 //   - Level is transformed and set as the Severity. The SeverityText is also set.
 //   - Fields are transformed and set as the attributes.
 //   - A field with key [logrus.ErrorKey] and an [error] value is set using
@@ -31,13 +31,15 @@
 // into a string value encoded using [fmt.Sprintf] if there is no matching type.
 //
 // [OpenTelemetry]: https://opentelemetry.io/docs/concepts/signals/logs/
-package otellogrus // import "go.opentelemetry.io/contrib/bridges/otellogrus"
+package otellogrus
 
 import (
+	"context"
+
 	"github.com/sirupsen/logrus"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/global"
 )
 
 type config struct {
@@ -56,7 +58,7 @@ func newConfig(options []Option) config {
 	}
 
 	if c.provider == nil {
-		c.provider = global.GetLoggerProvider()
+		c.provider = otel.GetLoggerProvider()
 	}
 
 	if c.levels == nil {
@@ -169,6 +171,9 @@ func (h *Hook) Levels() []logrus.Level {
 // Fire handles the passed record, and sends it to OpenTelemetry.
 func (h *Hook) Fire(entry *logrus.Entry) error {
 	ctx := entry.Context
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	h.logger.Emit(ctx, h.convertEntry(entry))
 	return nil
 }
@@ -176,7 +181,7 @@ func (h *Hook) Fire(entry *logrus.Entry) error {
 func (*Hook) convertEntry(e *logrus.Entry) log.Record {
 	var record log.Record
 	record.SetTimestamp(e.Time)
-	record.SetBody(log.StringValue(e.Message))
+	record.SetBody(attribute.StringValue(e.Message))
 	record.SetSeverity(convertSeverity(e.Level))
 	record.SetSeverityText(e.Level.String())
 
@@ -189,9 +194,9 @@ func (*Hook) convertEntry(e *logrus.Entry) log.Record {
 	return record
 }
 
-func convertFields(fields logrus.Fields) ([]log.KeyValue, error) {
+func convertFields(fields logrus.Fields) ([]attribute.KeyValue, error) {
 	var errVal error
-	kvs := make([]log.KeyValue, 0, len(fields))
+	kvs := make([]attribute.KeyValue, 0, len(fields))
 	for k, v := range fields {
 		if k == logrus.ErrorKey {
 			if e, ok := v.(error); ok {
@@ -199,8 +204,8 @@ func convertFields(fields logrus.Fields) ([]log.KeyValue, error) {
 				continue
 			}
 		}
-		kvs = append(kvs, log.KeyValue{
-			Key:   k,
+		kvs = append(kvs, attribute.KeyValue{
+			Key:   attribute.Key(k),
 			Value: convertValue(v),
 		})
 	}

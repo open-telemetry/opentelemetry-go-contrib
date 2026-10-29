@@ -14,8 +14,10 @@ repo for information on this and other language SIGs.
 See the [public meeting
 notes](https://docs.google.com/document/d/1E5e7Ld0NuU1iVvf-42tOBpu2VBBLYnh73GJuITGJTTU/edit)
 for a summary description of past meetings. To request edit access,
-join the meeting or get in touch on
-[Slack](https://cloud-native.slack.com/archives/C01NPAXACKT).
+join the meeting or get in touch on the
+[#otel-go](https://cloud-native.slack.com/archives/C01NPAXACKT)
+channel on CNCF Slack. If you are new to the CNCF Slack community,
+you can [create an account](https://slack.cncf.io/).
 
 The meeting is open for all to join. We invite everyone to join our
 meeting, regardless of your experience level. Whether you're a
@@ -142,23 +144,25 @@ For more information about the maintainer role, see the [community repository](h
 
 ### Approvers
 
-- [Flc](https://github.com/flc1125), Independent
+- [Puneet Singh](https://github.com/ps-mir), Independent
 
 For more information about the approver role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#approver).
 
 ### Triagers
 
-- [Alex Kats](https://github.com/akats7), Capital One
+- [Marc Schäfer](https://github.com/marcschaeferger), T&A SYSTEME GmbH
 
 For more information about the triager role, see the [community repository](https://github.com/open-telemetry/community/blob/main/guides/contributor/membership.md#triager).
 
 ### Emeritus
 
 - [Aaron Clawson](https://github.com/MadVikingGod)
+- [Alex Kats](https://github.com/akats7)
 - [Anthony Mirabella](https://github.com/Aneurysm9)
 - [Chester Cheung](https://github.com/hanyuancheung)
 - [Cheng-Zhen Yang](https://github.com/scorpionknifes)
 - [Evan Torrie](https://github.com/evantorrie)
+- [Flc゛](https://github.com/flc1125)
 - [Gustavo Silva Paiva](https://github.com/paivagustavo)
 - [Josh MacDonald](https://github.com/jmacd)
 
