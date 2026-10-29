@@ -282,6 +282,42 @@ func TestProduce(t *testing.T) {
 			}},
 		},
 		{
+			name: "histogram with only +Inf bucket",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
+					Name:    "test_histogram_metric",
+					Help:    "A histogram metric for testing",
+					Buckets: []float64{math.Inf(1)},
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+				metric.Observe(578.3)
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A histogram metric for testing",
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Count:      1,
+									Sum:        578.3,
+									Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
 			name: "histogram cumulative values to non-cumulative",
 			testFn: func(reg *prometheus.Registry) {
 				metric := prometheus.NewHistogram(prometheus.HistogramOpts{

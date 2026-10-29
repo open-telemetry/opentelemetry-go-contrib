@@ -369,7 +369,7 @@ func convertHistogram(metricName string, metrics []*dto.Metric, now time.Time) (
 		// The OpenTelemetry Prometheus and OpenMetrics Compatibility Specification requires:
 		// "Traditional Prometheus Histograms (with explicit bucket boundaries) MUST be converted to an OTLP Histogram."
 		// Non-matching exponential histogram datapoints lacking explicit buckets must be rejected.
-		if len(m.GetHistogram().GetBucket()) == 0 {
+		if isExponentialHistogram(m.GetHistogram()) && len(m.GetHistogram().GetBucket()) == 0 {
 			errs = append(errs, fmt.Errorf("%w: missing histogram buckets for metric %v", errInvalidHistogram, metricName))
 			continue
 		}
