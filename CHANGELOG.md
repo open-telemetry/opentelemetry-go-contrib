@@ -45,7 +45,6 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Reduce heap allocations and latency during context injection in `go.opentelemetry.io/contrib/propagators/aws/xray`. (#9938)
 - Reduce allocations during context injection in `go.opentelemetry.io/contrib/propagators/jaeger`. (#9918)
 - Support build tags to omit resource detectors in `go.opentelemetry.io/contrib/otelconf/x`. (#9818)
-- Unexport the concrete Transport type in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, while retaining NewTransport as the public constructor. (#9955)
 - `NewResourceDetector` in `go.opentelemetry.io/contrib/detectors/aws/lambda` returns the exported concrete type `*ResourceDetector` instead of `resource.Detector`. (#9606)
 - Remove the deprecation notice from `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9881)
 - Add `ReadFrom` support to the internal response writer wrapper template shared by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to track copied bytes and the last non-nil error. (#9804)
@@ -105,6 +104,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Remove the deprecated runtime metrics and the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS` environment variable in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10060)
 - Remove support for the `rpc/old` and `rpc/dup` values of `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#9908)
+
+### Removed
+
+- Unexport the concrete Transport type in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, while retaining NewTransport as the public constructor. (#9955)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
