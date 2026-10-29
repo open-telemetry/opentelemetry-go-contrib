@@ -29,7 +29,7 @@ const (
 
 var (
 	errUnsupportedType  = errors.New("unsupported metric type")
-	errInvalidHistogram = errors.New("invalid exponential histogram")
+	errInvalidHistogram = errors.New("invalid histogram")
 	processStartTime    = time.Now()
 )
 
@@ -104,8 +104,19 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 		case dto.MetricType_SUMMARY:
 			newMetric.Data = convertSummary(pm.GetMetric(), now)
 		case dto.MetricType_HISTOGRAM:
-			if isExponentialHistogram(pm.GetMetric()[0].GetHistogram()) {
-				data, err := convertExponentialHistogram(pm.GetName(), pm.GetMetric(), now)
+			var validMetrics []*dto.Metric
+			for _, m := range pm.GetMetric() {
+				if err := validateHistogram(pm.GetName(), m.GetHistogram()); err != nil {
+					errs = append(errs, err)
+					continue
+				}
+				validMetrics = append(validMetrics, m)
+			}
+			if len(validMetrics) == 0 {
+				continue
+			}
+			if isExponentialHistogram(validMetrics[0].GetHistogram()) {
+				data, err := convertExponentialHistogram(pm.GetName(), validMetrics, now)
 				if err != nil {
 					errs = append(errs, err)
 				}
@@ -114,7 +125,14 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 				}
 				newMetric.Data = data
 			} else {
-				newMetric.Data = convertHistogram(pm.GetMetric(), now)
+				data, err := convertHistogram(pm.GetName(), validMetrics, now)
+				if err != nil {
+					errs = append(errs, err)
+				}
+				if len(data.DataPoints) == 0 {
+					continue
+				}
+				newMetric.Data = data
 			}
 		default:
 			// MetricType_GAUGE_HISTOGRAM
@@ -124,6 +142,18 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 		otelMetrics = append(otelMetrics, newMetric)
 	}
 	return otelMetrics, errs.errOrNil()
+}
+
+func validateHistogram(metricName string, hist *dto.Histogram) error {
+	// The OpenTelemetry Prometheus and OpenMetrics Compatibility Specification requires:
+	// "Native histograms of the float or gauge flavors MUST be dropped."
+	if isFloatHistogram(hist) {
+		return fmt.Errorf("%w: float histogram for metric %v", errUnsupportedType, metricName)
+	}
+	if schema := hist.GetSchema(); schema < -4 || schema > 8 {
+		return fmt.Errorf("%w: schema %d for metric %v", errUnsupportedType, schema, metricName)
+	}
+	return nil
 }
 
 func isExponentialHistogram(hist *dto.Histogram) bool {
@@ -216,12 +246,16 @@ func convertExponentialHistogram(metricName string, metrics []*dto.Metric, now t
 	}
 	for _, m := range metrics {
 		hist := m.GetHistogram()
-		if isFloatHistogram(hist) {
-			errs = append(errs, fmt.Errorf("%w: float histogram for metric %v", errUnsupportedType, metricName))
+		if err := validateHistogram(metricName, hist); err != nil {
+			errs = append(errs, err)
 			continue
 		}
-		if schema := hist.GetSchema(); schema < -4 || schema > 8 {
-			errs = append(errs, fmt.Errorf("%w: schema %d for metric %v", errUnsupportedType, schema, metricName))
+		// The OpenTelemetry Prometheus and OpenMetrics Compatibility Specification requires:
+		// "A Prometheus Native Histogram with a standard exponential schema (schemas -4 to 8)
+		// of the integer and counter flavor MUST be converted to an OTLP Exponential Histogram."
+		// Non-matching classic histogram datapoints in an exponential family must be rejected.
+		if !isExponentialHistogram(hist) {
+			errs = append(errs, fmt.Errorf("%w: missing exponential histogram buckets for metric %v", errInvalidHistogram, metricName))
 			continue
 		}
 		positiveBucket, err := convertExponentialBuckets(
@@ -325,12 +359,20 @@ func convertExponentialBuckets(bucketSpans []*dto.BucketSpan, deltas []int64) (m
 	}, nil
 }
 
-func convertHistogram(metrics []*dto.Metric, now time.Time) metricdata.Histogram[float64] {
+func convertHistogram(metricName string, metrics []*dto.Metric, now time.Time) (metricdata.Histogram[float64], error) {
+	var errs multierr
 	otelHistogram := metricdata.Histogram[float64]{
-		DataPoints:  make([]metricdata.HistogramDataPoint[float64], len(metrics)),
+		DataPoints:  make([]metricdata.HistogramDataPoint[float64], 0, len(metrics)),
 		Temporality: metricdata.CumulativeTemporality,
 	}
-	for i, m := range metrics {
+	for _, m := range metrics {
+		// The OpenTelemetry Prometheus and OpenMetrics Compatibility Specification requires:
+		// "Traditional Prometheus Histograms (with explicit bucket boundaries) MUST be converted to an OTLP Histogram."
+		// Non-matching exponential histogram datapoints lacking explicit buckets must be rejected.
+		if len(m.GetHistogram().GetBucket()) == 0 {
+			errs = append(errs, fmt.Errorf("%w: missing histogram buckets for metric %v", errInvalidHistogram, metricName))
+			continue
+		}
 		bounds, bucketCounts, exemplars := convertBuckets(m.GetHistogram().GetBucket(), m.GetHistogram().GetSampleCount())
 		dp := metricdata.HistogramDataPoint[float64]{
 			Attributes:   convertLabels(m.GetLabel()),
@@ -349,9 +391,9 @@ func convertHistogram(metrics []*dto.Metric, now time.Time) metricdata.Histogram
 		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
-		otelHistogram.DataPoints[i] = dp
+		otelHistogram.DataPoints = append(otelHistogram.DataPoints, dp)
 	}
-	return otelHistogram
+	return otelHistogram, errs.errOrNil()
 }
 
 func convertBuckets(buckets []*dto.Bucket, sampleCount uint64) ([]float64, []uint64, []metricdata.Exemplar[float64]) {
