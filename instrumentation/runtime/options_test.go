@@ -36,6 +36,11 @@ func TestNewConfig(t *testing.T) {
 			expect: config{MinimumRefreshInterval: 10 * time.Second},
 		},
 		{
+			name:   "zero MinimumReadMemStatsInterval ignored",
+			opts:   []Option{WithMinimumReadMemStatsInterval(0)},
+			expect: config{MinimumRefreshInterval: 15 * time.Second},
+		},
+		{
 			name:   "negative MinimumReadMemStatsInterval ignored",
 			opts:   []Option{WithMinimumReadMemStatsInterval(-1 * time.Second)},
 			expect: config{MinimumRefreshInterval: 15 * time.Second},
