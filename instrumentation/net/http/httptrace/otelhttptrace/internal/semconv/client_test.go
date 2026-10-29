@@ -19,6 +19,7 @@ import (
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 )
 
 func TestHTTPClientStatus(t *testing.T) {
@@ -199,6 +200,55 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := HTTPClient{}.MetricAttributes(tt.req, tt.resp, tt.statusCode, tt.additionalAttributes)
 			tt.wantFunc(t, got)
+		})
+	}
+}
+
+func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
+	tests := []struct {
+		name   string
+		method string
+		url    string
+		want   []attribute.KeyValue
+	}{
+		{
+			name:   "default port",
+			method: http.MethodGet,
+			url:    "https://example.com/path?query=test",
+			want: []attribute.KeyValue{
+				attribute.String("http.request.method", "GET"),
+				attribute.String("server.address", "example.com"),
+			},
+		},
+		{
+			name:   "custom port",
+			method: http.MethodPost,
+			url:    "http://example.com:8080/path",
+			want: []attribute.KeyValue{
+				attribute.String("http.request.method", "POST"),
+				attribute.String("server.address", "example.com"),
+				attribute.Int("server.port", 8080),
+			},
+		},
+		{
+			name:   "unknown method",
+			method: "CUSTOM",
+			url:    "http://example.com/path",
+			want: []attribute.KeyValue{
+				attribute.String("http.request.method", "_OTHER"),
+				attribute.String("server.address", "example.com"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req, err := http.NewRequestWithContext(t.Context(), tt.method, tt.url, http.NoBody)
+			require.NoError(t, err)
+
+			opt := HTTPClient{}.ActiveRequestsOption(req)
+			got := metric.NewAddConfig([]metric.AddOption{opt}).Attributes()
+			assert.ElementsMatch(t, tt.want, got.ToSlice())
 		})
 	}
 }

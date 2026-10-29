@@ -1580,6 +1580,100 @@ func TestTransportFilterPassThrough(t *testing.T) {
 	assert.Empty(t, rm.ScopeMetrics)
 }
 
+func TestTransportActiveRequests(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.active_requests")
+
+	attrs := attribute.NewSet(
+		attribute.String("http.request.method", "GET"),
+		attribute.String("server.address", "example.com"),
+		attribute.Int("server.port", 8080),
+	)
+
+	for _, tc := range []struct {
+		name string
+		err  error
+	}{
+		{name: "response"},
+		{name: "error", err: errors.New("connection refused")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reader := sdkmetric.NewManualReader()
+			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			tr := NewTransport(roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+				assertActiveRequests(t, reader, attrs, 1)
+				if tc.err != nil {
+					return nil, tc.err
+				}
+				return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody, Request: r}, nil
+			}), WithMeterProvider(meterProvider))
+
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com:8080/path", http.NoBody)
+			require.NoError(t, err)
+
+			resp, err := tr.RoundTrip(req)
+			if tc.err != nil {
+				require.ErrorIs(t, err, tc.err)
+			} else {
+				require.NoError(t, err)
+				require.NoError(t, resp.Body.Close())
+			}
+
+			assertActiveRequests(t, reader, attrs, 0)
+		})
+	}
+}
+
+func TestTransportActiveRequestsDisabled(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	tr := NewTransport(http.DefaultTransport, WithMeterProvider(meterProvider))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := (&http.Client{Transport: tr}).Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		assert.NotEqual(t, "http.client.active_requests", m.Name)
+	}
+}
+
+func assertActiveRequests(t *testing.T, reader *sdkmetric.ManualReader, attrs attribute.Set, value int64) {
+	t.Helper()
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	want := metricdata.Metrics{
+		Name:        "http.client.active_requests",
+		Description: "Number of active HTTP requests.",
+		Unit:        "{request}",
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: value}},
+		},
+	}
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == want.Name {
+			metricdatatest.AssertEqual(t, want, m, metricdatatest.IgnoreTimestamp())
+			return
+		}
+	}
+	t.Fatalf("metric %q not found", want.Name)
+}
+
 func TestRequestTrackerGetBody(t *testing.T) {
 	newTrackedRequest := func(t *testing.T, getBody func() (io.ReadCloser, error)) (*http.Request, *requestTracker) {
 		t.Helper()

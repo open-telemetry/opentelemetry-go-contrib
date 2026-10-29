@@ -18,9 +18,11 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/httpconv"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/x"
 )
 
 // Transport implements the http.RoundTripper interface and wraps
@@ -36,7 +38,8 @@ type Transport struct {
 	clientTrace        func(context.Context) *httptrace.ClientTrace
 	metricAttributesFn func(*http.Request) []attribute.KeyValue
 
-	semconv semconv.HTTPClient
+	semconv              semconv.HTTPClient
+	recordActiveRequests bool
 }
 
 var _ http.RoundTripper = &Transport{}
@@ -75,6 +78,7 @@ func (t *Transport) applyConfig(c *config) {
 	t.spanNameFormatter = c.SpanNameFormatter
 	t.clientTrace = c.ClientTrace
 	t.semconv = semconv.NewHTTPClient(c.Meter)
+	t.recordActiveRequests = x.OptInMetrics.Enabled(httpconv.ClientActiveRequests{}.Name())
 	t.metricAttributesFn = c.MetricAttributesFn
 }
 
@@ -279,6 +283,12 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 
 	span.SetAttributes(t.semconv.RequestTraceAttrs(r)...)
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
+
+	if t.recordActiveRequests {
+		opt := t.semconv.ActiveRequestsOption(r)
+		t.semconv.AddActiveRequests(ctx, 1, opt)
+		defer t.semconv.AddActiveRequests(ctx, -1, opt)
+	}
 
 	res, err := t.rt.RoundTrip(r)
 	if err == nil {

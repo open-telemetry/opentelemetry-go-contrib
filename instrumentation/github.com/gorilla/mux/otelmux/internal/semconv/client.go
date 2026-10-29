@@ -28,6 +28,7 @@ import (
 type HTTPClient struct {
 	requestBodySize httpconv.ClientRequestBodySize
 	requestDuration httpconv.ClientRequestDuration
+	activeRequests  httpconv.ClientActiveRequests
 }
 
 func NewHTTPClient(meter metric.Meter) HTTPClient {
@@ -41,6 +42,9 @@ func NewHTTPClient(meter metric.Meter) HTTPClient {
 		meter,
 		metric.WithExplicitBucketBoundaries(0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10),
 	)
+	handleErr(err)
+
+	client.activeRequests, err = httpconv.NewClientActiveRequests(meter)
 	handleErr(err)
 
 	return client
@@ -414,6 +418,42 @@ func (n HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts Metri
 
 	n.requestBodySize.Inst().Record(ctx, md.RequestSize, *recordOpts...)
 	n.requestDuration.Inst().Record(ctx, durationToSeconds(md.RequestDuration), *recordOpts...)
+}
+
+// ActiveRequestsOption returns the attributes of the
+// http.client.active_requests metric for req. The same option must be passed
+// to both the increment and the decrement of a request.
+func (HTTPClient) ActiveRequestsOption(req *http.Request) metric.AddOption {
+	var h string
+	if req.URL != nil {
+		h = req.URL.Host
+	}
+	var requestHost string
+	var requestPort int
+	for _, hostport := range []string{h, req.Header.Get("Host")} {
+		requestHost, requestPort = SplitHostPort(hostport)
+		if requestHost != "" || requestPort > 0 {
+			break
+		}
+	}
+
+	attributes := make([]attribute.KeyValue, 0, 3)
+	attributes = append(
+		attributes,
+		semconv.HTTPRequestMethodKey.String(standardizeHTTPMethod(req.Method)),
+		semconv.ServerAddress(requestHost),
+	)
+	// Omit default ports as MetricAttributes does, so the attributes match
+	// those of the other client metrics.
+	if port := requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", requestPort); port > 0 {
+		attributes = append(attributes, semconv.ServerPort(port))
+	}
+	return metric.WithAttributeSet(attribute.NewSet(attributes...))
+}
+
+// AddActiveRequests adds incr to the http.client.active_requests metric.
+func (n HTTPClient) AddActiveRequests(ctx context.Context, incr int64, opt metric.AddOption) {
+	n.activeRequests.Inst().Add(ctx, incr, opt)
 }
 
 // TraceAttributes returns attributes for httptrace.
