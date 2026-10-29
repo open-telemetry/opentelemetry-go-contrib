@@ -109,7 +109,10 @@ func (ssm *SpanProcessor) spansPerMethod() map[string]*perMethodSummary {
 			pms.activeSpans++
 			return true
 		}
-		out[span.Name()] = &perMethodSummary{activeSpans: 1}
+		out[span.Name()] = &perMethodSummary{
+			activeSpans:  1,
+			latencySpans: make([]int, defaultBoundaries.numBuckets()),
+		}
 		return true
 	})
 	return out
