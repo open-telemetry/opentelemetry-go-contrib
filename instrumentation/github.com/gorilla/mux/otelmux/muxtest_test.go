@@ -4,7 +4,9 @@
 package otelmux_test
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -20,6 +22,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
@@ -606,4 +609,283 @@ func setDefaultName(method, path string) string {
 
 func ensurePrefix(prefix, s string) bool {
 	return strings.HasPrefix(s, prefix)
+}
+
+// testError has a distinct ErrorType() to tell which cause was selected.
+type testError string
+
+func (e testError) Error() string     { return string(e) }
+func (e testError) ErrorType() string { return string(e) }
+
+// failingWriter is a ResponseWriter whose non-empty body writes fail.
+type failingWriter struct {
+	*httptest.ResponseRecorder
+	err error
+}
+
+func (w failingWriter) Write(p []byte) (int, error) {
+	if len(p) == 0 {
+		return 0, nil
+	}
+	return 0, w.err
+}
+
+func (w failingWriter) ReadFrom(io.Reader) (int64, error) { return 0, w.err }
+
+// failingBody is a request body whose reads fail.
+type failingBody struct{ err error }
+
+func (b failingBody) Read([]byte) (int, error) { return 0, b.err }
+func (failingBody) Close() error               { return nil }
+
+func errorType(err error) string {
+	return semconv.ErrorType(err).Value.AsString()
+}
+
+// newTestHandler serves h at /user/{id} behind the middleware and returns the
+// recorded telemetry.
+func newTestHandler(
+	h http.HandlerFunc,
+	opts ...otelmux.Option,
+) (http.Handler, *tracetest.SpanRecorder, sdkmetric.Reader) {
+	sr := tracetest.NewSpanRecorder()
+	reader := sdkmetric.NewManualReader()
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware("foobar", append([]otelmux.Option{
+		otelmux.WithTracerProvider(sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))),
+		otelmux.WithMeterProvider(sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))),
+	}, opts...)...))
+	router.HandleFunc("/user/{id}", h)
+	return router, sr, reader
+}
+
+// TestClientDisconnect verifies that a client disconnect is recorded as the
+// cause, not the 500 the handler writes afterwards.
+func TestClientDisconnect(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	router, sr, reader := newTestHandler(func(w http.ResponseWriter, r *http.Request) {
+		cancel()
+		<-r.Context().Done()
+		w.WriteHeader(http.StatusInternalServerError)
+	})
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, srv.URL+"/user/123", http.NoBody)
+	require.NoError(t, err)
+	resp, err := srv.Client().Do(req)
+	if err == nil {
+		_ = resp.Body.Close()
+	}
+	require.ErrorIs(t, err, context.Canceled)
+	// Close waits for the handler, so the span has ended.
+	srv.Close()
+
+	require.Len(t, sr.Ended(), 1)
+	span := sr.Ended()[0]
+	assert.Equal(t, codes.Error, span.Status().Code)
+	assert.Equal(t, context.Canceled.Error(), span.Status().Description)
+	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusInternalServerError))
+	assertErrorType(t, attribute.NewSet(span.Attributes()...), errorType(context.Canceled))
+	assertMetricErrorType(t, reader, errorType(context.Canceled))
+}
+
+// TestErrorType verifies that a detected cause wins over the status code, in
+// priority order: write error, read error, context error.
+func TestErrorType(t *testing.T) {
+	errWrite := testError("write_error")
+	errRead := testError("read_error")
+	wrappedEOF := fmt.Errorf("upload failed: %w", io.EOF)
+
+	testCases := []struct {
+		name          string
+		status        int
+		writeErr      error
+		bodyErr       error
+		body          io.Reader
+		cancelCtx     bool
+		wantErrorType string
+	}{
+		{name: "200", status: http.StatusOK},
+		{name: "400", status: http.StatusBadRequest},
+		{name: "500", status: http.StatusInternalServerError, wantErrorType: "500"},
+		// Codes >= 600 are invalid and marked as errors by Status.
+		{name: "600", status: 600, wantErrorType: "600"},
+		{name: "write error", status: http.StatusOK, writeErr: errWrite, wantErrorType: "write_error"},
+		{name: "read error", status: http.StatusOK, bodyErr: errRead, wantErrorType: "read_error"},
+		{name: "wrapped EOF is read error", status: http.StatusOK, bodyErr: wrappedEOF, wantErrorType: errorType(wrappedEOF)},
+		// A fully read body leaves io.EOF as the last read error.
+		{name: "body fully read", status: http.StatusOK, body: strings.NewReader("hello")},
+		{name: "context canceled", status: http.StatusOK, cancelCtx: true, wantErrorType: errorType(context.Canceled)},
+		{name: "cause wins over 5xx", status: http.StatusInternalServerError, writeErr: errWrite, wantErrorType: "write_error"},
+		{name: "write over read", status: http.StatusOK, writeErr: errWrite, bodyErr: errRead, wantErrorType: "write_error"},
+		{name: "write over context", status: http.StatusOK, writeErr: errWrite, cancelCtx: true, wantErrorType: "write_error"},
+		{name: "read over context", status: http.StatusOK, bodyErr: errRead, cancelCtx: true, wantErrorType: "read_error"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			router, sr, reader := newTestHandler(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = io.ReadAll(r.Body)
+				w.WriteHeader(tc.status)
+				_, _ = w.Write([]byte("payload"))
+				// Succeeds after a failed write; must not clear that error.
+				_, _ = w.Write(nil)
+			})
+
+			ctx, cancel := context.WithCancel(t.Context())
+			defer cancel()
+			if tc.cancelCtx {
+				cancel()
+			}
+			var body io.Reader = http.NoBody
+			switch {
+			case tc.bodyErr != nil:
+				body = failingBody{err: tc.bodyErr}
+			case tc.body != nil:
+				body = tc.body
+			}
+			var w http.ResponseWriter = httptest.NewRecorder()
+			if tc.writeErr != nil {
+				w = failingWriter{ResponseRecorder: httptest.NewRecorder(), err: tc.writeErr}
+			}
+
+			router.ServeHTTP(w, httptest.NewRequestWithContext(ctx, http.MethodPost, "/user/123", body))
+
+			require.Len(t, sr.Ended(), 1)
+			span := sr.Ended()[0]
+			wantSpanStatus := codes.Unset
+			if tc.wantErrorType != "" {
+				wantSpanStatus = codes.Error
+			}
+			assert.Equal(t, wantSpanStatus, span.Status().Code)
+			assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", tc.status))
+			assertErrorType(t, attribute.NewSet(span.Attributes()...), tc.wantErrorType)
+			assertMetricErrorType(t, reader, tc.wantErrorType)
+		})
+	}
+}
+
+// TestDownstreamContextCancelIsNotError verifies that a request context
+// replaced and canceled by the handler is not recorded as an error.
+func TestDownstreamContextCancelIsNotError(t *testing.T) {
+	router, sr, reader := newTestHandler(func(_ http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithCancel(r.Context())
+		*r = *r.WithContext(ctx)
+		cancel()
+	})
+
+	router.ServeHTTP(httptest.NewRecorder(),
+		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody))
+
+	require.Len(t, sr.Ended(), 1)
+	assert.Equal(t, codes.Unset, sr.Ended()[0].Status().Code)
+	assertErrorType(t, attribute.NewSet(sr.Ended()[0].Attributes()...), "")
+	assertMetricErrorType(t, reader, "")
+}
+
+// TestMetricAttributesFnErrorTypeTakesPrecedence verifies that error.type from
+// WithMetricAttributesFn overrides the detected one on metrics.
+func TestMetricAttributesFnErrorTypeTakesPrecedence(t *testing.T) {
+	router, sr, reader := newTestHandler(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}, otelmux.WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue {
+		return []attribute.KeyValue{semconv.ErrorTypeKey.String("custom")}
+	}))
+
+	router.ServeHTTP(httptest.NewRecorder(),
+		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody))
+
+	require.Len(t, sr.Ended(), 1)
+	assert.Contains(t, sr.Ended()[0].Attributes(), semconv.ErrorTypeKey.String("500"), "span keeps the detected error.type")
+	assertMetricErrorType(t, reader, "custom")
+}
+
+// TestReadFromWriteError verifies that an io.ReaderFrom write error is
+// recorded like a Write error.
+func TestReadFromWriteError(t *testing.T) {
+	errReadFrom := testError("read_from_error")
+	router, sr, reader := newTestHandler(func(w http.ResponseWriter, _ *http.Request) {
+		// Larger than the prefix the wrapper copies through Write, so the rest
+		// reaches ReadFrom. Hiding strings.Reader's WriteTo makes io.Copy use it.
+		_, err := io.Copy(w, struct{ io.Reader }{strings.NewReader(strings.Repeat("a", 1024))})
+		assert.ErrorIs(t, err, errReadFrom)
+	})
+
+	router.ServeHTTP(failingWriter{ResponseRecorder: httptest.NewRecorder(), err: errReadFrom},
+		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody))
+
+	require.Len(t, sr.Ended(), 1)
+	assert.Equal(t, codes.Error, sr.Ended()[0].Status().Code)
+	assertErrorType(t, attribute.NewSet(sr.Ended()[0].Attributes()...), "read_from_error")
+	assertMetricErrorType(t, reader, "read_from_error")
+}
+
+// assertErrorType asserts error.type is want, or absent when want is empty.
+func assertErrorType(t *testing.T, attrs attribute.Set, want string) {
+	t.Helper()
+
+	got, ok := attrs.Value(semconv.ErrorTypeKey)
+	assert.Equal(t, want != "", ok, "error.type presence")
+	assert.Equal(t, want, got.AsString(), "error.type")
+}
+
+func assertMetricErrorType(t *testing.T, reader sdkmetric.Reader, want string) {
+	t.Helper()
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
+
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch d := m.Data.(type) {
+		case metricdata.Histogram[int64]:
+			require.Len(t, d.DataPoints, 1, m.Name)
+			assertErrorType(t, d.DataPoints[0].Attributes, want)
+		case metricdata.Histogram[float64]:
+			require.Len(t, d.DataPoints, 1, m.Name)
+			assertErrorType(t, d.DataPoints[0].Attributes, want)
+		default:
+			t.Fatalf("unexpected metric type for %s", m.Name)
+		}
+	}
+}
+
+func BenchmarkMiddleware(b *testing.B) {
+	tp := sdktrace.NewTracerProvider()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(sdkmetric.NewManualReader()))
+
+	r, err := http.NewRequestWithContext(b.Context(), http.MethodGet, "/user/123", http.NoBody)
+	require.NoError(b, err)
+
+	for _, bb := range []struct {
+		name   string
+		status int
+	}{
+		{name: "ok", status: http.StatusOK},
+		{name: "internal server error", status: http.StatusInternalServerError},
+	} {
+		b.Run(bb.name, func(b *testing.B) {
+			router := mux.NewRouter()
+			router.Use(otelmux.Middleware("foobar",
+				otelmux.WithTracerProvider(tp),
+				otelmux.WithMeterProvider(mp),
+			))
+			router.HandleFunc("/user/{id}", func(w http.ResponseWriter, _ *http.Request) {
+				w.WriteHeader(bb.status)
+				_, _ = w.Write([]byte("Hello World"))
+			})
+			rr := httptest.NewRecorder()
+
+			b.ReportAllocs()
+			b.ResetTimer()
+			for range b.N {
+				rr.Body.Reset()
+				router.ServeHTTP(rr, r)
+			}
+		})
+	}
 }
