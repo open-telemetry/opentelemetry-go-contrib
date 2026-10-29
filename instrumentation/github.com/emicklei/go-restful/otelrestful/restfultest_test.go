@@ -537,6 +537,7 @@ func TestMultipartFormTempFileCleanup(t *testing.T) {
 	require.NoError(t, result.err)
 	require.NotEmpty(t, result.tmpPath)
 	tmpPath := result.tmpPath
+	t.Cleanup(func() { _ = os.Remove(tmpPath) })
 
 	require.Eventually(t, func() bool {
 		_, statErr := os.Stat(tmpPath)
@@ -587,6 +588,7 @@ func TestMultipartFormTempFileCleanupOnPanic(t *testing.T) {
 	require.NoError(t, result.err)
 	require.NotEmpty(t, result.tmpPath)
 	tmpPath := result.tmpPath
+	t.Cleanup(func() { _ = os.Remove(tmpPath) })
 
 	require.Eventually(t, func() bool {
 		_, statErr := os.Stat(tmpPath)
