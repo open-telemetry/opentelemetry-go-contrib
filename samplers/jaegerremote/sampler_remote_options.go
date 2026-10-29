@@ -20,6 +20,7 @@ package jaegerremote
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -70,11 +71,17 @@ func getEnvOptions() ([]Option, []error) {
 		case "endpoint":
 			options = append(options, WithSamplingServerURL(value))
 		case "pollingIntervalMs":
-			intervalMs, err := strconv.Atoi(value)
+			intervalMs, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", key, err))
 				continue
 			}
+
+			if intervalMs < 0 || intervalMs > math.MaxInt64/int64(time.Millisecond) {
+				errs = append(errs, fmt.Errorf("%s value %q is out of range", key, value))
+				continue
+			}
+
 			options = append(options, WithSamplingRefreshInterval(time.Duration(intervalMs)*time.Millisecond))
 		case "initialSamplingRate":
 			samplingRate, err := strconv.ParseFloat(value, 64)

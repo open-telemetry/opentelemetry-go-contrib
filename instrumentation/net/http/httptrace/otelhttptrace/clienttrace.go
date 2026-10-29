@@ -345,6 +345,12 @@ func (ct *clientTracer) wroteHeaderField(k string, v []string) {
 	if !ct.addHeaders {
 		return
 	}
+	// HTTP/2 transports also report pseudo-header fields here. They are not
+	// request headers, and ":path" carries the full request target including
+	// the query string, which would bypass header and url.full redaction.
+	if strings.HasPrefix(k, ":") {
+		return
+	}
 	k = strings.ToLower(k)
 	value := sliceToString(v)
 	if _, ok := ct.redactedHeaders[k]; ok {
