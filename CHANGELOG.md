@@ -105,7 +105,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove the deprecated runtime metrics and the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS` environment variable in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10060)
 - Remove support for the `rpc/old` and `rpc/dup` values of `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#9908)
 
-### Removed
+### Removed (Unreleased)
 
 - Remove the exported `Transport` type from `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Use `NewTransport` to configure the HTTP transport. (#9955)
 
