@@ -45,6 +45,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Deduplicate propagator names in `go.opentelemetry.io/contrib/propagators/autoprop` to avoid repeated injection and extraction. (#9956)
 - Do not record HTTP/2 pseudo-header fields (`:authority`, `:method`, `:path`, `:scheme`) as `http.request.header.*` span attributes in `NewClientTrace` of `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, so the query string in `:path` is no longer exported unredacted. (#10015)
 - Omit source attributes in `go.opentelemetry.io/contrib/bridges/otelslog` when `WithSource(true)` is enabled but no caller frame is available. (#9991)
 - Redact the values of the `X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, `sig`, and `X-Goog-Signature` query parameters from the `url.full` attribute recorded on client spans by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, as required by the semantic conventions. (#9950)
