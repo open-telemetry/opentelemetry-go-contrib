@@ -12,6 +12,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"slices"
 	"strconv"
@@ -113,12 +114,25 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 
 	var u string
 	if req.URL != nil {
-		// Remove any username/password info that may be in the URL.
-		userinfo := req.URL.User
-		req.URL.User = nil
-		u = req.URL.String()
-		// Restore any username/password info that was removed.
-		req.URL.User = userinfo
+		// Remove any username/password info that may be in the URL and
+		// redact the values of sensitive query parameters. Work on a copy so
+		// the request, which a RoundTripper must not modify, is left as-is.
+		c := *req.URL
+		c.User = nil
+		// An opaque URL can carry its own query, which String and the
+		// request both emit as-is, joined to RawQuery by '?'. Redact them as
+		// one query so a sensitive value spanning the join is covered.
+		if path, query, ok := strings.Cut(c.Opaque, "?"); ok {
+			if c.RawQuery != "" || c.ForceQuery {
+				query += "?" + c.RawQuery
+			}
+			if r := redactQuery(query); r != query {
+				c.Opaque, c.RawQuery, c.ForceQuery = path+"?"+r, "", false
+			}
+		} else {
+			c.RawQuery = redactQuery(c.RawQuery)
+		}
+		u = c.String()
 	}
 	attrs = append(attrs, semconv.URLFull(u), semconv.ServerAddress(requestHost))
 	if eligiblePort > 0 {
@@ -133,6 +147,72 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 	}
 
 	return attrs
+}
+
+// sensitiveQueryKey reports whether key is a query parameter key whose value
+// the semantic conventions require to be redacted from url.full by default.
+// Matching is case-sensitive and done on the decoded key, so a
+// percent-encoded name like "%73ig" is still matched.
+func sensitiveQueryKey(key string) bool {
+	if strings.IndexByte(key, '%') >= 0 {
+		if k, err := url.QueryUnescape(key); err == nil {
+			key = k
+		}
+	}
+	switch key {
+	case "X-Amz-Signature", "X-Amz-Credential", "X-Amz-Security-Token", "sig", "X-Goog-Signature":
+		return true
+	}
+	return false
+}
+
+// redactQuery returns rawQuery with the value of every sensitive query
+// parameter replaced by "REDACTED". Keys, parameter order, and all other
+// values are preserved as-is. rawQuery is returned unchanged, without
+// allocating, when it has no sensitive parameter.
+//
+// Sensitive keys are detected after ';' and '?' as well as '&'. net/url only
+// uses '&', but other servers and proxies may also accept ';', and an opaque
+// URL joins its own query to RawQuery with '?'. Since the separator in use is
+// ambiguous, a sensitive value is redacted up to the next '&' or the end of
+// the query, so any ';'- or '?'-delimited content after it is dropped rather
+// than leaked.
+func redactQuery(rawQuery string) string {
+	var b strings.Builder
+	redacted := false
+	for pos := 0; ; {
+		end := len(rawQuery)
+		if i := strings.IndexAny(rawQuery[pos:], "&;?"); i >= 0 {
+			end = pos + i
+		}
+		param := rawQuery[pos:end]
+		if key, _, hasValue := strings.Cut(param, "="); hasValue && sensitiveQueryKey(key) {
+			if !redacted {
+				redacted = true
+				b.Grow(len(rawQuery))
+				_, _ = b.WriteString(rawQuery[:pos])
+			}
+			_, _ = b.WriteString(key)
+			_, _ = b.WriteString("=REDACTED")
+			end = len(rawQuery)
+			if i := strings.IndexByte(rawQuery[pos:], '&'); i >= 0 {
+				end = pos + i
+			}
+		} else if redacted {
+			_, _ = b.WriteString(param)
+		}
+		if end == len(rawQuery) {
+			break
+		}
+		if redacted {
+			_ = b.WriteByte(rawQuery[end])
+		}
+		pos = end + 1
+	}
+	if !redacted {
+		return rawQuery
+	}
+	return b.String()
 }
 
 // ResponseTraceAttrs returns trace attributes for an HTTP response made by a client.
