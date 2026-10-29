@@ -47,7 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
-- Unexport the concrete Transport type in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, while retaining NewTransport as the public constructor. (#9955)
+- Remove the exported `Transport` type from `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Use `NewTransport` to configure the HTTP transport. (#9955)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
