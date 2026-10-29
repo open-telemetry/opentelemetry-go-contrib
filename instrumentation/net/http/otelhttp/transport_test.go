@@ -1433,13 +1433,13 @@ func (b *blockingCloseBody) Close() error {
 	return nil
 }
 
-// asyncBlockedCloseTransport drains the request body, returns a response,
-// and then closes the request body on another goroutine, where the
-// underlying Close blocks.
+// asyncBlockedCloseTransport reads the declared request body length without
+// observing io.EOF, returns a response, and then closes the request body on
+// another goroutine, where the underlying Close blocks.
 type asyncBlockedCloseTransport struct{}
 
 func (asyncBlockedCloseTransport) RoundTrip(r *http.Request) (*http.Response, error) {
-	if _, err := io.Copy(io.Discard, r.Body); err != nil {
+	if _, err := io.CopyN(io.Discard, r.Body, r.ContentLength); err != nil {
 		return nil, err
 	}
 	go func() { _ = r.Body.Close() }()
@@ -1490,6 +1490,65 @@ func TestTransportMetricsRecordedWhenRequestBodyCloseBlocks(t *testing.T) {
 	// Metrics must be finalized even though the underlying Close never
 	// returned.
 	requireEventuallyRequestBodySize(t, reader, int64(len(payload)))
+}
+
+// bodyReplayingTransport mimics retrying RoundTrippers such as
+// go-retryablehttp: it reads the request body to EOF, sends a buffered copy
+// to the base RoundTripper, and never closes the original body.
+type bodyReplayingTransport struct {
+	base http.RoundTripper
+}
+
+func (tr bodyReplayingTransport) RoundTrip(r *http.Request) (*http.Response, error) {
+	buf, err := io.ReadAll(r.Body)
+	if err != nil {
+		return nil, err
+	}
+	replay := r.Clone(r.Context())
+	replay.Body = io.NopCloser(bytes.NewReader(buf))
+	return tr.base.RoundTrip(replay)
+}
+
+func TestTransportMetricsRecordedWhenRequestBodyDrainedWithoutClose(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = io.Copy(io.Discard, r.Body)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	tr := NewTransport(bodyReplayingTransport{base: http.DefaultTransport}, WithMeterProvider(meterProvider))
+
+	payload := strings.Repeat("a", 8*1024)
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, ts.URL, strings.NewReader(payload))
+	require.NoError(t, err)
+
+	resp, err := (&http.Client{Transport: tr}).Do(req)
+	require.NoError(t, err)
+	_, err = io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var duration metricdata.Metrics
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == "http.client.request.duration" {
+			duration = m
+			break
+		}
+	}
+	require.Equal(t, "http.client.request.duration", duration.Name)
+	hist, ok := duration.Data.(metricdata.Histogram[float64])
+	require.True(t, ok)
+	require.Len(t, hist.DataPoints, 1)
+	assert.Equal(t, uint64(1), hist.DataPoints[0].Count)
+
+	assert.Equal(t, int64(len(payload)), requestBodySizeMetricValue(t, rm))
 }
 
 func TestTransportFilterPassThrough(t *testing.T) {
