@@ -67,6 +67,11 @@ func TestNewLogLevelFiltering(t *testing.T) {
 			logger, err := New(tt.level, &output)
 			require.NoError(t, err)
 
+			logger.V(8).Info("debug marker")
+			assert.Equal(t, tt.level == "trace" || tt.level == "debug",
+				strings.Contains(output.String(), "debug marker"),
+				"debug message filtering; output: %q", output.String())
+
 			logger.V(4).Info("info marker")
 			logger.V(1).Info("warning marker")
 			logger.Error(errors.New("test error"), "error marker")
