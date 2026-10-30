@@ -9,7 +9,6 @@ import (
 	"errors"
 	"os"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
@@ -198,6 +197,11 @@ func WithLoggerProviderOptions(opts ...sdklog.LoggerProviderOption) Configuratio
 
 // WithMeterProviderOptions appends metric.Options used for constructing the
 // MeterProvider. OpenTelemetryConfiguration takes precedence over these options.
+//
+// The options are only used when the configuration has a meter_provider. They
+// can add readers that are built in code, for example a Prometheus exporter
+// that registers its collectors with an application's own
+// prometheus.Registerer, see the example.
 func WithMeterProviderOptions(opts ...sdkmetric.Option) ConfigurationOption {
 	return configurationOptionFunc(func(c configOptions) configOptions {
 		c.meterProviderOptions = append(c.meterProviderOptions, opts...)
@@ -210,17 +214,6 @@ func WithMeterProviderOptions(opts ...sdkmetric.Option) ConfigurationOption {
 func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) ConfigurationOption {
 	return configurationOptionFunc(func(c configOptions) configOptions {
 		c.tracerProviderOptions = append(c.tracerProviderOptions, opts...)
-		return c
-	})
-}
-
-// WithPrometheusRegisterer registers the collectors of configured Prometheus
-// pull readers with registerer instead of serving them over HTTP. No listener
-// is started and the host and port of the Prometheus exporter configuration
-// are ignored, so the application can serve the metrics on its own HTTP server.
-func WithPrometheusRegisterer(registerer prometheus.Registerer) ConfigurationOption {
-	return configurationOptionFunc(func(c configOptions) configOptions {
-		c.prometheusRegisterer = registerer
 		return c
 	})
 }
