@@ -22,14 +22,22 @@ import (
 )
 
 const (
-	scopeName    = "go.opentelemetry.io/contrib/bridges/prometheus"
-	traceIDLabel = "trace_id"
-	spanIDLabel  = "span_id"
+	scopeName           = "go.opentelemetry.io/contrib/bridges/prometheus"
+	traceIDLabel        = "trace_id"
+	spanIDLabel         = "span_id"
+	scopeLabelPrefix    = "otel_scope_"
+	scopeNameLabel      = scopeLabelPrefix + "name"
+	scopeVersionLabel   = scopeLabelPrefix + "version"
+	scopeSchemaURLLabel = scopeLabelPrefix + "schema_url"
 )
 
 var (
 	errUnsupportedType = errors.New("unsupported metric type")
 	processStartTime   = time.Now()
+	defaultScope       = instrumentation.Scope{
+		Name:    scopeName,
+		Version: Version,
+	}
 )
 
 // Producer is a [metric.Producer] that fetches metrics from Prometheus.
@@ -54,69 +62,97 @@ func NewMetricProducer(opts ...Option) *Producer {
 func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	now := time.Now()
 	var errs multierr
-	otelMetrics := make([]metricdata.Metrics, 0)
+	var c scopeMetricsCollector
 	for _, gatherer := range p.gatherers {
 		promMetrics, err := gatherer.Gather()
 		if err != nil {
 			errs = append(errs, err)
 			continue
 		}
-		m, err := convertPrometheusMetricsInto(promMetrics, now)
-		otelMetrics = append(otelMetrics, m...)
-		if err != nil {
+		if err := c.convertPrometheusMetrics(promMetrics, now); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	if errs.errOrNil() != nil {
 		otel.Handle(errs.errOrNil())
 	}
-	if len(otelMetrics) == 0 {
-		return nil, nil
-	}
-	return []metricdata.ScopeMetrics{{
-		Scope: instrumentation.Scope{
-			Name: scopeName,
-		},
-		Metrics: otelMetrics,
-	}}, nil
+	return c.scopeMetrics, nil
 }
 
-func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time) ([]metricdata.Metrics, error) {
+type scopeMetricsCollector struct {
+	scopeMetrics []metricdata.ScopeMetrics
+	scopeIndices map[instrumentation.Scope]int
+}
+
+func (c *scopeMetricsCollector) appendMetric(scope instrumentation.Scope, m metricdata.Metrics) {
+	if c.scopeIndices == nil {
+		if len(c.scopeMetrics) == 0 {
+			c.scopeMetrics = []metricdata.ScopeMetrics{{
+				Scope:   scope,
+				Metrics: []metricdata.Metrics{m},
+			}}
+			return
+		}
+		if c.scopeMetrics[0].Scope == scope {
+			c.scopeMetrics[0].Metrics = append(c.scopeMetrics[0].Metrics, m)
+			return
+		}
+		c.scopeIndices = map[instrumentation.Scope]int{
+			c.scopeMetrics[0].Scope: 0,
+		}
+	}
+	idx, ok := c.scopeIndices[scope]
+	if !ok {
+		idx = len(c.scopeMetrics)
+		c.scopeIndices[scope] = idx
+		c.scopeMetrics = append(c.scopeMetrics, metricdata.ScopeMetrics{
+			Scope: scope,
+		})
+	}
+	c.scopeMetrics[idx].Metrics = append(c.scopeMetrics[idx].Metrics, m)
+}
+
+func (c *scopeMetricsCollector) convertPrometheusMetrics(promMetrics []*dto.MetricFamily, now time.Time) error {
 	var errs multierr
-	otelMetrics := make([]metricdata.Metrics, 0)
 	for _, pm := range promMetrics {
 		if len(pm.GetMetric()) == 0 {
 			// This shouldn't ever happen
 			continue
 		}
-		newMetric := metricdata.Metrics{
-			Name:        pm.GetName(),
-			Description: pm.GetHelp(),
-			Unit:        unitWordToUCUM(pm.GetUnit()),
-		}
 		switch pm.GetType() {
-		case dto.MetricType_GAUGE:
-			newMetric.Data = convertGauge(pm.GetMetric(), now)
-		case dto.MetricType_UNTYPED:
-			newMetric.Data = convertUntyped(pm.GetMetric(), now)
-		case dto.MetricType_COUNTER:
-			newMetric.Data = convertCounter(pm.GetMetric(), now)
-		case dto.MetricType_SUMMARY:
-			newMetric.Data = convertSummary(pm.GetMetric(), now)
-		case dto.MetricType_HISTOGRAM:
-			if isExponentialHistogram(pm.GetMetric()[0].GetHistogram()) {
-				newMetric.Data = convertExponentialHistogram(pm.GetMetric(), now)
-			} else {
-				newMetric.Data = convertHistogram(pm.GetMetric(), now)
-			}
+		case dto.MetricType_GAUGE, dto.MetricType_UNTYPED, dto.MetricType_COUNTER, dto.MetricType_SUMMARY, dto.MetricType_HISTOGRAM:
 		default:
 			// MetricType_GAUGE_HISTOGRAM
 			errs = append(errs, fmt.Errorf("%w: %v for metric %v", errUnsupportedType, pm.GetType(), pm.GetName()))
 			continue
 		}
-		otelMetrics = append(otelMetrics, newMetric)
+		unit := unitWordToUCUM(pm.GetUnit())
+		for _, group := range groupByScope(pm.GetMetric()) {
+			newMetric := metricdata.Metrics{
+				Name:        pm.GetName(),
+				Description: pm.GetHelp(),
+				Unit:        unit,
+			}
+			switch pm.GetType() {
+			case dto.MetricType_GAUGE:
+				newMetric.Data = convertGauge(group.metrics, now)
+			case dto.MetricType_UNTYPED:
+				newMetric.Data = convertUntyped(group.metrics, now)
+			case dto.MetricType_COUNTER:
+				newMetric.Data = convertCounter(group.metrics, now)
+			case dto.MetricType_SUMMARY:
+				newMetric.Data = convertSummary(group.metrics, now)
+			case dto.MetricType_HISTOGRAM:
+				if isExponentialHistogram(group.metrics[0].GetHistogram()) {
+					newMetric.Data = convertExponentialHistogram(group.metrics, now)
+				} else {
+					newMetric.Data = convertHistogram(group.metrics, now)
+				}
+			}
+			c.appendMetric(group.scope, newMetric)
+		}
 	}
-	return otelMetrics, errs.errOrNil()
+	return errs.errOrNil()
 }
 
 func isExponentialHistogram(hist *dto.Histogram) bool {
@@ -385,10 +421,85 @@ func convertQuantiles(quantiles []*dto.Quantile) []metricdata.QuantileValue {
 	return otelQuantiles
 }
 
+type scopedMetrics struct {
+	scope   instrumentation.Scope
+	metrics []*dto.Metric
+}
+
+func groupByScope(metrics []*dto.Metric) []scopedMetrics {
+	firstScope := extractScope(metrics[0].GetLabel())
+	var groups []scopedMetrics
+	var scopeIndices map[instrumentation.Scope]int
+	for i := 1; i < len(metrics); i++ {
+		s := extractScope(metrics[i].GetLabel())
+		if groups == nil {
+			if s == firstScope {
+				continue
+			}
+			groups = []scopedMetrics{
+				{scope: firstScope, metrics: append([]*dto.Metric(nil), metrics[:i]...)},
+				{scope: s, metrics: []*dto.Metric{metrics[i]}},
+			}
+			scopeIndices = map[instrumentation.Scope]int{
+				firstScope: 0,
+				s:          1,
+			}
+			continue
+		}
+		if idx, ok := scopeIndices[s]; ok {
+			groups[idx].metrics = append(groups[idx].metrics, metrics[i])
+		} else {
+			scopeIndices[s] = len(groups)
+			groups = append(groups, scopedMetrics{
+				scope:   s,
+				metrics: []*dto.Metric{metrics[i]},
+			})
+		}
+	}
+	if groups == nil {
+		return []scopedMetrics{{scope: firstScope, metrics: metrics}}
+	}
+	return groups
+}
+
+func extractScope(labels []*dto.LabelPair) instrumentation.Scope {
+	var scope instrumentation.Scope
+	var scopeAttrs []attribute.KeyValue
+	hasScope := false
+	for _, l := range labels {
+		name := l.GetName()
+		if !strings.HasPrefix(name, scopeLabelPrefix) {
+			continue
+		}
+		hasScope = true
+		switch name {
+		case scopeNameLabel:
+			scope.Name = l.GetValue()
+		case scopeVersionLabel:
+			scope.Version = l.GetValue()
+		case scopeSchemaURLLabel:
+			scope.SchemaURL = l.GetValue()
+		default:
+			key := strings.TrimPrefix(name, scopeLabelPrefix)
+			scopeAttrs = append(scopeAttrs, attribute.String(key, l.GetValue()))
+		}
+	}
+	if !hasScope {
+		return defaultScope
+	}
+	if len(scopeAttrs) > 0 {
+		scope.Attributes = attribute.NewSet(scopeAttrs...)
+	}
+	return scope
+}
+
 func convertLabels(labels []*dto.LabelPair) attribute.Set {
-	kvs := make([]attribute.KeyValue, len(labels))
-	for i, l := range labels {
-		kvs[i] = attribute.String(l.GetName(), l.GetValue())
+	kvs := make([]attribute.KeyValue, 0, len(labels))
+	for _, l := range labels {
+		if strings.HasPrefix(l.GetName(), scopeLabelPrefix) {
+			continue
+		}
+		kvs = append(kvs, attribute.String(l.GetName(), l.GetValue()))
 	}
 	return attribute.NewSet(kvs...)
 }
