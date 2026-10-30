@@ -85,6 +85,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix `go.schedule.duration` datapoints returned by `Producer` in `go.opentelemetry.io/contrib/instrumentation/runtime` having their bucket counts overwritten by later collections, and a data race between concurrent `Produce` calls. (#9882)
 - Retain the last non-nil write error instead of letting a later successful write clear it in the response writer wrapper of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9790)
 - Fix `WithValues` in `go.opentelemetry.io/contrib/bridges/otellogr` so loggers derived from the same parent no longer overwrite each other's attributes or race on them. (#9994)
+- Resolve `slog.LogValuer` values before applying the empty-key rules in `go.opentelemetry.io/contrib/bridges/otelslog`, so a valuer with an empty key that resolves to a group is inlined and one that resolves to an empty value is dropped, as required by `slog.Handler`. (#10014)
 - Accept any 2xx status for the instance identity token request in `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`. The IMDS Identity API returns 201 Created for the token PUT, which the detector previously rejected, silently returning an empty resource on real IBM Cloud VPC instances. (#9671)
 
 ### Removed
