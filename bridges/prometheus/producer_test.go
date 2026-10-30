@@ -4,6 +4,7 @@
 package prometheus
 
 import (
+	"math"
 	"testing"
 	"time"
 
@@ -281,6 +282,42 @@ func TestProduce(t *testing.T) {
 			}},
 		},
 		{
+			name: "histogram with only +Inf bucket",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
+					Name:    "test_histogram_metric",
+					Help:    "A histogram metric for testing",
+					Buckets: []float64{math.Inf(1)},
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+				metric.Observe(578.3)
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A histogram metric for testing",
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Count:      1,
+									Sum:        578.3,
+									Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
 			name: "histogram cumulative values to non-cumulative",
 			testFn: func(reg *prometheus.Registry) {
 				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
@@ -536,6 +573,44 @@ func TestProduce(t *testing.T) {
 			}},
 		},
 		{
+			name: "exponential histogram with no observations",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
+					Name: "test_empty_exponential_histogram_metric",
+					Help: "An empty exponential histogram metric for testing",
+					// This enables collection of native histograms in the prometheus client.
+					NativeHistogramBucketFactor:  1.5,
+					NativeHistogramZeroThreshold: prometheus.NativeHistogramZeroThresholdZero,
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_empty_exponential_histogram_metric",
+						Description: "An empty exponential histogram metric for testing",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{
+									Scale:          1,
+									PositiveBucket: metricdata.ExponentialBucket{},
+									NegativeBucket: metricdata.ExponentialBucket{},
+									Attributes:     attribute.NewSet(attribute.String("foo", "bar")),
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
 			name: "untyped",
 			testFn: func(reg *prometheus.Registry) {
 				metric := prometheus.NewUntypedFunc(prometheus.UntypedOpts{
@@ -624,13 +699,45 @@ func TestProducePartialSuccess(t *testing.T) {
 					{},
 				},
 			},
-		}, nil
+			{
+				Name: new("test_float_histogram_metric"),
+				Help: new("A float native histogram metric for testing"),
+				Type: dto.MetricType_HISTOGRAM.Enum(),
+				Metric: []*dto.Metric{
+					{
+						Histogram: &dto.Histogram{
+							SampleCountFloat: new(1.0),
+							SampleSum:        new(1.0),
+							Schema:           new(int32(1)),
+						},
+					},
+				},
+			},
+			{
+				Name: new("test_invalid_schema_histogram_metric"),
+				Help: new("A native histogram with unsupported schema for testing"),
+				Type: dto.MetricType_HISTOGRAM.Enum(),
+				Metric: []*dto.Metric{
+					{
+						Histogram: &dto.Histogram{
+							SampleCount:   new(uint64(1)),
+							SampleSum:     new(1.0),
+							ZeroThreshold: new(1e-128),
+							Schema:        new(int32(9)),
+						},
+					},
+				},
+			},
+		}, assert.AnError
 	})))
 
 	output, err := p.Produce(t.Context())
 	assert.NoError(t, err)
 	require.ErrorIs(t, handledErr, errUnsupportedType)
+	require.ErrorIs(t, handledErr, assert.AnError)
 	assert.Contains(t, handledErr.Error(), "test_gauge_histogram_metric")
+	assert.Contains(t, handledErr.Error(), "test_float_histogram_metric")
+	assert.Contains(t, handledErr.Error(), "test_invalid_schema_histogram_metric")
 	require.Len(t, output, 1)
 
 	expected := metricdata.ScopeMetrics{
@@ -653,6 +760,544 @@ func TestProducePartialSuccess(t *testing.T) {
 		},
 	}
 	metricdatatest.AssertEqual(t, expected, output[0], metricdatatest.IgnoreTimestamp())
+}
+
+func TestProduceUnsupportedHistograms(t *testing.T) {
+	testCases := []struct {
+		name     string
+		metrics  []*dto.Metric
+		expected []metricdata.ScopeMetrics
+	}{
+		{
+			name: "float histogram with SampleCountFloat",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCountFloat: new(1.0),
+						SampleSum:        new(1.0),
+						Schema:           new(int32(1)),
+					},
+				},
+			},
+		},
+		{
+			name: "float histogram with ZeroCountFloat",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						ZeroCountFloat: new(1.0),
+						SampleSum:      new(0.0),
+						Schema:         new(int32(1)),
+					},
+				},
+			},
+		},
+		{
+			name: "float histogram with PositiveCount",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						PositiveSpan:  []*dto.BucketSpan{{Offset: new(int32(0)), Length: new(uint32(1))}},
+						PositiveCount: []float64{1.5},
+						Schema:        new(int32(1)),
+					},
+				},
+			},
+		},
+		{
+			name: "float histogram with NegativeCount",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						NegativeSpan:  []*dto.BucketSpan{{Offset: new(int32(0)), Length: new(uint32(1))}},
+						NegativeCount: []float64{1.5},
+						Schema:        new(int32(1)),
+					},
+				},
+			},
+		},
+		{
+			name: "schema below minimum (-5)",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(1.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(-5)),
+					},
+				},
+			},
+		},
+		{
+			name: "schema above maximum (9)",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(1.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(9)),
+					},
+				},
+			},
+		},
+		{
+			name: "partial datapoint filtering within histogram family",
+			metrics: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("valid")}},
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(2.0),
+						ZeroCount:     new(uint64(1)),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+					},
+				},
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("float")}},
+					Histogram: &dto.Histogram{
+						SampleCountFloat: new(1.0),
+						SampleSum:        new(2.0),
+						Schema:           new(int32(1)),
+					},
+				},
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A native histogram metric for testing",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{
+									Attributes:    attribute.NewSet(attribute.String("status", "valid")),
+									Count:         1,
+									Sum:           2.0,
+									Scale:         1,
+									ZeroCount:     1,
+									ZeroThreshold: 1e-128,
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
+			name: "partial datapoint filtering with float histogram first in exponential family",
+			metrics: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("float")}},
+					Histogram: &dto.Histogram{
+						SampleCountFloat: new(1.0),
+						SampleSum:        new(2.0),
+						Schema:           new(int32(1)),
+					},
+				},
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("valid")}},
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(2.0),
+						ZeroCount:     new(uint64(1)),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+					},
+				},
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A native histogram metric for testing",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{
+									Attributes:    attribute.NewSet(attribute.String("status", "valid")),
+									Count:         1,
+									Sum:           2.0,
+									Scale:         1,
+									ZeroCount:     1,
+									ZeroThreshold: 1e-128,
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
+			name: "partial datapoint filtering with classic histogram before float histogram",
+			metrics: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("classic")}},
+					Histogram: &dto.Histogram{
+						SampleCount: new(uint64(2)),
+						SampleSum:   new(5.0),
+						Bucket: []*dto.Bucket{
+							{CumulativeCount: new(uint64(1)), UpperBound: new(2.5)},
+							{CumulativeCount: new(uint64(2)), UpperBound: new(math.Inf(+1))},
+						},
+					},
+				},
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("float")}},
+					Histogram: &dto.Histogram{
+						SampleCountFloat: new(1.0),
+						SampleSum:        new(2.0),
+						Schema:           new(int32(1)),
+					},
+				},
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A native histogram metric for testing",
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Attributes:   attribute.NewSet(attribute.String("status", "classic")),
+									Count:        2,
+									Sum:          5.0,
+									Bounds:       []float64{2.5},
+									BucketCounts: []uint64{1, 1},
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			previousHandler := otel.GetErrorHandler()
+			t.Cleanup(func() { otel.SetErrorHandler(previousHandler) })
+
+			var handledErr error
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+				handledErr = err
+			}))
+
+			p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
+				return []*dto.MetricFamily{
+					{
+						Name:   new("test_histogram_metric"),
+						Help:   new("A native histogram metric for testing"),
+						Type:   dto.MetricType_HISTOGRAM.Enum(),
+						Metric: tc.metrics,
+					},
+				}, nil
+			})))
+
+			output, err := p.Produce(t.Context())
+			require.NoError(t, err)
+			require.ErrorIs(t, handledErr, errUnsupportedType)
+			assert.Contains(t, handledErr.Error(), "test_histogram_metric")
+			if tc.expected == nil {
+				assert.Empty(t, output)
+			} else {
+				require.Len(t, output, len(tc.expected))
+				metricdatatest.AssertEqual(t, tc.expected[0], output[0], metricdatatest.IgnoreTimestamp())
+			}
+		})
+	}
+}
+
+func TestProduceInconsistentExponentialBuckets(t *testing.T) {
+	testCases := []struct {
+		name     string
+		metrics  []*dto.Metric
+		expected []metricdata.ScopeMetrics
+	}{
+		{
+			name: "positive span lengths exceed deltas length",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(3))},
+						},
+						PositiveDelta: []int64{1, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "positive span lengths shorter than deltas length",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(1))},
+						},
+						PositiveDelta: []int64{1, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "negative offset on subsequent positive span",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(1))},
+							{Offset: new(int32(-2)), Length: new(uint32(1))},
+						},
+						PositiveDelta: []int64{1, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "negative span lengths exceed deltas length",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(-2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						NegativeSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(3))},
+						},
+						NegativeDelta: []int64{1, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "negative bucket count from deltas",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(2))},
+						},
+						PositiveDelta: []int64{1, -2},
+					},
+				},
+			},
+		},
+		{
+			name: "partial datapoint filtering when one datapoint has inconsistent spans",
+			metrics: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("valid")}},
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(2.0),
+						ZeroCount:     new(uint64(1)),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+					},
+				},
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("malformed")}},
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(3))},
+						},
+						PositiveDelta: []int64{1, 1},
+					},
+				},
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A native histogram metric for testing",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{
+									Attributes:    attribute.NewSet(attribute.String("status", "valid")),
+									Count:         1,
+									Sum:           2.0,
+									Scale:         1,
+									ZeroCount:     1,
+									ZeroThreshold: 1e-128,
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
+			name: "reject classic datapoint in exponential histogram family",
+			metrics: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("exponential")}},
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(2.0),
+						ZeroCount:     new(uint64(1)),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+					},
+				},
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("classic")}},
+					Histogram: &dto.Histogram{
+						SampleCount: new(uint64(2)),
+						SampleSum:   new(5.0),
+						Bucket: []*dto.Bucket{
+							{CumulativeCount: new(uint64(1)), UpperBound: new(2.5)},
+							{CumulativeCount: new(uint64(2)), UpperBound: new(math.Inf(+1))},
+						},
+					},
+				},
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A native histogram metric for testing",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{
+									Attributes:    attribute.NewSet(attribute.String("status", "exponential")),
+									Count:         1,
+									Sum:           2.0,
+									Scale:         1,
+									ZeroCount:     1,
+									ZeroThreshold: 1e-128,
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
+			name: "reject exponential datapoint without buckets in classic histogram family",
+			metrics: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("classic")}},
+					Histogram: &dto.Histogram{
+						SampleCount: new(uint64(2)),
+						SampleSum:   new(5.0),
+						Bucket: []*dto.Bucket{
+							{CumulativeCount: new(uint64(1)), UpperBound: new(2.5)},
+							{CumulativeCount: new(uint64(2)), UpperBound: new(math.Inf(+1))},
+						},
+					},
+				},
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("exponential_no_buckets")}},
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(2.0),
+						ZeroCount:     new(uint64(1)),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+					},
+				},
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A native histogram metric for testing",
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Attributes:   attribute.NewSet(attribute.String("status", "classic")),
+									Count:        2,
+									Sum:          5.0,
+									Bounds:       []float64{2.5},
+									BucketCounts: []uint64{1, 1},
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			previousHandler := otel.GetErrorHandler()
+			t.Cleanup(func() { otel.SetErrorHandler(previousHandler) })
+
+			var handledErr error
+			otel.SetErrorHandler(otel.ErrorHandlerFunc(func(err error) {
+				handledErr = err
+			}))
+
+			p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
+				return []*dto.MetricFamily{
+					{
+						Name:   new("test_histogram_metric"),
+						Help:   new("A native histogram metric for testing"),
+						Type:   dto.MetricType_HISTOGRAM.Enum(),
+						Metric: tc.metrics,
+					},
+				}, nil
+			})))
+
+			output, err := p.Produce(t.Context())
+			require.NoError(t, err)
+			require.ErrorIs(t, handledErr, errInvalidHistogram)
+			assert.Contains(t, handledErr.Error(), "test_histogram_metric")
+			if tc.expected == nil {
+				assert.Empty(t, output)
+			} else {
+				require.Len(t, output, len(tc.expected))
+				metricdatatest.AssertEqual(t, tc.expected[0], output[0], metricdatatest.IgnoreTimestamp())
+			}
+		})
+	}
 }
 
 func TestProduceForStartTime(t *testing.T) {
