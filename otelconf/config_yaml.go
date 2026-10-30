@@ -285,9 +285,6 @@ func (j *SpanLimits) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPHttpMetricExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPHttpMetricExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
@@ -302,9 +299,6 @@ func (j *OTLPHttpMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPGrpcMetricExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPGrpcMetricExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
@@ -319,9 +313,6 @@ func (j *OTLPGrpcMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPHttpExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPHttpExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
@@ -336,9 +327,6 @@ func (j *OTLPHttpExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPGrpcExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPGrpcExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {

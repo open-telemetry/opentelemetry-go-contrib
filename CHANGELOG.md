@@ -92,6 +92,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Remove support for the `rpc/old` and `rpc/dup` values of `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#9908)
 
+### Fixed
+
+- Allow `endpoint` to be omitted or set to `null` for OTLP exporters in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`; the SDK exporter defaults are used in this case, matching the OpenTelemetry configuration schema. (#9052)
+
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
 
