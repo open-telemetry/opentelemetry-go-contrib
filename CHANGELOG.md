@@ -11,6 +11,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Added
 
 - Support exemplars on exponential (native) histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
+- Convert Prometheus `UNIT` metadata to UCUM units in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10042)
 - Add the opt-in `go.memory.detailed_type` attribute to `go.memory.used` and `go.cpu.detailed_state` attribute to `go.cpu.time` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10021)
 - Add `WithHostID` option to `go.opentelemetry.io/contrib/detectors/k8sapi` to detect the `host.id` resource attribute from the machine ID reported by the node's kubelet. (#9973)
 - Add support for the `aws.lambda` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9924)

@@ -92,6 +92,7 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 		newMetric := metricdata.Metrics{
 			Name:        pm.GetName(),
 			Description: pm.GetHelp(),
+			Unit:        unitWordToUCUM(pm.GetUnit()),
 		}
 		switch pm.GetType() {
 		case dto.MetricType_GAUGE:
@@ -417,6 +418,77 @@ func convertExemplar(exemplar *dto.Exemplar) metricdata.Exemplar[float64] {
 		SpanID:             spanID,
 		FilteredAttributes: attrs,
 	}
+}
+
+var wordToUCUM = map[string]string{
+	// Time
+	"days":         "d",
+	"hours":        "h",
+	"minutes":      "min",
+	"seconds":      "s",
+	"milliseconds": "ms",
+	"microseconds": "us",
+	"nanoseconds":  "ns",
+
+	// Bytes
+	"bytes":     "By",
+	"kibibytes": "KiBy",
+	"mebibytes": "MiBy",
+	"gibibytes": "GiBy",
+	"tebibytes": "TiBy",
+	"kilobytes": "kBy",
+	"megabytes": "MBy",
+	"gigabytes": "GBy",
+	"terabytes": "TBy",
+
+	// SI
+	"meters":  "m",
+	"volts":   "V",
+	"amperes": "A",
+	"joules":  "J",
+	"watts":   "W",
+	"grams":   "g",
+
+	// Misc
+	"celsius": "Cel",
+	"hertz":   "Hz",
+	"percent": "%",
+}
+
+var perWordToUCUM = map[string]string{
+	"second": "s",
+	"minute": "min",
+	"hour":   "h",
+	"day":    "d",
+	"week":   "wk",
+	"month":  "mo",
+	"year":   "a",
+}
+
+func unitWordToUCUM(unit string) string {
+	if unit == "" {
+		return ""
+	}
+	unitTokens := strings.SplitN(unit, "_per_", 2)
+	ucumUnit := wordToUCUMOrDefault(unitTokens[0])
+	if len(unitTokens) > 1 && unitTokens[1] != "" {
+		ucumUnit += "/" + perWordToUCUMOrDefault(unitTokens[1])
+	}
+	return ucumUnit
+}
+
+func wordToUCUMOrDefault(unit string) string {
+	if ucum, ok := wordToUCUM[unit]; ok {
+		return ucum
+	}
+	return unit
+}
+
+func perWordToUCUMOrDefault(perUnit string) string {
+	if ucum, ok := perWordToUCUM[perUnit]; ok {
+		return ucum
+	}
+	return perUnit
 }
 
 type multierr []error
