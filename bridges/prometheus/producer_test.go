@@ -53,7 +53,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -86,7 +87,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -127,7 +129,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -176,7 +179,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -218,7 +222,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -257,7 +262,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -295,7 +301,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -339,7 +346,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -394,7 +402,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -455,7 +464,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -507,7 +517,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -551,7 +562,8 @@ func TestProduce(t *testing.T) {
 			},
 			expected: []metricdata.ScopeMetrics{{
 				Scope: instrumentation.Scope{
-					Name: scopeName,
+					Name:    scopeName,
+					Version: Version,
 				},
 				Metrics: []metricdata.Metrics{
 					{
@@ -635,7 +647,8 @@ func TestProducePartialSuccess(t *testing.T) {
 
 	expected := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
-			Name: scopeName,
+			Name:    scopeName,
+			Version: Version,
 		},
 		Metrics: []metricdata.Metrics{
 			{
@@ -1026,6 +1039,266 @@ func TestProduceUnit(t *testing.T) {
 			require.Len(t, output, 1)
 			require.Len(t, output[0].Metrics, 1)
 			assert.Equal(t, tc.expectedUnit, output[0].Metrics[0].Unit)
+		})
+	}
+}
+
+func TestProduceScope(t *testing.T) {
+	testCases := []struct {
+		name      string
+		gatherers []prometheus.Gatherer
+		expected  []metricdata.ScopeMetrics
+	}{
+		{
+			name: "otel_scope labels extracted into InstrumentationScope",
+			gatherers: []prometheus.Gatherer{
+				gathererFunc(func() ([]*dto.MetricFamily, error) {
+					return []*dto.MetricFamily{
+						{
+							Name: new("http_server_duration"),
+							Help: new("HTTP server duration"),
+							Type: dto.MetricType_COUNTER.Enum(),
+							Metric: []*dto.Metric{
+								{
+									Counter: &dto.Counter{Value: new(1.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("http_method"), Value: new("GET")},
+										{Name: new("otel_scope_name"), Value: new("go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp")},
+										{Name: new("otel_scope_version"), Value: new("v0.24.0")},
+										{Name: new("otel_scope_schema_url"), Value: new("https://opentelemetry.io/schemas/1.31.0")},
+										{Name: new("otel_scope_library_mascot"), Value: new("gopher")},
+									},
+								},
+							},
+						},
+					}, nil
+				}),
+			},
+			expected: []metricdata.ScopeMetrics{
+				{
+					Scope: instrumentation.Scope{
+						Name:      "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp",
+						Version:   "v0.24.0",
+						SchemaURL: "https://opentelemetry.io/schemas/1.31.0",
+						Attributes: attribute.NewSet(
+							attribute.String("library_mascot", "gopher"),
+						),
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "http_server_duration",
+							Description: "HTTP server duration",
+							Data: metricdata.Sum[float64]{
+								Temporality: metricdata.CumulativeTemporality,
+								IsMonotonic: true,
+								DataPoints: []metricdata.DataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(attribute.String("http_method", "GET")),
+										Value:      1.0,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "otel_scope_name only does not inherit bridge version",
+			gatherers: []prometheus.Gatherer{
+				gathererFunc(func() ([]*dto.MetricFamily, error) {
+					return []*dto.MetricFamily{
+						{
+							Name: new("custom_gauge"),
+							Help: new("Custom gauge"),
+							Type: dto.MetricType_GAUGE.Enum(),
+							Metric: []*dto.Metric{
+								{
+									Gauge: &dto.Gauge{Value: new(42.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("otel_scope_name"), Value: new("custom.scope")},
+									},
+								},
+							},
+						},
+					}, nil
+				}),
+			},
+			expected: []metricdata.ScopeMetrics{
+				{
+					Scope: instrumentation.Scope{
+						Name: "custom.scope",
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "custom_gauge",
+							Description: "Custom gauge",
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(),
+										Value:      42.0,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "multiple scopes within a single family and across families",
+			gatherers: []prometheus.Gatherer{
+				gathererFunc(func() ([]*dto.MetricFamily, error) {
+					return []*dto.MetricFamily{
+						{
+							Name: new("jvm_memory_bytes_used"),
+							Help: new("Used bytes of a given JVM memory area."),
+							Type: dto.MetricType_GAUGE.Enum(),
+							Metric: []*dto.Metric{
+								{
+									Gauge: &dto.Gauge{Value: new(100.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("area"), Value: new("heap")},
+										{Name: new("otel_scope_name"), Value: new("scope.a")},
+										{Name: new("otel_scope_version"), Value: new("v1.0.0")},
+									},
+								},
+								{
+									Gauge: &dto.Gauge{Value: new(101.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("area"), Value: new("nonheap")},
+										{Name: new("otel_scope_name"), Value: new("scope.a")},
+										{Name: new("otel_scope_version"), Value: new("v1.0.0")},
+									},
+								},
+								{
+									Gauge: &dto.Gauge{Value: new(200.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("area"), Value: new("heap")},
+										{Name: new("otel_scope_name"), Value: new("scope.b")},
+										{Name: new("otel_scope_version"), Value: new("v2.0.0")},
+									},
+								},
+								{
+									Gauge: &dto.Gauge{Value: new(300.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("area"), Value: new("native")},
+									},
+								},
+							},
+						},
+						{
+							Name: new("other_metric"),
+							Help: new("Another metric in scope.a"),
+							Type: dto.MetricType_GAUGE.Enum(),
+							Metric: []*dto.Metric{
+								{
+									Gauge: &dto.Gauge{Value: new(5.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("otel_scope_name"), Value: new("scope.a")},
+										{Name: new("otel_scope_version"), Value: new("v1.0.0")},
+									},
+								},
+							},
+						},
+					}, nil
+				}),
+			},
+			expected: []metricdata.ScopeMetrics{
+				{
+					Scope: instrumentation.Scope{
+						Name:    "scope.a",
+						Version: "v1.0.0",
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "jvm_memory_bytes_used",
+							Description: "Used bytes of a given JVM memory area.",
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(attribute.String("area", "heap")),
+										Value:      100.0,
+									},
+									{
+										Attributes: attribute.NewSet(attribute.String("area", "nonheap")),
+										Value:      101.0,
+									},
+								},
+							},
+						},
+						{
+							Name:        "other_metric",
+							Description: "Another metric in scope.a",
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(),
+										Value:      5.0,
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Scope: instrumentation.Scope{
+						Name:    "scope.b",
+						Version: "v2.0.0",
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "jvm_memory_bytes_used",
+							Description: "Used bytes of a given JVM memory area.",
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(attribute.String("area", "heap")),
+										Value:      200.0,
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Scope: instrumentation.Scope{
+						Name:    scopeName,
+						Version: Version,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "jvm_memory_bytes_used",
+							Description: "Used bytes of a given JVM memory area.",
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(attribute.String("area", "native")),
+										Value:      300.0,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var opts []Option
+			for _, g := range tc.gatherers {
+				opts = append(opts, WithGatherer(g))
+			}
+			p := NewMetricProducer(opts...)
+			output, err := p.Produce(t.Context())
+			require.NoError(t, err)
+			require.Len(t, output, len(tc.expected))
+			for i := range output {
+				metricdatatest.AssertEqual(t, tc.expected[i], output[i], metricdatatest.IgnoreTimestamp())
+			}
 		})
 	}
 }
