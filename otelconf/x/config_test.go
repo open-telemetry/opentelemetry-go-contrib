@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -463,18 +464,15 @@ func TestNewSDKDiagnosticLogger(t *testing.T) {
 		name            string
 		logLevel        *SeverityNumber
 		wantInfoEnabled bool
-		wantWarnEnabled bool
 	}{
 		{
 			name:            "explicit warn level",
 			logLevel:        new(SeverityNumberWarn),
 			wantInfoEnabled: false,
-			wantWarnEnabled: true,
 		},
 		{
 			name:            "omitted level defaults to info",
 			wantInfoEnabled: true,
-			wantWarnEnabled: true,
 		},
 	}
 
@@ -483,30 +481,100 @@ func TestNewSDKDiagnosticLogger(t *testing.T) {
 			var output bytes.Buffer
 			var installedLogger logr.Logger
 
-			cfg := OpenTelemetryConfiguration{
-				LogLevel: tt.logLevel,
-			}
-
 			sdk, err := newSDKWithDiagnosticWriter(
 				&output,
 				func(logger logr.Logger) {
 					installedLogger = logger
 				},
 				WithContext(t.Context()),
-				WithOpenTelemetryConfiguration(cfg),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: tt.logLevel,
+				}),
 			)
 			require.NoError(t, err)
-			require.NoError(t, sdk.Shutdown(t.Context()))
 
-			// Verify that the configured logger was installed.
-			require.True(t, installedLogger.Enabled())
+			assert.Equal(t, tt.wantInfoEnabled, installedLogger.V(4).Enabled())
+			assert.True(t, installedLogger.V(1).Enabled())
 
 			installedLogger.V(4).Info("info marker")
 			installedLogger.V(1).Info("warn marker")
 
 			got := output.String()
 			assert.Equal(t, tt.wantInfoEnabled, strings.Contains(got, "info marker"))
-			assert.Equal(t, tt.wantWarnEnabled, strings.Contains(got, "warn marker"))
+			assert.Contains(t, got, "warn marker")
+
+			require.NoError(t, sdk.Shutdown(t.Context()))
+		})
+	}
+}
+
+func TestNewSDKGlobalDiagnosticLogger(t *testing.T) {
+	const childProcessEnv = "OTELCONF_GLOBAL_LOGGER_TEST"
+
+	if os.Getenv(childProcessEnv) == "1" {
+		level := os.Getenv("OTELCONF_TEST_LOG_LEVEL")
+
+		var opts []ConfigurationOption
+		if level != "" {
+			opts = append(opts, WithOpenTelemetryConfiguration(
+				OpenTelemetryConfiguration{
+					LogLevel: new(SeverityNumber(level)),
+				},
+			))
+		}
+
+		sdk, err := NewSDK(opts...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := sdk.Shutdown(t.Context()); err != nil {
+				t.Error(err)
+			}
+		}()
+
+		sdktrace.NewTracerProvider()
+
+		return
+	}
+
+	tests := []struct {
+		name     string
+		level    string
+		wantInfo bool
+	}{
+		{
+			name:     "explicit warn level",
+			level:    "warn",
+			wantInfo: false,
+		},
+		{
+			name:     "default info level",
+			wantInfo: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := exec.Command(
+				os.Args[0],
+				"-test.v",
+				"-test.run=^TestNewSDKGlobalDiagnosticLogger$",
+			)
+
+			cmd.Env = append(os.Environ(),
+				childProcessEnv+"=1",
+				"OTELCONF_TEST_LOG_LEVEL="+tt.level,
+			)
+
+			output, err := cmd.CombinedOutput()
+			require.NoError(t, err, string(output))
+
+			if tt.wantInfo {
+				assert.Contains(t, string(output), `"msg":"TracerProvider created"`)
+			} else {
+				assert.NotContains(t, string(output), `"msg":"TracerProvider created"`)
+			}
 		})
 	}
 }
