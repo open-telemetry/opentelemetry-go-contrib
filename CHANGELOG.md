@@ -60,6 +60,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use native OpenTelemetry propagators instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#10030)
 - Deprecate `DefaultMinimumReadMemStatsInterval` and `WithMinimumReadMemStatsInterval` in `go.opentelemetry.io/contrib/instrumentation/runtime` in favor of `DefaultMinimumRefreshInterval` and `WithMinimumRefreshInterval`. (#10066)
 
+### Deprecated
+
+- Deprecate `go.opentelemetry.io/contrib/propagators/ot`, which will be removed in v1.49.0.
+  Migrate to native OpenTelemetry APIs and SDKs with W3C Trace Context and W3C Baggage propagation. (#10047)
+
 ### Fixed
 
 - Deduplicate propagator names in `go.opentelemetry.io/contrib/propagators/autoprop` to avoid repeated injection and extraction. (#9956)

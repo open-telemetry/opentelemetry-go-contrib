@@ -14,7 +14,7 @@ import (
 	"go.opentelemetry.io/contrib/propagators/aws/xray"
 	"go.opentelemetry.io/contrib/propagators/b3"
 	"go.opentelemetry.io/contrib/propagators/jaeger"
-	"go.opentelemetry.io/contrib/propagators/ot"
+	"go.opentelemetry.io/contrib/propagators/ot" //nolint:staticcheck // Retain ottrace support until removal in v1.49.0.
 )
 
 // none is the special "propagator" name that means no propagator shall be
