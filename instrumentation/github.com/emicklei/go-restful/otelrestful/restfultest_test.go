@@ -4,9 +4,14 @@
 package otelrestful_test
 
 import (
+	"bytes"
 	"context"
+	"errors"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"testing"
 	"time"
@@ -453,6 +458,142 @@ func TestWithPublicEndpointFn(t *testing.T) {
 			tt.spansAssert(t, sc, spans)
 		})
 	}
+}
+
+type multipartParseResult struct {
+	tmpPath string
+	err     error
+}
+
+func multipartDiskBackedTmpPath(r *http.Request) (string, error) {
+	if err := r.ParseMultipartForm(0); err != nil {
+		return "", err
+	}
+	files := r.MultipartForm.File["file"]
+	if len(files) == 0 {
+		return "", errors.New("missing file part")
+	}
+	f, err := files[0].Open()
+	if err != nil {
+		return "", err
+	}
+	name := ""
+	if of, ok := f.(*os.File); ok {
+		name = of.Name()
+	}
+	if err := f.Close(); err != nil {
+		return "", err
+	}
+	if name == "" {
+		return "", errors.New("file part should be disk-backed given maxMemory of 0")
+	}
+	return name, nil
+}
+
+func TestMultipartFormTempFileCleanup(t *testing.T) {
+	resultCh := make(chan multipartParseResult, 1)
+	ws := &restful.WebService{}
+	ws.Route(ws.POST("/upload").To(func(req *restful.Request, resp *restful.Response) {
+		path, err := multipartDiskBackedTmpPath(req.Request)
+		resultCh <- multipartParseResult{tmpPath: path, err: err}
+		if err != nil {
+			resp.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		resp.WriteHeader(http.StatusOK)
+	}))
+
+	container := restful.NewContainer()
+	container.DoNotRecover(false)
+	container.Filter(otelrestful.OTelFilter("test_handler"))
+	container.Add(ws)
+
+	srv := httptest.NewServer(container)
+	defer srv.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+"/upload", &body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := srv.Client().Do(req)
+	require.NoError(t, err)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	require.NoError(t, resp.Body.Close())
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result multipartParseResult
+	select {
+	case result = <-resultCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("handler never reported temp file path")
+	}
+	require.NoError(t, result.err)
+	require.NotEmpty(t, result.tmpPath)
+	tmpPath := result.tmpPath
+	t.Cleanup(func() { _ = os.Remove(tmpPath) })
+
+	require.Eventually(t, func() bool {
+		_, statErr := os.Stat(tmpPath)
+		return os.IsNotExist(statErr)
+	}, 2*time.Second, 20*time.Millisecond, "multipart temp file was not cleaned up: %s", tmpPath)
+}
+
+func TestMultipartFormTempFileCleanupOnPanic(t *testing.T) {
+	resultCh := make(chan multipartParseResult, 1)
+	ws := &restful.WebService{}
+	ws.Route(ws.POST("/upload").To(func(req *restful.Request, _ *restful.Response) {
+		path, err := multipartDiskBackedTmpPath(req.Request)
+		resultCh <- multipartParseResult{tmpPath: path, err: err}
+		panic("test panic after multipart parse")
+	}))
+
+	container := restful.NewContainer()
+	container.DoNotRecover(false)
+	container.Filter(otelrestful.OTelFilter("test_handler"))
+	container.Add(ws)
+
+	srv := httptest.NewServer(container)
+	defer srv.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+"/upload", &body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := srv.Client().Do(req)
+	require.NoError(t, err)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	require.NoError(t, resp.Body.Close())
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	var result multipartParseResult
+	select {
+	case result = <-resultCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("handler never reported temp file path")
+	}
+	require.NoError(t, result.err)
+	require.NotEmpty(t, result.tmpPath)
+	tmpPath := result.tmpPath
+	t.Cleanup(func() { _ = os.Remove(tmpPath) })
+
+	require.Eventually(t, func() bool {
+		_, statErr := os.Stat(tmpPath)
+		return os.IsNotExist(statErr)
+	}, 5*time.Second, 20*time.Millisecond, "multipart temp file was not cleaned up after panic: %s", tmpPath)
 }
 
 func assertSpan(t *testing.T, span sdktrace.ReadOnlySpan, name string, attrs ...attribute.KeyValue) {

@@ -2,6 +2,12 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package opencensus provides an OpenCensus trace context propagator.
+//
+// Deprecated: Use native OpenTelemetry propagators instead.
+// v0.73.0 is the final planned release of this module.
+// See [Migrating from OpenCensus].
+//
+// [Migrating from OpenCensus]: https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path
 package opencensus
 
 import (
