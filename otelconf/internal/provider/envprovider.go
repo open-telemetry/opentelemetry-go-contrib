@@ -6,6 +6,8 @@
 package provider
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -15,7 +17,11 @@ import (
 	"go.yaml.in/yaml/v3"
 )
 
-const validationPattern = `^[a-zA-Z_][a-zA-Z0-9_]*$`
+const (
+	validationPattern = `^[a-zA-Z_][a-zA-Z0-9_]*$`
+	// yamlLineBreaks is every character the YAML scanner treats as a line break.
+	yamlLineBreaks = "\r\n\u0085\u2028\u2029"
+)
 
 var (
 	validationRegexp        = regexp.MustCompile(validationPattern)
@@ -33,6 +39,12 @@ func ReplaceEnvVars(input []byte) ([]byte, error) {
 	var err error
 
 	out = envVarRegexp.ReplaceAllFunc(out, func(s []byte) []byte {
+		// ReplaceAllFunc cannot stop early, so do not let a later match
+		// overwrite the first error.
+		if err != nil {
+			return nil
+		}
+
 		match := envVarRegexp.FindSubmatch(s)
 		var data []byte
 
@@ -108,6 +120,13 @@ func parseEnvVar(in string) (string, defaultValue) {
 }
 
 func checkRawConfType(val []byte) error {
+	// val is checked on its own but substituted as text, so a line break can
+	// end the scalar it lands in: "|\nkey: value" is a string here, but adds a
+	// key to the document. Trailing line breaks cannot do that.
+	if bytes.ContainsAny(bytes.TrimRight(val, yamlLineBreaks), yamlLineBreaks) {
+		return errors.New("line breaks are not supported in substituted values")
+	}
+
 	var rawConf any
 	err := yaml.Unmarshal(val, &rawConf)
 	if err != nil {
