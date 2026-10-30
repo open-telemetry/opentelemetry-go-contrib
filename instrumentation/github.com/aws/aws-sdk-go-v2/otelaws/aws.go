@@ -6,9 +6,11 @@ package otelaws
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	v2Middleware "github.com/aws/aws-sdk-go-v2/aws/middleware"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"go.opentelemetry.io/otel"
@@ -72,8 +74,13 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		out, metadata, err = next.HandleInitialize(ctx, in)
 		span.SetAttributes(m.buildAttributes(ctx, in, out)...)
 		if err != nil {
-			span.SetAttributes(semconv.ErrorType(err))
-			span.SetStatus(codes.Error, err.Error())
+			// A 3xx response, such as a conditional request answered with 304 Not
+			// Modified, is an expected outcome and is not recorded as an error.
+			var respErr *awshttp.ResponseError
+			if !errors.As(err, &respErr) || respErr.HTTPStatusCode() < 300 || respErr.HTTPStatusCode() >= 400 {
+				span.SetAttributes(semconv.ErrorType(err))
+				span.SetStatus(codes.Error, err.Error())
+			}
 		}
 
 		return out, metadata, err
