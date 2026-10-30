@@ -99,36 +99,40 @@ It's recommended that you signal your intention to contribute in the issue track
 
 Please follow [Contributing to opentelemetry-go](https://github.com/open-telemetry/opentelemetry-go/blob/main/CONTRIBUTING.md).
 
-## New Component
+## New Modules and Components
 
-**Do not submit pull requests for new components without reading the following.**
+**Do not submit pull requests for new Go modules or components without reading the following.**
 
-This project is dedicated to promoting the development of quality components, such as instrumentation libraries, bridges, detectors, propagators, samplers, processors, using OpenTelemetry.
-To achieve this goal, we recognize that the components needs to be written using the best practices of OpenTelemetry.
-Additionally, the produced component needs to be maintained and evolved.
+This project is dedicated to promoting the development of quality OpenTelemetry components and Go modules. All new modules and components should follow OpenTelemetry best practices and be maintained and evolved over time.
 
-The size of the OpenTelemetry Go developer community is not large enough to support an ever growing amount of components.
-Therefore, to reach our goal, we have the following recommendations for where components should live.
+The following guidelines apply to all new Go modules in this repository, including instrumentation modules and other types of components.
 
-1. Native to the instrumented package
+The size of the OpenTelemetry Go developer community is not large enough to support an ever growing amount of components and modules.
+Therefore, to reach our goal, we have the following recommendations for where components and modules should live.
+
+1. Native to the relevant package or project
 2. A dedicated public repository
 3. Here in the opentelemetry-go-contrib repository
 
-If possible, OpenTelemetry instrumentation should be included in the instrumented package.
-This will ensure the instrumentation reaches all package users, and is continuously maintained by developers that understand the package.
+If possible, a component should be included in the package or project it is related to.
+This will ensure the component reaches all users of the package and is continuously maintained by developers who understand the package.
 
-If component cannot be directly included in the package it is related to, it should be hosted in a dedicated public repository owned by its maintainer(s).
-This will appropriately assign maintenance responsibilities for the instrumentation and ensure these maintainers have the needed privilege to maintain the code.
+If a component cannot be directly included in the package or project it is related to, it should be hosted in a dedicated public repository owned by its maintainer(s).
+This will appropriately assign maintenance responsibilities and ensure these maintainers have the necessary privileges to maintain the code.
 
-The last place component should be hosted is here in this repository as a separate Go module.
-Maintaining components here hampers the development of OpenTelemetry for Go and therefore should be avoided.
-When instrumentation cannot be included in a target package and there is good reason to not host it in a separate and dedicated repository a [new component or instrumentation request](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/new/choose) should be filed.
+The last place a component or module should be hosted is here in this repository as a separate Go module.
+Maintaining additional modules here increases the maintenance burden on the OpenTelemetry Go community and therefore should be avoided when possible.
+When a component cannot be included in a related package or project and there is good reason not to host it in a separate and dedicated repository, a [new component or instrumentation request](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/new/choose) should be filed.
 The request needs to be accepted before any pull requests for the component can be considered for merging.
 
-Regardless of where component is hosted, it needs to be discoverable.
-The [OpenTelemetry registry](https://opentelemetry.io/registry/)
-exists to ensure that component is discoverable.
-You can find out how to add component to the registry [here](https://github.com/open-telemetry/opentelemetry.io#adding-a-project-to-the-opentelemetry-registry).
+All new Go modules must have a designated Code Owner, as described in the [Code Owners](#code-owners) section.
+
+Regardless of where a component is hosted, it needs to be discoverable.
+The [OpenTelemetry registry](https://opentelemetry.io/registry)
+exists to ensure that components are discoverable.
+You can find out how to add a component to the registry [here](https://github.com/open-telemetry/opentelemetry.io#adding-a-project-to-the-opentelemetry-registry).
+
+For instrumentation-specific packaging and implementation requirements, see the [instrumentation documentation](./instrumentation/README.md).
 
 ## Approvers and Maintainers
 
