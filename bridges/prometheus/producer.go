@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -31,21 +32,26 @@ var (
 	processStartTime   = time.Now()
 )
 
-type producer struct {
+// Producer is a [metric.Producer] that fetches metrics from Prometheus.
+type Producer struct {
 	gatherers prometheus.Gatherers
 }
 
-// NewMetricProducer returns a metric.Producer that fetches metrics from
+var _ metric.Producer = (*Producer)(nil)
+
+// NewMetricProducer returns a [Producer] that fetches metrics from
 // Prometheus. This can be used to allow Prometheus instrumentation to be
 // added to an OpenTelemetry export pipeline.
-func NewMetricProducer(opts ...Option) metric.Producer {
+func NewMetricProducer(opts ...Option) *Producer {
 	cfg := newConfig(opts...)
-	return &producer{
+	return &Producer{
 		gatherers: cfg.gatherers,
 	}
 }
 
-func (p *producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
+// Produce fetches metrics from the configured Prometheus gatherers and
+// converts them to OpenTelemetry metrics.
+func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	now := time.Now()
 	var errs multierr
 	otelMetrics := make([]metricdata.Metrics, 0)
@@ -209,7 +215,12 @@ func convertExponentialHistogram(metrics []*dto.Metric, now time.Time) metricdat
 				m.GetHistogram().GetNegativeSpan(),
 				m.GetHistogram().GetNegativeDelta(),
 			),
-			// TODO: Support exemplars
+		}
+		if exs := m.GetHistogram().GetExemplars(); len(exs) > 0 {
+			dp.Exemplars = make([]metricdata.Exemplar[float64], len(exs))
+			for j, ex := range exs {
+				dp.Exemplars[j] = convertExemplar(ex)
+			}
 		}
 		createdTs := m.GetHistogram().GetCreatedTimestamp()
 		if createdTs.IsValid() {
@@ -388,9 +399,13 @@ func convertExemplar(exemplar *dto.Exemplar) metricdata.Exemplar[float64] {
 	for _, label := range exemplar.GetLabel() {
 		switch label.GetName() {
 		case traceIDLabel:
-			traceID = []byte(label.GetValue())
+			if tid, err := trace.TraceIDFromHex(label.GetValue()); err == nil {
+				traceID = tid[:]
+			}
 		case spanIDLabel:
-			spanID = []byte(label.GetValue())
+			if sid, err := trace.SpanIDFromHex(label.GetValue()); err == nil {
+				spanID = sid[:]
+			}
 		default:
 			attrs = append(attrs, attribute.String(label.GetName(), label.GetValue()))
 		}

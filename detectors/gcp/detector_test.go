@@ -100,7 +100,85 @@ func TestDetect(t *testing.T) {
 				gceRegion:              "us-central1",
 				gcpGceInstanceName:     "my-gke-node-1234",
 				gcpGceInstanceHostname: "hostname",
+				gcpGceInstanceLabels: map[string]string{
+					"env": "prod",
+				},
 			}},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPComputeEngine,
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+				semconv.GCPGCEInstanceNameKey.String("my-gke-node-1234"),
+				semconv.GCPGCEInstanceHostnameKey.String("hostname"),
+				semconv.HostType("n1-standard1"),
+				semconv.CloudRegion("us-central1"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+			),
+		},
+		{
+			desc: "GCE with instance labels filter enabled",
+			detector: &detector{
+				detector: &fakeGCPDetector{
+					projectID:              "my-project",
+					cloudPlatform:          internal.GCE,
+					gceHostID:              "1472385723456792345",
+					gceHostName:            "my-gke-node-1234",
+					gceHostType:            "n1-standard1",
+					gceAvailabilityZone:    "us-central1-c",
+					gceRegion:              "us-central1",
+					gcpGceInstanceName:     "my-gke-node-1234",
+					gcpGceInstanceHostname: "hostname",
+					gcpGceInstanceLabels: map[string]string{
+						"env":     "prod",
+						"team":    "instrumentation",
+						"ignored": "secret",
+					},
+				},
+				cfg: config{
+					gceLabelKeyFilter: func(k string) bool {
+						return k == "env" || k == "team"
+					},
+				},
+			},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPComputeEngine,
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+				semconv.GCPGCEInstanceNameKey.String("my-gke-node-1234"),
+				semconv.GCPGCEInstanceHostnameKey.String("hostname"),
+				semconv.HostType("n1-standard1"),
+				semconv.CloudRegion("us-central1"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				semconv.GCPGCEInstanceLabels("env", "prod"),
+				semconv.GCPGCEInstanceLabels("team", "instrumentation"),
+			),
+		},
+		{
+			desc: "GCE with instance labels error",
+			detector: &detector{
+				detector: &fakeGCPDetector{
+					projectID:              "my-project",
+					cloudPlatform:          internal.GCE,
+					gceHostID:              "1472385723456792345",
+					gceHostName:            "my-gke-node-1234",
+					gceHostType:            "n1-standard1",
+					gceAvailabilityZone:    "us-central1-c",
+					gceRegion:              "us-central1",
+					gcpGceInstanceName:     "my-gke-node-1234",
+					gcpGceInstanceHostname: "hostname",
+					gceLabelsErr:           fmt.Errorf("failed to get GCE labels"),
+				},
+				cfg: config{
+					gceLabelKeyFilter: func(string) bool { return true },
+				},
+			},
+			expectErr: true,
 			expectedResource: resource.NewWithAttributes(
 				semconv.SchemaURL,
 				semconv.CloudProviderGCP,
@@ -501,13 +579,21 @@ func TestBareMetalSolutionEnv(t *testing.T) {
 }
 
 func TestNewDetectorWithOptions(t *testing.T) {
-	d, ok := NewDetectorWithOptions(WithGKEHostType()).(*detector)
+	filter := func(k string) bool { return k == "env" }
+	d, ok := NewDetectorWithOptions(
+		WithGKEHostType(),
+		WithGCEInstanceLabelKeyFilter(filter),
+	).(*detector)
 	assert.True(t, ok)
 	assert.True(t, d.cfg.gkeHostType)
+	assert.NotNil(t, d.cfg.gceLabelKeyFilter)
+	assert.True(t, d.cfg.gceLabelKeyFilter("env"))
+	assert.False(t, d.cfg.gceLabelKeyFilter("other"))
 
 	defaultDetector, ok := NewDetector().(*detector)
 	assert.True(t, ok)
 	assert.False(t, defaultDetector.cfg.gkeHostType)
+	assert.Nil(t, defaultDetector.cfg.gceLabelKeyFilter)
 }
 
 func TestDetectGKEHostTypeContextCancellation(t *testing.T) {
@@ -544,12 +630,60 @@ func TestDetectGKEHostTypeContextCancellation(t *testing.T) {
 	), res)
 }
 
+func TestDetectGCEInstanceLabelsContextCancellation(t *testing.T) {
+	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
+
+	fake := &fakeGCPDetector{
+		projectID:              "my-project",
+		cloudPlatform:          internal.GCE,
+		gceHostID:              "1472385723456792345",
+		gceHostName:            "my-gke-node-1234",
+		gceHostType:            "n1-standard1",
+		gceAvailabilityZone:    "us-central1-c",
+		gceRegion:              "us-central1",
+		gcpGceInstanceName:     "my-gke-node-1234",
+		gcpGceInstanceHostname: "hostname",
+		gcpGceInstanceLabels: map[string]string{
+			"env": "prod",
+		},
+	}
+	d := &detector{
+		detector: fake,
+		cfg: config{
+			gceLabelKeyFilter: func(string) bool { return true },
+		},
+	}
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	res, err := d.Detect(ctx)
+	assert.ErrorIs(t, err, resource.ErrPartialResource)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Same(t, ctx, fake.gceLabelsCtx)
+	assert.Equal(t, resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.CloudProviderGCP,
+		semconv.CloudAccountID("my-project"),
+		semconv.CloudPlatformGCPComputeEngine,
+		semconv.HostID("1472385723456792345"),
+		semconv.HostName("my-gke-node-1234"),
+		semconv.GCPGCEInstanceNameKey.String("my-gke-node-1234"),
+		semconv.GCPGCEInstanceHostnameKey.String("hostname"),
+		semconv.HostType("n1-standard1"),
+		semconv.CloudRegion("us-central1"),
+		semconv.CloudAvailabilityZone("us-central1-c"),
+	), res)
+}
+
 // fakeGCPDetector implements gcpDetector and uses fake values.
 type fakeGCPDetector struct {
 	err                             error
 	migErr                          error
+	gceLabelsErr                    error
 	cloudPlatformCalls              int
 	gkeHostTypeCtx                  context.Context
+	gceLabelsCtx                    context.Context
 	projectID                       string
 	cloudPlatform                   internal.Platform
 	gkeAvailabilityZone             string
@@ -574,6 +708,7 @@ type fakeGCPDetector struct {
 	gceHostName                     string
 	gcpGceInstanceName              string
 	gcpGceInstanceHostname          string
+	gcpGceInstanceLabels            map[string]string
 	gcpGceManagedInstanceGroup      internal.ManagedInstanceGroup
 	gcpBareMetalSolutionCloudRegion string
 	gcpBareMetalSolutionInstanceID  string
@@ -746,6 +881,20 @@ func (f *fakeGCPDetector) GCEInstanceHostname() (string, error) {
 		return "", f.err
 	}
 	return f.gcpGceInstanceHostname, nil
+}
+
+func (f *fakeGCPDetector) GCEInstanceLabels(ctx context.Context) (map[string]string, error) {
+	f.gceLabelsCtx = ctx
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
+	if f.gceLabelsErr != nil {
+		return nil, f.gceLabelsErr
+	}
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.gcpGceInstanceLabels, nil
 }
 
 func (f *fakeGCPDetector) CloudRunJobExecution() (string, error) {
