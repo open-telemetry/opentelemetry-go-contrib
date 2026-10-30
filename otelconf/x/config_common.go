@@ -162,6 +162,18 @@ func unmarshalSamplerTypes(raw map[string]any, plain *Sampler) {
 	if _, ok := raw["always_off"]; ok {
 		plain.AlwaysOff = AlwaysOffSampler{}
 	}
+
+	delete(raw, "always_on")
+	delete(raw, "always_off")
+	delete(raw, "composite/development")
+	delete(raw, "jaeger_remote/development")
+	delete(raw, "parent_based")
+	delete(raw, "probability/development")
+	delete(raw, "trace_id_ratio_based")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
 }
 
 // unmarshalMetricProducer handles opencensus metric producer unmarshaling.

@@ -63,6 +63,95 @@ func TestUnmarshalSpanExporterInvalidData(t *testing.T) {
 	assert.ErrorIs(t, err, newErrUnmarshal(&SpanExporter{}))
 }
 
+func TestUnmarshalCustomSpanExporter(t *testing.T) {
+	want := SpanExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{
+		"custom": {
+			"endpoint": "http://localhost:4318"
+		}
+	}`)
+	yamlConfig := []byte(`custom:
+  endpoint: http://localhost:4318
+`)
+
+	var fromJSON SpanExporter
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML SpanExporter
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalCustomLogRecordExporter(t *testing.T) {
+	want := LogRecordExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{"custom":{"endpoint":"http://localhost:4318"}}`)
+	yamlConfig := []byte("custom:\n  endpoint: http://localhost:4318\n")
+
+	var fromJSON LogRecordExporter
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML LogRecordExporter
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalCustomTextMapPropagator(t *testing.T) {
+	want := TextMapPropagator{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"header": "x-trace-id",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{"custom":{"header":"x-trace-id"}}`)
+	yamlConfig := []byte("custom:\n  header: x-trace-id\n")
+
+	var fromJSON TextMapPropagator
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML TextMapPropagator
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalCustomSpanExporterYAMLMergeKey(t *testing.T) {
+	input := []byte(`
+<<: {custom: {endpoint: http://localhost:4318}}
+`)
+
+	var got SpanExporter
+	err := yaml.Unmarshal(input, &got)
+	require.NoError(t, err)
+
+	want := SpanExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	require.Equal(t, want, got)
+}
+
 func TestUnmarshalTextMapPropagator(t *testing.T) {
 	for _, tt := range []struct {
 		name                  string
@@ -441,6 +530,7 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 	material.CACertPath = filepath.ToSlash(material.CACertPath)
 	material.ClientCertPath = filepath.ToSlash(material.ClientCertPath)
 	material.ClientKeyPath = filepath.ToSlash(material.ClientKeyPath)
+
 	return &OpenTelemetryConfiguration{
 		Disabled:   new(false),
 		FileFormat: "1.0-rc.2",
@@ -448,7 +538,6 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 			AttributeCountLimit:       new(128),
 			AttributeValueLengthLimit: new(4096),
 		},
-
 		LogLevel: new(SeverityNumberInfo),
 		LoggerProvider: &LoggerProvider{
 			Limits: &LogRecordLimits{
@@ -504,12 +593,24 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 				},
 				{
 					Batch: &BatchLogRecordProcessor{
-						Exporter: LogRecordExporter{},
+						Exporter: LogRecordExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "file:///var/log/logs.jsonl",
+								},
+							},
+						},
 					},
 				},
 				{
 					Batch: &BatchLogRecordProcessor{
-						Exporter: LogRecordExporter{},
+						Exporter: LogRecordExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "stdout",
+								},
+							},
+						},
 					},
 				},
 				{
@@ -541,7 +642,20 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 							ObservableUpDownCounter: new(2000),
 							UpDownCounter:           new(2000),
 						},
-						Exporter: PullMetricExporter{},
+						Exporter: PullMetricExporter{
+							AdditionalProperties: map[string]any{
+								"prometheus/development": map[string]any{
+									"host":                 "localhost",
+									"port":                 9464,
+									"translation_strategy": "underscore_escaping_with_suffixes",
+									"with_resource_constant_labels": map[string]any{
+										"excluded": []any{"service.attr1"},
+										"included": []any{"service*"},
+									},
+									"without_scope_info": false,
+								},
+							},
+						},
 					},
 				},
 				{
@@ -611,12 +725,28 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 				},
 				{
 					Periodic: &PeriodicMetricReader{
-						Exporter: PushMetricExporter{},
+						Exporter: PushMetricExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream":                 "file:///var/log/metrics.jsonl",
+									"default_histogram_aggregation": "base2_exponential_bucket_histogram",
+									"temporality_preference":        "delta",
+								},
+							},
+						},
 					},
 				},
 				{
 					Periodic: &PeriodicMetricReader{
-						Exporter: PushMetricExporter{},
+						Exporter: PushMetricExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream":                 "stdout",
+									"default_histogram_aggregation": "base2_exponential_bucket_histogram",
+									"temporality_preference":        "delta",
+								},
+							},
+						},
 					},
 				},
 				{
@@ -657,24 +787,12 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 		},
 		Propagator: &Propagator{
 			Composite: []TextMapPropagator{
-				{
-					Tracecontext: TraceContextPropagator{},
-				},
-				{
-					Baggage: BaggagePropagator{},
-				},
-				{
-					B3: B3Propagator{},
-				},
-				{
-					B3Multi: B3MultiPropagator{},
-				},
-				{
-					Jaeger: JaegerPropagator{},
-				},
-				{
-					Ottrace: OpenTracingPropagator{},
-				},
+				{Tracecontext: TraceContextPropagator{}},
+				{Baggage: BaggagePropagator{}},
+				{B3: B3Propagator{}},
+				{B3Multi: B3MultiPropagator{}},
+				{Jaeger: JaegerPropagator{}},
+				{Ottrace: OpenTracingPropagator{}},
 			},
 			CompositeList: new("tracecontext,baggage,b3,b3multi,jaeger,ottrace,xray"),
 		},
@@ -750,12 +868,24 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 				},
 				{
 					Batch: &BatchSpanProcessor{
-						Exporter: SpanExporter{},
+						Exporter: SpanExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "file:///var/log/traces.jsonl",
+								},
+							},
+						},
 					},
 				},
 				{
 					Batch: &BatchSpanProcessor{
-						Exporter: SpanExporter{},
+						Exporter: SpanExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "stdout",
+								},
+							},
+						},
 					},
 				},
 				{
@@ -768,12 +898,8 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 			},
 			Sampler: &Sampler{
 				ParentBased: &ParentBasedSampler{
-					LocalParentNotSampled: &Sampler{
-						AlwaysOff: AlwaysOffSampler{},
-					},
-					LocalParentSampled: &Sampler{
-						AlwaysOn: AlwaysOnSampler{},
-					},
+					LocalParentNotSampled: &Sampler{AlwaysOff: AlwaysOffSampler{}},
+					LocalParentSampled:    &Sampler{AlwaysOn: AlwaysOnSampler{}},
 					RemoteParentNotSampled: &Sampler{
 						AlwaysOff: AlwaysOffSampler{},
 					},
@@ -907,6 +1033,7 @@ func TestParseFiles(t *testing.T) {
 				assert.Equal(t, tt.wantType, got)
 			}
 		})
+
 		t.Run("json: "+tt.name, func(t *testing.T) {
 			b, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.json", tt.input)))
 			require.NoError(t, err)
@@ -914,6 +1041,25 @@ func TestParseFiles(t *testing.T) {
 			var got OpenTelemetryConfiguration
 			err = json.Unmarshal(replaceCertPaths(b), &got)
 			require.ErrorIs(t, err, tt.wantErr)
+
+			if err == nil && tt.wantErr == nil && got.MeterProvider != nil {
+				for i := range got.MeterProvider.Readers {
+					reader := &got.MeterProvider.Readers[i]
+					if reader.Pull == nil {
+						continue
+					}
+
+					prometheus, ok := reader.Pull.Exporter.AdditionalProperties["prometheus/development"].(map[string]any)
+					if !ok {
+						continue
+					}
+
+					if port, ok := prometheus["port"].(float64); ok {
+						prometheus["port"] = int(port)
+					}
+				}
+			}
+
 			assert.Equal(t, tt.wantType, &got)
 		})
 	}
@@ -2023,10 +2169,14 @@ func TestUnmarshalPullMetricReader(t *testing.T) {
 		wantExporter PullMetricExporter
 	}{
 		{
-			name:         "valid with proemtheus exporter",
-			jsonConfig:   []byte(`{"exporter":{"prometheus/development":{}}}`),
-			yamlConfig:   []byte("exporter:\n  prometheus/development: {}"),
-			wantExporter: PullMetricExporter{},
+			name:       "valid with prometheus exporter",
+			jsonConfig: []byte(`{"exporter":{"prometheus/development":{}}}`),
+			yamlConfig: []byte("exporter:\n  prometheus/development: {}"),
+			wantExporter: PullMetricExporter{
+				AdditionalProperties: map[string]any{
+					"prometheus/development": map[string]any{},
+				},
+			},
 		},
 		{
 			name:       "missing required exporter field",
