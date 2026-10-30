@@ -20,9 +20,9 @@ const serviceNamespace = "cloud-run-managed"
 // The minimal list of metadata.Client methods we use. Use an interface so we
 // can replace it with a fake implementation in the unit test.
 type metadataClient interface {
-	ProjectID() (string, error)
-	Get(string) (string, error)
-	InstanceID() (string, error)
+	ProjectIDWithContext(ctx context.Context) (string, error)
+	GetWithContext(ctx context.Context, k string) (string, error)
+	InstanceIDWithContext(ctx context.Context) (string, error)
 }
 
 // CloudRun collects resource information of Cloud Run instance.
@@ -30,7 +30,7 @@ type metadataClient interface {
 // Deprecated: Use gcp.NewDetector() instead. Note that it sets faas.* resource attributes instead of service.* attributes.
 type CloudRun struct {
 	mc     metadataClient
-	onGCE  func() bool
+	onGCE  func(context.Context) bool
 	getenv func(string) string
 }
 
@@ -44,13 +44,13 @@ var _ resource.Detector = (*CloudRun)(nil)
 func NewCloudRun() *CloudRun {
 	return &CloudRun{
 		mc:     metadata.NewClient(nil),
-		onGCE:  metadata.OnGCE,
+		onGCE:  metadata.OnGCEWithContext,
 		getenv: os.Getenv,
 	}
 }
 
-func (c *CloudRun) cloudRegion() (string, error) {
-	region, err := c.mc.Get("instance/region")
+func (c *CloudRun) cloudRegion(ctx context.Context) (string, error) {
+	region, err := c.mc.GetWithContext(ctx, "instance/region")
 	if err != nil {
 		return "", err
 	}
@@ -63,10 +63,10 @@ func (c *CloudRun) cloudRegion() (string, error) {
 // NOTE: the service.namespace attribute is currently hardcoded to be
 // "cloud-run-managed". This may change in the future, please do not rely on
 // this behavior yet.
-func (c *CloudRun) Detect(context.Context) (*resource.Resource, error) {
+func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 	// .OnGCE is actually testing whether the metadata server is available.
 	// Metadata server is supported on Cloud Run.
-	if !c.onGCE() {
+	if !c.onGCE(ctx) {
 		return nil, nil
 	}
 
@@ -77,19 +77,19 @@ func (c *CloudRun) Detect(context.Context) (*resource.Resource, error) {
 
 	var errInfo []string
 
-	if projectID, err := c.mc.ProjectID(); hasProblem(err) {
+	if projectID, err := c.mc.ProjectIDWithContext(ctx); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if projectID != "" {
 		attributes = append(attributes, semconv.CloudAccountID(projectID))
 	}
 
-	if region, err := c.cloudRegion(); hasProblem(err) {
+	if region, err := c.cloudRegion(ctx); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if region != "" {
 		attributes = append(attributes, semconv.CloudRegion(region))
 	}
 
-	if instanceID, err := c.mc.InstanceID(); hasProblem(err) {
+	if instanceID, err := c.mc.InstanceIDWithContext(ctx); hasProblem(err) {
 		errInfo = append(errInfo, err.Error())
 	} else if instanceID != "" {
 		attributes = append(attributes, semconv.ServiceInstanceID(instanceID))

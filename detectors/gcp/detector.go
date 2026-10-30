@@ -88,9 +88,9 @@ type detector struct {
 // Detect detects associated resources when running on GCE, GKE, GAE,
 // Cloud Run, Cloud Run jobs, Cloud Run worker pools, Cloud Functions, and Bare Metal Solution.
 func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
-	projectID, err1 := d.detector.BareMetalSolutionProjectID()
-	region, err2 := d.detector.BareMetalSolutionCloudRegion()
-	instanceID, err3 := d.detector.BareMetalSolutionInstanceID()
+	projectID, err1 := d.detector.BareMetalSolutionProjectID(ctx)
+	region, err2 := d.detector.BareMetalSolutionCloudRegion(ctx)
+	instanceID, err3 := d.detector.BareMetalSolutionInstanceID(ctx)
 	if err1 == nil && err2 == nil && err3 == nil && projectID != "" && region != "" && instanceID != "" {
 		return resource.NewWithAttributes(
 			semconv.SchemaURL,
@@ -102,67 +102,67 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		), nil
 	}
 
-	if !metadata.OnGCE() {
+	if !metadata.OnGCEWithContext(ctx) {
 		return nil, nil
 	}
 	b := &resourceBuilder{}
 	b.attrs = append(b.attrs, semconv.CloudProviderGCP)
-	b.add(semconv.CloudAccountIDKey, d.detector.ProjectID)
+	b.add(ctx, semconv.CloudAccountIDKey, d.detector.ProjectID)
 
-	switch d.detector.CloudPlatform() {
+	switch d.detector.CloudPlatform(ctx) {
 	case internal.GKE:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPKubernetesEngine)
-		b.addZoneOrRegion(d.detector.GKEAvailabilityZoneOrRegion)
-		b.add(semconv.K8SClusterNameKey, d.detector.GKEClusterName)
-		b.add(semconv.HostIDKey, d.detector.GKEHostID)
+		b.addZoneOrRegion(ctx, d.detector.GKEAvailabilityZoneOrRegion)
+		b.add(ctx, semconv.K8SClusterNameKey, d.detector.GKEClusterName)
+		b.add(ctx, semconv.HostIDKey, d.detector.GKEHostID)
 		if d.cfg.gkeHostType {
-			b.add(semconv.HostTypeKey, func() (string, error) {
+			b.add(ctx, semconv.HostTypeKey, func(ctx context.Context) (string, error) {
 				return d.detector.GKEHostType(ctx)
 			})
 		}
 	case internal.CloudRun, internal.CloudRunWorkerPool:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
-		b.add(semconv.FaaSNameKey, d.detector.FaaSName)
-		b.add(semconv.FaaSVersionKey, d.detector.FaaSVersion)
-		b.add(semconv.FaaSInstanceKey, d.detector.FaaSID)
-		b.add(semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
+		b.add(ctx, semconv.FaaSVersionKey, d.detector.FaaSVersion)
+		b.add(ctx, semconv.FaaSInstanceKey, d.detector.FaaSID)
+		b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
 	case internal.CloudRunJob:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
-		b.add(semconv.FaaSNameKey, d.detector.FaaSName)
-		b.add(semconv.FaaSInstanceKey, d.detector.FaaSID)
-		b.add(semconv.GCPCloudRunJobExecutionKey, d.detector.CloudRunJobExecution)
-		b.addInt(semconv.GCPCloudRunJobTaskIndexKey, d.detector.CloudRunJobTaskIndex)
-		b.add(semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
+		b.add(ctx, semconv.FaaSInstanceKey, d.detector.FaaSID)
+		b.add(ctx, semconv.GCPCloudRunJobExecutionKey, d.detector.CloudRunJobExecution)
+		b.addInt(ctx, semconv.GCPCloudRunJobTaskIndexKey, d.detector.CloudRunJobTaskIndex)
+		b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
 	case internal.CloudFunctions:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudFunctions)
-		b.add(semconv.FaaSNameKey, d.detector.FaaSName)
-		b.add(semconv.FaaSVersionKey, d.detector.FaaSVersion)
-		b.add(semconv.FaaSInstanceKey, d.detector.FaaSID)
-		b.add(semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
+		b.add(ctx, semconv.FaaSVersionKey, d.detector.FaaSVersion)
+		b.add(ctx, semconv.FaaSInstanceKey, d.detector.FaaSID)
+		b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
 	case internal.AppEngineFlex:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPAppEngine)
-		b.addZoneAndRegion(d.detector.AppEngineFlexAvailabilityZoneAndRegion)
-		b.add(semconv.FaaSNameKey, d.detector.AppEngineServiceName)
-		b.add(semconv.FaaSVersionKey, d.detector.AppEngineServiceVersion)
-		b.add(semconv.FaaSInstanceKey, d.detector.AppEngineServiceInstance)
+		b.addZoneAndRegion(ctx, d.detector.AppEngineFlexAvailabilityZoneAndRegion)
+		b.add(ctx, semconv.FaaSNameKey, d.detector.AppEngineServiceName)
+		b.add(ctx, semconv.FaaSVersionKey, d.detector.AppEngineServiceVersion)
+		b.add(ctx, semconv.FaaSInstanceKey, d.detector.AppEngineServiceInstance)
 	case internal.AppEngineStandard:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPAppEngine)
-		b.add(semconv.CloudAvailabilityZoneKey, d.detector.AppEngineStandardAvailabilityZone)
-		b.add(semconv.CloudRegionKey, d.detector.AppEngineStandardCloudRegion)
-		b.add(semconv.FaaSNameKey, d.detector.AppEngineServiceName)
-		b.add(semconv.FaaSVersionKey, d.detector.AppEngineServiceVersion)
-		b.add(semconv.FaaSInstanceKey, d.detector.AppEngineServiceInstance)
+		b.add(ctx, semconv.CloudAvailabilityZoneKey, d.detector.AppEngineStandardAvailabilityZone)
+		b.add(ctx, semconv.CloudRegionKey, d.detector.AppEngineStandardCloudRegion)
+		b.add(ctx, semconv.FaaSNameKey, d.detector.AppEngineServiceName)
+		b.add(ctx, semconv.FaaSVersionKey, d.detector.AppEngineServiceVersion)
+		b.add(ctx, semconv.FaaSInstanceKey, d.detector.AppEngineServiceInstance)
 	case internal.GCE:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPComputeEngine)
-		b.addZoneAndRegion(d.detector.GCEAvailabilityZoneAndRegion)
-		b.add(semconv.HostTypeKey, d.detector.GCEHostType)
-		b.add(semconv.HostIDKey, d.detector.GCEHostID)
-		b.add(semconv.HostNameKey, d.detector.GCEHostName)
-		b.add(semconv.GCPGCEInstanceNameKey, d.detector.GCEInstanceName)
-		b.add(semconv.GCPGCEInstanceHostnameKey, d.detector.GCEInstanceHostname)
-		b.addManagedInstanceGroup(d.detector.GCEManagedInstanceGroup)
+		b.addZoneAndRegion(ctx, d.detector.GCEAvailabilityZoneAndRegion)
+		b.add(ctx, semconv.HostTypeKey, d.detector.GCEHostType)
+		b.add(ctx, semconv.HostIDKey, d.detector.GCEHostID)
+		b.add(ctx, semconv.HostNameKey, d.detector.GCEHostName)
+		b.add(ctx, semconv.GCPGCEInstanceNameKey, d.detector.GCEInstanceName)
+		b.add(ctx, semconv.GCPGCEInstanceHostnameKey, d.detector.GCEInstanceHostname)
+		b.addManagedInstanceGroup(ctx, d.detector.GCEManagedInstanceGroup)
 		if d.cfg.gceLabelKeyFilter != nil {
-			b.addGCEInstanceLabels(func() (map[string]string, error) {
+			b.addGCEInstanceLabels(ctx, func(ctx context.Context) (map[string]string, error) {
 				return d.detector.GCEInstanceLabels(ctx)
 			}, d.cfg.gceLabelKeyFilter)
 		}
@@ -179,16 +179,16 @@ type resourceBuilder struct {
 	attrs []attribute.KeyValue
 }
 
-func (r *resourceBuilder) add(key attribute.Key, detect func() (string, error)) {
-	if v, err := detect(); err == nil {
+func (r *resourceBuilder) add(ctx context.Context, key attribute.Key, detect func(context.Context) (string, error)) {
+	if v, err := detect(ctx); err == nil {
 		r.attrs = append(r.attrs, key.String(v))
 	} else {
 		r.errs = append(r.errs, err)
 	}
 }
 
-func (r *resourceBuilder) addInt(key attribute.Key, detect func() (string, error)) {
-	if v, err := detect(); err == nil {
+func (r *resourceBuilder) addInt(ctx context.Context, key attribute.Key, detect func(context.Context) (string, error)) {
+	if v, err := detect(ctx); err == nil {
 		if vi, err := strconv.Atoi(v); err == nil {
 			r.attrs = append(r.attrs, key.Int(vi))
 		} else {
@@ -200,8 +200,8 @@ func (r *resourceBuilder) addInt(key attribute.Key, detect func() (string, error
 }
 
 // addZoneAndRegion functions are expected to return zone, region, err.
-func (r *resourceBuilder) addZoneAndRegion(detect func() (string, string, error)) {
-	if zone, region, err := detect(); err == nil {
+func (r *resourceBuilder) addZoneAndRegion(ctx context.Context, detect func(context.Context) (string, string, error)) {
+	if zone, region, err := detect(ctx); err == nil {
 		r.attrs = append(
 			r.attrs,
 			semconv.CloudAvailabilityZone(zone),
@@ -212,8 +212,8 @@ func (r *resourceBuilder) addZoneAndRegion(detect func() (string, string, error)
 	}
 }
 
-func (r *resourceBuilder) addZoneOrRegion(detect func() (string, internal.LocationType, error)) {
-	if v, locType, err := detect(); err == nil {
+func (r *resourceBuilder) addZoneOrRegion(ctx context.Context, detect func(context.Context) (string, internal.LocationType, error)) {
+	if v, locType, err := detect(ctx); err == nil {
 		switch locType {
 		case internal.Zone:
 			r.attrs = append(r.attrs, semconv.CloudAvailabilityZone(v))
@@ -227,8 +227,8 @@ func (r *resourceBuilder) addZoneOrRegion(detect func() (string, internal.Locati
 	}
 }
 
-func (r *resourceBuilder) addManagedInstanceGroup(detect func() (internal.ManagedInstanceGroup, error)) {
-	if mig, err := detect(); err == nil {
+func (r *resourceBuilder) addManagedInstanceGroup(ctx context.Context, detect func(context.Context) (internal.ManagedInstanceGroup, error)) {
+	if mig, err := detect(ctx); err == nil {
 		if mig.Name != "" {
 			r.attrs = append(r.attrs, semconv.GCPGCEInstanceGroupManagerName(mig.Name))
 			switch mig.Type {
@@ -245,8 +245,8 @@ func (r *resourceBuilder) addManagedInstanceGroup(detect func() (internal.Manage
 	}
 }
 
-func (r *resourceBuilder) addGCEInstanceLabels(detect func() (map[string]string, error), filter func(key string) bool) {
-	if labels, err := detect(); err == nil {
+func (r *resourceBuilder) addGCEInstanceLabels(ctx context.Context, detect func(context.Context) (map[string]string, error), filter func(key string) bool) {
+	if labels, err := detect(ctx); err == nil {
 		for k, v := range labels {
 			if filter(k) {
 				r.attrs = append(r.attrs, semconv.GCPGCEInstanceLabels(k, v))

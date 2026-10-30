@@ -41,44 +41,44 @@ const (
 	defaultComputeBaseURL    = "https://compute.googleapis.com/compute/v1"
 )
 
-func (d *Detector) onGCE() bool {
-	_, err := d.metadata.GetWithContext(context.TODO(), machineTypeMetadataAttr)
+func (d *Detector) onGCE(ctx context.Context) bool {
+	_, err := d.metadata.GetWithContext(ctx, machineTypeMetadataAttr)
 	return err == nil
 }
 
 // GCEHostType returns the machine type of the instance on which this program is running.
-func (d *Detector) GCEHostType() (string, error) {
-	return d.metadata.GetWithContext(context.TODO(), machineTypeMetadataAttr)
+func (d *Detector) GCEHostType(ctx context.Context) (string, error) {
+	return d.metadata.GetWithContext(ctx, machineTypeMetadataAttr)
 }
 
 // GCEHostID returns the instance ID of the instance on which this program is running.
-func (d *Detector) GCEHostID() (string, error) {
-	return d.instanceID()
+func (d *Detector) GCEHostID(ctx context.Context) (string, error) {
+	return d.instanceID(ctx)
 }
 
 // GCEHostName returns the instance name of the instance on which this program is running.
 // Recommended to use GCEInstanceName() or GCEInstanceHostname() to more accurately reflect which
 // value is returned.
-func (d *Detector) GCEHostName() (string, error) {
-	return d.metadata.InstanceNameWithContext(context.TODO())
+func (d *Detector) GCEHostName(ctx context.Context) (string, error) {
+	return d.metadata.InstanceNameWithContext(ctx)
 }
 
 // GCEInstanceName returns the instance name of the instance on which this program is running.
 // This is the value visible in the Cloud Console UI, and the prefix for the default hostname
 // of the instance as defined by the default internal DNS name (see https://cloud.google.com/compute/docs/internal-dns#instance-fully-qualified-domain-names).
-func (d *Detector) GCEInstanceName() (string, error) {
-	return d.metadata.InstanceNameWithContext(context.TODO())
+func (d *Detector) GCEInstanceName(ctx context.Context) (string, error) {
+	return d.metadata.InstanceNameWithContext(ctx)
 }
 
 // GCEInstanceHostname returns the full value of the default or custom hostname of the instance
 // on which this program is running. See https://cloud.google.com/compute/docs/instances/custom-hostname-vm.
-func (d *Detector) GCEInstanceHostname() (string, error) {
-	return d.metadata.HostnameWithContext(context.TODO())
+func (d *Detector) GCEInstanceHostname(ctx context.Context) (string, error) {
+	return d.metadata.HostnameWithContext(ctx)
 }
 
 // GCEAvailabilityZoneAndRegion returns the zone and region in which this program is running.
-func (d *Detector) GCEAvailabilityZoneAndRegion() (string, string, error) {
-	zone, err := d.metadata.ZoneWithContext(context.TODO())
+func (d *Detector) GCEAvailabilityZoneAndRegion(ctx context.Context) (string, string, error) {
+	zone, err := d.metadata.ZoneWithContext(ctx)
 	if err != nil {
 		return "", "", err
 	}
@@ -100,8 +100,8 @@ type ManagedInstanceGroup struct {
 
 var createdByMIGRE = regexp.MustCompile(`^projects/[^/]+/(zones|regions)/([^/]+)/instanceGroupManagers/([^/]+)$`)
 
-func (d *Detector) GCEManagedInstanceGroup() (ManagedInstanceGroup, error) {
-	createdBy, err := d.metadata.InstanceAttributeValueWithContext(context.TODO(), createdByInstanceAttr)
+func (d *Detector) GCEManagedInstanceGroup(ctx context.Context) (ManagedInstanceGroup, error) {
+	createdBy, err := d.metadata.InstanceAttributeValueWithContext(ctx, createdByInstanceAttr)
 	if _, ok := errors.AsType[metadata.NotDefinedError](err); ok {
 		return ManagedInstanceGroup{}, nil
 	} else if err != nil {
