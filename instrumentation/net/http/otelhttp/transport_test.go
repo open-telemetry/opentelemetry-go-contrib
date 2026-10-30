@@ -1591,7 +1591,7 @@ func TestRequestTrackerGetBody(t *testing.T) {
 		)
 		require.NoError(t, err)
 		req.GetBody = getBody
-		tracker := newRequestTracker(NewTransport(http.DefaultTransport), req)
+		tracker := newRequestTracker(NewTransport(http.DefaultTransport).(*transport), req)
 		return req, tracker
 	}
 
