@@ -197,6 +197,11 @@ func WithLoggerProviderOptions(opts ...sdklog.LoggerProviderOption) Configuratio
 
 // WithMeterProviderOptions appends metric.Options used for constructing the
 // MeterProvider. OpenTelemetryConfiguration takes precedence over these options.
+//
+// The options are only used when the configuration has a meter_provider. They
+// can add readers that are built in code, for example a Prometheus exporter
+// that registers its collectors with an application's own
+// prometheus.Registerer, see the example.
 func WithMeterProviderOptions(opts ...sdkmetric.Option) ConfigurationOption {
 	return configurationOptionFunc(func(c configOptions) configOptions {
 		c.meterProviderOptions = append(c.meterProviderOptions, opts...)
