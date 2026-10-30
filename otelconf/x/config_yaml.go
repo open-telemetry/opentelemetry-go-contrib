@@ -336,6 +336,9 @@ func (j *OTLPHttpMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
+	if plain.Endpoint == nil || *plain.Endpoint == "" {
+		return newErrRequired(j, "endpoint")
+	}
 	if plain.Timeout != nil && 0 > *plain.Timeout {
 		return newErrGreaterOrEqualZero("timeout")
 	}
@@ -352,6 +355,9 @@ func (j *OTLPGrpcMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if plain.Endpoint == nil || *plain.Endpoint == "" {
+		return newErrRequired(j, "endpoint")
 	}
 	if plain.Timeout != nil && 0 > *plain.Timeout {
 		return newErrGreaterOrEqualZero("timeout")
@@ -370,6 +376,9 @@ func (j *OTLPHttpExporter) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
+	if plain.Endpoint == nil || *plain.Endpoint == "" {
+		return newErrRequired(j, "endpoint")
+	}
 	if plain.Timeout != nil && 0 > *plain.Timeout {
 		return newErrGreaterOrEqualZero("timeout")
 	}
@@ -386,6 +395,9 @@ func (j *OTLPGrpcExporter) UnmarshalYAML(node *yaml.Node) error {
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
+	}
+	if plain.Endpoint == nil || *plain.Endpoint == "" {
+		return newErrRequired(j, "endpoint")
 	}
 	if plain.Timeout != nil && 0 > *plain.Timeout {
 		return newErrGreaterOrEqualZero("timeout")

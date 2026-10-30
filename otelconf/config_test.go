@@ -1550,6 +1550,18 @@ func TestUnmarshalOTLPHttpExporter(t *testing.T) {
 			wantErrT:   newErrRequired(&OTLPHttpExporter{}, "endpoint"),
 		},
 		{
+			name:       "null required endpoint field",
+			jsonConfig: []byte(`{"endpoint": null}`),
+			yamlConfig: []byte("endpoint: null"),
+			wantErrT:   newErrRequired(&OTLPHttpExporter{}, "endpoint"),
+		},
+		{
+			name:       "empty required endpoint field",
+			jsonConfig: []byte(`{"endpoint": ""}`),
+			yamlConfig: []byte(`endpoint: ""`),
+			wantErrT:   newErrRequired(&OTLPHttpExporter{}, "endpoint"),
+		},
+		{
 			name:         "valid with zero timeout",
 			jsonConfig:   []byte(`{"endpoint":"localhost:4318", "timeout":0}`),
 			yamlConfig:   []byte("endpoint: localhost:4318\ntimeout: 0"),
@@ -1600,6 +1612,18 @@ func TestUnmarshalOTLPGrpcExporter(t *testing.T) {
 			name:       "missing required endpoint field",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&OTLPGrpcExporter{}, "endpoint"),
+		},
+		{
+			name:       "null required endpoint field",
+			jsonConfig: []byte(`{"endpoint": null}`),
+			yamlConfig: []byte("endpoint: null"),
+			wantErrT:   newErrRequired(&OTLPGrpcExporter{}, "endpoint"),
+		},
+		{
+			name:       "empty required endpoint field",
+			jsonConfig: []byte(`{"endpoint": ""}`),
+			yamlConfig: []byte(`endpoint: ""`),
 			wantErrT:   newErrRequired(&OTLPGrpcExporter{}, "endpoint"),
 		},
 		{
@@ -1656,6 +1680,18 @@ func TestUnmarshalOTLPHttpMetricExporter(t *testing.T) {
 			wantErrT:   newErrRequired(&OTLPHttpMetricExporter{}, "endpoint"),
 		},
 		{
+			name:       "null required endpoint field",
+			jsonConfig: []byte(`{"endpoint": null}`),
+			yamlConfig: []byte("endpoint: null"),
+			wantErrT:   newErrRequired(&OTLPHttpMetricExporter{}, "endpoint"),
+		},
+		{
+			name:       "empty required endpoint field",
+			jsonConfig: []byte(`{"endpoint": ""}`),
+			yamlConfig: []byte(`endpoint: ""`),
+			wantErrT:   newErrRequired(&OTLPHttpMetricExporter{}, "endpoint"),
+		},
+		{
 			name:         "valid with zero timeout",
 			jsonConfig:   []byte(`{"endpoint":"localhost:4318", "timeout":0}`),
 			yamlConfig:   []byte("endpoint: localhost:4318\ntimeout: 0"),
@@ -1706,6 +1742,18 @@ func TestUnmarshalOTLPGrpcMetricExporter(t *testing.T) {
 			name:       "missing required endpoint field",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
+			wantErrT:   newErrRequired(&OTLPGrpcMetricExporter{}, "endpoint"),
+		},
+		{
+			name:       "null required endpoint field",
+			jsonConfig: []byte(`{"endpoint": null}`),
+			yamlConfig: []byte("endpoint: null"),
+			wantErrT:   newErrRequired(&OTLPGrpcMetricExporter{}, "endpoint"),
+		},
+		{
+			name:       "empty required endpoint field",
+			jsonConfig: []byte(`{"endpoint": ""}`),
+			yamlConfig: []byte(`endpoint: ""`),
 			wantErrT:   newErrRequired(&OTLPGrpcMetricExporter{}, "endpoint"),
 		},
 		{
