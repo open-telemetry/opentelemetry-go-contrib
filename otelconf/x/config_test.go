@@ -556,7 +556,8 @@ func TestNewSDKGlobalDiagnosticLogger(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := exec.Command(
+			cmd := exec.CommandContext(
+				t.Context(),
 				os.Args[0],
 				"-test.v",
 				"-test.run=^TestNewSDKGlobalDiagnosticLogger$",
