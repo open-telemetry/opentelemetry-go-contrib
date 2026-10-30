@@ -147,9 +147,14 @@ func TestExtractJaegerInvalidHeaderPreservesContext(t *testing.T) {
 		{"absent", propagation.MapCarrier{}},
 		{"empty", propagation.MapCarrier{"uber-trace-id": ""}},
 		{"malformed", propagation.MapCarrier{"uber-trace-id": "invalid"}},
+		{"malformed two parts", propagation.MapCarrier{"uber-trace-id": "11111111111111111111111111111111:1111111111111111"}},
+		{"malformed three parts", propagation.MapCarrier{"uber-trace-id": "11111111111111111111111111111111:1111111111111111:0"}},
+		{"malformed five parts", propagation.MapCarrier{"uber-trace-id": "11111111111111111111111111111111:1111111111111111:0:1:extra"}},
 		{"zero trace ID", propagation.MapCarrier{"uber-trace-id": "00000000000000000000000000000000:2222222222222222:0:0"}},
 		{"missing span ID", propagation.MapCarrier{"uber-trace-id": "22222222222222222222222222222222::0:0"}},
 		{"malformed flags", propagation.MapCarrier{"uber-trace-id": "22222222222222222222222222222222:2222222222222222:0:invalid"}},
+		{"uppercase trace ID", propagation.MapCarrier{"uber-trace-id": "A:1:0:1"}},
+		{"uppercase span ID", propagation.MapCarrier{"uber-trace-id": "1:A:0:1"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got := propagator.Extract(ctx, tc.carrier)

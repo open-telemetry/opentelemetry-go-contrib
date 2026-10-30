@@ -20,8 +20,6 @@ const (
 	traceID128bitsWidth = 128 / 4
 	spanIDWidth         = 64 / 4
 
-	idPaddingChar = "0"
-
 	flagsDebug   = 0x02
 	flagsSampled = 0x01
 )
@@ -96,44 +94,52 @@ func (Jaeger) Extract(ctx context.Context, carrier propagation.TextMapCarrier) c
 func extract(ctx context.Context, headerVal string) (context.Context, trace.SpanContext, error) {
 	var (
 		scc   = trace.SpanContextConfig{}
-		err   error
 		debug bool
+		err   error
 	)
 
-	parts := strings.Split(headerVal, separator)
-	if len(parts) != 4 {
+	part0, part1, _, part3, ok := splitHeader(headerVal)
+	if !ok {
 		return ctx, empty, errMalformedTraceContextVal
 	}
 
 	// extract trace ID
-	if parts[0] != "" {
-		id := parts[0]
-		if len(id) > traceID128bitsWidth {
+	if part0 != "" {
+		if len(part0) > traceID128bitsWidth {
 			return ctx, empty, errInvalidTraceIDLength
 		}
-		// padding when length is less than 32
-		if len(id) < traceID128bitsWidth {
-			padCharCount := traceID128bitsWidth - len(id)
-			id = strings.Repeat(idPaddingChar, padCharCount) + id
+		if len(part0) < traceID128bitsWidth {
+			var buf [traceID128bitsWidth]byte
+			padCharCount := traceID128bitsWidth - len(part0)
+			for j := range padCharCount {
+				buf[j] = '0'
+			}
+			copy(buf[padCharCount:], part0)
+			part0 = string(buf[:])
 		}
-		scc.TraceID, err = trace.TraceIDFromHex(id)
+
+		scc.TraceID, err = trace.TraceIDFromHex(part0)
 		if err != nil {
 			return ctx, empty, errMalformedTraceID
 		}
 	}
 
 	// extract span ID
-	if parts[1] != "" {
-		id := parts[1]
-		if len(id) > spanIDWidth {
+	if part1 != "" {
+		if len(part1) > spanIDWidth {
 			return ctx, empty, errInvalidSpanIDLength
 		}
-		// padding when length is less than 16
-		if len(id) < spanIDWidth {
-			padCharCount := spanIDWidth - len(id)
-			id = strings.Repeat(idPaddingChar, padCharCount) + id
+		if len(part1) < spanIDWidth {
+			var buf [spanIDWidth]byte
+			padCharCount := spanIDWidth - len(part1)
+			for j := range padCharCount {
+				buf[j] = '0'
+			}
+			copy(buf[padCharCount:], part1)
+			part1 = string(buf[:])
 		}
-		scc.SpanID, err = trace.SpanIDFromHex(id)
+
+		scc.SpanID, err = trace.SpanIDFromHex(part1)
 		if err != nil {
 			return ctx, empty, errMalformedSpanID
 		}
@@ -142,10 +148,9 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 	// skip third part as it is deprecated
 
 	// extract flag
-	if parts[3] != "" {
-		flagStr := parts[3]
-		flag, err := strconv.ParseInt(flagStr, 16, 64)
-		if err != nil {
+	if part3 != "" {
+		flag, parseErr := strconv.ParseInt(part3, 16, 64)
+		if parseErr != nil {
 			return ctx, empty, errMalformedFlag
 		}
 		if flag&flagsSampled == flagsSampled {
@@ -163,6 +168,23 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 		ctx = withDebug(ctx, debug)
 	}
 	return ctx, trace.NewSpanContext(scc), nil
+}
+
+func splitHeader(val string) (p0, p1, p2, p3 string, ok bool) {
+	var rest string
+	p0, rest, ok = strings.Cut(val, ":")
+	if !ok {
+		return "", "", "", "", false
+	}
+	p1, rest, ok = strings.Cut(rest, ":")
+	if !ok {
+		return "", "", "", "", false
+	}
+	p2, p3, ok = strings.Cut(rest, ":")
+	if !ok || strings.Contains(p3, ":") {
+		return "", "", "", "", false
+	}
+	return p0, p1, p2, p3, true
 }
 
 // Fields returns the Jaeger header key whose value is set with Inject.
