@@ -20,7 +20,7 @@ import (
 	"google.golang.org/grpc"
 
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
-	"go.opentelemetry.io/contrib/propagators/opencensus"
+	"go.opentelemetry.io/contrib/propagators/opencensus" //nolint:staticcheck // Demonstrate the deprecated package until it is removed.
 )
 
 const address = "localhost:50051"

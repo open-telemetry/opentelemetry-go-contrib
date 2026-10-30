@@ -4,7 +4,9 @@
 package autoprop
 
 import (
+	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 
@@ -92,4 +94,49 @@ func TestTextMapPropagatorAllUnknown(t *testing.T) {
 	p, err := TextMapPropagator("invalid")
 	require.ErrorIs(t, err, errUnknownPropagator)
 	assert.Nil(t, p, "all-unknown input should return a nil propagator")
+}
+
+type recordingPropagator struct {
+	name  string
+	calls *[]string
+}
+
+func (p recordingPropagator) Inject(context.Context, propagation.TextMapCarrier) {
+	*p.calls = append(*p.calls, "inject "+p.name)
+}
+
+func (p recordingPropagator) Extract(ctx context.Context, _ propagation.TextMapCarrier) context.Context {
+	*p.calls = append(*p.calls, "extract "+p.name)
+	return ctx
+}
+
+func (recordingPropagator) Fields() []string { return nil }
+
+func TestTextMapPropagatorDeduplicates(t *testing.T) {
+	for _, fromEnv := range []bool{false, true} {
+		t.Run(fmt.Sprintf("fromEnv=%t", fromEnv), func(t *testing.T) {
+			var calls []string
+			first, second := t.Name()+"-first", t.Name()+"-second"
+			RegisterTextMapPropagator(first, recordingPropagator{"first", &calls})
+			RegisterTextMapPropagator(second, recordingPropagator{"second", &calls})
+			t.Cleanup(func() {
+				propagators.drop(first)
+				propagators.drop(second)
+			})
+
+			names := []string{first, second, first, second}
+			var p propagation.TextMapPropagator
+			if fromEnv {
+				t.Setenv(otelPropagatorsEnvKey, strings.Join(names, ","))
+				p = NewTextMapPropagator()
+			} else {
+				var err error
+				p, err = TextMapPropagator(names...)
+				require.NoError(t, err)
+			}
+			p.Inject(t.Context(), propagation.MapCarrier{})
+			p.Extract(t.Context(), propagation.MapCarrier{})
+			assert.Equal(t, []string{"inject first", "inject second", "extract first", "extract second"}, calls)
+		})
+	}
 }
