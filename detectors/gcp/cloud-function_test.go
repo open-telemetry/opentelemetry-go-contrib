@@ -4,6 +4,7 @@
 package gcp
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -27,21 +28,21 @@ type metaDataClientImpl struct {
 	instanceID func() (string, error)
 }
 
-func (mock *metaDataClientImpl) ProjectID() (string, error) {
+func (mock *metaDataClientImpl) ProjectIDWithContext(_ context.Context) (string, error) {
 	if mock.projectID != nil {
 		return mock.projectID()
 	}
 	return "", nil
 }
 
-func (mock *metaDataClientImpl) Get(key string) (string, error) {
+func (mock *metaDataClientImpl) GetWithContext(_ context.Context, key string) (string, error) {
 	if mock.get != nil {
 		return mock.get(key)
 	}
 	return "", nil
 }
 
-func (mock *metaDataClientImpl) InstanceID() (string, error) {
+func (mock *metaDataClientImpl) InstanceIDWithContext(_ context.Context) (string, error) {
 	if mock.instanceID != nil {
 		return mock.instanceID()
 	}

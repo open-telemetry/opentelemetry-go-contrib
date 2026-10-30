@@ -30,7 +30,7 @@ func TestCloudPlatformAppEngineFlex(t *testing.T) {
 			gaeServiceEnv: "foo",
 		},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, AppEngineFlex, platform)
 }
 
@@ -41,7 +41,7 @@ func TestCloudPlatformAppEngineStandard(t *testing.T) {
 			gaeEnv:        "standard",
 		},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, AppEngineStandard, platform)
 }
 
@@ -53,7 +53,7 @@ func TestCloudPlatformGKE(t *testing.T) {
 			k8sServiceHostEnv: "foo",
 		},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, GKE, platform)
 }
 
@@ -63,7 +63,7 @@ func TestCloudPlatformK8sNotGKE(t *testing.T) {
 			k8sServiceHostEnv: "foo",
 		},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, GCE, platform)
 }
 
@@ -73,7 +73,7 @@ func TestCloudPlatformUnknown(t *testing.T) {
 			k8sServiceHostEnv: "foo",
 		},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, UnknownPlatform, platform)
 }
 
@@ -81,7 +81,7 @@ func TestCloudPlatformGCE(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{
 		Vars: map[string]string{},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, GCE, platform)
 }
 
@@ -91,7 +91,7 @@ func TestCloudPlatformCloudRun(t *testing.T) {
 			cloudRunConfigurationEnv: "foo",
 		},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, CloudRun, platform)
 }
 
@@ -101,7 +101,7 @@ func TestCloudPlatformCloudRunJobs(t *testing.T) {
 			cloudRunJobsEnv: "foo",
 		},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, CloudRunJob, platform)
 }
 
@@ -111,7 +111,7 @@ func TestCloudPlatformCloudRunWorkerPool(t *testing.T) {
 			cloudRunWorkerPoolEnv: "foo",
 		},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, CloudRunWorkerPool, platform)
 }
 
@@ -121,7 +121,7 @@ func TestCloudPlatformCloudFunctions(t *testing.T) {
 			cloudFunctionsTargetEnv: "foo",
 		},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, CloudFunctions, platform)
 }
 
@@ -133,7 +133,7 @@ func TestCloudPlatformBareMetalSolution(t *testing.T) {
 			bmsRegionEnv:     "qux",
 		},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, BareMetalSolution, platform)
 }
 
@@ -145,13 +145,13 @@ func TestCloudPlatformBareMetalSolutionLocation(t *testing.T) {
 			bmsLocationEnv:   "qux",
 		},
 	})
-	platform := d.CloudPlatform()
+	platform := d.CloudPlatform(t.Context())
 	assert.Equal(t, BareMetalSolution, platform)
 }
 
 func TestProjectID(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
-	project, err := d.ProjectID()
+	project, err := d.ProjectID(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, fakeProjectID, project)
 }
@@ -160,7 +160,7 @@ func TestProjectIDErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{
 		Err: fmt.Errorf("fake error"),
 	}, &FakeOSProvider{})
-	project, err := d.ProjectID()
+	project, err := d.ProjectID(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, project)
 }
