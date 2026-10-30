@@ -260,6 +260,64 @@ func TestCore(t *testing.T) {
 		)
 	})
 
+	t.Run("WithNamespace", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		l := logger.With(zap.String("test1", "value1"), zap.Namespace("ns"), zap.String("test2", "value2"))
+		sibling := l.With(zap.String("other", "value"))
+		l = l.With(zap.String("test3", "value3"))
+		l.Info(testMessage, zap.String("test4", "value4"))
+		sibling.Info(testMessage)
+		logger.Info(testMessage, zap.String("test5", "value5"))
+
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Body:         attribute.StringValue(testMessage),
+					Severity:     log.SeverityInfo,
+					SeverityText: zap.InfoLevel.String(),
+					Attributes: []attribute.KeyValue{
+						attribute.String("test1", "value1"),
+						attribute.Map("ns",
+							attribute.String("test2", "value2"),
+							attribute.String("test3", "value3"),
+							attribute.String("test4", "value4"),
+						),
+					},
+				},
+				{
+					Body:         attribute.StringValue(testMessage),
+					Severity:     log.SeverityInfo,
+					SeverityText: zap.InfoLevel.String(),
+					Attributes: []attribute.KeyValue{
+						attribute.String("test1", "value1"),
+						attribute.Map("ns",
+							attribute.String("test2", "value2"),
+							attribute.String("other", "value"),
+						),
+					},
+				},
+				{
+					Body:         attribute.StringValue(testMessage),
+					Severity:     log.SeverityInfo,
+					SeverityText: zap.InfoLevel.String(),
+					Attributes: []attribute.KeyValue{
+						attribute.String("test5", "value5"),
+					},
+				},
+			},
+		}
+		logtest.AssertEqual(
+			t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Context = nil           // Ignore context for comparison.
+				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+				return cp
+			}),
+		)
+	})
+
 	t.Run("Named", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 

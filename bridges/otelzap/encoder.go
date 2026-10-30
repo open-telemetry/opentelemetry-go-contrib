@@ -4,6 +4,7 @@
 package otelzap
 
 import (
+	"slices"
 	"time"
 
 	"go.opentelemetry.io/otel/attribute"
@@ -39,6 +40,27 @@ func newObjectEncoder(n int) *objectEncoder {
 		root: m,
 		cur:  m,
 	}
+}
+
+// open adds a copy of the namespace chain ns to the encoder, so that
+// subsequent fields are added to the innermost namespace of the chain.
+func (m *objectEncoder) open(ns *namespace) {
+	for ; ns != nil; ns = ns.next {
+		m.cur.next = &namespace{name: ns.name, attrs: slices.Clone(ns.attrs)}
+		m.cur = m.cur.next
+	}
+}
+
+// namespaceAttrs returns the attributes of the namespace chain ns, without
+// changing it.
+func namespaceAttrs(ns *namespace) []attribute.KeyValue {
+	if ns == nil {
+		return nil
+	}
+	m := newObjectEncoder(1)
+	m.open(ns)
+	m.calculate(m.root)
+	return m.root.attrs
 }
 
 // It iterates to the end of the linked list and appends namespace data.
