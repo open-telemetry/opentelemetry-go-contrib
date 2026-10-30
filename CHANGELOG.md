@@ -68,7 +68,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Prevent `go.opentelemetry.io/contrib/detectors/azure/azureappservice` from detecting Azure Functions when only `FUNCTIONS_EXTENSION_VERSION` is set. (#9816)
 - Use the context bound to a logger when checking whether logs are enabled in `go.opentelemetry.io/contrib/bridges/otellogr` and `go.opentelemetry.io/contrib/bridges/otelzap`. (#9878)
 - Stop deriving the `server.address` and `server.port` metric attributes from the client-supplied `Host` header, which let any client grow metric cardinality unboundedly, in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, and `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`.
--These attributes are now only set from the configured server name.
+- These attributes are now only set from the configured server name.
 Use `WithServerName` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to keep reporting them. (#9930)
 - Fix `go.schedule.duration` datapoints returned by `Producer` in `go.opentelemetry.io/contrib/instrumentation/runtime` having their bucket counts overwritten by later collections, and a data race between concurrent `Produce` calls. (#9882)
 - Retain the last non-nil write error instead of letting a later successful write clear it in the response writer wrapper of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9790)
