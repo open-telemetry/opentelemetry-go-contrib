@@ -7,8 +7,11 @@ package otelconf
 import (
 	"context"
 	"errors"
+	"io"
 	"os"
 
+	"github.com/go-logr/logr"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/log"
 	nooplog "go.opentelemetry.io/otel/log/noop"
 	"go.opentelemetry.io/otel/metric"
@@ -16,10 +19,13 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	sdklog "go.opentelemetry.io/otel/sdk/log"
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	sdkresource "go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
 	yaml "go.yaml.in/yaml/v3"
+
+	"go.opentelemetry.io/contrib/otelconf/internal/diaglogger"
 
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
@@ -35,6 +41,7 @@ type SDK struct {
 	meterProvider  metric.MeterProvider
 	tracerProvider trace.TracerProvider
 	loggerProvider log.LoggerProvider
+	resource       *sdkresource.Resource
 	propagator     propagation.TextMapPropagator
 	shutdown       shutdownFunc
 }
@@ -96,10 +103,14 @@ func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error
 // Any file defined by `OTEL_CONFIG_FILE` will supersede all files passed with
 // [WithOpenTelemetryConfiguration].
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
-	_, ok := os.LookupEnv(envVarConfigFileDeprecated)
-	if ok {
+	return newSDKWithDiagnosticWriter(os.Stderr, otel.SetLogger, opts...)
+}
+
+func newSDKWithDiagnosticWriter(output io.Writer, setLogger func(logr.Logger), opts ...ConfigurationOption) (SDK, error) {
+	if _, ok := os.LookupEnv(envVarConfigFileDeprecated); ok {
 		return noopSDK, errDeprecatedEnvVarUsed
 	}
+
 	filename, ok := os.LookupEnv(envVarConfigFile)
 	if ok {
 		opt, err := parseConfigFileFromEnvironment(filename)
@@ -116,6 +127,16 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	}
 	if o.opentelemetryConfig.Disabled != nil && *o.opentelemetryConfig.Disabled {
 		return noopSDK, nil
+	}
+
+	level := string(SeverityNumberInfo)
+	if o.opentelemetryConfig.LogLevel != nil {
+		level = string(*o.opentelemetryConfig.LogLevel)
+	}
+
+	diagnosticLogger, err := diaglogger.New(level, output)
+	if err != nil {
+		return noopSDK, newErrInvalid(err.Error())
 	}
 
 	r, err := newResource(o.ctx, o.opentelemetryConfig.Resource)
@@ -143,15 +164,20 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 		return noopSDK, err
 	}
 
-	return SDK{
+	setLogger(diagnosticLogger)
+
+	sdk := SDK{
 		meterProvider:  mp,
 		tracerProvider: tp,
 		loggerProvider: lp,
+		resource:       r,
 		propagator:     p,
 		shutdown: func(ctx context.Context) error {
 			return errors.Join(mpShutdown(ctx), tpShutdown(ctx), lpShutdown(ctx))
 		},
-	}, nil
+	}
+
+	return sdk, nil
 }
 
 // ConfigurationOption configures options for providers.
