@@ -4,9 +4,11 @@
 package hetzner
 
 import (
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	hcloudmeta "github.com/hetznercloud/hcloud-go/v2/hcloud/metadata"
 	"github.com/stretchr/testify/assert"
@@ -164,4 +166,53 @@ func TestDetect_WithAttributeFilter(t *testing.T) {
 		assert.True(t, ok, "expected attribute %s to be present", kv.Key)
 		assert.Equal(t, kv.Value, val)
 	}
+}
+
+// https://github.com/open-telemetry/opentelemetry-go-contrib/issues/8985
+// Detect must surface ctx.Err() when the caller cancels before the metadata
+// client has a chance to respond. Without the ctx.Err() check in Detect,
+// IsHcloudServerWithContext returning false on a cancelled ctx would be
+// indistinguishable from "not a Hetzner server", and the caller would
+// get an empty resource and a nil error.
+func TestDetect_RespectsCanceledContext(t *testing.T) {
+	block := make(chan struct{})
+	t.Cleanup(func() { close(block) })
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(_ http.ResponseWriter, _ *http.Request) {
+		<-block
+	})
+	withFakeMetaServer(t, mux)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	res, err := NewResourceDetector().Detect(ctx)
+	require.ErrorIs(t, err, context.Canceled)
+	assert.Nil(t, res)
+}
+
+// Detect must also surface a deadline that expires while the metadata
+// request is in flight, not after the metadata client's own internal
+// timeout fires.
+func TestDetect_RespectsDeadline(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		select {
+		case <-time.After(5 * time.Second):
+			_, _ = w.Write([]byte("srv-slow"))
+		case <-r.Context().Done():
+		}
+	})
+	withFakeMetaServer(t, mux)
+
+	ctx, cancel := context.WithTimeout(t.Context(), 50*time.Millisecond)
+	t.Cleanup(cancel)
+
+	start := time.Now()
+	res, err := NewResourceDetector().Detect(ctx)
+	elapsed := time.Since(start)
+
+	require.ErrorIs(t, err, context.DeadlineExceeded)
+	assert.Nil(t, res)
+	assert.Less(t, elapsed, time.Second, "Detect should return as soon as ctx expires")
 }
