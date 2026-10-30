@@ -230,6 +230,39 @@ func TestDetect(t *testing.T) {
 			},
 		},
 		{
+			name: "bad request from metadata endpoint",
+			input: input{
+				jsonMetadata: "",
+				statusCode:   http.StatusBadRequest,
+			},
+			expected: expected{
+				resource: nil,
+				err:      true,
+			},
+		},
+		{
+			name: "method not allowed by metadata endpoint",
+			input: input{
+				jsonMetadata: "",
+				statusCode:   http.StatusMethodNotAllowed,
+			},
+			expected: expected{
+				resource: nil,
+				err:      true,
+			},
+		},
+		{
+			name: "metadata endpoint rate limited",
+			input: input{
+				jsonMetadata: "",
+				statusCode:   http.StatusTooManyRequests,
+			},
+			expected: expected{
+				resource: nil,
+				err:      true,
+			},
+		},
+		{
 			name: "metadata endpoint failure",
 			input: input{
 				jsonMetadata: "",
