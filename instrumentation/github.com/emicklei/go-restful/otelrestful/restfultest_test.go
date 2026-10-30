@@ -13,6 +13,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -23,6 +24,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
@@ -119,6 +123,7 @@ func TestChildSpanNames(t *testing.T) {
 		"/book/{title}",
 		attribute.String("server.address", "foobar"),
 		attribute.Int("http.response.status_code", http.StatusOK),
+		attribute.Int("http.response.body.size", 2),
 		attribute.String("http.request.method", "GET"),
 		attribute.String("http.route", "/book/{title}"),
 	)
@@ -212,6 +217,8 @@ func TestSpanStatus(t *testing.T) {
 func TestClientDisconnect(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
 	handlerStarted := make(chan struct{})
 	handlerDone := make(chan struct{})
@@ -225,7 +232,11 @@ func TestClientDisconnect(t *testing.T) {
 	ws := &restful.WebService{}
 	ws.Route(ws.GET("/hello").To(handlerFunc))
 	container := restful.NewContainer()
-	container.Filter(otelrestful.OTelFilter("srv", otelrestful.WithTracerProvider(provider)))
+	container.Filter(otelrestful.OTelFilter(
+		"srv",
+		otelrestful.WithTracerProvider(provider),
+		otelrestful.WithMeterProvider(meterProvider),
+	))
 	container.Add(ws)
 
 	ts := httptest.NewServer(container)
@@ -265,6 +276,24 @@ func TestClientDisconnect(t *testing.T) {
 	assert.Equal(t, codes.Error, span.Status().Code)
 	assert.Contains(t, span.Attributes(), attribute.Int("http.response.status_code", http.StatusInternalServerError))
 	assert.Contains(t, span.Attributes(), otelsemconv.ErrorType(context.Canceled))
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch data := m.Data.(type) {
+		case metricdata.Histogram[float64]:
+			require.Len(t, data.DataPoints, 1)
+			errVal, ok := data.DataPoints[0].Attributes.Value(otelsemconv.ErrorTypeKey)
+			require.True(t, ok, "expected error.type on %s", m.Name)
+			assert.Equal(t, otelsemconv.ErrorType(context.Canceled).Value.AsString(), errVal.AsString())
+		case metricdata.Histogram[int64]:
+			require.Len(t, data.DataPoints, 1)
+			errVal, ok := data.DataPoints[0].Attributes.Value(otelsemconv.ErrorTypeKey)
+			require.True(t, ok, "expected error.type on %s", m.Name)
+			assert.Equal(t, otelsemconv.ErrorType(context.Canceled).Value.AsString(), errVal.AsString())
+		}
+	}
 }
 
 func TestDownstreamContextCancellationIgnored(t *testing.T) {
@@ -594,6 +623,208 @@ func TestMultipartFormTempFileCleanupOnPanic(t *testing.T) {
 		_, statErr := os.Stat(tmpPath)
 		return os.IsNotExist(statErr)
 	}, 5*time.Second, 20*time.Millisecond, "multipart temp file was not cleaned up after panic: %s", tmpPath)
+}
+
+func TestMetrics(t *testing.T) {
+	tests := []struct {
+		name              string
+		useGlobalProvider bool
+		method            string
+		target            string
+		reqBody           string
+		unknownReqSize    bool
+		respStatus        int
+		respBody          string
+		wantRouteAttr     string
+		wantErrorType     string
+		wantReqBodyMetric bool
+		wantReqBodyBytes  int64
+		wantRespBodyBytes int64
+	}{
+		{
+			name:              "matched route with request and response bodies",
+			method:            http.MethodPost,
+			target:            "/users/123",
+			reqBody:           "hello",
+			respStatus:        http.StatusOK,
+			respBody:          "world!!",
+			wantRouteAttr:     "/users/{id}",
+			wantReqBodyMetric: true,
+			wantReqBodyBytes:  5,
+			wantRespBodyBytes: 7,
+		},
+		{
+			name:              "global meter provider fallback",
+			useGlobalProvider: true,
+			method:            http.MethodGet,
+			target:            "/users/123",
+			respStatus:        http.StatusOK,
+			respBody:          "ok",
+			wantRouteAttr:     "/users/{id}",
+			wantReqBodyMetric: true,
+			wantReqBodyBytes:  0,
+			wantRespBodyBytes: 2,
+		},
+		{
+			name:              "unmatched 404 route omits http.route",
+			method:            http.MethodGet,
+			target:            "/users/123/unknown",
+			respStatus:        http.StatusNotFound,
+			wantRouteAttr:     "",
+			wantReqBodyMetric: true,
+			wantReqBodyBytes:  0,
+			wantRespBodyBytes: 19,
+		},
+		{
+			name:              "unknown request content length (-1) omits request body size metric",
+			method:            http.MethodPost,
+			target:            "/users/123",
+			reqBody:           "chunked",
+			unknownReqSize:    true,
+			respStatus:        http.StatusOK,
+			respBody:          "ok",
+			wantRouteAttr:     "/users/{id}",
+			wantReqBodyMetric: false,
+			wantRespBodyBytes: 2,
+		},
+		{
+			name:              "500 status records error.type attribute",
+			method:            http.MethodGet,
+			target:            "/users/500",
+			respStatus:        http.StatusInternalServerError,
+			respBody:          "fail",
+			wantRouteAttr:     "/users/{id}",
+			wantErrorType:     "500",
+			wantReqBodyMetric: true,
+			wantReqBodyBytes:  0,
+			wantRespBodyBytes: 4,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := sdkmetric.NewManualReader()
+			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			var opts []otelrestful.Option
+			if tt.useGlobalProvider {
+				orig := otel.GetMeterProvider()
+				otel.SetMeterProvider(meterProvider)
+				t.Cleanup(func() { otel.SetMeterProvider(orig) })
+				// Passing nil should be ignored and fall back to global provider.
+				opts = append(opts, otelrestful.WithMeterProvider(nil))
+			} else {
+				opts = append(opts, otelrestful.WithMeterProvider(meterProvider))
+			}
+
+			ws := &restful.WebService{}
+			ws.Path("/users")
+			ws.Route(ws.GET("/{id}").To(func(_ *restful.Request, resp *restful.Response) {
+				resp.WriteHeader(tt.respStatus)
+				if tt.respBody != "" {
+					_, _ = resp.Write([]byte(tt.respBody))
+				}
+			}))
+			ws.Route(ws.POST("/{id}").To(func(_ *restful.Request, resp *restful.Response) {
+				resp.WriteHeader(tt.respStatus)
+				if tt.respBody != "" {
+					_, _ = resp.Write([]byte(tt.respBody))
+				}
+			}))
+
+			container := restful.NewContainer()
+			container.Filter(otelrestful.OTelFilter("foobar", opts...))
+			container.Add(ws)
+
+			r := httptest.NewRequestWithContext(t.Context(), tt.method, tt.target, strings.NewReader(tt.reqBody))
+			if tt.unknownReqSize {
+				r.ContentLength = -1
+			}
+			w := httptest.NewRecorder()
+			container.ServeHTTP(w, r)
+			assert.Equal(t, tt.respStatus, w.Code)
+
+			rm := metricdata.ResourceMetrics{}
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+			require.Len(t, rm.ScopeMetrics, 1)
+			sm := rm.ScopeMetrics[0]
+			assert.Equal(t, otelrestful.ScopeName, sm.Scope.Name)
+			assert.Equal(t, otelrestful.Version, sm.Scope.Version)
+
+			attrs := []attribute.KeyValue{
+				attribute.String("http.request.method", tt.method),
+				attribute.Int64("http.response.status_code", int64(tt.respStatus)),
+				attribute.String("network.protocol.name", "http"),
+				attribute.String("network.protocol.version", "1.1"),
+				attribute.String("server.address", "foobar"),
+				attribute.String("url.scheme", "http"),
+			}
+			if tt.wantRouteAttr != "" {
+				attrs = append(attrs, attribute.String("http.route", tt.wantRouteAttr))
+			}
+			if tt.wantErrorType != "" {
+				attrs = append(attrs, attribute.String("error.type", tt.wantErrorType))
+			}
+
+			metricsByName := make(map[string]metricdata.Metrics, len(sm.Metrics))
+			for _, m := range sm.Metrics {
+				metricsByName[m.Name] = m
+			}
+
+			if tt.wantReqBodyMetric {
+				require.Len(t, sm.Metrics, 3)
+				gotReq := metricsByName["http.server.request.body.size"]
+				metricdatatest.AssertEqual(t, metricdata.Metrics{
+					Name:        "http.server.request.body.size",
+					Description: "Size of HTTP server request bodies.",
+					Unit:        "By",
+					Data: metricdata.Histogram[int64]{
+						Temporality: metricdata.CumulativeTemporality,
+						DataPoints: []metricdata.HistogramDataPoint[int64]{
+							{
+								Attributes: attribute.NewSet(attrs...),
+							},
+						},
+					},
+				}, gotReq, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+				assert.Equal(t, tt.wantReqBodyBytes, gotReq.Data.(metricdata.Histogram[int64]).DataPoints[0].Sum)
+			} else {
+				require.Len(t, sm.Metrics, 2)
+				assert.NotContains(t, metricsByName, "http.server.request.body.size")
+			}
+
+			gotResp := metricsByName["http.server.response.body.size"]
+			metricdatatest.AssertEqual(t, metricdata.Metrics{
+				Name:        "http.server.response.body.size",
+				Description: "Size of HTTP server response bodies.",
+				Unit:        "By",
+				Data: metricdata.Histogram[int64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[int64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
+				},
+			}, gotResp, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+			assert.Equal(t, tt.wantRespBodyBytes, gotResp.Data.(metricdata.Histogram[int64]).DataPoints[0].Sum)
+
+			gotDur := metricsByName["http.server.request.duration"]
+			metricdatatest.AssertEqual(t, metricdata.Metrics{
+				Name:        "http.server.request.duration",
+				Description: "Duration of HTTP server requests.",
+				Unit:        "s",
+				Data: metricdata.Histogram[float64]{
+					Temporality: metricdata.CumulativeTemporality,
+					DataPoints: []metricdata.HistogramDataPoint[float64]{
+						{
+							Attributes: attribute.NewSet(attrs...),
+						},
+					},
+				},
+			}, gotDur, metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue(), metricdatatest.IgnoreExemplars())
+		})
+	}
 }
 
 func assertSpan(t *testing.T, span sdktrace.ReadOnlySpan, name string, attrs ...attribute.KeyValue) {

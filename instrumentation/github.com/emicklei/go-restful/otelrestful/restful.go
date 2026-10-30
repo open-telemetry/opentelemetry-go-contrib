@@ -5,10 +5,13 @@ package otelrestful
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/emicklei/go-restful/v3"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
@@ -39,9 +42,17 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 	if cfg.Propagators == nil {
 		cfg.Propagators = otel.GetTextMapPropagator()
 	}
-	semconvServer := semconv.NewHTTPServer(nil)
+	if cfg.MeterProvider == nil {
+		cfg.MeterProvider = otel.GetMeterProvider()
+	}
+	meter := cfg.MeterProvider.Meter(
+		ScopeName,
+		metric.WithInstrumentationVersion(Version),
+	)
+	semconvServer := semconv.NewHTTPServer(meter)
 
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
+		requestStartTime := time.Now()
 		r := req.Request
 		ctx := cfg.Propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 		route := req.SelectedRoutePath()
@@ -81,20 +92,44 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		chain.ProcessFilter(req, resp)
 
 		status := resp.StatusCode()
+		var additionalAttributes []attribute.KeyValue
 		err := ctx.Err()
 		if err != nil {
 			span.SetStatus(codes.Error, err.Error())
-			span.SetAttributes(otelsemconv.ErrorType(err))
+			errAttr := otelsemconv.ErrorType(err)
+			span.SetAttributes(errAttr)
+			additionalAttributes = append(additionalAttributes, errAttr)
 		} else {
 			stCode, stMsg := semconvServer.Status(status)
 			span.SetStatus(stCode, stMsg)
 			if status >= 500 && status < 600 {
-				span.SetAttributes(otelsemconv.ErrorTypeKey.String(strconv.Itoa(status)))
+				errAttr := otelsemconv.ErrorTypeKey.String(strconv.Itoa(status))
+				span.SetAttributes(errAttr)
+				additionalAttributes = append(additionalAttributes, errAttr)
 			}
 		}
 
+		respSize := int64(max(resp.ContentLength(), 0))
 		span.SetAttributes(semconvServer.ResponseTraceAttrs(semconv.ResponseTelemetry{
 			StatusCode: status,
+			WriteBytes: respSize,
 		})...)
+
+		rMetric := *r
+		rMetric.Pattern = route
+		semconvServer.RecordMetrics(ctx, semconv.ServerMetricData{
+			ServerName:   service,
+			ResponseSize: respSize,
+			MetricAttributes: semconv.MetricAttributes{
+				Req:                  &rMetric,
+				StatusCode:           status,
+				Route:                route,
+				AdditionalAttributes: additionalAttributes,
+			},
+			MetricData: semconv.MetricData{
+				RequestSize:     r.ContentLength,
+				RequestDuration: time.Since(requestStartTime),
+			},
+		})
 	}
 }
