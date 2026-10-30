@@ -48,6 +48,8 @@ func setupOTelSDK(ctx context.Context) (func(context.Context) error, error) {
 		resource.WithProcess(),
 		resource.WithHost(),
 		resource.WithTelemetrySDK(),
+		resource.WithOS(),
+		resource.WithContainer(),
 	)
 	if resErr != nil {
 		handleErr(resErr)

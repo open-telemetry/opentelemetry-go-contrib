@@ -1,16 +1,75 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
+// Uninstrumented provides an example rolldice service that is not instrumented
+// with observability.
 package main
 
 import (
+	"context"
 	"encoding/json"
-	"errors"
 	"log"
-	"math/rand/v2"
+	"net"
 	"net/http"
+	"os"
+	"os/signal"
 	"strconv"
+	"time"
 )
+
+func main() {
+	if err := run(); err != nil {
+		log.Fatalln(err)
+	}
+}
+
+func run() (err error) {
+	// Handle SIGINT (CTRL+C) gracefully.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer stop()
+
+	// Start HTTP server.
+	port := os.Getenv("APPLICATION_PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	srv := &http.Server{
+		Addr:         ":" + port,
+		BaseContext:  func(net.Listener) context.Context { return ctx },
+		ReadTimeout:  time.Second,
+		WriteTimeout: 10 * time.Second,
+		Handler:      newHTTPHandler(),
+	}
+	srvErr := make(chan error, 1)
+	go func() {
+		log.Println("Running HTTP server...")
+		srvErr <- srv.ListenAndServe()
+	}()
+
+	// Wait for interruption.
+	select {
+	case err = <-srvErr:
+		// Error when starting HTTP server.
+		return err
+	case <-ctx.Done():
+		// Wait for first CTRL+C.
+		// Stop receiving signal notifications as soon as possible.
+		stop()
+	}
+
+	// When Shutdown is called, ListenAndServe immediately returns ErrServerClosed.
+	err = srv.Shutdown(context.Background())
+	return err
+}
+
+func newHTTPHandler() http.Handler {
+	mux := http.NewServeMux()
+
+	// Register handlers.
+	mux.HandleFunc("/rolldice", handleRolldice)
+	return mux
+}
 
 func handleRolldice(w http.ResponseWriter, r *http.Request) {
 	// Parse query parameters.
@@ -63,42 +122,10 @@ func writeJSON(w http.ResponseWriter, v any) {
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"status":  "error",
-			"message": "Internal Server Error",
-		})
 		log.Printf("ERROR: %v", err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	_, _ = w.Write(data)
-}
-
-func rolldice(rolls int) ([]int, error) {
-	const maxRolls = 1000 // Arbitrary limit to prevent Slice memory allocation with excessive size value.
-
-	if rolls > maxRolls {
-		return nil, errors.New("rolls parameter exceeds maximum allowed value")
-	}
-
-	if rolls <= 0 {
-		return nil, errors.New("rolls must be positive")
-	}
-
-	if rolls == 1 {
-		return []int{rollOnce()}, nil
-	}
-
-	results := make([]int, rolls)
-	for i := range rolls {
-		results[i] = rollOnce()
-	}
-	return results, nil
-}
-
-// rollOnce returns a random number between 1 and 6.
-func rollOnce() int {
-	roll := 1 + rand.IntN(6) //nolint:gosec // G404: Use of weak random number generator (math/rand instead of crypto/rand) is ignored as this is not security-sensitive.
-	return roll
 }

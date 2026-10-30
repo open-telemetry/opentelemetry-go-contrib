@@ -5,19 +5,15 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"math/rand/v2"
-	"net/http"
-	"strconv"
 	"sync/atomic"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-
-	"go.opentelemetry.io/contrib/bridges/otelslog"
 )
 
 const name = "go.opentelemetry.io/contrib/examples/dice"
@@ -71,75 +67,6 @@ func init() {
 	}
 }
 
-func handleRolldice(w http.ResponseWriter, r *http.Request) {
-	// Parse query parameters.
-	rollsParam := r.URL.Query().Get("rolls")
-	player := r.URL.Query().Get("player")
-
-	// Default rolls = 1 if not defined.
-	if rollsParam == "" {
-		rollsParam = "1"
-	}
-
-	// Check if rolls is a number.
-	rolls, err := strconv.Atoi(rollsParam)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadRequest)
-		msg := "Parameter rolls must be a positive integer"
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"status":  "error",
-			"message": msg,
-		})
-		logger.WarnContext(r.Context(), msg)
-		return
-	}
-
-	results, err := rollDice(r.Context(), rolls)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		msg := "Internal server error"
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"status":  "error",
-			"message": msg,
-		})
-		logger.ErrorContext(r.Context(), err.Error())
-		return
-	}
-
-	if player == "" {
-		logger.DebugContext(r.Context(), "anonymous player rolled", "results", results)
-	} else {
-		logger.DebugContext(r.Context(), "player rolled dice", "player", player, "results", results)
-	}
-	logger.InfoContext(r.Context(), "Some player rolled a dice.")
-
-	w.Header().Set("Content-Type", "application/json")
-	if len(results) == 1 {
-		writeJSON(r.Context(), w, results[0])
-	} else {
-		writeJSON(r.Context(), w, results)
-	}
-}
-
-func writeJSON(ctx context.Context, w http.ResponseWriter, v any) {
-	data, err := json.Marshal(v)
-	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		_ = json.NewEncoder(w).Encode(map[string]string{
-			"status":  "error",
-			"message": "Internal Server Error",
-		})
-		logger.ErrorContext(ctx, "json encode failed", "error", err)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(data)
-}
-
 func rollDice(ctx context.Context, rolls int) ([]int, error) {
 	const maxRolls = 1000 // Arbitrary limit to prevent Slice memory allocation with excessive size value.
 
@@ -148,12 +75,14 @@ func rollDice(ctx context.Context, rolls int) ([]int, error) {
 
 	if rolls > maxRolls {
 		err := errors.New("rolls parameter exceeds maximum allowed value")
+		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
 	if rolls <= 0 {
 		err := errors.New("rolls must be positive")
+		span.RecordError(err)
 		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
