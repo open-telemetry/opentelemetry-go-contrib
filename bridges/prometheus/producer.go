@@ -104,19 +104,8 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 		case dto.MetricType_SUMMARY:
 			newMetric.Data = convertSummary(pm.GetMetric(), now)
 		case dto.MetricType_HISTOGRAM:
-			var validMetrics []*dto.Metric
-			for _, m := range pm.GetMetric() {
-				if err := validateHistogram(pm.GetName(), m.GetHistogram()); err != nil {
-					errs = append(errs, err)
-					continue
-				}
-				validMetrics = append(validMetrics, m)
-			}
-			if len(validMetrics) == 0 {
-				continue
-			}
-			if isExponentialHistogram(validMetrics[0].GetHistogram()) {
-				data, err := convertExponentialHistogram(pm.GetName(), validMetrics, now)
+			if isExponentialHistogram(pm.GetMetric()[0].GetHistogram()) {
+				data, err := convertExponentialHistogram(pm.GetName(), pm.GetMetric(), now)
 				if err != nil {
 					errs = append(errs, err)
 				}
@@ -125,7 +114,7 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 				}
 				newMetric.Data = data
 			} else {
-				data, err := convertHistogram(pm.GetName(), validMetrics, now)
+				data, err := convertHistogram(pm.GetName(), pm.GetMetric(), now)
 				if err != nil {
 					errs = append(errs, err)
 				}
@@ -366,10 +355,15 @@ func convertHistogram(metricName string, metrics []*dto.Metric, now time.Time) (
 		Temporality: metricdata.CumulativeTemporality,
 	}
 	for _, m := range metrics {
+		hist := m.GetHistogram()
+		if err := validateHistogram(metricName, hist); err != nil {
+			errs = append(errs, err)
+			continue
+		}
 		// The OpenTelemetry Prometheus and OpenMetrics Compatibility Specification requires:
 		// "Traditional Prometheus Histograms (with explicit bucket boundaries) MUST be converted to an OTLP Histogram."
 		// Non-matching exponential histogram datapoints lacking explicit buckets must be rejected.
-		if isExponentialHistogram(m.GetHistogram()) && len(m.GetHistogram().GetBucket()) == 0 {
+		if isExponentialHistogram(hist) && len(hist.GetBucket()) == 0 {
 			errs = append(errs, fmt.Errorf("%w: missing histogram buckets for metric %v", errInvalidHistogram, metricName))
 			continue
 		}
