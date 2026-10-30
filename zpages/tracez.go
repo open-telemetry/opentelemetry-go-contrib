@@ -18,10 +18,11 @@
 package zpages
 
 import (
+	"cmp"
 	"fmt"
 	"log"
 	"net/http"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -146,8 +147,8 @@ func (th *tracezHandler) getSummaryTableData() summaryTableData {
 		row := summaryTableRowData{Name: name, Active: s.activeSpans, Errors: s.errorSpans, Latency: s.latencySpans}
 		data.Rows = append(data.Rows, row)
 	}
-	sort.Slice(data.Rows, func(i, j int) bool {
-		return data.Rows[i].Name < data.Rows[j].Name
+	slices.SortFunc(data.Rows, func(i, j summaryTableRowData) int {
+		return cmp.Compare(i.Name, j.Name)
 	})
 	return data
 }
@@ -157,22 +158,6 @@ type spanRow struct {
 	trace.SpanContext
 	ParentSpanContext trace.SpanContext
 }
-
-type events []sdktrace.Event
-
-func (e events) Len() int { return len(e) }
-func (e events) Less(i, j int) bool {
-	return e[i].Time.Before(e[j].Time)
-}
-func (e events) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
-
-type attributes []attribute.KeyValue
-
-func (e attributes) Len() int { return len(e) }
-func (e attributes) Less(i, j int) bool {
-	return string(e[i].Key) < string(e[j].Key)
-}
-func (e attributes) Swap(i, j int) { e[i], e[j] = e[j], e[i] }
 
 func spanRows(s sdktrace.ReadOnlySpan) []spanRow {
 	start := s.StartTime()
@@ -228,8 +213,11 @@ func spanRows(s sdktrace.ReadOnlySpan) []spanRow {
 	}
 	out := []spanRow{firstRow}
 
-	formatAttributes := func(a attributes) string {
-		sort.Sort(a)
+	formatAttributes := func(attrs []attribute.KeyValue) string {
+		a := slices.Clone(attrs)
+		slices.SortFunc(a, func(x, y attribute.KeyValue) int {
+			return cmp.Compare(x.Key, y.Key)
+		})
 		var s []string
 		for i := range a {
 			s = append(s, fmt.Sprintf("%s=%v", a[i].Key, a[i].Value.String()))
@@ -244,8 +232,10 @@ func spanRows(s sdktrace.ReadOnlySpan) []spanRow {
 		out = append(out, spanRow{Fields: [3]string{"", "", formatAttributes(s.Attributes())}})
 	}
 
-	es := events(s.Events())
-	sort.Sort(es)
+	es := slices.Clone(s.Events())
+	slices.SortFunc(es, func(x, y sdktrace.Event) int {
+		return x.Time.Compare(y.Time)
+	})
 	for _, e := range es {
 		msg := e.Name
 		if len(e.Attributes) != 0 {
