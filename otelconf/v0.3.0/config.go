@@ -190,6 +190,34 @@ func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) Configurat
 	})
 }
 
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *Resource) UnmarshalYAML(unmarshal func(any) error) error {
+	var raw struct {
+		Attributes any `yaml:"attributes"`
+	}
+
+	if err := unmarshal(&raw); err != nil {
+		return err
+	}
+
+	if attributes, ok := raw.Attributes.([]any); ok {
+		for i, attr := range attributes {
+			if attr == nil {
+				return fmt.Errorf(
+					"resource.attributes[%d]: null attribute is invalid", i,
+				)
+			}
+		}
+	}
+
+	type Plain Resource
+	plain := Plain(*j)
+
+	err := unmarshal(&plain)
+	*j = Resource(plain)
+	return err
+}
+
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
 func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
 	file, err := provider.ReplaceEnvVars(file)

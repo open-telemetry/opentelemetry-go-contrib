@@ -7,6 +7,7 @@ package otelconf
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 
 	"go.opentelemetry.io/otel/log"
@@ -207,6 +208,40 @@ func WithTracerProviderOptions(opts ...sdktrace.TracerProviderOption) Configurat
 		c.tracerProviderOptions = append(c.tracerProviderOptions, opts...)
 		return c
 	})
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *Resource) UnmarshalYAML(node *yaml.Node) error {
+	var raw struct {
+		Attributes any `yaml:"attributes"`
+	}
+
+	if err := node.Decode(&raw); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	if attributes, ok := raw.Attributes.([]any); ok {
+		for i, attr := range attributes {
+			if attr == nil {
+				return fmt.Errorf(
+					"resource.attributes[%d]: null attribute is invalid", i,
+				)
+			}
+		}
+	}
+
+	type Plain Resource
+	plain := Plain(*j)
+
+	err := node.Decode(&plain)
+	if err != nil {
+		unmarshalErr := newErrUnmarshal(j)
+		*j = Resource(plain)
+		return errors.Join(unmarshalErr, err)
+	}
+
+	*j = Resource(plain)
+	return nil
 }
 
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.

@@ -2519,3 +2519,87 @@ func TestUnmarshalResourceJson(t *testing.T) {
 		})
 	}
 }
+
+func TestParseYAMLRejectsNullResourceAttributeAliasesAndMerges(t *testing.T) {
+	inputs := map[string]string{
+		"aliased resource": `file_format: "0.3"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource: *resource_defaults
+`,
+		"aliased attribute list": `file_format: "0.3"
+null_attributes: &null_attributes
+  - null
+resource:
+  attributes: *null_attributes
+`,
+		"non-string resource key": `file_format: "0.3"
+resource:
+  1: ignored
+  attributes:
+    - null
+`,
+		"merged attributes": `file_format: "1.0"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource:
+  <<: *resource_defaults
+`,
+	}
+
+	for name, input := range inputs {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseYAML([]byte(input))
+			require.ErrorContains(t, err, "null attribute is invalid")
+		})
+	}
+}
+
+func TestParseYAMLAllowsExplicitAttributesToOverrideMerge(t *testing.T) {
+	input := `file_format: "1.0"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource:
+  <<: *resource_defaults
+  attributes:
+    - name: service.name
+      value: demo
+`
+	_, err := ParseYAML([]byte(input))
+	require.NoError(t, err)
+}
+
+func TestParseYAMLAllowsEmptyResourceAttributes(t *testing.T) {
+	inputs := map[string]string{
+		"omitted": `file_format: "1.0"
+resource: {}
+`,
+		"empty list": `file_format: "1.0"
+resource:
+  attributes: []
+`,
+	}
+
+	for name, input := range inputs {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseYAML([]byte(input))
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestUnmarshalJSONRejectsNullResourceAttribute(t *testing.T) {
+	input := `{
+        "file_format": "1.0",
+        "resource": {
+            "attributes": [null]
+        }
+    }`
+
+	var cfg OpenTelemetryConfiguration
+	err := json.Unmarshal([]byte(input), &cfg)
+	require.Error(t, err)
+}
