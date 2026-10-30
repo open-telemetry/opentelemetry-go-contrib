@@ -158,7 +158,7 @@ func Start(opts ...Option) error {
 		}
 	}
 
-	collector := newCollector(c.MinimumReadMemStatsInterval, metricNames)
+	collector := newCollector(c.MinimumRefreshInterval, metricNames)
 	var lock sync.Mutex
 	_, err = meter.RegisterCallback(
 		func(_ context.Context, o metric.Observer) error {

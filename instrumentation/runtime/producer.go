@@ -53,7 +53,7 @@ func NewProducer(opts ...ProducerOption) *Producer {
 		histogramMetrics = append(histogramMetrics, goGCPauses)
 	}
 	return &Producer{
-		collector:      newCollector(c.MinimumReadMemStatsInterval, histogramMetrics),
+		collector:      newCollector(c.MinimumRefreshInterval, histogramMetrics),
 		enableGCPauses: enableGCPauses,
 	}
 }
