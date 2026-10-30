@@ -1,3 +1,6 @@
+// Deprecated: Use native OpenTelemetry propagators instead.
+// v0.73.0 is the final planned release of this module.
+// See https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path.
 module go.opentelemetry.io/contrib/propagators/opencensus
 
 go 1.26.0

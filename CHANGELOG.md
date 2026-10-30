@@ -10,6 +10,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   
 ### Added
 
+- Support exemplars on exponential (native) histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
+- Convert Prometheus `UNIT` metadata to UCUM units in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10042)
+- Add the opt-in `go.memory.detailed_type` attribute to `go.memory.used` and `go.cpu.detailed_state` attribute to `go.cpu.time` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10021)
 - Add `WithHostID` option to `go.opentelemetry.io/contrib/detectors/k8sapi` to detect the `host.id` resource attribute from the machine ID reported by the node's kubelet. (#9973)
 - Add support for the `aws.lambda` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9924)
 - Add `WithNonErrorCodes` option for `NewServerHandler` and `NewClientHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to prevent the handler from setting an error span status for specific gRPC codes. (#9209)
@@ -21,7 +24,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add the `cloud.platform`, `aws.log.group.names`, and `aws.log.stream.names` resource attributes to `go.opentelemetry.io/contrib/detectors/aws/lambda`, matching the `lambda` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#9606)
 - Add `WithAttributeFilter` to `go.opentelemetry.io/contrib/detectors/aws/lambda` to select which detected attributes are included in the returned resource. (#9606)
 - Add `go.opentelemetry.io/contrib/detectors/azure/azureaks`, a new resource detector for Azure Kubernetes Service, ported from `processor/resourcedetectionprocessor/internal/azure/aks` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, and `k8s.cluster.name`. (#9501)
-- Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, Cloud Run Worker Pool parity, and `NewDetectorWithOptions` with `WithGKEHostType` to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462)
+- Add Bare Metal Solution (BMS) detection, GCE Managed Instance Group (MIG) attributes, Cloud Run Worker Pool parity, and `NewDetectorWithOptions` with `WithGKEHostType` and `WithGCEInstanceLabelKeyFilter` to `go.opentelemetry.io/contrib/detectors/gcp`. (#9462, #10020)
 - Add `go.opentelemetry.io/contrib/detectors/akamai` — a new resource detector for Akamai Connected Cloud (formerly Linode) compute instances, ported from `processor/resourcedetectionprocessor/internal/akamai` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.region`, `host.id`, `host.name`, `host.type`, `host.image.id`, and `host.image.name`. (#9492)
 - Add `go.opentelemetry.io/contrib/detectors/openstack/nova`, a new resource detector for OpenStack Nova compute instances, ported from `processor/resourcedetectionprocessor/internal/openstack/nova` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `host.id`, `host.name`, and `host.type`, and optionally emits `openstack.nova.meta.<key>` attributes for the instance metadata keys selected with `WithMetaKeyFilter`. (#9486)
 - Add `go.opentelemetry.io/contrib/detectors/ibmcloud/classic`, a new resource detector for IBM Cloud Classic Infrastructure (SoftLayer) instances, ported from `processor/resourcedetectionprocessor/internal/ibmcloud/classic` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `cloud.resource_id`, `host.id`, and `host.name`. (#9490)
@@ -34,6 +37,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- `NewMetricProducer` in `go.opentelemetry.io/contrib/bridges/prometheus` returns the exported concrete type `*Producer` instead of `metric.Producer`. (#10043)
 - Reduce heap allocations and latency during context tagging in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#10007)
 - Reduce heap allocations and latency during context injection in `go.opentelemetry.io/contrib/propagators/aws/xray`. (#9938)
 - Reduce allocations during context injection in `go.opentelemetry.io/contrib/propagators/jaeger`. (#9918)
@@ -43,9 +47,17 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `ReadFrom` support to the internal response writer wrapper template shared by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to track copied bytes and the last non-nil error. (#9804)
 - The default span name formatter in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` upper-cases the request method before matching it against known methods, so a lowercase `get` request is named `GET <route>` instead of `HTTP <route>`, matching `http.request.method`. (#9939)
 
+### Deprecated
+
+- The `go.opentelemetry.io/contrib/propagators/opencensus` module and package are deprecated and will be removed in v0.74.0.
+  v0.73.0 is the final planned release of this module.
+  Use native OpenTelemetry propagators instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#10030)
+
 ### Fixed
 
+- Deduplicate propagator names in `go.opentelemetry.io/contrib/propagators/autoprop` to avoid repeated injection and extraction. (#9956)
 - Do not record HTTP/2 pseudo-header fields (`:authority`, `:method`, `:path`, `:scheme`) as `http.request.header.*` span attributes in `NewClientTrace` of `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, so the query string in `:path` is no longer exported unredacted. (#10015)
+- Decode hex-encoded `trace_id` and `span_id` exemplar labels into binary `TraceID` and `SpanID` bytes in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
 - Omit source attributes in `go.opentelemetry.io/contrib/bridges/otelslog` when `WithSource(true)` is enabled but no caller frame is available. (#9991)
 - Redact the values of the `X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, `sig`, and `X-Goog-Signature` query parameters from the `url.full` attribute recorded on client spans by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, as required by the semantic conventions. (#9950)
 - Resolve the Docker container ID from cgroup data, with a `/proc/self/mountinfo` fallback for private cgroup namespaces, so custom hostnames do not disable detection. Fall back to hostname lookup when neither source provides an ID or the Docker daemon does not recognize it. (`go.opentelemetry.io/contrib/detectors/docker`) (#10019)
@@ -74,7 +86,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   Use `WithServerName` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` to keep reporting them. (#9930)
 - Fix `go.schedule.duration` datapoints returned by `Producer` in `go.opentelemetry.io/contrib/instrumentation/runtime` having their bucket counts overwritten by later collections, and a data race between concurrent `Produce` calls. (#9882)
 - Retain the last non-nil write error instead of letting a later successful write clear it in the response writer wrapper of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9790)
+- Ignore a zero or negative refresh interval from `WithSamplingRefreshInterval` or `pollingIntervalMs` in `OTEL_TRACES_SAMPLER_ARG` in `go.opentelemetry.io/contrib/samplers/jaegerremote`, preserving the previously configured interval, or the default when none was configured, instead of panicking in `time.NewTicker`. (#9999)
 - Fix `WithValues` in `go.opentelemetry.io/contrib/bridges/otellogr` so loggers derived from the same parent no longer overwrite each other's attributes or race on them. (#9994)
+- Accept any 2xx status for the instance identity token request in `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`. The IMDS Identity API returns 201 Created for the token PUT, which the detector previously rejected, silently returning an empty resource on real IBM Cloud VPC instances. (#9671)
 
 ### Removed
 

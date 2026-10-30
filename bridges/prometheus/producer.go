@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -31,21 +32,26 @@ var (
 	processStartTime   = time.Now()
 )
 
-type producer struct {
+// Producer is a [metric.Producer] that fetches metrics from Prometheus.
+type Producer struct {
 	gatherers prometheus.Gatherers
 }
 
-// NewMetricProducer returns a metric.Producer that fetches metrics from
+var _ metric.Producer = (*Producer)(nil)
+
+// NewMetricProducer returns a [Producer] that fetches metrics from
 // Prometheus. This can be used to allow Prometheus instrumentation to be
 // added to an OpenTelemetry export pipeline.
-func NewMetricProducer(opts ...Option) metric.Producer {
+func NewMetricProducer(opts ...Option) *Producer {
 	cfg := newConfig(opts...)
-	return &producer{
+	return &Producer{
 		gatherers: cfg.gatherers,
 	}
 }
 
-func (p *producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
+// Produce fetches metrics from the configured Prometheus gatherers and
+// converts them to OpenTelemetry metrics.
+func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	now := time.Now()
 	var errs multierr
 	otelMetrics := make([]metricdata.Metrics, 0)
@@ -86,6 +92,7 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 		newMetric := metricdata.Metrics{
 			Name:        pm.GetName(),
 			Description: pm.GetHelp(),
+			Unit:        unitWordToUCUM(pm.GetUnit()),
 		}
 		switch pm.GetType() {
 		case dto.MetricType_GAUGE:
@@ -209,7 +216,12 @@ func convertExponentialHistogram(metrics []*dto.Metric, now time.Time) metricdat
 				m.GetHistogram().GetNegativeSpan(),
 				m.GetHistogram().GetNegativeDelta(),
 			),
-			// TODO: Support exemplars
+		}
+		if exs := m.GetHistogram().GetExemplars(); len(exs) > 0 {
+			dp.Exemplars = make([]metricdata.Exemplar[float64], len(exs))
+			for j, ex := range exs {
+				dp.Exemplars[j] = convertExemplar(ex)
+			}
 		}
 		createdTs := m.GetHistogram().GetCreatedTimestamp()
 		if createdTs.IsValid() {
@@ -388,9 +400,13 @@ func convertExemplar(exemplar *dto.Exemplar) metricdata.Exemplar[float64] {
 	for _, label := range exemplar.GetLabel() {
 		switch label.GetName() {
 		case traceIDLabel:
-			traceID = []byte(label.GetValue())
+			if tid, err := trace.TraceIDFromHex(label.GetValue()); err == nil {
+				traceID = tid[:]
+			}
 		case spanIDLabel:
-			spanID = []byte(label.GetValue())
+			if sid, err := trace.SpanIDFromHex(label.GetValue()); err == nil {
+				spanID = sid[:]
+			}
 		default:
 			attrs = append(attrs, attribute.String(label.GetName(), label.GetValue()))
 		}
@@ -402,6 +418,77 @@ func convertExemplar(exemplar *dto.Exemplar) metricdata.Exemplar[float64] {
 		SpanID:             spanID,
 		FilteredAttributes: attrs,
 	}
+}
+
+var wordToUCUM = map[string]string{
+	// Time
+	"days":         "d",
+	"hours":        "h",
+	"minutes":      "min",
+	"seconds":      "s",
+	"milliseconds": "ms",
+	"microseconds": "us",
+	"nanoseconds":  "ns",
+
+	// Bytes
+	"bytes":     "By",
+	"kibibytes": "KiBy",
+	"mebibytes": "MiBy",
+	"gibibytes": "GiBy",
+	"tebibytes": "TiBy",
+	"kilobytes": "kBy",
+	"megabytes": "MBy",
+	"gigabytes": "GBy",
+	"terabytes": "TBy",
+
+	// SI
+	"meters":  "m",
+	"volts":   "V",
+	"amperes": "A",
+	"joules":  "J",
+	"watts":   "W",
+	"grams":   "g",
+
+	// Misc
+	"celsius": "Cel",
+	"hertz":   "Hz",
+	"percent": "%",
+}
+
+var perWordToUCUM = map[string]string{
+	"second": "s",
+	"minute": "min",
+	"hour":   "h",
+	"day":    "d",
+	"week":   "wk",
+	"month":  "mo",
+	"year":   "a",
+}
+
+func unitWordToUCUM(unit string) string {
+	if unit == "" {
+		return ""
+	}
+	unitTokens := strings.SplitN(unit, "_per_", 2)
+	ucumUnit := wordToUCUMOrDefault(unitTokens[0])
+	if len(unitTokens) > 1 && unitTokens[1] != "" {
+		ucumUnit += "/" + perWordToUCUMOrDefault(unitTokens[1])
+	}
+	return ucumUnit
+}
+
+func wordToUCUMOrDefault(unit string) string {
+	if ucum, ok := wordToUCUM[unit]; ok {
+		return ucum
+	}
+	return unit
+}
+
+func perWordToUCUMOrDefault(perUnit string) string {
+	if ucum, ok := perWordToUCUM[perUnit]; ok {
+		return ucum
+	}
+	return perUnit
 }
 
 type multierr []error
