@@ -50,6 +50,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Deprecated
 
+- `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` is deprecated.
+  Use `WithPublicEndpointFn` instead. (#10052)
 - The `go.opentelemetry.io/contrib/propagators/opencensus` module and package are deprecated and will be removed in v0.74.0.
   v0.73.0 is the final planned release of this module.
   Use native OpenTelemetry propagators instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#10030)
