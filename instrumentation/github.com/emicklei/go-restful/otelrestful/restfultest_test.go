@@ -105,7 +105,7 @@ func TestChildSpanNames(t *testing.T) {
 	assertSpan(
 		t,
 		spans[0],
-		"/user/{id:[0-9]+}",
+		"GET /user/{id:[0-9]+}",
 		attribute.String("server.address", "foobar"),
 		attribute.Int("http.response.status_code", http.StatusOK),
 		attribute.String("http.request.method", "GET"),
@@ -120,13 +120,106 @@ func TestChildSpanNames(t *testing.T) {
 	assertSpan(
 		t,
 		spans[1],
-		"/book/{title}",
+		"GET /book/{title}",
 		attribute.String("server.address", "foobar"),
 		attribute.Int("http.response.status_code", http.StatusOK),
 		attribute.Int("http.response.body.size", 2),
 		attribute.String("http.request.method", "GET"),
 		attribute.String("http.route", "/book/{title}"),
 	)
+}
+
+func TestSpanNamesAndRouteAttributesEdgeCases(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	handlerFunc := func(_ *restful.Request, resp *restful.Response) {
+		resp.WriteHeader(http.StatusOK)
+	}
+	ws := &restful.WebService{}
+	ws.Path("/users")
+	ws.Route(ws.GET("/{id}").To(handlerFunc))
+	ws.Route(ws.Method("CUSTOM").Path("/{id}").To(handlerFunc))
+
+	container := restful.NewContainer()
+	container.Filter(otelrestful.OTelFilter("foobar", otelrestful.WithTracerProvider(provider)))
+	container.Add(ws)
+
+	// Unmatched route (404 Not Found): span name should be "{method}" and http.route must be omitted.
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/users/unknown/path", http.NoBody)
+	w := httptest.NewRecorder()
+	container.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	assertSpan(
+		t,
+		spans[0],
+		"GET",
+		attribute.String("server.address", "foobar"),
+		attribute.Int("http.response.status_code", http.StatusNotFound),
+		attribute.String("http.request.method", "GET"),
+	)
+	for _, attr := range spans[0].Attributes() {
+		assert.NotEqual(t, attribute.Key("http.route"), attr.Key)
+	}
+
+	// Unmatched method (405 Method Not Allowed): span name should be "{method}" and http.route must be omitted.
+	r = httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/users/123", http.NoBody)
+	w = httptest.NewRecorder()
+	container.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusMethodNotAllowed, w.Code)
+	spans = sr.Ended()
+	require.Len(t, spans, 2)
+	assertSpan(
+		t,
+		spans[1],
+		"POST",
+		attribute.String("server.address", "foobar"),
+		attribute.Int("http.response.status_code", http.StatusMethodNotAllowed),
+		attribute.String("http.request.method", "POST"),
+	)
+	for _, attr := range spans[1].Attributes() {
+		assert.NotEqual(t, attribute.Key("http.route"), attr.Key)
+	}
+
+	// Non-standard HTTP method on a matched route: span name uses "HTTP {route}".
+	r = httptest.NewRequestWithContext(t.Context(), "CUSTOM", "/users/123", http.NoBody)
+	w = httptest.NewRecorder()
+	container.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusOK, w.Code)
+	spans = sr.Ended()
+	require.Len(t, spans, 3)
+	assertSpan(
+		t,
+		spans[2],
+		"HTTP /users/{id}",
+		attribute.String("server.address", "foobar"),
+		attribute.Int("http.response.status_code", http.StatusOK),
+		attribute.String("http.request.method", "_OTHER"),
+		attribute.String("http.request.method_original", "CUSTOM"),
+		attribute.String("http.route", "/users/{id}"),
+	)
+
+	// Non-standard HTTP method on an unmatched route: span name uses "HTTP" and omits http.route.
+	r = httptest.NewRequestWithContext(t.Context(), "CUSTOM", "/users/unknown/path", http.NoBody)
+	w = httptest.NewRecorder()
+	container.ServeHTTP(w, r)
+	assert.Equal(t, http.StatusNotFound, w.Code)
+	spans = sr.Ended()
+	require.Len(t, spans, 4)
+	assertSpan(
+		t,
+		spans[3],
+		"HTTP",
+		attribute.String("server.address", "foobar"),
+		attribute.Int("http.response.status_code", http.StatusNotFound),
+		attribute.String("http.request.method", "_OTHER"),
+		attribute.String("http.request.method_original", "CUSTOM"),
+	)
+	for _, attr := range spans[3].Attributes() {
+		assert.NotEqual(t, attribute.Key("http.route"), attr.Key)
+	}
 }
 
 func TestMultiFilters(t *testing.T) {
@@ -157,21 +250,21 @@ func TestMultiFilters(t *testing.T) {
 	container.ServeHTTP(w, r)
 	spans := sr.Ended()
 	require.Len(t, spans, 1)
-	assertSpan(t, spans[0], "/user/{id}")
+	assertSpan(t, spans[0], "GET /user/{id}")
 
 	r = httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123/books", http.NoBody)
 	w = httptest.NewRecorder()
 	container.ServeHTTP(w, r)
 	spans = sr.Ended()
 	require.Len(t, spans, 2)
-	assertSpan(t, spans[1], "/user/{id}/books")
+	assertSpan(t, spans[1], "GET /user/{id}/books")
 
 	r = httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/library/metropolitan", http.NoBody)
 	w = httptest.NewRecorder()
 	container.ServeHTTP(w, r)
 	spans = sr.Ended()
 	require.Len(t, spans, 3)
-	assertSpan(t, spans[2], "/library/{name}")
+	assertSpan(t, spans[2], "GET /library/{name}")
 }
 
 func TestSpanStatus(t *testing.T) {

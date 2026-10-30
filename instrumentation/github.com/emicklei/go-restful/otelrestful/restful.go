@@ -56,15 +56,13 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		r := req.Request
 		ctx := cfg.Propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
 		route := req.SelectedRoutePath()
-		spanName := route
+		rSemconv := *r
+		rSemconv.Pattern = route
+		spanName := semconvServer.SpanName(&rSemconv)
 
 		opts := []oteltrace.SpanStartOption{
-			oteltrace.WithAttributes(semconvServer.RequestTraceAttrs(service, r, semconv.RequestTraceAttrsOpts{})...),
+			oteltrace.WithAttributes(semconvServer.RequestTraceAttrs(service, &rSemconv, semconv.RequestTraceAttrsOpts{})...),
 			oteltrace.WithSpanKind(oteltrace.SpanKindServer),
-		}
-		if route != "" {
-			rAttr := semconvServer.Route(route)
-			opts = append(opts, oteltrace.WithAttributes(rAttr))
 		}
 
 		if cfg.PublicEndpointFn != nil && cfg.PublicEndpointFn(r.WithContext(ctx)) {
@@ -115,13 +113,11 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 			WriteBytes: respSize,
 		})...)
 
-		rMetric := *r
-		rMetric.Pattern = route
 		semconvServer.RecordMetrics(ctx, semconv.ServerMetricData{
 			ServerName:   service,
 			ResponseSize: respSize,
 			MetricAttributes: semconv.MetricAttributes{
-				Req:                  &rMetric,
+				Req:                  &rSemconv,
 				StatusCode:           status,
 				Route:                route,
 				AdditionalAttributes: additionalAttributes,
