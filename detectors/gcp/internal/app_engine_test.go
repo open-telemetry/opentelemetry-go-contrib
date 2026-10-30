@@ -30,7 +30,7 @@ func TestAppEngineServiceName(t *testing.T) {
 			gaeServiceEnv: "my-service",
 		},
 	})
-	serviceName, err := d.AppEngineServiceName()
+	serviceName, err := d.AppEngineServiceName(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "my-service", serviceName)
 }
@@ -39,7 +39,7 @@ func TestAppEngineServiceNameErr(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{
 		Vars: map[string]string{},
 	})
-	name, err := d.AppEngineServiceName()
+	name, err := d.AppEngineServiceName(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, name)
 }
@@ -50,7 +50,7 @@ func TestAppEngineServiceVersion(t *testing.T) {
 			gaeVersionEnv: "my-version",
 		},
 	})
-	version, err := d.AppEngineServiceVersion()
+	version, err := d.AppEngineServiceVersion(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "my-version", version)
 }
@@ -59,7 +59,7 @@ func TestAppEngineServiceVersionErr(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{
 		Vars: map[string]string{},
 	})
-	version, err := d.AppEngineServiceVersion()
+	version, err := d.AppEngineServiceVersion(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, version)
 }
@@ -70,7 +70,7 @@ func TestAppEngineServiceInstance(t *testing.T) {
 			gaeInstanceEnv: "instance-123",
 		},
 	})
-	instance, err := d.AppEngineServiceInstance()
+	instance, err := d.AppEngineServiceInstance(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "instance-123", instance)
 }
@@ -79,7 +79,7 @@ func TestAppEngineServiceInstanceErr(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{
 		Vars: map[string]string{},
 	})
-	instance, err := d.AppEngineServiceInstance()
+	instance, err := d.AppEngineServiceInstance(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, instance)
 }
@@ -88,7 +88,7 @@ func TestAppEngineStandardAvailabilityZone(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t,
 		"instance/zone", "us16",
 	), &FakeOSProvider{})
-	zone, err := d.AppEngineStandardAvailabilityZone()
+	zone, err := d.AppEngineStandardAvailabilityZone(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "us16", zone)
 }
@@ -97,7 +97,7 @@ func TestAppEngineStandardAvailabilityZoneErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{
 		Err: fmt.Errorf("fake error"),
 	}, &FakeOSProvider{})
-	zone, err := d.AppEngineStandardAvailabilityZone()
+	zone, err := d.AppEngineStandardAvailabilityZone(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, zone)
 }
@@ -106,7 +106,7 @@ func TestAppEngineStandardCloudRegion(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t,
 		regionMetadataAttr, "/projects/123/regions/us-central1",
 	), &FakeOSProvider{})
-	instance, err := d.AppEngineStandardCloudRegion()
+	instance, err := d.AppEngineStandardCloudRegion(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "us-central1", instance)
 }
@@ -115,14 +115,14 @@ func TestAppEngineStandardCloudRegionErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{
 		Err: fmt.Errorf("fake error"),
 	}, &FakeOSProvider{})
-	instance, err := d.AppEngineStandardCloudRegion()
+	instance, err := d.AppEngineStandardCloudRegion(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, instance)
 }
 
 func TestAppEngineFlexAvailabilityZoneAndRegion(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
-	zone, region, err := d.AppEngineFlexAvailabilityZoneAndRegion()
+	zone, region, err := d.AppEngineFlexAvailabilityZoneAndRegion(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, fakeZone, zone)
 	assert.Equal(t, fakeRegion, region)
@@ -132,7 +132,7 @@ func TestAppEngineFlexAvailabilityZoneAndRegionMalformedZone(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t,
 		"instance/zone", "us-central1",
 	), &FakeOSProvider{})
-	zone, region, err := d.AppEngineFlexAvailabilityZoneAndRegion()
+	zone, region, err := d.AppEngineFlexAvailabilityZoneAndRegion(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, zone)
 	assert.Empty(t, region)
@@ -142,7 +142,7 @@ func TestAppEngineFlexAvailabilityZoneAndRegionNoZone(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t,
 		"instance/zone", "",
 	), &FakeOSProvider{})
-	zone, region, err := d.AppEngineFlexAvailabilityZoneAndRegion()
+	zone, region, err := d.AppEngineFlexAvailabilityZoneAndRegion(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, zone)
 	assert.Empty(t, region)
@@ -152,7 +152,7 @@ func TestAppEngineFlexAvailabilityZoneAndRegionErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{
 		Err: fmt.Errorf("fake error"),
 	}, &FakeOSProvider{})
-	zone, region, err := d.AppEngineFlexAvailabilityZoneAndRegion()
+	zone, region, err := d.AppEngineFlexAvailabilityZoneAndRegion(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, zone)
 	assert.Empty(t, region)
