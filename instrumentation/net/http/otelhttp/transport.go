@@ -294,7 +294,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	if t.recordActiveRequests {
-		opt := t.semconv.ActiveRequestsOption(r)
+		opt := t.semconv.ActiveRequestsOption(r, append(labeler.Get(), t.metricAttributesFromRequest(r)...))
 		t.semconv.AddActiveRequests(ctx, 1, opt)
 		defer t.semconv.AddActiveRequests(ctx, -1, opt)
 	}

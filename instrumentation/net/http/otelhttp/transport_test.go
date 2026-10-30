@@ -1638,6 +1638,38 @@ func TestTransportActiveRequests(t *testing.T) {
 		assert.PanicsWithValue(t, "round trip panic", func() { _, _ = tr.RoundTrip(req) }) //nolint:bodyclose // no response is returned on panic
 		assertActiveRequests(t, reader, attrs, 0)
 	})
+
+	t.Run("additional attributes", func(t *testing.T) {
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+		attrs := attribute.NewSet(append(attrs.ToSlice(),
+			attribute.String("labeler", "before"),
+			attribute.String("fn", "value"),
+		)...)
+
+		tr := NewTransport(roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+			assertActiveRequests(t, reader, attrs, 1)
+			// Labels added during RoundTrip must not change the decrement.
+			labeler, _ := ClientLabelerFromContext(r.Context())
+			labeler.Add(attribute.String("labeler", "during"))
+			return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody, Request: r}, nil
+		}), WithMeterProvider(meterProvider), WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue {
+			return []attribute.KeyValue{attribute.String("fn", "value")}
+		}))
+
+		labeler := &Labeler{}
+		labeler.Add(attribute.String("labeler", "before"))
+		ctx := ContextWithClientLabeler(t.Context(), labeler)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com:8080/path", http.NoBody)
+		require.NoError(t, err)
+
+		resp, err := tr.RoundTrip(req)
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+
+		assertActiveRequests(t, reader, attrs, 0)
+	})
 }
 
 func TestTransportActiveRequestsDisabled(t *testing.T) {

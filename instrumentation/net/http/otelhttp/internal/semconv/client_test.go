@@ -206,10 +206,11 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 
 func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 	tests := []struct {
-		name   string
-		method string
-		url    string
-		want   []attribute.KeyValue
+		name       string
+		method     string
+		url        string
+		additional []attribute.KeyValue
+		want       []attribute.KeyValue
 	}{
 		{
 			name:   "default port",
@@ -239,6 +240,17 @@ func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 				attribute.String("server.address", "example.com"),
 			},
 		},
+		{
+			name:       "additional attributes",
+			method:     http.MethodGet,
+			url:        "http://example.com/path",
+			additional: []attribute.KeyValue{attribute.String("key", "value")},
+			want: []attribute.KeyValue{
+				attribute.String("key", "value"),
+				attribute.String("http.request.method", "GET"),
+				attribute.String("server.address", "example.com"),
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -246,7 +258,7 @@ func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 			req, err := http.NewRequestWithContext(t.Context(), tt.method, tt.url, http.NoBody)
 			require.NoError(t, err)
 
-			opt := HTTPClient{}.ActiveRequestsOption(req)
+			opt := HTTPClient{}.ActiveRequestsOption(req, tt.additional)
 			got := metric.NewAddConfig([]metric.AddOption{opt}).Attributes()
 			assert.ElementsMatch(t, tt.want, got.ToSlice())
 		})
