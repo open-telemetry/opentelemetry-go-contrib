@@ -1096,6 +1096,23 @@ func TestProduceInconsistentExponentialBuckets(t *testing.T) {
 			},
 		},
 		{
+			name: "negative bucket count from deltas",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(2))},
+						},
+						PositiveDelta: []int64{1, -2},
+					},
+				},
+			},
+		},
+		{
 			name: "partial datapoint filtering when one datapoint has inconsistent spans",
 			metrics: []*dto.Metric{
 				{
