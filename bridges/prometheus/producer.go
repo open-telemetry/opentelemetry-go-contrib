@@ -335,10 +335,10 @@ func convertExponentialBuckets(bucketSpans []*dto.BucketSpan, deltas []int64) (m
 			// Convert deltas to the cumulative number of observations
 			count += deltas[deltaIndex]
 			deltaIndex++
-			// count should always be positive after accounting for deltas
-			if count > 0 {
-				counts[countIndex] = uint64(count)
+			if count < 0 {
+				return metricdata.ExponentialBucket{}, fmt.Errorf("%w: negative bucket count %d", errInvalidHistogram, count)
 			}
+			counts[countIndex] = uint64(count)
 			countIndex++
 		}
 	}
