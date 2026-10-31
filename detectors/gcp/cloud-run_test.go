@@ -4,6 +4,7 @@
 package gcp
 
 import (
+	"context"
 	"fmt"
 	"testing"
 
@@ -13,8 +14,8 @@ import (
 )
 
 var (
-	notOnGCE = func() bool { return false }
-	onGCE    = func() bool { return true }
+	notOnGCE = func(_ context.Context) bool { return false }
+	onGCE    = func(_ context.Context) bool { return true }
 )
 
 func getenv(m map[string]string) func(string) string {
@@ -30,13 +31,13 @@ type client struct {
 	m map[string]string
 }
 
-func setupForTest(c *CloudRun, mc metadataClient, ongce func() bool, getenv func(string) string) {
+func setupForTest(c *CloudRun, mc metadataClient, ongce func(context.Context) bool, getenv func(string) string) {
 	c.mc = mc
 	c.onGCE = ongce
 	c.getenv = getenv
 }
 
-func (c *client) Get(s string) (string, error) {
+func (c *client) GetWithContext(_ context.Context, s string) (string, error) {
 	got, ok := c.m[s]
 	if !ok {
 		return "", fmt.Errorf("%q do not exist", s)
@@ -46,12 +47,12 @@ func (c *client) Get(s string) (string, error) {
 	return got, nil
 }
 
-func (c *client) InstanceID() (string, error) {
-	return c.Get("instance/id")
+func (c *client) InstanceIDWithContext(ctx context.Context) (string, error) {
+	return c.GetWithContext(ctx, "instance/id")
 }
 
-func (c *client) ProjectID() (string, error) {
-	return c.Get("project/project-id")
+func (c *client) ProjectIDWithContext(ctx context.Context) (string, error) {
+	return c.GetWithContext(ctx, "project/project-id")
 }
 
 var _ metadataClient = (*client)(nil)
