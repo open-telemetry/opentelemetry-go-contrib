@@ -155,6 +155,8 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 			semconv.AWSECSClusterARN(taskMetadata.Cluster),
 			semconv.AWSECSLaunchtypeKey.String(strings.ToLower(taskMetadata.LaunchType)),
 			semconv.AWSECSTaskARN(taskMetadata.TaskARN),
+			// The resource is "task/<id>" (legacy) or "task/<cluster>/<id>".
+			semconv.AWSECSTaskID(arnParts[5][strings.LastIndex(arnParts[5], "/")+1:]),
 			semconv.AWSECSTaskFamily(taskMetadata.Family),
 			semconv.AWSECSTaskRevision(taskMetadata.Revision),
 		)
