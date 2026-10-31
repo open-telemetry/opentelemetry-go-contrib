@@ -106,6 +106,7 @@ func TestDetectV4(t *testing.T) {
 		semconv.ContainerID("0123456789A"),
 		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
 		semconv.AWSECSTaskARN("arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3"),
+		semconv.AWSECSTaskID("e9028f8d5d8e4f258373e7b93ce9a3c3"),
 		semconv.AWSECSLaunchtypeKey.String("fargate"),
 		semconv.AWSECSTaskFamily("curltest"),
 		semconv.AWSECSTaskRevision("3"),
@@ -116,6 +117,41 @@ func TestDetectV4(t *testing.T) {
 	res, _ := detector.Detect(t.Context())
 
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
+}
+
+func TestDetectV4TaskID(t *testing.T) {
+	tests := []struct {
+		name    string
+		taskARN string
+	}{
+		{name: "long ARN format", taskARN: "arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3"},
+		{name: "legacy ARN format", taskARN: "arn:aws:ecs:us-west-2:111122223333:task/e9028f8d5d8e4f258373e7b93ce9a3c3"},
+		{name: "task ID only", taskARN: "e9028f8d5d8e4f258373e7b93ce9a3c3"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(metadataV4EnvVar, "4")
+
+			detectorUtils := new(MockDetectorUtils)
+			detectorUtils.On("getContainerName").Return("container-Name", nil)
+			detectorUtils.On("getContainerID").Return("0123456789A", nil)
+			detectorUtils.On("getContainerMetadataV4").Return(&metadata.ContainerMetadataV4{
+				ContainerARN: "arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1",
+			}, nil)
+			detectorUtils.On("getTaskMetadataV4").Return(&metadata.TaskMetadataV4{
+				Cluster: "default",
+				TaskARN: tt.taskARN,
+			}, nil)
+
+			detector := &resourceDetector{utils: detectorUtils}
+			res, err := detector.Detect(t.Context())
+			require.NoError(t, err)
+
+			got, ok := res.Set().Value(semconv.AWSECSTaskIDKey)
+			require.True(t, ok, "aws.ecs.task.id is missing")
+			assert.Equal(t, "e9028f8d5d8e4f258373e7b93ce9a3c3", got.AsString())
+		})
+	}
 }
 
 // returns empty resource when detector receives a bad task ARN from the Metadata v4 endpoint.
