@@ -99,6 +99,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Ignore a zero or negative refresh interval from `WithSamplingRefreshInterval` or `pollingIntervalMs` in `OTEL_TRACES_SAMPLER_ARG` in `go.opentelemetry.io/contrib/samplers/jaegerremote`, preserving the previously configured interval, or the default when none was configured, instead of panicking in `time.NewTicker`. (#9999)
 - Fix `WithValues` in `go.opentelemetry.io/contrib/bridges/otellogr` so loggers derived from the same parent no longer overwrite each other's attributes or race on them. (#9994)
 - Accept any 2xx status for the instance identity token request in `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`. The IMDS Identity API returns 201 Created for the token PUT, which the detector previously rejected, silently returning an empty resource on real IBM Cloud VPC instances. (#9671)
+- Honor a standalone `without_type_suffix` or `without_units` Prometheus option in `go.opentelemetry.io/contrib/otelconf/v0.3.0`.
+  Previously the option was silently ignored unless both were set together. (#9717)
 
 ### Removed
 
