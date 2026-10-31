@@ -9,6 +9,8 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -459,7 +461,7 @@ func stubClientSeams(
 
 // detectWithClient runs Detect with c injected as the IMDS client via the
 // construction seams.
-func detectWithClient(t *testing.T, c client) (*resource.Resource, error) {
+func detectWithClient(t *testing.T, c client, opts ...Option) (*resource.Resource, error) {
 	t.Helper()
 	stubClientSeams(
 		t,
@@ -468,7 +470,113 @@ func detectWithClient(t *testing.T, c client) (*resource.Resource, error) {
 		},
 		func(aws.Config, ...func(*imds.Options)) client { return c },
 	)
-	return NewResourceDetector().Detect(t.Context())
+	return NewResourceDetectorWithOptions(opts...).Detect(t.Context())
+}
+
+func TestDetectIMDSTags(t *testing.T) {
+	baseAttrs := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEC2,
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAvailabilityZone("us-west-2b"),
+		semconv.CloudAccountID("123456789012"),
+		semconv.HostID("i-1234567890abcdef0"),
+		semconv.HostImageID("ami-5fb8c835"),
+		semconv.HostType("t2.micro"),
+		semconv.HostName("ip-12-34-56-78.us-west-2.compute.internal"),
+	}
+	type metadataResponse struct {
+		value string
+		err   error
+	}
+
+	testCases := []struct {
+		name          string
+		opts          []Option
+		metadata      map[string]metadataResponse
+		expectedAttrs []attribute.KeyValue
+		expectedErr   error
+	}{
+		{
+			name:          "disabled by default",
+			expectedAttrs: baseAttrs,
+		},
+		{
+			name: "no patterns",
+			opts: []Option{WithIMDSTags()},
+			// tags/instance must not be requested.
+			expectedAttrs: baseAttrs,
+		},
+		{
+			name: "matching tags",
+			opts: []Option{WithIMDSTags(regexp.MustCompile("^Name$"), regexp.MustCompile("^env"), nil)},
+			metadata: map[string]metadataResponse{
+				// team must not be requested because it does not match.
+				"tags/instance":             {value: "Name\nenvironment\nteam\n"},
+				"tags/instance/Name":        {value: "web-1"},
+				"tags/instance/environment": {value: "prod"},
+			},
+			expectedAttrs: append(slices.Clone(baseAttrs),
+				attribute.String("ec2.tag.Name", "web-1"),
+				attribute.String("ec2.tag.environment", "prod"),
+			),
+		},
+		{
+			name: "tags not enabled in instance metadata",
+			opts: []Option{WithIMDSTags(regexp.MustCompile(".*"))},
+			metadata: map[string]metadataResponse{
+				"tags/instance": {err: newAwsResponseError(http.StatusNotFound)},
+			},
+			expectedAttrs: baseAttrs,
+		},
+		{
+			name: "tag list error",
+			opts: []Option{WithIMDSTags(regexp.MustCompile(".*"))},
+			metadata: map[string]metadataResponse{
+				"tags/instance": {err: newAwsResponseError(http.StatusBadGateway)},
+			},
+			expectedAttrs: baseAttrs,
+			expectedErr:   resource.ErrPartialResource,
+		},
+		{
+			name: "tag value error",
+			opts: []Option{WithIMDSTags(regexp.MustCompile(".*"))},
+			metadata: map[string]metadataResponse{
+				"tags/instance":      {value: "Name\nenv"},
+				"tags/instance/Name": {err: newAwsResponseError(http.StatusBadGateway)},
+				"tags/instance/env":  {value: "prod"},
+			},
+			expectedAttrs: append(slices.Clone(baseAttrs), attribute.String("ec2.tag.env", "prod")),
+			expectedErr:   resource.ErrPartialResource,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			clientMock := new(mockClient)
+			clientMock.On("GetInstanceIdentityDocument", mock.Anything, mock.Anything, mock.Anything).
+				Return(validIdentityDocument(), nil)
+			clientMock.On("GetMetadata", mock.Anything, &imds.GetMetadataInput{Path: "hostname"}, mock.Anything).
+				Return(mockMetadataOutput("ip-12-34-56-78.us-west-2.compute.internal"), nil)
+			for path, resp := range tc.metadata {
+				out := mockMetadataOutput(resp.value)
+				if resp.err != nil {
+					out = nil
+				}
+				clientMock.On("GetMetadata", mock.Anything, &imds.GetMetadataInput{Path: path}, mock.Anything).
+					Return(out, resp.err).Once()
+			}
+
+			res, err := detectWithClient(t, clientMock, tc.opts...)
+			if tc.expectedErr != nil {
+				assert.ErrorIs(t, err, tc.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, resource.NewWithAttributes(semconv.SchemaURL, tc.expectedAttrs...), res)
+			clientMock.AssertExpectations(t)
+		})
+	}
 }
 
 func TestRecordErrors(t *testing.T) {
