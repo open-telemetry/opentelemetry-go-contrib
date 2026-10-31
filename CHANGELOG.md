@@ -13,6 +13,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Support exemplars on exponential (native) histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
 - Convert Prometheus `UNIT` metadata to UCUM units in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10042)
 - Add the opt-in `go.memory.detailed_type` attribute to `go.memory.used` and `go.cpu.detailed_state` attribute to `go.cpu.time` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10021)
+- Add `WithMeterProvider` and HTTP server metrics (`http.server.request.duration`, `http.server.request.body.size`, `http.server.response.body.size`), and record `http.response.body.size` on server spans in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#10055)
+- Add `DefaultMinimumRefreshInterval` and `WithMinimumRefreshInterval` to `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10066)
 - Add `WithHostID` option to `go.opentelemetry.io/contrib/detectors/k8sapi` to detect the `host.id` resource attribute from the machine ID reported by the node's kubelet. (#9973)
 - Add support for the `aws.lambda` resource detector in `go.opentelemetry.io/contrib/otelconf/x`. (#9924)
 - Add `WithNonErrorCodes` option for `NewServerHandler` and `NewClientHandler` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc` to prevent the handler from setting an error span status for specific gRPC codes. (#9209)
@@ -47,18 +49,25 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove the deprecation notice from `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9881)
 - Add `ReadFrom` support to the internal response writer wrapper template shared by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to track copied bytes and the last non-nil error. (#9804)
 - The default span name formatter in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` upper-cases the request method before matching it against known methods, so a lowercase `get` request is named `GET <route>` instead of `HTTP <route>`, matching `http.request.method`. (#9939)
+- Format the default server span name in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` as `{method} {http.route}` when a route matches and `{method}` when no route matches, following the HTTP semantic conventions. (#10053)
 
 ### Deprecated
 
+- `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` is deprecated.
+  Use `WithPublicEndpointFn` instead. (#10052)
 - The `go.opentelemetry.io/contrib/propagators/opencensus` module and package are deprecated and will be removed in v0.74.0.
   v0.73.0 is the final planned release of this module.
   Use native OpenTelemetry propagators instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#10030)
+- Deprecate `DefaultMinimumReadMemStatsInterval` and `WithMinimumReadMemStatsInterval` in `go.opentelemetry.io/contrib/instrumentation/runtime` in favor of `DefaultMinimumRefreshInterval` and `WithMinimumRefreshInterval`. (#10066)
 
 ### Fixed
 
 - Deduplicate propagator names in `go.opentelemetry.io/contrib/propagators/autoprop` to avoid repeated injection and extraction. (#9956)
 - Do not record HTTP/2 pseudo-header fields (`:authority`, `:method`, `:path`, `:scheme`) as `http.request.header.*` span attributes in `NewClientTrace` of `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, so the query string in `:path` is no longer exported unredacted. (#10015)
 - Decode hex-encoded `trace_id` and `span_id` exemplar labels into binary `TraceID` and `SpanID` bytes in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
+- Preserve `MultipartForm` on the original `http.Request` when `OTelFilter` substitutes the request context in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`, so `net/http.Server` cleans up temporary multipart files when the request finishes. (#10054)
+- Set the semantic convention `SchemaURL` on the `Meter` in `Start` and the `instrumentation.Scope` returned by `Producer.Produce` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10067)
+- Omit the `http.route` attribute on unmatched routes (`404`/`405`) instead of recording the `go-restful` `WebService` root path prefix from `http.Request.Pattern` in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#10053)
 - Omit source attributes in `go.opentelemetry.io/contrib/bridges/otelslog` when `WithSource(true)` is enabled but no caller frame is available. (#9991)
 - Redact the values of the `X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, `sig`, and `X-Goog-Signature` query parameters from the `url.full` attribute recorded on client spans by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, as required by the semantic conventions. (#9950)
 - Resolve the Docker container ID from cgroup data, with a `/proc/self/mountinfo` fallback for private cgroup namespaces, so custom hostnames do not disable detection. Fall back to hostname lookup when neither source provides an ID or the Docker daemon does not recognize it. (`go.opentelemetry.io/contrib/detectors/docker`) (#10019)
@@ -93,6 +102,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
+- Remove the deprecated runtime metrics and the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS` environment variable in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10060)
 - Remove support for the `rpc/old` and `rpc/dup` values of `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#9908)
 
 <!-- Released section -->

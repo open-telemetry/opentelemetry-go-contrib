@@ -32,7 +32,7 @@ func Example() {
 	otel.SetMeterProvider(provider)
 
 	// Start go runtime metric collection.
-	err := runtime.Start(runtime.WithMinimumReadMemStatsInterval(time.Second))
+	err := runtime.Start(runtime.WithMinimumRefreshInterval(time.Second))
 	if err != nil {
 		log.Fatal(err)
 	}
