@@ -10,6 +10,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -92,6 +95,17 @@ func WithMaxBackoff(backoff time.Duration) Option {
 	})
 }
 
+// WithIMDSTags adds the EC2 instance tags whose keys match any of the
+// patterns as "ec2.tag.<key>" resource attributes. Tags are read from the
+// instance metadata service, which requires access to tags in instance
+// metadata to be enabled for the instance. If it is not enabled, no tag
+// attributes are added. Tags are not read if no patterns are provided.
+func WithIMDSTags(patterns ...*regexp.Regexp) Option {
+	return optionFunc(func(c *config) {
+		c.tagPatterns = patterns
+	})
+}
+
 // Option configures an AWS SDK client.
 type Option interface {
 	apply(*config)
@@ -105,6 +119,7 @@ type config struct {
 	logger      logging.Logger
 	maxAttempts *int
 	maxBackoff  *time.Duration
+	tagPatterns []*regexp.Regexp
 }
 
 func (detector *resourceDetector) getClient(ctx context.Context) (client, error) {
@@ -148,6 +163,9 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 	m := &metadata{client: client}
 	m.add(ctx, semconv.HostNameKey, "hostname")
+	if len(detector.cfg.tagPatterns) > 0 {
+		m.addTags(ctx, detector.cfg.tagPatterns)
+	}
 
 	attributes = append(attributes, m.attributes...)
 
@@ -210,18 +228,40 @@ type metadata struct {
 }
 
 func (m *metadata) add(ctx context.Context, k attribute.Key, n string) {
+	if v, ok := m.get(ctx, n); ok {
+		m.attributes = append(m.attributes, k.String(v))
+	}
+}
+
+func (m *metadata) addTags(ctx context.Context, patterns []*regexp.Regexp) {
+	keys, ok := m.get(ctx, "tags/instance")
+	if !ok {
+		return
+	}
+	for key := range strings.SplitSeq(keys, "\n") {
+		key = strings.TrimSpace(key)
+		if key == "" || !slices.ContainsFunc(patterns, func(re *regexp.Regexp) bool {
+			return re != nil && re.MatchString(key)
+		}) {
+			continue
+		}
+		m.add(ctx, attribute.Key("ec2.tag."+key), "tags/instance/"+key)
+	}
+}
+
+func (m *metadata) get(ctx context.Context, n string) (string, bool) {
 	metadataInput := &imds.GetMetadataInput{Path: n}
 	md, err := m.client.GetMetadata(ctx, metadataInput)
 	if err != nil {
 		m.recordError(n, err)
-		return
+		return "", false
 	}
 	data, err := io.ReadAll(md.Content)
 	if err != nil {
 		m.recordError(n, err)
-		return
+		return "", false
 	}
-	m.attributes = append(m.attributes, k.String(string(data)))
+	return string(data), true
 }
 
 func (m *metadata) recordError(path string, err error) {
