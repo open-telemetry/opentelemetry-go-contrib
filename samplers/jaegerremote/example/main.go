@@ -19,7 +19,7 @@ import (
 func main() {
 	jaegerRemoteSampler := jaegerremote.New(
 		"foo",
-		jaegerremote.WithSamplingServerURL("http://localhost:5778"),
+		jaegerremote.WithSamplingServerURL("http://localhost:5778/sampling"),
 		jaegerremote.WithSamplingRefreshInterval(10*time.Second), // decrease polling interval to get quicker feedback
 		jaegerremote.WithInitialSampler(trace.TraceIDRatioBased(0.5)),
 	)
