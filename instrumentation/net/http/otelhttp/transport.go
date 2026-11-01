@@ -23,8 +23,6 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 )
 
-// transport implements the http.RoundTripper interface and wraps
-// outbound HTTP(S) requests with a span and enriches it with metrics.
 type transport struct {
 	rt http.RoundTripper
 
@@ -41,12 +39,20 @@ type transport struct {
 
 var _ http.RoundTripper = &transport{}
 
-// NewTransport wraps the provided http.RoundTripper with one that
+// NewTransport wraps the provided [http.RoundTripper] with one that
 // starts a span, injects the span context into the outbound request headers,
 // and enriches it with metrics.
 //
-// If the provided http.RoundTripper is nil, http.DefaultTransport will be used
-// as the base http.RoundTripper.
+// The span ends when the response body is closed or when a read from the
+// response body returns [io.EOF]. Errors encountered while reading the
+// response body are recorded in the span.
+//
+// The response body is wrapped to track the response lifecycle. If the
+// response body implements [io.Writer], the returned body also implements
+// [io.ReadWriteCloser].
+//
+// If the provided [http.RoundTripper] is nil, [http.DefaultTransport] will be used
+// as the base [http.RoundTripper].
 func NewTransport(base http.RoundTripper, opts ...Option) http.RoundTripper {
 	if base == nil {
 		base = http.DefaultTransport
@@ -233,9 +239,6 @@ func (b *trackedRequestBody) Close() error {
 	return b.body.Close()
 }
 
-// RoundTrip creates a Span and propagates its context via the provided request's headers
-// before handing the request to the configured base RoundTripper. The created span will
-// end when the response body is closed or when a read from the body returns io.EOF.
 func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	requestStartTime := time.Now()
 	for _, f := range t.filters {
