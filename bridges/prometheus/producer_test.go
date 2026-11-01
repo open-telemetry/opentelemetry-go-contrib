@@ -1284,6 +1284,183 @@ func TestProduceScope(t *testing.T) {
 				},
 			},
 		},
+		{
+			name: "scopes with same name differentiated by version, schema_url, and attributes",
+			gatherers: []prometheus.Gatherer{
+				gathererFunc(func() ([]*dto.MetricFamily, error) {
+					return []*dto.MetricFamily{
+						{
+							Name: new("requests_total"),
+							Help: new("Total requests."),
+							Type: dto.MetricType_GAUGE.Enum(),
+							Metric: []*dto.Metric{
+								{
+									Gauge: &dto.Gauge{Value: new(1.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("id"), Value: new("first")},
+										{Name: new("otel_scope_name"), Value: new("scope.a")},
+										{Name: new("otel_scope_version"), Value: new("v1.0.0")},
+										{Name: new("otel_scope_schema_url"), Value: new("https://opentelemetry.io/schemas/1.30.0")},
+										{Name: new("otel_scope_k1"), Value: new("v1")},
+										{Name: new("otel_scope_k2"), Value: new("v2")},
+									},
+								},
+								{
+									Gauge: &dto.Gauge{Value: new(2.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("id"), Value: new("diff_version")},
+										{Name: new("otel_scope_name"), Value: new("scope.a")},
+										{Name: new("otel_scope_version"), Value: new("v2.0.0")},
+										{Name: new("otel_scope_schema_url"), Value: new("https://opentelemetry.io/schemas/1.30.0")},
+										{Name: new("otel_scope_k1"), Value: new("v1")},
+										{Name: new("otel_scope_k2"), Value: new("v2")},
+									},
+								},
+								{
+									Gauge: &dto.Gauge{Value: new(3.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("id"), Value: new("diff_schema")},
+										{Name: new("otel_scope_name"), Value: new("scope.a")},
+										{Name: new("otel_scope_version"), Value: new("v1.0.0")},
+										{Name: new("otel_scope_schema_url"), Value: new("https://opentelemetry.io/schemas/1.31.0")},
+										{Name: new("otel_scope_k1"), Value: new("v1")},
+										{Name: new("otel_scope_k2"), Value: new("v2")},
+									},
+								},
+								{
+									Gauge: &dto.Gauge{Value: new(4.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("id"), Value: new("diff_attrs")},
+										{Name: new("otel_scope_name"), Value: new("scope.a")},
+										{Name: new("otel_scope_version"), Value: new("v1.0.0")},
+										{Name: new("otel_scope_schema_url"), Value: new("https://opentelemetry.io/schemas/1.30.0")},
+										{Name: new("otel_scope_k1"), Value: new("v1")},
+										{Name: new("otel_scope_k2"), Value: new("other")},
+									},
+								},
+								{
+									Gauge: &dto.Gauge{Value: new(5.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("id"), Value: new("reordered_attrs")},
+										{Name: new("otel_scope_name"), Value: new("scope.a")},
+										{Name: new("otel_scope_version"), Value: new("v1.0.0")},
+										{Name: new("otel_scope_schema_url"), Value: new("https://opentelemetry.io/schemas/1.30.0")},
+										{Name: new("otel_scope_k2"), Value: new("v2")},
+										{Name: new("otel_scope_k1"), Value: new("v1")},
+									},
+								},
+							},
+						},
+					}, nil
+				}),
+			},
+			expected: []metricdata.ScopeMetrics{
+				{
+					Scope: instrumentation.Scope{
+						Name:      "scope.a",
+						Version:   "v1.0.0",
+						SchemaURL: "https://opentelemetry.io/schemas/1.30.0",
+						Attributes: attribute.NewSet(
+							attribute.String("k1", "v1"),
+							attribute.String("k2", "v2"),
+						),
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "requests_total",
+							Description: "Total requests.",
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(attribute.String("id", "first")),
+										Value:      1.0,
+									},
+									{
+										Attributes: attribute.NewSet(attribute.String("id", "reordered_attrs")),
+										Value:      5.0,
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Scope: instrumentation.Scope{
+						Name:      "scope.a",
+						Version:   "v2.0.0",
+						SchemaURL: "https://opentelemetry.io/schemas/1.30.0",
+						Attributes: attribute.NewSet(
+							attribute.String("k1", "v1"),
+							attribute.String("k2", "v2"),
+						),
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "requests_total",
+							Description: "Total requests.",
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(attribute.String("id", "diff_version")),
+										Value:      2.0,
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Scope: instrumentation.Scope{
+						Name:      "scope.a",
+						Version:   "v1.0.0",
+						SchemaURL: "https://opentelemetry.io/schemas/1.31.0",
+						Attributes: attribute.NewSet(
+							attribute.String("k1", "v1"),
+							attribute.String("k2", "v2"),
+						),
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "requests_total",
+							Description: "Total requests.",
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(attribute.String("id", "diff_schema")),
+										Value:      3.0,
+									},
+								},
+							},
+						},
+					},
+				},
+				{
+					Scope: instrumentation.Scope{
+						Name:      "scope.a",
+						Version:   "v1.0.0",
+						SchemaURL: "https://opentelemetry.io/schemas/1.30.0",
+						Attributes: attribute.NewSet(
+							attribute.String("k1", "v1"),
+							attribute.String("k2", "other"),
+						),
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "requests_total",
+							Description: "Total requests.",
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(attribute.String("id", "diff_attrs")),
+										Value:      4.0,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
