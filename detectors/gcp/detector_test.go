@@ -596,6 +596,30 @@ func TestNewDetectorWithOptions(t *testing.T) {
 	assert.Nil(t, defaultDetector.cfg.gceLabelKeyFilter)
 }
 
+func TestDetectCloudPlatformContextCancellation(t *testing.T) {
+	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	fake := &fakeGCPDetector{
+		projectID: "my-project",
+		onCloudPlatform: func(context.Context) internal.Platform {
+			cancel()
+			return internal.UnknownPlatform
+		},
+	}
+	d := &detector{detector: fake}
+
+	res, err := d.Detect(ctx)
+	assert.ErrorIs(t, err, resource.ErrPartialResource)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Same(t, ctx, fake.cloudPlatformCtx)
+	assert.Equal(t, resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.CloudProviderGCP,
+		semconv.CloudAccountID("my-project"),
+	), res)
+}
+
 func TestDetectGKEHostTypeContextCancellation(t *testing.T) {
 	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
 
@@ -682,6 +706,8 @@ type fakeGCPDetector struct {
 	migErr                          error
 	gceLabelsErr                    error
 	cloudPlatformCalls              int
+	cloudPlatformCtx                context.Context
+	onCloudPlatform                 func(context.Context) internal.Platform
 	gkeHostTypeCtx                  context.Context
 	gceLabelsCtx                    context.Context
 	projectID                       string
@@ -724,8 +750,12 @@ func (f *fakeGCPDetector) ProjectID(_ context.Context) (string, error) {
 	return f.projectID, nil
 }
 
-func (f *fakeGCPDetector) CloudPlatform(_ context.Context) internal.Platform {
+func (f *fakeGCPDetector) CloudPlatform(ctx context.Context) internal.Platform {
 	f.cloudPlatformCalls++
+	f.cloudPlatformCtx = ctx
+	if f.onCloudPlatform != nil {
+		return f.onCloudPlatform(ctx)
+	}
 	return f.cloudPlatform
 }
 
