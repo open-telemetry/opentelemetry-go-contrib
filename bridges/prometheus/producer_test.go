@@ -793,6 +793,20 @@ func TestProduceUnsupportedHistograms(t *testing.T) {
 			},
 		},
 		{
+			name: "empty float histogram with zero SampleCountFloat and ZeroCountFloat",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCountFloat: new(0.0),
+						ZeroCountFloat:   new(0.0),
+						SampleSum:        new(0.0),
+						Schema:           new(int32(1)),
+						PositiveSpan:     []*dto.BucketSpan{{Offset: new(int32(0)), Length: new(uint32(0))}},
+					},
+				},
+			},
+		},
+		{
 			name: "float histogram with PositiveCount",
 			metrics: []*dto.Metric{
 				{
