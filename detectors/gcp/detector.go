@@ -167,6 +167,9 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 			}, d.cfg.gceLabelKeyFilter)
 		}
 	default:
+		if err := ctx.Err(); err != nil {
+			b.errs = append(b.errs, err)
+		}
 		// We don't support this platform yet, so just return with what we have
 	}
 	return b.build()
