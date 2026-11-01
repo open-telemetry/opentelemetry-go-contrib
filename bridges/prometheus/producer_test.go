@@ -1165,19 +1165,19 @@ func TestProduceScope(t *testing.T) {
 									},
 								},
 								{
-									Gauge: &dto.Gauge{Value: new(101.0)},
-									Label: []*dto.LabelPair{
-										{Name: new("area"), Value: new("nonheap")},
-										{Name: new("otel_scope_name"), Value: new("scope.a")},
-										{Name: new("otel_scope_version"), Value: new("v1.0.0")},
-									},
-								},
-								{
 									Gauge: &dto.Gauge{Value: new(200.0)},
 									Label: []*dto.LabelPair{
 										{Name: new("area"), Value: new("heap")},
 										{Name: new("otel_scope_name"), Value: new("scope.b")},
 										{Name: new("otel_scope_version"), Value: new("v2.0.0")},
+									},
+								},
+								{
+									Gauge: &dto.Gauge{Value: new(101.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("area"), Value: new("nonheap")},
+										{Name: new("otel_scope_name"), Value: new("scope.a")},
+										{Name: new("otel_scope_version"), Value: new("v1.0.0")},
 									},
 								},
 								{
