@@ -157,8 +157,11 @@ func isExponentialHistogram(hist *dto.Histogram) bool {
 }
 
 func isFloatHistogram(hist *dto.Histogram) bool {
-	return hist.GetSampleCountFloat() > 0 ||
-		hist.GetZeroCountFloat() > 0 ||
+	if hist == nil {
+		return false
+	}
+	return hist.SampleCountFloat != nil ||
+		hist.ZeroCountFloat != nil ||
 		len(hist.GetPositiveCount()) > 0 ||
 		len(hist.GetNegativeCount()) > 0
 }
