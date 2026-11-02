@@ -7,7 +7,6 @@ package otelconf
 import (
 	"context"
 	"errors"
-	"fmt"
 
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log"
@@ -213,7 +212,9 @@ func createHeadersConfig(headers []NameStringValuePair, headersList *string) (ma
 		// Parsing follows https://github.com/open-telemetry/opentelemetry-configuration/blob/568e5080816d40d75792eb754fc96bde09654159/schema/type_descriptions.yaml#L584.
 		headerslist, err := baggage.Parse(*headersList)
 		if err != nil {
-			return nil, fmt.Errorf("invalid headers list: %w", err)
+			// Do not wrap err: it quotes the offending list member, and
+			// header values are often credentials.
+			return nil, errors.New("invalid headers list")
 		}
 		for _, kv := range headerslist.Members() {
 			result[kv.Key()] = kv.Value()
