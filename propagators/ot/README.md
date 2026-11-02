@@ -6,7 +6,8 @@ This module implements the `ot-tracer-*` and `ot-baggage-*` propagation formats 
 
 ## Deprecation
 
-This module and package are deprecated and will be removed in v1.49.0.
+This module and package are deprecated as of v1.48.0.
+v1.48.0 is the final planned release of this module.
 OpenTelemetry has [deprecated OpenTracing compatibility requirements](https://opentelemetry.io/blog/2026/deprecating-opentracing-compatibility/).
 Removal is tracked in [#10046](https://github.com/open-telemetry/opentelemetry-go-contrib/issues/10046).
 
