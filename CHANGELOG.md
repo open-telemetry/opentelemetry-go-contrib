@@ -50,6 +50,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `ReadFrom` support to the internal response writer wrapper template shared by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to track copied bytes and the last non-nil error. (#9804)
 - The default span name formatter in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` upper-cases the request method before matching it against known methods, so a lowercase `get` request is named `GET <route>` instead of `HTTP <route>`, matching `http.request.method`. (#9939)
 - Format the default server span name in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` as `{method} {http.route}` when a route matches and `{method}` when no route matches, following the HTTP semantic conventions. (#10053)
+- Updated `example/dice` app based on updated specifications for the reference application. (#8099) 
 
 ### Deprecated
 

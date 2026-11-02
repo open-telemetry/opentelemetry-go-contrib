@@ -8,6 +8,7 @@ import (
 	"errors"
 	"time"
 
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
@@ -18,6 +19,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
 )
+
+var logger = otelslog.NewLogger(name)
 
 // setupOTelSDK bootstraps the OpenTelemetry pipeline.
 // If it does not return an error, make sure to call shutdown for proper cleanup.
@@ -106,27 +109,31 @@ func newTracerProvider(res *resource.Resource) (*trace.TracerProvider, error) {
 	}
 
 	tracerProvider := trace.NewTracerProvider(
-		trace.WithBatcher(traceExporter, trace.WithBatchTimeout(time.Second)), // Default is 5s. Set to 1s for demonstrative purposes.
+		trace.WithBatcher(traceExporter,
+			// Default is 5s. Set to 1s for demonstrative purposes.
+			trace.WithBatchTimeout(time.Second)),
 		trace.WithResource(res),
 	)
 	return tracerProvider, nil
 }
 
 func newMeterProvider(res *resource.Resource) (*metric.MeterProvider, error) {
-	metricExporter, err := stdoutmetric.New()
+	metricExporter, err := stdoutmetric.New(stdoutmetric.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}
 
 	meterProvider := metric.NewMeterProvider(
-		metric.WithReader(metric.NewPeriodicReader(metricExporter, metric.WithInterval(3*time.Second))), // Default is 1m. Set to 3s for demonstrative purposes.
+		metric.WithReader(metric.NewPeriodicReader(metricExporter,
+			// Default is 1m. Set to 3s for demonstrative purposes.
+			metric.WithInterval(3*time.Second))),
 		metric.WithResource(res),
 	)
 	return meterProvider, nil
 }
 
 func newLoggerProvider(res *resource.Resource) (*log.LoggerProvider, error) {
-	logExporter, err := stdoutlog.New()
+	logExporter, err := stdoutlog.New(stdoutlog.WithPrettyPrint())
 	if err != nil {
 		return nil, err
 	}

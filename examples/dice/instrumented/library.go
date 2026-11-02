@@ -9,7 +9,6 @@ import (
 	"math/rand/v2"
 	"sync/atomic"
 
-	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -19,9 +18,9 @@ import (
 const name = "go.opentelemetry.io/contrib/examples/dice"
 
 var (
-	tracer         = otel.Tracer(name)
-	meter          = otel.Meter(name)
-	logger         = otelslog.NewLogger(name)
+	tracer = otel.Tracer(name)
+	meter  = otel.Meter(name)
+
 	rollCnt        metric.Int64Counter
 	outcomeHist    metric.Int64Histogram
 	lastRollsGauge metric.Int64ObservableGauge
@@ -31,7 +30,7 @@ var (
 func init() {
 	var err error
 	rollCnt, err = meter.Int64Counter("dice.rolls",
-		metric.WithDescription("The number of rolls"),
+		metric.WithDescription("Number of dice rolled"),
 		metric.WithUnit("{roll}"))
 	if err != nil {
 		panic(err)
@@ -73,6 +72,9 @@ func rollDice(ctx context.Context, rolls int) ([]int, error) {
 	ctx, span := tracer.Start(ctx, "rollDice")
 	defer span.End()
 
+	rollsAttr := attribute.Int("rolls", rolls)
+	span.SetAttributes(rollsAttr)
+
 	if rolls > maxRolls {
 		err := errors.New("rolls parameter exceeds maximum allowed value")
 		span.RecordError(err)
@@ -87,23 +89,12 @@ func rollDice(ctx context.Context, rolls int) ([]int, error) {
 		return nil, err
 	}
 
-	if rolls == 1 {
-		result := rollOnce(ctx)
-		outcomeHist.Record(ctx, int64(result))
-		rollsAttr := attribute.Int("rolls", rolls)
-		span.SetAttributes(rollsAttr)
-		rollCnt.Add(ctx, int64(rolls), metric.WithAttributes(rollsAttr))
-		lastRolls.Store(int64(rolls))
-		return []int{result}, nil
-	}
 	results := make([]int, rolls)
 	for i := range results {
 		results[i] = rollOnce(ctx)
 		outcomeHist.Record(ctx, int64(results[i]))
 	}
 
-	rollsAttr := attribute.Int("rolls", rolls)
-	span.SetAttributes(rollsAttr)
 	rollCnt.Add(ctx, int64(rolls), metric.WithAttributes(rollsAttr))
 	lastRolls.Store(int64(rolls))
 	return results, nil
