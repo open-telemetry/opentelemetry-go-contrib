@@ -256,6 +256,7 @@ func (m *metadata) get(ctx context.Context, n string) (string, bool) {
 		m.recordError(n, err)
 		return "", false
 	}
+	defer md.Content.Close()
 	data, err := io.ReadAll(md.Content)
 	if err != nil {
 		m.recordError(n, err)
