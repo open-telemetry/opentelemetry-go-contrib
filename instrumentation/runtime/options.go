@@ -15,10 +15,9 @@ import (
 
 // config contains optional settings for reporting runtime metrics.
 type config struct {
-	// MinimumReadMemStatsInterval sets the minimum interval
-	// between calls to runtime.ReadMemStats().  Negative values
-	// are ignored.
-	MinimumReadMemStatsInterval time.Duration
+	// MinimumRefreshInterval sets the minimum interval between refreshes of
+	// the runtime metrics. Values less than or equal to zero are ignored.
+	MinimumRefreshInterval time.Duration
 
 	// MeterProvider sets the metric.MeterProvider.  If nil, the global
 	// Provider will be used.
@@ -51,28 +50,42 @@ type ProducerOption interface {
 	applyProducer(*config)
 }
 
-// DefaultMinimumReadMemStatsInterval is the default minimum interval
-// between calls to runtime.ReadMemStats().  Use the
-// WithMinimumReadMemStatsInterval() option to modify this setting in
-// Start().
-const DefaultMinimumReadMemStatsInterval time.Duration = 15 * time.Second
+// DefaultMinimumRefreshInterval is the default minimum interval between
+// refreshes of the runtime metrics. Use the [WithMinimumRefreshInterval] option
+// to modify this setting in [Start] and [NewProducer].
+const DefaultMinimumRefreshInterval time.Duration = 15 * time.Second
 
-// WithMinimumReadMemStatsInterval sets a minimum interval between calls to
-// runtime.ReadMemStats(), which is a relatively expensive call to make
-// frequently.  This setting is ignored when `d` is negative.
-func WithMinimumReadMemStatsInterval(d time.Duration) Option {
-	return minimumReadMemStatsIntervalOption(d)
+// DefaultMinimumReadMemStatsInterval is the default minimum interval between
+// refreshes of the runtime metrics. Use the [WithMinimumRefreshInterval] option
+// to modify this setting in [Start] and [NewProducer].
+//
+// Deprecated: Use [DefaultMinimumRefreshInterval] instead.
+const DefaultMinimumReadMemStatsInterval time.Duration = DefaultMinimumRefreshInterval
+
+// WithMinimumRefreshInterval sets a minimum interval between refreshes of the
+// runtime metrics. This setting is ignored when d is less than or equal to zero.
+func WithMinimumRefreshInterval(d time.Duration) ProducerOption {
+	return minimumRefreshIntervalOption(d)
 }
 
-type minimumReadMemStatsIntervalOption time.Duration
+type minimumRefreshIntervalOption time.Duration
 
-func (o minimumReadMemStatsIntervalOption) apply(c *config) {
-	if o >= 0 {
-		c.MinimumReadMemStatsInterval = time.Duration(o)
+func (o minimumRefreshIntervalOption) apply(c *config) {
+	if o > 0 {
+		c.MinimumRefreshInterval = time.Duration(o)
 	}
 }
 
-func (o minimumReadMemStatsIntervalOption) applyProducer(c *config) { o.apply(c) }
+func (o minimumRefreshIntervalOption) applyProducer(c *config) { o.apply(c) }
+
+// WithMinimumReadMemStatsInterval sets a minimum interval between refreshes of
+// the runtime metrics. This setting is ignored when d is less than or equal to
+// zero.
+//
+// Deprecated: Use [WithMinimumRefreshInterval] instead.
+func WithMinimumReadMemStatsInterval(d time.Duration) Option {
+	return WithMinimumRefreshInterval(d)
+}
 
 // WithMeterProvider sets the Metric implementation to use for
 // reporting.  If this option is not used, the global metric.MeterProvider
@@ -97,8 +110,8 @@ func newConfig(opts ...Option) config {
 	for _, opt := range opts {
 		opt.apply(&c)
 	}
-	if c.MinimumReadMemStatsInterval <= 0 {
-		c.MinimumReadMemStatsInterval = DefaultMinimumReadMemStatsInterval
+	if c.MinimumRefreshInterval <= 0 {
+		c.MinimumRefreshInterval = DefaultMinimumRefreshInterval
 	}
 	return c
 }
@@ -109,8 +122,8 @@ func newProducerConfig(opts ...ProducerOption) config {
 	for _, opt := range opts {
 		opt.applyProducer(&c)
 	}
-	if c.MinimumReadMemStatsInterval <= 0 {
-		c.MinimumReadMemStatsInterval = DefaultMinimumReadMemStatsInterval
+	if c.MinimumRefreshInterval <= 0 {
+		c.MinimumRefreshInterval = DefaultMinimumRefreshInterval
 	}
 	return c
 }

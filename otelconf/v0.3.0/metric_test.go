@@ -1644,7 +1644,7 @@ func TestPrometheusReaderDotStyleLabels(t *testing.T) {
 	addr := reader.(readerWithServer).server.Addr
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/metrics", http.NoBody)
 	require.NoError(t, err)
-	req.Header.Set("Accept", "application/openmetrics-text; version=1.0.0; escaping=allow-utf-8")
+	req.Header.Set("Accept", "text/plain; version=0.0.4; escaping=allow-utf-8")
 	resp, err := http.DefaultClient.Do(req)
 	require.NoError(t, err)
 	defer resp.Body.Close()

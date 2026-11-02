@@ -241,7 +241,9 @@ func (d *ResourceDetector) getToken(ctx context.Context) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != http.StatusOK {
+	// The IMDS Identity API documents 201 Created for the token PUT; accept any
+	// 2xx like IBM's own SDK does.
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize))
 		return "", fmt.Errorf("token request returned %d: %s", resp.StatusCode, string(body))
 	}
