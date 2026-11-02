@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   
 ### Added
 
-- Add a `NewMiddleware` example to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`.
+- Add a `NewMiddleware` example to `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#10099)
 - Support exemplars on exponential (native) histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
 - Convert Prometheus `UNIT` metadata to UCUM units in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10042)
 - Add the opt-in `go.memory.detailed_type` attribute to `go.memory.used` and `go.cpu.detailed_state` attribute to `go.cpu.time` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10021)
