@@ -7,6 +7,7 @@ package xray
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
 	"strings"
 
@@ -33,6 +34,10 @@ const (
 	traceIDDelimitterIndex2 = 10
 	traceIDFirstPartLength  = 8
 	sampledFlagLength       = 1
+
+	// xrayHeaderLen is the exact byte length of:
+	// "Root=1-12345678-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=1".
+	xrayHeaderLen = 74
 )
 
 var (
@@ -60,20 +65,27 @@ func (Propagator) Inject(ctx context.Context, carrier propagation.TextMapCarrier
 	if !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
 		return
 	}
-	otTraceID := sc.TraceID().String()
-	xrayTraceID := traceIDVersion + traceIDDelimiter + otTraceID[0:traceIDFirstPartLength] +
-		traceIDDelimiter + otTraceID[traceIDFirstPartLength:]
-	parentID := sc.SpanID()
-	samplingFlag := notSampled
+
+	var buf [xrayHeaderLen]byte
+	copy(buf[0:7], "Root=1-")
+
+	tid := sc.TraceID()
+	hex.Encode(buf[7:15], tid[:4])
+	buf[15] = '-'
+	hex.Encode(buf[16:40], tid[4:])
+
+	copy(buf[40:48], ";Parent=")
+	sid := sc.SpanID()
+	hex.Encode(buf[48:64], sid[:])
+
+	copy(buf[64:73], ";Sampled=")
 	if sc.TraceFlags().IsSampled() {
-		samplingFlag = isSampled
-	}
-	headers := []string{
-		traceIDKey, kvDelimiter, xrayTraceID, traceHeaderDelimiter, parentIDKey,
-		kvDelimiter, parentID.String(), traceHeaderDelimiter, sampleFlagKey, kvDelimiter, samplingFlag,
+		buf[73] = '1'
+	} else {
+		buf[73] = '0'
 	}
 
-	carrier.Set(traceHeaderKey, strings.Join(headers, ""))
+	carrier.Set(traceHeaderKey, string(buf[:]))
 }
 
 // Extract gets a context from the carrier if it contains AWS X-Ray headers.
@@ -107,24 +119,23 @@ func extract(headerVal string) (trace.SpanContext, error) {
 			part = strings.TrimSpace(headerVal[pos:])
 			pos = len(headerVal)
 		}
-		_, after, ok := strings.Cut(part, kvDelimiter)
+		key, value, ok := strings.Cut(part, kvDelimiter)
 		if !ok {
 			return empty, errInvalidTraceHeader
 		}
-		value := after
-		switch {
-		case strings.HasPrefix(part, traceIDKey):
+		switch key {
+		case traceIDKey:
 			scc.TraceID, err = parseTraceID(value)
 			if err != nil {
 				return empty, err
 			}
-		case strings.HasPrefix(part, parentIDKey):
+		case parentIDKey:
 			// extract parentId
 			scc.SpanID, err = trace.SpanIDFromHex(value)
 			if err != nil {
 				return empty, errInvalidSpanIDLength
 			}
-		case strings.HasPrefix(part, sampleFlagKey):
+		case sampleFlagKey:
 			// extract traceflag
 			scc.TraceFlags = parseTraceFlag(value)
 		}

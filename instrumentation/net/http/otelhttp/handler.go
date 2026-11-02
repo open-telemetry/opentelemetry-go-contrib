@@ -96,10 +96,10 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	}
 
 	ctx := h.propagators.Extract(r.Context(), propagation.HeaderCarrier(r.Header))
-	opts := []trace.SpanStartOption{
-		trace.WithAttributes(h.semconv.RequestTraceAttrs(h.server, r, semconv.RequestTraceAttrsOpts{})...),
-	}
-
+	// Pre-allocate with enough capacity to prevent slices.Grow allocations
+	// 1 (Attributes) + len(spanStartOptions) + 3 (possible NewRoot, Links, Timestamp)
+	opts := make([]trace.SpanStartOption, 0, len(h.spanStartOptions)+4)
+	opts = append(opts, trace.WithAttributes(h.semconv.RequestTraceAttrs(h.server, r, semconv.RequestTraceAttrsOpts{})...))
 	opts = append(opts, h.spanStartOptions...)
 	if h.publicEndpointFn != nil && h.publicEndpointFn(r.WithContext(ctx)) {
 		opts = append(opts, trace.WithNewRoot())
@@ -129,8 +129,8 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	readRecordFunc := func(int64) {}
 	if h.readEvent {
-		readRecordFunc = func(n int64) {
-			span.AddEvent("read", trace.WithAttributes(ReadBytesKey.Int64(n)))
+		readRecordFunc = func(int64) {
+			span.AddEvent("read")
 		}
 	}
 
@@ -150,8 +150,8 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 
 	writeRecordFunc := func(int64) {}
 	if h.writeEvent {
-		writeRecordFunc = func(n int64) {
-			span.AddEvent("write", trace.WithAttributes(WroteBytesKey.Int64(n)))
+		writeRecordFunc = func(int64) {
+			span.AddEvent("write")
 		}
 	}
 
@@ -168,11 +168,19 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		Write: func(httpsnoop.WriteFunc) httpsnoop.WriteFunc {
 			return rww.Write
 		},
+		ReadFrom: func(httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
+			return rww.ReadFrom
+		},
 		WriteHeader: func(httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
 			return rww.WriteHeader
 		},
 		Flush: func(httpsnoop.FlushFunc) httpsnoop.FlushFunc {
 			return rww.Flush
+		},
+		FlushError: func(flush httpsnoop.FlushErrorFunc) httpsnoop.FlushErrorFunc {
+			return func() error {
+				return rww.FlushWithError(flush)
+			}
 		},
 	})
 
@@ -180,12 +188,21 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if !found {
 		ctx = ContextWithLabeler(ctx, labeler)
 	}
+	rCtx := r.WithContext(ctx)
+	defer func() {
+		// Copy MultipartForm back to the original request so net/http can
+		// find and remove any temp files ParseMultipartForm created on the
+		// copy. Deferred so the copy-back also runs during panic unwinding,
+		// letting net/http cleanup paths that still run (HTTP/2 handler
+		// recovery, outer recovery middleware) find the form.
+		if rCtx.MultipartForm != nil {
+			r.MultipartForm = rCtx.MultipartForm
+		}
+	}()
+	next.ServeHTTP(w, rCtx)
 
-	r = r.WithContext(ctx)
-	next.ServeHTTP(w, r)
-
-	if r.Pattern != "" {
-		span.SetName(h.spanNameFormatter(h.operation, r))
+	if rCtx.Pattern != "" {
+		span.SetName(h.spanNameFormatter(h.operation, rCtx))
 	}
 
 	statusCode := rww.StatusCode()
@@ -204,9 +221,9 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		ServerName:   h.server,
 		ResponseSize: bytesWritten,
 		MetricAttributes: semconv.MetricAttributes{
-			Req:                  r,
+			Req:                  rCtx,
 			StatusCode:           statusCode,
-			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(r)...),
+			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(rCtx)...),
 		},
 		MetricData: semconv.MetricData{
 			RequestSize:     bytesRead,

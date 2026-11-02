@@ -46,7 +46,7 @@ func TestNewResource(t *testing.T) {
 		{
 			name: "resource-with-attributes-invalid-schema",
 			config: &Resource{
-				SchemaUrl: ptr("https://opentelemetry.io/"),
+				SchemaUrl: new("https://opentelemetry.io/"),
 				Attributes: Attributes{
 					"service.name": "service-a",
 				},
@@ -60,7 +60,7 @@ func TestNewResource(t *testing.T) {
 				Attributes: Attributes{
 					"service.name": "service-a",
 				},
-				SchemaUrl: ptr(schemaURL),
+				SchemaUrl: new(schemaURL),
 			},
 			wantResource: res,
 		},
@@ -71,7 +71,7 @@ func TestNewResource(t *testing.T) {
 					"service.name": "service-a",
 					"attr-bool":    true,
 				},
-				SchemaUrl: ptr(schemaURL),
+				SchemaUrl: new(schemaURL),
 			},
 			wantResource: resWithAttrs,
 		},

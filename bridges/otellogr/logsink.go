@@ -20,6 +20,10 @@
 //     added as attributes. If there are multiple [context.Context] the last one
 //     is used.
 //
+// A context bound with [LogSink.WithValues] is also used by [LogSink.Enabled].
+// A context supplied only to [LogSink.Info] or [LogSink.Error] is used when
+// emitting that record, but does not affect the earlier enablement check.
+//
 // The V-level is transformed by using the [WithLevelSeverity] option. If option is
 // not provided then V-level is transformed in the following way:
 //
@@ -56,11 +60,12 @@ package otellogr
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/go-logr/logr"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/global"
 )
 
 type config struct {
@@ -79,7 +84,7 @@ func newConfig(options []Option) config {
 	}
 
 	if c.provider == nil {
-		c.provider = global.GetLoggerProvider()
+		c.provider = otel.GetLoggerProvider()
 	}
 
 	if c.levelSeverity == nil {
@@ -213,10 +218,10 @@ var _ logr.LogSink = (*LogSink)(nil)
 // Enabled tests whether this LogSink is enabled at the specified V-level.
 // For example, commandline flags might be used to set the logging
 // verbosity and disable some info logs.
+// The enablement check uses the context bound with [LogSink.WithValues].
 func (l *LogSink) Enabled(level int) bool {
-	ctx := context.Background()
 	param := log.EnabledParameters{Severity: l.levelSeverity(level)}
-	return l.logger.Enabled(ctx, param)
+	return l.logger.Enabled(l.ctx, param)
 }
 
 // Error logs an error, with the given message and key/value pairs.
@@ -264,9 +269,13 @@ func (l LogSink) WithName(name string) logr.LogSink {
 }
 
 // WithValues returns a new LogSink with additional key/value pairs.
+// A value of type [context.Context] sets the context used by [LogSink.Enabled]
+// and log emission.
 func (l LogSink) WithValues(keysAndValues ...any) logr.LogSink {
 	ctx, attr := convertKVs(l.ctx, keysAndValues...)
-	l.attr = append(l.attr, attr...)
+	// Clip so sibling sinks derived from the same parent do not share and
+	// overwrite the backing array.
+	l.attr = append(slices.Clip(l.attr), attr...)
 	l.ctx = ctx
 	return &l
 }

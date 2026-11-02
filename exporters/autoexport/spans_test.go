@@ -5,6 +5,7 @@ package autoexport
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
+	"go.opentelemetry.io/otel/sdk/trace"
 )
 
 func TestSpanExporterNone(t *testing.T) {
@@ -22,6 +24,7 @@ func TestSpanExporterNone(t *testing.T) {
 		assert.NoError(t, got.Shutdown(t.Context()))
 	})
 	assert.True(t, IsNoneSpanExporter(got))
+	assert.NoError(t, got.ExportSpans(t.Context(), nil))
 }
 
 func TestSpanExporterConsole(t *testing.T) {
@@ -93,4 +96,51 @@ func TestSpanExporterOTLPOverInvalidProtocol(t *testing.T) {
 
 	_, err := NewSpanExporter(t.Context())
 	assert.Error(t, err)
+}
+
+func TestSpanExporterFallback(t *testing.T) {
+	testErr := errors.New("factory failed")
+
+	testCases := []struct {
+		name        string
+		factory     func(context.Context) (trace.SpanExporter, error)
+		expectedErr error
+		verify      func(*testing.T, trace.SpanExporter)
+	}{
+		{
+			name: "success with console exporter",
+			factory: func(context.Context) (trace.SpanExporter, error) {
+				return stdouttrace.New()
+			},
+			verify: func(t *testing.T, got trace.SpanExporter) {
+				assert.NotNil(t, got)
+				assert.IsType(t, &stdouttrace.Exporter{}, got)
+				assert.NoError(t, got.Shutdown(t.Context()))
+			},
+		},
+		{
+			name: "error propagation",
+			factory: func(context.Context) (trace.SpanExporter, error) {
+				return nil, testErr
+			},
+			expectedErr: testErr,
+			verify: func(t *testing.T, got trace.SpanExporter) {
+				assert.Nil(t, got)
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("OTEL_TRACES_EXPORTER", "")
+
+			got, err := NewSpanExporter(t.Context(), WithFallbackSpanExporter(tc.factory))
+			if tc.expectedErr != nil {
+				assert.ErrorIs(t, err, tc.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+			tc.verify(t, got)
+		})
+	}
 }

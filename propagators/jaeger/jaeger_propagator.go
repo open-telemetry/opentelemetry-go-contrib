@@ -5,8 +5,8 @@ package jaeger
 
 import (
 	"context"
+	"encoding/hex"
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -20,13 +20,8 @@ const (
 	traceID128bitsWidth = 128 / 4
 	spanIDWidth         = 64 / 4
 
-	idPaddingChar = "0"
-
-	flagsDebug      = 0x02
-	flagsSampled    = 0x01
-	flagsNotSampled = 0x00
-
-	deprecatedParentSpanID = "0"
+	flagsDebug   = 0x02
+	flagsSampled = 0x01
 )
 
 var (
@@ -53,21 +48,34 @@ var _ propagation.TextMapPropagator = &Jaeger{}
 // The parent span ID is set to an dummy parent span id as the most implementations do.
 func (Jaeger) Inject(ctx context.Context, carrier propagation.TextMapCarrier) {
 	sc := trace.SpanFromContext(ctx).SpanContext()
-	headers := []string{}
 	if !sc.TraceID().IsValid() || !sc.SpanID().IsValid() {
 		return
 	}
-	headers = append(headers, sc.TraceID().String(), sc.SpanID().String(), deprecatedParentSpanID)
+
+	carrier.Set(jaegerHeader, formatHeader(ctx, sc))
+}
+
+func formatHeader(ctx context.Context, sc trace.SpanContext) string {
+	var h [53]byte
+	traceID := sc.TraceID()
+	spanID := sc.SpanID()
+	hex.Encode(h[:32], traceID[:])
+	h[32] = ':'
+	hex.Encode(h[33:49], spanID[:])
+	h[49] = ':'
+	h[50] = '0'
+	h[51] = ':'
+
 	switch {
 	case debugFromContext(ctx):
-		headers = append(headers, fmt.Sprintf("%x", flagsDebug|flagsSampled))
+		h[52] = '3'
 	case sc.IsSampled():
-		headers = append(headers, fmt.Sprintf("%x", flagsSampled))
+		h[52] = '1'
 	default:
-		headers = append(headers, fmt.Sprintf("%x", flagsNotSampled))
+		h[52] = '0'
 	}
 
-	carrier.Set(jaegerHeader, strings.Join(headers, separator))
+	return string(h[:])
 }
 
 // Extract extracts a context from the carrier if it contains Jaeger headers.
@@ -85,44 +93,53 @@ func (Jaeger) Extract(ctx context.Context, carrier propagation.TextMapCarrier) c
 
 func extract(ctx context.Context, headerVal string) (context.Context, trace.SpanContext, error) {
 	var (
-		scc = trace.SpanContextConfig{}
-		err error
+		scc   = trace.SpanContextConfig{}
+		debug bool
+		err   error
 	)
 
-	parts := strings.Split(headerVal, separator)
-	if len(parts) != 4 {
+	part0, part1, _, part3, ok := splitHeader(headerVal)
+	if !ok {
 		return ctx, empty, errMalformedTraceContextVal
 	}
 
 	// extract trace ID
-	if parts[0] != "" {
-		id := parts[0]
-		if len(id) > traceID128bitsWidth {
+	if part0 != "" {
+		if len(part0) > traceID128bitsWidth {
 			return ctx, empty, errInvalidTraceIDLength
 		}
-		// padding when length is less than 32
-		if len(id) < traceID128bitsWidth {
-			padCharCount := traceID128bitsWidth - len(id)
-			id = strings.Repeat(idPaddingChar, padCharCount) + id
+		if len(part0) < traceID128bitsWidth {
+			var buf [traceID128bitsWidth]byte
+			padCharCount := traceID128bitsWidth - len(part0)
+			for j := range padCharCount {
+				buf[j] = '0'
+			}
+			copy(buf[padCharCount:], part0)
+			part0 = string(buf[:])
 		}
-		scc.TraceID, err = trace.TraceIDFromHex(id)
+
+		scc.TraceID, err = trace.TraceIDFromHex(part0)
 		if err != nil {
 			return ctx, empty, errMalformedTraceID
 		}
 	}
 
 	// extract span ID
-	if parts[1] != "" {
-		id := parts[1]
-		if len(id) > spanIDWidth {
+	if part1 != "" {
+		if len(part1) > spanIDWidth {
 			return ctx, empty, errInvalidSpanIDLength
 		}
-		// padding when length is less than 16
-		if len(id) < spanIDWidth {
-			padCharCount := spanIDWidth - len(id)
-			id = strings.Repeat(idPaddingChar, padCharCount) + id
+		if len(part1) < spanIDWidth {
+			var buf [spanIDWidth]byte
+			padCharCount := spanIDWidth - len(part1)
+			for j := range padCharCount {
+				buf[j] = '0'
+			}
+			copy(buf[padCharCount:], part1)
+			part1 = string(buf[:])
 		}
-		scc.SpanID, err = trace.SpanIDFromHex(id)
+
+		scc.SpanID, err = trace.SpanIDFromHex(part1)
 		if err != nil {
 			return ctx, empty, errMalformedSpanID
 		}
@@ -131,24 +148,43 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 	// skip third part as it is deprecated
 
 	// extract flag
-	if parts[3] != "" {
-		flagStr := parts[3]
-		flag, err := strconv.ParseInt(flagStr, 16, 64)
-		if err != nil {
+	if part3 != "" {
+		flag, parseErr := strconv.ParseInt(part3, 16, 64)
+		if parseErr != nil {
 			return ctx, empty, errMalformedFlag
 		}
 		if flag&flagsSampled == flagsSampled {
 			// if sample bit is set, we check if debug bit is also set
 			if flag&flagsDebug == flagsDebug {
 				scc.TraceFlags |= trace.FlagsSampled
-				ctx = withDebug(ctx, true)
+				debug = true
 			} else {
 				scc.TraceFlags |= trace.FlagsSampled
 			}
 		}
 		// ignore other bit, including firehose since we don't have corresponding flag in trace context.
 	}
+	if debug != debugFromContext(ctx) {
+		ctx = withDebug(ctx, debug)
+	}
 	return ctx, trace.NewSpanContext(scc), nil
+}
+
+func splitHeader(val string) (p0, p1, p2, p3 string, ok bool) {
+	var rest string
+	p0, rest, ok = strings.Cut(val, ":")
+	if !ok {
+		return "", "", "", "", false
+	}
+	p1, rest, ok = strings.Cut(rest, ":")
+	if !ok {
+		return "", "", "", "", false
+	}
+	p2, p3, ok = strings.Cut(rest, ":")
+	if !ok || strings.Contains(p3, ":") {
+		return "", "", "", "", false
+	}
+	return p0, p1, p2, p3, true
 }
 
 // Fields returns the Jaeger header key whose value is set with Inject.

@@ -13,6 +13,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 	v1common "go.opentelemetry.io/proto/otlp/common/v1"
@@ -106,6 +107,10 @@ var (
 
 	expectedSpanResource = v1resource.Resource{
 		Attributes: []*v1common.KeyValue{
+			{Key: "aws.log.stream.names", Value: &v1common.AnyValue{Value: &v1common.AnyValue_ArrayValue{ArrayValue: &v1common.ArrayValue{Values: []*v1common.AnyValue{
+				{Value: &v1common.AnyValue_StringValue{StringValue: "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"}},
+			}}}}},
+			{Key: "cloud.platform", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "aws_lambda"}}},
 			{Key: "cloud.provider", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "aws"}}},
 			{Key: "cloud.region", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "us-texas-1"}}},
 			{Key: "faas.instance", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "2023/01/01/[$LATEST]5d1edb9e525d486696cf01a3503487bc"}}},
@@ -124,13 +129,10 @@ var (
 )
 
 func assertResourceEquals(t *testing.T, expected, actual *v1resource.Resource) {
-	assert.Len(t, actual.Attributes, 6)
-	assert.Equal(t, expected.Attributes[0].String(), actual.Attributes[0].String())
-	assert.Equal(t, expected.Attributes[1].String(), actual.Attributes[1].String())
-	assert.Equal(t, expected.Attributes[2].String(), actual.Attributes[2].String())
-	assert.Equal(t, expected.Attributes[3].String(), actual.Attributes[3].String())
-	assert.Equal(t, expected.Attributes[4].String(), actual.Attributes[4].String())
-	assert.Equal(t, expected.Attributes[5].String(), actual.Attributes[5].String())
+	require.Len(t, actual.Attributes, len(expected.Attributes))
+	for i := range expected.Attributes {
+		assert.Equal(t, expected.Attributes[i].String(), actual.Attributes[i].String())
+	}
 	assert.Equal(t, expected.DroppedAttributesCount, actual.DroppedAttributesCount)
 }
 

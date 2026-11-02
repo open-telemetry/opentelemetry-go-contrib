@@ -57,7 +57,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    []string{"x-b3-traceid", "x-b3-spanid", "x-b3-sampled", "x-b3-flags"},
+			want:    []string{"b3"},
 			wantErr: false,
 		},
 		{
@@ -111,7 +111,7 @@ func TestPropagator(t *testing.T) {
 					},
 				},
 			},
-			want:    []string{"tracestate", "baggage", "x-b3-traceid", "x-b3-spanid", "x-b3-sampled", "x-b3-flags", "traceparent"},
+			want:    []string{"tracestate", "baggage", "b3", "traceparent"},
 			wantErr: false,
 		},
 		{
@@ -127,15 +127,15 @@ func TestPropagator(t *testing.T) {
 		{
 			name: "multiple propagators via composite_list",
 			cfg: &Propagator{
-				CompositeList: ptr("tracecontext,baggage,b3"),
+				CompositeList: new("tracecontext,baggage,b3"),
 			},
-			want:    []string{"tracestate", "baggage", "x-b3-traceid", "x-b3-spanid", "x-b3-sampled", "x-b3-flags", "traceparent"},
+			want:    []string{"tracestate", "baggage", "b3", "traceparent"},
 			wantErr: false,
 		},
 		{
 			name: "valid xray",
 			cfg: &Propagator{
-				CompositeList: ptr("xray"),
+				CompositeList: new("xray"),
 			},
 			want:    []string{"X-Amzn-Trace-Id"},
 			wantErr: false,
@@ -143,7 +143,7 @@ func TestPropagator(t *testing.T) {
 		{
 			name: "empty propagator name",
 			cfg: &Propagator{
-				CompositeList: ptr(""),
+				CompositeList: new(""),
 			},
 			want:    []string{},
 			wantErr: true,
@@ -152,7 +152,7 @@ func TestPropagator(t *testing.T) {
 		{
 			name: "unsupported propagator",
 			cfg: &Propagator{
-				CompositeList: ptr("random-garbage,baggage,b3"),
+				CompositeList: new("random-garbage,baggage,b3"),
 			},
 			want:    []string{},
 			wantErr: true,

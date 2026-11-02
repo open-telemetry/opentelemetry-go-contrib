@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -113,6 +112,32 @@ func TestExtract(t *testing.T) {
 			wantSpanID:  "1234567890abcdef",
 			wantSampled: true,
 		},
+		{
+			name:        "Valid header with auxiliary prefix-matching keys",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=1;ParentType=AWS::Lambda;RootCause=db_timeout;SampledBy=gateway",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: true,
+		},
+		{
+			name:      "RootCause without Root: expect invalid context",
+			headerVal: "RootCause=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;Sampled=1",
+			wantValid: false,
+		},
+		{
+			name:      "ParentType without Parent: expect invalid context",
+			headerVal: "Root=1-abcdef12-1234567890abcdef12345678;ParentType=1234567890abcdef;Sampled=1",
+			wantValid: false,
+		},
+		{
+			name:        "SampledBy without Sampled: expect valid unsampled context",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;SampledBy=1",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: false,
+		},
 	}
 
 	for _, tc := range tests {
@@ -121,8 +146,6 @@ func TestExtract(t *testing.T) {
 			if tc.headerVal != "" {
 				carrier.Set("X-Amzn-Trace-Id", tc.headerVal)
 			}
-
-			// prop := P
 
 			ctx := Propagator{}.Extract(t.Context(), carrier)
 			sc := trace.SpanContextFromContext(ctx)
@@ -139,7 +162,6 @@ func TestExtract(t *testing.T) {
 					t.Errorf("expected SpanID %q, got %q", tc.wantSpanID, got)
 				}
 				if got := sc.IsSampled(); got != tc.wantSampled {
-					t.Log("name-->> ", tc.name)
 					t.Errorf("expected sampled=%v, got %v", tc.wantSampled, got)
 				}
 			}
@@ -329,10 +351,14 @@ func BenchmarkPropagatorExtract(b *testing.B) {
 
 func BenchmarkPropagatorInject(b *testing.B) {
 	propagator := Propagator{}
-	tracer := otel.Tracer("test")
 
 	req, _ := http.NewRequestWithContext(b.Context(), http.MethodGet, "http://example.com", http.NoBody)
-	ctx, _ := tracer.Start(b.Context(), "Parent operation...")
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+		SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx := trace.ContextWithSpanContext(b.Context(), sc)
 
 	b.ResetTimer()
 	for range b.N {

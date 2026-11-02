@@ -18,6 +18,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const (
@@ -31,21 +32,26 @@ var (
 	processStartTime   = time.Now()
 )
 
-type producer struct {
+// Producer is a [metric.Producer] that fetches metrics from Prometheus.
+type Producer struct {
 	gatherers prometheus.Gatherers
 }
 
-// NewMetricProducer returns a metric.Producer that fetches metrics from
+var _ metric.Producer = (*Producer)(nil)
+
+// NewMetricProducer returns a [Producer] that fetches metrics from
 // Prometheus. This can be used to allow Prometheus instrumentation to be
 // added to an OpenTelemetry export pipeline.
-func NewMetricProducer(opts ...Option) metric.Producer {
+func NewMetricProducer(opts ...Option) *Producer {
 	cfg := newConfig(opts...)
-	return &producer{
+	return &Producer{
 		gatherers: cfg.gatherers,
 	}
 }
 
-func (p *producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
+// Produce fetches metrics from the configured Prometheus gatherers and
+// converts them to OpenTelemetry metrics.
+func (p *Producer) Produce(context.Context) ([]metricdata.ScopeMetrics, error) {
 	now := time.Now()
 	var errs multierr
 	otelMetrics := make([]metricdata.Metrics, 0)
@@ -86,10 +92,13 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 		newMetric := metricdata.Metrics{
 			Name:        pm.GetName(),
 			Description: pm.GetHelp(),
+			Unit:        unitWordToUCUM(pm.GetUnit()),
 		}
 		switch pm.GetType() {
 		case dto.MetricType_GAUGE:
 			newMetric.Data = convertGauge(pm.GetMetric(), now)
+		case dto.MetricType_UNTYPED:
+			newMetric.Data = convertUntyped(pm.GetMetric(), now)
 		case dto.MetricType_COUNTER:
 			newMetric.Data = convertCounter(pm.GetMetric(), now)
 		case dto.MetricType_SUMMARY:
@@ -101,7 +110,7 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 				newMetric.Data = convertHistogram(pm.GetMetric(), now)
 			}
 		default:
-			// MetricType_GAUGE_HISTOGRAM, MetricType_UNTYPED
+			// MetricType_GAUGE_HISTOGRAM
 			errs = append(errs, fmt.Errorf("%w: %v for metric %v", errUnsupportedType, pm.GetType(), pm.GetName()))
 			continue
 		}
@@ -130,7 +139,25 @@ func convertGauge(metrics []*dto.Metric, now time.Time) metricdata.Gauge[float64
 			Time:       now,
 			Value:      m.GetGauge().GetValue(),
 		}
-		if m.GetTimestampMs() != 0 {
+		if m.TimestampMs != nil {
+			dp.Time = time.UnixMilli(m.GetTimestampMs())
+		}
+		otelGauge.DataPoints[i] = dp
+	}
+	return otelGauge
+}
+
+func convertUntyped(metrics []*dto.Metric, now time.Time) metricdata.Gauge[float64] {
+	otelGauge := metricdata.Gauge[float64]{
+		DataPoints: make([]metricdata.DataPoint[float64], len(metrics)),
+	}
+	for i, m := range metrics {
+		dp := metricdata.DataPoint[float64]{
+			Attributes: convertLabels(m.GetLabel()),
+			Time:       now,
+			Value:      m.GetUntyped().GetValue(),
+		}
+		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelGauge.DataPoints[i] = dp
@@ -158,7 +185,7 @@ func convertCounter(metrics []*dto.Metric, now time.Time) metricdata.Sum[float64
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if m.GetTimestampMs() != 0 {
+		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelCounter.DataPoints[i] = dp
@@ -189,14 +216,19 @@ func convertExponentialHistogram(metrics []*dto.Metric, now time.Time) metricdat
 				m.GetHistogram().GetNegativeSpan(),
 				m.GetHistogram().GetNegativeDelta(),
 			),
-			// TODO: Support exemplars
+		}
+		if exs := m.GetHistogram().GetExemplars(); len(exs) > 0 {
+			dp.Exemplars = make([]metricdata.Exemplar[float64], len(exs))
+			for j, ex := range exs {
+				dp.Exemplars[j] = convertExemplar(ex)
+			}
 		}
 		createdTs := m.GetHistogram().GetCreatedTimestamp()
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if t := m.GetTimestampMs(); t != 0 {
-			dp.Time = time.UnixMilli(t)
+		if m.TimestampMs != nil {
+			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelExpHistogram.DataPoints[i] = dp
 	}
@@ -268,7 +300,7 @@ func convertHistogram(metrics []*dto.Metric, now time.Time) metricdata.Histogram
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if m.GetTimestampMs() != 0 {
+		if m.TimestampMs != nil {
 			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelHistogram.DataPoints[i] = dp
@@ -333,8 +365,8 @@ func convertSummary(metrics []*dto.Metric, now time.Time) metricdata.Summary {
 		if createdTs.IsValid() {
 			dp.StartTime = createdTs.AsTime()
 		}
-		if t := m.GetTimestampMs(); t != 0 {
-			dp.Time = time.UnixMilli(t)
+		if m.TimestampMs != nil {
+			dp.Time = time.UnixMilli(m.GetTimestampMs())
 		}
 		otelSummary.DataPoints[i] = dp
 	}
@@ -368,9 +400,13 @@ func convertExemplar(exemplar *dto.Exemplar) metricdata.Exemplar[float64] {
 	for _, label := range exemplar.GetLabel() {
 		switch label.GetName() {
 		case traceIDLabel:
-			traceID = []byte(label.GetValue())
+			if tid, err := trace.TraceIDFromHex(label.GetValue()); err == nil {
+				traceID = tid[:]
+			}
 		case spanIDLabel:
-			spanID = []byte(label.GetValue())
+			if sid, err := trace.SpanIDFromHex(label.GetValue()); err == nil {
+				spanID = sid[:]
+			}
 		default:
 			attrs = append(attrs, attribute.String(label.GetName(), label.GetValue()))
 		}
@@ -382,6 +418,77 @@ func convertExemplar(exemplar *dto.Exemplar) metricdata.Exemplar[float64] {
 		SpanID:             spanID,
 		FilteredAttributes: attrs,
 	}
+}
+
+var wordToUCUM = map[string]string{
+	// Time
+	"days":         "d",
+	"hours":        "h",
+	"minutes":      "min",
+	"seconds":      "s",
+	"milliseconds": "ms",
+	"microseconds": "us",
+	"nanoseconds":  "ns",
+
+	// Bytes
+	"bytes":     "By",
+	"kibibytes": "KiBy",
+	"mebibytes": "MiBy",
+	"gibibytes": "GiBy",
+	"tebibytes": "TiBy",
+	"kilobytes": "kBy",
+	"megabytes": "MBy",
+	"gigabytes": "GBy",
+	"terabytes": "TBy",
+
+	// SI
+	"meters":  "m",
+	"volts":   "V",
+	"amperes": "A",
+	"joules":  "J",
+	"watts":   "W",
+	"grams":   "g",
+
+	// Misc
+	"celsius": "Cel",
+	"hertz":   "Hz",
+	"percent": "%",
+}
+
+var perWordToUCUM = map[string]string{
+	"second": "s",
+	"minute": "min",
+	"hour":   "h",
+	"day":    "d",
+	"week":   "wk",
+	"month":  "mo",
+	"year":   "a",
+}
+
+func unitWordToUCUM(unit string) string {
+	if unit == "" {
+		return ""
+	}
+	unitTokens := strings.SplitN(unit, "_per_", 2)
+	ucumUnit := wordToUCUMOrDefault(unitTokens[0])
+	if len(unitTokens) > 1 && unitTokens[1] != "" {
+		ucumUnit += "/" + perWordToUCUMOrDefault(unitTokens[1])
+	}
+	return ucumUnit
+}
+
+func wordToUCUMOrDefault(unit string) string {
+	if ucum, ok := wordToUCUM[unit]; ok {
+		return ucum
+	}
+	return unit
+}
+
+func perWordToUCUMOrDefault(perUnit string) string {
+	if ucum, ok := perWordToUCUM[perUnit]; ok {
+		return ucum
+	}
+	return perUnit
 }
 
 type multierr []error

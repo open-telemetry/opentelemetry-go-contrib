@@ -21,6 +21,11 @@ import (
 // configured.
 const none = "none"
 
+// noopPropagator is the no-op TextMapPropagator returned for the "none"
+// propagator name as well as for empty input. Reusing a single value keeps the
+// "none" and empty-input behavior identical.
+var noopPropagator = propagation.NewCompositeTextMapPropagator()
+
 // propagators is the registry of TextMapPropagators registered with this
 // package. It includes all the OpenTelemetry defaults at startup.
 var propagators = &registry{
@@ -41,7 +46,7 @@ var propagators = &registry{
 		"ottrace": ot.OT{},
 
 		// No-op TextMapPropagator.
-		none: propagation.NewCompositeTextMapPropagator(),
+		none: noopPropagator,
 	},
 }
 
@@ -112,25 +117,31 @@ func RegisterTextMapPropagator(name string, p propagation.TextMapPropagator) {
 // already registered TextMapPropagator (see the RegisterTextMapPropagator
 // function for more information) or a default (tracecontext, baggage, b3,
 // b3multi, jaeger, xray, or ottrace).
+// Duplicate names are ignored, preserving the order of their first occurrence.
 //
 // If "none" is included in the arguments, or no names are provided, the
 // returned TextMapPropagator will be a no-operation implementation.
 //
 // An error is returned for any un-registered names. The remaining, known,
 // names will be used to compose a TextMapPropagator that is returned with the
-// error.
+// error. If every provided name is un-registered, a nil TextMapPropagator is
+// returned with the error so callers can fall back to their own default.
 func TextMapPropagator(names ...string) (propagation.TextMapPropagator, error) {
 	var (
 		props   []propagation.TextMapPropagator
 		unknown []string
 	)
+	seen := make(map[string]struct{}, len(names))
 
 	for _, name := range names {
 		if name == none {
 			// If "none" is passed in combination with any other propagator,
 			// the result still needs to be a no-op propagator. Therefore,
 			// short-circuit here.
-			return propagation.NewCompositeTextMapPropagator(), nil
+			return noopPropagator, nil
+		}
+		if _, ok := seen[name]; ok {
+			continue
 		}
 
 		p, ok := propagators.load(name)
@@ -138,6 +149,7 @@ func TextMapPropagator(names ...string) (propagation.TextMapPropagator, error) {
 			unknown = append(unknown, name)
 			continue
 		}
+		seen[name] = struct{}{}
 		props = append(props, p)
 	}
 
@@ -149,7 +161,15 @@ func TextMapPropagator(names ...string) (propagation.TextMapPropagator, error) {
 
 	switch len(props) {
 	case 0:
-		return nil, err
+		if err != nil {
+			// Names were provided but none matched a registered propagator.
+			// Return nil so callers such as NewTextMapPropagator can fall back
+			// to their default rather than silently disabling propagation.
+			return nil, err
+		}
+		// No names were provided. Return the no-op propagator, matching the
+		// "none" behavior above.
+		return noopPropagator, nil
 	case 1:
 		// Do not return a composite of a single propagator.
 		return props[0], err

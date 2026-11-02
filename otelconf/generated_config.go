@@ -535,7 +535,7 @@ type LogRecordExporter struct {
 	//
 	OTLPHttp *OTLPHttpExporter `json:"otlp_http,omitempty,omitzero" yaml:"otlp_http,omitempty" mapstructure:"otlp_http,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type LogRecordLimits struct {
@@ -577,7 +577,7 @@ type LogRecordProcessor struct {
 	//
 	Simple *SimpleLogRecordProcessor `json:"simple,omitempty,omitzero" yaml:"simple,omitempty" mapstructure:"simple,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type LoggerProvider struct {
@@ -624,7 +624,7 @@ type MetricProducer struct {
 	//
 	Opencensus OpenCensusMetricProducer `json:"opencensus,omitempty,omitzero" yaml:"opencensus,omitempty" mapstructure:"opencensus,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type MetricReader struct {
@@ -1075,7 +1075,7 @@ type OpenTelemetryConfiguration struct {
 	//
 	TracerProvider *TracerProvider `json:"tracer_provider,omitempty,omitzero" yaml:"tracer_provider,omitempty" mapstructure:"tracer_provider,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 // Configure if the SDK is disabled or not.
@@ -1188,7 +1188,7 @@ type Propagator struct {
 type PropagatorCompositeList *string
 
 type PullMetricExporter struct {
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type PullMetricReader struct {
@@ -1224,7 +1224,7 @@ type PushMetricExporter struct {
 	//
 	OTLPHttp *OTLPHttpMetricExporter `json:"otlp_http,omitempty,omitzero" yaml:"otlp_http,omitempty" mapstructure:"otlp_http,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type Resource struct {
@@ -1284,7 +1284,7 @@ type Sampler struct {
 	//
 	TraceIDRatioBased *TraceIDRatioBasedSampler `json:"trace_id_ratio_based,omitempty,omitzero" yaml:"trace_id_ratio_based,omitempty" mapstructure:"trace_id_ratio_based,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type SeverityNumber string
@@ -1344,7 +1344,7 @@ type SpanExporter struct {
 	//
 	OTLPHttp *OTLPHttpExporter `json:"otlp_http,omitempty,omitzero" yaml:"otlp_http,omitempty" mapstructure:"otlp_http,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type SpanKind string
@@ -1438,7 +1438,7 @@ type SpanProcessor struct {
 	//
 	Simple *SimpleSpanProcessor `json:"simple,omitempty,omitzero" yaml:"simple,omitempty" mapstructure:"simple,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type SumAggregation map[string]interface{}
@@ -1474,7 +1474,7 @@ type TextMapPropagator struct {
 	//
 	Tracecontext TraceContextPropagator `json:"tracecontext,omitempty,omitzero" yaml:"tracecontext,omitempty" mapstructure:"tracecontext,omitempty"`
 
-	AdditionalProperties interface{} `mapstructure:",remain"`
+	AdditionalProperties map[string]any `mapstructure:",remain" json:"-" yaml:"-"`
 }
 
 type TraceContextPropagator map[string]interface{}

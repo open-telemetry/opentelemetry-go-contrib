@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/log/global"
 
 	"go.opentelemetry.io/contrib/otelconf"
 )
@@ -43,7 +42,7 @@ func Example() {
 	// Set the global providers.
 	otel.SetTracerProvider(s.TracerProvider())
 	otel.SetMeterProvider(s.MeterProvider())
-	global.SetLoggerProvider(s.LoggerProvider())
+	otel.SetLoggerProvider(s.LoggerProvider())
 	// Set the global propagator.
 	otel.SetTextMapPropagator(s.Propagator())
 }

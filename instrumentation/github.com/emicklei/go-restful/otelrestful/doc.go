@@ -7,7 +7,8 @@
 // package (https://github.com/emicklei/go-restful).
 //
 // Instrumentation of an incoming request is achieved via a go-restful
-// FilterFunc called `OTelFilterFunc` which may be applied at any one of
+// [restful.FilterFunction] called [OTelFilter] which may be applied at any one
+// of:
 //   - the container level
 //   - webservice level
 //   - route level

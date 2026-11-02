@@ -18,17 +18,37 @@ func TestNewConfig(t *testing.T) {
 	}{
 		{
 			name:   "default",
-			expect: config{MinimumReadMemStatsInterval: 15 * time.Second},
+			expect: config{MinimumRefreshInterval: 15 * time.Second},
+		},
+		{
+			name:   "zero MinimumRefreshInterval ignored",
+			opts:   []Option{WithMinimumRefreshInterval(0)},
+			expect: config{MinimumRefreshInterval: 15 * time.Second},
+		},
+		{
+			name:   "negative MinimumRefreshInterval ignored",
+			opts:   []Option{WithMinimumRefreshInterval(-1 * time.Second)},
+			expect: config{MinimumRefreshInterval: 15 * time.Second},
+		},
+		{
+			name:   "set MinimumRefreshInterval",
+			opts:   []Option{WithMinimumRefreshInterval(10 * time.Second)},
+			expect: config{MinimumRefreshInterval: 10 * time.Second},
+		},
+		{
+			name:   "zero MinimumReadMemStatsInterval ignored",
+			opts:   []Option{WithMinimumReadMemStatsInterval(0)},
+			expect: config{MinimumRefreshInterval: 15 * time.Second},
 		},
 		{
 			name:   "negative MinimumReadMemStatsInterval ignored",
 			opts:   []Option{WithMinimumReadMemStatsInterval(-1 * time.Second)},
-			expect: config{MinimumReadMemStatsInterval: 15 * time.Second},
+			expect: config{MinimumRefreshInterval: 15 * time.Second},
 		},
 		{
 			name:   "set MinimumReadMemStatsInterval",
 			opts:   []Option{WithMinimumReadMemStatsInterval(10 * time.Second)},
-			expect: config{MinimumReadMemStatsInterval: 10 * time.Second},
+			expect: config{MinimumRefreshInterval: 10 * time.Second},
 		},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
@@ -38,7 +58,49 @@ func TestNewConfig(t *testing.T) {
 	}
 }
 
+func TestNewProducerConfig(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		opts   []ProducerOption
+		expect config
+	}{
+		{
+			name:   "default",
+			expect: config{MinimumRefreshInterval: 15 * time.Second},
+		},
+		{
+			name:   "zero MinimumRefreshInterval ignored",
+			opts:   []ProducerOption{WithMinimumRefreshInterval(0)},
+			expect: config{MinimumRefreshInterval: 15 * time.Second},
+		},
+		{
+			name:   "negative MinimumRefreshInterval ignored",
+			opts:   []ProducerOption{WithMinimumRefreshInterval(-1 * time.Second)},
+			expect: config{MinimumRefreshInterval: 15 * time.Second},
+		},
+		{
+			name:   "set MinimumRefreshInterval",
+			opts:   []ProducerOption{WithMinimumRefreshInterval(10 * time.Second)},
+			expect: config{MinimumRefreshInterval: 10 * time.Second},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := newProducerConfig(tt.opts...)
+			assert.True(t, configEqual(got, tt.expect))
+		})
+	}
+}
+
+func TestOptInMetricEnabled(t *testing.T) {
+	assert.False(t, optInGCCycles.enabled())
+	assert.False(t, optInCPUTime.enabled())
+
+	t.Setenv("OTEL_GO_X_RUNTIME_METRICS_OPTIN", "go.cpu.time")
+	assert.False(t, optInGCCycles.enabled())
+	assert.True(t, optInCPUTime.enabled())
+}
+
 func configEqual(a, b config) bool {
 	// ignore MeterProvider
-	return a.MinimumReadMemStatsInterval == b.MinimumReadMemStatsInterval
+	return a.MinimumRefreshInterval == b.MinimumRefreshInterval
 }

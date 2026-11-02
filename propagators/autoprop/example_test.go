@@ -39,7 +39,7 @@ func ExampleNewTextMapPropagator_arguments() {
 	).Fields()
 	sort.Strings(fields)
 	fmt.Println(fields)
-	// Output: [baggage traceparent tracestate x-b3-flags x-b3-sampled x-b3-spanid x-b3-traceid]
+	// Output: [b3 baggage traceparent tracestate]
 }
 
 func ExampleNewTextMapPropagator_environment() {
@@ -53,7 +53,7 @@ func ExampleNewTextMapPropagator_environment() {
 	fields := autoprop.NewTextMapPropagator(propagation.TraceContext{}).Fields()
 	sort.Strings(fields)
 	fmt.Println(fields)
-	// Output: [baggage x-b3-flags x-b3-sampled x-b3-spanid x-b3-traceid]
+	// Output: [b3 baggage]
 }
 
 type myTextMapPropagator struct{ propagation.TextMapPropagator }
@@ -83,7 +83,7 @@ func ExampleGetTextMapPropagator() {
 	fields := prop.Fields()
 	sort.Strings(fields)
 	fmt.Println(fields)
-	// Output: [baggage x-b3-flags x-b3-sampled x-b3-spanid x-b3-traceid]
+	// Output: [b3 baggage]
 }
 
 func ExampleGetTextMapPropagator_custom() {

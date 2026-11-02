@@ -8,6 +8,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -132,6 +134,42 @@ func TestOT_Extract(t *testing.T) {
 
 		assert.Equal(t, trace.NewSpanContext(test.expected), sc, info...)
 	}
+}
+
+func TestExtractBagsAggregateLimitError(t *testing.T) {
+	// Test depends on 64 member limit enforced by `baggage.maxMembers`. Each member below parses
+	// individually without error, so the aggregate limit error is only
+	// surfaced by baggage.New itself.
+	carrier := propagation.MapCarrier{}
+	for i := range 65 {
+		carrier.Set(fmt.Sprintf("%sk%d", baggageHeaderPrefix, i), "v")
+	}
+
+	bags, err := extractBags(carrier)
+
+	require.Error(t, err)
+	assert.Len(t, bags.Members(), 64)
+}
+
+func TestOT_ExtractAttachesPartialBaggageOnAggregateLimitError(t *testing.T) {
+	// When baggage.New exceeds the aggregate member limit, extractBags
+	// returns an error alongside the truncated, still-valid members.
+	// OT.Extract must attach that partial baggage to the context instead of
+	// discarding it, matching the module's pre-existing behavior of
+	// preserving up to the limit rather than dropping everything.
+	carrier := propagation.MapCarrier{
+		traceIDHeader: traceID128Str,
+		spanIDHeader:  spanIDStr,
+		sampledHeader: "1",
+	}
+	for i := range 65 {
+		carrier.Set(fmt.Sprintf("%sk%d", baggageHeaderPrefix, i), "v")
+	}
+
+	ctx := OT{}.Extract(t.Context(), carrier)
+
+	bags := baggage.FromContext(ctx)
+	assert.Len(t, bags.Members(), 64)
 }
 
 func TestOT_Fields(t *testing.T) {

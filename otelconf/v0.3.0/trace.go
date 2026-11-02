@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/url"
 	"time"
 
@@ -174,9 +175,14 @@ func otlpGRPCSpanExporter(ctx context.Context, otlpConfig *OTLP) (sdktrace.SpanE
 	var opts []otlptracegrpc.Option
 
 	if otlpConfig.Endpoint != nil {
-		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
+		endpoint := *otlpConfig.Endpoint
+		u, err := url.ParseRequestURI(endpoint)
 		if err != nil {
-			return nil, err
+			if _, _, splitErr := net.SplitHostPort(endpoint); splitErr != nil {
+				return nil, err
+			}
+
+			u = &url.URL{Host: endpoint}
 		}
 		// ParseRequestURI leaves the Host field empty when no
 		// scheme is specified (i.e. localhost:4317). This check is

@@ -51,10 +51,10 @@ import (
 	"runtime"
 	"slices"
 
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
-	"go.opentelemetry.io/otel/log/global"
-	semconv "go.opentelemetry.io/otel/semconv/v1.42.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 // NewLogger returns a new [slog.Logger] backed by a new [Handler]. See
@@ -78,7 +78,7 @@ func newConfig(options []Option) config {
 	}
 
 	if c.provider == nil {
-		c.provider = global.GetLoggerProvider()
+		c.provider = otel.GetLoggerProvider()
 	}
 
 	return c
@@ -207,11 +207,13 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 	if h.source {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
 		f, _ := fs.Next()
-		record.AddAttributes(
-			attribute.String(string(semconv.CodeFilePathKey), f.File),
-			attribute.String(string(semconv.CodeFunctionNameKey), f.Function),
-			attribute.Int(string(semconv.CodeLineNumberKey), f.Line),
-		)
+		if f.PC != 0 {
+			record.AddAttributes(
+				attribute.String(string(semconv.CodeFilePathKey), f.File),
+				attribute.String(string(semconv.CodeFunctionNameKey), f.Function),
+				attribute.Int(string(semconv.CodeLineNumberKey), f.Line),
+			)
+		}
 	}
 
 	if h.attrs != nil && h.attrs.err != nil {
@@ -288,8 +290,12 @@ func (h *Handler) WithAttrs(attrs []slog.Attr) slog.Handler {
 }
 
 // WithGroup returns a new [slog.Handler] based on h that will log all messages
-// and attributes within a group of the provided name.
+// and attributes within a group of the provided name. If name is empty,
+// WithGroup returns h.
 func (h *Handler) WithGroup(name string) slog.Handler {
+	if name == "" {
+		return h
+	}
 	h2 := *h
 	h2.group = &group{name: name, next: h2.group}
 	return &h2
@@ -412,6 +418,12 @@ func (g *group) AddAttrs(attrs []slog.Attr) {
 type kvBuffer struct {
 	data []attribute.KeyValue
 	err  error
+	// keepErr, when true, keeps an error-valued attribute as a normal
+	// attribute instead of promoting it to err. It is set when converting a
+	// group value, because a group maps to an attribute.MAP that has no
+	// dedicated error slot like a record does, so a promoted error would be
+	// silently dropped.
+	keepErr bool
 }
 
 func newKVBuffer(n int) *kvBuffer {
@@ -431,15 +443,21 @@ func (b *kvBuffer) Clone() *kvBuffer {
 	if b == nil {
 		return nil
 	}
-	return &kvBuffer{data: slices.Clone(b.data), err: b.err}
+	return &kvBuffer{data: slices.Clone(b.data), err: b.err, keepErr: b.keepErr}
 }
 
-// KeyValues returns kvs appended to the [attribute.KeyValue] held by b.
+// KeyValues returns kvs appended to the [attribute.KeyValue] held by b. The
+// returned slice never shares spare capacity with b's backing array, so
+// appending to it (including a concurrent KeyValues call on the same shared
+// buffer) cannot corrupt b or a slice returned by a previous call.
 func (b *kvBuffer) KeyValues(kvs ...attribute.KeyValue) []attribute.KeyValue {
 	if b == nil {
 		return kvs
 	}
-	return append(b.data, kvs...)
+	// Clip forces append to allocate a new backing array rather than writing
+	// kvs into b.data's spare capacity, which is shared across concurrent
+	// Handle calls.
+	return append(slices.Clip(b.data), kvs...)
 }
 
 // AddAttrs adds attrs to b.
@@ -459,7 +477,7 @@ func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
 //
 // If attr is empty, it will be dropped.
 func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
-	if attr.Value.Kind() == slog.KindAny {
+	if !b.keepErr && attr.Value.Kind() == slog.KindAny {
 		if err, ok := attr.Value.Any().(error); ok {
 			b.err = err
 			return true
@@ -513,6 +531,7 @@ func convert(v slog.Value) attribute.Value {
 	case slog.KindGroup:
 		g := v.Group()
 		buf := newKVBuffer(len(g))
+		buf.keepErr = true
 		buf.AddAttrs(g)
 		return attribute.MapValue(buf.data...)
 	case slog.KindLogValuer:

@@ -1,29 +1,32 @@
 # Feature Gates
 
-The runtime package contains a feature gate used to ease the migration
-from the [previous runtime metrics conventions] to the new [OpenTelemetry Go
-Runtime conventions].
+The runtime package contains feature gates used to enable the opt-in metrics of
+the [OpenTelemetry Go Runtime conventions].
 
 Note that the new runtime metrics conventions are still experimental, and may
 change in backwards incompatible ways as feedback is applied.
 
 ## Features
 
-- [Include Deprecated Metrics](#include-deprecated-metrics)
+- [Include Opt-In Metrics](#include-opt-in-metrics)
 
-### Include Deprecated Metrics
+### Include Opt-In Metrics
 
-To temporarily re-enable the deprecated metrics:
+To produce the [opt-in metrics] of the Go runtime conventions, list them
+comma-separated:
 
 ```console
-export OTEL_GO_X_DEPRECATED_RUNTIME_METRICS=true
+export OTEL_GO_X_RUNTIME_METRICS_OPTIN=go.memory.gc.cycles,go.memory.gc.pause.duration,go.cpu.time
 ```
 
-Eventually, the deprecated runtime metrics will be removed,
-and setting the environment variable will no longer have any effect.
+The supported metrics are:
 
-The value set must be the case-insensitive string of `"true"` to enable the
-feature, and `"false"` to disable the feature. All other values are ignored.
+- `go.memory.gc.cycles`, produced by `Start`.
+- `go.cpu.time`, produced by `Start`.
+- `go.memory.gc.pause.duration`, produced by `NewProducer`.
 
-[previous runtime metrics conventions]: https://pkg.go.dev/go.opentelemetry.io/contrib/instrumentation/runtime@v0.52.0
+Unknown names are ignored. Once the metrics API supports the opt-in metric
+advisory parameter, this environment variable will be replaced by it.
+
+[opt-in metrics]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/general/metric-requirement-level.md#opt-in
 [OpenTelemetry Go Runtime conventions]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/runtime/go-metrics.md

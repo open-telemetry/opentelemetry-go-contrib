@@ -10,17 +10,22 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 
-	eksdetector "go.opentelemetry.io/contrib/detectors/aws/eks"
-
+	"go.opentelemetry.io/contrib/otelconf/internal/detectors"
 	"go.opentelemetry.io/contrib/otelconf/internal/kv"
 )
 
-func resourceOpts(detectors []ExperimentalResourceDetector) []resource.Option {
+func resourceOpts(resourceDetectors []ExperimentalResourceDetector) []resource.Option {
 	opts := []resource.Option{}
-	for _, d := range detectors {
-		if d.AWSEKS != nil {
-			opts = append(opts, resource.WithDetectors(eksdetector.NewResourceDetector()))
-		}
+	for _, d := range resourceDetectors {
+		opts = append(opts, detectors.Options(detectors.Detector{
+			AWSEC2:    d.AWSEC2 != nil,
+			AWSECS:    d.AWSECS != nil,
+			AWSEKS:    d.AWSEKS != nil,
+			AWSLambda: d.AWSLambda != nil,
+			AzureVM:   d.AzureVM != nil,
+			GCP:       d.GCP != nil,
+		})...)
+
 		if d.Container != nil {
 			opts = append(opts, resource.WithContainer())
 		}
@@ -63,21 +68,21 @@ func newResourceWithBuilder(ctx context.Context, r *Resource, build resourceBuil
 		resource.WithSchemaURL(schema),
 	}
 
-	base, err := build(ctx, opts...)
+	result, err := build(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
 
 	if r.DetectionDevelopment == nil {
-		return base, nil
+		return result, nil
 	}
 
 	detected, err := newDetectedResource(ctx, r.DetectionDevelopment, build)
 	if detected == nil {
-		return base, err
+		return result, err
 	}
 
-	merged, mergeErr := resource.Merge(detected, base)
+	merged, mergeErr := resource.Merge(detected, result)
 	return merged, errors.Join(err, mergeErr)
 }
 

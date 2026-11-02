@@ -20,6 +20,7 @@ package jaegerremote
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -39,6 +40,11 @@ type config struct {
 	posParams               perOperationSamplerParams
 	logger                  logr.Logger
 	attributesDisabled      bool
+	probabilitySampling     bool
+	// initialSamplingRate can be set from OTEL_TRACES_SAMPLER_ARG. The sampler
+	// is built from it after all options are applied, to honor
+	// WithProbabilitySampling.
+	initialSamplingRate float64
 }
 
 func getEnvOptions() ([]Option, []error) {
@@ -65,11 +71,20 @@ func getEnvOptions() ([]Option, []error) {
 		case "endpoint":
 			options = append(options, WithSamplingServerURL(value))
 		case "pollingIntervalMs":
-			intervalMs, err := strconv.Atoi(value)
+			intervalMs, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", key, err))
 				continue
 			}
+			if intervalMs <= 0 {
+				errs = append(errs, fmt.Errorf("%s must be positive, got %d", key, intervalMs))
+				continue
+			}
+			if intervalMs > math.MaxInt64/int64(time.Millisecond) {
+				errs = append(errs, fmt.Errorf("%s value %q is out of range", key, value))
+				continue
+			}
+
 			options = append(options, WithSamplingRefreshInterval(time.Duration(intervalMs)*time.Millisecond))
 		case "initialSamplingRate":
 			samplingRate, err := strconv.ParseFloat(value, 64)
@@ -77,7 +92,7 @@ func getEnvOptions() ([]Option, []error) {
 				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", key, err))
 				continue
 			}
-			options = append(options, WithInitialSampler(trace.TraceIDRatioBased(samplingRate)))
+			options = append(options, withInitialSamplingRate(samplingRate))
 		default:
 			errs = append(errs, fmt.Errorf("invalid argument %s in OTEL_TRACE_SAMPLER_ARG", key))
 		}
@@ -96,7 +111,8 @@ func newConfig(options ...Option) config {
 			MaxOperations:            defaultSamplingMaxOperations,
 			OperationNameLateBinding: defaultSamplingOperationNameLateBinding,
 		},
-		logger: logr.Discard(),
+		logger:              logr.Discard(),
+		initialSamplingRate: 0.001,
 	}
 
 	envOptions, errs := getEnvOptions()
@@ -116,13 +132,14 @@ func newConfig(options ...Option) config {
 			MaxOperations:            c.posParams.MaxOperations,
 			OperationNameLateBinding: c.posParams.OperationNameLateBinding,
 			attributesDisabled:       c.attributesDisabled,
+			probabilitySampling:      c.probabilitySampling,
 		},
-		&probabilisticSamplerUpdater{attributesDisabled: c.attributesDisabled},
+		&probabilisticSamplerUpdater{attributesDisabled: c.attributesDisabled, probabilitySampling: c.probabilitySampling},
 		&rateLimitingSamplerUpdater{attributesDisabled: c.attributesDisabled},
 	}
 
 	if c.sampler == nil {
-		c.sampler = newProbabilisticSampler(0.001, c.attributesDisabled)
+		c.sampler = newProbabilisticSampler(c.initialSamplingRate, c.attributesDisabled, c.probabilitySampling)
 	}
 
 	return c
@@ -175,9 +192,15 @@ func WithOperationNameLateBinding(enable bool) Option {
 
 // WithSamplingRefreshInterval creates a Option that sets how often the
 // sampler will poll local agent for the appropriate sampling strategy.
+// A non-positive value is ignored, preserving the previously configured
+// interval, or the default when none was configured.
 func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) Option {
 	return optionFunc(func(c *config) {
-		c.samplingRefreshInterval = samplingRefreshInterval
+		// time.NewTicker panics on a non-positive interval, so ignore one here
+		// rather than overwriting the default or an earlier valid value.
+		if samplingRefreshInterval > 0 {
+			c.samplingRefreshInterval = samplingRefreshInterval
+		}
 	})
 }
 
@@ -204,7 +227,27 @@ func WithAttributesDisabled() Option {
 	})
 }
 
-// samplingStrategyParser creates a Option that initializes sampling strategy parser.
+// WithProbabilitySampling configures probabilistic strategies to follow the
+// OpenTelemetry probability sampling specification instead of using
+// [trace.TraceIDRatioBased]: sampled spans record their threshold in the "ot"
+// tracestate entry, and a parent's explicit randomness value is honored.
+//
+// This is a preview feature built on the experimental
+// go.opentelemetry.io/otel/sdk/trace/x module. It is disabled by default and
+// may change.
+func WithProbabilitySampling(enabled bool) Option {
+	return optionFunc(func(c *config) {
+		c.probabilitySampling = enabled
+	})
+}
+
+func withInitialSamplingRate(samplingRate float64) Option {
+	return optionFunc(func(c *config) {
+		c.initialSamplingRate = samplingRate
+	})
+}
+
+// withSamplingStrategyParser creates a Option that initializes sampling strategy parser.
 func withSamplingStrategyParser(parser samplingStrategyParser) Option {
 	return optionFunc(func(c *config) {
 		c.samplingParser = parser
