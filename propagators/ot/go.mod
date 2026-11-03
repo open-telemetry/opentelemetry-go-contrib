@@ -1,3 +1,6 @@
+// Deprecated: OpenTracing is deprecated.
+// v1.48.0 is the final planned release of this module.
+// Migrate to native OpenTelemetry APIs and SDKs with W3C Trace Context and W3C Baggage propagation.
 module go.opentelemetry.io/contrib/propagators/ot
 
 go 1.26.0
