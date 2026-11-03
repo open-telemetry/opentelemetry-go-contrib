@@ -26,7 +26,11 @@ var _ resource.Detector = (*GCE)(nil)
 
 // Detect detects associated resources when running on GCE hosts.
 func (*GCE) Detect(ctx context.Context) (*resource.Resource, error) {
-	if !metadata.OnGCEWithContext(ctx) {
+	onGCE, err := defaultOnGCE(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if !onGCE {
 		return nil, nil
 	}
 

@@ -6,6 +6,8 @@ package gcp
 import (
 	"context"
 	"fmt"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -564,6 +566,7 @@ func TestBareMetalSolutionEnv(t *testing.T) {
 	})
 
 	t.Run("partial BMS env vars do not trigger BMS resource or extra CloudPlatform probe", func(t *testing.T) {
+		t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
 		fake := &fakeGCPDetector{
 			projectID:                     "my-project",
 			cloudPlatform:                 internal.UnknownPlatform,
@@ -623,21 +626,22 @@ func TestDetectCloudPlatformContextCancellation(t *testing.T) {
 func TestDetectGKEHostTypeContextCancellation(t *testing.T) {
 	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
 
+	ctx, cancel := context.WithCancel(t.Context())
 	fake := &fakeGCPDetector{
 		projectID:           "my-project",
-		cloudPlatform:       internal.GKE,
 		gkeHostID:           "1472385723456792345",
 		gkeHostType:         "e2-standard-4",
 		gkeClusterName:      "my-cluster",
 		gkeAvailabilityZone: "us-central1-c",
+		onCloudPlatform: func(context.Context) internal.Platform {
+			cancel()
+			return internal.GKE
+		},
 	}
 	d := &detector{
 		detector: fake,
 		cfg:      config{gkeHostType: true},
 	}
-
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
 
 	res, err := d.Detect(ctx)
 	assert.ErrorIs(t, err, resource.ErrPartialResource)
@@ -657,9 +661,9 @@ func TestDetectGKEHostTypeContextCancellation(t *testing.T) {
 func TestDetectGCEInstanceLabelsContextCancellation(t *testing.T) {
 	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
 
+	ctx, cancel := context.WithCancel(t.Context())
 	fake := &fakeGCPDetector{
 		projectID:              "my-project",
-		cloudPlatform:          internal.GCE,
 		gceHostID:              "1472385723456792345",
 		gceHostName:            "my-gke-node-1234",
 		gceHostType:            "n1-standard1",
@@ -670,6 +674,10 @@ func TestDetectGCEInstanceLabelsContextCancellation(t *testing.T) {
 		gcpGceInstanceLabels: map[string]string{
 			"env": "prod",
 		},
+		onCloudPlatform: func(context.Context) internal.Platform {
+			cancel()
+			return internal.GCE
+		},
 	}
 	d := &detector{
 		detector: fake,
@@ -677,9 +685,6 @@ func TestDetectGCEInstanceLabelsContextCancellation(t *testing.T) {
 			gceLabelKeyFilter: func(string) bool { return true },
 		},
 	}
-
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
 
 	res, err := d.Detect(ctx)
 	assert.ErrorIs(t, err, resource.ErrPartialResource)
@@ -700,6 +705,110 @@ func TestDetectGCEInstanceLabelsContextCancellation(t *testing.T) {
 	), res)
 }
 
+func TestDetectCanceledAtEntryDoesNotPoisonOnGCE(t *testing.T) {
+	t.Run("canceled context at entry returns error and subsequent Detect succeeds", func(t *testing.T) {
+		t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
+
+		fake := &fakeGCPDetector{
+			projectID:     "my-project",
+			cloudPlatform: internal.UnknownPlatform,
+		}
+		d := &detector{detector: fake}
+
+		canceledCtx, cancel := context.WithCancel(t.Context())
+		cancel()
+
+		res, err := d.Detect(canceledCtx)
+		assert.Nil(t, res)
+		assert.ErrorIs(t, err, context.Canceled)
+
+		gceRes, gceErr := (&GCE{}).Detect(canceledCtx)
+		assert.Nil(t, gceRes)
+		assert.ErrorIs(t, gceErr, context.Canceled)
+
+		crRes, crErr := NewCloudRun().Detect(canceledCtx)
+		assert.Nil(t, crRes)
+		assert.NoError(t, crErr)
+
+		res, err = d.Detect(t.Context())
+		assert.NoError(t, err)
+		assert.Equal(t, resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.CloudProviderGCP,
+			semconv.CloudAccountID("my-project"),
+		), res)
+	})
+
+	t.Run("in-flight OnGCE cancellation does not poison sync.Once for subsequent Detect", func(t *testing.T) {
+		probeStarted := make(chan struct{})
+		releaseProbe := make(chan struct{})
+		var once sync.Once
+		var memoized bool
+		probe := func() bool {
+			once.Do(func() {
+				close(probeStarted)
+				<-releaseProbe
+				memoized = true
+			})
+			return memoized
+		}
+
+		fake := &fakeGCPDetector{
+			projectID:     "my-project",
+			cloudPlatform: internal.UnknownPlatform,
+		}
+		d := &detector{
+			detector: fake,
+			onGCE:    newOnGCEChecker(probe),
+		}
+
+		firstCtx, cancelFirst := context.WithCancel(t.Context())
+		errCh := make(chan error, 1)
+		go func() {
+			res, err := d.Detect(firstCtx)
+			assert.Nil(t, res)
+			errCh <- err
+		}()
+
+		<-probeStarted
+		cancelFirst()
+		assert.ErrorIs(t, <-errCh, context.Canceled)
+
+		close(releaseProbe)
+
+		res, err := d.Detect(t.Context())
+		assert.NoError(t, err)
+		assert.Equal(t, resource.NewWithAttributes(
+			semconv.SchemaURL,
+			semconv.CloudProviderGCP,
+			semconv.CloudAccountID("my-project"),
+		), res)
+	})
+}
+
+func TestDetectProjectIDContextCancellationNoDuplicateError(t *testing.T) {
+	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	fake := &fakeGCPDetector{
+		onProjectID: func(ctx context.Context) (string, error) {
+			cancel()
+			return "", fmt.Errorf("project id lookup: %w", ctx.Err())
+		},
+		cloudPlatform: internal.UnknownPlatform,
+	}
+	d := &detector{detector: fake}
+
+	res, err := d.Detect(ctx)
+	assert.ErrorIs(t, err, resource.ErrPartialResource)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Equal(t, 1, strings.Count(err.Error(), context.Canceled.Error()), "expected single context.Canceled in error: %v", err)
+	assert.Equal(t, resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.CloudProviderGCP,
+	), res)
+}
+
 // fakeGCPDetector implements gcpDetector and uses fake values.
 type fakeGCPDetector struct {
 	err                             error
@@ -707,6 +816,7 @@ type fakeGCPDetector struct {
 	gceLabelsErr                    error
 	cloudPlatformCalls              int
 	cloudPlatformCtx                context.Context
+	onProjectID                     func(context.Context) (string, error)
 	onCloudPlatform                 func(context.Context) internal.Platform
 	gkeHostTypeCtx                  context.Context
 	gceLabelsCtx                    context.Context
@@ -743,7 +853,10 @@ type fakeGCPDetector struct {
 	cloudRunJobTaskIndex            string
 }
 
-func (f *fakeGCPDetector) ProjectID(_ context.Context) (string, error) {
+func (f *fakeGCPDetector) ProjectID(ctx context.Context) (string, error) {
+	if f.onProjectID != nil {
+		return f.onProjectID(ctx)
+	}
 	if f.err != nil {
 		return "", f.err
 	}
