@@ -9,7 +9,7 @@
   "separateMajorMinor": true,
   "postUpdateOptions" : [
     "gomodTidyAll",
-    "gomodUpdateImportPaths",
+    "gomodUpdateImportPaths"
   ],
   "packageRules": [
     {
