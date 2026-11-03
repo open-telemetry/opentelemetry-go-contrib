@@ -22,9 +22,10 @@ import (
 )
 
 const (
-	scopeName    = "go.opentelemetry.io/contrib/bridges/prometheus"
-	traceIDLabel = "trace_id"
-	spanIDLabel  = "span_id"
+	scopeName                  = "go.opentelemetry.io/contrib/bridges/prometheus"
+	traceIDLabel               = "trace_id"
+	spanIDLabel                = "span_id"
+	maxExponentialBucketCounts = 1 << 20
 )
 
 var (
@@ -104,7 +105,7 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 		case dto.MetricType_SUMMARY:
 			newMetric.Data = convertSummary(pm.GetMetric(), now)
 		case dto.MetricType_HISTOGRAM:
-			if isExponentialHistogram(pm.GetMetric()[0].GetHistogram()) {
+			if isExponentialHistogramFamily(pm.GetName(), pm.GetMetric()) {
 				data, err := convertExponentialHistogram(pm.GetName(), pm.GetMetric(), now)
 				if err != nil {
 					errs = append(errs, err)
@@ -145,6 +146,17 @@ func validateHistogram(metricName string, hist *dto.Histogram) error {
 	return nil
 }
 
+func isExponentialHistogramFamily(metricName string, metrics []*dto.Metric) bool {
+	for _, m := range metrics {
+		hist := m.GetHistogram()
+		if validateHistogram(metricName, hist) != nil {
+			continue
+		}
+		return isExponentialHistogram(hist)
+	}
+	return false
+}
+
 func isExponentialHistogram(hist *dto.Histogram) bool {
 	// The prometheus go client ensures at least one of these is non-zero
 	// so it can be distinguished from a fixed-bucket histogram.
@@ -152,8 +164,7 @@ func isExponentialHistogram(hist *dto.Histogram) bool {
 	return hist.GetZeroThreshold() > 0 ||
 		hist.GetZeroCount() > 0 ||
 		len(hist.GetPositiveSpan()) > 0 ||
-		len(hist.GetNegativeSpan()) > 0 ||
-		isFloatHistogram(hist)
+		len(hist.GetNegativeSpan()) > 0
 }
 
 func isFloatHistogram(hist *dto.Histogram) bool {
@@ -299,31 +310,39 @@ func convertExponentialHistogram(metricName string, metrics []*dto.Metric, now t
 func convertExponentialBuckets(bucketSpans []*dto.BucketSpan, deltas []int64) (metricdata.ExponentialBucket, error) {
 	// We will have one bucket count for each delta, and zeros for the offsets
 	// after the initial offset.
-	lenCounts := len(deltas)
-	totalLength := 0
+	lenCounts := int64(len(deltas))
+	var totalLength int64
 	for i, bs := range bucketSpans {
 		if i != 0 {
-			if bs.GetOffset() < 0 {
-				return metricdata.ExponentialBucket{}, fmt.Errorf("%w: negative bucket span offset %d", errInvalidHistogram, bs.GetOffset())
+			offset := bs.GetOffset()
+			if offset < 0 {
+				return metricdata.ExponentialBucket{}, fmt.Errorf("%w: negative bucket span offset %d", errInvalidHistogram, offset)
 			}
-			lenCounts += int(bs.GetOffset())
+			lenCounts += int64(offset)
 		}
-		if uint64(bs.GetLength()) > uint64(len(deltas)-totalLength) {
+		if lenCounts > maxExponentialBucketCounts {
+			return metricdata.ExponentialBucket{}, fmt.Errorf("%w: bucket count %d exceeds maximum %d", errInvalidHistogram, lenCounts, maxExponentialBucketCounts)
+		}
+		spanLen := int64(bs.GetLength())
+		if spanLen > int64(len(deltas))-totalLength {
 			return metricdata.ExponentialBucket{}, fmt.Errorf("%w: bucket span lengths exceed deltas length %d", errInvalidHistogram, len(deltas))
 		}
-		totalLength += int(bs.GetLength())
+		totalLength += spanLen
 	}
-	if totalLength != len(deltas) {
+	if totalLength != int64(len(deltas)) {
 		return metricdata.ExponentialBucket{}, fmt.Errorf("%w: bucket span lengths (%d) do not match deltas length (%d)", errInvalidHistogram, totalLength, len(deltas))
 	}
 	if totalLength == 0 {
 		return metricdata.ExponentialBucket{}, nil
 	}
+	if bucketSpans[0].GetOffset() == math.MinInt32 {
+		return metricdata.ExponentialBucket{}, fmt.Errorf("%w: bucket span offset %d underflows int32", errInvalidHistogram, bucketSpans[0].GetOffset())
+	}
 	// Prometheus Native Histograms buckets are indexed by upper boundary
 	// while Exponential Histograms are indexed by lower boundary, the result
 	// being that the Offset fields are different-by-one.
 	initialOffset := bucketSpans[0].GetOffset() - 1
-	counts := make([]uint64, lenCounts)
+	counts := make([]uint64, int(lenCounts))
 	deltaIndex := 0
 	countIndex := 0
 	count := int64(0)
@@ -336,8 +355,12 @@ func convertExponentialBuckets(bucketSpans []*dto.BucketSpan, deltas []int64) (m
 		}
 		for range bs.GetLength() {
 			// Convert deltas to the cumulative number of observations
-			count += deltas[deltaIndex]
+			d := deltas[deltaIndex]
 			deltaIndex++
+			if d > 0 && count > math.MaxInt64-d {
+				return metricdata.ExponentialBucket{}, fmt.Errorf("%w: bucket count overflows int64", errInvalidHistogram)
+			}
+			count += d
 			if count < 0 {
 				return metricdata.ExponentialBucket{}, fmt.Errorf("%w: negative bucket count %d", errInvalidHistogram, count)
 			}
