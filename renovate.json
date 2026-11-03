@@ -14,6 +14,9 @@
     {
       "matchManagers": ["gomod"],
       "matchDepTypes": ["indirect"],
+      "matchUpdateTypes": [
+        "!major",
+      ],
       "enabled": true
     },
     {
