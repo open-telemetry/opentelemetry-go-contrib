@@ -78,7 +78,6 @@ func TestCommandStartedTraceAttrs(t *testing.T) {
 		dbNamespace = "dbNamespace"
 		port        = 1
 		host        = "host"
-		address     = "host:1"
 		stmt        = `{"insert":"users"}`
 		coll        = "coll"
 	)
@@ -100,7 +99,7 @@ func TestCommandStartedTraceAttrs(t *testing.T) {
 		{Key: "db.namespace", Value: attribute.StringValue(dbNamespace)},
 		{Key: "db.query.text", Value: attribute.StringValue(stmt)},
 		{Key: "network.peer.port", Value: attribute.IntValue(port)},
-		{Key: "network.peer.address", Value: attribute.StringValue(address)},
+		{Key: "network.peer.address", Value: attribute.StringValue(host)},
 		{Key: "network.transport", Value: attribute.StringValue("tcp")},
 		{Key: "db.collection.name", Value: attribute.StringValue("coll")},
 	}
