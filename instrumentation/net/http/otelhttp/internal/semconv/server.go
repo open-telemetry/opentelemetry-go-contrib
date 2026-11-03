@@ -150,8 +150,13 @@ func (n HTTPServer) RequestTraceAttrs(server string, req *http.Request, opts Req
 		count++
 	}
 
-	if req.URL != nil && req.URL.Path != "" {
-		count++
+	if req.URL != nil {
+		if req.URL.Path != "" {
+			count++
+		}
+		if req.URL.RawQuery != "" {
+			count++
+		}
 	}
 
 	protoName, protoVersion := netProtocol(req.Proto)
@@ -199,8 +204,13 @@ func (n HTTPServer) RequestTraceAttrs(server string, req *http.Request, opts Req
 		attrs = append(attrs, semconv.ClientAddress(clientIP))
 	}
 
-	if req.URL != nil && req.URL.Path != "" {
-		attrs = append(attrs, semconv.URLPath(req.URL.Path))
+	if req.URL != nil {
+		if req.URL.Path != "" {
+			attrs = append(attrs, semconv.URLPath(req.URL.Path))
+		}
+		if req.URL.RawQuery != "" {
+			attrs = append(attrs, semconv.URLQuery(redactQuery(req.URL.RawQuery)))
+		}
 	}
 
 	if protoName != "" && protoName != "http" {
