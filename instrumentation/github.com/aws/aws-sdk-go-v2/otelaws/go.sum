@@ -8,8 +8,8 @@ github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.8 h1:PWv+vG8aCLS8qd+HPdY
 github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.8/go.mod h1:xxPZEpflYHJA12366ZGyq66z9dHPCoeCIu99Jck+MPw=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.8 h1:WOp5De9iWdEHDPh2Kb0tBP3vGBm/dVAuRGh4a4tqduo=
 github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.8/go.mod h1:z8W8YgfhbWl62XqcTtK+CxPrE+iHGRVUOtrrbIOp7ZY=
-github.com/aws/aws-sdk-go-v2/service/dynamodb v1.72.2 h1:Uj/bc/6R65Ha/xktXH8KUttT2iiuJBDd593cxsxWWj0=
-github.com/aws/aws-sdk-go-v2/service/dynamodb v1.72.2/go.mod h1:8AVcr/vb8bgJu2xczpXR3NMmQGG2w32FnaDs/dy1Aq0=
+github.com/aws/aws-sdk-go-v2/service/dynamodb v1.72.3 h1:W2GBZXhuN8NshnX0y6emc1AHp++za3XmPAFEVJ5ZdD0=
+github.com/aws/aws-sdk-go-v2/service/dynamodb v1.72.3/go.mod h1:8AVcr/vb8bgJu2xczpXR3NMmQGG2w32FnaDs/dy1Aq0=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.23 h1:MCIR6iZaCKO4UE0hUvoWWLI6JVjppopV64JfAJaMjng=
 github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.23/go.mod h1:pphWFS+z0MmIPivj8c/6bATd1Z+Av7Ust75DPdEFsPA=
 github.com/aws/aws-sdk-go-v2/service/internal/checksum v1.11.9 h1:GACgECI422Xt5n4Pojr3O0aocPv8lfH4PJe2Aon5Wv8=
@@ -26,8 +26,8 @@ github.com/aws/aws-sdk-go-v2/service/s3 v1.114.6 h1:to7+Vr3rLkpYRwVKJ5QRriI0eE30
 github.com/aws/aws-sdk-go-v2/service/s3 v1.114.6/go.mod h1:Jc89ASa2k7HMAskj3bSnt8bf+k+p2IApzkoXnEjkgUw=
 github.com/aws/aws-sdk-go-v2/service/sns v1.47.7 h1:XKmyF18UU2dk5/7uMWy6ik50hTp4Y/bu7tesKYUoWpY=
 github.com/aws/aws-sdk-go-v2/service/sns v1.47.7/go.mod h1:Djs3JnE1OSVXBQcOy9uZNKbyrBJfw1QCC6uJRL57wAk=
-github.com/aws/aws-sdk-go-v2/service/sqs v1.52.7 h1:Eip+mZ0wFZY/10e5w89lWhF09Pa8tbbGwxePP3T2iMc=
-github.com/aws/aws-sdk-go-v2/service/sqs v1.52.7/go.mod h1:bXp38eBNyvSevFIao60mYcC3pQIAkPYWOddhFVv9z8E=
+github.com/aws/aws-sdk-go-v2/service/sqs v1.52.8 h1:1bpW8xRTrPyN2qoOpcQyJi+5JnoKdGfS9GJwYj3cNls=
+github.com/aws/aws-sdk-go-v2/service/sqs v1.52.8/go.mod h1:bXp38eBNyvSevFIao60mYcC3pQIAkPYWOddhFVv9z8E=
 github.com/aws/smithy-go v1.28.7 h1:h/n1SHrwVtaDYLz8mR1/Kq4Xh4RaFbFW7bOYckg9mfE=
 github.com/aws/smithy-go v1.28.7/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
