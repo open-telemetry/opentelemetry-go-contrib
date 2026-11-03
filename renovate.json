@@ -15,7 +15,7 @@
       "matchManagers": ["gomod"],
       "matchDepTypes": ["indirect"],
       "matchUpdateTypes": [
-        "!major",
+        "!major"
       ],
       "enabled": true
     },
