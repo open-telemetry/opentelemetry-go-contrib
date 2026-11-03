@@ -997,6 +997,53 @@ func TestProduceUnsupportedHistograms(t *testing.T) {
 				},
 			}},
 		},
+		{
+			name: "partial datapoint filtering with float histogram before classic histogram",
+			metrics: []*dto.Metric{
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("float")}},
+					Histogram: &dto.Histogram{
+						SampleCountFloat: new(1.0),
+						SampleSum:        new(2.0),
+						Schema:           new(int32(1)),
+					},
+				},
+				{
+					Label: []*dto.LabelPair{{Name: new("status"), Value: new("classic")}},
+					Histogram: &dto.Histogram{
+						SampleCount: new(uint64(2)),
+						SampleSum:   new(5.0),
+						Bucket: []*dto.Bucket{
+							{CumulativeCount: new(uint64(1)), UpperBound: new(2.5)},
+							{CumulativeCount: new(uint64(2)), UpperBound: new(math.Inf(+1))},
+						},
+					},
+				},
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_histogram_metric",
+						Description: "A native histogram metric for testing",
+						Data: metricdata.Histogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.HistogramDataPoint[float64]{
+								{
+									Attributes:   attribute.NewSet(attribute.String("status", "classic")),
+									Count:        2,
+									Sum:          5.0,
+									Bounds:       []float64{2.5},
+									BucketCounts: []uint64{1, 1},
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1088,6 +1135,58 @@ func TestProduceInconsistentExponentialBuckets(t *testing.T) {
 							{Offset: new(int32(-2)), Length: new(uint32(1))},
 						},
 						PositiveDelta: []int64{1, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "huge offset math.MaxInt32 on subsequent positive span",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(1))},
+							{Offset: new(int32(math.MaxInt32)), Length: new(uint32(1))},
+						},
+						PositiveDelta: []int64{1, 1},
+					},
+				},
+			},
+		},
+		{
+			name: "initial offset math.MinInt32 underflow",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(1)),
+						SampleSum:     new(1.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(math.MinInt32)), Length: new(uint32(1))},
+						},
+						PositiveDelta: []int64{1},
+					},
+				},
+			},
+		},
+		{
+			name: "cumulative bucket count overflows int64",
+			metrics: []*dto.Metric{
+				{
+					Histogram: &dto.Histogram{
+						SampleCount:   new(uint64(2)),
+						SampleSum:     new(2.0),
+						ZeroThreshold: new(1e-128),
+						Schema:        new(int32(1)),
+						PositiveSpan: []*dto.BucketSpan{
+							{Offset: new(int32(0)), Length: new(uint32(2))},
+						},
+						PositiveDelta: []int64{math.MaxInt64, 1},
 					},
 				},
 			},
