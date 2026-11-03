@@ -10,7 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   
 ### Added
 
-- Support exemplars on exponential (native) histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
+- Support exemplars on exponential (native) histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10041)
 - Convert Prometheus `UNIT` metadata to UCUM units in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10042)
 - Add the opt-in `go.memory.detailed_type` attribute to `go.memory.used` and `go.cpu.detailed_state` attribute to `go.cpu.time` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10021)
 - Add `WithMeterProvider` and HTTP server metrics (`http.server.request.duration`, `http.server.request.body.size`, `http.server.response.body.size`), and record `http.response.body.size` on server spans in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#10055)
@@ -64,7 +64,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Deduplicate propagator names in `go.opentelemetry.io/contrib/propagators/autoprop` to avoid repeated injection and extraction. (#9956)
 - Do not record HTTP/2 pseudo-header fields (`:authority`, `:method`, `:path`, `:scheme`) as `http.request.header.*` span attributes in `NewClientTrace` of `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, so the query string in `:path` is no longer exported unredacted. (#10015)
-- Decode hex-encoded `trace_id` and `span_id` exemplar labels into binary `TraceID` and `SpanID` bytes in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
+- Decode hex-encoded `trace_id` and `span_id` exemplar labels into binary `TraceID` and `SpanID` bytes in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10041)
 - Preserve `MultipartForm` on the original `http.Request` when `OTelFilter` substitutes the request context in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`, so `net/http.Server` cleans up temporary multipart files when the request finishes. (#10054)
 - Set the semantic convention `SchemaURL` on the `Meter` in `Start` and the `instrumentation.Scope` returned by `Producer.Produce` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10067)
 - Omit the `http.route` attribute on unmatched routes (`404`/`405`) instead of recording the `go-restful` `WebService` root path prefix from `http.Request.Pattern` in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#10053)
