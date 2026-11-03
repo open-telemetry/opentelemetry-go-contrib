@@ -462,13 +462,17 @@ func groupByScope(metrics []*dto.Metric) []scopedMetrics {
 	return groups
 }
 
+func isScopeLabel(name string) bool {
+	return len(name) > len(scopeLabelPrefix) && strings.HasPrefix(name, scopeLabelPrefix)
+}
+
 func extractScope(labels []*dto.LabelPair) instrumentation.Scope {
 	var scope instrumentation.Scope
 	var scopeAttrs []attribute.KeyValue
 	hasScope := false
 	for _, l := range labels {
 		name := l.GetName()
-		if !strings.HasPrefix(name, scopeLabelPrefix) {
+		if !isScopeLabel(name) {
 			continue
 		}
 		hasScope = true
@@ -496,7 +500,7 @@ func extractScope(labels []*dto.LabelPair) instrumentation.Scope {
 func convertLabels(labels []*dto.LabelPair) attribute.Set {
 	kvs := make([]attribute.KeyValue, 0, len(labels))
 	for _, l := range labels {
-		if strings.HasPrefix(l.GetName(), scopeLabelPrefix) {
+		if isScopeLabel(l.GetName()) {
 			continue
 		}
 		kvs = append(kvs, attribute.String(l.GetName(), l.GetValue()))

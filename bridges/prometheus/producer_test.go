@@ -1147,6 +1147,54 @@ func TestProduceScope(t *testing.T) {
 			},
 		},
 		{
+			name: "bare otel_scope_ label does not create empty scope and is kept as datapoint attribute",
+			gatherers: []prometheus.Gatherer{
+				gathererFunc(func() ([]*dto.MetricFamily, error) {
+					return []*dto.MetricFamily{
+						{
+							Name: new("bare_prefix_gauge"),
+							Help: new("Gauge with bare otel_scope_ label"),
+							Type: dto.MetricType_GAUGE.Enum(),
+							Metric: []*dto.Metric{
+								{
+									Gauge: &dto.Gauge{Value: new(7.0)},
+									Label: []*dto.LabelPair{
+										{Name: new("otel_scope_"), Value: new("not_a_scope_attr")},
+										{Name: new("env"), Value: new("prod")},
+									},
+								},
+							},
+						},
+					}, nil
+				}),
+			},
+			expected: []metricdata.ScopeMetrics{
+				{
+					Scope: instrumentation.Scope{
+						Name:    scopeName,
+						Version: Version,
+					},
+					Metrics: []metricdata.Metrics{
+						{
+							Name:        "bare_prefix_gauge",
+							Description: "Gauge with bare otel_scope_ label",
+							Data: metricdata.Gauge[float64]{
+								DataPoints: []metricdata.DataPoint[float64]{
+									{
+										Attributes: attribute.NewSet(
+											attribute.String("otel_scope_", "not_a_scope_attr"),
+											attribute.String("env", "prod"),
+										),
+										Value: 7.0,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "multiple scopes within a single family and across families",
 			gatherers: []prometheus.Gatherer{
 				gathererFunc(func() ([]*dto.MetricFamily, error) {
