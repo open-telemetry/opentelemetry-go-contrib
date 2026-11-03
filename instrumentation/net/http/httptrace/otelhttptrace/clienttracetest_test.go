@@ -951,11 +951,11 @@ func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded(t *testing.T) {
 
 	wg := sync.WaitGroup{}
 
-	errors := make(chan error, 2)
+	errs := make(chan error, 2)
 
 	wg.Go(func() {
-		err := func(_ context.Context) error {
-			req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
+		err := func(ctx context.Context) error {
+			req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL, http.NoBody)
 
 			res, err := client.Do(req)
 			if err != nil {
@@ -967,7 +967,7 @@ func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded(t *testing.T) {
 			return nil
 		}(t.Context())
 		if err != nil {
-			errors <- fmt.Errorf("perform request 1: %w", err)
+			errs <- fmt.Errorf("perform request 1: %w", err)
 		}
 	})
 
@@ -975,7 +975,7 @@ func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded(t *testing.T) {
 		err := func(ctx context.Context) error {
 			ctx, span := tr.Start(ctx, "test")
 			defer span.End()
-			req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
+			req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL, http.NoBody)
 			_, req = otelhttptrace.W3C(ctx, req)
 
 			res, err := client.Do(req)
@@ -988,15 +988,19 @@ func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded(t *testing.T) {
 			return nil
 		}(t.Context())
 		if err != nil {
-			errors <- fmt.Errorf("perform request 2: %w", err)
+			errs <- fmt.Errorf("perform request 2: %w", err)
 		}
-
 	})
 
 	wg.Wait()
 
-	if len(errors) > 0 {
-		require.Failf(t, "requests to the server should succeed", "errors: %v", errors)
+	if len(errs) > 0 {
+		errDump := make([]error, 0, 2)
+		for err := range errs {
+			errDump = append(errDump, err)
+		}
+
+		require.Failf(t, "requests to the server should succeed", "errors: %v", errDump)
 	}
 
 	span, ok := getSpanFromRecorder(sr, "http.receive")
@@ -1041,7 +1045,7 @@ func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded_CloseIdle(t *testing
 	err := func(ctx context.Context) error {
 		ctx, span := tr.Start(ctx, "test")
 		defer span.End()
-		req, _ := http.NewRequest("GET", ts.URL, http.NoBody)
+		req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL, http.NoBody)
 		_, req = otelhttptrace.W3C(ctx, req)
 
 		res, err := client.Do(req)
