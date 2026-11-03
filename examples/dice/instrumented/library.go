@@ -77,14 +77,14 @@ func rollDice(ctx context.Context, rolls int) ([]int, error) {
 
 	if rolls > maxRolls {
 		err := errors.New("rolls parameter exceeds maximum allowed value")
-		span.RecordError(err)
+		span.RecordError(err) //nolint:forbidigo // RecordError is used here to demonstrate error recording in spans as required by the specification.
 		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}
 
 	if rolls <= 0 {
 		err := errors.New("rolls must be positive")
-		span.RecordError(err)
+		span.RecordError(err) //nolint:forbidigo // RecordError is used here to demonstrate error recording in spans as required by the specification.
 		span.SetStatus(codes.Error, err.Error())
 		return nil, err
 	}

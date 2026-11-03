@@ -8,7 +8,6 @@ import (
 	"errors"
 	"time"
 
-	"go.opentelemetry.io/contrib/bridges/otelslog"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutlog"
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
@@ -18,6 +17,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
 	"go.opentelemetry.io/otel/sdk/trace"
+
+	"go.opentelemetry.io/contrib/bridges/otelslog"
 )
 
 var logger = otelslog.NewLogger(name)
