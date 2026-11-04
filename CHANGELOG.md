@@ -51,6 +51,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - The default span name formatter in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` upper-cases the request method before matching it against known methods, so a lowercase `get` request is named `GET <route>` instead of `HTTP <route>`, matching `http.request.method`. (#9939)
 - Format the default server span name in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` as `{method} {http.route}` when a route matches and `{method}` when no route matches, following the HTTP semantic conventions. (#10053)
 - Change the return type of `NewTransport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` from `*Transport` to `http.RoundTripper`. (#9955)
+- Updated `example/dice` app based on updated specifications for the reference application. (#8099)
 
 ### Deprecated
 
@@ -60,6 +61,9 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   v0.73.0 is the final planned release of this module.
   Use native OpenTelemetry propagators instead; see [Migrating from OpenCensus](https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path). (#10030)
 - Deprecate `DefaultMinimumReadMemStatsInterval` and `WithMinimumReadMemStatsInterval` in `go.opentelemetry.io/contrib/instrumentation/runtime` in favor of `DefaultMinimumRefreshInterval` and `WithMinimumRefreshInterval`. (#10066)
+- The `go.opentelemetry.io/contrib/propagators/ot` module and package are deprecated.
+  v1.48.0 is the final planned release of this module.
+  Migrate to native OpenTelemetry APIs and SDKs with W3C Trace Context and W3C Baggage propagation. (#10047)
 
 ### Fixed
 
