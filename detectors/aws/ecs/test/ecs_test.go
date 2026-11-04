@@ -59,10 +59,7 @@ func TestDetectV4LaunchTypeEc2(t *testing.T) {
 		semconv.CloudAvailabilityZone("us-west-2d"),
 		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		semconv.ContainerName(hostname),
-		// We are not running the test in an actual container,
-		// the container id is tested with mocks of the cgroup
-		// file in the unit tests
-		semconv.ContainerID(""),
+		semconv.ContainerID("ea32192c8553fbff06c9340478a2ff089b2bb5646fb718b4ee206641c9086d66"),
 		semconv.AWSECSContainerARN("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
 		semconv.AWSECSLaunchtypeKey.String("ec2"),
@@ -120,10 +117,7 @@ func TestDetectV4LaunchTypeEc2BadContainerArn(t *testing.T) {
 		semconv.CloudAvailabilityZone("us-west-2d"),
 		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		semconv.ContainerName(hostname),
-		// We are not running the test in an actual container,
-		// the container id is tested with mocks of the cgroup
-		// file in the unit tests
-		semconv.ContainerID(""),
+		semconv.ContainerID("ea32192c8553fbff06c9340478a2ff089b2bb5646fb718b4ee206641c9086d66"),
 		semconv.AWSECSContainerARN("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
 		semconv.AWSECSLaunchtypeKey.String("ec2"),
@@ -181,10 +175,7 @@ func TestDetectV4LaunchTypeEc2BadTaskArn(t *testing.T) {
 		semconv.CloudRegion("us-west-2"),
 		semconv.CloudAvailabilityZone("us-west-2d"),
 		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
-		// We are not running the test in an actual container,
-		// the container id is tested with mocks of the cgroup
-		// file in the unit tests
-		semconv.ContainerID(""),
+		semconv.ContainerID("ea32192c8553fbff06c9340478a2ff089b2bb5646fb718b4ee206641c9086d66"),
 		semconv.AWSECSContainerARN("arn:aws:ecs:us-west-2:111122223333:container/0206b271-b33f-47ab-86c6-a0ba208a70a9"),
 		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
 		semconv.AWSECSLaunchtypeKey.String("ec2"),
@@ -242,10 +233,7 @@ func TestDetectV4LaunchTypeFargate(t *testing.T) {
 		semconv.CloudRegion("us-west-2"),
 		semconv.CloudAvailabilityZone("us-west-2a"),
 		semconv.CloudResourceID("arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1"),
-		// We are not running the test in an actual container,
-		// the container id is tested with mocks of the cgroup
-		// file in the unit tests
-		semconv.ContainerID(""),
+		semconv.ContainerID("cd189a933e5849daa93386466019ab50-2495160603"),
 		semconv.AWSECSContainerARN("arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1"),
 		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
 		semconv.AWSECSLaunchtypeKey.String("fargate"),
