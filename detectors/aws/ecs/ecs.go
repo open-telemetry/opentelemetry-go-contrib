@@ -169,8 +169,8 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 // taskIDFromARNResource returns the task ID from the resource part of a task
 // ARN, which is "task/<id>" (legacy) or "task/<cluster>/<id>".
-func taskIDFromARNResource(resource string) string {
-	return resource[strings.LastIndex(resource, "/")+1:]
+func taskIDFromARNResource(arnResource string) string {
+	return arnResource[strings.LastIndex(arnResource, "/")+1:]
 }
 
 func (*resourceDetector) getBaseArn(arns ...string) string {
