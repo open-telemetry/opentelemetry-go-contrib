@@ -2601,5 +2601,5 @@ func TestUnmarshalJSONRejectsNullResourceAttribute(t *testing.T) {
 
 	var cfg OpenTelemetryConfiguration
 	err := json.Unmarshal([]byte(input), &cfg)
-	require.Error(t, err)
+	require.ErrorContains(t, err, "name")
 }

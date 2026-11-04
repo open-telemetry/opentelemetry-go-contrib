@@ -223,9 +223,9 @@ func (j *Resource) UnmarshalYAML(node *yaml.Node) error {
 	if attributes, ok := raw.Attributes.([]any); ok {
 		for i, attr := range attributes {
 			if attr == nil {
-				return fmt.Errorf(
+				return errors.Join(newErrUnmarshal(j), fmt.Errorf(
 					"resource.attributes[%d]: null attribute is invalid", i,
-				)
+				))
 			}
 		}
 	}

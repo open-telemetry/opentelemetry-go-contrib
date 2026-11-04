@@ -740,7 +740,7 @@ resource:
 	for name, input := range inputs {
 		t.Run(name, func(t *testing.T) {
 			_, err := ParseYAML([]byte(input))
-			require.Error(t, err)
+			require.ErrorContains(t, err, "null attribute is invalid")
 		})
 	}
 }
@@ -755,7 +755,7 @@ func TestUnmarshalJSONRejectsNullResourceAttribute(t *testing.T) {
 
 	var cfg OpenTelemetryConfiguration
 	err := json.Unmarshal([]byte(input), &cfg)
-	require.Error(t, err)
+	require.ErrorContains(t, err, "null attribute is invalid")
 }
 
 func TestParseYAMLAllowsEmptyResourceAttributes(t *testing.T) {

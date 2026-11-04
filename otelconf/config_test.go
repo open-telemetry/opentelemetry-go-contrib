@@ -2084,21 +2084,21 @@ func TestUnmarshalResourceJson(t *testing.T) {
 	}
 }
 
-func TestParseYAMLRejectsNullResourceAttributeAliasesAndMerges(t *testing.T) {
+func TestParseYAMLRejectsNullResourceAttributeInIndirectForms(t *testing.T) {
 	inputs := map[string]string{
-		"aliased resource": `file_format: "0.3"
+		"aliased resource": `file_format: "0.1"
 resource_defaults: &resource_defaults
   attributes:
     - null
 resource: *resource_defaults
 `,
-		"aliased attribute list": `file_format: "0.3"
+		"aliased attribute list": `file_format: "0.1"
 null_attributes: &null_attributes
   - null
 resource:
   attributes: *null_attributes
 `,
-		"non-string resource key": `file_format: "0.3"
+		"non-string resource key": `file_format: "0.1"
 resource:
   1: ignored
   attributes:
@@ -2165,5 +2165,5 @@ func TestUnmarshalJSONRejectsNullResourceAttribute(t *testing.T) {
 
 	var cfg OpenTelemetryConfiguration
 	err := json.Unmarshal([]byte(input), &cfg)
-	require.Error(t, err)
+	require.ErrorContains(t, err, "name")
 }

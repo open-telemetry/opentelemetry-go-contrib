@@ -345,7 +345,7 @@ func (j *AttributeNameValue) UnmarshalJSON(b []byte) error {
 		return err
 	}
 	if raw == nil {
-		return errors.New("null AttributeNameValue is invalid")
+		return errors.New("null attribute is invalid")
 	}
 	if _, ok := raw["name"]; !ok {
 		return errors.New("field name in AttributeNameValue: required")
