@@ -14,10 +14,16 @@
     {
       "matchManagers": ["gomod"],
       "matchDepTypes": ["indirect"],
-      "matchUpdateTypes": [
-        "!major"
-      ],
+      "abandonmentThreshold": "50 years",
       "enabled": true
+    },
+    {
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
     },
     {
       "matchPackageNames": ["go.opentelemetry.io/build-tools/**"],
