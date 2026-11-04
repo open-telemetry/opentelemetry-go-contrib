@@ -163,7 +163,7 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		}
 
 		if containerID == "" {
-			// The cgroup path does not contain the container ID on Fargate or on cgroup v2 hosts.
+			// The cgroup parser only matches 64-hex IDs under /ecs/, so it finds none on Fargate.
 			containerID = containerMetadata.DockerID
 		}
 	}
