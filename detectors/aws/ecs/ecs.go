@@ -155,14 +155,22 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 			semconv.AWSECSClusterARN(taskMetadata.Cluster),
 			semconv.AWSECSLaunchtypeKey.String(strings.ToLower(taskMetadata.LaunchType)),
 			semconv.AWSECSTaskARN(taskMetadata.TaskARN),
-			// The resource is "task/<id>" (legacy) or "task/<cluster>/<id>".
-			semconv.AWSECSTaskID(arnParts[5][strings.LastIndex(arnParts[5], "/")+1:]),
 			semconv.AWSECSTaskFamily(taskMetadata.Family),
 			semconv.AWSECSTaskRevision(taskMetadata.Revision),
 		)
+
+		if taskID := taskIDFromARNResource(arnParts[5]); taskID != "" {
+			attributes = append(attributes, semconv.AWSECSTaskID(taskID))
+		}
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
+}
+
+// taskIDFromARNResource returns the task ID from the resource part of a task
+// ARN, which is "task/<id>" (legacy) or "task/<cluster>/<id>".
+func taskIDFromARNResource(resource string) string {
+	return resource[strings.LastIndex(resource, "/")+1:]
 }
 
 func (*resourceDetector) getBaseArn(arns ...string) string {

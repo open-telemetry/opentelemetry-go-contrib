@@ -123,10 +123,13 @@ func TestDetectV4TaskID(t *testing.T) {
 	tests := []struct {
 		name    string
 		taskARN string
+		want    string
 	}{
-		{name: "long ARN format", taskARN: "arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3"},
-		{name: "legacy ARN format", taskARN: "arn:aws:ecs:us-west-2:111122223333:task/e9028f8d5d8e4f258373e7b93ce9a3c3"},
-		{name: "task ID only", taskARN: "e9028f8d5d8e4f258373e7b93ce9a3c3"},
+		{name: "long ARN format", taskARN: "arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3", want: "e9028f8d5d8e4f258373e7b93ce9a3c3"},
+		{name: "legacy ARN format", taskARN: "arn:aws:ecs:us-west-2:111122223333:task/e9028f8d5d8e4f258373e7b93ce9a3c3", want: "e9028f8d5d8e4f258373e7b93ce9a3c3"},
+		{name: "task ID only", taskARN: "e9028f8d5d8e4f258373e7b93ce9a3c3", want: "e9028f8d5d8e4f258373e7b93ce9a3c3"},
+		{name: "empty resource", taskARN: "arn:aws:ecs:us-west-2:111122223333:"},
+		{name: "resource ends with slash", taskARN: "arn:aws:ecs:us-west-2:111122223333:task/"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -148,8 +151,12 @@ func TestDetectV4TaskID(t *testing.T) {
 			require.NoError(t, err)
 
 			got, ok := res.Set().Value(semconv.AWSECSTaskIDKey)
+			if tt.want == "" {
+				assert.False(t, ok, "aws.ecs.task.id should be omitted when the ID is empty")
+				return
+			}
 			require.True(t, ok, "aws.ecs.task.id is missing")
-			assert.Equal(t, "e9028f8d5d8e4f258373e7b93ce9a3c3", got.AsString())
+			assert.Equal(t, tt.want, got.AsString())
 		})
 	}
 }
