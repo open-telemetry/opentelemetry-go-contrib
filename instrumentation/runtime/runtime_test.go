@@ -17,6 +17,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/semconv/v1.43.0/goconv"
 )
 
@@ -78,8 +79,9 @@ func TestRuntimeWithLimit(t *testing.T) {
 
 	expectedScopeMetric := metricdata.ScopeMetrics{
 		Scope: instrumentation.Scope{
-			Name:    "go.opentelemetry.io/contrib/instrumentation/runtime",
-			Version: Version,
+			Name:      "go.opentelemetry.io/contrib/instrumentation/runtime",
+			Version:   Version,
+			SchemaURL: semconv.SchemaURL,
 		},
 		Metrics: []metricdata.Metrics{
 			{
