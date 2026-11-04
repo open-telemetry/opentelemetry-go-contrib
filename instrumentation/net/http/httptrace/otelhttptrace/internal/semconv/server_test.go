@@ -318,12 +318,16 @@ func TestHTTPServer_SpanName(t *testing.T) {
 }
 
 func TestRequestTraceAttrs_URLQuery(t *testing.T) {
+	assertNoURLQuery := func(t *testing.T, attrs []attribute.KeyValue) {
+		t.Helper()
+		s := attribute.NewSet(attrs...)
+		assert.False(t, s.HasValue("url.query"))
+	}
+
 	t.Run("nil URL omits url.query", func(t *testing.T) {
 		req := &http.Request{Method: http.MethodGet}
 		attrs := (HTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
-		for _, attr := range attrs {
-			assert.NotEqual(t, attribute.Key("url.query"), attr.Key)
-		}
+		assertNoURLQuery(t, attrs)
 	})
 
 	testCases := []struct {
@@ -411,9 +415,7 @@ func TestRequestTraceAttrs_URLQuery(t *testing.T) {
 
 			attrs := (HTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
 			if tc.wantOmit {
-				for _, attr := range attrs {
-					assert.NotEqual(t, attribute.Key("url.query"), attr.Key)
-				}
+				assertNoURLQuery(t, attrs)
 			} else {
 				assert.Contains(t, attrs, attribute.String("url.query", tc.wantQuery))
 			}
