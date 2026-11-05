@@ -5,10 +5,12 @@ package provider
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.yaml.in/yaml/v3"
 )
 
 func TestInvalidEnvVarName(t *testing.T) {
@@ -177,6 +179,78 @@ func TestReplaceEnvVar(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "YAML injection with a block scalar causes error",
+			input:   "parent:\n  key: ${MALICIOUS_VAR}\n",
+			env:     map[string]string{"MALICIOUS_VAR": "|\nkey2: injected"},
+			wantErr: true,
+		},
+		{
+			name:    "YAML injection with a document marker causes error",
+			input:   "key: ${MALICIOUS_VAR}\nkey2: dropped\n",
+			env:     map[string]string{"MALICIOUS_VAR": "value\n---\n"},
+			wantErr: true,
+		},
+		{
+			name:    "YAML injection closing a double quoted scalar causes error",
+			input:   `key: "${MALICIOUS_VAR}"`,
+			env:     map[string]string{"MALICIOUS_VAR": "\"\nkey2: injected\nkey3: \""},
+			wantErr: true,
+		},
+		{
+			name:    "YAML injection closing a single quoted scalar causes error",
+			input:   "key: '${MALICIOUS_VAR}'",
+			env:     map[string]string{"MALICIOUS_VAR": "'\nkey2: injected\nkey3: '"},
+			wantErr: true,
+		},
+		{
+			name:    "YAML injection with a carriage return causes error",
+			input:   "parent:\n  key: ${MALICIOUS_VAR}\n",
+			env:     map[string]string{"MALICIOUS_VAR": "|\rkey2: injected"},
+			wantErr: true,
+		},
+		{
+			name:    "YAML injection with a next line character causes error",
+			input:   "parent:\n  key: ${MALICIOUS_VAR}\n",
+			env:     map[string]string{"MALICIOUS_VAR": "|\u0085key2: injected"},
+			wantErr: true,
+		},
+		{
+			name:    "YAML injection with a line separator causes error",
+			input:   "parent:\n  key: ${MALICIOUS_VAR}\n",
+			env:     map[string]string{"MALICIOUS_VAR": "|\u2028key2: injected"},
+			wantErr: true,
+		},
+		{
+			name:    "YAML injection with a paragraph separator causes error",
+			input:   "parent:\n  key: ${MALICIOUS_VAR}\n",
+			env:     map[string]string{"MALICIOUS_VAR": "|\u2029key2: injected"},
+			wantErr: true,
+		},
+		{
+			name:  "trailing line breaks are trimmed",
+			input: "key: ${TRAILING_NEWLINE_VAR}",
+			env:   map[string]string{"TRAILING_NEWLINE_VAR": "value\r\n"},
+			want:  "key: value",
+		},
+		{
+			name:  "trailing line breaks before a literal suffix are trimmed",
+			input: "parent:\n  key: ${TRAILING_NEWLINE_VAR}---\n  key2: kept\n",
+			env:   map[string]string{"TRAILING_NEWLINE_VAR": "value\r\n"},
+			want:  "parent:\n  key: value---\n  key2: kept\n",
+		},
+		{
+			name:    "error case - invalid value followed by a valid reference",
+			input:   "key: ${MALICIOUS_VAR}\nkey2: ${TEST_VAR}",
+			env:     map[string]string{"MALICIOUS_VAR": "key3: injected", "TEST_VAR": "value"},
+			wantErr: true,
+		},
+		{
+			name:    "error case - invalid substitution syntax followed by a valid reference",
+			input:   "key: ${ERR_INVALID_SUFFIX:?error}\nkey2: ${TEST_VAR}",
+			env:     map[string]string{"TEST_VAR": "value"},
+			wantErr: true,
+		},
+		{
 			name:    "error case - invalid YAML type",
 			input:   "key: ${INVALID_TYPE_VAR}",
 			env:     map[string]string{"INVALID_TYPE_VAR": "!!int NaN"},
@@ -223,4 +297,46 @@ func TestReplaceEnvVar(t *testing.T) {
 			assert.Equal(t, tt.want, string(got))
 		})
 	}
+}
+
+func FuzzReplaceEnvVars(f *testing.F) {
+	f.Add("simple")
+	f.Add("|\nkey2: injected")
+	f.Add("value\n---\n")
+	f.Add("\"\nkey2: injected\nkey3: \"")
+	f.Add("'\nkey2: injected\nkey3: '")
+	f.Add("value\r\n")
+
+	templates := []string{
+		"parent:\n  target: ${V}\n  sentinel: keep\nafter: keep\n",
+		"parent:\n  target: \"${V}\"\n  sentinel: keep\nafter: keep\n",
+		"parent:\n  target: '${V}'\n  sentinel: keep\nafter: keep\n",
+		"parent:\n  target: prefix-${V}-suffix\n  sentinel: keep\nafter: keep\n",
+		"parent:\n  target: ${V}---\n  sentinel: keep\nafter: keep\n",
+	}
+
+	f.Fuzz(func(t *testing.T, val string) {
+		if strings.ContainsRune(val, '\x00') {
+			t.Skip()
+		}
+		t.Setenv("V", val)
+		for _, tmpl := range templates {
+			out, err := ReplaceEnvVars([]byte(tmpl))
+			if err != nil {
+				continue
+			}
+			var got map[string]any
+			if err := yaml.Unmarshal(out, &got); err != nil {
+				continue
+			}
+			require.Equal(t, "keep", got["after"])
+			require.Len(t, got, 2)
+			parent, ok := got["parent"].(map[string]any)
+			require.True(t, ok)
+			require.Equal(t, "keep", parent["sentinel"])
+			require.Len(t, parent, 2)
+			require.IsNotType(t, map[string]any(nil), parent["target"])
+			require.IsNotType(t, []any(nil), parent["target"])
+		}
+	})
 }
