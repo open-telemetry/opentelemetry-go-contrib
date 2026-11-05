@@ -6,6 +6,7 @@ package otelrestful
 import (
 	"net/http"
 
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	oteltrace "go.opentelemetry.io/otel/trace"
 )
@@ -13,6 +14,7 @@ import (
 // config is used to configure the go-restful middleware.
 type config struct {
 	TracerProvider   oteltrace.TracerProvider
+	MeterProvider    metric.MeterProvider
 	Propagators      propagation.TextMapPropagator
 	PublicEndpointFn func(*http.Request) bool
 }
@@ -57,6 +59,16 @@ func WithTracerProvider(provider oteltrace.TracerProvider) Option {
 	return optionFunc(func(cfg *config) {
 		if provider != nil {
 			cfg.TracerProvider = provider
+		}
+	})
+}
+
+// WithMeterProvider specifies a meter provider to use for creating a meter.
+// If none is specified, the global provider is used.
+func WithMeterProvider(provider metric.MeterProvider) Option {
+	return optionFunc(func(cfg *config) {
+		if provider != nil {
+			cfg.MeterProvider = provider
 		}
 	})
 }
