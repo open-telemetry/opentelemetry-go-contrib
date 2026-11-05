@@ -148,7 +148,7 @@ func commandStartedTraceAttrs(evt *event.CommandStartedEvent, setters ...Attribu
 	attrs = append(
 		attrs,
 		semconv.NetworkPeerPort(port),
-		semconv.NetworkPeerAddress(net.JoinHostPort(hostname, strconv.Itoa(port))),
+		semconv.NetworkPeerAddress(hostname),
 	)
 
 	if !opts.commandAttributeDisabled {
