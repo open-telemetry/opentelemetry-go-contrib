@@ -193,6 +193,48 @@ func TestDetectBadARNsv4(t *testing.T) {
 	assert.Equal(t, errCannotParseTaskArn, err)
 }
 
+func TestDetectV4ContainerID(t *testing.T) {
+	tests := []struct {
+		name     string
+		cgroupID string
+		dockerID string
+		want     string
+	}{
+		{name: "cgroup ID", cgroupID: "0123456789A", dockerID: "0123456789B", want: "0123456789A"},
+		{name: "Fargate DockerId", dockerID: "cd189a933e5849daa93386466019ab50-2495160603", want: "cd189a933e5849daa93386466019ab50-2495160603"},
+		{name: "no ID"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(metadataV4EnvVar, "4")
+
+			detectorUtils := new(MockDetectorUtils)
+			detectorUtils.On("getContainerName").Return("container-Name", nil)
+			detectorUtils.On("getContainerID").Return(tt.cgroupID, nil)
+			detectorUtils.On("getContainerMetadataV4").Return(&metadata.ContainerMetadataV4{
+				ContainerARN: "arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1",
+				DockerID:     tt.dockerID,
+			}, nil)
+			detectorUtils.On("getTaskMetadataV4").Return(&metadata.TaskMetadataV4{
+				Cluster: "default",
+				TaskARN: "arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3",
+			}, nil)
+
+			detector := &resourceDetector{utils: detectorUtils}
+			res, err := detector.Detect(t.Context())
+			require.NoError(t, err)
+
+			got, ok := res.Set().Value(semconv.ContainerIDKey)
+			if tt.want == "" {
+				assert.False(t, ok, "container.id should be omitted when the ID is empty")
+				return
+			}
+			require.True(t, ok, "container.id is missing")
+			assert.Equal(t, tt.want, got.AsString())
+		})
+	}
+}
+
 // returns empty resource when detector cannot read container ID.
 func TestDetectCannotReadContainerID(t *testing.T) {
 	t.Setenv(metadataV3EnvVar, "3")
@@ -207,7 +249,6 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
 		semconv.ContainerName("container-Name"),
-		semconv.ContainerID(""),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}

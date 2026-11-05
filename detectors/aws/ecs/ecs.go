@@ -87,7 +87,6 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
 		semconv.ContainerName(hostName),
-		semconv.ContainerID(containerID),
 	}
 
 	if metadataURIV4 != "" {
@@ -162,6 +161,15 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		if taskID := taskIDFromARNResource(arnParts[5]); taskID != "" {
 			attributes = append(attributes, semconv.AWSECSTaskID(taskID))
 		}
+
+		if containerID == "" {
+			// The cgroup parser only matches 64-hex IDs under /ecs/, so it finds none on Fargate.
+			containerID = containerMetadata.DockerID
+		}
+	}
+
+	if containerID != "" {
+		attributes = append(attributes, semconv.ContainerID(containerID))
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
