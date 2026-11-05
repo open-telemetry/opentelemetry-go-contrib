@@ -696,7 +696,7 @@ func TestCreateHeadersConfig(t *testing.T) {
 		{
 			name:        "invalid headerslist",
 			headersList: new("==="),
-			wantErr:     "invalid headers list: invalid key: \"\"",
+			wantErr:     "invalid headers list",
 		},
 		{
 			name: "empty header name",
@@ -719,6 +719,39 @@ func TestCreateHeadersConfig(t *testing.T) {
 				require.NoError(t, err)
 			}
 			require.Equal(t, tt.wantHeaders, headersMap)
+		})
+	}
+}
+
+func TestCreateHeadersConfigErrorOmitsValues(t *testing.T) {
+	// Header values usually hold credentials, and the returned error is
+	// commonly logged. The key is kept so the failing header can be found.
+	for _, tt := range []struct {
+		headersList string
+		wantErr     string
+	}{
+		{
+			headersList: "Authorization=Bearer s3cr3t",
+			wantErr:     `invalid headers list: invalid value for header "Authorization"`,
+		},
+		{
+			headersList: "api-key=ok,Authorization=Basic s3cr3t",
+			wantErr:     `invalid headers list: invalid value for header "Authorization"`,
+		},
+		{
+			headersList: "s3cr3t",
+			wantErr:     "invalid headers list",
+		},
+		{
+			// A ':' instead of '=' puts the credential before the '='.
+			headersList: "Authorization: Basic s3cr3t==",
+			wantErr:     "invalid headers list",
+		},
+	} {
+		t.Run(tt.headersList, func(t *testing.T) {
+			_, err := createHeadersConfig(nil, &tt.headersList)
+			require.EqualError(t, err, tt.wantErr)
+			assert.NotContains(t, err.Error(), "s3cr3t")
 		})
 	}
 }
