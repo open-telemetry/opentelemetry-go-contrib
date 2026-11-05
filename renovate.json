@@ -8,7 +8,8 @@
   "labels": ["Skip Changelog", "dependencies"],
   "separateMajorMinor": true,
   "postUpdateOptions" : [
-    "gomodTidy"
+    "gomodTidyAll",
+    "gomodUpdateImportPaths"
   ],
   "packageRules": [
     {
