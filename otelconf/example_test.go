@@ -46,3 +46,38 @@ func Example() {
 	// Set the global propagator.
 	otel.SetTextMapPropagator(s.Propagator())
 }
+
+func ExampleWithConfigurationCustomizer() {
+	// The service instance ID is only known at runtime, so it cannot be part
+	// of the configuration file named by OTEL_CONFIG_FILE.
+	instanceID := "instance-1"
+
+	s, err := otelconf.NewSDK(
+		otelconf.WithConfigurationCustomizer(func(cfg *otelconf.OpenTelemetryConfiguration) error {
+			if cfg.Resource == nil {
+				cfg.Resource = &otelconf.Resource{}
+			}
+			cfg.Resource.Attributes = append(cfg.Resource.Attributes, otelconf.AttributeNameValue{
+				Name:  "service.instance.id",
+				Value: instanceID,
+			})
+			// Keep the metric readers passed with WithMeterProviderOptions even
+			// when the file has no meter_provider section.
+			if cfg.MeterProvider == nil {
+				cfg.MeterProvider = &otelconf.MeterProvider{}
+			}
+			return nil
+		}),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer func() {
+		if err := s.Shutdown(context.Background()); err != nil {
+			log.Fatal(err)
+		}
+	}()
+
+	otel.SetMeterProvider(s.MeterProvider())
+}
