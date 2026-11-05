@@ -433,6 +433,108 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 	require.ErrorIs(t, err, newErrInvalid("otlp_file/development"))
 }
 
+type markerOption struct{}
+
+func (markerOption) apply(c configOptions) configOptions { return c }
+
+func TestNewSDKDoesNotMutateCallerOptions(t *testing.T) {
+	t.Setenv(envVarConfigFile, filepath.Join("..", "testdata", "valid_empty.yaml"))
+	backing := []ConfigurationOption{WithContext(t.Context()), markerOption{}}
+	_, err := NewSDK(backing[:1]...)
+	require.NoError(t, err)
+	assert.IsType(t, markerOption{}, backing[1])
+}
+
+func TestNewSDKWithConfigurationCustomizer(t *testing.T) {
+	t.Run("customizes the configuration passed in", func(t *testing.T) {
+		sdk, err := NewSDK(
+			WithContext(t.Context()),
+			WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{}),
+			WithConfigurationCustomizer(func(cfg *OpenTelemetryConfiguration) error {
+				cfg.MeterProvider = &MeterProvider{}
+				return nil
+			}),
+		)
+		require.NoError(t, err)
+		assert.IsType(t, &sdkmetric.MeterProvider{}, sdk.MeterProvider())
+		assert.IsType(t, tracenoop.NewTracerProvider(), sdk.TracerProvider())
+		require.NoError(t, sdk.Shutdown(t.Context()))
+	})
+
+	t.Run("customizes the configuration file", func(t *testing.T) {
+		t.Setenv(envVarConfigFile, filepath.Join("..", "testdata", "valid_empty.yaml"))
+		sdk, err := NewSDK(
+			WithContext(t.Context()),
+			// Superseded by the configuration file.
+			WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{MeterProvider: &MeterProvider{}}),
+			WithConfigurationCustomizer(func(cfg *OpenTelemetryConfiguration) error {
+				assert.Nil(t, cfg.MeterProvider)
+				cfg.TracerProvider = &TracerProvider{}
+				return nil
+			}),
+		)
+		require.NoError(t, err)
+		assert.IsType(t, &sdktrace.TracerProvider{}, sdk.TracerProvider())
+		assert.IsType(t, metricnoop.NewMeterProvider(), sdk.MeterProvider())
+		require.NoError(t, sdk.Shutdown(t.Context()))
+	})
+
+	t.Run("runs customizers in registration order", func(t *testing.T) {
+		var order []string
+		_, err := NewSDK(
+			WithConfigurationCustomizer(func(cfg *OpenTelemetryConfiguration) error {
+				order = append(order, "first")
+				cfg.TracerProvider = &TracerProvider{}
+				return nil
+			}),
+			WithConfigurationCustomizer(func(cfg *OpenTelemetryConfiguration) error {
+				order = append(order, "second")
+				assert.NotNil(t, cfg.TracerProvider)
+				return nil
+			}),
+		)
+		require.NoError(t, err)
+		assert.Equal(t, []string{"first", "second"}, order)
+	})
+
+	t.Run("runs before disabled is evaluated", func(t *testing.T) {
+		sdk, err := NewSDK(
+			WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+				Disabled:       new(true),
+				TracerProvider: &TracerProvider{},
+			}),
+			WithConfigurationCustomizer(func(cfg *OpenTelemetryConfiguration) error {
+				cfg.Disabled = new(false)
+				return nil
+			}),
+		)
+		require.NoError(t, err)
+		assert.IsType(t, &sdktrace.TracerProvider{}, sdk.TracerProvider())
+		require.NoError(t, sdk.Shutdown(t.Context()))
+
+		sdk, err = NewSDK(
+			WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{TracerProvider: &TracerProvider{}}),
+			WithConfigurationCustomizer(func(cfg *OpenTelemetryConfiguration) error {
+				cfg.Disabled = new(true)
+				return nil
+			}),
+		)
+		require.NoError(t, err)
+		assert.IsType(t, tracenoop.NewTracerProvider(), sdk.TracerProvider())
+	})
+
+	t.Run("returns the customizer error", func(t *testing.T) {
+		sdk, err := NewSDK(
+			WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{TracerProvider: &TracerProvider{}}),
+			WithConfigurationCustomizer(func(*OpenTelemetryConfiguration) error {
+				return assert.AnError
+			}),
+		)
+		require.ErrorIs(t, err, assert.AnError)
+		assert.IsType(t, tracenoop.NewTracerProvider(), sdk.TracerProvider())
+	})
+}
+
 func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfiguration {
 	material.CACertPath = filepath.ToSlash(material.CACertPath)
 	material.ClientCertPath = filepath.ToSlash(material.ClientCertPath)
