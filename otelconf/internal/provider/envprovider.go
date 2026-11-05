@@ -97,7 +97,9 @@ func replaceEnvVar(in string) ([]byte, error) {
 		return nil, nil
 	}
 
-	out := []byte(val)
+	// A trailing line break would move any text after the reference to the
+	// start of a line, but values read from files often end with one.
+	out := bytes.TrimRight([]byte(val), yamlLineBreaks)
 	if err := checkRawConfType(out); err != nil {
 		return nil, fmt.Errorf("invalid value type: %w", err)
 	}
@@ -122,8 +124,8 @@ func parseEnvVar(in string) (string, defaultValue) {
 func checkRawConfType(val []byte) error {
 	// val is checked on its own but substituted as text, so a line break can
 	// end the scalar it lands in: "|\nkey: value" is a string here, but adds a
-	// key to the document. Trailing line breaks cannot do that.
-	if bytes.ContainsAny(bytes.TrimRight(val, yamlLineBreaks), yamlLineBreaks) {
+	// key to the document.
+	if bytes.ContainsAny(val, yamlLineBreaks) {
 		return errors.New("line breaks are not supported in substituted values")
 	}
 
