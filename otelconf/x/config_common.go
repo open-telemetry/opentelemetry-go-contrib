@@ -53,6 +53,7 @@ type configOptions struct {
 	loggerProviderOptions []sdklog.LoggerProviderOption
 	meterProviderOptions  []sdkmetric.Option
 	tracerProviderOptions []sdktrace.TracerProviderOption
+	customizers           []func(*OpenTelemetryConfiguration) error
 }
 
 type shutdownFunc func(context.Context) error
