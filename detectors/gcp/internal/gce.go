@@ -19,20 +19,27 @@ package internal
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
 	"cloud.google.com/go/compute/metadata"
+	"golang.org/x/oauth2/google"
 )
 
-// See the available GCE instance metadata:
-// https://cloud.google.com/compute/docs/metadata/predefined-metadata-keys#instance-metadata
-const machineTypeMetadataAttr = "instance/machine-type"
-
-// https://cloud.google.com/compute/docs/instance-groups/getting-info-about-migs#checking_if_a_vm_instance_is_part_of_a_mig
-const createdByInstanceAttr = "created-by"
+const (
+	// See the available GCE instance metadata:
+	// https://cloud.google.com/compute/docs/metadata/predefined-metadata-keys#instance-metadata
+	machineTypeMetadataAttr = "instance/machine-type"
+	// https://cloud.google.com/compute/docs/instance-groups/getting-info-about-migs#checking_if_a_vm_instance_is_part_of_a_mig
+	createdByInstanceAttr    = "created-by"
+	computeInstancesGetScope = "https://www.googleapis.com/auth/compute.readonly"
+	defaultComputeBaseURL    = "https://compute.googleapis.com/compute/v1"
+)
 
 func (d *Detector) onGCE() bool {
 	_, err := d.metadata.GetWithContext(context.TODO(), machineTypeMetadataAttr)
@@ -118,4 +125,81 @@ func (d *Detector) GCEManagedInstanceGroup() (ManagedInstanceGroup, error) {
 		mig.Type = Region
 	}
 	return mig, nil
+}
+
+type computeInstance struct {
+	MachineType string            `json:"machineType"`
+	Labels      map[string]string `json:"labels"`
+}
+
+// GCEInstanceLabels returns the labels of the GCE instance on which this program is running.
+func (d *Detector) GCEInstanceLabels(ctx context.Context) (map[string]string, error) {
+	instance, err := d.computeInstance(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return instance.Labels, nil
+}
+
+func (d *Detector) computeInstance(ctx context.Context) (*computeInstance, error) {
+	projectID, err := d.metadata.GetWithContext(ctx, "project/project-id")
+	if err != nil {
+		return nil, err
+	}
+	projectID = strings.TrimSpace(projectID)
+	zone, err := d.metadata.ZoneWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+	instanceName, err := d.metadata.InstanceNameWithContext(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := d.computeHTTPClient(ctx)
+	if err != nil {
+		return nil, err
+	}
+	baseURL := d.computeBaseURL
+	if baseURL == "" {
+		baseURL = defaultComputeBaseURL
+	}
+	reqURL := fmt.Sprintf("%s/projects/%s/zones/%s/instances/%s",
+		strings.TrimRight(baseURL, "/"),
+		url.PathEscape(projectID),
+		url.PathEscape(lastPathSegment(zone)),
+		url.PathEscape(instanceName),
+	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, http.NoBody)
+	if err != nil {
+		return nil, err
+	}
+	res, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer func() { _ = res.Body.Close() }()
+	if res.StatusCode < 200 || res.StatusCode >= 300 {
+		return nil, fmt.Errorf("compute instances.get returned %s", res.Status)
+	}
+	var instance computeInstance
+	if err := json.NewDecoder(res.Body).Decode(&instance); err != nil {
+		return nil, err
+	}
+	return &instance, nil
+}
+
+func (d *Detector) computeHTTPClient(ctx context.Context) (*http.Client, error) {
+	if d.httpClient != nil {
+		return d.httpClient, nil
+	}
+	return google.DefaultClient(ctx, computeInstancesGetScope)
+}
+
+func lastPathSegment(s string) string {
+	s = strings.TrimRight(s, "/")
+	if i := strings.LastIndex(s, "/"); i >= 0 {
+		return s[i+1:]
+	}
+	return s
 }
