@@ -450,6 +450,68 @@ func TestEKSDetectorUtilsClientInitError(t *testing.T) {
 	require.ErrorIs(t, err, errK8sClientUnavailable)
 }
 
+func TestEKSDetectorUtilsHTTPClientError(t *testing.T) {
+	utils := newK8sDetectorUtils()
+	utils.inClusterConfig = func() (*rest.Config, error) {
+		return &rest.Config{
+			Host:            "https://k8s.invalid",
+			TLSClientConfig: rest.TLSClientConfig{CAData: []byte("not a certificate")},
+		}, nil
+	}
+
+	_, err := utils.getServerVersion(t.Context())
+	require.ErrorIs(t, err, errK8sClientUnavailable)
+	assert.ErrorContains(t, err, "failed to create HTTP client")
+}
+
+func TestAWSClients(t *testing.T) {
+	sharedConfig := filepath.Join(t.TempDir(), "config")
+	require.NoError(t, os.WriteFile(sharedConfig, nil, 0o600))
+	t.Setenv("AWS_CONFIG_FILE", sharedConfig)
+	t.Setenv("AWS_SHARED_CREDENTIALS_FILE", sharedConfig)
+
+	t.Run("default config", func(t *testing.T) {
+		t.Setenv("AWS_PROFILE", "")
+		d := &resourceDetector{}
+
+		cfg, err := d.getAWSConfig(t.Context())
+		require.NoError(t, err)
+		require.NotNil(t, cfg.Retryer)
+		assert.Equal(t, 1, cfg.Retryer().MaxAttempts())
+
+		imdsCl, err := d.getIMDSClient(t.Context())
+		require.NoError(t, err)
+		assert.NotNil(t, imdsCl)
+
+		ec2Cl, err := d.getEC2Client(t.Context(), func(o *ec2.Options) { o.Region = "us-west-2" })
+		require.NoError(t, err)
+		assert.NotNil(t, ec2Cl)
+	})
+
+	t.Run("user config", func(t *testing.T) {
+		d := NewResourceDetectorWithOptions(WithAWSConfig(aws.Config{Region: "eu-west-1"})).(*resourceDetector)
+
+		cfg, err := d.getAWSConfig(t.Context())
+		require.NoError(t, err)
+		assert.Equal(t, "eu-west-1", cfg.Region)
+		assert.Nil(t, cfg.Retryer)
+	})
+
+	t.Run("load error", func(t *testing.T) {
+		t.Setenv("AWS_PROFILE", "missing-profile")
+		d := &resourceDetector{}
+
+		_, err := d.getAWSConfig(t.Context())
+		require.Error(t, err)
+
+		_, err = d.getIMDSClient(t.Context())
+		require.Error(t, err)
+
+		_, err = d.getEC2Client(t.Context())
+		require.Error(t, err)
+	})
+}
+
 func TestGetConfigMap(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -670,18 +732,18 @@ func TestDetectWithOIDCIssuer(t *testing.T) {
 	}{
 		{
 			name:    "EKS issuer",
-			issuer:  "https://oidc.eks.us-west-2.amazonaws.com/id/EXAMPLED539D4633E53DE1B71EXAMPLE",
+			issuer:  "https://oidc.eks.us-west-2.amazonaws.com/id/EXAMPLE",
 			wantEKS: true,
 		},
 		{
 			name:    "non-EKS issuer falls back to aws-auth",
-			issuer:  "https://kubernetes.default.svc.cluster.local",
+			issuer:  "https://issuer.example.com",
 			awsAuth: true,
 			wantEKS: true,
 		},
 		{
 			name:   "non-EKS issuer without aws-auth",
-			issuer: "https://container.googleapis.com/v1/projects/p/locations/l/clusters/c",
+			issuer: "https://issuer.example.com",
 		},
 	}
 
@@ -1029,7 +1091,7 @@ func TestGetK8sAPI(t *testing.T) {
 		case "/version":
 			_, _ = w.Write([]byte(`{"gitVersion":"v1.30.2-eks-123456"}`))
 		case "/.well-known/openid-configuration":
-			_, _ = w.Write([]byte(`{"issuer":"https://oidc.eks.us-west-2.amazonaws.com/id/EXAMPLE","jwks_uri":"https://example/keys"}`))
+			_, _ = w.Write([]byte(`{"issuer":"https://oidc.eks.us-west-2.amazonaws.com/id/EXAMPLE"}`))
 		case "/api/v1/nodes/ip-10-0-0-1.ec2.internal":
 			_, _ = w.Write([]byte(`{"spec":{"providerID":"aws:///us-west-2a/i-049ca2df511bec762"}}`))
 		case "/api/v1/nodes/bad%2Fnode":
