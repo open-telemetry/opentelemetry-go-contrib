@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/hex"
 	"errors"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -97,6 +98,16 @@ func extract(ctx context.Context, headerVal string) (context.Context, trace.Span
 		debug bool
 		err   error
 	)
+
+	// Jaeger clients URL-encode the value when propagating over HTTP, so a
+	// value without a literal separator may be encoded.
+	if !strings.Contains(headerVal, separator) {
+		v, err := url.QueryUnescape(headerVal)
+		if err != nil {
+			return ctx, empty, errMalformedTraceContextVal
+		}
+		headerVal = v
+	}
 
 	part0, part1, _, part3, ok := splitHeader(headerVal)
 	if !ok {
