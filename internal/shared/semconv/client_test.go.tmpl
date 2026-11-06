@@ -20,6 +20,9 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
+	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 )
 
 func TestHTTPClientStatus(t *testing.T) {
@@ -263,6 +266,49 @@ func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 			assert.ElementsMatch(t, tt.want, got.ToSlice())
 		})
 	}
+}
+
+func TestHTTPClient_AddActiveRequests(t *testing.T) {
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	client := NewHTTPClient(mp.Meter("test"))
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com:8080/path", http.NoBody)
+	require.NoError(t, err)
+	opt := client.ActiveRequestsOption(req, nil)
+
+	client.AddActiveRequests(t.Context(), 1, opt)
+	client.AddActiveRequests(t.Context(), 1, opt)
+	client.AddActiveRequests(t.Context(), -1, opt)
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var got metricdata.Metrics
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == "http.client.active_requests" {
+			got = m
+		}
+	}
+	metricdatatest.AssertEqual(t, metricdata.Metrics{
+		Name:        "http.client.active_requests",
+		Description: got.Description,
+		Unit:        "{request}",
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints: []metricdata.DataPoint[int64]{
+				{
+					Attributes: attribute.NewSet(
+						attribute.String("http.request.method", "GET"),
+						attribute.String("server.address", "example.com"),
+						attribute.Int("server.port", 8080),
+					),
+					Value: 1,
+				},
+			},
+		},
+	}, got, metricdatatest.IgnoreTimestamp())
 }
 
 func TestHTTPClient_ErrorType(t *testing.T) {
