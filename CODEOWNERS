@@ -57,6 +57,7 @@ detectors/k8sapi/                                                       @open-te
 detectors/kubeadm/                                                      @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/openshift/                                                    @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/openstack/nova/                                               @open-telemetry/go-approvers @paulojmdias @iblancasa
+detectors/render/                                                       @open-telemetry/go-approvers @harshal-paltse
 detectors/scaleway/                                                     @open-telemetry/go-approvers @paulojmdias @iblancasa
 detectors/vultr/                                                        @open-telemetry/go-approvers @paulojmdias @iblancasa
 
