@@ -293,13 +293,14 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	span.SetAttributes(t.semconv.RequestTraceAttrs(r)...)
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
-	if t.recordActiveRequests {
-		opt := t.semconv.ActiveRequestsOption(r, append(labeler.Get(), t.metricAttributesFromRequest(r)...))
-		t.semconv.AddActiveRequests(ctx, 1, opt)
-		defer t.semconv.AddActiveRequests(ctx, -1, opt)
-	}
-
-	res, err := t.rt.RoundTrip(r)
+	res, err := func() (*http.Response, error) {
+		if t.recordActiveRequests {
+			opt := t.semconv.ActiveRequestsOption(r, append(labeler.Get(), t.metricAttributesFromRequest(r)...))
+			t.semconv.AddActiveRequests(ctx, 1, opt)
+			defer t.semconv.AddActiveRequests(ctx, -1, opt)
+		}
+		return t.rt.RoundTrip(r)
+	}()
 	if err == nil {
 		res, err = ensureResponseBody(t.rt, r, res)
 	}

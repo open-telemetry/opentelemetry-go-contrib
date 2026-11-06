@@ -1670,6 +1670,31 @@ func TestTransportActiveRequests(t *testing.T) {
 
 		assertActiveRequests(t, reader, attrs, 0)
 	})
+
+	t.Run("not counted after base RoundTrip returns", func(t *testing.T) {
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+		var calls int
+		tr := NewTransport(roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody, Request: r}, nil
+		}), WithMeterProvider(meterProvider), WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue {
+			// The second call builds the attributes of the recorded metrics.
+			calls++
+			if calls == 2 {
+				assertActiveRequests(t, reader, attrs, 0)
+			}
+			return nil
+		}))
+
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com:8080/path", http.NoBody)
+		require.NoError(t, err)
+
+		resp, err := tr.RoundTrip(req)
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		assert.Equal(t, 2, calls)
+	})
 }
 
 func TestTransportActiveRequestsDisabled(t *testing.T) {
