@@ -42,12 +42,10 @@ var _ resource.Detector = (*CloudRun)(nil)
 //
 // Deprecated: Use gcp.NewDetector() instead. Note that it sets faas.* resource attributes instead of service.* attributes.
 func NewCloudRun() *CloudRun {
+	mc := metadata.NewClient(nil)
 	return &CloudRun{
-		mc: metadata.NewClient(nil),
-		onGCE: func(ctx context.Context) bool {
-			ok, err := defaultOnGCE(ctx)
-			return err == nil && ok
-		},
+		mc:     mc,
+		onGCE:  mc.OnGCEWithContext,
 		getenv: os.Getenv,
 	}
 }

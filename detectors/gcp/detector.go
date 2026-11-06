@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"sync/atomic"
 
 	"cloud.google.com/go/compute/metadata"
 	"go.opentelemetry.io/otel/attribute"
@@ -83,48 +82,7 @@ func WithGCEInstanceLabelKeyFilter(filter func(key string) bool) Option {
 
 type detector struct {
 	detector gcpDetector
-	onGCE    func(context.Context) (bool, error)
 	cfg      config
-}
-
-// newOnGCEChecker wraps a context-free availability probe (such as
-// metadata.OnGCE, whose package-global sync.Once uses context.Background()) so
-// callers honor ctx cancellation and deadlines without poisoning the
-// process-global memoized result when the first caller's ctx is canceled.
-func newOnGCEChecker(probe func() bool) func(context.Context) (bool, error) {
-	var done atomic.Bool
-	return func(ctx context.Context) (bool, error) {
-		if err := ctx.Err(); err != nil {
-			return false, err
-		}
-		if done.Load() {
-			return probe(), nil
-		}
-		ch := make(chan bool, 1)
-		go func() {
-			v := probe()
-			done.Store(true)
-			ch <- v
-		}()
-		select {
-		case v := <-ch:
-			if err := ctx.Err(); err != nil {
-				return false, err
-			}
-			return v, nil
-		case <-ctx.Done():
-			return false, ctx.Err()
-		}
-	}
-}
-
-var defaultOnGCE = newOnGCEChecker(metadata.OnGCE)
-
-func (d *detector) checkOnGCE(ctx context.Context) (bool, error) {
-	if d.onGCE != nil {
-		return d.onGCE(ctx)
-	}
-	return defaultOnGCE(ctx)
 }
 
 func hasErr(errs []error, target error) bool {
@@ -139,9 +97,6 @@ func hasErr(errs []error, target error) bool {
 // Detect detects associated resources when running on GCE, GKE, GAE,
 // Cloud Run, Cloud Run jobs, Cloud Run worker pools, Cloud Functions, and Bare Metal Solution.
 func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
-	if err := ctx.Err(); err != nil {
-		return nil, err
-	}
 	projectID, err1 := d.detector.BareMetalSolutionProjectID(ctx)
 	region, err2 := d.detector.BareMetalSolutionCloudRegion(ctx)
 	instanceID, err3 := d.detector.BareMetalSolutionInstanceID(ctx)
@@ -156,11 +111,7 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		), nil
 	}
 
-	onGCE, err := d.checkOnGCE(ctx)
-	if err != nil {
-		return nil, err
-	}
-	if !onGCE {
+	if !metadata.NewClient(nil).OnGCEWithContext(ctx) {
 		return nil, nil
 	}
 	b := &resourceBuilder{}
