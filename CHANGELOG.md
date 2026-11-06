@@ -106,6 +106,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Retain the last non-nil write error instead of letting a later successful write clear it in the response writer wrapper of `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9790)
 - Ignore a zero or negative refresh interval from `WithSamplingRefreshInterval` or `pollingIntervalMs` in `OTEL_TRACES_SAMPLER_ARG` in `go.opentelemetry.io/contrib/samplers/jaegerremote`, preserving the previously configured interval, or the default when none was configured, instead of panicking in `time.NewTicker`. (#9999)
 - Fix `WithValues` in `go.opentelemetry.io/contrib/bridges/otellogr` so loggers derived from the same parent no longer overwrite each other's attributes or race on them. (#9994)
+- Add the fields that follow a `zap.Namespace` passed to `With` to that namespace in `go.opentelemetry.io/contrib/bridges/otelzap`, as zap does, instead of adding them at the top level. (#10017)
 - Accept any 2xx status for the instance identity token request in `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`. The IMDS Identity API returns 201 Created for the token PUT, which the detector previously rejected, silently returning an empty resource on real IBM Cloud VPC instances. (#9671)
 
 ### Removed

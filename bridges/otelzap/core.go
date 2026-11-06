@@ -131,8 +131,13 @@ type Core struct {
 	logger   log.Logger
 	opts     []log.LoggerOption
 	attr     []attribute.KeyValue
-	ctx      context.Context
-	err      error
+	// ns is the namespace opened by With, if any. The fields added after it
+	// belong to its innermost namespace. nsAttr holds its attributes for a
+	// Write without fields.
+	ns     *namespace
+	nsAttr []attribute.KeyValue
+	ctx    context.Context
+	err    error
 }
 
 // Compile-time check *Core implements zapcore.Core.
@@ -178,11 +183,13 @@ func (o *Core) Enabled(level zapcore.Level) bool {
 func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 	cloned := o.clone()
 	if len(fields) > 0 {
-		ctx, attrbuf, err := convertField(fields)
+		ctx, enc, err := convertField(fields, o.ns)
 		if ctx != nil {
 			cloned.ctx = ctx
 		}
-		cloned.attr = append(cloned.attr, attrbuf...)
+		cloned.attr = append(cloned.attr, enc.root.attrs...)
+		cloned.ns = enc.root.next
+		cloned.nsAttr = namespaceAttrs(cloned.ns)
 		if err != nil {
 			cloned.err = err
 		}
@@ -196,6 +203,8 @@ func (o *Core) clone() *Core {
 		opts:     o.opts,
 		logger:   o.logger,
 		attr:     slices.Clone(o.attr),
+		ns:       o.ns,
+		nsAttr:   o.nsAttr,
 		ctx:      o.ctx,
 		err:      o.err,
 	}
@@ -233,13 +242,14 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 
 	emitCtx := o.ctx
 	recErr := o.err
-	var attrbuf []attribute.KeyValue
+	attrbuf := o.nsAttr
 	if len(fields) > 0 {
-		ctx, converted, err := convertField(fields)
+		ctx, enc, err := convertField(fields, o.ns)
 		if ctx != nil {
 			emitCtx = ctx
 		}
-		attrbuf = converted
+		enc.calculate(enc.root)
+		attrbuf = enc.root.attrs
 		if err != nil {
 			recErr = err
 		}
@@ -273,9 +283,13 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 	return nil
 }
 
-func convertField(fields []zapcore.Field) (context.Context, []attribute.KeyValue, error) {
+// convertField adds fields to an encoder that continues the namespace ns, if
+// any. The namespaces are left open, so call calculate on the encoder before
+// reading its attributes.
+func convertField(fields []zapcore.Field, ns *namespace) (context.Context, *objectEncoder, error) {
 	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
+	enc.open(ns)
 	var errField error
 	for _, field := range fields {
 		if ctxFld, ok := field.Interface.(context.Context); ok {
@@ -291,8 +305,7 @@ func convertField(fields []zapcore.Field) (context.Context, []attribute.KeyValue
 		field.AddTo(enc)
 	}
 
-	enc.calculate(enc.root)
-	return ctx, enc.root.attrs, errField
+	return ctx, enc, errField
 }
 
 func hasExceptionAttributes(attrs []attribute.KeyValue) bool {
