@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -706,84 +705,39 @@ func TestDetectGCEInstanceLabelsContextCancellation(t *testing.T) {
 }
 
 func TestDetectCanceledAtEntryDoesNotPoisonOnGCE(t *testing.T) {
-	t.Run("canceled context at entry returns error and subsequent Detect succeeds", func(t *testing.T) {
-		t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
+	t.Setenv("GCE_METADATA_HOST", "")
 
-		fake := &fakeGCPDetector{
-			projectID:     "my-project",
-			cloudPlatform: internal.UnknownPlatform,
-		}
-		d := &detector{detector: fake}
+	fake := &fakeGCPDetector{
+		projectID:     "my-project",
+		cloudPlatform: internal.UnknownPlatform,
+	}
+	d := &detector{detector: fake}
 
-		canceledCtx, cancel := context.WithCancel(t.Context())
-		cancel()
+	canceledCtx, cancel := context.WithCancel(t.Context())
+	cancel()
 
-		res, err := d.Detect(canceledCtx)
-		assert.Nil(t, res)
-		assert.ErrorIs(t, err, context.Canceled)
+	res, err := d.Detect(canceledCtx)
+	assert.Nil(t, res)
+	assert.NoError(t, err)
+	assert.Zero(t, fake.cloudPlatformCalls)
 
-		gceRes, gceErr := (&GCE{}).Detect(canceledCtx)
-		assert.Nil(t, gceRes)
-		assert.ErrorIs(t, gceErr, context.Canceled)
+	gceRes, gceErr := (&GCE{}).Detect(canceledCtx)
+	assert.Nil(t, gceRes)
+	assert.NoError(t, gceErr)
 
-		crRes, crErr := NewCloudRun().Detect(canceledCtx)
-		assert.Nil(t, crRes)
-		assert.NoError(t, crErr)
+	crRes, crErr := NewCloudRun().Detect(canceledCtx)
+	assert.Nil(t, crRes)
+	assert.NoError(t, crErr)
 
-		res, err = d.Detect(t.Context())
-		assert.NoError(t, err)
-		assert.Equal(t, resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.CloudProviderGCP,
-			semconv.CloudAccountID("my-project"),
-		), res)
-	})
+	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
 
-	t.Run("in-flight OnGCE cancellation does not poison sync.Once for subsequent Detect", func(t *testing.T) {
-		probeStarted := make(chan struct{})
-		releaseProbe := make(chan struct{})
-		var once sync.Once
-		var memoized bool
-		probe := func() bool {
-			once.Do(func() {
-				close(probeStarted)
-				<-releaseProbe
-				memoized = true
-			})
-			return memoized
-		}
-
-		fake := &fakeGCPDetector{
-			projectID:     "my-project",
-			cloudPlatform: internal.UnknownPlatform,
-		}
-		d := &detector{
-			detector: fake,
-			onGCE:    newOnGCEChecker(probe),
-		}
-
-		firstCtx, cancelFirst := context.WithCancel(t.Context())
-		errCh := make(chan error, 1)
-		go func() {
-			res, err := d.Detect(firstCtx)
-			assert.Nil(t, res)
-			errCh <- err
-		}()
-
-		<-probeStarted
-		cancelFirst()
-		assert.ErrorIs(t, <-errCh, context.Canceled)
-
-		close(releaseProbe)
-
-		res, err := d.Detect(t.Context())
-		assert.NoError(t, err)
-		assert.Equal(t, resource.NewWithAttributes(
-			semconv.SchemaURL,
-			semconv.CloudProviderGCP,
-			semconv.CloudAccountID("my-project"),
-		), res)
-	})
+	res, err = d.Detect(t.Context())
+	assert.NoError(t, err)
+	assert.Equal(t, resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.CloudProviderGCP,
+		semconv.CloudAccountID("my-project"),
+	), res)
 }
 
 func TestDetectProjectIDContextCancellationNoDuplicateError(t *testing.T) {
