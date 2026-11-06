@@ -150,8 +150,8 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 }
 
 // sensitiveQueryKey reports whether key is a query parameter key whose value
-// the semantic conventions require to be redacted from url.full by default.
-// Matching is case-sensitive and done on the decoded key, so a
+// the semantic conventions require to be redacted from url.full and url.query
+// by default. Matching is case-sensitive and done on the decoded key, so a
 // percent-encoded name like "%73ig" is still matched.
 func sensitiveQueryKey(key string) bool {
 	if strings.IndexByte(key, '%') >= 0 {

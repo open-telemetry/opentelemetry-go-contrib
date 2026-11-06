@@ -20,30 +20,41 @@ var benchHTTPServerRequestResults []attribute.KeyValue
 // To use an alternative start this test with OTEL_SEMCONV_STABILITY_OPT_IN set to the
 // version under test.
 func BenchmarkHTTPServerRequest(b *testing.B) {
-	// Request was generated from TestHTTPServerRequest request.
-	req := &http.Request{
-		Method: http.MethodGet,
-		URL: &url.URL{
-			Path: "/",
-		},
-		Proto:      "HTTP/1.1",
-		ProtoMajor: 1,
-		ProtoMinor: 1,
-		Header: http.Header{
-			"User-Agent":      []string{"Go-http-client/1.1"},
-			"Accept-Encoding": []string{"gzip"},
-		},
-		Body:       http.NoBody,
-		Host:       "127.0.0.1:39093",
-		RemoteAddr: "127.0.0.1:38738",
-		RequestURI: "/",
+	testCases := []struct {
+		name     string
+		rawQuery string
+	}{
+		{name: "NoQuery"},
+		{name: "Query", rawQuery: "stuff=morestuff&other=1"},
+		{name: "SensitiveQuery", rawQuery: "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAEXAMPLE%2F20260101%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=abc123"},
 	}
 	serv := NewHTTPServer(nil)
 
-	b.ReportAllocs()
-	b.ResetTimer()
-	for range b.N {
-		benchHTTPServerRequestResults = serv.RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
+	for _, tc := range testCases {
+		req := &http.Request{
+			Method: http.MethodGet,
+			URL: &url.URL{
+				Path:     "/",
+				RawQuery: tc.rawQuery,
+			},
+			Proto:      "HTTP/1.1",
+			ProtoMajor: 1,
+			ProtoMinor: 1,
+			Header: http.Header{
+				"User-Agent":      []string{"Go-http-client/1.1"},
+				"Accept-Encoding": []string{"gzip"},
+			},
+			Body:       http.NoBody,
+			Host:       "127.0.0.1:39093",
+			RemoteAddr: "127.0.0.1:38738",
+			RequestURI: "/",
+		}
+		b.Run(tc.name, func(b *testing.B) {
+			b.ReportAllocs()
+			for range b.N {
+				benchHTTPServerRequestResults = serv.RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
+			}
+		})
 	}
 }
 
