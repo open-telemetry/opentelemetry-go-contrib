@@ -6,6 +6,7 @@ package gcp
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -564,6 +565,7 @@ func TestBareMetalSolutionEnv(t *testing.T) {
 	})
 
 	t.Run("partial BMS env vars do not trigger BMS resource or extra CloudPlatform probe", func(t *testing.T) {
+		t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
 		fake := &fakeGCPDetector{
 			projectID:                     "my-project",
 			cloudPlatform:                 internal.UnknownPlatform,
@@ -596,24 +598,49 @@ func TestNewDetectorWithOptions(t *testing.T) {
 	assert.Nil(t, defaultDetector.cfg.gceLabelKeyFilter)
 }
 
+func TestDetectCloudPlatformContextCancellation(t *testing.T) {
+	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	fake := &fakeGCPDetector{
+		projectID: "my-project",
+		onCloudPlatform: func(context.Context) internal.Platform {
+			cancel()
+			return internal.UnknownPlatform
+		},
+	}
+	d := &detector{detector: fake}
+
+	res, err := d.Detect(ctx)
+	assert.ErrorIs(t, err, resource.ErrPartialResource)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Same(t, ctx, fake.cloudPlatformCtx)
+	assert.Equal(t, resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.CloudProviderGCP,
+		semconv.CloudAccountID("my-project"),
+	), res)
+}
+
 func TestDetectGKEHostTypeContextCancellation(t *testing.T) {
 	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
 
+	ctx, cancel := context.WithCancel(t.Context())
 	fake := &fakeGCPDetector{
 		projectID:           "my-project",
-		cloudPlatform:       internal.GKE,
 		gkeHostID:           "1472385723456792345",
 		gkeHostType:         "e2-standard-4",
 		gkeClusterName:      "my-cluster",
 		gkeAvailabilityZone: "us-central1-c",
+		onCloudPlatform: func(context.Context) internal.Platform {
+			cancel()
+			return internal.GKE
+		},
 	}
 	d := &detector{
 		detector: fake,
 		cfg:      config{gkeHostType: true},
 	}
-
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
 
 	res, err := d.Detect(ctx)
 	assert.ErrorIs(t, err, resource.ErrPartialResource)
@@ -633,9 +660,9 @@ func TestDetectGKEHostTypeContextCancellation(t *testing.T) {
 func TestDetectGCEInstanceLabelsContextCancellation(t *testing.T) {
 	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
 
+	ctx, cancel := context.WithCancel(t.Context())
 	fake := &fakeGCPDetector{
 		projectID:              "my-project",
-		cloudPlatform:          internal.GCE,
 		gceHostID:              "1472385723456792345",
 		gceHostName:            "my-gke-node-1234",
 		gceHostType:            "n1-standard1",
@@ -646,6 +673,10 @@ func TestDetectGCEInstanceLabelsContextCancellation(t *testing.T) {
 		gcpGceInstanceLabels: map[string]string{
 			"env": "prod",
 		},
+		onCloudPlatform: func(context.Context) internal.Platform {
+			cancel()
+			return internal.GCE
+		},
 	}
 	d := &detector{
 		detector: fake,
@@ -653,9 +684,6 @@ func TestDetectGCEInstanceLabelsContextCancellation(t *testing.T) {
 			gceLabelKeyFilter: func(string) bool { return true },
 		},
 	}
-
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
 
 	res, err := d.Detect(ctx)
 	assert.ErrorIs(t, err, resource.ErrPartialResource)
@@ -676,12 +704,74 @@ func TestDetectGCEInstanceLabelsContextCancellation(t *testing.T) {
 	), res)
 }
 
+func TestDetectCanceledAtEntryDoesNotPoisonOnGCE(t *testing.T) {
+	t.Setenv("GCE_METADATA_HOST", "")
+
+	fake := &fakeGCPDetector{
+		projectID:     "my-project",
+		cloudPlatform: internal.UnknownPlatform,
+	}
+	d := &detector{detector: fake}
+
+	canceledCtx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	res, err := d.Detect(canceledCtx)
+	assert.Nil(t, res)
+	assert.NoError(t, err)
+	assert.Zero(t, fake.cloudPlatformCalls)
+
+	gceRes, gceErr := (&GCE{}).Detect(canceledCtx)
+	assert.Nil(t, gceRes)
+	assert.NoError(t, gceErr)
+
+	crRes, crErr := NewCloudRun().Detect(canceledCtx)
+	assert.Nil(t, crRes)
+	assert.NoError(t, crErr)
+
+	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
+
+	res, err = d.Detect(t.Context())
+	assert.NoError(t, err)
+	assert.Equal(t, resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.CloudProviderGCP,
+		semconv.CloudAccountID("my-project"),
+	), res)
+}
+
+func TestDetectProjectIDContextCancellationNoDuplicateError(t *testing.T) {
+	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	fake := &fakeGCPDetector{
+		onProjectID: func(ctx context.Context) (string, error) {
+			cancel()
+			return "", fmt.Errorf("project id lookup: %w", ctx.Err())
+		},
+		cloudPlatform: internal.UnknownPlatform,
+	}
+	d := &detector{detector: fake}
+
+	res, err := d.Detect(ctx)
+	assert.ErrorIs(t, err, resource.ErrPartialResource)
+	assert.ErrorIs(t, err, context.Canceled)
+	assert.Equal(t, 1, strings.Count(err.Error(), context.Canceled.Error()), "expected single context.Canceled in error: %v", err)
+	assert.Equal(t, resource.NewWithAttributes(
+		semconv.SchemaURL,
+		semconv.CloudProviderGCP,
+	), res)
+}
+
 // fakeGCPDetector implements gcpDetector and uses fake values.
 type fakeGCPDetector struct {
 	err                             error
 	migErr                          error
 	gceLabelsErr                    error
 	cloudPlatformCalls              int
+	cloudPlatformCtx                context.Context
+	onProjectID                     func(context.Context) (string, error)
+	onCloudPlatform                 func(context.Context) internal.Platform
 	gkeHostTypeCtx                  context.Context
 	gceLabelsCtx                    context.Context
 	projectID                       string
@@ -717,19 +807,26 @@ type fakeGCPDetector struct {
 	cloudRunJobTaskIndex            string
 }
 
-func (f *fakeGCPDetector) ProjectID() (string, error) {
+func (f *fakeGCPDetector) ProjectID(ctx context.Context) (string, error) {
+	if f.onProjectID != nil {
+		return f.onProjectID(ctx)
+	}
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.projectID, nil
 }
 
-func (f *fakeGCPDetector) CloudPlatform() internal.Platform {
+func (f *fakeGCPDetector) CloudPlatform(ctx context.Context) internal.Platform {
 	f.cloudPlatformCalls++
+	f.cloudPlatformCtx = ctx
+	if f.onCloudPlatform != nil {
+		return f.onCloudPlatform(ctx)
+	}
 	return f.cloudPlatform
 }
 
-func (f *fakeGCPDetector) GKEAvailabilityZoneOrRegion() (string, internal.LocationType, error) {
+func (f *fakeGCPDetector) GKEAvailabilityZoneOrRegion(_ context.Context) (string, internal.LocationType, error) {
 	if f.err != nil {
 		return "", internal.UndefinedLocation, f.err
 	}
@@ -739,14 +836,14 @@ func (f *fakeGCPDetector) GKEAvailabilityZoneOrRegion() (string, internal.Locati
 	return f.gkeRegion, internal.Region, nil
 }
 
-func (f *fakeGCPDetector) GKEClusterName() (string, error) {
+func (f *fakeGCPDetector) GKEClusterName(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.gkeClusterName, nil
 }
 
-func (f *fakeGCPDetector) GKEHostID() (string, error) {
+func (f *fakeGCPDetector) GKEHostID(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
@@ -771,112 +868,112 @@ func (f *fakeGCPDetector) GKEHostName() (string, error) {
 	return f.gkeHostName, nil
 }
 
-func (f *fakeGCPDetector) FaaSName() (string, error) {
+func (f *fakeGCPDetector) FaaSName(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.faaSName, nil
 }
 
-func (f *fakeGCPDetector) FaaSVersion() (string, error) {
+func (f *fakeGCPDetector) FaaSVersion(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.faaSVersion, nil
 }
 
-func (f *fakeGCPDetector) FaaSID() (string, error) {
+func (f *fakeGCPDetector) FaaSID(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.faaSID, nil
 }
 
-func (f *fakeGCPDetector) FaaSCloudRegion() (string, error) {
+func (f *fakeGCPDetector) FaaSCloudRegion(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.faaSCloudRegion, nil
 }
 
-func (f *fakeGCPDetector) AppEngineFlexAvailabilityZoneAndRegion() (string, string, error) {
+func (f *fakeGCPDetector) AppEngineFlexAvailabilityZoneAndRegion(_ context.Context) (string, string, error) {
 	if f.err != nil {
 		return "", "", f.err
 	}
 	return f.appEngineAvailabilityZone, f.appEngineRegion, nil
 }
 
-func (f *fakeGCPDetector) AppEngineStandardAvailabilityZone() (string, error) {
+func (f *fakeGCPDetector) AppEngineStandardAvailabilityZone(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.appEngineAvailabilityZone, nil
 }
 
-func (f *fakeGCPDetector) AppEngineStandardCloudRegion() (string, error) {
+func (f *fakeGCPDetector) AppEngineStandardCloudRegion(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.appEngineRegion, nil
 }
 
-func (f *fakeGCPDetector) AppEngineServiceName() (string, error) {
+func (f *fakeGCPDetector) AppEngineServiceName(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.appEngineServiceName, nil
 }
 
-func (f *fakeGCPDetector) AppEngineServiceVersion() (string, error) {
+func (f *fakeGCPDetector) AppEngineServiceVersion(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.appEngineServiceVersion, nil
 }
 
-func (f *fakeGCPDetector) AppEngineServiceInstance() (string, error) {
+func (f *fakeGCPDetector) AppEngineServiceInstance(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.appEngineServiceInstance, nil
 }
 
-func (f *fakeGCPDetector) GCEAvailabilityZoneAndRegion() (string, string, error) {
+func (f *fakeGCPDetector) GCEAvailabilityZoneAndRegion(_ context.Context) (string, string, error) {
 	if f.err != nil {
 		return "", "", f.err
 	}
 	return f.gceAvailabilityZone, f.gceRegion, nil
 }
 
-func (f *fakeGCPDetector) GCEHostType() (string, error) {
+func (f *fakeGCPDetector) GCEHostType(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.gceHostType, nil
 }
 
-func (f *fakeGCPDetector) GCEHostID() (string, error) {
+func (f *fakeGCPDetector) GCEHostID(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.gceHostID, nil
 }
 
-func (f *fakeGCPDetector) GCEHostName() (string, error) {
+func (f *fakeGCPDetector) GCEHostName(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.gceHostName, nil
 }
 
-func (f *fakeGCPDetector) GCEInstanceName() (string, error) {
+func (f *fakeGCPDetector) GCEInstanceName(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.gcpGceInstanceName, nil
 }
 
-func (f *fakeGCPDetector) GCEInstanceHostname() (string, error) {
+func (f *fakeGCPDetector) GCEInstanceHostname(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
@@ -897,21 +994,21 @@ func (f *fakeGCPDetector) GCEInstanceLabels(ctx context.Context) (map[string]str
 	return f.gcpGceInstanceLabels, nil
 }
 
-func (f *fakeGCPDetector) CloudRunJobExecution() (string, error) {
+func (f *fakeGCPDetector) CloudRunJobExecution(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.cloudRunJobExecution, nil
 }
 
-func (f *fakeGCPDetector) CloudRunJobTaskIndex() (string, error) {
+func (f *fakeGCPDetector) CloudRunJobTaskIndex(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.cloudRunJobTaskIndex, nil
 }
 
-func (f *fakeGCPDetector) GCEManagedInstanceGroup() (internal.ManagedInstanceGroup, error) {
+func (f *fakeGCPDetector) GCEManagedInstanceGroup(_ context.Context) (internal.ManagedInstanceGroup, error) {
 	if f.migErr != nil {
 		return internal.ManagedInstanceGroup{}, f.migErr
 	}
@@ -921,21 +1018,21 @@ func (f *fakeGCPDetector) GCEManagedInstanceGroup() (internal.ManagedInstanceGro
 	return f.gcpGceManagedInstanceGroup, nil
 }
 
-func (f *fakeGCPDetector) BareMetalSolutionInstanceID() (string, error) {
+func (f *fakeGCPDetector) BareMetalSolutionInstanceID(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.gcpBareMetalSolutionInstanceID, nil
 }
 
-func (f *fakeGCPDetector) BareMetalSolutionCloudRegion() (string, error) {
+func (f *fakeGCPDetector) BareMetalSolutionCloudRegion(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.gcpBareMetalSolutionCloudRegion, nil
 }
 
-func (f *fakeGCPDetector) BareMetalSolutionProjectID() (string, error) {
+func (f *fakeGCPDetector) BareMetalSolutionProjectID(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
