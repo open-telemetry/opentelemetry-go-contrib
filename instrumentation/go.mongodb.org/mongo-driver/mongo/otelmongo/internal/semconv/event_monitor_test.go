@@ -84,7 +84,8 @@ func TestCommandStartedTraceAttrsIPv6WithoutPort(t *testing.T) {
 		ConnectionID: "[::1][-5]",
 	})
 
-	assert.Contains(t, attrs, semconv.NetworkPeerAddress("[::1]:27017"))
+	assert.Contains(t, attrs, semconv.NetworkPeerAddress("::1"))
+	assert.Contains(t, attrs, semconv.NetworkPeerPort(27017))
 }
 
 func TestCommandStartedTraceAttrs(t *testing.T) {
