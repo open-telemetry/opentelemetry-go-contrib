@@ -5,17 +5,22 @@ package otelaws
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"testing"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsSignerV4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/smithy-go/middleware"
 	smithyhttp "github.com/aws/smithy-go/transport/http"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 type mockPropagator struct {
@@ -182,4 +187,69 @@ func Test_Span_name(t *testing.T) {
 	assert.Equal(t, spanName(serviceID1, operation2), "."+operation2)
 	assert.Equal(t, spanName(serviceID2, operation1), serviceID2)
 	assert.Equal(t, spanName(serviceID2, operation2), serviceID2+"."+operation2)
+}
+
+func Test_otelMiddlewares_initializeMiddlewareAfter_spanStatus(t *testing.T) {
+	responseErr := func(status int) error {
+		return &awshttp.ResponseError{
+			ResponseError: &smithyhttp.ResponseError{
+				Response: &smithyhttp.Response{
+					Response: &http.Response{StatusCode: status},
+				},
+			},
+		}
+	}
+
+	for _, tt := range []struct {
+		name       string
+		err        error
+		wantStatus codes.Code
+	}{
+		{
+			name:       "3xx response is not recorded as an error",
+			err:        responseErr(http.StatusNotModified),
+			wantStatus: codes.Unset,
+		},
+		{
+			name:       "4xx response is recorded as an error",
+			err:        responseErr(http.StatusNotFound),
+			wantStatus: codes.Error,
+		},
+		{
+			name:       "5xx response is recorded as an error",
+			err:        responseErr(http.StatusInternalServerError),
+			wantStatus: codes.Error,
+		},
+		{
+			name:       "non-HTTP error is recorded as an error",
+			err:        errors.New("connection refused"),
+			wantStatus: codes.Error,
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+			m := otelMiddlewares{
+				tracer: provider.Tracer(ScopeName),
+			}
+
+			stack := middleware.Stack{
+				Initialize: middleware.NewInitializeStep(),
+			}
+			require.NoError(t, m.initializeMiddlewareAfter(&stack))
+
+			ctx := context.WithValue(t.Context(), spanTimestampKey{}, time.Now())
+			next := middleware.HandlerFunc(func(context.Context, any) (any, middleware.Metadata, error) {
+				return nil, middleware.Metadata{}, tt.err
+			})
+
+			_, _, err := stack.Initialize.HandleMiddleware(ctx, nil, next)
+			require.Error(t, err)
+
+			spans := sr.Ended()
+			require.Len(t, spans, 1)
+			assert.Equal(t, tt.wantStatus, spans[0].Status().Code)
+		})
+	}
 }
