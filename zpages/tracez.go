@@ -93,17 +93,23 @@ func (th *tracezHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	if err := headerTemplate.Execute(w, headerData{Title: "Trace Spans"}); err != nil {
 		log.Printf("zpages: executing template: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
 	if err := summaryTableTemplate.Execute(w, th.getSummaryTableData()); err != nil {
 		log.Printf("zpages: executing template: %v", err)
+		http.Error(w, "internal server error", http.StatusInternalServerError)
+		return
 	}
 	if spanName != "" {
 		if err := tracesTableTemplate.Execute(w, th.getTraceTableData(spanName, spanType, spanSubtype)); err != nil {
 			log.Printf("zpages: executing template: %v", err)
+			return
 		}
 	}
 	if err := footerTemplate.Execute(w, nil); err != nil {
 		log.Printf("zpages: executing template: %v", err)
+		return
 	}
 }
 
