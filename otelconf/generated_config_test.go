@@ -10,7 +10,7 @@ import (
 	"github.com/go-viper/mapstructure/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 // mapstructure's ",remain" decoder only accepts map fields, so a bare
