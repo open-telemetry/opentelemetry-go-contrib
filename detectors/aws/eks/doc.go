@@ -20,7 +20,7 @@ if available:
   - k8s.cluster.name
   - container.id
 
-The detector can be configured using options such as [WithAttributeFilter],
-[WithNodeEnvVar], and [WithAWSConfig].
+Use [NewResourceDetectorWithOptions] to configure the detector with options
+such as [WithAttributeFilter], [WithNodeEnvVar], and [WithAWSConfig].
 */
 package eks

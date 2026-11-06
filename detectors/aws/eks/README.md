@@ -34,6 +34,8 @@ res, err := resource.New(
 )
 ```
 
-The detector identifies an EKS environment by verifying the presence of IAM Roles for Service Accounts (IRSA) tokens, EKS Pod Identity authorization tokens, EKS cluster version identifiers (`-eks-`), and the `kube-system/aws-auth` ConfigMap.
+Use `eks.NewResourceDetectorWithOptions` to configure the detector with options such as `WithAttributeFilter`, `WithNodeEnvVar`, and `WithAWSConfig`.
+
+The detector identifies an EKS environment by verifying the presence of IAM Roles for Service Accounts (IRSA) tokens, EKS Pod Identity authorization tokens, EKS cluster version identifiers (`-eks-`), an EKS service account OIDC issuer (`oidc.eks.`), and the `kube-system/aws-auth` ConfigMap.
 
 Host and node attributes are detected via the EC2 Instance Metadata Service (IMDS). In environments where IMDS access is disabled or restricted (such as EKS Auto Mode or IMDS hop limit set to 1), the detector falls back to reading the node provider ID via the Kubernetes API using the node name from an environment variable (configured with `WithNodeEnvVar`, defaulting to `K8S_NODE_NAME`).
