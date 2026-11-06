@@ -8,10 +8,14 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/http/httptrace"
 	"net/textproto"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -903,4 +907,171 @@ func TestClientTraceErrorAndInformationalBranches(t *testing.T) {
 			root.End()
 		})
 	}
+}
+
+func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+
+	oldTp := otel.GetTracerProvider()
+	t.Cleanup(func() {
+		otel.SetTracerProvider(oldTp)
+	})
+
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	otel.SetTracerProvider(tp)
+	tr := tp.Tracer("httptrace/client")
+
+	shouldReturn := make(chan struct{})
+	reqsMade := atomic.Int32{}
+
+	const maxInFlightRequests = 1
+
+	ts := httptest.NewServer(
+		http.HandlerFunc(func(http.ResponseWriter, *http.Request) {
+			inFlightRequests := reqsMade.Add(1)
+
+			if inFlightRequests > maxInFlightRequests {
+				close(shouldReturn)
+			}
+
+			// this would stall the requests until we exceed the configured maximum of in-flight requests
+			// Then, it would just release the requests and make net/http try to reuse the HTTP connection
+			<-shouldReturn
+		}),
+	)
+	t.Cleanup(ts.Close)
+
+	client := ts.Client()
+
+	*client = http.Client{
+		Transport: &http.Transport{
+			MaxIdleConnsPerHost: maxInFlightRequests,
+		},
+	}
+
+	wg := sync.WaitGroup{}
+
+	errs := make(chan error, 2)
+
+	wg.Go(func() {
+		err := func(ctx context.Context) error {
+			req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL, http.NoBody)
+
+			res, err := client.Do(req)
+			if err != nil {
+				return fmt.Errorf("perform request: %w", err)
+			}
+
+			_ = res.Body.Close()
+
+			return nil
+		}(t.Context())
+		if err != nil {
+			errs <- fmt.Errorf("perform request 1: %w", err)
+		}
+	})
+
+	wg.Go(func() {
+		err := func(ctx context.Context) error {
+			ctx, span := tr.Start(ctx, "test")
+			defer span.End()
+			req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL, http.NoBody)
+			_, req = otelhttptrace.W3C(ctx, req)
+
+			res, err := client.Do(req)
+			if err != nil {
+				return fmt.Errorf("perform request: %w", err)
+			}
+
+			_ = res.Body.Close()
+
+			return nil
+		}(t.Context())
+		if err != nil {
+			errs <- fmt.Errorf("perform request 2: %w", err)
+		}
+	})
+
+	wg.Wait()
+
+	if len(errs) > 0 {
+		errDump := make([]error, 0, 2)
+		for err := range errs {
+			errDump = append(errDump, err)
+		}
+
+		require.Failf(t, "requests to the server should succeed", "errors: %v", errDump)
+	}
+
+	span, ok := getSpanFromRecorder(sr, "http.receive")
+	require.True(t, ok, "span should be present")
+
+	require.Contains(
+		t,
+		[]string{codes.Ok.String(), codes.Unset.String()},
+		span.Status().Code.String(),
+		"connection pooling error shouldn't affect the trace's status",
+	)
+}
+
+func TestHTTPRequestWithClientTrace_PerHostIdlePoolExceeded_CloseIdle(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+
+	oldTp := otel.GetTracerProvider()
+	t.Cleanup(func() {
+		otel.SetTracerProvider(oldTp)
+	})
+
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+	otel.SetTracerProvider(tp)
+	tr := tp.Tracer("httptrace/client")
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// Small but non-empty body so we get GotFirstResponseByte and then EOF.
+		w.WriteHeader(200)
+		_, _ = w.Write([]byte("hello"))
+	}))
+	t.Cleanup(ts.Close)
+
+	transport := http.Transport{}
+	t.Cleanup(transport.CloseIdleConnections)
+
+	client := ts.Client()
+
+	*client = http.Client{
+		Transport: &transport,
+	}
+
+	err := func(ctx context.Context) error {
+		ctx, span := tr.Start(ctx, "test")
+		defer span.End()
+		req, _ := http.NewRequestWithContext(ctx, "GET", ts.URL, http.NoBody)
+		_, req = otelhttptrace.W3C(ctx, req)
+
+		res, err := client.Do(req)
+		if err != nil {
+			return fmt.Errorf("perform request: %w", err)
+		}
+
+		// Exhausting the response body and closing it puts the connection into the idle pool
+		// Calling CloseIdleConnections prevents the current connection from being reused
+		transport.CloseIdleConnections()
+
+		_, _ = io.Copy(io.Discard, res.Body)
+
+		_ = res.Body.Close()
+
+		return nil
+	}(t.Context())
+	require.NoError(t, err, "request should succeed")
+
+	span, ok := getSpanFromRecorder(sr, "http.receive")
+	require.True(t, ok, "span should be present")
+
+	require.Contains(
+		t,
+		[]string{codes.Ok.String(), codes.Unset.String()},
+		span.Status().Code.String(),
+		"Transport#CloseIdleConnections shouldn't affect the trace's status",
+	)
 }
