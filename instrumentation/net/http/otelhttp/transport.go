@@ -23,9 +23,7 @@ import (
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 )
 
-// Transport implements the http.RoundTripper interface and wraps
-// outbound HTTP(S) requests with a span and enriches it with metrics.
-type Transport struct {
+type transport struct {
 	rt http.RoundTripper
 
 	tracer             trace.Tracer
@@ -39,20 +37,28 @@ type Transport struct {
 	semconv semconv.HTTPClient
 }
 
-var _ http.RoundTripper = &Transport{}
+var _ http.RoundTripper = &transport{}
 
-// NewTransport wraps the provided http.RoundTripper with one that
+// NewTransport wraps the provided [http.RoundTripper] with one that
 // starts a span, injects the span context into the outbound request headers,
 // and enriches it with metrics.
 //
-// If the provided http.RoundTripper is nil, http.DefaultTransport will be used
-// as the base http.RoundTripper.
-func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
+// The span ends when the response body is closed or when a read from the
+// response body returns [io.EOF]. Errors encountered while reading the
+// response body are recorded in the span.
+//
+// The response body is wrapped to track the response lifecycle. If the
+// response body implements [io.Writer], the returned body also implements
+// [io.ReadWriteCloser].
+//
+// If the provided [http.RoundTripper] is nil, [http.DefaultTransport] will be used
+// as the base [http.RoundTripper].
+func NewTransport(base http.RoundTripper, opts ...Option) http.RoundTripper {
 	if base == nil {
 		base = http.DefaultTransport
 	}
 
-	t := Transport{
+	t := transport{
 		rt: base,
 	}
 
@@ -67,7 +73,7 @@ func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 	return &t
 }
 
-func (t *Transport) applyConfig(c *config) {
+func (t *transport) applyConfig(c *config) {
 	t.tracer = c.Tracer
 	t.propagators = c.Propagators
 	t.spanStartOptions = c.SpanStartOptions
@@ -92,7 +98,7 @@ func defaultTransportFormatter(_ string, r *http.Request) string {
 // held in explicit fields with methods instead of escaping closures. Only
 // GetBody retries allocate an additional trackedRequestBody.
 type requestTracker struct {
-	transport *Transport
+	transport *transport
 	first     trackedRequestBody
 
 	originalGetBody func() (io.ReadCloser, error)
@@ -112,7 +118,7 @@ type requestTracker struct {
 	opts     semconv.MetricOpts
 }
 
-func newRequestTracker(t *Transport, r *http.Request) *requestTracker {
+func newRequestTracker(t *transport, r *http.Request) *requestTracker {
 	rt := &requestTracker{transport: t}
 	rt.first = trackedRequestBody{body: r.Body, tracker: rt}
 	rt.body = &rt.first
@@ -233,10 +239,7 @@ func (b *trackedRequestBody) Close() error {
 	return b.body.Close()
 }
 
-// RoundTrip creates a Span and propagates its context via the provided request's headers
-// before handing the request to the configured base RoundTripper. The created span will
-// end when the response body is closed or when a read from the body returns io.EOF.
-func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
+func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	requestStartTime := time.Now()
 	for _, f := range t.filters {
 		if !f(r) {
@@ -343,7 +346,7 @@ func ensureResponseBody(rt http.RoundTripper, r *http.Request, res *http.Respons
 	}
 }
 
-func (t *Transport) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
+func (t *transport) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
 	var attributeForRequest []attribute.KeyValue
 	if t.metricAttributesFn != nil {
 		attributeForRequest = t.metricAttributesFn(r)
