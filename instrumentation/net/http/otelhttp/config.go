@@ -9,7 +9,6 @@ import (
 	"net/http/httptrace"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -33,9 +32,8 @@ type config struct {
 	SpanNameFormatter func(string, *http.Request) string
 	ClientTrace       func(context.Context) *httptrace.ClientTrace
 
-	TracerProvider     trace.TracerProvider
-	MeterProvider      metric.MeterProvider
-	MetricAttributesFn func(*http.Request) []attribute.KeyValue
+	TracerProvider trace.TracerProvider
+	MeterProvider  metric.MeterProvider
 }
 
 // Option interface used for setting optional config properties.
@@ -193,16 +191,5 @@ func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 func WithServerName(server string) Option {
 	return optionFunc(func(c *config) {
 		c.ServerName = server
-	})
-}
-
-// WithMetricAttributesFn returns an Option to set a function that maps an HTTP request to a slice of attribute.KeyValue.
-// These attributes will be included in metrics for every request.
-//
-// Deprecated: WithMetricAttributesFn is deprecated and will be removed in a
-// future release. Use [Labeler] instead.
-func WithMetricAttributesFn(metricAttributesFn func(r *http.Request) []attribute.KeyValue) Option {
-	return optionFunc(func(c *config) {
-		c.MetricAttributesFn = metricAttributesFn
 	})
 }
