@@ -68,7 +68,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Fixed
 
 - Do not add resource attributes as metric labels in the Prometheus exporter of `go.opentelemetry.io/contrib/otelconf/x` when `with_resource_constant_labels` sets neither `included` nor `excluded`.
-  Before, an empty `with_resource_constant_labels: {}` added every resource attribute. (#10238)
+  Before, an empty `with_resource_constant_labels: {}` added every resource attribute; list the attributes to keep under `included`. (#10238)
 - Fall back to the `DockerId` from the task metadata endpoint v4 for the `container.id` resource attribute in `go.opentelemetry.io/contrib/detectors/aws/ecs` when the cgroup parser finds no ID, and omit `container.id` instead of setting it to an empty string.
   The parser only matches 64-hex IDs, so it finds none on Fargate, and it may also find none when `/proc/self/cgroup` has no `/ecs/` path. (#10128)
 - Do not include the port in the `network.peer.address` attribute in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`, it is recorded as `network.peer.port`. (#10110)
