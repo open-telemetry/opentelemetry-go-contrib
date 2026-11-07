@@ -20,7 +20,7 @@ import (
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
-	yaml "go.yaml.in/yaml/v3"
+	yaml "go.yaml.in/yaml/v4"
 
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )

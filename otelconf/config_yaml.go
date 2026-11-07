@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"go.yaml.in/yaml/v3"
+	"go.yaml.in/yaml/v4"
 )
 
 // hasYAMLMapKey reports whether the provided mapping node contains the given
