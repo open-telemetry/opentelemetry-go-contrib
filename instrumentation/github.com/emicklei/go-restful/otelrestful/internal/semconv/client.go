@@ -403,7 +403,7 @@ func (HTTPClient) ActiveRequestsOption(req *http.Request, additionalAttributes [
 	requestHost, port := requestHostPort(req)
 	if port <= 0 && req.URL != nil {
 		// server.port is required for this metric, and it has no url.scheme
-		// to tell http://host:80 from https://host:443, so default ports stay.
+		// to tell http and https apart, so default ports are kept.
 		switch req.URL.Scheme {
 		case "http":
 			port = 80
