@@ -216,9 +216,39 @@ func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 		want       []attribute.KeyValue
 	}{
 		{
-			name:   "default port",
+			name:   "default https port",
 			method: http.MethodGet,
 			url:    "https://example.com/path?query=test",
+			want: []attribute.KeyValue{
+				attribute.String("http.request.method", "GET"),
+				attribute.String("server.address", "example.com"),
+				attribute.Int("server.port", 443),
+			},
+		},
+		{
+			name:   "default http port",
+			method: http.MethodGet,
+			url:    "http://example.com/path",
+			want: []attribute.KeyValue{
+				attribute.String("http.request.method", "GET"),
+				attribute.String("server.address", "example.com"),
+				attribute.Int("server.port", 80),
+			},
+		},
+		{
+			name:   "explicit default port",
+			method: http.MethodGet,
+			url:    "https://example.com:443/path",
+			want: []attribute.KeyValue{
+				attribute.String("http.request.method", "GET"),
+				attribute.String("server.address", "example.com"),
+				attribute.Int("server.port", 443),
+			},
+		},
+		{
+			name:   "unknown scheme",
+			method: http.MethodGet,
+			url:    "custom://example.com/path",
 			want: []attribute.KeyValue{
 				attribute.String("http.request.method", "GET"),
 				attribute.String("server.address", "example.com"),
@@ -241,6 +271,7 @@ func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 			want: []attribute.KeyValue{
 				attribute.String("http.request.method", "_OTHER"),
 				attribute.String("server.address", "example.com"),
+				attribute.Int("server.port", 80),
 			},
 		},
 		{
@@ -252,6 +283,7 @@ func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 				attribute.String("key", "value"),
 				attribute.String("http.request.method", "GET"),
 				attribute.String("server.address", "example.com"),
+				attribute.Int("server.port", 80),
 			},
 		},
 	}

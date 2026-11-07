@@ -400,7 +400,17 @@ func (n HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts Metri
 // same option must be passed to both the increment and the decrement of a
 // request.
 func (HTTPClient) ActiveRequestsOption(req *http.Request, additionalAttributes []attribute.KeyValue) metric.AddOption {
-	requestHost, port := serverAddressPort(req)
+	requestHost, port := requestHostPort(req)
+	if port <= 0 && req.URL != nil {
+		// server.port is required for this metric, and it has no url.scheme
+		// to tell http://host:80 from https://host:443, so default ports stay.
+		switch req.URL.Scheme {
+		case "http":
+			port = 80
+		case "https":
+			port = 443
+		}
+	}
 	// The constant capacity keeps the slice off the heap when there are no
 	// additional attributes.
 	attributes := append(make([]attribute.KeyValue, 0, 3), additionalAttributes...)
@@ -436,6 +446,13 @@ func (n HTTPClient) AddActiveRequests(ctx context.Context, incr int64, opt metri
 // serverAddressPort returns the server.address and server.port of req. The
 // port is -1 when it is unknown or the default port of the scheme.
 func serverAddressPort(req *http.Request) (host string, port int) {
+	host, port = requestHostPort(req)
+	return host, requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", port)
+}
+
+// requestHostPort returns the host and port of req as written in its URL or
+// Host header. The port is -1 when it is not set.
+func requestHostPort(req *http.Request) (host string, port int) {
 	var urlHost string
 	if req.URL != nil {
 		urlHost = req.URL.Host
@@ -446,7 +463,7 @@ func serverAddressPort(req *http.Request) (host string, port int) {
 			break
 		}
 	}
-	return host, requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", port)
+	return host, port
 }
 
 // TraceAttributes returns attributes for httptrace.
