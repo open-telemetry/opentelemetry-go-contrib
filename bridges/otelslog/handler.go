@@ -6,7 +6,7 @@
 //
 // # Record Conversion
 //
-// The [slog.Record] are converted to OpenTelemetry [log.Record] in the following
+// A [slog.Record] is converted to an OpenTelemetry [log.Record] in the following
 // way:
 //
 //   - Time is set as the Timestamp.
