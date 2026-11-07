@@ -1584,7 +1584,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 			cfg: ExperimentalPrometheusMetricExporter{
 				WithoutScopeInfo:           new(true),
 				TranslationStrategy:        new(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithoutSuffixes),
-				WithResourceConstantLabels: &IncludeExclude{},
+				WithResourceConstantLabels: &IncludeExclude{Included: []string{"service.name"}},
 			},
 			wantOptions: 3,
 		},
@@ -1593,9 +1593,16 @@ func TestPrometheusReaderOpts(t *testing.T) {
 			cfg: ExperimentalPrometheusMetricExporter{
 				WithoutScopeInfo:           new(false),
 				TranslationStrategy:        new(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes),
-				WithResourceConstantLabels: &IncludeExclude{},
+				WithResourceConstantLabels: &IncludeExclude{Excluded: []string{"service.name"}},
 			},
 			wantOptions: 2,
+		},
+		{
+			name: "empty resource constant labels",
+			cfg: ExperimentalPrometheusMetricExporter{
+				WithResourceConstantLabels: &IncludeExclude{},
+			},
+			wantOptions: 0,
 		},
 	}
 	for _, tt := range testCases {
