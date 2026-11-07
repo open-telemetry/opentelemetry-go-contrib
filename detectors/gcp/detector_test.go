@@ -723,7 +723,7 @@ func TestDetectCanceledAtEntryDoesNotPoisonOnGCE(t *testing.T) {
 
 	gceRes, gceErr := (&GCE{}).Detect(canceledCtx)
 	assert.Nil(t, gceRes)
-	assert.NoError(t, gceErr)
+	assert.ErrorIs(t, gceErr, context.Canceled)
 
 	crRes, crErr := NewCloudRun().Detect(canceledCtx)
 	assert.Nil(t, crRes)
