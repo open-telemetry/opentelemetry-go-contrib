@@ -112,7 +112,7 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 	}
 
 	if !metadata.NewClient(nil).OnGCEWithContext(ctx) {
-		return nil, nil
+		return nil, ctx.Err()
 	}
 	b := &resourceBuilder{}
 	b.attrs = append(b.attrs, semconv.CloudProviderGCP)

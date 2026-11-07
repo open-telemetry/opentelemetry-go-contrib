@@ -718,7 +718,7 @@ func TestDetectCanceledAtEntryDoesNotPoisonOnGCE(t *testing.T) {
 
 	res, err := d.Detect(canceledCtx)
 	assert.Nil(t, res)
-	assert.NoError(t, err)
+	assert.ErrorIs(t, err, context.Canceled)
 	assert.Zero(t, fake.cloudPlatformCalls)
 
 	gceRes, gceErr := (&GCE{}).Detect(canceledCtx)
