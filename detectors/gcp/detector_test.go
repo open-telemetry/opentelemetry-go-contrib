@@ -704,7 +704,7 @@ func TestDetectGCEInstanceLabelsContextCancellation(t *testing.T) {
 	), res)
 }
 
-func TestDetectCanceledAtEntryDoesNotPoisonOnGCE(t *testing.T) {
+func TestDetectCanceledContext(t *testing.T) {
 	t.Setenv("GCE_METADATA_HOST", "")
 
 	fake := &fakeGCPDetector{
