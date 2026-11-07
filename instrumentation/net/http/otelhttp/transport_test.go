@@ -1698,6 +1698,8 @@ func TestTransportActiveRequests(t *testing.T) {
 }
 
 func TestTransportActiveRequestsDisabled(t *testing.T) {
+	// Unset the opt-in so an exported value does not enable the metric.
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "")
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
