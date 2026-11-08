@@ -316,3 +316,30 @@ func TestHTTPServer_SpanName(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTPServer_NetworkTransportAttr(t *testing.T) {
+	tests := []struct {
+		name    string
+		network string
+		want    attribute.KeyValue
+	}{
+		{name: "tcp", network: "tcp", want: attribute.String("network.transport", "tcp")},
+		{name: "tcp4", network: "tcp4", want: attribute.String("network.transport", "tcp")},
+		{name: "tcp6", network: "tcp6", want: attribute.String("network.transport", "tcp")},
+		{name: "udp", network: "udp", want: attribute.String("network.transport", "udp")},
+		{name: "udp4", network: "udp4", want: attribute.String("network.transport", "udp")},
+		{name: "udp6", network: "udp6", want: attribute.String("network.transport", "udp")},
+		{name: "unix", network: "unix", want: attribute.String("network.transport", "unix")},
+		{name: "unixgram", network: "unixgram", want: attribute.String("network.transport", "unix")},
+		{name: "unixpacket", network: "unixpacket", want: attribute.String("network.transport", "unix")},
+		{name: "empty defaults to pipe", network: "", want: attribute.String("network.transport", "pipe")},
+		{name: "unknown defaults to pipe", network: "ip", want: attribute.String("network.transport", "pipe")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := HTTPServer{}.NetworkTransportAttr(tt.network)
+			assert.Equal(t, []attribute.KeyValue{tt.want}, got)
+		})
+	}
+}
