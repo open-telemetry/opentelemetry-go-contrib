@@ -68,7 +68,7 @@ func (c *CloudRun) Detect(ctx context.Context) (*resource.Resource, error) {
 	// .OnGCE is actually testing whether the metadata server is available.
 	// Metadata server is supported on Cloud Run.
 	if !c.onGCE(ctx) {
-		return nil, nil
+		return nil, ctx.Err()
 	}
 
 	attributes := []attribute.KeyValue{

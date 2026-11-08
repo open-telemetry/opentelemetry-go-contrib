@@ -5,6 +5,7 @@ package gcp
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -217,8 +218,8 @@ func TestCloudRunDetectorContextPropagation(t *testing.T) {
 			return ctx.Err() == nil
 		}, getenv(envvars))
 
-		if res, err := c.Detect(ctx); res != nil || err != nil {
-			t.Errorf("Expect c.Detect(ctx) to return (nil, nil), got (%v, %v)", res, err)
+		if res, err := c.Detect(ctx); res != nil || !errors.Is(err, context.Canceled) {
+			t.Errorf("Expect c.Detect(ctx) to return (nil, %v), got (%v, %v)", context.Canceled, res, err)
 		}
 		if len(mc.contexts) != 0 {
 			t.Errorf("expected 0 metadata calls when onGCE fails, got %d", len(mc.contexts))

@@ -727,7 +727,7 @@ func TestDetectCanceledContext(t *testing.T) {
 
 	crRes, crErr := NewCloudRun().Detect(canceledCtx)
 	assert.Nil(t, crRes)
-	assert.NoError(t, crErr)
+	assert.ErrorIs(t, crErr, context.Canceled)
 
 	t.Setenv("GCE_METADATA_HOST", "169.254.169.254")
 
