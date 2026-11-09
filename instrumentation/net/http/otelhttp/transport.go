@@ -293,9 +293,11 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	span.SetAttributes(t.semconv.RequestTraceAttrs(r)...)
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
+	// Call WithMetricAttributesFn once per request and share the result.
+	metricAttrs := t.metricAttributesFromRequest(r)
 	res, err := func() (*http.Response, error) {
 		if t.recordActiveRequests {
-			opt := t.semconv.ActiveRequestsOption(r, append(labeler.Get(), t.metricAttributesFromRequest(r)...))
+			opt := t.semconv.ActiveRequestsOption(r, append(labeler.Get(), metricAttrs...))
 			t.semconv.AddActiveRequests(ctx, 1, opt)
 			defer t.semconv.AddActiveRequests(ctx, -1, opt)
 		}
@@ -315,7 +317,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		Resp:                 res,
 		StatusCode:           statusCode,
 		Err:                  err,
-		AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
+		AdditionalAttributes: append(labeler.Get(), metricAttrs...),
 	})
 
 	if tracker != nil {

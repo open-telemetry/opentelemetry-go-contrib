@@ -246,6 +246,18 @@ func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 			},
 		},
 		{
+			// Port 0 can't be dialed, so it falls back to the scheme default
+			// like a missing port.
+			name:   "explicit port zero",
+			method: http.MethodGet,
+			url:    "http://example.com:0/path",
+			want: []attribute.KeyValue{
+				attribute.String("http.request.method", "GET"),
+				attribute.String("server.address", "example.com"),
+				attribute.Int("server.port", 80),
+			},
+		},
+		{
 			name:   "unknown scheme",
 			method: http.MethodGet,
 			url:    "custom://example.com/path",
