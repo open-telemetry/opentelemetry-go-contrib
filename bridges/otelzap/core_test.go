@@ -318,6 +318,63 @@ func TestCore(t *testing.T) {
 		)
 	})
 
+	t.Run("WithNamespaces", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		l := logger.With(zap.String("top", "0"),
+			zap.Namespace("a"), zap.String("x", "1"),
+			zap.Namespace("b"), zap.String("y", "2"),
+			zap.Namespace("c"), zap.String("z", "3"))
+		l.Info(testMessage, zap.String("w", "4"))
+
+		assertNamespaceRecord(t, rec, []attribute.KeyValue{
+			attribute.String("top", "0"),
+			attribute.Map("a",
+				attribute.String("x", "1"),
+				attribute.Map("b",
+					attribute.String("y", "2"),
+					attribute.Map("c",
+						attribute.String("z", "3"),
+						attribute.String("w", "4"),
+					),
+				),
+			),
+		})
+	})
+
+	t.Run("WithNamespaceAndWriteNamespace", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.With(zap.Namespace("a"), zap.String("x", "1")).
+			Info(testMessage, zap.Namespace("b"), zap.String("y", "2"))
+
+		assertNamespaceRecord(t, rec, []attribute.KeyValue{
+			attribute.Map("a",
+				attribute.String("x", "1"),
+				attribute.Map("b",
+					attribute.String("y", "2"),
+				),
+			),
+		})
+	})
+
+	t.Run("WithNamespaceAcrossWith", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.With(zap.Namespace("a")).
+			With(zap.Namespace("b"), zap.String("x", "1")).
+			Info(testMessage, zap.String("y", "2"))
+
+		assertNamespaceRecord(t, rec, []attribute.KeyValue{
+			attribute.Map("a",
+				attribute.Map("b",
+					attribute.String("x", "1"),
+					attribute.String("y", "2"),
+				),
+			),
+		})
+	})
+
 	t.Run("Named", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 
@@ -777,4 +834,29 @@ func TestCoreEnabledWithContext(t *testing.T) {
 			require.Nil(t, rebound.Check(zap.InfoLevel, testMessage))
 		})
 	}
+}
+
+// assertNamespaceRecord asserts that rec holds a single info record of
+// testMessage with the attributes attrs.
+func assertNamespaceRecord(t *testing.T, rec *logtest.Recorder, attrs []attribute.KeyValue) {
+	t.Helper()
+	want := logtest.Recording{
+		logtest.Scope{Name: loggerName}: {
+			{
+				Body:         attribute.StringValue(testMessage),
+				Severity:     log.SeverityInfo,
+				SeverityText: zap.InfoLevel.String(),
+				Attributes:   attrs,
+			},
+		},
+	}
+	logtest.AssertEqual(
+		t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Context = nil           // Ignore context for comparison.
+			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+			return cp
+		}),
+	)
 }
