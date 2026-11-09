@@ -65,6 +65,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   v1.48.0 is the final planned release of this module.
   Migrate to native OpenTelemetry APIs and SDKs with W3C Trace Context and W3C Baggage propagation. (#10047)
 
+<!-- markdownlint-enable MD024 -->
 ### Fixed
 
 - Fall back to the `DockerId` from the task metadata endpoint v4 for the `container.id` resource attribute in `go.opentelemetry.io/contrib/detectors/aws/ecs` when the cgroup parser finds no ID, and omit `container.id` instead of setting it to an empty string.
@@ -112,6 +113,11 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Remove the deprecated runtime metrics and the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS` environment variable in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10060)
 - Remove support for the `rpc/old` and `rpc/dup` values of `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#9908)
+
+### Removed
+
+- Remove the deprecated `WithMetricAttributesFn` option from `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Use `ContextWithLabeler` for server metric attributes and `ContextWithClientLabeler` for client metric attributes. (#9944)
+<!-- markdownlint-enable MD024 -->
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->
