@@ -27,6 +27,13 @@
       "enabled": false
     },
     {
+      "description": "Ensure source compatibility with Go version used by this project",
+      "matchManagers": [
+        "gomod"
+      ],
+      "constraintsFiltering": "strict"
+    },
+    {
       "matchPackageNames": ["go.opentelemetry.io/build-tools/**"],
       "groupName": "build-tools"
     },
