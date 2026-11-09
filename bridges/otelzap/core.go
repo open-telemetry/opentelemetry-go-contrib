@@ -289,7 +289,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 func convertField(fields []zapcore.Field, ns *namespace) (context.Context, *objectEncoder, error) {
 	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
-	enc.open(ns)
+	enc.open(ns, len(fields))
 	var errField error
 	for _, field := range fields {
 		if ctxFld, ok := field.Interface.(context.Context); ok {
