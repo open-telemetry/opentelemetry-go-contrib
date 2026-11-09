@@ -132,8 +132,8 @@ type Core struct {
 	opts     []log.LoggerOption
 	attr     []attribute.KeyValue
 	// ns is the namespace opened by With, if any. The fields added after it
-	// belong to its innermost namespace. nsAttr holds its attributes for a
-	// Write without fields.
+	// belong to its innermost namespace. nsAttr holds resolved attributes to
+	// enable fast path on [Write] without fields.
 	ns     *namespace
 	nsAttr []attribute.KeyValue
 	ctx    context.Context
@@ -285,7 +285,7 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 
 // convertField adds fields to an encoder that continues the namespace ns, if
 // any. The namespaces are left open: the attributes of enc.root do not
-// include them until objectEncoder.calculate is called.
+// include them until [objectEncoder.calculate] is called.
 func convertField(fields []zapcore.Field, ns *namespace) (context.Context, *objectEncoder, error) {
 	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
