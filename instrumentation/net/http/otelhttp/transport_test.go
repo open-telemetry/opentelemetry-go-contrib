@@ -1701,18 +1701,30 @@ func TestTransportActiveRequestsDisabled(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
+	var served atomic.Bool
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		served.Store(true)
 		w.WriteHeader(http.StatusOK)
 	}))
 	defer ts.Close()
 
-	tr := NewTransport(http.DefaultTransport, WithMeterProvider(meterProvider))
+	// Without the opt-in, the callback runs after the base RoundTrip so it
+	// can read data filled in during the request.
+	var calls int
+	var servedBeforeFn bool
+	tr := NewTransport(http.DefaultTransport, WithMeterProvider(meterProvider), WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue {
+		calls++
+		servedBeforeFn = served.Load()
+		return nil
+	}))
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
 	require.NoError(t, err)
 
 	resp, err := (&http.Client{Transport: tr}).Do(req)
 	require.NoError(t, err)
 	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, 1, calls)
+	assert.True(t, servedBeforeFn, "metric attributes function ran before the base RoundTrip")
 
 	var rm metricdata.ResourceMetrics
 	require.NoError(t, reader.Collect(t.Context(), &rm))
