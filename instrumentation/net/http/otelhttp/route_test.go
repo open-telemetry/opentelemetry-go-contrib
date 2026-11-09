@@ -300,13 +300,28 @@ func TestRouteMiddleware_ConcurrencyRace(t *testing.T) {
 		handler.ServeHTTP(rec, req)
 	}()
 
-	time.Sleep(50 * time.Millisecond)
+	select {
+	case <-doneCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for outer handler to complete")
+	}
+
+	// Release the blocked handler so RouteMiddleware can finish its late write.
 	close(blockCh)
 
-	<-doneCh
-	<-innerDoneCh
+	select {
+	case <-innerDoneCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("timed out waiting for inner handler to complete")
+	}
 
-	require.NotEmpty(t, sr.Ended())
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	// The outer handler timed out before RouteMiddleware finished, so the span
+	// was ended without the route. The late RouteMiddleware write executes safely
+	// without data race or panic, but cannot mutate the already-ended span.
+	assert.Equal(t, "GET", spans[0].Name())
+	assert.NotContains(t, spans[0].Attributes(), attribute.String("http.route", "/slow/{id}"))
 }
 
 func TestRouteMiddleware_FormatterRunsOutsideLock(t *testing.T) {

@@ -5,6 +5,7 @@ package otelhttp
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 
 	"go.opentelemetry.io/otel/trace"
@@ -17,6 +18,7 @@ type routeContext struct {
 	middleware *middleware
 	span       trace.Span
 	route      string
+	disabled   bool
 }
 
 // RouteMiddleware records the matched route on the server span and metrics
@@ -32,15 +34,16 @@ type routeContext struct {
 func RouteMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, ok := r.Context().Value(routeContextKey{}).(*routeContext)
-		if !ok || route == nil {
+		if !ok || route == nil || route.disabled {
 			next.ServeHTTP(w, r)
 			return
 		}
 		defer func() {
-			attr, matched := route.middleware.semconv.RouteFromRequest(r)
-			if !matched {
+			routeStr := httpRoute(r.Pattern)
+			if routeStr == "" {
 				return
 			}
+			attr := route.middleware.semconv.Route(routeStr)
 
 			// A route middleware closer to the handler already recorded the
 			// innermost matched route, so there is nothing left to do.
@@ -66,4 +69,11 @@ func RouteMiddleware(next http.Handler) http.Handler {
 		}()
 		next.ServeHTTP(w, r)
 	})
+}
+
+func httpRoute(pattern string) string {
+	if idx := strings.IndexByte(pattern, '/'); idx >= 0 {
+		return pattern[idx:]
+	}
+	return ""
 }
