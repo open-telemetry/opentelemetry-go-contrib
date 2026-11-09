@@ -15,7 +15,7 @@ require (
 	go.opentelemetry.io/build-tools/gotmpl v0.30.0
 	go.opentelemetry.io/build-tools/multimod v0.30.0
 	golang.org/x/exp v0.0.0-20261106192419-47ce03d25ef0
-	golang.org/x/tools v0.52.1-0.20261106210606-4f7264d11672
+	golang.org/x/tools v0.52.1-0.20261109152204-fe606802c0cd
 	golang.org/x/vuln v1.9.0
 )
 
@@ -241,8 +241,8 @@ require (
 	golang.org/x/exp/typeparams v0.0.0-20261106192419-47ce03d25ef0 // indirect
 	golang.org/x/mod v0.42.0 // indirect
 	golang.org/x/net v0.62.0 // indirect
-	golang.org/x/sync v0.24.0 // indirect
-	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/sync v0.25.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
 	golang.org/x/telemetry v0.0.0-20261021172232-6cd571d43fbb // indirect
 	golang.org/x/text v0.43.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
