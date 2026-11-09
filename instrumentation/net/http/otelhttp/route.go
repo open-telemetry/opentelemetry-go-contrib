@@ -41,11 +41,26 @@ func RouteMiddleware(next http.Handler) http.Handler {
 			if !matched {
 				return
 			}
+
+			// A route middleware closer to the handler already recorded the
+			// innermost matched route, so there is nothing left to do.
+			route.RLock()
+			recorded := route.route != ""
+			route.RUnlock()
+			if recorded {
+				return
+			}
+
+			// spanNameFormatter is user code and may be slow. Format the name
+			// before taking the write lock so it never blocks a concurrent
+			// serveHTTP waiting on route.RLock.
+			name := route.middleware.spanNameFormatter(route.middleware.operation, r)
+
 			route.Lock()
 			defer route.Unlock()
 			if route.route == "" {
 				route.route = attr.Value.AsString()
-				route.span.SetName(route.middleware.spanNameFormatter(route.middleware.operation, r))
+				route.span.SetName(name)
 				route.span.SetAttributes(attr)
 			}
 		}()

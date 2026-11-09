@@ -308,3 +308,52 @@ func TestRouteMiddleware_ConcurrencyRace(t *testing.T) {
 
 	require.NotEmpty(t, sr.Ended())
 }
+
+func TestRouteMiddleware_FormatterRunsOutsideLock(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	calls := 0
+	formatter := func(operation string, r *http.Request) string {
+		calls++
+		// TryLock can only grab the write lock when it is free, so it fails if
+		// the formatter is being run from inside route.Lock(). That would let a
+		// slow formatter hold the write lock and block serveHTTP on RLock.
+		if route, ok := r.Context().Value(routeContextKey{}).(*routeContext); ok && route != nil {
+			if route.TryLock() {
+				route.Unlock()
+			} else {
+				t.Error("spanNameFormatter must not run while holding the route write lock")
+			}
+		}
+		return operation
+	}
+
+	innerMux := http.NewServeMux()
+	innerMux.HandleFunc("GET /api/v1/users/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	outerMux := http.NewServeMux()
+	outerMux.Handle("/api/v1/", RouteMiddleware(innerMux))
+
+	handler := NewHandler(
+		copyRouteRequest(RouteMiddleware(outerMux)),
+		"server",
+		WithTracerProvider(tp),
+		WithRouteTracking(),
+		WithSpanNameFormatter(formatter),
+	)
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/v1/users/99", http.NoBody)
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, req)
+
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	// Innermost matched route still wins once formatting moves out of the lock.
+	assert.Contains(t, spans[0].Attributes(), attribute.String("http.route", "/api/v1/users/{id}"))
+	// Span start formats once; the inner route middleware formats once. The outer
+	// one sees the route already recorded and skips the formatter entirely.
+	assert.Equal(t, 2, calls)
+}
