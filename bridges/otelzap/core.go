@@ -284,8 +284,8 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 }
 
 // convertField adds fields to an encoder that continues the namespace ns, if
-// any. The namespaces are left open, so call calculate on the encoder before
-// reading its attributes.
+// any. The namespaces are left open: the attributes of enc.root do not
+// include them until objectEncoder.calculate is called.
 func convertField(fields []zapcore.Field, ns *namespace) (context.Context, *objectEncoder, error) {
 	var ctx context.Context
 	enc := newObjectEncoder(len(fields))
