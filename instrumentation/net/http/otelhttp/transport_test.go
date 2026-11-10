@@ -1675,12 +1675,24 @@ func TestTransportActiveRequests(t *testing.T) {
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
+		// With the opt-in, the callback runs before the base RoundTrip and
+		// before the increment, since it supplies the increment's attributes.
 		var calls int
+		var rtCalled, rtCalledBeforeFn bool
 		tr := NewTransport(roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+			rtCalled = true
 			assertActiveRequests(t, reader, attrs, 1)
 			return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody, Request: r}, nil
 		}), WithMeterProvider(meterProvider), WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue {
 			calls++
+			rtCalledBeforeFn = rtCalled
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+			for _, sm := range rm.ScopeMetrics {
+				for _, m := range sm.Metrics {
+					assert.NotEqual(t, "http.client.active_requests", m.Name)
+				}
+			}
 			return nil
 		}))
 
@@ -1691,6 +1703,7 @@ func TestTransportActiveRequests(t *testing.T) {
 		require.NoError(t, err)
 		require.NoError(t, resp.Body.Close())
 		assert.Equal(t, 1, calls)
+		assert.False(t, rtCalledBeforeFn, "metric attributes function ran after the base RoundTrip")
 		assertActiveRequests(t, reader, attrs, 0)
 	})
 }
