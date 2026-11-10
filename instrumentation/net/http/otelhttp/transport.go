@@ -159,14 +159,14 @@ func (rt *requestTracker) publish(ctx context.Context, d time.Duration, opts sem
 }
 
 // maybeRecord records the client metrics once the metric data has been
-// published and the request body has reached a final state. Close is the
-// only authoritative completion signal for a non-nil body: a body may yield
-// more bytes than its declared ContentLength, so a read count is never proof
-// of completion.
+// published and the request body has reached a final state. Close and io.EOF
+// are the only authoritative completion signals for a non-nil body: a body
+// may yield more bytes than its declared ContentLength, so a read count is
+// never proof of completion.
 func (rt *requestTracker) maybeRecord() {
 	rt.mu.Lock()
 	body := rt.body
-	record := rt.published && !rt.recorded && (body == nil || body.closed.Load())
+	record := rt.published && !rt.recorded && (body == nil || body.final())
 	if record {
 		rt.recorded = true
 	}
@@ -192,12 +192,13 @@ func (rt *requestTracker) maybeRecord() {
 }
 
 // trackedRequestBody wraps a request body to count read bytes and signal the
-// tracker when the body is closed.
+// tracker when the body is fully read or closed.
 type trackedRequestBody struct {
 	body    io.ReadCloser
 	tracker *requestTracker
 
 	read   atomic.Int64
+	eof    atomic.Bool
 	closed atomic.Bool
 }
 
@@ -206,7 +207,21 @@ var _ io.ReadCloser = (*trackedRequestBody)(nil)
 func (b *trackedRequestBody) Read(p []byte) (int, error) {
 	n, err := b.body.Read(p)
 	b.read.Add(int64(n))
+	if err == io.EOF {
+		// A drained body yields no more bytes, so its size is final even if
+		// the RoundTripper never closes it. Body-replaying RoundTrippers
+		// (e.g. retry clients) read the body to EOF and send a buffered copy
+		// instead, without closing the original.
+		b.eof.Store(true)
+		b.tracker.maybeRecord()
+	}
 	return n, err
+}
+
+// final reports whether the body has reached a state where no more bytes
+// will be read from it.
+func (b *trackedRequestBody) final() bool {
+	return b.eof.Load() || b.closed.Load()
 }
 
 func (b *trackedRequestBody) Close() error {

@@ -10,6 +10,10 @@ This module provides a [`resource.Detector`](https://pkg.go.dev/go.opentelemetry
 - `k8s.node.uid`
 - `k8s.cluster.uid`
 
+With the `WithHostID` option, it also detects the [host semantic convention](https://opentelemetry.io/docs/specs/semconv/resource/host/) `host.id` attribute, set to the machine ID reported by the node's kubelet (`status.nodeInfo.machineID`):
+
+- `host.id`
+
 ## Usage
 
 ```golang
@@ -29,7 +33,7 @@ env:
         fieldPath: spec.nodeName
 ```
 
-Node attributes (`k8s.node.name`, `k8s.node.uid`) require the following RBAC:
+Node attributes (`k8s.node.name`, `k8s.node.uid`, `host.id`) require the following RBAC:
 
 ```yaml
 - apiGroups: [""]

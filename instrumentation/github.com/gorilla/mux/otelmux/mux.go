@@ -6,6 +6,7 @@ package otelmux
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/felixge/httpsnoop"
@@ -99,11 +100,17 @@ var validMethods = map[string]struct{}{
 
 // defaultSpanNameFunc returns the semconv based default span name.
 func defaultSpanNameFunc(routeName string, r *http.Request) string {
-	method := r.Method
-	if _, ok := validMethods[method]; !ok {
-		method = "HTTP"
+	return normalizeMethod(r.Method, "HTTP") + " " + routeName
+}
+
+// normalizeMethod returns the upper-cased m if it is a known HTTP method,
+// otherwise fallback. Upper-casing matches how http.request.method is recorded.
+func normalizeMethod(m, fallback string) string {
+	m = strings.ToUpper(m)
+	if _, ok := validMethods[m]; !ok {
+		return fallback
 	}
-	return method + " " + routeName
+	return m
 }
 
 // ServeHTTP implements the http.Handler interface. It does the actual
@@ -135,7 +142,10 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	routeStr := extractRoute(r)
 
 	if routeStr == "" {
-		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
+		// routeStr is recorded as http.route on metrics, so it must not
+		// carry the raw, client-controlled method.
+		method := normalizeMethod(r.Method, "_OTHER")
+		routeStr = fmt.Sprintf("HTTP %s route not found", method)
 	} else {
 		rAttr := tw.semconv.Route(routeStr)
 		opts = append(opts, trace.WithAttributes(rAttr))

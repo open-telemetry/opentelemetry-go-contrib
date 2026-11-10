@@ -11,11 +11,12 @@ import (
 )
 
 type Detector struct {
-	AWSEC2  bool
-	AWSECS  bool
-	AWSEKS  bool
-	AzureVM bool
-	GCP     bool
+	AWSEC2    bool
+	AWSECS    bool
+	AWSEKS    bool
+	AWSLambda bool
+	AzureVM   bool
+	GCP       bool
 }
 
 func Options(d Detector) []resource.Option {
@@ -28,6 +29,9 @@ func Options(d Detector) []resource.Option {
 	}
 	if d.AWSEKS {
 		opts = append(opts, resource.WithDetectors(eksDetector()))
+	}
+	if d.AWSLambda {
+		opts = append(opts, resource.WithDetectors(awsLambdaDetector()))
 	}
 	if d.AzureVM {
 		opts = append(opts, resource.WithDetectors(azurevmDetector()))

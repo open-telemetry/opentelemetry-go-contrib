@@ -366,21 +366,19 @@ func (HTTPServer) Route(route string) attribute.KeyValue {
 }
 
 func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCode int, route string, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
-	num := len(additionalAttributes) + 3
-	var host string
-	var p int
-	if server == "" {
-		host, p = SplitHostPort(req.Host)
-	} else {
-		// Prioritize the primary server name.
-		host, p = SplitHostPort(server)
-		if p < 0 {
-			_, p = SplitHostPort(req.Host)
-		}
-	}
-	hostPort := requiredHTTPPort(req.TLS != nil, p)
-	if hostPort > 0 {
+	num := len(additionalAttributes) + 2
+	// server.address and server.port are Opt-In for HTTP server metrics:
+	// the request Host is client-controlled and would let any client grow
+	// metric cardinality. Only the configured server name is used.
+	host, p := SplitHostPort(server)
+	hostPort := -1
+	if host != "" {
 		num++
+		// server.port is only set alongside server.address.
+		hostPort = requiredHTTPPort(req.TLS != nil, p)
+		if hostPort > 0 {
+			num++
+		}
 	}
 	protoName, protoVersion := netProtocol(req.Proto)
 	if protoName != "" {
@@ -403,9 +401,11 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 	attributes := slices.Grow(additionalAttributes, num)
 	attributes = append(attributes,
 		semconv.HTTPRequestMethodKey.String(standardizeHTTPMethod(req.Method)),
-		n.scheme(req.TLS != nil),
-		semconv.ServerAddress(host))
+		n.scheme(req.TLS != nil))
 
+	if host != "" {
+		attributes = append(attributes, semconv.ServerAddress(host))
+	}
 	if hostPort > 0 {
 		attributes = append(attributes, semconv.ServerPort(hostPort))
 	}

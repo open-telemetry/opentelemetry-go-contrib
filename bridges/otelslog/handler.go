@@ -207,11 +207,13 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 	if h.source {
 		fs := runtime.CallersFrames([]uintptr{r.PC})
 		f, _ := fs.Next()
-		record.AddAttributes(
-			attribute.String(string(semconv.CodeFilePathKey), f.File),
-			attribute.String(string(semconv.CodeFunctionNameKey), f.Function),
-			attribute.Int(string(semconv.CodeLineNumberKey), f.Line),
-		)
+		if f.PC != 0 {
+			record.AddAttributes(
+				attribute.String(string(semconv.CodeFilePathKey), f.File),
+				attribute.String(string(semconv.CodeFunctionNameKey), f.Function),
+				attribute.Int(string(semconv.CodeLineNumberKey), f.Line),
+			)
+		}
 	}
 
 	if h.attrs != nil && h.attrs.err != nil {

@@ -2295,8 +2295,8 @@ func TestUnmarshalResourceJson(t *testing.T) {
 	}{
 		{
 			name:       "valid with all detectors",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.ec2": null},{"gcp": null},{"aws.ecs": null},{"aws.eks": null},{"azure.vm": null},{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.ec2:\n    - gcp:\n    - aws.ecs:\n    - aws.eks:\n    - azure.vm:\n    - container:\n    - host:\n    - process:\n    - service:"),
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.ec2": null},{"gcp": null},{"aws.ecs": null},{"aws.eks": null},{"aws.lambda": null},{"azure.vm": null},{"container": null},{"host": null},{"process": null},{"service": null}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.ec2:\n    - gcp:\n    - aws.ecs:\n    - aws.eks:\n    - aws.lambda:\n    - azure.vm:\n    - container:\n    - host:\n    - process:\n    - service:"),
 			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
@@ -2311,6 +2311,9 @@ func TestUnmarshalResourceJson(t *testing.T) {
 						},
 						{
 							AWSEKS: ExperimentalAWSEKSResourceDetector{},
+						},
+						{
+							AWSLambda: ExperimentalAWSLambdaResourceDetector{},
 						},
 						{
 							AzureVM: ExperimentalAzureVMResourceDetector{},
@@ -2333,8 +2336,9 @@ func TestUnmarshalResourceJson(t *testing.T) {
 		},
 		{
 			name:       "valid non-nil with all detectors",
-			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.ec2": {}},{"gcp": {}},{"aws.ecs": {}},{"aws.eks": {}},{"azure.vm": {}},{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
-			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.ec2: {}\n    - gcp: {}\n    - aws.ecs: {}\n    - aws.eks: {}\n    - azure.vm: {}\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.ec2": {}},{"gcp": {}},{"aws.ecs": {}},{"aws.eks": {}},{"aws.lambda": {}},{"azure.vm": {}},{"container": {}},{"host": {}},{"process": {}},{"service": {}}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.ec2: {}\n    - gcp: {}\n    - aws.ecs: {}\n    - aws.eks: {}\n    - aws.lambda: {}\n    - azure.vm: {}\n    - container: {}\n    - host: {}\n    - process: {}\n    - service: {}"),
+
 			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
@@ -2349,6 +2353,9 @@ func TestUnmarshalResourceJson(t *testing.T) {
 						},
 						{
 							AWSEKS: ExperimentalAWSEKSResourceDetector{},
+						},
+						{
+							AWSLambda: ExperimentalAWSLambdaResourceDetector{},
 						},
 						{
 							AzureVM: ExperimentalAzureVMResourceDetector{},
@@ -2412,6 +2419,19 @@ func TestUnmarshalResourceJson(t *testing.T) {
 			name:       "invalid aws eks detector",
 			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.eks": 1}]}}`),
 			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.eks: 1"),
+			wantResource: Resource{
+				DetectionDevelopment: &ExperimentalResourceDetection{
+					Detectors: []ExperimentalResourceDetector{
+						{},
+					},
+				},
+			},
+			wantErrT: newErrUnmarshal(&ExperimentalResourceDetector{}),
+		},
+		{
+			name:       "invalid aws lambda detector",
+			jsonConfig: []byte(`{"detection/development": {"detectors": [{"aws.lambda": 1}]}}`),
+			yamlConfig: []byte("detection/development:\n  detectors:\n    - aws.lambda: 1"),
 			wantResource: Resource{
 				DetectionDevelopment: &ExperimentalResourceDetection{
 					Detectors: []ExperimentalResourceDetector{
@@ -2749,4 +2769,87 @@ func TestAdditionalPropertiesPreserved(t *testing.T) {
 			assert.NotContains(t, got, "host")
 		})
 	}
+}
+func TestParseYAMLRejectsNullResourceAttributeAliasesAndMerges(t *testing.T) {
+	inputs := map[string]string{
+		"aliased resource": `file_format: "0.3"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource: *resource_defaults
+`,
+		"aliased attribute list": `file_format: "0.3"
+null_attributes: &null_attributes
+  - null
+resource:
+  attributes: *null_attributes
+`,
+		"non-string resource key": `file_format: "0.3"
+resource:
+  1: ignored
+  attributes:
+    - null
+`,
+		"merged attributes": `file_format: "1.0"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource:
+  <<: *resource_defaults
+`,
+	}
+
+	for name, input := range inputs {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseYAML([]byte(input))
+			require.ErrorContains(t, err, "null attribute is invalid")
+		})
+	}
+}
+
+func TestParseYAMLAllowsExplicitAttributesToOverrideMerge(t *testing.T) {
+	input := `file_format: "1.0"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource:
+  <<: *resource_defaults
+  attributes:
+    - name: service.name
+      value: demo
+`
+	_, err := ParseYAML([]byte(input))
+	require.NoError(t, err)
+}
+
+func TestParseYAMLAllowsEmptyResourceAttributes(t *testing.T) {
+	inputs := map[string]string{
+		"omitted": `file_format: "1.0"
+resource: {}
+`,
+		"empty list": `file_format: "1.0"
+resource:
+  attributes: []
+`,
+	}
+
+	for name, input := range inputs {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseYAML([]byte(input))
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestUnmarshalJSONRejectsNullResourceAttribute(t *testing.T) {
+	input := `{
+        "file_format": "1.0",
+        "resource": {
+            "attributes": [null]
+        }
+    }`
+
+	var cfg OpenTelemetryConfiguration
+	err := json.Unmarshal([]byte(input), &cfg)
+	require.ErrorContains(t, err, "name")
 }

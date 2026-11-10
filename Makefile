@@ -361,6 +361,7 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	perl -0pi -e 's/type ExperimentalGCPResourceDetector map\[string\]interface\{\}\n(type ExperimentalAWSECSResourceDetector)/type ExperimentalGCPResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
 	perl -0pi -e 's/type ExperimentalAWSECSResourceDetector map\[string\]interface\{\}\n(type ExperimentalAWSEKSResourceDetector)/type ExperimentalAWSECSResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
 	perl -0pi -e 's/type ExperimentalAWSEKSResourceDetector map\[string\]interface\{\}\n(type ExperimentalAzureVMResourceDetector)/type ExperimentalAWSEKSResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
+	perl -0pi -e 's/type ExperimentalAWSLambdaResourceDetector map\[string\]interface\{\}\n(type ExperimentalAzureVMResourceDetector)/type ExperimentalAWSLambdaResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
 	perl -0pi -e 's/type ExperimentalAzureVMResourceDetector map\[string\]interface\{\}\n(type ExperimentalServiceResourceDetector)/type ExperimentalAzureVMResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
 	sed -f ./otelconf/remove_experimental_patch.sed ${GENERATED_EXPERIMENTAL_CONFIG}.tmp > ${GENERATED_STABLE_CONFIG}.tmp
 	rm ${GENERATED_EXPERIMENTAL_CONFIG}.tmp

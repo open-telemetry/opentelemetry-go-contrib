@@ -487,6 +487,38 @@ func TestWithoutHeaders(t *testing.T) {
 	require.Empty(t, gotAttributes)
 }
 
+func TestHTTP2PseudoHeadersNotRecorded(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := trace.NewTracerProvider(trace.WithSpanProcessor(sr))
+
+	ts := httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	ts.EnableHTTP2 = true
+	ts.StartTLS()
+	defer ts.Close()
+
+	ctx, span := tp.Tracer("oteltest").Start(t.Context(), "root")
+	ctx = httptrace.WithClientTrace(
+		ctx,
+		otelhttptrace.NewClientTrace(ctx, otelhttptrace.WithoutSubSpans()),
+	)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/object?X-Goog-Signature=secret", http.NoBody)
+	require.NoError(t, err)
+	resp, err := ts.Client().Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	require.Equal(t, 2, resp.ProtoMajor)
+	span.End()
+	require.Len(t, sr.Ended(), 1)
+
+	attrs := sr.Ended()[0].Attributes()
+	for _, kv := range attrs {
+		assert.NotContains(t, string(kv.Key), "http.request.header.:")
+	}
+	assert.Contains(t, attrs, attribute.Key("http.request.header.accept-encoding").String("gzip"))
+}
+
 func TestWithInsecureHeaders(t *testing.T) {
 	fixture := prepareClientTraceTest(t)
 

@@ -125,9 +125,15 @@ func (b3 propagator) Inject(ctx context.Context, carrier propagation.TextMapCarr
 	}
 
 	if b3.cfg.InjectEncoding.supports(B3MultipleHeader) {
-		if sc.TraceID().IsValid() && sc.SpanID().IsValid() {
-			carrier.Set(b3TraceIDHeader, sc.TraceID().String())
-			carrier.Set(b3SpanIDHeader, sc.SpanID().String())
+		tid := sc.TraceID()
+		sid := sc.SpanID()
+		if tid.IsValid() && sid.IsValid() {
+			var buf [48]byte
+			hex.Encode(buf[:32], tid[:])
+			hex.Encode(buf[32:], sid[:])
+			s := string(buf[:])
+			carrier.Set(b3TraceIDHeader, s[:32])
+			carrier.Set(b3SpanIDHeader, s[32:])
 		}
 
 		if debugFromContext(ctx) {
