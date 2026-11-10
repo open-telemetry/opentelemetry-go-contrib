@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   
 ### Added
 
+- Add `WithIMDSTags` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` to add EC2 instance tags read from the instance metadata service as `ec2.tag.<key>` resource attributes. (#10086)
 - Support exemplars on exponential (native) histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
 - Convert Prometheus `UNIT` metadata to UCUM units in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10042)
 - Add the opt-in `go.memory.detailed_type` attribute to `go.memory.used` and `go.cpu.detailed_state` attribute to `go.cpu.time` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10021)
@@ -87,6 +88,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Prevent recording negative metric values for unknown request/response sizes in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#9433)
 - Prevent integer overflow when configuring the polling interval for the Jaeger remote sampler via the `OTEL_TRACES_SAMPLER_ARG` environment variable in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#10027)
 - Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray` to prevent auxiliary fields with prefix-sharing keys from dropping trace contexts. (#9879)
+- Reject null entries in `resource.attributes` during YAML and JSON parsing in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x` and `go.opentelemetry.io/contrib/otelconf/v0.3.0`. (#9970)
 - Preserve errors returned by `http.ResponseController.Flush` through `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9798)
 - Replace inherited debug and deferred sampling flags when extracting a new B3 context in `go.opentelemetry.io/contrib/propagators/b3`. (#9864)
 - Use a background context for entries without an explicit context in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#9865)
