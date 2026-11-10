@@ -33,8 +33,8 @@ require (
 	golang.org/x/net v0.62.0 // indirect
 	golang.org/x/oauth2 v0.38.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
-	golang.org/x/term v0.47.0 // indirect
-	golang.org/x/text v0.43.0 // indirect
+	golang.org/x/term v0.48.0 // indirect
+	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
