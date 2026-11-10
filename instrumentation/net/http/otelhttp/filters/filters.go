@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package filters provides a set of filters useful with the
-// otelhttp.WithFilter() option to control which inbound requests are traced.
+// [otelhttp.WithFilter] option to control which HTTP requests are instrumented.
 package filters
 
 import (
