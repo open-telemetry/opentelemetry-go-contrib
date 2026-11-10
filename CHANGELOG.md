@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   
 ### Added
 
+- Add the `cloud.resource_id` resource attribute for Cloud Run services, Cloud Run jobs, and Cloud Functions in `go.opentelemetry.io/contrib/detectors/gcp`. (#10258)
 - Record the `url.query` attribute on HTTP server spans (with `X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, `sig`, and `X-Goog-Signature` query parameter values redacted to `REDACTED`) in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, and `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#10122)
 - Add `WithIMDSTags` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` to add EC2 instance tags read from the instance metadata service as `ec2.tag.<key>` resource attributes. (#10086)
 - Support exemplars on exponential (native) histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
