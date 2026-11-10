@@ -105,7 +105,7 @@ func convertPrometheusMetricsInto(promMetrics []*dto.MetricFamily, now time.Time
 		case dto.MetricType_SUMMARY:
 			newMetric.Data = convertSummary(pm.GetMetric(), now)
 		case dto.MetricType_HISTOGRAM:
-			if isExponentialHistogramFamily(pm.GetName(), pm.GetMetric()) {
+			if isExponentialHistogramFamily(pm.GetMetric()) {
 				data, err := convertExponentialHistogram(pm.GetName(), pm.GetMetric(), now)
 				if err != nil {
 					errs = append(errs, err)
@@ -146,10 +146,10 @@ func validateHistogram(metricName string, hist *dto.Histogram) error {
 	return nil
 }
 
-func isExponentialHistogramFamily(metricName string, metrics []*dto.Metric) bool {
+func isExponentialHistogramFamily(metrics []*dto.Metric) bool {
 	for _, m := range metrics {
 		hist := m.GetHistogram()
-		if validateHistogram(metricName, hist) != nil {
+		if isFloatHistogram(hist) || hist.GetSchema() < -4 || hist.GetSchema() > 8 {
 			continue
 		}
 		return isExponentialHistogram(hist)
