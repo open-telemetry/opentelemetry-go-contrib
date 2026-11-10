@@ -28,8 +28,8 @@ github.com/aws/aws-sdk-go-v2/service/sns v1.47.10 h1:dqHTDRiALOMKb5odwU49bI8ATjD
 github.com/aws/aws-sdk-go-v2/service/sns v1.47.10/go.mod h1:DenuY8JutgG46gaBzt5g2YbDsrouO4o3Ndlvpa0MB2M=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.52.11 h1:l0xoF0qX4gBceK/7pHNJYBAU/6pIQ1oAmSxX5wj50Zw=
 github.com/aws/aws-sdk-go-v2/service/sqs v1.52.11/go.mod h1:pQMLwZnCgN/XcwUhn/Nu6IN+CF94dfDBZK7W8TD5lIc=
-github.com/aws/smithy-go v1.28.8 h1:aEmdAq7gVCoGCnvf1NnELlu3I6D/nhqrC321FyFiQkQ=
-github.com/aws/smithy-go v1.28.8/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
+github.com/aws/smithy-go v1.28.9 h1:zkZ058OpNX0iGTK24b+ZUEQSMc11CBA6oO7xtKZfzkY=
+github.com/aws/smithy-go v1.28.9/go.mod h1:YE2RhdIuDbA5E5bTdciG9KrW3+TiEONeUWCqxX9i1Fc=
 github.com/cespare/xxhash/v2 v2.3.0 h1:UL815xU9SqsFlibzuggzjXhog7bL6oX9BbNZnL2UFvs=
 github.com/cespare/xxhash/v2 v2.3.0/go.mod h1:VGX0DQ3Q6kWi7AoAeZDth3/j3BFtOZR5XLFGgcrjCOs=
 github.com/go-logr/logr v1.2.2/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
