@@ -474,6 +474,22 @@ func TestSlogtest(t *testing.T) {
 	})
 }
 
+func TestHandlerWithSourceWithoutPC(t *testing.T) {
+	r := new(recorder)
+	h := NewHandler("", WithLoggerProvider(r), WithSource(true))
+	record := slog.NewRecord(time.Time{}, slog.LevelInfo, "msg", 0)
+
+	require.NoError(t, h.Handle(t.Context(), record))
+	require.Len(t, r.Records, 1)
+	for _, key := range []string{
+		string(semconv.CodeFilePathKey),
+		string(semconv.CodeFunctionNameKey),
+		string(semconv.CodeLineNumberKey),
+	} {
+		assert.NotContains(t, r.Results()[0], key)
+	}
+}
+
 func TestNewHandlerConfiguration(t *testing.T) {
 	name := "name"
 	t.Run("Default", func(t *testing.T) {
