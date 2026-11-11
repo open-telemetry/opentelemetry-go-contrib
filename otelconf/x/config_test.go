@@ -2770,6 +2770,7 @@ func TestAdditionalPropertiesPreserved(t *testing.T) {
 		})
 	}
 }
+
 func TestParseYAMLRejectsNullResourceAttributeAliasesAndMerges(t *testing.T) {
 	inputs := map[string]string{
 		"aliased resource": `file_format: "0.3"
