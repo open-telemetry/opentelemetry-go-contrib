@@ -2317,3 +2317,233 @@ func TestUnmarshalJSONRejectsNullResourceAttribute(t *testing.T) {
 	err := json.Unmarshal([]byte(input), &cfg)
 	require.ErrorContains(t, err, "name")
 }
+
+func TestUnmarshalSamplerAdditionalProperties(t *testing.T) {
+	jsonConfig := []byte(`{
+        "always_on": {},
+        "custom_sampler/development": {
+            "parameter": "value"
+        }
+    }`)
+
+	yamlConfig := []byte(`
+always_on: {}
+custom_sampler/development:
+  parameter: value
+`)
+
+	want := Sampler{
+		AlwaysOn: AlwaysOnSampler{},
+		AdditionalProperties: map[string]any{
+			"custom_sampler/development": map[string]any{
+				"parameter": "value",
+			},
+		},
+	}
+
+	var fromJSON Sampler
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML Sampler
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalSpanProcessorWithoutAdditionalProperties(t *testing.T) {
+	jsonConfig := []byte(`{
+        "batch": {
+            "exporter": {
+                "console": {}
+            }
+        }
+    }`)
+
+	yamlConfig := []byte(`
+batch:
+  exporter:
+    console: {}
+`)
+
+	want := SpanProcessor{
+		Batch: &BatchSpanProcessor{
+			Exporter: SpanExporter{
+				Console: ConsoleExporter{},
+			},
+		},
+	}
+
+	var fromJSON SpanProcessor
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML SpanProcessor
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalLogRecordProcessorWithoutAdditionalProperties(t *testing.T) {
+	jsonConfig := []byte(`{
+        "batch": {
+            "exporter": {
+                "console": {}
+            }
+        }
+    }`)
+
+	yamlConfig := []byte(`
+batch:
+  exporter:
+    console: {}
+`)
+
+	want := LogRecordProcessor{
+		Batch: &BatchLogRecordProcessor{
+			Exporter: LogRecordExporter{
+				Console: ConsoleExporter{},
+			},
+		},
+	}
+
+	var fromJSON LogRecordProcessor
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML LogRecordProcessor
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalSpanProcessorAdditionalProperties(t *testing.T) {
+	tests := []struct {
+		name      string
+		unmarshal func([]byte, any) error
+		input     string
+	}{
+		{
+			name:      "JSON",
+			unmarshal: json.Unmarshal,
+			input: `{
+				"custom_span_processor": {
+					"parameter": "value"
+				}
+			}`,
+		},
+		{
+			name:      "YAML",
+			unmarshal: yaml.Unmarshal,
+			input: `
+custom_span_processor:
+  parameter: value
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got SpanProcessor
+
+			if err := tt.unmarshal([]byte(tt.input), &got); err != nil {
+				t.Fatalf("unmarshal failed: %v", err)
+			}
+
+			custom, ok := got.AdditionalProperties["custom_span_processor"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected custom_span_processor in AdditionalProperties, got: %#v",
+					got.AdditionalProperties)
+			}
+
+			if custom["parameter"] != "value" {
+				t.Errorf("expected parameter = %q, got %v", "value", custom["parameter"])
+			}
+		})
+	}
+}
+
+func TestUnmarshalLogRecordProcessorAdditionalProperties(t *testing.T) {
+	tests := []struct {
+		name      string
+		unmarshal func([]byte, any) error
+		input     string
+	}{
+		{
+			name:      "JSON",
+			unmarshal: json.Unmarshal,
+			input: `{
+				"custom_log_processor": {
+					"parameter": "value"
+				}
+			}`,
+		},
+		{
+			name:      "YAML",
+			unmarshal: yaml.Unmarshal,
+			input: `
+custom_log_processor:
+  parameter: value
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got LogRecordProcessor
+
+			if err := tt.unmarshal([]byte(tt.input), &got); err != nil {
+				t.Fatalf("unmarshal failed: %v", err)
+			}
+
+			custom, ok := got.AdditionalProperties["custom_log_processor"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected custom_log_processor in AdditionalProperties, got: %#v",
+					got.AdditionalProperties)
+			}
+
+			if custom["parameter"] != "value" {
+				t.Errorf("expected parameter = %q, got %v", "value", custom["parameter"])
+			}
+		})
+	}
+}
+
+func TestYAMLMappingToMap(t *testing.T) {
+	t.Run("nil node", func(t *testing.T) {
+		got, err := yamlMappingToMap(nil)
+
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("non-mapping node", func(t *testing.T) {
+		node := &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!str",
+			Value: "value",
+		}
+
+		got, err := yamlMappingToMap(node)
+
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("invalid mapping key", func(t *testing.T) {
+		node := &yaml.Node{
+			Kind: yaml.MappingNode,
+			Content: []*yaml.Node{
+				{
+					Kind: yaml.SequenceNode,
+					Tag:  "!!seq",
+					Content: []*yaml.Node{
+						{Kind: yaml.ScalarNode, Tag: "!!str", Value: "key"},
+					},
+				},
+				{Kind: yaml.ScalarNode, Tag: "!!str", Value: "value"},
+			},
+		}
+
+		_, err := yamlMappingToMap(node)
+
+		require.Error(t, err)
+	})
+}
