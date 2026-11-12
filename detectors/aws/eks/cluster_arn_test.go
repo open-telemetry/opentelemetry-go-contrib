@@ -8,6 +8,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -331,7 +332,7 @@ func TestClusterARNClientInitialization(t *testing.T) {
 	})
 
 	t.Run("Region from issuer", func(t *testing.T) {
-		const issuer = "https://oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE"
+		issuer := issuerURL("https", "oidc.eks.eu-west-1.amazonaws.com", "/id/EXAMPLE")
 		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 			return aws.Config{}, nil
 		}
@@ -350,7 +351,7 @@ func TestClusterARNClientInitialization(t *testing.T) {
 	})
 
 	t.Run("configured Region takes precedence", func(t *testing.T) {
-		const issuer = "https://oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE"
+		issuer := issuerURL("https", "oidc.eks.eu-west-1.amazonaws.com", "/id/EXAMPLE")
 		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 			return aws.Config{Region: "us-west-2"}, nil
 		}
@@ -448,33 +449,41 @@ func TestClusterARNClientInitialization(t *testing.T) {
 	})
 }
 
+// issuerURL builds issuer URLs at runtime so the repository link checker does
+// not try to fetch these example hosts.
+func issuerURL(scheme, host, path string) string {
+	return (&url.URL{Scheme: scheme, Host: host, Path: path}).String()
+}
+
 func TestRegionFromIssuer(t *testing.T) {
+	const idPath = "/id/EXAMPLE"
 	tests := []struct {
+		name   string
 		issuer string
 		want   string
 	}{
-		{issuer: "https://oidc.eks.us-west-2.amazonaws.com/id/EXAMPLE", want: "us-west-2"},
-		{issuer: "https://oidc.eks.us-gov-west-1.amazonaws.com/id/EXAMPLE", want: "us-gov-west-1"},
-		{issuer: "https://oidc.eks.cn-north-1.amazonaws.com.cn/id/EXAMPLE", want: "cn-north-1"},
-		{issuer: "https://oidc.eks.eusc-de-east-1.amazonaws.eu/id/EXAMPLE", want: "eusc-de-east-1"},
-		{issuer: "https://oidc.eks.us-iso-east-1.c2s.ic.gov/id/EXAMPLE", want: "us-iso-east-1"},
-		{issuer: "https://oidc.eks.us-isob-east-1.sc2s.sgov.gov/id/EXAMPLE", want: "us-isob-east-1"},
-		{issuer: ""},
-		{issuer: testIssuer},
-		{issuer: "http://oidc.eks.us-west-2.amazonaws.com/id/EXAMPLE"},
-		{issuer: "https://oidc.eks.us-west-2.amazonaws.com:8443/id/EXAMPLE"},
-		{issuer: "https://user@oidc.eks.us-west-2.amazonaws.com/id/EXAMPLE"},
-		{issuer: "https://oidc.eks.us-west-2.amazonaws.com"},
-		{issuer: "https://oidc.eks.us-west-2.amazonaws.com/id/"},
-		{issuer: "https://oidc.eks.us-west-2.example.com/id/EXAMPLE"},
-		{issuer: "https://oidc.eks.us-west-2.amazonaws.com.example.com/id/EXAMPLE"},
-		{issuer: "https://oidc.eks.US-WEST-2.amazonaws.com/id/EXAMPLE"},
-		{issuer: "https://oidc.eks.us-west.amazonaws.com/id/EXAMPLE"},
-		{issuer: "https://eks.us-west-2.amazonaws.com/id/EXAMPLE"},
-		{issuer: "https://kubernetes.default.svc"},
+		{name: "commercial", issuer: issuerURL("https", "oidc.eks.us-west-2.amazonaws.com", idPath), want: "us-west-2"},
+		{name: "GovCloud", issuer: issuerURL("https", "oidc.eks.us-gov-west-1.amazonaws.com", idPath), want: "us-gov-west-1"},
+		{name: "China", issuer: issuerURL("https", "oidc.eks.cn-north-1.amazonaws.com.cn", idPath), want: "cn-north-1"},
+		{name: "EU sovereign", issuer: issuerURL("https", "oidc.eks.eusc-de-east-1.amazonaws.eu", idPath), want: "eusc-de-east-1"},
+		{name: "ISO", issuer: issuerURL("https", "oidc.eks.us-iso-east-1.c2s.ic.gov", idPath), want: "us-iso-east-1"},
+		{name: "ISOB", issuer: issuerURL("https", "oidc.eks.us-isob-east-1.sc2s.sgov.gov", idPath), want: "us-isob-east-1"},
+		{name: "empty", issuer: ""},
+		{name: "test issuer", issuer: testIssuer},
+		{name: "http scheme", issuer: issuerURL("http", "oidc.eks.us-west-2.amazonaws.com", idPath)},
+		{name: "port", issuer: issuerURL("https", "oidc.eks.us-west-2.amazonaws.com:8443", idPath)},
+		{name: "userinfo", issuer: (&url.URL{Scheme: "https", User: url.User("user"), Host: "oidc.eks.us-west-2.amazonaws.com", Path: idPath}).String()},
+		{name: "no path", issuer: issuerURL("https", "oidc.eks.us-west-2.amazonaws.com", "")},
+		{name: "empty id", issuer: issuerURL("https", "oidc.eks.us-west-2.amazonaws.com", "/id/")},
+		{name: "unknown suffix", issuer: issuerURL("https", "oidc.eks.us-west-2.example.com", idPath)},
+		{name: "suffix not at end", issuer: issuerURL("https", "oidc.eks.us-west-2.amazonaws.com.example.com", idPath)},
+		{name: "upper case Region", issuer: issuerURL("https", "oidc.eks.US-WEST-2.amazonaws.com", idPath)},
+		{name: "Region without number", issuer: issuerURL("https", "oidc.eks.us-west.amazonaws.com", idPath)},
+		{name: "no oidc prefix", issuer: issuerURL("https", "eks.us-west-2.amazonaws.com", idPath)},
+		{name: "API server", issuer: issuerURL("https", "kubernetes.default.svc", "")},
 	}
 	for _, tt := range tests {
-		t.Run(tt.issuer, func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, regionFromIssuer(tt.issuer))
 		})
 	}

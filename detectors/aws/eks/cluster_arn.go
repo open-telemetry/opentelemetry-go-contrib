@@ -185,9 +185,9 @@ func (d *clusterARNDetector) getClient(ctx context.Context, issuer string) (eksC
 	return d.client, nil
 }
 
-// regionFromIssuer returns the Region of an EKS OIDC issuer URL of the form
-// https://oidc.eks.<region>.<partition DNS suffix>/id/<id>, or an empty string
-// if issuer does not have that form.
+// regionFromIssuer returns the Region of an EKS OIDC issuer URL, or an empty
+// string if issuer is not one. An EKS issuer uses the https scheme, the host
+// oidc.eks.<region>.<partition DNS suffix>, and the path /id/<id>.
 func regionFromIssuer(issuer string) string {
 	u, err := url.Parse(issuer)
 	if err != nil || u.Scheme != "https" || u.User != nil || u.Port() != "" ||
