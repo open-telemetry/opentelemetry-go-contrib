@@ -247,7 +247,7 @@ func TestDetect(t *testing.T) {
 			svr := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(tCase.input.statusCode)
 
-				if r.Header.Get("Metadata") == "True" {
+				if r.Header.Get("Metadata") == "true" {
 					fmt.Fprint(w, tCase.input.jsonMetadata)
 				}
 			}))
