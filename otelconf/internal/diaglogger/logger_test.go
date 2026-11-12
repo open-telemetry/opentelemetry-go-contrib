@@ -7,6 +7,7 @@ package diaglogger
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -58,6 +59,51 @@ func TestNewLogLevelFiltering(t *testing.T) {
 			name:  "fatal",
 			level: "fatal",
 		},
+
+		{
+			name:        "trace2",
+			level:       "trace2",
+			wantInfo:    true,
+			wantWarning: true,
+			wantError:   true,
+		},
+		{
+			name:        "debug4",
+			level:       "debug4",
+			wantInfo:    true,
+			wantWarning: true,
+			wantError:   true,
+		},
+		{
+			name:        "info2",
+			level:       "info2",
+			wantInfo:    true,
+			wantWarning: true,
+			wantError:   true,
+		},
+		{
+			name:        "warn3",
+			level:       "warn3",
+			wantWarning: true,
+			wantError:   true,
+		},
+		{
+			name:      "error4",
+			level:     "error4",
+			wantError: true,
+		},
+		{
+			name:  "fatal2",
+			level: "fatal2",
+		},
+		{
+			name:  "fatal3",
+			level: "fatal3",
+		},
+		{
+			name:  "fatal4",
+			level: "fatal4",
+		},
 	}
 
 	for _, tt := range tests {
@@ -100,6 +146,17 @@ func TestNewWritesToProvidedWriter(t *testing.T) {
 }
 
 func TestNewUnsupportedLevel(t *testing.T) {
-	_, err := New("invalid")
-	require.EqualError(t, err, `unsupported log_level "invalid"`)
+	tests := []string{
+		"invalid",
+		"info5",
+		"warn1",
+		"fatal5",
+	}
+
+	for _, level := range tests {
+		t.Run(level, func(t *testing.T) {
+			_, err := New(level)
+			require.EqualError(t, err, fmt.Sprintf("unsupported log_level %q", level))
+		})
+	}
 }
