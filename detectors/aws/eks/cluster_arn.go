@@ -11,6 +11,8 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -38,6 +40,21 @@ var (
 	errClusterMismatch          = errors.New("EKS cluster identity does not match the live cluster")
 )
 
+// issuerRegion matches the Region label of an EKS OIDC issuer host.
+var issuerRegion = regexp.MustCompile(`^[a-z]{2,4}(-[a-z]+)+-\d+$`)
+
+// issuerDNSSuffixes are the DNS suffixes of the AWS partitions that EKS OIDC
+// issuer hosts (oidc.eks.<region>.<suffix>) are published under.
+var issuerDNSSuffixes = []string{
+	"amazonaws.com",
+	"amazonaws.com.cn",
+	"amazonaws.eu",
+	"c2s.ic.gov",
+	"sc2s.sgov.gov",
+	"cloud.adc-e.uk",
+	"csp.hci.ic.gov",
+}
+
 var (
 	loadAWSConfig = awsconfig.LoadDefaultConfig
 	newEKSClient  = func(cfg aws.Config) eksClient { return eks.NewFromConfig(cfg) }
@@ -47,8 +64,10 @@ var (
 // EKS DescribeCluster and reports the ARN only when the returned OIDC issuer
 // matches the issuer published by the live Kubernetes API server. The option
 // requires cluster.name from the amazon-cloudwatch/cluster-info ConfigMap and
-// valid AWS configuration for that cluster. If the ARN cannot be established,
-// Detect returns the other EKS attributes with resource.ErrPartialResource.
+// valid AWS configuration for that cluster. If the AWS configuration has no
+// Region, the Region of the live OIDC issuer is used. If the ARN cannot be
+// established, Detect returns the other EKS attributes with
+// resource.ErrPartialResource.
 func WithClusterARN() Option {
 	return optionFunc(func(c *config) {
 		c.clusterARN = true
@@ -98,7 +117,7 @@ func (d *clusterARNDetector) detect(ctx context.Context, clusterName string) (st
 	awsCtx, cancel := context.WithTimeout(ctx, clusterARNTimeout)
 	defer cancel()
 
-	client, err := d.getClient(awsCtx)
+	client, err := d.getClient(awsCtx, liveIssuer)
 	if err != nil {
 		if ctxErr := awsCtx.Err(); ctxErr != nil {
 			return "", ctxErr
@@ -133,8 +152,9 @@ func (d *clusterARNDetector) detect(ctx context.Context, clusterName string) (st
 
 // getClient loads the AWS configuration synchronously with the caller's ctx.
 // Callers are serialized by a lock that is acquired with select so a caller
-// waiting on another caller's initialization still honors its own ctx.
-func (d *clusterARNDetector) getClient(ctx context.Context) (eksClient, error) {
+// waiting on another caller's initialization still honors its own ctx. If the
+// configuration has no Region, the Region is taken from issuer.
+func (d *clusterARNDetector) getClient(ctx context.Context, issuer string) (eksClient, error) {
 	sem := d.lock()
 	select {
 	case sem <- struct{}{}:
@@ -156,10 +176,33 @@ func (d *clusterARNDetector) getClient(ctx context.Context) (eksClient, error) {
 		return nil, err
 	}
 	if cfg.Region == "" {
+		cfg.Region = regionFromIssuer(issuer)
+	}
+	if cfg.Region == "" {
 		return nil, errAWSRegionUnavailable
 	}
 	d.client = newEKSClient(cfg)
 	return d.client, nil
+}
+
+// regionFromIssuer returns the Region of an EKS OIDC issuer URL of the form
+// https://oidc.eks.<region>.<partition DNS suffix>/id/<id>, or an empty string
+// if issuer does not have that form.
+func regionFromIssuer(issuer string) string {
+	u, err := url.Parse(issuer)
+	if err != nil || u.Scheme != "https" || u.User != nil || u.Port() != "" ||
+		!strings.HasPrefix(u.Path, "/id/") || len(u.Path) == len("/id/") {
+		return ""
+	}
+	rest, ok := strings.CutPrefix(u.Hostname(), "oidc.eks.")
+	if !ok {
+		return ""
+	}
+	region, suffix, ok := strings.Cut(rest, ".")
+	if !ok || !issuerRegion.MatchString(region) || !slices.Contains(issuerDNSSuffixes, suffix) {
+		return ""
+	}
+	return region
 }
 
 func normalizeIssuer(issuer string) string {

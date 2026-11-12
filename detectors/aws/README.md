@@ -82,10 +82,11 @@ server. This prevents a stale or copied cluster name from producing an ARN for
 a different cluster.
 
 The option requires `cluster.name` in the `amazon-cloudwatch/cluster-info`
-ConfigMap, AWS credentials and the EKS cluster's Region, `eks:DescribeCluster`
-permission, and access to `/.well-known/openid-configuration`. Kubernetes'
-built-in `system:service-account-issuer-discovery` ClusterRole provides the
-last permission.
+ConfigMap, AWS credentials, `eks:DescribeCluster` permission, and access to
+`/.well-known/openid-configuration`. Kubernetes' built-in
+`system:service-account-issuer-discovery` ClusterRole provides the last
+permission. The Region comes from the AWS configuration, such as `AWS_REGION`.
+If none is configured, the Region in the live OIDC issuer URL is used.
 
 The OIDC request is bounded to 10 seconds. AWS configuration and
 `DescribeCluster` share another 10-second bound. A shorter caller deadline

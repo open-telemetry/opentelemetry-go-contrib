@@ -330,6 +330,43 @@ func TestClusterARNClientInitialization(t *testing.T) {
 		assert.ErrorIs(t, err, errAWSRegionUnavailable)
 	})
 
+	t.Run("Region from issuer", func(t *testing.T) {
+		const issuer = "https://oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE"
+		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			return aws.Config{}, nil
+		}
+		var region string
+		newEKSClient = func(cfg aws.Config) eksClient {
+			region = cfg.Region
+			return &mockEKSClient{output: describedCluster(testClusterARN, issuer)}
+		}
+		detector := &clusterARNDetector{utils: &arnTestUtils{issuer: issuer}}
+
+		arn, err := detector.detect(t.Context(), testClusterName)
+
+		require.NoError(t, err)
+		assert.Equal(t, testClusterARN, arn)
+		assert.Equal(t, "eu-west-1", region)
+	})
+
+	t.Run("configured Region takes precedence", func(t *testing.T) {
+		const issuer = "https://oidc.eks.eu-west-1.amazonaws.com/id/EXAMPLE"
+		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+			return aws.Config{Region: "us-west-2"}, nil
+		}
+		var region string
+		newEKSClient = func(cfg aws.Config) eksClient {
+			region = cfg.Region
+			return &mockEKSClient{output: describedCluster(testClusterARN, issuer)}
+		}
+		detector := &clusterARNDetector{utils: &arnTestUtils{issuer: issuer}}
+
+		_, err := detector.detect(t.Context(), testClusterName)
+
+		require.NoError(t, err)
+		assert.Equal(t, "us-west-2", region)
+	})
+
 	t.Run("waiter honors its own deadline", func(t *testing.T) {
 		loadCalls := 0
 		started := make(chan struct{})
@@ -346,7 +383,7 @@ func TestClusterARNClientInitialization(t *testing.T) {
 
 		leaderDone := make(chan error, 1)
 		go func() {
-			_, err := detector.getClient(t.Context())
+			_, err := detector.getClient(t.Context(), testIssuer)
 			leaderDone <- err
 		}()
 		<-started
@@ -354,7 +391,7 @@ func TestClusterARNClientInitialization(t *testing.T) {
 		ctx, cancel := context.WithTimeout(t.Context(), 20*time.Millisecond)
 		defer cancel()
 		start := time.Now()
-		_, err := detector.getClient(ctx)
+		_, err := detector.getClient(ctx, testIssuer)
 		elapsed := time.Since(start)
 		close(release)
 
@@ -409,6 +446,38 @@ func TestClusterARNClientInitialization(t *testing.T) {
 		assert.Equal(t, 1, newCalls)
 		assert.Equal(t, 2, client.calls)
 	})
+}
+
+func TestRegionFromIssuer(t *testing.T) {
+	tests := []struct {
+		issuer string
+		want   string
+	}{
+		{issuer: "https://oidc.eks.us-west-2.amazonaws.com/id/EXAMPLE", want: "us-west-2"},
+		{issuer: "https://oidc.eks.us-gov-west-1.amazonaws.com/id/EXAMPLE", want: "us-gov-west-1"},
+		{issuer: "https://oidc.eks.cn-north-1.amazonaws.com.cn/id/EXAMPLE", want: "cn-north-1"},
+		{issuer: "https://oidc.eks.eusc-de-east-1.amazonaws.eu/id/EXAMPLE", want: "eusc-de-east-1"},
+		{issuer: "https://oidc.eks.us-iso-east-1.c2s.ic.gov/id/EXAMPLE", want: "us-iso-east-1"},
+		{issuer: "https://oidc.eks.us-isob-east-1.sc2s.sgov.gov/id/EXAMPLE", want: "us-isob-east-1"},
+		{issuer: ""},
+		{issuer: testIssuer},
+		{issuer: "http://oidc.eks.us-west-2.amazonaws.com/id/EXAMPLE"},
+		{issuer: "https://oidc.eks.us-west-2.amazonaws.com:8443/id/EXAMPLE"},
+		{issuer: "https://user@oidc.eks.us-west-2.amazonaws.com/id/EXAMPLE"},
+		{issuer: "https://oidc.eks.us-west-2.amazonaws.com"},
+		{issuer: "https://oidc.eks.us-west-2.amazonaws.com/id/"},
+		{issuer: "https://oidc.eks.us-west-2.example.com/id/EXAMPLE"},
+		{issuer: "https://oidc.eks.us-west-2.amazonaws.com.example.com/id/EXAMPLE"},
+		{issuer: "https://oidc.eks.US-WEST-2.amazonaws.com/id/EXAMPLE"},
+		{issuer: "https://oidc.eks.us-west.amazonaws.com/id/EXAMPLE"},
+		{issuer: "https://eks.us-west-2.amazonaws.com/id/EXAMPLE"},
+		{issuer: "https://kubernetes.default.svc"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.issuer, func(t *testing.T) {
+			assert.Equal(t, tt.want, regionFromIssuer(tt.issuer))
+		})
+	}
 }
 
 func TestClusterARNClientInitializationCancellation(t *testing.T) {
