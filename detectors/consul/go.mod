@@ -5,8 +5,8 @@ go 1.26.0
 require (
 	github.com/hashicorp/consul/api v1.32.1
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/otel v1.47.0
-	go.opentelemetry.io/otel/sdk v1.47.0
+	go.opentelemetry.io/otel v1.47.1-0.20261112115731-9f099277e0af
+	go.opentelemetry.io/otel/sdk v1.47.1-0.20261112115731-9f099277e0af
 )
 
 require (
@@ -30,8 +30,8 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
-	go.opentelemetry.io/otel/metric v1.47.0 // indirect
-	go.opentelemetry.io/otel/trace v1.47.0 // indirect
+	go.opentelemetry.io/otel/metric v1.47.1-0.20261112115731-9f099277e0af // indirect
+	go.opentelemetry.io/otel/trace v1.47.1-0.20261112115731-9f099277e0af // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp v0.0.0-20261109185158-a52e3aef5920 // indirect
 	golang.org/x/sys v0.50.0 // indirect

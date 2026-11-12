@@ -11,7 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sns/types"
 	"github.com/aws/smithy-go/middleware"
 	"github.com/stretchr/testify/assert"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 func TestPublishInput(t *testing.T) {
@@ -23,7 +23,7 @@ func TestPublishInput(t *testing.T) {
 
 	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
+	assert.Contains(t, attributes, semconv.MessagingSystemNameAWSSNS)
 	assert.Contains(t, attributes, semconv.MessagingDestinationName("my-topic"))
 	assert.Contains(t, attributes, semconv.AWSSNSTopicARN("arn:aws:sns:us-east-2:444455556666:my-topic"))
 	assert.Contains(t, attributes, semconv.MessagingOperationName("publish_input"))
@@ -37,7 +37,7 @@ func TestPublishInputWithNoDestination(t *testing.T) {
 
 	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
+	assert.Contains(t, attributes, semconv.MessagingSystemNameAWSSNS)
 	assert.Contains(t, attributes, semconv.MessagingDestinationName(""))
 	for _, attr := range attributes {
 		assert.NotEqual(t, semconv.AWSSNSTopicARNKey, attr.Key)
@@ -71,7 +71,7 @@ func TestPublishBatchInput(t *testing.T) {
 
 	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	assert.Contains(t, attributes, semconv.MessagingSystemKey.String("aws_sns"))
+	assert.Contains(t, attributes, semconv.MessagingSystemNameAWSSNS)
 	assert.Contains(t, attributes, semconv.MessagingDestinationName("my-topic-batch"))
 	assert.Contains(t, attributes, semconv.AWSSNSTopicARN("arn:aws:sns:us-east-2:444455556666:my-topic-batch"))
 	assert.Contains(t, attributes, semconv.MessagingOperationName("publish_batch_input"))
