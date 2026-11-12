@@ -5,12 +5,20 @@ package eks
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"os"
+	"path/filepath"
+	"slices"
 	"strings"
+	"sync"
 	"testing"
+	"testing/iotest"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -219,6 +227,36 @@ func TestGetOIDCIssuer(t *testing.T) {
 		require.Error(t, err)
 		assert.ErrorContains(t, err, "unexpected status 403 Forbidden")
 	})
+
+	t.Run("invalid host", func(t *testing.T) {
+		_, err := (eksDetectorUtils{host: "https://[::1", client: &http.Client{}}).getOIDCIssuer(t.Context())
+
+		require.Error(t, err)
+		assert.ErrorContains(t, err, "failed to build OIDC discovery URL")
+	})
+
+	t.Run("body read fails", func(t *testing.T) {
+		readErr := errors.New("connection reset")
+		client := &http.Client{Transport: roundTripperFunc(func(req *http.Request) (*http.Response, error) {
+			return &http.Response{
+				StatusCode: http.StatusOK,
+				Body:       io.NopCloser(iotest.ErrReader(readErr)),
+				Request:    req,
+			}, nil
+		})}
+
+		_, err := (eksDetectorUtils{host: "https://kubernetes.invalid", client: client}).getOIDCIssuer(t.Context())
+
+		require.Error(t, err)
+		assert.ErrorIs(t, err, readErr)
+		assert.ErrorContains(t, err, "failed to read OIDC discovery document")
+	})
+}
+
+type roundTripperFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripperFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return f(req)
 }
 
 func TestClusterARNFailures(t *testing.T) {
@@ -331,43 +369,6 @@ func TestClusterARNClientInitialization(t *testing.T) {
 		assert.ErrorIs(t, err, errAWSRegionUnavailable)
 	})
 
-	t.Run("Region from issuer", func(t *testing.T) {
-		issuer := issuerURL("https", "oidc.eks.eu-west-1.amazonaws.com", "/id/EXAMPLE")
-		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
-			return aws.Config{}, nil
-		}
-		var region string
-		newEKSClient = func(cfg aws.Config) eksClient {
-			region = cfg.Region
-			return &mockEKSClient{output: describedCluster(testClusterARN, issuer)}
-		}
-		detector := &clusterARNDetector{utils: &arnTestUtils{issuer: issuer}}
-
-		arn, err := detector.detect(t.Context(), testClusterName)
-
-		require.NoError(t, err)
-		assert.Equal(t, testClusterARN, arn)
-		assert.Equal(t, "eu-west-1", region)
-	})
-
-	t.Run("configured Region takes precedence", func(t *testing.T) {
-		issuer := issuerURL("https", "oidc.eks.eu-west-1.amazonaws.com", "/id/EXAMPLE")
-		loadAWSConfig = func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
-			return aws.Config{Region: "us-west-2"}, nil
-		}
-		var region string
-		newEKSClient = func(cfg aws.Config) eksClient {
-			region = cfg.Region
-			return &mockEKSClient{output: describedCluster(testClusterARN, issuer)}
-		}
-		detector := &clusterARNDetector{utils: &arnTestUtils{issuer: issuer}}
-
-		_, err := detector.detect(t.Context(), testClusterName)
-
-		require.NoError(t, err)
-		assert.Equal(t, "us-west-2", region)
-	})
-
 	t.Run("waiter honors its own deadline", func(t *testing.T) {
 		loadCalls := 0
 		started := make(chan struct{})
@@ -453,6 +454,125 @@ func TestClusterARNClientInitialization(t *testing.T) {
 // not try to fetch these example hosts.
 func issuerURL(scheme, host, path string) string {
 	return (&url.URL{Scheme: scheme, Host: host, Path: path}).String()
+}
+
+// awsTransport answers the STS and EKS requests made by clients built from
+// the real AWS configuration loader, so the tests make no network requests.
+type awsTransport struct {
+	issuer string
+
+	mu    sync.Mutex
+	hosts []string
+}
+
+func (tr *awsTransport) Do(req *http.Request) (*http.Response, error) {
+	tr.mu.Lock()
+	tr.hosts = append(tr.hosts, req.URL.Host)
+	tr.mu.Unlock()
+
+	var contentType, body string
+	switch {
+	case strings.HasPrefix(req.URL.Host, "sts."):
+		contentType = "text/xml"
+		body = `<AssumeRoleWithWebIdentityResponse><AssumeRoleWithWebIdentityResult><Credentials>` +
+			`<AccessKeyId>AKIDEXAMPLE</AccessKeyId><SecretAccessKey>SECRET</SecretAccessKey>` +
+			`<SessionToken>TOKEN</SessionToken><Expiration>2100-01-01T00:00:00Z</Expiration>` +
+			`</Credentials></AssumeRoleWithWebIdentityResult></AssumeRoleWithWebIdentityResponse>`
+	case strings.HasPrefix(req.URL.Host, "eks."):
+		contentType = "application/json"
+		b, err := json.Marshal(map[string]any{"cluster": map[string]any{
+			"arn":      testClusterARN,
+			"identity": map[string]any{"oidc": map[string]any{"issuer": tr.issuer}},
+		}})
+		if err != nil {
+			return nil, err
+		}
+		body = string(b)
+	default:
+		return nil, fmt.Errorf("unexpected request to %s", req.URL.Host)
+	}
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Header:     http.Header{"Content-Type": {contentType}},
+		Body:       io.NopCloser(strings.NewReader(body)),
+		Request:    req,
+	}, nil
+}
+
+func (tr *awsTransport) requestHosts() []string {
+	tr.mu.Lock()
+	defer tr.mu.Unlock()
+	return slices.Clone(tr.hosts)
+}
+
+// setWebIdentityEnv configures web identity (IRSA) credentials, as EKS does
+// for a pod with an IAM role, and clears every other credential and Region
+// source.
+func setWebIdentityEnv(t *testing.T) {
+	t.Helper()
+	dir := t.TempDir()
+	tokenFile := filepath.Join(dir, "token")
+	require.NoError(t, os.WriteFile(tokenFile, []byte("token"), 0o600))
+
+	for k, v := range map[string]string{
+		"AWS_CONFIG_FILE":                        filepath.Join(dir, "config"),
+		"AWS_SHARED_CREDENTIALS_FILE":            filepath.Join(dir, "credentials"),
+		"AWS_PROFILE":                            "",
+		"AWS_DEFAULT_PROFILE":                    "",
+		"AWS_REGION":                             "",
+		"AWS_DEFAULT_REGION":                     "",
+		"AWS_ACCESS_KEY_ID":                      "",
+		"AWS_SECRET_ACCESS_KEY":                  "",
+		"AWS_SESSION_TOKEN":                      "",
+		"AWS_CONTAINER_CREDENTIALS_FULL_URI":     "",
+		"AWS_CONTAINER_CREDENTIALS_RELATIVE_URI": "",
+		"AWS_ENDPOINT_URL":                       "",
+		"AWS_ENDPOINT_URL_STS":                   "",
+		"AWS_ENDPOINT_URL_EKS":                   "",
+		"AWS_USE_FIPS_ENDPOINT":                  "",
+		"AWS_USE_DUALSTACK_ENDPOINT":             "",
+		"AWS_EC2_METADATA_DISABLED":              "true",
+		"AWS_WEB_IDENTITY_TOKEN_FILE":            tokenFile,
+		"AWS_ROLE_ARN":                           "arn:aws:iam::123456789012:role/example",
+		"AWS_ROLE_SESSION_NAME":                  "example",
+	} {
+		t.Setenv(k, v)
+	}
+}
+
+func TestClusterARNRegionWithWebIdentityCredentials(t *testing.T) {
+	originalLoad := loadAWSConfig
+	t.Cleanup(func() { loadAWSConfig = originalLoad })
+
+	issuer := issuerURL("https", "oidc.eks.eu-west-1.amazonaws.com", "/id/EXAMPLE")
+	tests := []struct {
+		name   string
+		region string
+		want   string
+	}{
+		{name: "Region from issuer", want: "eu-west-1"},
+		{name: "configured Region takes precedence", region: "us-west-2", want: "us-west-2"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			setWebIdentityEnv(t)
+			t.Setenv("AWS_REGION", tt.region)
+			transport := &awsTransport{issuer: issuer}
+			loadAWSConfig = func(ctx context.Context, opts ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+				return awsconfig.LoadDefaultConfig(ctx, append(opts, awsconfig.WithHTTPClient(transport))...)
+			}
+			detector := &clusterARNDetector{utils: &arnTestUtils{issuer: issuer}}
+
+			arn, err := detector.detect(t.Context(), testClusterName)
+
+			require.NoError(t, err)
+			assert.Equal(t, testClusterARN, arn)
+			assert.Equal(t, []string{
+				"sts." + tt.want + ".amazonaws.com",
+				"eks." + tt.want + ".amazonaws.com",
+			}, transport.requestHosts())
+		})
+	}
 }
 
 func TestRegionFromIssuer(t *testing.T) {

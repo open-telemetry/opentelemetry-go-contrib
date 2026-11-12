@@ -152,8 +152,10 @@ func (d *clusterARNDetector) detect(ctx context.Context, clusterName string) (st
 
 // getClient loads the AWS configuration synchronously with the caller's ctx.
 // Callers are serialized by a lock that is acquired with select so a caller
-// waiting on another caller's initialization still honors its own ctx. If the
-// configuration has no Region, the Region is taken from issuer.
+// waiting on another caller's initialization still honors its own ctx. The
+// Region of issuer is passed as the default Region so it is used only when no
+// Region is configured, and so credential providers created while loading the
+// configuration, such as web identity and assume role, use it too.
 func (d *clusterARNDetector) getClient(ctx context.Context, issuer string) (eksClient, error) {
 	sem := d.lock()
 	select {
@@ -171,12 +173,13 @@ func (d *clusterARNDetector) getClient(ctx context.Context, issuer string) (eksC
 		return d.client, nil
 	}
 
-	cfg, err := loadAWSConfig(ctx)
+	var opts []func(*awsconfig.LoadOptions) error
+	if region := regionFromIssuer(issuer); region != "" {
+		opts = append(opts, awsconfig.WithDefaultRegion(region))
+	}
+	cfg, err := loadAWSConfig(ctx, opts...)
 	if err != nil {
 		return nil, err
-	}
-	if cfg.Region == "" {
-		cfg.Region = regionFromIssuer(issuer)
 	}
 	if cfg.Region == "" {
 		return nil, errAWSRegionUnavailable
