@@ -18,8 +18,8 @@ import (
 // ScopeName is the instrumentation scope name.
 const ScopeName = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-// config represents the configuration options available for the http.Handler
-// and http.Transport types.
+// config represents the configuration options available for HTTP handlers
+// and the transport returned by NewTransport.
 type config struct {
 	ServerName        string
 	Tracer            trace.Tracer
@@ -178,7 +178,7 @@ func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Opt
 }
 
 // WithClientTrace takes a function that returns client trace instance that will be
-// applied to the requests sent through the otelhttp Transport.
+// applied to the requests sent through the transport returned by NewTransport.
 func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 	return optionFunc(func(c *config) {
 		c.ClientTrace = f
