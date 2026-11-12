@@ -1584,7 +1584,7 @@ func TestPrometheusReaderOpts(t *testing.T) {
 			cfg: ExperimentalPrometheusMetricExporter{
 				WithoutScopeInfo:           new(true),
 				TranslationStrategy:        new(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithoutSuffixes),
-				WithResourceConstantLabels: &IncludeExclude{},
+				WithResourceConstantLabels: &IncludeExclude{Included: []string{"service.name"}},
 			},
 			wantOptions: 3,
 		},
@@ -1593,9 +1593,16 @@ func TestPrometheusReaderOpts(t *testing.T) {
 			cfg: ExperimentalPrometheusMetricExporter{
 				WithoutScopeInfo:           new(false),
 				TranslationStrategy:        new(ExperimentalPrometheusTranslationStrategyUnderscoreEscapingWithSuffixes),
-				WithResourceConstantLabels: &IncludeExclude{},
+				WithResourceConstantLabels: &IncludeExclude{Excluded: []string{"service.name"}},
 			},
 			wantOptions: 2,
+		},
+		{
+			name: "empty resource constant labels",
+			cfg: ExperimentalPrometheusMetricExporter{
+				WithResourceConstantLabels: &IncludeExclude{},
+			},
+			wantOptions: 0,
 		},
 	}
 	for _, tt := range testCases {
@@ -1603,6 +1610,62 @@ func TestPrometheusReaderOpts(t *testing.T) {
 			opts, err := prometheusReaderOpts(&tt.cfg)
 			require.NoError(t, err)
 			require.Len(t, opts, tt.wantOptions)
+		})
+	}
+}
+
+func TestPrometheusResourceConstantLabels(t *testing.T) {
+	tests := []struct {
+		name      string
+		rcl       *IncludeExclude
+		wantLabel bool
+	}{
+		{name: "empty", rcl: &IncludeExclude{}},
+		{name: "empty lists", rcl: &IncludeExclude{Included: []string{}, Excluded: []string{}}},
+		{name: "included", rcl: &IncludeExclude{Included: []string{"service.name"}}, wantLabel: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := ExperimentalPrometheusMetricExporter{
+				Host:                       new("localhost"),
+				Port:                       new(0),
+				WithResourceConstantLabels: tt.rcl,
+			}
+			rs, err := prometheusReader(t.Context(), &cfg)
+			require.NoError(t, err)
+
+			mp := sdkmetric.NewMeterProvider(
+				sdkmetric.WithReader(rs),
+				sdkmetric.WithResource(resource.NewSchemaless(attribute.String("service.name", "svc"))),
+			)
+			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				require.NoError(t, mp.Shutdown(context.Background()))
+			})
+			c, err := mp.Meter("test").Int64Counter("test_counter")
+			require.NoError(t, err)
+			c.Add(t.Context(), 1)
+
+			addr := rs.(readerWithServer).server.Addr
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://"+addr+"/metrics", http.NoBody)
+			require.NoError(t, err)
+			resp, err := http.DefaultClient.Do(req)
+			require.NoError(t, err)
+			t.Cleanup(func() { require.NoError(t, resp.Body.Close()) })
+			var body bytes.Buffer
+			_, err = body.ReadFrom(resp.Body)
+			require.NoError(t, err)
+
+			var series []string
+			for line := range strings.Lines(body.String()) {
+				if strings.HasPrefix(line, "test_counter") {
+					series = append(series, line)
+				}
+			}
+			require.NotEmpty(t, series, body.String())
+			for _, line := range series {
+				assert.Equal(t, tt.wantLabel, strings.Contains(line, `service_name="svc"`), line)
+			}
 		})
 	}
 }
