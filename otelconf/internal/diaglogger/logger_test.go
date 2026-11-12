@@ -19,6 +19,7 @@ func TestNewLogLevelFiltering(t *testing.T) {
 	tests := []struct {
 		name        string
 		level       string
+		wantDebug   bool
 		wantInfo    bool
 		wantWarning bool
 		wantError   bool
@@ -59,10 +60,10 @@ func TestNewLogLevelFiltering(t *testing.T) {
 			name:  "fatal",
 			level: "fatal",
 		},
-
 		{
 			name:        "trace2",
 			level:       "trace2",
+			wantDebug:   true,
 			wantInfo:    true,
 			wantWarning: true,
 			wantError:   true,
@@ -70,6 +71,7 @@ func TestNewLogLevelFiltering(t *testing.T) {
 		{
 			name:        "debug4",
 			level:       "debug4",
+			wantDebug:   true,
 			wantInfo:    true,
 			wantWarning: true,
 			wantError:   true,
@@ -114,7 +116,7 @@ func TestNewLogLevelFiltering(t *testing.T) {
 			require.NoError(t, err)
 
 			logger.V(8).Info("debug marker")
-			assert.Equal(t, tt.level == "trace" || tt.level == "debug",
+			assert.Equal(t, strings.HasPrefix(tt.level, "trace") || strings.HasPrefix(tt.level, "debug"),
 				strings.Contains(output.String(), "debug marker"),
 				"debug message filtering; output: %q", output.String())
 
