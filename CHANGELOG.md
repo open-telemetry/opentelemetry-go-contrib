@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   
 ### Added
 
+- Add `WithIMDSTags` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` to add EC2 instance tags read from the instance metadata service as `ec2.tag.<key>` resource attributes. (#10086)
 - Support exemplars on exponential (native) histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
 - Convert Prometheus `UNIT` metadata to UCUM units in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10042)
 - Add the opt-in `go.memory.detailed_type` attribute to `go.memory.used` and `go.cpu.detailed_state` attribute to `go.cpu.time` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10021)
@@ -36,6 +37,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/contrib/detectors/consul`, a new resource detector that reads attributes from a Consul agent, ported from `processor/resourcedetectionprocessor/internal/consul` in `opentelemetry-collector-contrib`. Detects `host.name`, `cloud.region`, and `host.id`, plus opt-in `consul.meta.<key>` attributes for the Consul node meta entries selected with `WithMetaKeyFilter`. (#9388)
 - Add `go.opentelemetry.io/contrib/detectors/dynatrace`, a resource detector for hosts monitored by the Dynatrace OneAgent, ported from `processor/resourcedetectionprocessor/internal/dynatrace` in `opentelemetry-collector-contrib`. It reads the OneAgent host enrichment file `dt_host_metadata.properties` and sets the `dt.entity.host`, `host.name`, and `dt.smartscape.host` attributes. (#9491)
 - Add `aws.sns.topic.arn` from `TopicArn` to SNS `Publish` and `PublishBatch` spans in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9954)
+- Add the opt-in `http.client.active_requests` metric to `Transport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, enabled by listing it in the `OTEL_GO_X_HTTP_METRICS_OPTIN` environment variable. (#10069)
+- Add the `aws.ecs.task.id` resource attribute, parsed from the task ARN, to `go.opentelemetry.io/contrib/detectors/aws/ecs`, matching the `ecs` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#10087)
 
 ### Changed
 
@@ -67,6 +70,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Format bracketed IPv6 MongoDB peer addresses without an explicit port correctly in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` and `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#10101)
+- Fall back to the `DockerId` from the task metadata endpoint v4 for the `container.id` resource attribute in `go.opentelemetry.io/contrib/detectors/aws/ecs` when the cgroup parser finds no ID, and omit `container.id` instead of setting it to an empty string.
+  The parser only matches 64-hex IDs, so it finds none on Fargate, and it may also find none when `/proc/self/cgroup` has no `/ecs/` path. (#10128)
+- Do not include the port in the `network.peer.address` attribute in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`, it is recorded as `network.peer.port`. (#10110)
 - Deduplicate propagator names in `go.opentelemetry.io/contrib/propagators/autoprop` to avoid repeated injection and extraction. (#9956)
 - Do not record HTTP/2 pseudo-header fields (`:authority`, `:method`, `:path`, `:scheme`) as `http.request.header.*` span attributes in `NewClientTrace` of `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, so the query string in `:path` is no longer exported unredacted. (#10015)
 - Decode hex-encoded `trace_id` and `span_id` exemplar labels into binary `TraceID` and `SpanID` bytes in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
@@ -83,6 +90,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Prevent recording negative metric values for unknown request/response sizes in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#9433)
 - Prevent integer overflow when configuring the polling interval for the Jaeger remote sampler via the `OTEL_TRACES_SAMPLER_ARG` environment variable in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#10027)
 - Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray` to prevent auxiliary fields with prefix-sharing keys from dropping trace contexts. (#9879)
+- Reject null entries in `resource.attributes` during YAML and JSON parsing in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x` and `go.opentelemetry.io/contrib/otelconf/v0.3.0`. (#9970)
 - Preserve errors returned by `http.ResponseController.Flush` through `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9798)
 - Replace inherited debug and deferred sampling flags when extracting a new B3 context in `go.opentelemetry.io/contrib/propagators/b3`. (#9864)
 - Use a background context for entries without an explicit context in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#9865)

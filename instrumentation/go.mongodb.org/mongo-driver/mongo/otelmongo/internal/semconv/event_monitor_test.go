@@ -57,7 +57,7 @@ func TestPeerInfo(t *testing.T) {
 		{"IPv4 with port and connection number", "10.0.0.1:27017[-13]", "10.0.0.1", 27017},
 		{"IPv4 without port and connection number", "127.0.0.1[-3]", "127.0.0.1", 27017},
 		{"IPv6 with port and connection number", "[::1]:27019[-42]", "::1", 27019},
-		{"IPv6 without port with square brackets and connection number", "[::1][-5]", "[::1]", 27017},
+		{"IPv6 without port with square brackets and connection number", "[::1][-5]", "::1", 27017},
 		{"Hostname with port and connection number", "example.com:27020[-1708]", "example.com", 27020},
 		{"Hostname without port and connection number", "example.com[-99]", "example.com", 27017},
 	}
@@ -72,13 +72,28 @@ func TestPeerInfo(t *testing.T) {
 	}
 }
 
+func TestCommandStartedTraceAttrsIPv6WithoutPort(t *testing.T) {
+	command, err := bson.Marshal(bson.D{{Key: "ping", Value: 1}})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	attrs := NewEventMonitor().CommandStartedTraceAttrs(&event.CommandStartedEvent{
+		CommandName:  "ping",
+		Command:      bson.Raw(command),
+		ConnectionID: "[::1][-5]",
+	})
+
+	assert.Contains(t, attrs, semconv.NetworkPeerAddress("::1"))
+	assert.Contains(t, attrs, semconv.NetworkPeerPort(27017))
+}
+
 func TestCommandStartedTraceAttrs(t *testing.T) {
 	const (
 		opName      = "opName"
 		dbNamespace = "dbNamespace"
 		port        = 1
 		host        = "host"
-		address     = "host:1"
 		stmt        = `{"insert":"users"}`
 		coll        = "coll"
 	)
@@ -100,7 +115,7 @@ func TestCommandStartedTraceAttrs(t *testing.T) {
 		{Key: "db.namespace", Value: attribute.StringValue(dbNamespace)},
 		{Key: "db.query.text", Value: attribute.StringValue(stmt)},
 		{Key: "network.peer.port", Value: attribute.IntValue(port)},
-		{Key: "network.peer.address", Value: attribute.StringValue(address)},
+		{Key: "network.peer.address", Value: attribute.StringValue(host)},
 		{Key: "network.transport", Value: attribute.StringValue("tcp")},
 		{Key: "db.collection.name", Value: attribute.StringValue("coll")},
 	}

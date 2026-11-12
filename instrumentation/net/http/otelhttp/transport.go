@@ -18,9 +18,11 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/httpconv"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/x"
 )
 
 type transport struct {
@@ -34,7 +36,8 @@ type transport struct {
 	clientTrace        func(context.Context) *httptrace.ClientTrace
 	metricAttributesFn func(*http.Request) []attribute.KeyValue
 
-	semconv semconv.HTTPClient
+	semconv              semconv.HTTPClient
+	recordActiveRequests bool
 }
 
 var _ http.RoundTripper = &transport{}
@@ -54,6 +57,18 @@ var _ http.RoundTripper = &transport{}
 // If the provided [http.RoundTripper] is nil, [http.DefaultTransport] will be used
 // as the base [http.RoundTripper].
 func NewTransport(base http.RoundTripper, opts ...Option) http.RoundTripper {
+// If the provided http.RoundTripper is nil, http.DefaultTransport will be used
+// as the base http.RoundTripper.
+//
+// The following opt-in metrics are produced when listed, comma-separated, in
+// the OTEL_GO_X_HTTP_METRICS_OPTIN environment variable when NewTransport is
+// called:
+//
+//	http.client.active_requests  {request}  Number of active HTTP requests.
+//
+// A request is counted from the start of RoundTrip until the base
+// http.RoundTripper returns. This feature is experimental and may change.
+func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 	if base == nil {
 		base = http.DefaultTransport
 	}
@@ -81,6 +96,7 @@ func (t *transport) applyConfig(c *config) {
 	t.spanNameFormatter = c.SpanNameFormatter
 	t.clientTrace = c.ClientTrace
 	t.semconv = semconv.NewHTTPClient(c.Meter)
+	t.recordActiveRequests = x.OptInMetrics.Enabled(httpconv.ClientActiveRequests{}.Name())
 	t.metricAttributesFn = c.MetricAttributesFn
 }
 
@@ -283,12 +299,27 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	span.SetAttributes(t.semconv.RequestTraceAttrs(r)...)
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
-	res, err := t.rt.RoundTrip(r)
+	// WithMetricAttributesFn runs once per request. It runs before RoundTrip
+	// only when active requests need it; otherwise it runs after, so it can
+	// read data set during the request and stays out of the duration.
+	var metricAttrs []attribute.KeyValue
+	res, err := func() (*http.Response, error) {
+		if t.recordActiveRequests {
+			metricAttrs = t.metricAttributesFromRequest(r)
+			opt := t.semconv.ActiveRequestsOption(r, append(labeler.Get(), metricAttrs...))
+			t.semconv.AddActiveRequests(ctx, 1, opt)
+			defer t.semconv.AddActiveRequests(ctx, -1, opt)
+		}
+		return t.rt.RoundTrip(r)
+	}()
 	if err == nil {
 		res, err = ensureResponseBody(t.rt, r, res)
 	}
 
 	requestDuration := time.Since(requestStartTime)
+	if !t.recordActiveRequests {
+		metricAttrs = t.metricAttributesFromRequest(r)
+	}
 	statusCode := 0
 	if err == nil {
 		statusCode = res.StatusCode
@@ -298,7 +329,7 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		Resp:                 res,
 		StatusCode:           statusCode,
 		Err:                  err,
-		AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
+		AdditionalAttributes: append(labeler.Get(), metricAttrs...),
 	})
 
 	if tracker != nil {
