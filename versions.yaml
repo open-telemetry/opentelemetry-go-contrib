@@ -91,6 +91,7 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/kubeadm
       - go.opentelemetry.io/contrib/detectors/openshift
       - go.opentelemetry.io/contrib/detectors/openstack/nova
+      - go.opentelemetry.io/contrib/detectors/render
       - go.opentelemetry.io/contrib/detectors/scaleway
       - go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk
       - go.opentelemetry.io/contrib/detectors/vultr
