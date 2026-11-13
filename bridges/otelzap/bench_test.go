@@ -107,6 +107,33 @@ func BenchmarkCoreWrite(b *testing.B) {
 			})
 		})
 	}
+
+	b.Run("WithNamespaceAndFields", func(b *testing.B) {
+		zc := NewCore(loggerName)
+		zc1 := zc.With([]zapcore.Field{
+			zap.String("k", "a"),
+			zap.Namespace("a"),
+			zap.Int16("a", 1),
+			zap.Namespace("b"),
+			zap.String("k", "a"),
+		})
+		fields := []zapcore.Field{
+			zap.Int16("a", 1),
+			zap.String("k", "a"),
+			zap.Bool("k", true),
+			zap.Namespace("c"),
+			zap.Ints("k", []int{1, 2}),
+		}
+		b.ReportAllocs()
+		b.RunParallel(func(pb *testing.PB) {
+			for pb.Next() {
+				err := zc1.Write(testEntry, fields)
+				if err != nil {
+					b.Errorf("Unexpected error: %v", err)
+				}
+			}
+		})
+	})
 }
 
 func BenchmarkSemanticConvWrite(b *testing.B) {

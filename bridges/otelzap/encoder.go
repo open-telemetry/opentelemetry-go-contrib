@@ -41,6 +41,35 @@ func newObjectEncoder(n int) *objectEncoder {
 	}
 }
 
+// open adds a copy of the namespace chain ns to the encoder, so that
+// subsequent fields are added to the innermost namespace of the chain. The
+// copies have room for the attribute calculate appends to an outer namespace
+// and for n more attributes in the innermost one.
+func (m *objectEncoder) open(ns *namespace, n int) {
+	for ; ns != nil; ns = ns.next {
+		extra := 1
+		if ns.next == nil {
+			extra = n
+		}
+		attrs := make([]attribute.KeyValue, len(ns.attrs), len(ns.attrs)+extra)
+		copy(attrs, ns.attrs)
+		m.cur.next = &namespace{name: ns.name, attrs: attrs}
+		m.cur = m.cur.next
+	}
+}
+
+// namespaceAttrs returns the attributes of the namespace chain ns, without
+// changing it.
+func namespaceAttrs(ns *namespace) []attribute.KeyValue {
+	if ns == nil {
+		return nil
+	}
+	m := newObjectEncoder(1)
+	m.open(ns, 0)
+	m.calculate(m.root)
+	return m.root.attrs
+}
+
 // It iterates to the end of the linked list and appends namespace data.
 // Run this function before accessing complete result.
 func (m *objectEncoder) calculate(o *namespace) {
