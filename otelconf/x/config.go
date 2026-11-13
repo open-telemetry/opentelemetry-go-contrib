@@ -250,12 +250,12 @@ func (j *Resource) UnmarshalYAML(node *yaml.Node) error {
 
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
 func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
-	file, err := provider.ReplaceEnvVars(file)
+	node, err := provider.ReplaceEnvVars(file)
 	if err != nil {
 		return nil, err
 	}
 	var cfg OpenTelemetryConfiguration
-	err = yaml.Unmarshal(file, &cfg)
+	err = node.Decode(&cfg)
 	if err != nil {
 		return nil, err
 	}
