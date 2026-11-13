@@ -484,11 +484,12 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 		}
 	}
 
-	// A LogValuer can resolve to a group or to nothing, so resolve before
-	// applying the empty-key rules below.
-	attr.Value = attr.Value.Resolve()
-
 	if attr.Key == "" {
+		// A LogValuer can resolve to a group or to nothing, so resolve before
+		// applying the empty-key rules below. Named LogValuer attributes are
+		// resolved in convert.
+		attr.Value = attr.Value.Resolve()
+
 		if attr.Value.Kind() == slog.KindGroup {
 			// A Handler should inline the Attrs of a group with an empty key.
 			for _, a := range attr.Value.Group() {
