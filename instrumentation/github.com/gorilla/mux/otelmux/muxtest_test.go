@@ -630,8 +630,6 @@ func (w failingWriter) Write(p []byte) (int, error) {
 	return 0, w.err
 }
 
-func (w failingWriter) ReadFrom(io.Reader) (int64, error) { return 0, w.err }
-
 // failingBody is a request body whose reads fail.
 type failingBody struct{ err error }
 
@@ -803,18 +801,28 @@ func TestMetricAttributesFnErrorTypeTakesPrecedence(t *testing.T) {
 	assertMetricErrorType(t, reader, "custom")
 }
 
+// readFromFailingWriter is a ResponseWriter whose ReadFrom fails while Write
+// succeeds, so only ReadFrom can produce the error.
+type readFromFailingWriter struct {
+	*httptest.ResponseRecorder
+	err error
+}
+
+func (w readFromFailingWriter) ReadFrom(io.Reader) (int64, error) { return 0, w.err }
+
 // TestReadFromWriteError verifies that an io.ReaderFrom write error is
 // recorded like a Write error.
 func TestReadFromWriteError(t *testing.T) {
 	errReadFrom := testError("read_from_error")
 	router, sr, reader := newTestHandler(func(w http.ResponseWriter, _ *http.Request) {
-		// Larger than the prefix the wrapper copies through Write, so the rest
-		// reaches ReadFrom. Hiding strings.Reader's WriteTo makes io.Copy use it.
-		_, err := io.Copy(w, struct{ io.Reader }{strings.NewReader(strings.Repeat("a", 1024))})
+		// Writing the header first skips the prefix the wrapper copies through
+		// Write. Hiding strings.Reader's WriteTo makes io.Copy use ReadFrom.
+		w.WriteHeader(http.StatusOK)
+		_, err := io.Copy(w, struct{ io.Reader }{strings.NewReader("payload")})
 		assert.ErrorIs(t, err, errReadFrom)
 	})
 
-	router.ServeHTTP(failingWriter{ResponseRecorder: httptest.NewRecorder(), err: errReadFrom},
+	router.ServeHTTP(readFromFailingWriter{ResponseRecorder: httptest.NewRecorder(), err: errReadFrom},
 		httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/user/123", http.NoBody))
 
 	require.Len(t, sr.Ended(), 1)
