@@ -667,6 +667,60 @@ func TestHandlerErrorFieldSetErr(t *testing.T) {
 	})
 }
 
+type emptyChildLogValuer struct{}
+
+func (emptyChildLogValuer) LogValue() slog.Value {
+	return slog.Value{}
+}
+
+func TestHandlerOmitsNamedGroupAfterResolvingEmptyChild(t *testing.T) {
+	for _, withAttrs := range []bool{false, true} {
+		t.Run(fmt.Sprintf("WithAttrs=%t", withAttrs), func(t *testing.T) {
+			r := new(recorder)
+			var h slog.Handler = NewHandler("", WithLoggerProvider(r))
+			record := slog.NewRecord(time.Time{}, slog.LevelInfo, "msg", 0)
+			attr := slog.Group("outer", slog.Any("", emptyChildLogValuer{}))
+			if withAttrs {
+				h = h.WithAttrs([]slog.Attr{attr})
+			} else {
+				record.AddAttrs(attr)
+			}
+
+			require.NoError(t, h.Handle(t.Context(), record))
+			require.Len(t, r.Records, 1)
+			assert.NotContains(t, r.Results()[0], "outer")
+		})
+	}
+}
+
+func TestHandlerOmitsEmptyNestedNamedGroups(t *testing.T) {
+	r := new(recorder)
+	h := NewHandler("", WithLoggerProvider(r))
+	record := slog.NewRecord(time.Time{}, slog.LevelInfo, "msg", 0)
+	record.AddAttrs(slog.Group("outer", slog.Group("inner", slog.Any("", emptyChildLogValuer{}))))
+
+	require.NoError(t, h.Handle(t.Context(), record))
+	require.Len(t, r.Records, 1)
+	assert.NotContains(t, r.Results()[0], "outer")
+}
+
+func TestHandlerPreservesNamedGroupWithRemainingAttributes(t *testing.T) {
+	r := new(recorder)
+	h := NewHandler("", WithLoggerProvider(r))
+	record := slog.NewRecord(time.Time{}, slog.LevelInfo, "msg", 0)
+	record.AddAttrs(
+		slog.Group(
+			"outer",
+			slog.Any("", emptyChildLogValuer{}),
+			slog.String("keep", "value"),
+		),
+	)
+
+	require.NoError(t, h.Handle(t.Context(), record))
+	require.Len(t, r.Records, 1)
+	assert.Equal(t, map[string]any{"keep": "value"}, r.Results()[0]["outer"])
+}
+
 func TestKVBufferKeyValuesDoesNotAliasBackingArray(t *testing.T) {
 	// A buffer with spare capacity is the condition under which appending kvs
 	// used to write into b.data's backing array and return an aliasing slice.
