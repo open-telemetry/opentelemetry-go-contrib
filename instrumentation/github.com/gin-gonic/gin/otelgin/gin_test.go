@@ -262,6 +262,191 @@ func TestSpanStatus(t *testing.T) {
 	})
 }
 
+func TestWithSpanEndHook_Expected404StaysUnset(t *testing.T) {
+	// Arrange
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("server",
+		otelgin.WithTracerProvider(tp),
+		otelgin.WithSpanEndHook(func(_ *gin.Context, span trace.Span) {
+			span.SetStatus(codes.Unset, "")
+		}),
+	))
+	router.GET("/resource", func(c *gin.Context) {
+		_ = c.Error(errors.New("not found"))
+		c.Status(http.StatusNotFound)
+	})
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/resource", http.NoBody)
+	rec := httptest.NewRecorder()
+
+	// Act
+	router.ServeHTTP(rec, req)
+
+	// Assert
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	assert.Equal(t, codes.Unset, spans[0].Status().Code)
+	for _, attr := range spans[0].Attributes() {
+		assert.NotEqual(t, semconv.ErrorTypeKey, attr.Key, "otelgin should not set error.type when hook is configured")
+	}
+}
+
+func TestWithSpanEndHook_CustomStatusAndAttributes(t *testing.T) {
+	// Arrange
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+	customAttr := attribute.String("custom.key", "custom.value")
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("server",
+		otelgin.WithTracerProvider(tp),
+		otelgin.WithSpanEndHook(func(_ *gin.Context, span trace.Span) {
+			span.SetStatus(codes.Ok, "")
+			span.SetAttributes(customAttr)
+		}),
+	))
+	router.GET("/resource", func(c *gin.Context) {
+		c.Status(http.StatusOK)
+	})
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/resource", http.NoBody)
+	rec := httptest.NewRecorder()
+
+	// Act
+	router.ServeHTTP(rec, req)
+
+	// Assert
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	assert.Equal(t, codes.Ok, spans[0].Status().Code)
+	assert.Contains(t, spans[0].Attributes(), customAttr)
+	for _, attr := range spans[0].Attributes() {
+		assert.NotEqual(t, semconv.ErrorTypeKey, attr.Key, "otelgin should not set error.type when hook is configured")
+	}
+}
+
+func TestWithSpanEndHook_HandlerErrorTakesPrecedence(t *testing.T) {
+	// Arrange
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("server",
+		otelgin.WithTracerProvider(tp),
+		otelgin.WithSpanEndHook(func(_ *gin.Context, span trace.Span) {
+			span.SetStatus(codes.Unset, "")
+		}),
+	))
+	router.GET("/resource", func(c *gin.Context) {
+		trace.SpanFromContext(c.Request.Context()).SetStatus(codes.Error, "set by handler")
+	})
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/resource", http.NoBody)
+	rec := httptest.NewRecorder()
+
+	// Act
+	router.ServeHTTP(rec, req)
+
+	// Assert
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	assert.Equal(t, codes.Error, spans[0].Status().Code)
+	assert.Equal(t, "set by handler", spans[0].Status().Description)
+}
+
+func TestWithSpanEndHook_PreservesMetricErrorType(t *testing.T) {
+	// Arrange
+	reqErr := errors.New("resource not found")
+	reader := sdkmetric.NewManualReader()
+	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("server",
+		otelgin.WithMeterProvider(mp),
+		otelgin.WithSpanEndHook(func(_ *gin.Context, span trace.Span) {
+			span.SetStatus(codes.Unset, "")
+		}),
+	))
+	router.GET("/resource", func(c *gin.Context) {
+		_ = c.Error(reqErr)
+		c.Status(http.StatusNotFound)
+	})
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/resource", http.NoBody)
+	rec := httptest.NewRecorder()
+
+	// Act
+	router.ServeHTTP(rec, req)
+
+	// Assert
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name != "http.server.request.duration" {
+			continue
+		}
+		histogram := m.Data.(metricdata.Histogram[float64])
+		require.Len(t, histogram.DataPoints, 1)
+
+		attrVal, ok := histogram.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
+		require.True(t, ok, "metric should record error.type")
+		assert.Equal(t, semconv.ErrorType(reqErr).Value.AsString(), attrVal.AsString())
+		return
+	}
+	t.Fatal("http.server.request.duration metric not found")
+}
+
+func TestWithSpanEndHook_RunsWhenPanicRecoveredInsideMiddleware(t *testing.T) {
+	// Arrange
+	hookRan := false
+
+	router := gin.New()
+	router.Use(otelgin.Middleware("server", otelgin.WithSpanEndHook(func(*gin.Context, trace.Span) {
+		hookRan = true
+	})))
+	router.Use(gin.Recovery())
+	router.GET("/panic", func(*gin.Context) {
+		panic("handler panic")
+	})
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/panic", http.NoBody)
+	rec := httptest.NewRecorder()
+
+	// Act
+	router.ServeHTTP(rec, req)
+
+	// Assert
+	assert.True(t, hookRan, "hook should run when panic is recovered inside middleware chain")
+}
+
+func TestWithSpanEndHook_DoesNotRunWhenPanicEscapesMiddleware(t *testing.T) {
+	// Arrange
+	hookRan := false
+
+	router := gin.New()
+	router.Use(gin.Recovery())
+	router.Use(otelgin.Middleware("server", otelgin.WithSpanEndHook(func(*gin.Context, trace.Span) {
+		hookRan = true
+	})))
+	router.GET("/panic", func(*gin.Context) {
+		panic("handler panic")
+	})
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/panic", http.NoBody)
+	rec := httptest.NewRecorder()
+
+	// Act
+	router.ServeHTTP(rec, req)
+
+	// Assert
+	assert.False(t, hookRan, "hook should not run when panic escapes middleware chain")
+}
+
 func TestWithSpanOptions_CustomAttributesAndSpanKind(t *testing.T) {
 	sr := tracetest.NewSpanRecorder()
 	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))

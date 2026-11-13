@@ -113,24 +113,20 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		c.Next()
 
 		status := c.Writer.Status()
-		spanCode, spanMsg := sc.Status(status)
-		span.SetStatus(spanCode, spanMsg)
 		span.SetAttributes(sc.ResponseTraceAttrs(semconv.ResponseTelemetry{
 			StatusCode: status,
 			WriteBytes: int64(c.Writer.Size()),
 		})...)
 
 		var errorTypeAttr attribute.KeyValue
-		switch {
-		case len(c.Errors) > 0:
-			span.SetStatus(codes.Error, c.Errors.String())
+		requestErr := savedCtx.Err()
+		if len(c.Errors) > 0 {
 			if len(c.Errors) == 1 {
 				errorTypeAttr = otelsemconv.ErrorType(c.Errors[0].Err)
 			} else {
 				errorTypeAttr = otelsemconv.ErrorTypeOther
 			}
-			span.SetAttributes(errorTypeAttr)
-		default:
+		} else {
 			// No explicit c.Errors entry. If the client disconnected
 			// mid-request, the original request context carries the real
 			// cause even when the handler never wrote a response that would
@@ -145,9 +141,23 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			// c.Request with one wrapping a differently-scoped context (e.g.
 			// its own cancelable child), whose Err() would reflect that
 			// handler's own lifecycle instead of an actual client disconnect.
-			if reqErr := savedCtx.Err(); reqErr != nil {
-				span.SetStatus(codes.Error, reqErr.Error())
-				errorTypeAttr = otelsemconv.ErrorType(reqErr)
+			if requestErr != nil {
+				errorTypeAttr = otelsemconv.ErrorType(requestErr)
+			}
+		}
+
+		if cfg.SpanEndHook != nil {
+			cfg.SpanEndHook(c, span)
+		} else {
+			spanCode, spanMsg := sc.Status(status)
+			switch {
+			case len(c.Errors) > 0:
+				spanCode, spanMsg = codes.Error, c.Errors.String()
+			case requestErr != nil:
+				spanCode, spanMsg = codes.Error, requestErr.Error()
+			}
+			span.SetStatus(spanCode, spanMsg)
+			if errorTypeAttr.Valid() {
 				span.SetAttributes(errorTypeAttr)
 			}
 		}
