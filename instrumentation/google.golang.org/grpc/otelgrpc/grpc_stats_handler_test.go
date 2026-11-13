@@ -23,8 +23,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/rpcconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/rpcconv"
 	oteltrace "go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -164,7 +164,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/EmptyCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCStatusCode(codes.OK.String()),
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 		testSpanAttr,
@@ -177,7 +177,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/UnaryCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCStatusCode(codes.OK.String()),
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 		testSpanAttr,
@@ -190,7 +190,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/StreamingInputCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCStatusCode(codes.OK.String()),
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 		testSpanAttr,
@@ -203,7 +203,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/StreamingOutputCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCStatusCode(codes.OK.String()),
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 		testSpanAttr,
@@ -216,7 +216,7 @@ func checkClientSpans(t *testing.T, spans []trace.ReadOnlySpan, addr string) {
 	assert.ElementsMatch(t, []attribute.KeyValue{
 		semconv.RPCMethodKey.String("grpc.testing.TestService/FullDuplexCall"),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(codes.OK.String()),
+		semconv.RPCStatusCode(codes.OK.String()),
 		semconv.ServerAddress(host),
 		semconv.ServerPort(port),
 		testSpanAttr,
@@ -259,7 +259,7 @@ func checkServerSpans(t *testing.T, sr *tracetest.SpanRecorder, addr string) {
 		assert.ElementsMatch(t, []attribute.KeyValue{
 			semconv.RPCMethodKey.String(tc.name),
 			semconv.RPCSystemNameGRPC,
-			semconv.RPCResponseStatusCode(codes.OK.String()),
+			semconv.RPCStatusCode(codes.OK.String()),
 			semconv.ServerAddress(host),
 			semconv.ServerPort(port),
 			testSpanAttr,
@@ -356,7 +356,7 @@ func checkDurationErrorType(t *testing.T, reader metric.Reader, metricName strin
 					if v, ok := dp.Attributes.Value(attribute.Key("rpc.method")); !ok || v.AsString() != method {
 						continue
 					}
-					if statusCode, ok := dp.Attributes.Value(attribute.Key("rpc.response.status_code")); ok && statusCode.AsString() == "INTERNAL" {
+					if statusCode, ok := dp.Attributes.Value(attribute.Key("rpc.status_code")); ok && statusCode.AsString() == "INTERNAL" {
 						errDP = dp
 					} else {
 						okDP = dp
@@ -374,7 +374,7 @@ func checkDurationErrorType(t *testing.T, reader metric.Reader, metricName strin
 	assert.Equal(t, "INTERNAL", errorType.AsString())
 	_, hasErrType := okDP.Attributes.Value(attribute.Key("error.type"))
 	assert.False(t, hasErrType, "%s: successful call data point must not contain error.type", metricName)
-	statusCode, ok := errDP.Attributes.Value(attribute.Key("rpc.response.status_code"))
+	statusCode, ok := errDP.Attributes.Value(attribute.Key("rpc.status_code"))
 	require.True(t, ok)
 	assert.Equal(t, "INTERNAL", statusCode.AsString())
 }
@@ -386,6 +386,11 @@ func checkClientMetrics(t *testing.T, reader metric.Reader, addr string) {
 	err := reader.Collect(t.Context(), &rm)
 	assert.NoError(t, err)
 	require.Len(t, rm.ScopeMetrics, 1)
+	assertGRPCDurationHistogramBounds(
+		t,
+		rm,
+		rpcconv.ClientCallDuration{}.Name(),
+	)
 
 	host, p, err := net.SplitHostPort(addr)
 	require.NoError(t, err)
@@ -399,11 +404,11 @@ func checkClientMetrics(t *testing.T, reader metric.Reader, addr string) {
 		Data: metricdata.Histogram[float64]{
 			Temporality: metricdata.CumulativeTemporality,
 			DataPoints: []metricdata.HistogramDataPoint[float64]{
-				{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/EmptyCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
-				{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/UnaryCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
-				{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
-				{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
-				{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
+				{Attributes: attribute.NewSet(semconv.RPCStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/EmptyCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
+				{Attributes: attribute.NewSet(semconv.RPCStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/UnaryCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
+				{Attributes: attribute.NewSet(semconv.RPCStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
+				{Attributes: attribute.NewSet(semconv.RPCStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
+				{Attributes: attribute.NewSet(semconv.RPCStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"), semconv.RPCSystemNameGRPC, semconv.ServerAddress(host), semconv.ServerPort(port), testMetricAttr)},
 			},
 		},
 	}}
@@ -465,6 +470,11 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 	}, time.Second, 10*time.Millisecond)
 
 	require.Len(t, rm.ScopeMetrics, 1)
+	assertGRPCDurationHistogramBounds(
+		t,
+		rm,
+		rpcconv.ServerCallDuration{}.Name(),
+	)
 
 	expectedMetrics := []metricdata.Metrics{{
 		Name:        rpcconv.ServerCallDuration{}.Name(),
@@ -473,11 +483,11 @@ func checkServerMetrics(t *testing.T, reader metric.Reader) {
 		Data: metricdata.Histogram[float64]{
 			Temporality: metricdata.CumulativeTemporality,
 			DataPoints: []metricdata.HistogramDataPoint[float64]{
-				{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/EmptyCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
-				{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/UnaryCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
-				{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
-				{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
-				{Attributes: attribute.NewSet(semconv.RPCResponseStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+				{Attributes: attribute.NewSet(semconv.RPCStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/EmptyCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+				{Attributes: attribute.NewSet(semconv.RPCStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/UnaryCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+				{Attributes: attribute.NewSet(semconv.RPCStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingInputCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+				{Attributes: attribute.NewSet(semconv.RPCStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/StreamingOutputCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
+				{Attributes: attribute.NewSet(semconv.RPCStatusCode(codes.OK.String()), semconv.RPCMethod("grpc.testing.TestService/FullDuplexCall"), semconv.RPCSystemNameGRPC, testMetricAttr)},
 			},
 		},
 	}}
@@ -900,7 +910,7 @@ func TestNonErrorCodesPerMethodWrapper(t *testing.T) {
 			require.Len(t, spans, 1)
 			assert.Equal(t, tc.wantCode, spans[0].Status().Code)
 			assert.Equal(t, tc.wantDesc, spans[0].Status().Description)
-			assert.Contains(t, spans[0].Attributes(), semconv.RPCResponseStatusCode("NOT_FOUND"))
+			assert.Contains(t, spans[0].Attributes(), semconv.RPCStatusCode("NOT_FOUND"))
 		})
 	}
 }
@@ -946,7 +956,7 @@ func TestNonErrorCodesOnlyAffectSpanStatus(t *testing.T) {
 			now := time.Now()
 			h.HandleRPC(ctx, &stats.End{Error: status.Error(tc.code, "msg"), BeginTime: now, EndTime: now})
 
-			wantStatus := semconv.RPCResponseStatusCode(tc.wantErrorType)
+			wantStatus := semconv.RPCStatusCode(tc.wantErrorType)
 
 			spans := sr.Ended()
 			require.Len(t, spans, 1)
@@ -977,4 +987,41 @@ func TestNonErrorCodesOnlyAffectSpanStatus(t *testing.T) {
 			assert.True(t, found, "metric %s not recorded", tc.metricName)
 		})
 	}
+}
+
+func assertGRPCDurationHistogramBounds(
+	t *testing.T,
+	rm metricdata.ResourceMetrics,
+	metricName string,
+) {
+	t.Helper()
+
+	expectedBounds := []float64{
+		0,
+		0.00001, 0.00005, 0.0001, 0.0003, 0.0006, 0.0008,
+		0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.008,
+		0.01, 0.013, 0.016, 0.02, 0.025, 0.03, 0.04,
+		0.05, 0.065, 0.08, 0.1, 0.13, 0.16, 0.2,
+		0.25, 0.3, 0.4, 0.5, 0.65, 0.8, 1,
+		2, 5, 10, 20, 50, 100,
+	}
+
+	for _, scopeMetric := range rm.ScopeMetrics {
+		for _, m := range scopeMetric.Metrics {
+			if m.Name != metricName {
+				continue
+			}
+
+			histogram, ok := m.Data.(metricdata.Histogram[float64])
+			require.True(t, ok, "expected histogram for %s", metricName)
+			require.NotEmpty(t, histogram.DataPoints)
+
+			for _, dp := range histogram.DataPoints {
+				assert.Equal(t, expectedBounds, dp.Bounds)
+			}
+			return
+		}
+	}
+
+	t.Fatalf("metric %s not found", metricName)
 }

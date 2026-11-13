@@ -91,7 +91,7 @@ var (
 			StartTimeUnixNano: 0,
 			EndTimeUnixNano:   0,
 			Attributes: []*v1common.KeyValue{
-				{Key: "faas.invocation_id", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "123"}}},
+				{Key: "faas.invocation.id", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "123"}}},
 				{Key: "aws.lambda.invoked_arn", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "arn:partition:service:region:account-id:resource-type:resource-id"}}},
 				{Key: "cloud.account.id", Value: &v1common.AnyValue{Value: &v1common.AnyValue_StringValue{StringValue: "account-id"}}},
 			},

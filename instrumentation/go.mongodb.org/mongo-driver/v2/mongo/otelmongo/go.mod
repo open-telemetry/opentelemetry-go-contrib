@@ -5,11 +5,11 @@ go 1.26.0
 require (
 	github.com/stretchr/testify v1.12.1
 	go.mongodb.org/mongo-driver/v2 v2.10.0
-	go.opentelemetry.io/otel v1.47.0
-	go.opentelemetry.io/otel/metric v1.47.0
-	go.opentelemetry.io/otel/sdk v1.47.0
+	go.opentelemetry.io/otel v1.47.1-0.20261112115731-9f099277e0af
+	go.opentelemetry.io/otel/metric v1.47.1-0.20261112115731-9f099277e0af
+	go.opentelemetry.io/otel/sdk v1.47.1-0.20261112115731-9f099277e0af
 	go.opentelemetry.io/otel/sdk/metric v1.47.0
-	go.opentelemetry.io/otel/trace v1.47.0
+	go.opentelemetry.io/otel/trace v1.47.1-0.20261112115731-9f099277e0af
 )
 
 require (

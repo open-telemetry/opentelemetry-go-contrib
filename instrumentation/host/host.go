@@ -18,8 +18,8 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/processconv"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/systemconv"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/processconv"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/systemconv"
 )
 
 // ScopeName is the instrumentation scope name.
@@ -139,17 +139,17 @@ func (h *host) register() error {
 			cpuTime.AttrCPUMode(systemconv.CPUModeAttr("other")),
 		)
 
-		memUse          systemconv.MemoryUsage
-		memUseStateFree = metric.WithAttributes(
-			memUse.AttrMemoryState(systemconv.MemoryStateFree),
+		memUse               systemconv.MemoryUsage
+		memUseStateAvailable = metric.WithAttributes(
+			memUse.AttrMemoryState(systemconv.MemoryStateAvailable),
 		)
 		memUseStateUsed = metric.WithAttributes(
 			memUse.AttrMemoryState(systemconv.MemoryStateUsed),
 		)
 
-		memUtil          systemconv.MemoryUtilization
-		memUtilStateFree = metric.WithAttributes(
-			memUtil.AttrMemoryState(systemconv.MemoryStateFree),
+		memUtil               systemconv.MemoryUtilization
+		memUtilStateAvailable = metric.WithAttributes(
+			memUtil.AttrMemoryState(systemconv.MemoryStateAvailable),
 		)
 		memUtilStateUsed = metric.WithAttributes(
 			memUtil.AttrMemoryState(systemconv.MemoryStateUsed),
@@ -258,7 +258,7 @@ func (h *host) register() error {
 
 			// Host memory usage
 			o.ObserveInt64(memUse.Inst(), clampInt64(vmStats.Used), memUseStateUsed)
-			o.ObserveInt64(memUse.Inst(), clampInt64(vmStats.Available), memUseStateFree)
+			o.ObserveInt64(memUse.Inst(), clampInt64(vmStats.Available), memUseStateAvailable)
 
 			// Host memory utilization
 			o.ObserveFloat64(
@@ -268,7 +268,7 @@ func (h *host) register() error {
 			o.ObserveFloat64(
 				memUtil.Inst(),
 				float64(vmStats.Available)/float64(vmStats.Total),
-				memUtilStateFree,
+				memUtilStateAvailable,
 			)
 
 			// Host network usage

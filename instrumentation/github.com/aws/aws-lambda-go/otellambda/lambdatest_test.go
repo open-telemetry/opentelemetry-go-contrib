@@ -24,7 +24,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 	"go.opentelemetry.io/otel/trace"
 
 	lambdadetector "go.opentelemetry.io/contrib/detectors/aws/lambda"
@@ -127,7 +127,7 @@ var (
 		StartTime: time.Time{},
 		EndTime:   time.Time{},
 		Attributes: []attribute.KeyValue{
-			attribute.String("faas.invocation_id", "123"),
+			attribute.String("faas.invocation.id", "123"),
 			attribute.String("aws.lambda.invoked_arn", "arn:partition:service:region:account-id:resource-type:resource-id"),
 			attribute.String("cloud.account.id", "account-id"),
 		},
@@ -324,7 +324,7 @@ var (
 		StartTime: time.Time{},
 		EndTime:   time.Time{},
 		Attributes: []attribute.KeyValue{
-			attribute.String("faas.invocation_id", "123"),
+			attribute.String("faas.invocation.id", "123"),
 			attribute.String("aws.lambda.invoked_arn", "arn:partition:service:region:account-id:resource-type:resource-id"),
 			attribute.String("cloud.account.id", "account-id"),
 		},

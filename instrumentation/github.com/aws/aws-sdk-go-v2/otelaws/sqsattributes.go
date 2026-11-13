@@ -9,12 +9,12 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sqs"
 	"github.com/aws/smithy-go/middleware"
 	"go.opentelemetry.io/otel/attribute"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 // SQSAttributeBuilder sets SQS specific attributes depending on the SQS operation being performed.
 func SQSAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ middleware.InitializeOutput) []attribute.KeyValue {
-	sqsAttributes := []attribute.KeyValue{semconv.MessagingSystemAWSSQS}
+	sqsAttributes := []attribute.KeyValue{semconv.MessagingSystemNameAWSSQS}
 
 	switch v := in.Parameters.(type) {
 	case *sqs.DeleteMessageBatchInput:

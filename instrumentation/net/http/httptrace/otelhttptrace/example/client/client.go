@@ -15,11 +15,11 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
 	stdout "go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/propagation"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace"
@@ -77,7 +77,7 @@ func main() {
 
 	tr := otel.Tracer("example/client")
 	err = func(ctx context.Context) error {
-		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(semconv.ServicePeerName("ExampleService")))
+		ctx, span := tr.Start(ctx, "say hello", trace.WithAttributes(attribute.String("service.peer.name", "ExampleService")))
 		defer span.End()
 
 		req, err := http.NewRequestWithContext(ctx, http.MethodGet, *url, http.NoBody)
