@@ -316,3 +316,111 @@ func TestHTTPServer_SpanName(t *testing.T) {
 		})
 	}
 }
+
+func TestRequestTraceAttrs_URLQuery(t *testing.T) {
+	assertNoURLQuery := func(t *testing.T, attrs []attribute.KeyValue) {
+		t.Helper()
+		s := attribute.NewSet(attrs...)
+		assert.False(t, s.HasValue("url.query"))
+	}
+
+	t.Run("nil URL omits url.query", func(t *testing.T) {
+		req := &http.Request{Method: http.MethodGet}
+		attrs := (HTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
+		assertNoURLQuery(t, attrs)
+	})
+
+	testCases := []struct {
+		name      string
+		target    string
+		wantQuery string
+		wantOmit  bool
+	}{
+		{
+			name:     "no query",
+			target:   "/foo",
+			wantOmit: true,
+		},
+		{
+			name:     "empty query with trailing question mark",
+			target:   "/foo?",
+			wantOmit: true,
+		},
+		{
+			name:      "no sensitive parameters",
+			target:    "/foo?stuff=morestuff&other=1",
+			wantQuery: "stuff=morestuff&other=1",
+		},
+		{
+			name:      "aws sigv4 presigned url",
+			target:    "/key?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAEXAMPLE%2F20260101%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Security-Token=token&X-Amz-Signature=abc123",
+			wantQuery: "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=REDACTED&X-Amz-Security-Token=REDACTED&X-Amz-Signature=REDACTED",
+		},
+		{
+			name:      "azure sas token",
+			target:    "/container/blob?sv=2024-11-04&sig=abc%2F123%3D&se=2026-01-01",
+			wantQuery: "sv=2024-11-04&sig=REDACTED&se=2026-01-01",
+		},
+		{
+			name:      "gcs signed url",
+			target:    "/bucket/object?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Signature=abc123",
+			wantQuery: "X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Signature=REDACTED",
+		},
+		{
+			name:      "matching is case sensitive",
+			target:    "/foo?SIG=abc&Sig=def&x-amz-signature=ghi",
+			wantQuery: "SIG=abc&Sig=def&x-amz-signature=ghi",
+		},
+		{
+			name:      "key without value is preserved",
+			target:    "/foo?sig&stuff=morestuff",
+			wantQuery: "sig&stuff=morestuff",
+		},
+		{
+			name:      "percent-encoded key",
+			target:    "/foo?%73ig=abc&X-Amz-%53ignature=def&stuff=morestuff",
+			wantQuery: "%73ig=REDACTED&X-Amz-%53ignature=REDACTED&stuff=morestuff",
+		},
+		{
+			name:      "semicolon separator",
+			target:    "/foo?a=1;sig=abc&stuff=morestuff;X-Amz-Signature=def",
+			wantQuery: "a=1;sig=REDACTED&stuff=morestuff;X-Amz-Signature=REDACTED",
+		},
+		{
+			name:      "semicolon inside sensitive value",
+			target:    "/foo?sig=prefix;SECRET_SUFFIX&other=1",
+			wantQuery: "sig=REDACTED&other=1",
+		},
+		{
+			name:      "question mark separator",
+			target:    "/foo?a=1?sig=abc&stuff=morestuff",
+			wantQuery: "a=1?sig=REDACTED&stuff=morestuff",
+		},
+		{
+			name:      "empty value is redacted",
+			target:    "/foo?sig=&stuff=morestuff",
+			wantQuery: "sig=REDACTED&stuff=morestuff",
+		},
+		{
+			name:      "repeated key",
+			target:    "/foo?sig=abc&sig=def",
+			wantQuery: "sig=REDACTED&sig=REDACTED",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.target, http.NoBody)
+			origRawQuery := req.URL.RawQuery
+
+			attrs := (HTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
+			if tc.wantOmit {
+				assertNoURLQuery(t, attrs)
+			} else {
+				assert.Contains(t, attrs, attribute.String("url.query", tc.wantQuery))
+			}
+			// The incoming request must not be modified.
+			assert.Equal(t, origRawQuery, req.URL.RawQuery)
+		})
+	}
+}
