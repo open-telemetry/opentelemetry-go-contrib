@@ -1544,10 +1544,14 @@ func TestUnmarshalOTLPHttpExporter(t *testing.T) {
 			wantExporter: OTLPHttpExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
+			name:       "missing endpoint uses default",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPHttpExporter{}, "endpoint"),
+		},
+		{
+			name:       "null endpoint uses default",
+			jsonConfig: []byte(`{"endpoint":null}`),
+			yamlConfig: []byte("endpoint: null\n"),
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1597,10 +1601,14 @@ func TestUnmarshalOTLPGrpcExporter(t *testing.T) {
 			wantExporter: OTLPGrpcExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
+			name:       "missing endpoint uses default",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPGrpcExporter{}, "endpoint"),
+		},
+		{
+			name:       "null endpoint uses default",
+			jsonConfig: []byte(`{"endpoint":null}`),
+			yamlConfig: []byte("endpoint: null\n"),
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1650,10 +1658,14 @@ func TestUnmarshalOTLPHttpMetricExporter(t *testing.T) {
 			wantExporter: OTLPHttpMetricExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
+			name:       "missing endpoint uses default",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPHttpMetricExporter{}, "endpoint"),
+		},
+		{
+			name:       "null endpoint uses default",
+			jsonConfig: []byte(`{"endpoint":null}`),
+			yamlConfig: []byte("endpoint: null\n"),
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1703,10 +1715,14 @@ func TestUnmarshalOTLPGrpcMetricExporter(t *testing.T) {
 			wantExporter: OTLPGrpcMetricExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
+			name:       "missing endpoint uses default",
 			jsonConfig: []byte(`{}`),
 			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPGrpcMetricExporter{}, "endpoint"),
+		},
+		{
+			name:       "null endpoint uses default",
+			jsonConfig: []byte(`{"endpoint":null}`),
+			yamlConfig: []byte("endpoint: null\n"),
 		},
 		{
 			name:         "valid with zero timeout",
