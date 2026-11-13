@@ -14,6 +14,7 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/gcp
       - go.opentelemetry.io/contrib/detectors/aws/ecs
       - go.opentelemetry.io/contrib/detectors/aws/eks
+      - go.opentelemetry.io/contrib/zpages
   stable-v2:
     version: v2.6.0
     modules:
@@ -47,7 +48,6 @@ module-sets:
       - go.opentelemetry.io/contrib/instrumentation/host
       - go.opentelemetry.io/contrib/instrumentation/host/example
       - go.opentelemetry.io/contrib/instrumentation/runtime
-      - go.opentelemetry.io/contrib/zpages
   experimental-samplers:
     version: v0.38.0
     modules:
