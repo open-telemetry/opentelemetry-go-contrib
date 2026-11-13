@@ -802,14 +802,16 @@ func TestHandlerResolvesEmptyKeyLogValuer(t *testing.T) {
 		assert.NotContains(t, r.Results()[0], "", "an empty Attr must be ignored")
 	})
 
-	t.Run("PlainValueIsKept", func(t *testing.T) {
+	t.Run("PlainValueIsForwarded", func(t *testing.T) {
 		r := new(recorder)
 		l := slog.New(NewHandler("", WithLoggerProvider(r)))
 
 		l.Info("msg", slog.Any("", stringLogValuer{}))
 
 		require.Len(t, r.Records, 1)
-		assert.Equal(t, "value", r.Results()[0][""], "a non-group value with an empty key must be kept")
+		// The bridge forwards the value with its empty key; whether to keep it
+		// is up to the Logs API implementation (the SDK drops empty keys).
+		assert.Equal(t, "value", r.Results()[0][""], "a non-group value with an empty key must be forwarded unchanged")
 	})
 
 	t.Run("NestedLogValuerIsResolved", func(t *testing.T) {
@@ -836,4 +838,60 @@ func TestHandlerResolvesEmptyKeyLogValuer(t *testing.T) {
 		assert.NotContains(t, got, "", "a group with an empty key must be inlined")
 		assert.Equal(t, int64(1), got["a"])
 	})
+}
+
+type errorGroupLogValuer struct{ err error }
+
+func (v errorGroupLogValuer) LogValue() slog.Value {
+	return slog.GroupValue(slog.Any("failure", v.err))
+}
+
+// TestHandlerLazyGroupMatchesEagerGroup checks that an empty-key LogValuer
+// resolving to a group is handled exactly like the same group passed
+// directly, including how an error value inside it is treated.
+func TestHandlerLazyGroupMatchesEagerGroup(t *testing.T) {
+	err := errors.New("boom")
+	eager := slog.Attr{Value: slog.GroupValue(slog.Any("failure", err))}
+	lazy := slog.Any("", errorGroupLogValuer{err: err})
+
+	for _, tc := range []struct {
+		name string
+		log  func(h slog.Handler, attr slog.Attr) error
+	}{
+		{
+			name: "WithGroup",
+			log: func(h slog.Handler, attr slog.Attr) error {
+				record := slog.NewRecord(time.Time{}, slog.LevelInfo, "msg", 0)
+				record.AddAttrs(attr)
+				return h.WithGroup("outer").Handle(t.Context(), record)
+			},
+		},
+		{
+			name: "Group",
+			log: func(h slog.Handler, attr slog.Attr) error {
+				record := slog.NewRecord(time.Time{}, slog.LevelInfo, "msg", 0)
+				record.AddAttrs(slog.Group("outer", attr))
+				return h.Handle(t.Context(), record)
+			},
+		},
+		{
+			name: "WithAttrs",
+			log: func(h slog.Handler, attr slog.Attr) error {
+				record := slog.NewRecord(time.Time{}, slog.LevelInfo, "msg", 0)
+				return h.WithGroup("outer").WithAttrs([]slog.Attr{attr}).Handle(t.Context(), record)
+			},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			r := new(recorder)
+			h := NewHandler("", WithLoggerProvider(r))
+			require.NoError(t, tc.log(h, eager))
+			require.NoError(t, tc.log(h, lazy))
+
+			require.Len(t, r.Records, 2)
+			assert.Equal(t, r.Records[0].Err(), r.Records[1].Err(), "record errors should agree")
+			got := r.Results()
+			assert.Equal(t, got[0], got[1], "attributes should agree")
+		})
+	}
 }
