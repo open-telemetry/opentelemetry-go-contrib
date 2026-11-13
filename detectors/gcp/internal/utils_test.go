@@ -18,6 +18,7 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -48,6 +49,7 @@ type FakeMetadataTransport struct {
 	T        *testing.T
 	Err      error
 	Metadata map[string]string
+	Contexts []context.Context
 }
 
 const computeMetadataPrefix = "/computeMetadata/v1/"
@@ -62,12 +64,16 @@ func (f *FakeMetadataTransport) getResponse(path string) (string, bool) {
 }
 
 func (f *FakeMetadataTransport) RoundTrip(req *http.Request) (*http.Response, error) {
+	f.Contexts = append(f.Contexts, req.Context())
 	if f.T != nil {
 		f.T.Helper()
 		f.T.Logf("metadata request: %v", req)
 	}
 	if req.URL.Host != "169.254.169.254" && req.URL.Host != "metadata.google.internal" {
 		return nil, fmt.Errorf("unknown host %q", req.URL.Host)
+	}
+	if err := req.Context().Err(); err != nil {
+		return nil, err
 	}
 	if f.Err != nil {
 		return nil, f.Err

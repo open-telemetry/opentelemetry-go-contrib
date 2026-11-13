@@ -26,8 +26,8 @@ var _ resource.Detector = (*GCE)(nil)
 
 // Detect detects associated resources when running on GCE hosts.
 func (*GCE) Detect(ctx context.Context) (*resource.Resource, error) {
-	if !metadata.OnGCE() {
-		return nil, nil
+	if !metadata.NewClient(nil).OnGCEWithContext(ctx) {
+		return nil, ctx.Err()
 	}
 
 	attributes := []attribute.KeyValue{

@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
   
 ### Added
 
+- Add `WithIMDSTags` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` to add EC2 instance tags read from the instance metadata service as `ec2.tag.<key>` resource attributes. (#10086)
 - Support exemplars on exponential (native) histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
 - Convert Prometheus `UNIT` metadata to UCUM units in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10042)
 - Add the opt-in `go.memory.detailed_type` attribute to `go.memory.used` and `go.cpu.detailed_state` attribute to `go.cpu.time` in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10021)
@@ -36,10 +37,12 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/contrib/detectors/consul`, a new resource detector that reads attributes from a Consul agent, ported from `processor/resourcedetectionprocessor/internal/consul` in `opentelemetry-collector-contrib`. Detects `host.name`, `cloud.region`, and `host.id`, plus opt-in `consul.meta.<key>` attributes for the Consul node meta entries selected with `WithMetaKeyFilter`. (#9388)
 - Add `go.opentelemetry.io/contrib/detectors/dynatrace`, a resource detector for hosts monitored by the Dynatrace OneAgent, ported from `processor/resourcedetectionprocessor/internal/dynatrace` in `opentelemetry-collector-contrib`. It reads the OneAgent host enrichment file `dt_host_metadata.properties` and sets the `dt.entity.host`, `host.name`, and `dt.smartscape.host` attributes. (#9491)
 - Add `aws.sns.topic.arn` from `TopicArn` to SNS `Publish` and `PublishBatch` spans in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9954)
+- Add the opt-in `http.client.active_requests` metric to `Transport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, enabled by listing it in the `OTEL_GO_X_HTTP_METRICS_OPTIN` environment variable. (#10069)
 - Add the `aws.ecs.task.id` resource attribute, parsed from the task ARN, to `go.opentelemetry.io/contrib/detectors/aws/ecs`, matching the `ecs` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#10087)
 
 ### Changed
 
+- Environment variable references in mapping keys and comments are no longer substituted in `go.opentelemetry.io/contrib/otelconf`, as required by the declarative configuration data model, and a value substituted into a quoted scalar is used as is, without YAML escape processing. (#10088)
 - Reduce heap allocations and latency during header extraction in `go.opentelemetry.io/contrib/propagators/jaeger`. (#10022)
 - `NewMetricProducer` in `go.opentelemetry.io/contrib/bridges/prometheus` returns the exported concrete type `*Producer` instead of `metric.Producer`. (#10043)
 - Reduce heap allocations and latency during context tagging in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#10007)
@@ -51,6 +54,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `ReadFrom` support to the internal response writer wrapper template shared by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to track copied bytes and the last non-nil error. (#9804)
 - The default span name formatter in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` upper-cases the request method before matching it against known methods, so a lowercase `get` request is named `GET <route>` instead of `HTTP <route>`, matching `http.request.method`. (#9939)
 - Format the default server span name in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` as `{method} {http.route}` when a route matches and `{method}` when no route matches, following the HTTP semantic conventions. (#10053)
+- Change the return type of `NewTransport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` from `*Transport` to `http.RoundTripper`. (#9955)
 - Updated `example/dice` app based on updated specifications for the reference application. (#8099)
 
 ### Deprecated
@@ -67,7 +71,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Reject environment variable values containing line breaks in `go.opentelemetry.io/contrib/otelconf`, which could add keys to or truncate the configuration during substitution, and return substitution errors that a later valid reference previously discarded. (#10088)
+- Substitute environment variables in `go.opentelemetry.io/contrib/otelconf` after the configuration is parsed, so a substituted value can no longer add keys to or truncate the configuration, and return substitution errors that a later valid reference previously discarded. (#10088)
+- Render all latency columns for active spans and add the missing closing anchor tag for error counts in the summary table of `go.opentelemetry.io/contrib/zpages`. (#10074)
+- Propagate the caller's context to metadata requests in `go.opentelemetry.io/contrib/detectors/gcp` so `Detect` honors context cancellation and deadlines. (#10085)
+- Format bracketed IPv6 MongoDB peer addresses without an explicit port correctly in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` and `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#10101)
 - Fall back to the `DockerId` from the task metadata endpoint v4 for the `container.id` resource attribute in `go.opentelemetry.io/contrib/detectors/aws/ecs` when the cgroup parser finds no ID, and omit `container.id` instead of setting it to an empty string.
   The parser only matches 64-hex IDs, so it finds none on Fargate, and it may also find none when `/proc/self/cgroup` has no `/ecs/` path. (#10128)
 - Do not include the port in the `network.peer.address` attribute in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`, it is recorded as `network.peer.port`. (#10110)
@@ -87,6 +94,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Prevent recording negative metric values for unknown request/response sizes in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#9433)
 - Prevent integer overflow when configuring the polling interval for the Jaeger remote sampler via the `OTEL_TRACES_SAMPLER_ARG` environment variable in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#10027)
 - Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray` to prevent auxiliary fields with prefix-sharing keys from dropping trace contexts. (#9879)
+- Reject null entries in `resource.attributes` during YAML and JSON parsing in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x` and `go.opentelemetry.io/contrib/otelconf/v0.3.0`. (#9970)
 - Preserve errors returned by `http.ResponseController.Flush` through `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#9798)
 - Replace inherited debug and deferred sampling flags when extracting a new B3 context in `go.opentelemetry.io/contrib/propagators/b3`. (#9864)
 - Use a background context for entries without an explicit context in `go.opentelemetry.io/contrib/bridges/otellogrus`. (#9865)
@@ -113,6 +121,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 - Remove the deprecated runtime metrics and the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS` environment variable in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10060)
 - Remove support for the `rpc/old` and `rpc/dup` values of `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#9908)
+- Remove the exported `Transport` type from `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Use the `http.RoundTripper` returned by `NewTransport` instead. (#9955)
 
 <!-- Released section -->
 <!-- Don't change this section unless doing release -->

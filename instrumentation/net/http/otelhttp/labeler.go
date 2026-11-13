@@ -64,7 +64,7 @@ func LabelerFromContext(ctx context.Context) (*Labeler, bool) {
 const clientLabelerContextKey labelerContextKeyType = 1
 
 // ContextWithClientLabeler returns a new context with the provided Labeler instance
-// for use with client-side HTTP instrumentation (otelhttp.Transport).
+// for use with client-side HTTP instrumentation.
 // Attributes added to this labeler will be attached to client-side metrics.
 func ContextWithClientLabeler(parent context.Context, l *Labeler) context.Context {
 	return context.WithValue(parent, clientLabelerContextKey, l)
