@@ -164,6 +164,36 @@ func TestSpanProcessorSpansByLatencyWrongIndex(t *testing.T) {
 	assert.Nil(t, zsp.spansByLatency("test", defaultBoundaries.numBuckets()))
 }
 
+func TestSpanProcessorMaxSpanNames(t *testing.T) {
+	zsp := NewSpanProcessor()
+	tracerProvider := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSpanProcessor(zsp),
+	)
+	tracer := tracerProvider.Tracer("test")
+	createEndedSpans(tracer, "existing", 1)
+
+	const goroutine = 4
+	var wg sync.WaitGroup
+	wg.Add(goroutine)
+	for g := range goroutine {
+		go func(n int) {
+			defer wg.Done()
+			for i := range maxSpanNames / 2 {
+				createEndedSpans(tracer, "testSpan"+strconv.Itoa(n)+"-"+strconv.Itoa(i), 1)
+			}
+		}(g)
+	}
+	wg.Wait()
+	assert.Len(t, zsp.spansPerMethod(), maxSpanNames)
+
+	// Span names stored before the limit was reached are still sampled.
+	_, span := tracer.Start(t.Context(), "existing")
+	span.SetStatus(codes.Error, "")
+	span.End()
+	assert.Len(t, zsp.errorSpans("existing"), 1)
+}
+
 func createEndedSpans(tracer trace.Tracer, spanName string, numSpans int) {
 	for i := range numSpans {
 		_, span := tracer.Start(context.Background(), spanName)
