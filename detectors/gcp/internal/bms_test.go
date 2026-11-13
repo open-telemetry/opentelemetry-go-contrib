@@ -29,7 +29,7 @@ func TestBareMetalSolutionInstanceID(t *testing.T) {
 			bmsInstanceIDEnv: "my-host-123",
 		},
 	})
-	instanceID, err := d.BareMetalSolutionInstanceID()
+	instanceID, err := d.BareMetalSolutionInstanceID(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "my-host-123", instanceID)
 }
@@ -38,7 +38,7 @@ func TestBareMetalSolutionInstanceIDErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{}, &FakeOSProvider{
 		Vars: map[string]string{},
 	})
-	instanceID, err := d.BareMetalSolutionInstanceID()
+	instanceID, err := d.BareMetalSolutionInstanceID(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, instanceID)
 }
@@ -49,7 +49,7 @@ func TestBareMetalSolutionCloudRegion(t *testing.T) {
 			bmsRegionEnv: "us-central1",
 		},
 	})
-	region, err := d.BareMetalSolutionCloudRegion()
+	region, err := d.BareMetalSolutionCloudRegion(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "us-central1", region)
 }
@@ -60,7 +60,7 @@ func TestBareMetalSolutionCloudRegionFromLocation(t *testing.T) {
 			bmsLocationEnv: "europe-west1",
 		},
 	})
-	region, err := d.BareMetalSolutionCloudRegion()
+	region, err := d.BareMetalSolutionCloudRegion(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "europe-west1", region)
 }
@@ -69,7 +69,7 @@ func TestBareMetalSolutionCloudRegionErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{}, &FakeOSProvider{
 		Vars: map[string]string{},
 	})
-	region, err := d.BareMetalSolutionCloudRegion()
+	region, err := d.BareMetalSolutionCloudRegion(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, region)
 }
@@ -80,7 +80,7 @@ func TestBareMetalSolutionProjectID(t *testing.T) {
 			bmsProjectIDEnv: "my-test-project",
 		},
 	})
-	projectID, err := d.BareMetalSolutionProjectID()
+	projectID, err := d.BareMetalSolutionProjectID(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "my-test-project", projectID)
 }
@@ -89,7 +89,7 @@ func TestBareMetalSolutionProjectIDErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{}, &FakeOSProvider{
 		Vars: map[string]string{},
 	})
-	projectID, err := d.BareMetalSolutionProjectID()
+	projectID, err := d.BareMetalSolutionProjectID(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, projectID)
 }
