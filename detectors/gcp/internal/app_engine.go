@@ -29,19 +29,19 @@ const (
 	gaeStandard    = "standard"
 )
 
-func (d *Detector) onAppEngineStandard() bool {
+func (d *Detector) onAppEngineStandard(_ context.Context) bool {
 	// See https://cloud.google.com/appengine/docs/standard/go111/runtime#environment_variables.
 	env, found := d.os.LookupEnv(gaeEnv)
 	return found && env == gaeStandard
 }
 
-func (d *Detector) onAppEngine() bool {
+func (d *Detector) onAppEngine(_ context.Context) bool {
 	_, found := d.os.LookupEnv(gaeServiceEnv)
 	return found
 }
 
 // AppEngineServiceName returns the service name of the app engine service.
-func (d *Detector) AppEngineServiceName() (string, error) {
+func (d *Detector) AppEngineServiceName(_ context.Context) (string, error) {
 	if name, found := d.os.LookupEnv(gaeServiceEnv); found {
 		return name, nil
 	}
@@ -49,7 +49,7 @@ func (d *Detector) AppEngineServiceName() (string, error) {
 }
 
 // AppEngineServiceVersion returns the service version of the app engine service.
-func (d *Detector) AppEngineServiceVersion() (string, error) {
+func (d *Detector) AppEngineServiceVersion(_ context.Context) (string, error) {
 	if version, found := d.os.LookupEnv(gaeVersionEnv); found {
 		return version, nil
 	}
@@ -57,7 +57,7 @@ func (d *Detector) AppEngineServiceVersion() (string, error) {
 }
 
 // AppEngineServiceInstance returns the service instance of the app engine service.
-func (d *Detector) AppEngineServiceInstance() (string, error) {
+func (d *Detector) AppEngineServiceInstance(_ context.Context) (string, error) {
 	if instanceID, found := d.os.LookupEnv(gaeInstanceEnv); found {
 		return instanceID, nil
 	}
@@ -65,17 +65,17 @@ func (d *Detector) AppEngineServiceInstance() (string, error) {
 }
 
 // AppEngineFlexAvailabilityZoneAndRegion returns the zone and region in which this program is running.
-func (d *Detector) AppEngineFlexAvailabilityZoneAndRegion() (string, string, error) {
+func (d *Detector) AppEngineFlexAvailabilityZoneAndRegion(ctx context.Context) (string, string, error) {
 	// The GCE metadata server is available on App Engine Flex.
-	return d.GCEAvailabilityZoneAndRegion()
+	return d.GCEAvailabilityZoneAndRegion(ctx)
 }
 
 // AppEngineStandardAvailabilityZone returns the zone the app engine service is running in.
-func (d *Detector) AppEngineStandardAvailabilityZone() (string, error) {
-	return d.metadata.ZoneWithContext(context.TODO())
+func (d *Detector) AppEngineStandardAvailabilityZone(ctx context.Context) (string, error) {
+	return d.metadata.ZoneWithContext(ctx)
 }
 
 // AppEngineStandardCloudRegion returns the region the app engine service is running in.
-func (d *Detector) AppEngineStandardCloudRegion() (string, error) {
-	return d.FaaSCloudRegion()
+func (d *Detector) AppEngineStandardCloudRegion(ctx context.Context) (string, error) {
+	return d.FaaSCloudRegion(ctx)
 }

@@ -17,6 +17,8 @@
 
 package internal
 
+import "context"
+
 const (
 	bmsProjectIDEnv  = "BMS_PROJECT_ID"
 	bmsLocationEnv   = "BMS_LOCATION"
@@ -27,15 +29,15 @@ const (
 // onBareMetalSolution checks if the code is running on a Google Cloud Bare Metal Solution (BMS) by verifying
 // the presence and non-empty values of BMS_PROJECT_ID, BMS_LOCATION (or BMS_REGION), and BMS_INSTANCE_ID environment variables.
 // For more information on Google Cloud Bare Metal Solution, see: https://cloud.google.com/bare-metal/docs
-func (d *Detector) onBareMetalSolution() bool {
-	_, err1 := d.BareMetalSolutionProjectID()
-	_, err2 := d.BareMetalSolutionCloudRegion()
-	_, err3 := d.BareMetalSolutionInstanceID()
+func (d *Detector) onBareMetalSolution(ctx context.Context) bool {
+	_, err1 := d.BareMetalSolutionProjectID(ctx)
+	_, err2 := d.BareMetalSolutionCloudRegion(ctx)
+	_, err3 := d.BareMetalSolutionInstanceID(ctx)
 	return err1 == nil && err2 == nil && err3 == nil
 }
 
 // BareMetalSolutionInstanceID returns the instance ID from the BMS_INSTANCE_ID environment variable.
-func (d *Detector) BareMetalSolutionInstanceID() (string, error) {
+func (d *Detector) BareMetalSolutionInstanceID(_ context.Context) (string, error) {
 	if instanceID, found := d.os.LookupEnv(bmsInstanceIDEnv); found && instanceID != "" {
 		return instanceID, nil
 	}
@@ -43,7 +45,7 @@ func (d *Detector) BareMetalSolutionInstanceID() (string, error) {
 }
 
 // BareMetalSolutionCloudRegion returns the location/region from the BMS_LOCATION or BMS_REGION environment variable.
-func (d *Detector) BareMetalSolutionCloudRegion() (string, error) {
+func (d *Detector) BareMetalSolutionCloudRegion(_ context.Context) (string, error) {
 	if location, found := d.os.LookupEnv(bmsLocationEnv); found && location != "" {
 		return location, nil
 	}
@@ -54,7 +56,7 @@ func (d *Detector) BareMetalSolutionCloudRegion() (string, error) {
 }
 
 // BareMetalSolutionProjectID returns the project ID from the BMS_PROJECT_ID environment variable.
-func (d *Detector) BareMetalSolutionProjectID() (string, error) {
+func (d *Detector) BareMetalSolutionProjectID(_ context.Context) (string, error) {
 	if project, found := d.os.LookupEnv(bmsProjectIDEnv); found && project != "" {
 		return project, nil
 	}

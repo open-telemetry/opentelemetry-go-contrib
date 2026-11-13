@@ -221,6 +221,10 @@ func peerInfo(connectionID string) (hostname string, port int) {
 	host, _, _ := strings.Cut(connectionID, "[-")
 	hostname, portStr, err := net.SplitHostPort(host)
 	if err != nil {
+		if len(host) > 2 && host[0] == '[' && host[len(host)-1] == ']' &&
+			net.ParseIP(host[1:len(host)-1]) != nil {
+			host = host[1 : len(host)-1]
+		}
 		// If parsing fails, assume default MongoDB port and return the entire host as hostname
 		hostname = host
 		port = defaultMongoPort

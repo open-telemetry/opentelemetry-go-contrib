@@ -18,14 +18,14 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	"go.opentelemetry.io/otel/semconv/v1.43.0/httpconv"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/x"
 )
 
-// Transport implements the http.RoundTripper interface and wraps
-// outbound HTTP(S) requests with a span and enriches it with metrics.
-type Transport struct {
+type transport struct {
 	rt http.RoundTripper
 
 	tracer             trace.Tracer
@@ -36,23 +36,41 @@ type Transport struct {
 	clientTrace        func(context.Context) *httptrace.ClientTrace
 	metricAttributesFn func(*http.Request) []attribute.KeyValue
 
-	semconv semconv.HTTPClient
+	semconv              semconv.HTTPClient
+	recordActiveRequests bool
 }
 
-var _ http.RoundTripper = &Transport{}
+var _ http.RoundTripper = &transport{}
 
-// NewTransport wraps the provided http.RoundTripper with one that
+// NewTransport wraps the provided [http.RoundTripper] with one that
 // starts a span, injects the span context into the outbound request headers,
 // and enriches it with metrics.
 //
-// If the provided http.RoundTripper is nil, http.DefaultTransport will be used
-// as the base http.RoundTripper.
-func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
+// The span ends when the response body is closed or when a read from the
+// response body returns [io.EOF]. Errors encountered while reading the
+// response body are recorded in the span.
+//
+// The response body is wrapped to track the response lifecycle. If the
+// response body implements [io.Writer], the returned body also implements
+// [io.ReadWriteCloser].
+//
+// If the provided [http.RoundTripper] is nil, [http.DefaultTransport] will be used
+// as the base [http.RoundTripper].
+//
+// The following opt-in metrics are produced when listed, comma-separated, in
+// the OTEL_GO_X_HTTP_METRICS_OPTIN environment variable when NewTransport is
+// called:
+//
+//	http.client.active_requests  {request}  Number of active HTTP requests.
+//
+// A request is counted from the start of RoundTrip until the base
+// [http.RoundTripper] returns. This feature is experimental and may change.
+func NewTransport(base http.RoundTripper, opts ...Option) http.RoundTripper {
 	if base == nil {
 		base = http.DefaultTransport
 	}
 
-	t := Transport{
+	t := transport{
 		rt: base,
 	}
 
@@ -67,7 +85,7 @@ func NewTransport(base http.RoundTripper, opts ...Option) *Transport {
 	return &t
 }
 
-func (t *Transport) applyConfig(c *config) {
+func (t *transport) applyConfig(c *config) {
 	t.tracer = c.Tracer
 	t.propagators = c.Propagators
 	t.spanStartOptions = c.SpanStartOptions
@@ -75,6 +93,7 @@ func (t *Transport) applyConfig(c *config) {
 	t.spanNameFormatter = c.SpanNameFormatter
 	t.clientTrace = c.ClientTrace
 	t.semconv = semconv.NewHTTPClient(c.Meter)
+	t.recordActiveRequests = x.OptInMetrics.Enabled(httpconv.ClientActiveRequests{}.Name())
 	t.metricAttributesFn = c.MetricAttributesFn
 }
 
@@ -92,7 +111,7 @@ func defaultTransportFormatter(_ string, r *http.Request) string {
 // held in explicit fields with methods instead of escaping closures. Only
 // GetBody retries allocate an additional trackedRequestBody.
 type requestTracker struct {
-	transport *Transport
+	transport *transport
 	first     trackedRequestBody
 
 	originalGetBody func() (io.ReadCloser, error)
@@ -112,7 +131,7 @@ type requestTracker struct {
 	opts     semconv.MetricOpts
 }
 
-func newRequestTracker(t *Transport, r *http.Request) *requestTracker {
+func newRequestTracker(t *transport, r *http.Request) *requestTracker {
 	rt := &requestTracker{transport: t}
 	rt.first = trackedRequestBody{body: r.Body, tracker: rt}
 	rt.body = &rt.first
@@ -233,10 +252,7 @@ func (b *trackedRequestBody) Close() error {
 	return b.body.Close()
 }
 
-// RoundTrip creates a Span and propagates its context via the provided request's headers
-// before handing the request to the configured base RoundTripper. The created span will
-// end when the response body is closed or when a read from the body returns io.EOF.
-func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
+func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	requestStartTime := time.Now()
 	for _, f := range t.filters {
 		if !f(r) {
@@ -280,12 +296,27 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	span.SetAttributes(t.semconv.RequestTraceAttrs(r)...)
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
-	res, err := t.rt.RoundTrip(r)
+	// WithMetricAttributesFn runs once per request. It runs before RoundTrip
+	// only when active requests need it; otherwise it runs after, so it can
+	// read data set during the request and stays out of the duration.
+	var metricAttrs []attribute.KeyValue
+	res, err := func() (*http.Response, error) {
+		if t.recordActiveRequests {
+			metricAttrs = t.metricAttributesFromRequest(r)
+			opt := t.semconv.ActiveRequestsOption(r, append(labeler.Get(), metricAttrs...))
+			t.semconv.AddActiveRequests(ctx, 1, opt)
+			defer t.semconv.AddActiveRequests(ctx, -1, opt)
+		}
+		return t.rt.RoundTrip(r)
+	}()
 	if err == nil {
 		res, err = ensureResponseBody(t.rt, r, res)
 	}
 
 	requestDuration := time.Since(requestStartTime)
+	if !t.recordActiveRequests {
+		metricAttrs = t.metricAttributesFromRequest(r)
+	}
 	statusCode := 0
 	if err == nil {
 		statusCode = res.StatusCode
@@ -295,7 +326,7 @@ func (t *Transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		Resp:                 res,
 		StatusCode:           statusCode,
 		Err:                  err,
-		AdditionalAttributes: append(labeler.Get(), t.metricAttributesFromRequest(r)...),
+		AdditionalAttributes: append(labeler.Get(), metricAttrs...),
 	})
 
 	if tracker != nil {
@@ -343,7 +374,7 @@ func ensureResponseBody(rt http.RoundTripper, r *http.Request, res *http.Respons
 	}
 }
 
-func (t *Transport) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
+func (t *transport) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
 	var attributeForRequest []attribute.KeyValue
 	if t.metricAttributesFn != nil {
 		attributeForRequest = t.metricAttributesFn(r)
