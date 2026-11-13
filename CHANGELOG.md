@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release contains the first stable release of `go.opentelemetry.io/contrib/zpages`.
+Our project stability guarantees now apply to the `go.opentelemetry.io/contrib/zpages` module.
+See our [versioning policy](https://github.com/open-telemetry/opentelemetry-go/blob/main/VERSIONING.md) for more information about these stability guarantees.
+
 ### Added
 
 - Record the `url.query` attribute on HTTP server spans (with `X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, `sig`, and `X-Goog-Signature` query parameter values redacted to `REDACTED`) in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, and `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#10122)
@@ -43,6 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Stabilize the `go.opentelemetry.io/contrib/zpages` module. (#10272)
 - Reduce heap allocations and latency during header extraction in `go.opentelemetry.io/contrib/propagators/jaeger`. (#10022)
 - `NewMetricProducer` in `go.opentelemetry.io/contrib/bridges/prometheus` returns the exported concrete type `*Producer` instead of `metric.Producer`. (#10043)
 - Reduce heap allocations and latency during context tagging in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#10007)
