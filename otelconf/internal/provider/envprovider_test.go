@@ -5,10 +5,12 @@ package provider
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.yaml.in/yaml/v3"
 )
 
 func TestInvalidEnvVarName(t *testing.T) {
@@ -80,10 +82,22 @@ func TestReplaceEnvVar(t *testing.T) {
 			want:  "key1: replaced\nkey2: ${NOT_REPLACED}",
 		},
 		{
-			name:  "environment variable in key position",
+			name:  "environment variable in key position is not substituted",
 			input: "${KEY_VAR}: value",
 			env:   map[string]string{"KEY_VAR": "dynamic_key"},
-			want:  "dynamic_key: value",
+			want:  "${KEY_VAR}: value",
+		},
+		{
+			name:  "environment variables in a sequence",
+			input: "key:\n  - ${VAR1}\n  - ${VAR2}\n",
+			env:   map[string]string{"VAR1": "first", "VAR2": "2"},
+			want:  "key:\n  - first\n  - 2\n",
+		},
+		{
+			name:  "aliased environment variable is substituted once",
+			input: "key: &anchor $$${TEST_VAR}\nkey2: *anchor\n",
+			env:   map[string]string{"TEST_VAR": "test_value"},
+			want:  "key: $test_value\nkey2: $test_value\n",
 		},
 		{
 			name:  "multiple environment variables in same line",
@@ -136,6 +150,12 @@ func TestReplaceEnvVar(t *testing.T) {
 			want:  "key: \"quoted_value\"",
 		},
 		{
+			name:  "quoted boolean environment variable is a string",
+			input: "key: \"${BOOL_VAR}\"",
+			env:   map[string]string{"BOOL_VAR": "true"},
+			want:  "key: \"true\"",
+		},
+		{
 			name:  "environment variable with special characters",
 			input: "key: ${SPECIAL_VAR}",
 			env:   map[string]string{"SPECIAL_VAR": "value\\nwith\\tescape"},
@@ -153,27 +173,75 @@ func TestReplaceEnvVar(t *testing.T) {
 		},
 		{
 			name: "complex YAML with multiple substitutions",
-			input: `service:
-		  name: ${SERVICE_NAME:-default-service}
-		  version: ${SERVICE_VERSION}
-		config:
-		  endpoint: ${ENDPOINT}
-		  escaped: $${NOT_REPLACED}`,
+			input: "service:\n" +
+				"  name: ${SERVICE_NAME:-default-service}\n" +
+				"  version: ${SERVICE_VERSION}\n" +
+				"config:\n" +
+				"  endpoint: ${ENDPOINT}\n" +
+				"  escaped: $${NOT_REPLACED}\n",
 			env: map[string]string{
 				"SERVICE_VERSION": "1.0.0",
 				"ENDPOINT":        "http://localhost:8080",
 			},
-			want: `service:
-		  name: default-service
-		  version: 1.0.0
-		config:
-		  endpoint: http://localhost:8080
-		  escaped: ${NOT_REPLACED}`,
+			want: "service:\n" +
+				"  name: default-service\n" +
+				"  version: 1.0.0\n" +
+				"config:\n" +
+				"  endpoint: http://localhost:8080\n" +
+				"  escaped: ${NOT_REPLACED}\n",
 		},
 		{
 			name:    "YAML injection causes error",
 			input:   "key: ${MALICIOUS_VAR}",
 			env:     map[string]string{"MALICIOUS_VAR": "value\\nkey2: injected"},
+			wantErr: true,
+		},
+		{
+			name:  "block scalar value does not add keys",
+			input: "parent:\n  key: ${MALICIOUS_VAR}\n",
+			env:   map[string]string{"MALICIOUS_VAR": "|\nkey2: injected"},
+			want:  "parent:\n  key: \"\"\n",
+		},
+		{
+			name:  "document marker in value does not truncate the document",
+			input: "key: ${MALICIOUS_VAR}\nkey2: kept\n",
+			env:   map[string]string{"MALICIOUS_VAR": "value\n---\n"},
+			want:  "key: value\nkey2: kept\n",
+		},
+		{
+			name:  "value cannot close a double quoted scalar",
+			input: `key: "${MALICIOUS_VAR}"`,
+			env:   map[string]string{"MALICIOUS_VAR": "\"\nkey2: injected\nkey3: \""},
+			want:  `key: "\"\nkey2: injected\nkey3: \""`,
+		},
+		{
+			name:  "value cannot close a single quoted scalar",
+			input: "key: '${MALICIOUS_VAR}'",
+			env:   map[string]string{"MALICIOUS_VAR": "'\nkey2: injected\nkey3: '"},
+			want:  `key: "'\nkey2: injected\nkey3: '"`,
+		},
+		{
+			name:  "trailing line break in a whole value",
+			input: "key: ${TRAILING_NEWLINE_VAR}",
+			env:   map[string]string{"TRAILING_NEWLINE_VAR": "value\r\n"},
+			want:  "key: value",
+		},
+		{
+			name:  "trailing line break before a literal suffix",
+			input: "parent:\n  key: ${TRAILING_NEWLINE_VAR}---\n  key2: kept\n",
+			env:   map[string]string{"TRAILING_NEWLINE_VAR": "value\r\n"},
+			want:  "parent:\n  key: \"value\\r\\n---\"\n  key2: kept\n",
+		},
+		{
+			name:    "error case - invalid value followed by a valid reference",
+			input:   "key: ${MALICIOUS_VAR}\nkey2: ${TEST_VAR}",
+			env:     map[string]string{"MALICIOUS_VAR": "key3: injected", "TEST_VAR": "value"},
+			wantErr: true,
+		},
+		{
+			name:    "error case - invalid substitution syntax followed by a valid reference",
+			input:   "key: ${ERR_INVALID_SUFFIX:?error}\nkey2: ${TEST_VAR}",
+			env:     map[string]string{"TEST_VAR": "value"},
 			wantErr: true,
 		},
 		{
@@ -214,13 +282,60 @@ func TestReplaceEnvVar(t *testing.T) {
 			}
 
 			got, err := ReplaceEnvVars([]byte(tt.input))
-
 			if tt.wantErr {
 				require.Error(t, err)
-			} else {
-				require.NoError(t, err)
+				assert.Nil(t, got)
+				return
 			}
-			assert.Equal(t, tt.want, string(got))
+			require.NoError(t, err)
+
+			// Compare decoded values so resolved types are checked too.
+			var gotVal, wantVal any
+			require.NoError(t, got.Decode(&gotVal))
+			require.NoError(t, yaml.Unmarshal([]byte(tt.want), &wantVal))
+			assert.Equal(t, wantVal, gotVal)
 		})
 	}
+}
+
+func FuzzReplaceEnvVars(f *testing.F) {
+	f.Add("simple")
+	f.Add("|\nkey2: injected")
+	f.Add("value\n---\n")
+	f.Add("\"\nkey2: injected\nkey3: \"")
+	f.Add("'\nkey2: injected\nkey3: '")
+	f.Add("value\r\n")
+
+	templates := []string{
+		"parent:\n  target: ${V}\n  sentinel: keep\nafter: keep\n",
+		"parent:\n  target: \"${V}\"\n  sentinel: keep\nafter: keep\n",
+		"parent:\n  target: '${V}'\n  sentinel: keep\nafter: keep\n",
+		"parent:\n  target: prefix-${V}-suffix\n  sentinel: keep\nafter: keep\n",
+		"parent:\n  target: ${V}---\n  sentinel: keep\nafter: keep\n",
+	}
+
+	f.Fuzz(func(t *testing.T, val string) {
+		if strings.ContainsRune(val, '\x00') {
+			t.Skip()
+		}
+		t.Setenv("V", val)
+		for _, tmpl := range templates {
+			node, err := ReplaceEnvVars([]byte(tmpl))
+			if err != nil {
+				continue
+			}
+			var got map[string]any
+			if err := node.Decode(&got); err != nil {
+				continue
+			}
+			require.Equal(t, "keep", got["after"])
+			require.Len(t, got, 2)
+			parent, ok := got["parent"].(map[string]any)
+			require.True(t, ok)
+			require.Equal(t, "keep", parent["sentinel"])
+			require.Len(t, parent, 2)
+			require.IsNotType(t, map[string]any(nil), parent["target"])
+			require.IsNotType(t, []any(nil), parent["target"])
+		}
+	})
 }

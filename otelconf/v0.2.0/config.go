@@ -14,7 +14,6 @@ import (
 	noopmetric "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/trace"
 	nooptrace "go.opentelemetry.io/otel/trace/noop"
-	yaml "go.yaml.in/yaml/v3"
 
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
@@ -144,13 +143,13 @@ func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) Configuratio
 
 // ParseYAML parses a YAML configuration file into an OpenTelemetryConfiguration.
 func ParseYAML(file []byte) (*OpenTelemetryConfiguration, error) {
-	file, err := provider.ReplaceEnvVars(file)
+	node, err := provider.ReplaceEnvVars(file)
 	if err != nil {
 		return nil, err
 	}
 
 	var cfg OpenTelemetryConfiguration
-	err = yaml.Unmarshal(file, &cfg)
+	err = node.Decode(&cfg)
 	if err != nil {
 		return nil, err
 	}
