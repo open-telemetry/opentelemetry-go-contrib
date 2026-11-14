@@ -4,6 +4,7 @@
 package otelhttp
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -27,6 +28,7 @@ type middleware struct {
 	spanStartOptions   []trace.SpanStartOption
 	readEvent          bool
 	writeEvent         bool
+	routeTracking      bool
 	filters            []Filter
 	spanNameFormatter  func(string, *http.Request) string
 	publicEndpointFn   func(*http.Request) bool
@@ -75,6 +77,7 @@ func (h *middleware) configure(c *config) {
 	h.spanStartOptions = c.SpanStartOptions
 	h.readEvent = c.ReadEvent
 	h.writeEvent = c.WriteEvent
+	h.routeTracking = c.RouteTracking
 	h.filters = c.Filters
 	h.spanNameFormatter = c.SpanNameFormatter
 	h.publicEndpointFn = c.PublicEndpointFn
@@ -188,6 +191,17 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if !found {
 		ctx = ContextWithLabeler(ctx, labeler)
 	}
+
+	var route *routeContext
+	if h.routeTracking {
+		route = &routeContext{middleware: h, span: span}
+		ctx = context.WithValue(ctx, routeContextKey{}, route)
+	} else if inherited, _ := ctx.Value(routeContextKey{}).(*routeContext); inherited != nil {
+		// A nested instrumented handler controls its own route tracking, rather
+		// than letting a helper update an enclosing handler's server span.
+		ctx = context.WithValue(ctx, routeContextKey{}, disabledRoute)
+	}
+
 	rCtx := r.WithContext(ctx)
 	defer func() {
 		// Copy MultipartForm back to the original request so net/http can
@@ -201,7 +215,13 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	}()
 	next.ServeHTTP(w, rCtx)
 
-	if rCtx.Pattern != "" {
+	var capturedRoute string
+	if route != nil {
+		route.RLock()
+		capturedRoute = route.route
+		route.RUnlock()
+	}
+	if capturedRoute == "" && rCtx.Pattern != "" {
 		span.SetName(h.spanNameFormatter(h.operation, rCtx))
 	}
 
@@ -223,6 +243,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		MetricAttributes: semconv.MetricAttributes{
 			Req:                  rCtx,
 			StatusCode:           statusCode,
+			Route:                capturedRoute,
 			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(rCtx)...),
 		},
 		MetricData: semconv.MetricData{
