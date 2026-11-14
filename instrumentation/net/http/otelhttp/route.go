@@ -21,6 +21,9 @@ type routeContext struct {
 	disabled   bool
 }
 
+// disabledRoute shadows an enclosing handler's routeContext. It is never locked.
+var disabledRoute = &routeContext{disabled: true}
+
 // RouteMiddleware records the matched route on the server span and metrics
 // created by [NewHandler] or [NewMiddleware] configured with [WithRouteTracking].
 // Place it directly around an [http.ServeMux], inside any middleware that copies
@@ -31,6 +34,9 @@ type routeContext struct {
 // is added to the server span before a handler panic propagates. Requests with no
 // matched pattern are left unchanged. If the nearest enclosing instrumented
 // handler does not enable route tracking, it simply calls the next handler.
+//
+// The span name formatter may be invoked more than once per request and must
+// be safe for concurrent use and side-effect free.
 func RouteMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		route, ok := r.Context().Value(routeContextKey{}).(*routeContext)

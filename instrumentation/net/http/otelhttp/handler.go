@@ -196,10 +196,10 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	if h.routeTracking {
 		route = &routeContext{middleware: h, span: span}
 		ctx = context.WithValue(ctx, routeContextKey{}, route)
-	} else if inherited, _ := ctx.Value(routeContextKey{}).(*routeContext); inherited != nil && !inherited.disabled {
+	} else if inherited, _ := ctx.Value(routeContextKey{}).(*routeContext); inherited != nil {
 		// A nested instrumented handler controls its own route tracking, rather
 		// than letting a helper update an enclosing handler's server span.
-		ctx = context.WithValue(ctx, routeContextKey{}, &routeContext{disabled: true})
+		ctx = context.WithValue(ctx, routeContextKey{}, disabledRoute)
 	}
 
 	rCtx := r.WithContext(ctx)
