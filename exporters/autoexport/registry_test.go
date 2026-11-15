@@ -87,3 +87,15 @@ func TestMust(t *testing.T) {
 	assert.Panics(t, func() { must(errors.New("test")) })
 	assert.NotPanics(t, func() { must(nil) })
 }
+
+func TestRegistryKeysAreCaseInsensitive(t *testing.T) {
+	r := newTestRegistry()
+	require.NoError(t, r.store("Custom", factory("custom")))
+
+	for _, key := range []string{"custom", "Custom", "CUSTOM"} {
+		exp, err := r.load(t.Context(), key)
+		require.NoError(t, err, key)
+		assert.Equal(t, "custom", exp.string)
+	}
+	assert.ErrorIs(t, r.store("CUSTOM", factory("other")), errDuplicateRegistration)
+}

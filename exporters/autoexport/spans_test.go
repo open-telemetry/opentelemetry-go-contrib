@@ -144,3 +144,14 @@ func TestSpanExporterFallback(t *testing.T) {
 		})
 	}
 }
+
+func TestSpanExporterEnvIsCaseInsensitive(t *testing.T) {
+	for _, value := range []string{"Console", "NONE"} {
+		t.Run(value, func(t *testing.T) {
+			t.Setenv("OTEL_TRACES_EXPORTER", value)
+			exp, err := NewSpanExporter(t.Context())
+			assert.NoError(t, err)
+			assert.NotNil(t, exp)
+		})
+	}
+}
