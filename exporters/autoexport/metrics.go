@@ -296,7 +296,7 @@ func (pr producerRegistry) create(ctx context.Context) ([]metric.Producer, error
 func dedupedMetricProducers(envValue string) []string {
 	producers := make(map[string]struct{})
 	for producer := range strings.SplitSeq(envValue, ",") {
-		producers[producer] = struct{}{}
+		producers[strings.ToLower(producer)] = struct{}{}
 	}
 
 	result := make([]string, 0, len(producers))

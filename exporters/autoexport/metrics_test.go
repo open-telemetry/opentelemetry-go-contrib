@@ -436,3 +436,7 @@ func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
 	ts.Close()
 	goleak.VerifyNone(t)
 }
+
+func TestDedupedMetricProducersIsCaseInsensitive(t *testing.T) {
+	assert.Equal(t, []string{"prometheus"}, dedupedMetricProducers("prometheus,Prometheus,PROMETHEUS"))
+}
