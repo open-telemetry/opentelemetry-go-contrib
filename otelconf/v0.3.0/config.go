@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"go.opentelemetry.io/otel/baggage"
 	"go.opentelemetry.io/otel/log"
@@ -242,7 +241,9 @@ func createHeadersConfig(headers []NameStringValuePair, headersList *string) (ma
 		// Parsing follows https://github.com/open-telemetry/opentelemetry-configuration/blob/568e5080816d40d75792eb754fc96bde09654159/schema/type_descriptions.yaml#L584.
 		headerslist, err := baggage.Parse(*headersList)
 		if err != nil {
-			return nil, headersListError(*headersList)
+			// Do not wrap err: it quotes the offending list member, and
+			// header values are often credentials.
+			return nil, errors.New("invalid headers list")
 		}
 		for _, kv := range headerslist.Members() {
 			result[kv.Key()] = kv.Value()
@@ -260,26 +261,4 @@ func createHeadersConfig(headers []NameStringValuePair, headersList *string) (ma
 		}
 	}
 	return result, nil
-}
-
-// headersListError returns the error for a headers list that baggage.Parse
-// rejected. The parse error is not wrapped because it quotes the offending
-// list member, and header values are often credentials. The key of the first
-// invalid member is named only when it is a valid header name: a misplaced
-// delimiter, as in "Authorization: Basic <token>==", can put the credential
-// before the first '='.
-func headersListError(headersList string) error {
-	for member := range strings.SplitSeq(headersList, ",") {
-		if _, err := baggage.Parse(member); err == nil {
-			continue
-		}
-		keyValue, _, _ := strings.Cut(member, ";")
-		key, _, found := strings.Cut(keyValue, "=")
-		key = strings.TrimSpace(key)
-		if _, err := baggage.NewMember(key, ""); found && err == nil {
-			return fmt.Errorf("invalid headers list: invalid value for header %q", key)
-		}
-		break
-	}
-	return errors.New("invalid headers list")
 }
