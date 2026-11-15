@@ -30,7 +30,7 @@ func TestFaaSName(t *testing.T) {
 			faasServiceEnv: "my-service",
 		},
 	})
-	name, err := d.FaaSName()
+	name, err := d.FaaSName(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "my-service", name)
 }
@@ -41,7 +41,7 @@ func TestFaaSJobsName(t *testing.T) {
 			cloudRunJobsEnv: "my-service",
 		},
 	})
-	name, err := d.FaaSName()
+	name, err := d.FaaSName(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "my-service", name)
 }
@@ -52,7 +52,7 @@ func TestFaaSWorkerPoolName(t *testing.T) {
 			cloudRunWorkerPoolEnv: "my-service",
 		},
 	})
-	name, err := d.FaaSName()
+	name, err := d.FaaSName(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "my-service", name)
 }
@@ -61,7 +61,7 @@ func TestFaaSNameErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{}, &FakeOSProvider{
 		Vars: map[string]string{},
 	})
-	name, err := d.FaaSName()
+	name, err := d.FaaSName(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, name)
 }
@@ -72,7 +72,7 @@ func TestFaaSVersion(t *testing.T) {
 			faasRevisionEnv: "version-123",
 		},
 	})
-	version, err := d.FaaSVersion()
+	version, err := d.FaaSVersion(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "version-123", version)
 }
@@ -84,7 +84,7 @@ func TestFaaSWorkerPoolVersion(t *testing.T) {
 			cloudRunRevisionEnv:   "version-123",
 		},
 	})
-	version, err := d.FaaSVersion()
+	version, err := d.FaaSVersion(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "version-123", version)
 }
@@ -93,7 +93,7 @@ func TestFaaSVersionErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{}, &FakeOSProvider{
 		Vars: map[string]string{},
 	})
-	version, err := d.FaaSVersion()
+	version, err := d.FaaSVersion(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, version)
 }
@@ -104,7 +104,7 @@ func TestFaaSJobExecution(t *testing.T) {
 			cloudRunJobExecutionEnv: "version-123",
 		},
 	})
-	version, err := d.CloudRunJobExecution()
+	version, err := d.CloudRunJobExecution(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "version-123", version)
 }
@@ -113,7 +113,7 @@ func TestFaaSJobExecutionErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{}, &FakeOSProvider{
 		Vars: map[string]string{},
 	})
-	name, err := d.CloudRunJobExecution()
+	name, err := d.CloudRunJobExecution(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, name)
 }
@@ -124,7 +124,7 @@ func TestFaaSJobTaskIndex(t *testing.T) {
 			cloudRunJobTaskIndexEnv: "5",
 		},
 	})
-	version, err := d.CloudRunJobTaskIndex()
+	version, err := d.CloudRunJobTaskIndex(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "5", version)
 }
@@ -133,14 +133,14 @@ func TestFaaSJobTaskIndexErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{}, &FakeOSProvider{
 		Vars: map[string]string{},
 	})
-	name, err := d.CloudRunJobTaskIndex()
+	name, err := d.CloudRunJobTaskIndex(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, name)
 }
 
 func TestFaaSID(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{})
-	instance, err := d.FaaSID()
+	instance, err := d.FaaSID(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, fakeInstanceID, instance)
 }
@@ -149,7 +149,7 @@ func TestFaaSIDErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{
 		Err: fmt.Errorf("fake error"),
 	}, &FakeOSProvider{})
-	instance, err := d.FaaSID()
+	instance, err := d.FaaSID(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, instance)
 }
@@ -158,7 +158,7 @@ func TestFaaSCloudRegion(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t,
 		regionMetadataAttr, "/projects/123/regions/us-central1",
 	), &FakeOSProvider{})
-	instance, err := d.FaaSCloudRegion()
+	instance, err := d.FaaSCloudRegion(t.Context())
 	assert.NoError(t, err)
 	assert.Equal(t, "us-central1", instance)
 }
@@ -167,7 +167,7 @@ func TestFaaSCloudRegionErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{
 		Err: fmt.Errorf("fake error"),
 	}, &FakeOSProvider{})
-	instance, err := d.FaaSCloudRegion()
+	instance, err := d.FaaSCloudRegion(t.Context())
 	assert.Error(t, err)
 	assert.Empty(t, instance)
 }
