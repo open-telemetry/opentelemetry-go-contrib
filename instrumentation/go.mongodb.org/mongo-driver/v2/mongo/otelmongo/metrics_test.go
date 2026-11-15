@@ -129,6 +129,21 @@ func TestMetricsOperationFailure(t *testing.T) {
 	require.Len(t, rm.ScopeMetrics, 1)
 	scopeMetrics := rm.ScopeMetrics[0]
 	assert.NotEmpty(t, scopeMetrics.Metrics)
+
+	var found bool
+	for _, m := range scopeMetrics.Metrics {
+		if m.Name != "db.client.operation.duration" {
+			continue
+		}
+		histogram, ok := m.Data.(metricdata.Histogram[float64])
+		require.True(t, ok, "expected histogram data type")
+		require.NotEmpty(t, histogram.DataPoints)
+		v, ok := histogram.DataPoints[0].Attributes.Value("db.namespace")
+		assert.True(t, ok, "expected db.namespace attribute on a failed operation")
+		assert.Equal(t, "test-database", v.AsString())
+		found = true
+	}
+	assert.True(t, found, "expected db.client.operation.duration metric")
 }
 
 func TestNewMonitorWithInvalidMeterProvider(t *testing.T) {
