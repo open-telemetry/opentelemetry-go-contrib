@@ -7,6 +7,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
 	"testing"
 
 	metadata "github.com/brunoscheufler/aws-ecs-metadata-go"
@@ -354,6 +356,21 @@ func TestNewResourceDetector(t *testing.T) {
 	res, err := detector.Detect(t.Context())
 	assert.NoError(t, err)
 	assert.Nil(t, res)
+}
+
+func TestNewResourceDetectorDisablesProxy(t *testing.T) {
+	proxy := "http://" + net.JoinHostPort("127.0.0.1", "1")
+	t.Setenv("HTTP_PROXY", proxy)
+	t.Setenv("HTTPS_PROXY", proxy)
+
+	detector, ok := NewResourceDetector().(*resourceDetector)
+	require.True(t, ok)
+	utils, ok := detector.utils.(ecsDetectorUtils)
+	require.True(t, ok)
+	require.NotNil(t, utils.client)
+	transport, ok := utils.client.Transport.(*http.Transport)
+	require.True(t, ok)
+	assert.Nil(t, transport.Proxy)
 }
 
 func TestLogsAttributesErrors(t *testing.T) {
