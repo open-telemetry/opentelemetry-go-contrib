@@ -787,74 +787,58 @@ func TestSpanStatus(t *testing.T) {
 	}
 }
 
-func TestHandlerWithMetricAttributesFn(t *testing.T) {
+func TestHandlerWithLabeler(t *testing.T) {
 	const (
-		serverRequestSize  = "http.server.request.size"
-		serverResponseSize = "http.server.response.size"
-		serverDuration     = "http.server.duration"
+		serverRequestSize  = "http.server.request.body.size"
+		serverResponseSize = "http.server.response.body.size"
+		serverDuration     = "http.server.request.duration"
 	)
-	testCases := []struct {
-		name                        string
-		fn                          func(r *http.Request) []attribute.KeyValue
-		expectedAdditionalAttribute []attribute.KeyValue
-	}{
-		{
-			name:                        "With a nil function",
-			fn:                          nil,
-			expectedAdditionalAttribute: []attribute.KeyValue{},
-		},
-		{
-			name: "With a function that returns an additional attribute",
-			fn: func(*http.Request) []attribute.KeyValue {
-				return []attribute.KeyValue{
-					attribute.String("fooKey", "fooValue"),
-					attribute.String("barKey", "barValue"),
-				}
-			},
-			expectedAdditionalAttribute: []attribute.KeyValue{
-				attribute.String("fooKey", "fooValue"),
-				attribute.String("barKey", "barValue"),
-			},
-		},
+
+	additionalAttributes := []attribute.KeyValue{
+		attribute.String("fooKey", "fooValue"),
+		attribute.String("barKey", "barValue"),
 	}
+	labeler := new(Labeler)
+	labeler.Add(additionalAttributes...)
 
-	for _, tc := range testCases {
-		reader := sdkmetric.NewManualReader()
-		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}),
+		"test_handler",
+		WithMeterProvider(meterProvider),
+	)
 
-		h := NewHandler(
-			http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
-				w.WriteHeader(http.StatusOK)
-			}), "test_handler",
-			WithMeterProvider(meterProvider),
-			WithMetricAttributesFn(tc.fn),
-		)
+	r, err := http.NewRequestWithContext(
+		ContextWithLabeler(t.Context(), labeler),
+		http.MethodGet,
+		"http://localhost/",
+		http.NoBody,
+	)
+	require.NoError(t, err)
+	h.ServeHTTP(httptest.NewRecorder(), r)
 
-		r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/", http.NoBody)
-		require.NoError(t, err)
-		rr := httptest.NewRecorder()
-		h.ServeHTTP(rr, r)
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
 
-		rm := metricdata.ResourceMetrics{}
-		err = reader.Collect(t.Context(), &rm)
-		require.NoError(t, err)
-		require.Len(t, rm.ScopeMetrics, 1)
-		assert.Len(t, rm.ScopeMetrics[0].Metrics, 3)
-
-		// Verify that the additional attribute is present in the metrics.
-		for _, m := range rm.ScopeMetrics[0].Metrics {
-			switch m.Name {
-			case serverRequestSize, serverResponseSize:
-				d, ok := m.Data.(metricdata.Sum[int64])
-				assert.True(t, ok)
-				assert.Len(t, d.DataPoints, 1)
-				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
-			case serverDuration:
-				d, ok := m.Data.(metricdata.Histogram[float64])
-				assert.True(t, ok)
-				assert.Len(t, d.DataPoints, 1)
-				containsAttributes(t, d.DataPoints[0].Attributes, testCases[0].expectedAdditionalAttribute)
-			}
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch m.Name {
+		case serverRequestSize, serverResponseSize:
+			d, ok := m.Data.(metricdata.Histogram[int64])
+			require.True(t, ok)
+			require.Len(t, d.DataPoints, 1)
+			containsAttributes(t, d.DataPoints[0].Attributes, additionalAttributes)
+		case serverDuration:
+			d, ok := m.Data.(metricdata.Histogram[float64])
+			require.True(t, ok)
+			require.Len(t, d.DataPoints, 1)
+			containsAttributes(t, d.DataPoints[0].Attributes, additionalAttributes)
+		default:
+			t.Fatalf("unexpected metric: %s", m.Name)
 		}
 	}
 }

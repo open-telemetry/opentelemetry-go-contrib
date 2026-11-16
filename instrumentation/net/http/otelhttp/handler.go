@@ -9,7 +9,6 @@ import (
 
 	"github.com/felixge/httpsnoop"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 
@@ -22,15 +21,14 @@ type middleware struct {
 	operation string
 	server    string
 
-	tracer             trace.Tracer
-	propagators        propagation.TextMapPropagator
-	spanStartOptions   []trace.SpanStartOption
-	readEvent          bool
-	writeEvent         bool
-	filters            []Filter
-	spanNameFormatter  func(string, *http.Request) string
-	publicEndpointFn   func(*http.Request) bool
-	metricAttributesFn func(*http.Request) []attribute.KeyValue
+	tracer            trace.Tracer
+	propagators       propagation.TextMapPropagator
+	spanStartOptions  []trace.SpanStartOption
+	readEvent         bool
+	writeEvent        bool
+	filters           []Filter
+	spanNameFormatter func(string, *http.Request) string
+	publicEndpointFn  func(*http.Request) bool
 
 	semconv semconv.HTTPServer
 }
@@ -80,7 +78,6 @@ func (h *middleware) configure(c *config) {
 	h.publicEndpointFn = c.PublicEndpointFn
 	h.server = c.ServerName
 	h.semconv = semconv.NewHTTPServer(c.Meter)
-	h.metricAttributesFn = c.MetricAttributesFn
 }
 
 // serveHTTP sets up tracing and calls the given next http.Handler with the span
@@ -223,19 +220,11 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		MetricAttributes: semconv.MetricAttributes{
 			Req:                  rCtx,
 			StatusCode:           statusCode,
-			AdditionalAttributes: append(labeler.Get(), h.metricAttributesFromRequest(rCtx)...),
+			AdditionalAttributes: labeler.Get(),
 		},
 		MetricData: semconv.MetricData{
 			RequestSize:     bytesRead,
 			RequestDuration: time.Since(requestStartTime),
 		},
 	})
-}
-
-func (h *middleware) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
-	var attributeForRequest []attribute.KeyValue
-	if h.metricAttributesFn != nil {
-		attributeForRequest = h.metricAttributesFn(r)
-	}
-	return attributeForRequest
 }
