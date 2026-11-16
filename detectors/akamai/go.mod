@@ -6,7 +6,7 @@ require (
 	github.com/linode/go-metadata v0.3.1
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.47.0
-	go.opentelemetry.io/otel/sdk v1.45.0
+	go.opentelemetry.io/otel/sdk v1.47.0
 )
 
 require (
