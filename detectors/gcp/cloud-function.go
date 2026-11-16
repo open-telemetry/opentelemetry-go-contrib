@@ -32,17 +32,17 @@ type cloudFunction struct {
 }
 
 // Detect detects associated resources when running in GCP Cloud Function.
-func (f *cloudFunction) Detect(context.Context) (*resource.Resource, error) {
+func (f *cloudFunction) Detect(ctx context.Context) (*resource.Resource, error) {
 	functionName, ok := f.googleCloudFunctionName()
 	if !ok {
 		return nil, nil
 	}
 
-	projectID, err := f.cloudRun.mc.ProjectID()
+	projectID, err := f.cloudRun.mc.ProjectIDWithContext(ctx)
 	if err != nil {
 		return nil, err
 	}
-	region, err := f.cloudRun.cloudRegion()
+	region, err := f.cloudRun.cloudRegion(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -8,14 +8,17 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/trace"
 )
 
 func TestNewTracezHandler(t *testing.T) {
@@ -310,4 +313,111 @@ func TestTracezHandler_ConcurrentSafe(t *testing.T) {
 	}
 
 	wg.Wait()
+}
+
+func TestTracezHandler_ActiveOnlySpan(t *testing.T) {
+	sp := NewSpanProcessor()
+	defer func() {
+		require.NoError(t, sp.Shutdown(t.Context()))
+	}()
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer func() {
+		require.NoError(t, tp.Shutdown(t.Context()))
+	}()
+
+	tracer := tp.Tracer("test-tracer")
+	ctx := t.Context()
+
+	_, activeSpan := tracer.Start(ctx, "active-only-span")
+	defer activeSpan.End()
+
+	handler := NewTracezHandler(sp)
+
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/tracez", http.NoBody)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+
+	resp := w.Result()
+	defer resp.Body.Close()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body := w.Body.String()
+
+	// Verify the active span is shown with active count = 1.
+	assert.Contains(t, body, `<a href="tracez?zspanname=active-only-span&ztype=0">1</a>`)
+
+	// Verify all 9 latency buckets are rendered as cells with 0 count.
+	for i := range defaultBoundaries.numBuckets() {
+		expectedCell := `<a href="tracez?zspanname=active-only-span&ztype=1&zlatencybucket=` + strconv.Itoa(i) + `">0</a>`
+		assert.Contains(t, body, expectedCell)
+	}
+
+	// Verify error cell renders with closing </a> tag.
+	assert.Contains(t, body, `<a href="tracez?zspanname=active-only-span&ztype=2&zlatencybucket=0">0</a></td>`)
+}
+
+func TestSpanRows_DoesNotMutateSpan(t *testing.T) {
+	sp := NewSpanProcessor()
+	defer func() {
+		require.NoError(t, sp.Shutdown(t.Context()))
+	}()
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer func() {
+		require.NoError(t, tp.Shutdown(t.Context()))
+	}()
+
+	tracer := tp.Tracer("test-tracer")
+	ctx := t.Context()
+
+	origAttrs := []attribute.KeyValue{
+		attribute.String("z-key", "z-val"),
+		attribute.String("a-key", "a-val"),
+		attribute.String("m-key", "m-val"),
+	}
+
+	eventAttrs := []attribute.KeyValue{
+		attribute.String("y-key", "y-val"),
+		attribute.String("b-key", "b-val"),
+	}
+
+	t0 := time.Unix(1000, 0)
+	_, span := tracer.Start(ctx, "mutation-test-span", trace.WithTimestamp(t0))
+	span.SetAttributes(origAttrs...)
+	// Add events with timestamps out of chronological order to ensure
+	// sorting events in spanRows does not mutate the span's events slice in-place.
+	span.AddEvent("second-event", trace.WithTimestamp(t0.Add(time.Second)), trace.WithAttributes(eventAttrs...))
+	span.AddEvent("first-event", trace.WithTimestamp(t0))
+	span.End(trace.WithTimestamp(t0.Add(2 * time.Second)))
+
+	spans := sp.spansByLatency("mutation-test-span", 0)
+	// If it ended up in another latency bucket, find it
+	if len(spans) == 0 {
+		for i := range defaultBoundaries.numBuckets() {
+			spans = sp.spansByLatency("mutation-test-span", i)
+			if len(spans) > 0 {
+				break
+			}
+		}
+	}
+	require.NotEmpty(t, spans)
+	roSpan := spans[0]
+
+	// Copy the attributes slice to compare order before and after
+	attrsBefore := append([]attribute.KeyValue(nil), roSpan.Attributes()...)
+	eventsBefore := append([]sdktrace.Event(nil), roSpan.Events()...)
+	eventAttrsBefore := append([]attribute.KeyValue(nil), roSpan.Events()[0].Attributes...)
+
+	rows := spanRows(roSpan)
+	require.NotEmpty(t, rows)
+
+	// Verify the original span's attributes and event attributes were not sorted in-place
+	assert.Equal(t, attrsBefore, roSpan.Attributes(), "span.Attributes() was mutated in-place")
+	assert.Equal(t, eventsBefore, roSpan.Events(), "span.Events() was mutated in-place")
+	assert.Equal(t, eventAttrsBefore, roSpan.Events()[0].Attributes, "event.Attributes was mutated in-place")
 }
