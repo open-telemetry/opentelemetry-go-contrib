@@ -93,3 +93,11 @@ func ExampleNewHandler() {
 		log.Fatal(err)
 	}
 }
+
+func ExampleNewMiddleware() {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprintln(w, "hello")
+	})
+	instrumentedHandler := otelhttp.NewMiddleware("server")(handler)
+	_ = http.ListenAndServe(":8080", instrumentedHandler)
+}

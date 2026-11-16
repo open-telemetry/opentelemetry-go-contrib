@@ -27,8 +27,8 @@ docker compose up -d
 # Running the code
 
 You can find the complete code for this example in the [main.go](./main.go)
-file. To run it, ensure you have a somewhat recent version of Go (preferably >=
-1.13) and do
+file. Use Go 1.26.0 or newer, as declared in this example's go.mod, and run
+the following command from this example directory:
 
 ```bash
 go run main.go

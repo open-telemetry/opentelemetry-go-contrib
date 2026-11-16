@@ -149,6 +149,32 @@ func TestRemoteSamplerOptionsDefaults(t *testing.T) {
 	assert.NotZero(t, options.samplingRefreshInterval)
 }
 
+func TestRemoteSamplerNonPositiveRefreshInterval(t *testing.T) {
+	// time.NewTicker panics for a non-positive interval, so the sampler
+	// must never be configured with one.
+	for _, d := range []time.Duration{0, -time.Second} {
+		cfg := newConfig(WithSamplingRefreshInterval(d))
+		assert.Equal(t, defaultSamplingRefreshInterval, cfg.samplingRefreshInterval, "option %v", d)
+	}
+
+	// A non-positive value must be ignored, not overwrite an earlier valid one.
+	for _, d := range []time.Duration{0, -time.Second} {
+		cfg := newConfig(WithSamplingRefreshInterval(5*time.Second), WithSamplingRefreshInterval(d))
+		assert.Equal(t, 5*time.Second, cfg.samplingRefreshInterval, "option %v", d)
+	}
+
+	for _, v := range []string{"0", "-5"} {
+		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "pollingIntervalMs="+v)
+
+		_, errs := getEnvOptions()
+		require.Len(t, errs, 1, "pollingIntervalMs=%s", v)
+		assert.ErrorContains(t, errs[0], "pollingIntervalMs must be positive")
+
+		cfg := newConfig()
+		assert.Equal(t, defaultSamplingRefreshInterval, cfg.samplingRefreshInterval, "pollingIntervalMs=%s", v)
+	}
+}
+
 func initAgent(t *testing.T) (*testutils.MockAgent, *Sampler) {
 	agent, err := testutils.StartMockAgent()
 	require.NoError(t, err)
