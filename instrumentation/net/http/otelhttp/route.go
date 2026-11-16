@@ -5,9 +5,9 @@ package otelhttp
 
 import (
 	"net/http"
-	"strings"
 	"sync"
 
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
 	"go.opentelemetry.io/otel/trace"
 )
 
@@ -45,7 +45,7 @@ func RouteMiddleware(next http.Handler) http.Handler {
 			return
 		}
 		defer func() {
-			routeStr := httpRoute(r.Pattern)
+			routeStr := semconv.HTTPRoute(r.Pattern)
 			if routeStr == "" {
 				return
 			}
@@ -75,11 +75,4 @@ func RouteMiddleware(next http.Handler) http.Handler {
 		}()
 		next.ServeHTTP(w, r)
 	})
-}
-
-func httpRoute(pattern string) string {
-	if idx := strings.IndexByte(pattern, '/'); idx >= 0 {
-		return pattern[idx:]
-	}
-	return ""
 }
