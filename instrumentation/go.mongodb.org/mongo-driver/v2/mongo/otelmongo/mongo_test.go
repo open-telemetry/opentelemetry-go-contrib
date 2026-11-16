@@ -361,7 +361,7 @@ func TestPeerInfo(t *testing.T) {
 		{
 			name:         "IPv6 without port with square brackets",
 			connectionID: "[::1]",
-			expectedHost: "[::1]",
+			expectedHost: "::1",
 			expectedPort: 27017,
 		},
 		{
@@ -379,7 +379,7 @@ func TestPeerInfo(t *testing.T) {
 		{
 			name:         "IPv6 without port with square brackets and connection number",
 			connectionID: "[::1][-5]",
-			expectedHost: "[::1]",
+			expectedHost: "::1",
 			expectedPort: 27017,
 		},
 		{
@@ -429,4 +429,24 @@ func TestPeerInfo(t *testing.T) {
 			assert.Equal(t, tc.expectedPort, port)
 		})
 	}
+}
+
+func TestStartedIPv6PeerAttributesWithoutPort(t *testing.T) {
+	const connectionID = "[::1][-5]"
+	recorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	monitor := NewMonitor(WithTracerProvider(provider))
+
+	monitor.Started(t.Context(), &event.CommandStartedEvent{
+		CommandName:  "ping",
+		ConnectionID: connectionID,
+	})
+	monitor.Succeeded(t.Context(), &event.CommandSucceededEvent{
+		CommandFinishedEvent: event.CommandFinishedEvent{ConnectionID: connectionID},
+	})
+
+	spans := recorder.Ended()
+	require.Len(t, spans, 1)
+	assert.Contains(t, spans[0].Attributes(), attribute.String("network.peer.address", "::1"))
+	assert.Contains(t, spans[0].Attributes(), attribute.Int64("network.peer.port", 27017))
 }

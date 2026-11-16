@@ -35,7 +35,7 @@ const (
 	clusterLocationMetadataAttr = "cluster-location"
 )
 
-func (d *Detector) onGKE() bool {
+func (d *Detector) onGKE(ctx context.Context) bool {
 	// Check if we are on k8s first
 	_, found := d.os.LookupEnv(k8sServiceHostEnv)
 	if !found {
@@ -43,18 +43,18 @@ func (d *Detector) onGKE() bool {
 	}
 	// If we are on k8s, make sure that we are actually on GKE, and not a
 	// different managed k8s platform.
-	_, err := d.metadata.InstanceAttributeValueWithContext(context.TODO(), clusterLocationMetadataAttr)
+	_, err := d.metadata.InstanceAttributeValueWithContext(ctx, clusterLocationMetadataAttr)
 	return err == nil
 }
 
 // GKEHostID returns the instance ID of the instance on which this program is running.
-func (d *Detector) GKEHostID() (string, error) {
-	return d.GCEHostID()
+func (d *Detector) GKEHostID(ctx context.Context) (string, error) {
+	return d.GCEHostID(ctx)
 }
 
 // GKEClusterName returns the name of the GKE cluster in which this program is running.
-func (d *Detector) GKEClusterName() (string, error) {
-	return d.metadata.InstanceAttributeValueWithContext(context.TODO(), clusterNameMetadataAttr)
+func (d *Detector) GKEClusterName(ctx context.Context) (string, error) {
+	return d.metadata.InstanceAttributeValueWithContext(ctx, clusterNameMetadataAttr)
 }
 
 // GKEHostType returns the machine type of the instance on which this program is running.
@@ -80,8 +80,8 @@ const (
 )
 
 // GKEAvailabilityZoneOrRegion returns the location of the cluster and whether the cluster is zonal or regional.
-func (d *Detector) GKEAvailabilityZoneOrRegion() (string, LocationType, error) {
-	clusterLocation, err := d.metadata.InstanceAttributeValueWithContext(context.TODO(), clusterLocationMetadataAttr)
+func (d *Detector) GKEAvailabilityZoneOrRegion(ctx context.Context) (string, LocationType, error) {
+	clusterLocation, err := d.metadata.InstanceAttributeValueWithContext(ctx, clusterLocationMetadataAttr)
 	if err != nil {
 		return "", UndefinedLocation, err
 	}
