@@ -20,8 +20,7 @@ import (
 const (
 	defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
 	defaultMetadataTimeout         = 10 * time.Second
-	// maxResponseSize is 1 MiB (1024 * 1024 bytes).
-	maxResponseSize = 1024 * 1024
+	maxResponseSize = 1024 * 1024 // 1 MiB
 )
 
 // Azure-specific resource attribute keys that are not (yet) part of the
