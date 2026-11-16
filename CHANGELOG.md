@@ -71,7 +71,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
-- Bound Azure VM metadata requests to five seconds and reject responses over 1 MiB in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. (#10299)
+- Bound Azure VM metadata requests to ten seconds and reject responses over 1 MiB in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. (#10299)
 - Use the sampling endpoint in `go.opentelemetry.io/contrib/samplers/jaegerremote/example` so the example applies the remote sampling strategy. (#10089)
 - Render all latency columns for active spans and add the missing closing anchor tag for error counts in the summary table of `go.opentelemetry.io/contrib/zpages`. (#10074)
 - Propagate the caller's context to metadata requests in `go.opentelemetry.io/contrib/detectors/gcp` so `Detect` honors context cancellation and deadlines. (#10085)
