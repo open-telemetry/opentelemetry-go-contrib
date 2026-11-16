@@ -223,7 +223,7 @@ func (detector *ResourceDetector) getJSONMetadata(ctx context.Context) ([]byte, 
 	if resp.StatusCode == http.StatusOK {
 		bytes, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize+1))
 		if len(bytes) > maxResponseSize {
-			return nil, true, fmt.Errorf("Azure VM metadata response exceeds %d bytes", maxResponseSize)
+			return nil, true, fmt.Errorf("azure VM metadata response exceeds %d bytes", maxResponseSize)
 		}
 		if err != nil {
 			return nil, true, err
