@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Based on https://github.com/DataDog/dd-trace-go/blob/8fb554ff7cf694267f9077ae35e27ce4689ed8b6/contrib/gin-gonic/gin/option.go
+
+// Package otelgin provides OpenTelemetry instrumentation for the Gin web framework.
 //
 // Deprecated: This package is no longer supported.
 package otelgin
