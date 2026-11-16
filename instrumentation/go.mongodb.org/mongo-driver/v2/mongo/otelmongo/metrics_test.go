@@ -16,6 +16,8 @@ import (
 	"go.mongodb.org/mongo-driver/v2/x/mongo/driver/drivertest"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
+	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
+	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 )
 
 const (
@@ -130,20 +132,7 @@ func TestMetricsOperationFailure(t *testing.T) {
 	scopeMetrics := rm.ScopeMetrics[0]
 	assert.NotEmpty(t, scopeMetrics.Metrics)
 
-	var found bool
-	for _, m := range scopeMetrics.Metrics {
-		if m.Name != "db.client.operation.duration" {
-			continue
-		}
-		histogram, ok := m.Data.(metricdata.Histogram[float64])
-		require.True(t, ok, "expected histogram data type")
-		require.NotEmpty(t, histogram.DataPoints)
-		v, ok := histogram.DataPoints[0].Attributes.Value("db.namespace")
-		assert.True(t, ok, "expected db.namespace attribute on a failed operation")
-		assert.Equal(t, "test-database", v.AsString())
-		found = true
-	}
-	assert.True(t, found, "expected db.client.operation.duration metric")
+	metricdatatest.AssertHasAttributes(t, scopeMetrics, semconv.DBNamespace("test-database"))
 }
 
 func TestNewMonitorWithInvalidMeterProvider(t *testing.T) {
