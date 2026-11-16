@@ -4,14 +4,17 @@
 package azurevm
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
@@ -43,6 +46,7 @@ func TestNew(t *testing.T) {
 	// New must remain equivalent to NewResourceDetector called with no options.
 	assert.Equal(t, NewResourceDetector(), New())
 	assert.Equal(t, defaultAzureVMMetadataEndpoint, New().endpoint)
+	assert.Equal(t, defaultMetadataTimeout, New().timeout)
 }
 
 func TestDetect(t *testing.T) {
@@ -260,6 +264,113 @@ func TestDetect(t *testing.T) {
 
 			assert.Equal(t, tCase.expected.err, err != nil)
 			assert.Equal(t, tCase.expected.resource, azureResource)
+		})
+	}
+}
+
+func TestGetJSONMetadataTimeout(t *testing.T) {
+	tests := []struct {
+		name           string
+		sendHeaders    bool
+		runningInAzure bool
+	}{
+		{name: "response headers", runningInAzure: false},
+		{name: "response body", sendHeaders: true, runningInAzure: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if tt.sendHeaders {
+					w.WriteHeader(http.StatusOK)
+					w.(http.Flusher).Flush()
+				}
+				<-r.Context().Done()
+			}))
+			defer server.Close()
+
+			detector := NewResourceDetector()
+			detector.endpoint = server.URL
+			detector.timeout = 500 * time.Millisecond
+
+			// The caller deadline only keeps a broken timeout implementation
+			// from hanging the test indefinitely.
+			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			defer cancel()
+
+			_, runningInAzure, err := detector.getJSONMetadata(ctx)
+			require.Error(t, err)
+			assert.ErrorIs(t, err, context.DeadlineExceeded)
+			assert.NoError(t, ctx.Err(), "the detector timeout should fire first")
+			assert.Equal(t, tt.runningInAzure, runningInAzure)
+		})
+	}
+}
+
+func TestGetJSONMetadataCallerDeadline(t *testing.T) {
+	tests := []struct {
+		name           string
+		sendHeaders    bool
+		runningInAzure bool
+	}{
+		{name: "response headers", runningInAzure: false},
+		{name: "response body", sendHeaders: true, runningInAzure: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if tt.sendHeaders {
+					w.WriteHeader(http.StatusOK)
+					w.(http.Flusher).Flush()
+				}
+				<-r.Context().Done()
+			}))
+			defer server.Close()
+
+			detector := NewResourceDetector()
+			detector.endpoint = server.URL
+
+			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+			defer cancel()
+
+			_, runningInAzure, err := detector.getJSONMetadata(ctx)
+			require.Error(t, err)
+			assert.ErrorIs(t, err, context.DeadlineExceeded)
+			assert.Equal(t, tt.runningInAzure, runningInAzure)
+		})
+	}
+}
+
+func TestDetectResponseSizeLimit(t *testing.T) {
+	validJSON := "{}" + strings.Repeat(" ", maxResponseSize-len("{}"))
+	tests := []struct {
+		name      string
+		body      string
+		wantError bool
+	}{
+		{name: "exact limit", body: validJSON},
+		{name: "over limit", body: validJSON + " ", wantError: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+				fmt.Fprint(w, tt.body)
+			}))
+			defer server.Close()
+
+			detector := NewResourceDetector()
+			detector.endpoint = server.URL
+
+			res, err := detector.Detect(t.Context())
+			if tt.wantError {
+				require.ErrorContains(t, err, "exceeds")
+				assert.Nil(t, res)
+			} else {
+				require.NoError(t, err)
+				assert.NotNil(t, res)
+			}
 		})
 	}
 }
