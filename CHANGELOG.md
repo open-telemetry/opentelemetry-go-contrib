@@ -71,6 +71,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Use the sampling endpoint in `go.opentelemetry.io/contrib/samplers/jaegerremote/example` so the example applies the remote sampling strategy. (#10089)
 - Render all latency columns for active spans and add the missing closing anchor tag for error counts in the summary table of `go.opentelemetry.io/contrib/zpages`. (#10074)
 - Propagate the caller's context to metadata requests in `go.opentelemetry.io/contrib/detectors/gcp` so `Detect` honors context cancellation and deadlines. (#10085)
 - Format bracketed IPv6 MongoDB peer addresses without an explicit port correctly in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` and `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#10101)
