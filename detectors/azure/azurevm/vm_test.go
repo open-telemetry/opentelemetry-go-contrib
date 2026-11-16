@@ -295,7 +295,7 @@ func TestGetJSONMetadataTimeout(t *testing.T) {
 
 			// The caller deadline only keeps a broken timeout implementation
 			// from hanging the test indefinitely.
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(t.Context(), 5*time.Second)
 			defer cancel()
 
 			_, runningInAzure, err := detector.getJSONMetadata(ctx)
@@ -331,7 +331,7 @@ func TestGetJSONMetadataCallerDeadline(t *testing.T) {
 			detector := NewResourceDetector()
 			detector.endpoint = server.URL
 
-			ctx, cancel := context.WithTimeout(context.Background(), 500*time.Millisecond)
+			ctx, cancel := context.WithTimeout(t.Context(), 500*time.Millisecond)
 			defer cancel()
 
 			_, runningInAzure, err := detector.getJSONMetadata(ctx)
