@@ -62,7 +62,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Deprecate `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`
   because it currently has no owner. The module will be removed after at least
   three months or two releases, whichever is longer.
-- `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` is deprecated.
+- `WithPublicEndpoint` in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` is deprecated. (#10300)
   Use `WithPublicEndpointFn` instead. (#10052)
 - The `go.opentelemetry.io/contrib/propagators/opencensus` module and package are deprecated and will be removed in v0.74.0.
   v0.73.0 is the final planned release of this module.
