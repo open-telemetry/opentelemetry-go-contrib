@@ -7,4 +7,8 @@
 // instrumenting the routing of a received message (the Middleware function)
 // and instrumenting the response generation through template evaluation (the
 // HTML function).
+//
+// Deprecated: This package is deprecated because it has no owner.
+// It will be removed after at least three months or two releases,
+// whichever is longer.
 package otelgin

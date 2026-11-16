@@ -1,3 +1,6 @@
+// Deprecated: This module is deprecated because it has no owner.
+// It will be removed after at least three months or two releases,
+// whichever is longer.
 module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
 
 go 1.26.0
