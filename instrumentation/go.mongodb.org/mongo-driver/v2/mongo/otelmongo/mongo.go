@@ -113,6 +113,7 @@ func (m *monitor) Failed(ctx context.Context, evt *event.CommandFailedEvent) {
 	attrs := attribute.NewSet(
 		semconv.DBSystemNameMongoDB,
 		semconv.DBOperationName(evt.CommandName),
+		semconv.DBNamespace(evt.DatabaseName),
 		semconv.NetworkPeerAddress(hostname),
 		semconv.NetworkPeerPort(port),
 		semconv.NetworkTransportTCP,
