@@ -34,15 +34,15 @@ require (
 	go.opentelemetry.io/otel/trace v1.47.0
 	go.opentelemetry.io/proto/otlp v1.11.1
 	go.yaml.in/yaml/v3 v3.0.5
-	golang.org/x/exp v0.0.0-20261112173441-d10d3b464990
+	golang.org/x/exp v0.0.0-20261113113407-e3970619a1a4
 	google.golang.org/grpc v1.85.0
 )
 
 require (
 	cloud.google.com/go/compute/metadata v0.10.0 // indirect
 	github.com/aws/aws-sdk-go-v2 v1.48.0 // indirect
-	github.com/aws/aws-sdk-go-v2/config v1.33.18 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.21.0 // indirect
+	github.com/aws/aws-sdk-go-v2/config v1.33.19 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.21.1 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.9 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.12 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.12 // indirect
@@ -63,7 +63,7 @@ require (
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/grpc-ecosystem/grpc-gateway/v2 v2.33.0 // indirect
+	github.com/grpc-ecosystem/grpc-gateway/v2 v2.34.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.3-0.20250322232337-35a7c28c31ee // indirect
@@ -87,8 +87,8 @@ require (
 	golang.org/x/term v0.48.0 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	golang.org/x/time v0.16.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20261110000943-09e21b237f2c // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20261110000943-09e21b237f2c // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20261116203732-fd2c7689a808 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20261116203732-fd2c7689a808 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	k8s.io/apimachinery v0.37.2 // indirect

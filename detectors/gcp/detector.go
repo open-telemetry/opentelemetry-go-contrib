@@ -116,7 +116,7 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 	}
 	b := &resourceBuilder{}
 	b.attrs = append(b.attrs, semconv.CloudProviderGCP)
-	b.add(ctx, semconv.CloudAccountIDKey, d.detector.ProjectID)
+	projectID = b.add(ctx, semconv.CloudAccountIDKey, d.detector.ProjectID)
 
 	switch d.detector.CloudPlatform(ctx) {
 	case internal.GKE:
@@ -129,7 +129,14 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 				return d.detector.GKEHostType(ctx)
 			})
 		}
-	case internal.CloudRun, internal.CloudRunWorkerPool:
+	case internal.CloudRun:
+		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
+		faasName := b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
+		b.add(ctx, semconv.FaaSVersionKey, d.detector.FaaSVersion)
+		b.add(ctx, semconv.FaaSInstanceKey, d.detector.FaaSID)
+		region := b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		b.addCloudResourceID("//run.googleapis.com/projects/%s/locations/%s/services/%s", projectID, region, faasName)
+	case internal.CloudRunWorkerPool:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
 		b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
 		b.add(ctx, semconv.FaaSVersionKey, d.detector.FaaSVersion)
@@ -137,17 +144,19 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
 	case internal.CloudRunJob:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
-		b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
+		faasName := b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
 		b.add(ctx, semconv.FaaSInstanceKey, d.detector.FaaSID)
 		b.add(ctx, semconv.GCPCloudRunJobExecutionKey, d.detector.CloudRunJobExecution)
 		b.addInt(ctx, semconv.GCPCloudRunJobTaskIndexKey, d.detector.CloudRunJobTaskIndex)
-		b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		region := b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		b.addCloudResourceID("//run.googleapis.com/projects/%s/locations/%s/jobs/%s", projectID, region, faasName)
 	case internal.CloudFunctions:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudFunctions)
-		b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
+		faasName := b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
 		b.add(ctx, semconv.FaaSVersionKey, d.detector.FaaSVersion)
 		b.add(ctx, semconv.FaaSInstanceKey, d.detector.FaaSID)
-		b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		region := b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		b.addCloudResourceID("//cloudfunctions.googleapis.com/projects/%s/locations/%s/functions/%s", projectID, region, faasName)
 	case internal.AppEngineFlex:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPAppEngine)
 		b.addZoneAndRegion(ctx, d.detector.AppEngineFlexAvailabilityZoneAndRegion)
@@ -191,11 +200,19 @@ type resourceBuilder struct {
 	attrs []attribute.KeyValue
 }
 
-func (r *resourceBuilder) add(ctx context.Context, key attribute.Key, detect func(context.Context) (string, error)) {
-	if v, err := detect(ctx); err == nil {
-		r.attrs = append(r.attrs, key.String(v))
-	} else {
+func (r *resourceBuilder) add(ctx context.Context, key attribute.Key, detect func(context.Context) (string, error)) string {
+	v, err := detect(ctx)
+	if err != nil {
 		r.errs = append(r.errs, err)
+		return ""
+	}
+	r.attrs = append(r.attrs, key.String(v))
+	return v
+}
+
+func (r *resourceBuilder) addCloudResourceID(format, projectID, region, name string) {
+	if projectID != "" && region != "" && name != "" {
+		r.attrs = append(r.attrs, semconv.CloudResourceID(fmt.Sprintf(format, projectID, region, name)))
 	}
 }
 

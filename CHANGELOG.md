@@ -7,10 +7,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
-  
+
 ### Added
 
 - Add `WithSpanEndHook` to customize span status and attributes after Gin handlers complete in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#10266)
+- Add the `cloud.resource_id` resource attribute for Cloud Run services, Cloud Run jobs, and Cloud Functions in `go.opentelemetry.io/contrib/detectors/gcp`. (#10258)
+- Record the `url.query` attribute on HTTP server spans (with `X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, `sig`, and `X-Goog-Signature` query parameter values redacted to `REDACTED`) in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, and `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#10122)
 - Add `WithIMDSTags` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` to add EC2 instance tags read from the instance metadata service as `ec2.tag.<key>` resource attributes. (#10086)
 - Support exemplars on exponential (native) histograms in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
 - Convert Prometheus `UNIT` metadata to UCUM units in `go.opentelemetry.io/contrib/bridges/prometheus`. (#10042)
@@ -71,12 +73,16 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Send the `Metadata` header as `true` instead of `True` in `go.opentelemetry.io/contrib/detectors/azure/azurevm`, as the Azure Instance Metadata Service rejects requests with `True`. (#10264)
+- Use the sampling endpoint in `go.opentelemetry.io/contrib/samplers/jaegerremote/example` so the example applies the remote sampling strategy. (#10089)
 - Render all latency columns for active spans and add the missing closing anchor tag for error counts in the summary table of `go.opentelemetry.io/contrib/zpages`. (#10074)
 - Propagate the caller's context to metadata requests in `go.opentelemetry.io/contrib/detectors/gcp` so `Detect` honors context cancellation and deadlines. (#10085)
+- Record the `db.namespace` attribute on the `db.client.operation.duration` metric for failed commands in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`, as is already done for successful commands. (#10288)
 - Format bracketed IPv6 MongoDB peer addresses without an explicit port correctly in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` and `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#10101)
 - Fall back to the `DockerId` from the task metadata endpoint v4 for the `container.id` resource attribute in `go.opentelemetry.io/contrib/detectors/aws/ecs` when the cgroup parser finds no ID, and omit `container.id` instead of setting it to an empty string.
   The parser only matches 64-hex IDs, so it finds none on Fargate, and it may also find none when `/proc/self/cgroup` has no `/ecs/` path. (#10128)
 - Do not include the port in the `network.peer.address` attribute in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`, it is recorded as `network.peer.port`. (#10110)
+- Allow omitted and null endpoints in OTLP exporter configuration in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`, unmarshaling to nil to use the default endpoint per the v1.0.0 configuration schema. (#10076)
 - Deduplicate propagator names in `go.opentelemetry.io/contrib/propagators/autoprop` to avoid repeated injection and extraction. (#9956)
 - Do not record HTTP/2 pseudo-header fields (`:authority`, `:method`, `:path`, `:scheme`) as `http.request.header.*` span attributes in `NewClientTrace` of `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, so the query string in `:path` is no longer exported unredacted. (#10015)
 - Decode hex-encoded `trace_id` and `span_id` exemplar labels into binary `TraceID` and `SpanID` bytes in `go.opentelemetry.io/contrib/bridges/prometheus`. (#8427)
