@@ -75,11 +75,16 @@ func serverClientIP(xForwardedFor string) string {
 	return xForwardedFor
 }
 
-func httpRoute(pattern string) string {
+// HTTPRoute returns the route path from an HTTP pattern.
+func HTTPRoute(pattern string) string {
 	if idx := strings.IndexByte(pattern, '/'); idx >= 0 {
 		return pattern[idx:]
 	}
 	return ""
+}
+
+func httpRoute(pattern string) string {
+	return HTTPRoute(pattern)
 }
 
 func netProtocol(proto string) (name, version string) {
