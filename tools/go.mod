@@ -11,9 +11,9 @@ require (
 	github.com/itchyny/gojq v0.12.20
 	github.com/stretchr/testify v1.12.1
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
-	go.opentelemetry.io/build-tools/crosslink v0.30.0
-	go.opentelemetry.io/build-tools/gotmpl v0.30.0
-	go.opentelemetry.io/build-tools/multimod v0.30.0
+	go.opentelemetry.io/build-tools/crosslink v0.31.0
+	go.opentelemetry.io/build-tools/gotmpl v0.31.0
+	go.opentelemetry.io/build-tools/multimod v0.31.0
 	golang.org/x/exp v0.0.0-20261113113407-e3970619a1a4
 	golang.org/x/tools v0.52.1-0.20261117052324-6bc5e25e1abb
 	golang.org/x/vuln v1.9.0
