@@ -98,7 +98,20 @@ func (t *transport) applyConfig(c *config) {
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {
-	return "HTTP " + r.Method
+	switch r.Method {
+	case http.MethodConnect,
+		http.MethodDelete,
+		http.MethodGet,
+		http.MethodHead,
+		http.MethodOptions,
+		http.MethodPatch,
+		http.MethodPost,
+		http.MethodPut,
+		http.MethodTrace:
+		return r.Method
+	default:
+		return "HTTP"
+	}
 }
 
 // requestTracker tracks the request body lifecycle of a single RoundTrip and
