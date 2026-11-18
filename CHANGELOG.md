@@ -73,6 +73,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Guard against `nil` per-operation sampling strategies and missing `probabilisticSampling` fields in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#10329)
 - Send the `Metadata` header as `true` instead of `True` in `go.opentelemetry.io/contrib/detectors/azure/azurevm`, as the Azure Instance Metadata Service rejects requests with `True`. (#10264)
 - Use the sampling endpoint in `go.opentelemetry.io/contrib/samplers/jaegerremote/example` so the example applies the remote sampling strategy. (#10089)
 - Render all latency columns for active spans and add the missing closing anchor tag for error counts in the summary table of `go.opentelemetry.io/contrib/zpages`. (#10074)
