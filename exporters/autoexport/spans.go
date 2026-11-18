@@ -6,6 +6,7 @@ package autoexport
 import (
 	"context"
 	"os"
+	"strings"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracehttp"
@@ -47,6 +48,9 @@ func WithFallbackSpanExporter(spanExporterFactory func(ctx context.Context) (tra
 // OTEL_EXPORTER_OTLP_TRACES_PROTOCOL defines OTLP exporter's transport protocol for the traces signal;
 // supported values are the same as OTEL_EXPORTER_OTLP_PROTOCOL.
 //
+// Environment variable values, including exporter names and protocols, are
+// matched case-insensitively.
+//
 // An error is returned if an environment value is set to an unhandled value.
 //
 // Use [RegisterSpanExporter] to handle more values of OTEL_TRACES_EXPORTER.
@@ -62,6 +66,7 @@ func NewSpanExporter(ctx context.Context, opts ...SpanOption) (trace.SpanExporte
 // RegisterSpanExporter sets the SpanExporter factory to be used when the
 // OTEL_TRACES_EXPORTER environment variable contains the exporter name. This
 // will panic if name has already been registered.
+// Names are case-insensitive, so "Custom" and "custom" are the same name.
 func RegisterSpanExporter(name string, factory func(context.Context) (trace.SpanExporter, error)) {
 	must(tracesSignal.registry.store(name, factory))
 }
@@ -80,7 +85,7 @@ func init() {
 			proto = "http/protobuf"
 		}
 
-		switch proto {
+		switch strings.ToLower(proto) {
 		case "grpc":
 			return otlptracegrpc.New(ctx)
 		case "http/protobuf":

@@ -62,6 +62,9 @@ func WithFallbackMetricReader(metricReaderFactory func(ctx context.Context) (met
 // Experimental: OTEL_METRICS_PRODUCERS can be used to configure metric producers.
 // supported values: prometheus, none. Multiple values can be specified separated by commas.
 //
+// Environment variable values, including exporter names and protocols, are
+// matched case-insensitively.
+//
 // An error is returned if an environment value is set to an unhandled value.
 //
 // Use [RegisterMetricReader] to handle more values of OTEL_METRICS_EXPORTER.
@@ -78,6 +81,7 @@ func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, 
 // RegisterMetricReader sets the MetricReader factory to be used when the
 // OTEL_METRICS_EXPORTERS environment variable contains the exporter name. This
 // will panic if name has already been registered.
+// Names are case-insensitive, so "Custom" and "custom" are the same name.
 func RegisterMetricReader(name string, factory func(context.Context) (metric.Reader, error)) {
 	must(metricsSignal.registry.store(name, factory))
 }
@@ -85,6 +89,7 @@ func RegisterMetricReader(name string, factory func(context.Context) (metric.Rea
 // RegisterMetricProducer sets the MetricReader factory to be used when the
 // OTEL_METRICS_PRODUCERS environment variable contains the producer name. This
 // will panic if name has already been registered.
+// Names are case-insensitive, so "Custom" and "custom" are the same name.
 func RegisterMetricProducer(name string, factory func(context.Context) (metric.Producer, error)) {
 	must(metricsProducers.registry.store(name, factory))
 }
@@ -121,7 +126,7 @@ func init() {
 			proto = "http/protobuf"
 		}
 
-		switch proto {
+		switch strings.ToLower(proto) {
 		case "grpc":
 			r, err := otlpmetricgrpc.New(ctx)
 			if err != nil {
