@@ -131,6 +131,22 @@ func TestExtract(t *testing.T) {
 			wantValid: false,
 		},
 		{
+			name:        "Whitespace before Parent: expect valid sampled context",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678; Parent=1234567890abcdef;Sampled=1",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: true,
+		},
+		{
+			name:        "Whitespace around every part: expect valid sampled context",
+			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678 ; Parent=1234567890abcdef\t; Sampled=1",
+			wantValid:   true,
+			wantTraceID: "abcdef121234567890abcdef12345678",
+			wantSpanID:  "1234567890abcdef",
+			wantSampled: true,
+		},
+		{
 			name:        "SampledBy without Sampled: expect valid unsampled context",
 			headerVal:   "Root=1-abcdef12-1234567890abcdef12345678;Parent=1234567890abcdef;SampledBy=1",
 			wantValid:   true,

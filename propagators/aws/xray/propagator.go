@@ -116,10 +116,10 @@ func extract(headerVal string) (trace.SpanContext, error) {
 			pos = delimiterIndex + 1
 		} else {
 			// last part
-			part = strings.TrimSpace(headerVal[pos:])
+			part = headerVal[pos:]
 			pos = len(headerVal)
 		}
-		key, value, ok := strings.Cut(part, kvDelimiter)
+		key, value, ok := strings.Cut(strings.TrimSpace(part), kvDelimiter)
 		if !ok {
 			return empty, errInvalidTraceHeader
 		}
