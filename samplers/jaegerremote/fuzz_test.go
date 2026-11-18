@@ -31,12 +31,12 @@ func FuzzParseAndUpdate(f *testing.F) {
 		}
 
 		updaters := []samplerUpdater{
-			&probabilisticSamplerUpdater{},
-			&rateLimitingSamplerUpdater{},
 			&perOperationSamplerUpdater{
 				MaxOperations:            defaultSamplingMaxOperations,
 				OperationNameLateBinding: defaultSamplingOperationNameLateBinding,
 			},
+			&probabilisticSamplerUpdater{},
+			&rateLimitingSamplerUpdater{},
 		}
 
 		var current trace.Sampler = newProbabilisticSampler(0.5, false, false)
