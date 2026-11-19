@@ -45,6 +45,15 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Update active instrumentation, resource detectors, examples, and shared templates to Semantic Conventions v1.45.0, and align resource schema URLs with the OTel Go SDK.
+  The legacy v1.21.0 attributes emitted by `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` with `OTEL_SEMCONV_STABILITY_OPT_IN=database/dup` remain supported. (#10343)
+- Rename `rpc.response.status_code` to `rpc.status_code` on spans and metrics in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`.
+  Duration histograms use the 41 recommended gRPC boundaries, including zero; SDK Views can override this advice. (#10343)
+- Report `system.memory.state="available"` instead of `"free"` for memory usage and utilization in `go.opentelemetry.io/contrib/instrumentation/host`.
+  These measurements already use available memory, including reclaimable memory. (#10343)
+- Rename the SQS and SNS span attribute `messaging.system` to `messaging.system.name` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`.
+  The SQS system value changes from `aws_sqs` to `aws.sqs`. (#10343)
+- Rename the Lambda span attribute `faas.invocation_id` to `faas.invocation.id` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#10343)
 - Reduce heap allocations and latency during header extraction in `go.opentelemetry.io/contrib/propagators/jaeger`. (#10022)
 - `NewMetricProducer` in `go.opentelemetry.io/contrib/bridges/prometheus` returns the exported concrete type `*Producer` instead of `metric.Producer`. (#10043)
 - Reduce heap allocations and latency during context tagging in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#10007)
@@ -73,6 +82,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Use the standardized SNS system value `aws.sns` instead of the custom value `aws_sns` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`.
+  This corrects an existing mismatch with the semantic conventions; the standardized SNS value was already `aws.sns` before v1.45.0. (#10343)
 - Fix response body size accounting for copies through `ReadFrom` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#10317)
 - Send the `Metadata` header as `true` instead of `True` in `go.opentelemetry.io/contrib/detectors/azure/azurevm`, as the Azure Instance Metadata Service rejects requests with `True`. (#10264)
 - Use the sampling endpoint in `go.opentelemetry.io/contrib/samplers/jaegerremote/example` so the example applies the remote sampling strategy. (#10089)
