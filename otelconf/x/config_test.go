@@ -1711,10 +1711,22 @@ func TestUnmarshalOTLPHttpExporter(t *testing.T) {
 			wantExporter: OTLPHttpExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPHttpExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPHttpExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPHttpExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPHttpExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1764,10 +1776,22 @@ func TestUnmarshalOTLPGrpcExporter(t *testing.T) {
 			wantExporter: OTLPGrpcExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPGrpcExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPGrpcExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPGrpcExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPGrpcExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1817,10 +1841,22 @@ func TestUnmarshalOTLPHttpMetricExporter(t *testing.T) {
 			wantExporter: OTLPHttpMetricExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPHttpMetricExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPHttpMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPHttpMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPHttpMetricExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1870,10 +1906,22 @@ func TestUnmarshalOTLPGrpcMetricExporter(t *testing.T) {
 			wantExporter: OTLPGrpcMetricExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPGrpcMetricExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPGrpcMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPGrpcMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPGrpcMetricExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
@@ -2518,4 +2566,88 @@ func TestUnmarshalResourceJson(t *testing.T) {
 			assert.Equal(t, tt.wantResource, r)
 		})
 	}
+}
+
+func TestParseYAMLRejectsNullResourceAttributeAliasesAndMerges(t *testing.T) {
+	inputs := map[string]string{
+		"aliased resource": `file_format: "0.3"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource: *resource_defaults
+`,
+		"aliased attribute list": `file_format: "0.3"
+null_attributes: &null_attributes
+  - null
+resource:
+  attributes: *null_attributes
+`,
+		"non-string resource key": `file_format: "0.3"
+resource:
+  1: ignored
+  attributes:
+    - null
+`,
+		"merged attributes": `file_format: "1.0"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource:
+  <<: *resource_defaults
+`,
+	}
+
+	for name, input := range inputs {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseYAML([]byte(input))
+			require.ErrorContains(t, err, "null attribute is invalid")
+		})
+	}
+}
+
+func TestParseYAMLAllowsExplicitAttributesToOverrideMerge(t *testing.T) {
+	input := `file_format: "1.0"
+resource_defaults: &resource_defaults
+  attributes:
+    - null
+resource:
+  <<: *resource_defaults
+  attributes:
+    - name: service.name
+      value: demo
+`
+	_, err := ParseYAML([]byte(input))
+	require.NoError(t, err)
+}
+
+func TestParseYAMLAllowsEmptyResourceAttributes(t *testing.T) {
+	inputs := map[string]string{
+		"omitted": `file_format: "1.0"
+resource: {}
+`,
+		"empty list": `file_format: "1.0"
+resource:
+  attributes: []
+`,
+	}
+
+	for name, input := range inputs {
+		t.Run(name, func(t *testing.T) {
+			_, err := ParseYAML([]byte(input))
+			require.NoError(t, err)
+		})
+	}
+}
+
+func TestUnmarshalJSONRejectsNullResourceAttribute(t *testing.T) {
+	input := `{
+        "file_format": "1.0",
+        "resource": {
+            "attributes": [null]
+        }
+    }`
+
+	var cfg OpenTelemetryConfiguration
+	err := json.Unmarshal([]byte(input), &cfg)
+	require.ErrorContains(t, err, "name")
 }

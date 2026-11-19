@@ -1580,6 +1580,198 @@ func TestTransportFilterPassThrough(t *testing.T) {
 	assert.Empty(t, rm.ScopeMetrics)
 }
 
+func TestTransportActiveRequests(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.active_requests")
+
+	attrs := attribute.NewSet(
+		attribute.String("http.request.method", "GET"),
+		attribute.String("server.address", "example.com"),
+		attribute.Int("server.port", 8080),
+	)
+
+	for _, tc := range []struct {
+		name string
+		err  error
+	}{
+		{name: "response"},
+		{name: "error", err: errors.New("connection refused")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			reader := sdkmetric.NewManualReader()
+			meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			tr := NewTransport(roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+				assertActiveRequests(t, reader, attrs, 1)
+				if tc.err != nil {
+					return nil, tc.err
+				}
+				return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody, Request: r}, nil
+			}), WithMeterProvider(meterProvider))
+
+			req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com:8080/path", http.NoBody)
+			require.NoError(t, err)
+
+			resp, err := tr.RoundTrip(req)
+			if tc.err != nil {
+				require.ErrorIs(t, err, tc.err)
+			} else {
+				require.NoError(t, err)
+				require.NoError(t, resp.Body.Close())
+			}
+
+			assertActiveRequests(t, reader, attrs, 0)
+		})
+	}
+
+	t.Run("panic", func(t *testing.T) {
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+		tr := NewTransport(roundTripperFunc(func(*http.Request) (*http.Response, error) {
+			assertActiveRequests(t, reader, attrs, 1)
+			panic("round trip panic")
+		}), WithMeterProvider(meterProvider))
+
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com:8080/path", http.NoBody)
+		require.NoError(t, err)
+
+		assert.PanicsWithValue(t, "round trip panic", func() { _, _ = tr.RoundTrip(req) }) //nolint:bodyclose // no response is returned on panic
+		assertActiveRequests(t, reader, attrs, 0)
+	})
+
+	t.Run("additional attributes", func(t *testing.T) {
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+		attrs := attribute.NewSet(append(attrs.ToSlice(),
+			attribute.String("labeler", "before"),
+			attribute.String("fn", "value"),
+		)...)
+
+		tr := NewTransport(roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+			assertActiveRequests(t, reader, attrs, 1)
+			// Labels added during RoundTrip must not change the decrement.
+			labeler, _ := ClientLabelerFromContext(r.Context())
+			labeler.Add(attribute.String("labeler", "during"))
+			return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody, Request: r}, nil
+		}), WithMeterProvider(meterProvider), WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue {
+			return []attribute.KeyValue{attribute.String("fn", "value")}
+		}))
+
+		labeler := &Labeler{}
+		labeler.Add(attribute.String("labeler", "before"))
+		ctx := ContextWithClientLabeler(t.Context(), labeler)
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, "http://example.com:8080/path", http.NoBody)
+		require.NoError(t, err)
+
+		resp, err := tr.RoundTrip(req)
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+
+		assertActiveRequests(t, reader, attrs, 0)
+	})
+
+	t.Run("metric attributes function called once", func(t *testing.T) {
+		reader := sdkmetric.NewManualReader()
+		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+		// With the opt-in, the callback runs before the base RoundTrip and
+		// before the increment, since it supplies the increment's attributes.
+		var calls int
+		var rtCalled, rtCalledBeforeFn bool
+		tr := NewTransport(roundTripperFunc(func(r *http.Request) (*http.Response, error) {
+			rtCalled = true
+			assertActiveRequests(t, reader, attrs, 1)
+			return &http.Response{StatusCode: http.StatusOK, Body: http.NoBody, Request: r}, nil
+		}), WithMeterProvider(meterProvider), WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue {
+			calls++
+			rtCalledBeforeFn = rtCalled
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+			for _, sm := range rm.ScopeMetrics {
+				for _, m := range sm.Metrics {
+					assert.NotEqual(t, "http.client.active_requests", m.Name)
+				}
+			}
+			return nil
+		}))
+
+		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com:8080/path", http.NoBody)
+		require.NoError(t, err)
+
+		resp, err := tr.RoundTrip(req)
+		require.NoError(t, err)
+		require.NoError(t, resp.Body.Close())
+		assert.Equal(t, 1, calls)
+		assert.False(t, rtCalledBeforeFn, "metric attributes function ran after the base RoundTrip")
+		assertActiveRequests(t, reader, attrs, 0)
+	})
+}
+
+func TestTransportActiveRequestsDisabled(t *testing.T) {
+	// Unset the opt-in so an exported value does not enable the metric.
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "")
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	var served atomic.Bool
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		served.Store(true)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	// Without the opt-in, the callback runs after the base RoundTrip so it
+	// can read data filled in during the request.
+	var calls int
+	var servedBeforeFn bool
+	tr := NewTransport(http.DefaultTransport, WithMeterProvider(meterProvider), WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue {
+		calls++
+		servedBeforeFn = served.Load()
+		return nil
+	}))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	resp, err := (&http.Client{Transport: tr}).Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+	assert.Equal(t, 1, calls)
+	assert.True(t, servedBeforeFn, "metric attributes function ran before the base RoundTrip")
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		assert.NotEqual(t, "http.client.active_requests", m.Name)
+	}
+}
+
+func assertActiveRequests(t *testing.T, reader *sdkmetric.ManualReader, attrs attribute.Set, value int64) {
+	t.Helper()
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	want := metricdata.Metrics{
+		Name:        "http.client.active_requests",
+		Description: "Number of active HTTP requests.",
+		Unit:        "{request}",
+		Data: metricdata.Sum[int64]{
+			Temporality: metricdata.CumulativeTemporality,
+			DataPoints:  []metricdata.DataPoint[int64]{{Attributes: attrs, Value: value}},
+		},
+	}
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == want.Name {
+			metricdatatest.AssertEqual(t, want, m, metricdatatest.IgnoreTimestamp())
+			return
+		}
+	}
+	t.Fatalf("metric %q not found", want.Name)
+}
+
 func TestRequestTrackerGetBody(t *testing.T) {
 	newTrackedRequest := func(t *testing.T, getBody func() (io.ReadCloser, error)) (*http.Request, *requestTracker) {
 		t.Helper()
@@ -1591,7 +1783,7 @@ func TestRequestTrackerGetBody(t *testing.T) {
 		)
 		require.NoError(t, err)
 		req.GetBody = getBody
-		tracker := newRequestTracker(NewTransport(http.DefaultTransport), req)
+		tracker := newRequestTracker(NewTransport(http.DefaultTransport).(*transport), req)
 		return req, tracker
 	}
 
@@ -1957,6 +2149,18 @@ func BenchmarkTransportRoundTrip(b *testing.B) {
 				WithTracerProvider(tp),
 				WithMeterProvider(mp),
 			),
+		},
+		{
+			name: "OptInMetrics",
+			rt: func() http.RoundTripper {
+				// The variable is read when the Transport is created.
+				b.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.active_requests")
+				return NewTransport(
+					http.DefaultTransport,
+					WithTracerProvider(tp),
+					WithMeterProvider(mp),
+				)
+			}(),
 		},
 	} {
 		for _, shape := range []string{"NoBody", "KnownLength", "Streaming"} {

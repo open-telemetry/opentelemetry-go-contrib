@@ -1,3 +1,6 @@
+// Deprecated: Use native OpenTelemetry propagators instead.
+// v0.73.0 is the final planned release of this module.
+// See https://opentelemetry.io/docs/specs/otel/compatibility/opencensus/#migration-path.
 module go.opentelemetry.io/contrib/propagators/opencensus
 
 go 1.26.0
@@ -23,5 +26,5 @@ require (
 	go.opentelemetry.io/otel/sdk v1.47.0 // indirect
 	go.opentelemetry.io/otel/sdk/metric v1.47.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/sys v0.49.0 // indirect
+	golang.org/x/sys v0.50.0 // indirect
 )

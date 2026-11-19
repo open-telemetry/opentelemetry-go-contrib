@@ -76,8 +76,11 @@ func getEnvOptions() ([]Option, []error) {
 				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", key, err))
 				continue
 			}
-
-			if intervalMs < 0 || intervalMs > math.MaxInt64/int64(time.Millisecond) {
+			if intervalMs <= 0 {
+				errs = append(errs, fmt.Errorf("%s must be positive, got %d", key, intervalMs))
+				continue
+			}
+			if intervalMs > math.MaxInt64/int64(time.Millisecond) {
 				errs = append(errs, fmt.Errorf("%s value %q is out of range", key, value))
 				continue
 			}
@@ -189,9 +192,15 @@ func WithOperationNameLateBinding(enable bool) Option {
 
 // WithSamplingRefreshInterval creates a Option that sets how often the
 // sampler will poll local agent for the appropriate sampling strategy.
+// A non-positive value is ignored, preserving the previously configured
+// interval, or the default when none was configured.
 func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) Option {
 	return optionFunc(func(c *config) {
-		c.samplingRefreshInterval = samplingRefreshInterval
+		// time.NewTicker panics on a non-positive interval, so ignore one here
+		// rather than overwriting the default or an earlier valid value.
+		if samplingRefreshInterval > 0 {
+			c.samplingRefreshInterval = samplingRefreshInterval
+		}
 	})
 }
 

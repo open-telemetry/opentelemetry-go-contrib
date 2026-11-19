@@ -97,3 +97,16 @@ res, err := resource.New(ctx,
     resource.WithDetectors(gcp.NewDetectorWithOptions(gcp.WithGKEHostType())),
 )
 ```
+
+## GCE Instance Labels (`gcp.gce.instance.labels.<key>`)
+
+On Google Compute Engine (GCE), detecting instance labels (`gcp.gce.instance.labels.<key>`) requires an additional call to the Compute Engine `instances.get` API and the `compute.instances.get` IAM permission. Because of this overhead and permission requirement, GCE instance label detection is disabled by default and can be enabled via `NewDetectorWithOptions` with `WithGCEInstanceLabelKeyFilter`:
+
+```golang
+re := regexp.MustCompile(`^env$`)
+res, err := resource.New(ctx,
+    resource.WithDetectors(gcp.NewDetectorWithOptions(
+        gcp.WithGCEInstanceLabelKeyFilter(re.MatchString),
+    )),
+)
+```

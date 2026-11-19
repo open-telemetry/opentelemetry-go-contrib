@@ -18,8 +18,8 @@ import (
 // ScopeName is the instrumentation scope name.
 const ScopeName = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
-// config represents the configuration options available for the http.Handler
-// and http.Transport types.
+// config represents the configuration options available for HTTP handlers
+// and the transport returned by NewTransport.
 type config struct {
 	ServerName        string
 	Tracer            trace.Tracer
@@ -29,6 +29,7 @@ type config struct {
 	PublicEndpointFn  func(*http.Request) bool
 	ReadEvent         bool
 	WriteEvent        bool
+	RouteTracking     bool
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
 	ClientTrace       func(context.Context) *httptrace.ClientTrace
@@ -178,7 +179,7 @@ func WithSpanNameFormatter(f func(operation string, r *http.Request) string) Opt
 }
 
 // WithClientTrace takes a function that returns client trace instance that will be
-// applied to the requests sent through the otelhttp Transport.
+// applied to the requests sent through the transport returned by NewTransport.
 func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 	return optionFunc(func(c *config) {
 		c.ClientTrace = f
@@ -204,5 +205,14 @@ func WithServerName(server string) Option {
 func WithMetricAttributesFn(metricAttributesFn func(r *http.Request) []attribute.KeyValue) Option {
 	return optionFunc(func(c *config) {
 		c.MetricAttributesFn = metricAttributesFn
+	})
+}
+
+// WithRouteTracking enables [RouteMiddleware] to record matched routes on the
+// server span and metrics created by [NewHandler] or [NewMiddleware] when
+// intervening middleware copies the request.
+func WithRouteTracking() Option {
+	return optionFunc(func(c *config) {
+		c.RouteTracking = true
 	})
 }
