@@ -138,10 +138,11 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		b.addCloudResourceID("//run.googleapis.com/projects/%s/locations/%s/services/%s", projectID, region, faasName)
 	case internal.CloudRunWorkerPool:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
-		b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
+		faasName := b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
 		b.add(ctx, semconv.FaaSVersionKey, d.detector.FaaSVersion)
 		b.add(ctx, semconv.FaaSInstanceKey, d.detector.FaaSID)
-		b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		region := b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		b.addCloudResourceID("//run.googleapis.com/projects/%s/locations/%s/workerPools/%s", projectID, region, faasName)
 	case internal.CloudRunJob:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
 		faasName := b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)

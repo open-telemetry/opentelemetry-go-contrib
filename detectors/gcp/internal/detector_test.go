@@ -100,6 +100,17 @@ func TestCloudPlatformCloudRun(t *testing.T) {
 	assert.Equal(t, CloudRun, platform)
 }
 
+func TestCloudPlatformCloudRunFunction(t *testing.T) {
+	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{
+		Vars: map[string]string{
+			cloudRunConfigurationEnv: "foo",
+			cloudFunctionsTargetEnv:  "bar",
+		},
+	})
+	platform := d.CloudPlatform(t.Context())
+	assert.Equal(t, CloudRun, platform)
+}
+
 func TestCloudPlatformCloudRunJobs(t *testing.T) {
 	d := NewTestDetector(newFakeMetadataTransport(t), &FakeOSProvider{
 		Vars: map[string]string{
