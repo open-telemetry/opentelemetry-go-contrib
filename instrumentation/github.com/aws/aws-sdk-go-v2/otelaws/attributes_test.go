@@ -100,8 +100,6 @@ func TestDefaultAttributeBuilderOnSupportedService(t *testing.T) {
 		},
 	}, middleware.InitializeOutput{})
 	assert.ElementsMatch(t, []attribute.KeyValue{
-		// Pin the wire format independently of generated semconv declarations:
-		// v1.45.0 renames messaging.system=aws_sqs to messaging.system.name=aws.sqs.
 		attribute.String("messaging.system.name", "aws.sqs"),
 		semconv.ServerAddress(testQueueURL),
 	}, attr)

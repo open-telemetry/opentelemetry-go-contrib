@@ -24,8 +24,6 @@ func TestPublishInput(t *testing.T) {
 
 	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	// Pin the canonical SNS wire format independently of generated semconv values.
-	// Semconv already specified aws.sns; our custom aws_sns value was non-standard.
 	assert.Contains(t, attributes, attribute.String("messaging.system.name", "aws.sns"))
 	assert.Contains(t, attributes, semconv.MessagingDestinationName("my-topic"))
 	assert.Contains(t, attributes, semconv.AWSSNSTopicARN("arn:aws:sns:us-east-2:444455556666:my-topic"))
@@ -40,8 +38,6 @@ func TestPublishInputWithNoDestination(t *testing.T) {
 
 	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	// Missing destination data must not restore the former non-standard aws_sns
-	// value or the messaging.system key replaced in semconv v1.45.0.
 	assert.Contains(t, attributes, attribute.String("messaging.system.name", "aws.sns"))
 	assert.Contains(t, attributes, semconv.MessagingDestinationName(""))
 	for _, attr := range attributes {
@@ -76,8 +72,6 @@ func TestPublishBatchInput(t *testing.T) {
 
 	attributes := SNSAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
-	// Batch publish uses the same canonical key and aws.sns value as single
-	// publish, replacing our former custom messaging.system=aws_sns attribute.
 	assert.Contains(t, attributes, attribute.String("messaging.system.name", "aws.sns"))
 	assert.Contains(t, attributes, semconv.MessagingDestinationName("my-topic-batch"))
 	assert.Contains(t, attributes, semconv.AWSSNSTopicARN("arn:aws:sns:us-east-2:444455556666:my-topic-batch"))
