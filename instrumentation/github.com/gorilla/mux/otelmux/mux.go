@@ -184,11 +184,11 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Write: func(httpsnoop.WriteFunc) httpsnoop.WriteFunc {
 			return rww.Write
 		},
-		WriteHeader: func(httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
-			return rww.WriteHeader
-		},
 		ReadFrom: func(httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
 			return rww.ReadFrom
+		},
+		WriteHeader: func(httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
+			return rww.WriteHeader
 		},
 		Flush: func(httpsnoop.FlushFunc) httpsnoop.FlushFunc {
 			return rww.Flush

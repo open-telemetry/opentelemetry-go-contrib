@@ -897,3 +897,44 @@ func BenchmarkMiddleware(b *testing.B) {
 		})
 	}
 }
+
+type readerFromResponseRecorder struct{ *httptest.ResponseRecorder }
+
+func (w readerFromResponseRecorder) ReadFrom(r io.Reader) (int64, error) {
+	return io.Copy(w.ResponseRecorder, r)
+}
+
+func TestResponseBodySizeReadFrom(t *testing.T) {
+	const body = "test"
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	router := mux.NewRouter()
+	router.Use(otelmux.Middleware("foobar", otelmux.WithMeterProvider(meterProvider)))
+	router.HandleFunc("/user/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		rf, ok := w.(io.ReaderFrom)
+		assert.True(t, ok)
+		_, err := rf.ReadFrom(strings.NewReader(body))
+		assert.NoError(t, err)
+	})
+
+	r, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://localhost/user/123", http.NoBody)
+	require.NoError(t, err)
+	router.ServeHTTP(readerFromResponseRecorder{httptest.NewRecorder()}, r)
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name != "http.server.response.body.size" {
+			continue
+		}
+		d, ok := m.Data.(metricdata.Histogram[int64])
+		require.True(t, ok)
+		require.Len(t, d.DataPoints, 1)
+		assert.Equal(t, int64(len(body)), d.DataPoints[0].Sum)
+		return
+	}
+	t.Fatal("http.server.response.body.size metric not recorded")
+}
