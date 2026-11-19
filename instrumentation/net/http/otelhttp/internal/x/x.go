@@ -19,7 +19,7 @@ import (
 //
 // To enable opt-in metrics set the OTEL_GO_X_HTTP_METRICS_OPTIN environment
 // variable to a comma-separated list of metric names (e.g.
-// "http.client.active_requests").
+// "http.client.active_requests,http.client.request.size").
 var OptInMetrics = newListFeature("HTTP_METRICS_OPTIN")
 
 // ListFeature is an experimental feature control flag that holds a

@@ -28,7 +28,7 @@ import (
 )
 
 func TestNewTraceRequest(t *testing.T) {
-	serv := semconv.NewHTTPServer(nil)
+	serv := semconv.NewHTTPServer(nil, false, false)
 	want := func(req testServerReq) []attribute.KeyValue {
 		return []attribute.KeyValue{
 			attribute.String("http.request.method", "GET"),
@@ -61,7 +61,6 @@ func TestNewServerRecordMetrics(t *testing.T) {
 		attribute.String("http.request.method", "POST"),
 		attribute.Int64("http.response.status_code", 301),
 		attribute.String("key", "value"),
-		attribute.String("network.protocol.name", "http"),
 		attribute.String("network.protocol.version", "1.1"),
 		attribute.String("server.address", "stuff"),
 		attribute.String("url.scheme", "http"),
@@ -169,7 +168,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 		{
 			name: "No Meter",
 			serverFunc: func(metric.MeterProvider) semconv.HTTPServer {
-				return semconv.NewHTTPServer(nil)
+				return semconv.NewHTTPServer(nil, false, false)
 			},
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				assert.Empty(t, rm.ScopeMetrics)
@@ -178,7 +177,7 @@ func TestNewServerRecordMetrics(t *testing.T) {
 		{
 			name: "With Meter",
 			serverFunc: func(mp metric.MeterProvider) semconv.HTTPServer {
-				return semconv.NewHTTPServer(mp.Meter("test"))
+				return semconv.NewHTTPServer(mp.Meter("test"), true, true)
 			},
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				require.Len(t, rm.ScopeMetrics, 1)
@@ -278,14 +277,14 @@ func TestNewTraceRequest_Client(t *testing.T) {
 	req.Header.Set("User-Agent", "go-test-agent")
 
 	want := []attribute.KeyValue{
-		attribute.String("http.request.method", "POST"),
+		attribute.String("http.request.method", "_OTHER"),
 		attribute.String("http.request.method_original", "pOST"),
 		attribute.String("url.full", url),
 		attribute.String("server.address", "example.com"),
 		attribute.Int("server.port", 8888),
 		attribute.String("network.protocol.version", "1.1"),
 	}
-	client := semconv.NewHTTPClient(nil)
+	client := semconv.NewHTTPClient(nil, false, false)
 	assert.ElementsMatch(t, want, client.RequestTraceAttrs(req))
 }
 
@@ -315,7 +314,7 @@ func TestNewTraceResponse_Client(t *testing.T) {
 	}
 
 	for _, tt := range testcases {
-		client := semconv.NewHTTPClient(nil)
+		client := semconv.NewHTTPClient(nil, false, false)
 		assert.ElementsMatch(t, tt.want, client.ResponseTraceAttrs(&tt.resp))
 	}
 }
@@ -327,7 +326,7 @@ func TestClientRequest(t *testing.T) {
 	req.Header.Set("User-Agent", "go-test-agent")
 
 	want := []attribute.KeyValue{
-		attribute.String("http.request.method", "POST"),
+		attribute.String("http.request.method", "_OTHER"),
 		attribute.String("http.request.method_original", "pOST"),
 		attribute.String("url.full", url),
 		attribute.String("server.address", "example.com"),
@@ -496,11 +495,85 @@ func TestClientResponse(t *testing.T) {
 	}
 }
 
+func TestClientMetricOptionsErrorType(t *testing.T) {
+	testCases := []struct {
+		name          string
+		statusCode    int
+		wantErrorType string
+	}{
+		{
+			name:       "successful response",
+			statusCode: http.StatusOK,
+		},
+		{
+			name:          "client error response",
+			statusCode:    http.StatusNotFound,
+			wantErrorType: "404",
+		},
+		{
+			name:          "server error response",
+			statusCode:    http.StatusInternalServerError,
+			wantErrorType: "500",
+		},
+	}
+
+	for _, tt := range testCases {
+		t.Run(tt.name, func(t *testing.T) {
+			reader := sdkmetric.NewManualReader()
+			provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+			defer func() {
+				assert.NoError(t, provider.Shutdown(t.Context()))
+			}()
+
+			client := semconv.NewHTTPClient(provider.Meter("test"), false, false)
+
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodGet,
+				"http://example.com/",
+				http.NoBody,
+			)
+
+			client.RecordMetrics(t.Context(), semconv.MetricData{
+				RequestDuration: time.Second,
+			}, client.MetricOptions(semconv.MetricAttributes{
+				Req:        req,
+				StatusCode: tt.statusCode,
+			}))
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+			require.Len(t, rm.ScopeMetrics, 1)
+
+			for _, m := range rm.ScopeMetrics[0].Metrics {
+				if m.Name != "http.client.request.duration" {
+					continue
+				}
+
+				hist, ok := m.Data.(metricdata.Histogram[float64])
+				require.True(t, ok)
+				require.Len(t, hist.DataPoints, 1)
+
+				value, found := hist.DataPoints[0].Attributes.Value(attribute.Key("error.type"))
+
+				if tt.wantErrorType == "" {
+					assert.False(t, found)
+				} else {
+					require.True(t, found)
+					assert.Equal(t, tt.wantErrorType, value.AsString())
+				}
+				return
+			}
+
+			t.Fatal("http.client.request.duration metric not found")
+		})
+	}
+}
+
 func TestNewClientRecordMetrics(t *testing.T) {
 	currAttrs := attribute.NewSet(
 		attribute.String("http.request.method", "POST"),
 		attribute.Int64("http.response.status_code", 301),
-		attribute.String("network.protocol.name", "http"),
 		attribute.String("network.protocol.version", "1.1"),
 		attribute.String("server.address", "example.com"),
 		attribute.String("url.scheme", "http"),
@@ -549,7 +622,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 		{
 			name: "No environment variable set, and no Meter",
 			clientFunc: func(metric.MeterProvider) semconv.HTTPClient {
-				return semconv.NewHTTPClient(nil)
+				return semconv.NewHTTPClient(nil, false, false)
 			},
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				assert.Empty(t, rm.ScopeMetrics)
@@ -558,7 +631,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 		{
 			name: "With Meter",
 			clientFunc: func(mp metric.MeterProvider) semconv.HTTPClient {
-				return semconv.NewHTTPClient(mp.Meter("test"))
+				return semconv.NewHTTPClient(mp.Meter("test"), true, true)
 			},
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				require.Len(t, rm.ScopeMetrics, 1)
