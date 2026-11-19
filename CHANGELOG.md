@@ -49,6 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `NewMetricProducer` in `go.opentelemetry.io/contrib/bridges/prometheus` returns the exported concrete type `*Producer` instead of `metric.Producer`. (#10043)
 - Reduce heap allocations and latency during context tagging in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#10007)
 - Reduce heap allocations and latency during context injection in `go.opentelemetry.io/contrib/propagators/aws/xray`. (#9938)
+- Align `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` with HTTP semantic conventions `v1.43.0` by making client request attributes available at span creation, recording `error.type` for client metrics, and supporting opt-in HTTP body-size metrics and configurable known methods. (#10347)
 - Reduce allocations during context injection in `go.opentelemetry.io/contrib/propagators/jaeger`. (#9918)
 - Support build tags to omit resource detectors in `go.opentelemetry.io/contrib/otelconf/x`. (#9818)
 - `NewResourceDetector` in `go.opentelemetry.io/contrib/detectors/aws/lambda` returns the exported concrete type `*ResourceDetector` instead of `resource.Detector`. (#9606)
