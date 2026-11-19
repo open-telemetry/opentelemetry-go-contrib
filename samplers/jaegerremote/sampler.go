@@ -290,8 +290,14 @@ func newPerOperationSampler(params perOperationSamplerParams, attributesDisabled
 	if params.MaxOperations <= 0 {
 		params.MaxOperations = defaultMaxOperations
 	}
+	if params.Strategies == nil {
+		params.Strategies = &jaeger_api_v2.PerOperationSamplingStrategies{}
+	}
 	samplers := make(map[string]*guaranteedThroughputProbabilisticSampler)
 	for _, strategy := range params.Strategies.PerOperationStrategies {
+		if strategy == nil || strategy.ProbabilisticSampling == nil {
+			continue
+		}
 		sampler := newGuaranteedThroughputProbabilisticSampler(
 			params.Strategies.DefaultLowerBoundTracesPerSecond,
 			strategy.ProbabilisticSampling.SamplingRate,
@@ -346,10 +352,16 @@ func (*perOperationSampler) Description() string {
 }
 
 func (s *perOperationSampler) update(strategies *jaeger_api_v2.PerOperationSamplingStrategies) {
+	if strategies == nil {
+		return
+	}
 	s.Lock()
 	defer s.Unlock()
 	newSamplers := map[string]*guaranteedThroughputProbabilisticSampler{}
 	for _, strategy := range strategies.PerOperationStrategies {
+		if strategy == nil || strategy.ProbabilisticSampling == nil {
+			continue
+		}
 		operation := strategy.Operation
 		samplingRate := strategy.ProbabilisticSampling.SamplingRate
 		lowerBound := strategies.DefaultLowerBoundTracesPerSecond

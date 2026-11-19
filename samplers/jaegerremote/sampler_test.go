@@ -627,3 +627,70 @@ func TestGuaranteedThroughputProbabilisticSamplerTraceState(t *testing.T) {
 		assert.Equal(t, testRandomnessValue, result.Tracestate.Get(traceStateKey))
 	})
 }
+
+func TestPerOperationSamplerNilStrategies(t *testing.T) {
+	testCases := []struct {
+		name               string
+		strategies         *jaeger_api_v2.PerOperationSamplingStrategies
+		wantValidOperation bool
+	}{
+		{
+			name:               "nil strategies struct",
+			strategies:         nil,
+			wantValidOperation: false,
+		},
+		{
+			name: "nil entry and missing probabilisticSampling skipped while valid entry preserved",
+			strategies: &jaeger_api_v2.PerOperationSamplingStrategies{
+				DefaultSamplingProbability:       0.0,
+				DefaultLowerBoundTracesPerSecond: 0.0,
+				PerOperationStrategies: []*jaeger_api_v2.OperationSamplingStrategy{
+					nil,
+					{
+						Operation:             "incomplete-op",
+						ProbabilisticSampling: nil,
+					},
+					{
+						Operation: testOperationName,
+						ProbabilisticSampling: &jaeger_api_v2.ProbabilisticSamplingStrategy{
+							SamplingRate: 1.0,
+						},
+					},
+				},
+			},
+			wantValidOperation: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sampler := newPerOperationSampler(perOperationSamplerParams{
+				MaxOperations: testDefaultMaxOperations,
+				Strategies:    tc.strategies,
+			}, false, false)
+
+			if tc.wantValidOperation {
+				require.Contains(t, sampler.samplers, testOperationName)
+				assert.NotContains(t, sampler.samplers, "incomplete-op")
+			} else {
+				assert.Empty(t, sampler.samplers)
+			}
+
+			// Verify update path also handles nil strategies and incomplete entries without panicking.
+			sampler.update(tc.strategies)
+
+			if tc.wantValidOperation {
+				require.Contains(t, sampler.samplers, testOperationName)
+				assert.NotContains(t, sampler.samplers, "incomplete-op")
+				res := sampler.ShouldSample(makeSamplingParameters(testMaxID+10, testOperationName))
+				assert.Equal(t, trace.RecordAndSample, res.Decision)
+			} else {
+				assert.Empty(t, sampler.samplers)
+			}
+
+			// Incomplete operation falls back to defaultSampler (rate 0.0 -> Drop).
+			fallbackRes := sampler.ShouldSample(makeSamplingParameters(testMaxID+10, "incomplete-op"))
+			assert.Equal(t, trace.Drop, fallbackRes.Decision)
+		})
+	}
+}
