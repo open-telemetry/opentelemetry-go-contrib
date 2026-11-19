@@ -46,13 +46,13 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Changed
 
 - Update active instrumentation, resource detectors, examples, and shared templates to Semantic Conventions v1.45.0, and align resource schema URLs with the OTel Go SDK.
-  The legacy v1.21.0 attributes emitted by `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` with `OTEL_SEMCONV_STABILITY_OPT_IN=database/dup` remain supported.
+  The legacy v1.21.0 attributes emitted by `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` with `OTEL_SEMCONV_STABILITY_OPT_IN=database/dup` remain supported. (#10343)
 - Rename `rpc.response.status_code` to `rpc.status_code` on spans and metrics in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`.
-  Duration histograms use the 41 recommended gRPC boundaries, including zero; SDK Views can override this advice.
+  Duration histograms use the 41 recommended gRPC boundaries, including zero; SDK Views can override this advice. (#10343)
 - Report `system.memory.state="available"` instead of `"free"` for memory usage and utilization in `go.opentelemetry.io/contrib/instrumentation/host`.
-  These measurements already use available memory, including reclaimable memory.
-- Rename the SQS and SNS span attribute `messaging.system` to `messaging.system.name`, with values `aws.sqs` and `aws.sns`, in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`.
-- Rename the Lambda span attribute `faas.invocation_id` to `faas.invocation.id` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`.
+  These measurements already use available memory, including reclaimable memory. (#10343)
+- Rename the SQS and SNS span attribute `messaging.system` to `messaging.system.name`, with values `aws.sqs` and `aws.sns`, in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#10343)
+- Rename the Lambda span attribute `faas.invocation_id` to `faas.invocation.id` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#10343)
 - Reduce heap allocations and latency during header extraction in `go.opentelemetry.io/contrib/propagators/jaeger`. (#10022)
 - `NewMetricProducer` in `go.opentelemetry.io/contrib/bridges/prometheus` returns the exported concrete type `*Producer` instead of `metric.Producer`. (#10043)
 - Reduce heap allocations and latency during context tagging in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#10007)
