@@ -24,6 +24,7 @@ var _ log.Processor = (*LogProcessor)(nil)
 // The Baggage log processor adds attributes to a log record that are found
 // in Baggage in the parent context at the moment the log is emitted.
 // The passed filter determines which baggage members are added to the span.
+// A baggage member never replaces an attribute already set on the log record.
 //
 // If filter is nil, all baggage members will be added.
 func NewLogProcessor(filter Filter) *LogProcessor {
@@ -47,12 +48,27 @@ func (processor LogProcessor) OnEmit(ctx context.Context, record *log.Record) er
 	}
 
 	for _, member := range baggage.FromContext(ctx).Members() {
-		if filter(member) {
-			record.AddAttributes(attribute.String(member.Key(), member.Value()))
+		if !filter(member) {
+			continue
 		}
+		// Baggage is commonly extracted from incoming requests, so it must
+		// not replace attributes the application set on the record.
+		if hasAttribute(record, attribute.Key(member.Key())) {
+			continue
+		}
+		record.AddAttributes(attribute.String(member.Key(), member.Value()))
 	}
 
 	return nil
+}
+
+func hasAttribute(record *log.Record, key attribute.Key) bool {
+	var found bool
+	record.WalkAttributes(func(kv attribute.KeyValue) bool {
+		found = kv.Key == key
+		return !found
+	})
+	return found
 }
 
 // Shutdown is called when the [log.Processor] is shutting down and is a no-op for this processor.

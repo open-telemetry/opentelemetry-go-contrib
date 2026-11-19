@@ -5,6 +5,7 @@ package baggagecopy
 
 import (
 	"context"
+	"slices"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
@@ -30,6 +31,7 @@ var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 // The Baggage span processor duplicates onto a span the attributes found
 // in Baggage in the parent context at the moment the span is started.
 // The passed filter determines which baggage members are added to the span.
+// A baggage member never replaces an attribute the span was started with.
 //
 // If filter is nil, all baggage members will be added.
 func NewSpanProcessor(filter Filter) *SpanProcessor {
@@ -45,10 +47,23 @@ func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWrite
 		filter = AllowAllMembers
 	}
 
-	for _, member := range baggage.FromContext(ctx).Members() {
-		if filter(member) {
-			span.SetAttributes(attribute.String(member.Key(), member.Value()))
+	members := baggage.FromContext(ctx).Members()
+	if len(members) == 0 {
+		return
+	}
+
+	// Baggage is commonly extracted from incoming requests, so it must not
+	// replace attributes set by the instrumentation that started the span.
+	existing := span.Attributes()
+	for _, member := range members {
+		if !filter(member) {
+			continue
 		}
+		key := attribute.Key(member.Key())
+		if slices.ContainsFunc(existing, func(kv attribute.KeyValue) bool { return kv.Key == key }) {
+			continue
+		}
+		span.SetAttributes(attribute.String(member.Key(), member.Value()))
 	}
 }
 

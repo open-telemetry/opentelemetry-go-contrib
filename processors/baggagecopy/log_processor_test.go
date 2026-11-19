@@ -121,6 +121,35 @@ func TestLogProcessorOnEmit(t *testing.T) {
 	}
 }
 
+func TestLogProcessorDoesNotOverwriteRecordAttributes(t *testing.T) {
+	b, _ := baggage.New()
+	b = addEntryToBaggage(t, b, "user.id", "bob")
+	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
+	ctx := baggage.ContextWithBaggage(t.Context(), b)
+
+	wrapped := &processor{}
+	lp := log.NewLoggerProvider(
+		log.WithProcessor(NewLogProcessor(AllowAllMembers)),
+		log.WithProcessor(wrapped),
+	)
+
+	var r api.Record
+	r.AddAttributes(attribute.String("user.id", "alice"))
+	lp.Logger("test").Emit(ctx, r)
+
+	require.Len(t, wrapped.records, 1)
+	var got []attribute.KeyValue
+	wrapped.records[0].WalkAttributes(func(kv attribute.KeyValue) bool {
+		got = append(got, kv)
+		return true
+	})
+	want := []attribute.KeyValue{
+		attribute.String("user.id", "alice"),
+		attribute.String("baggage.test", "baggage value"),
+	}
+	assert.ElementsMatch(t, want, got)
+}
+
 func TestZeroLogProcessorNoPanic(t *testing.T) {
 	lp := new(LogProcessor)
 
