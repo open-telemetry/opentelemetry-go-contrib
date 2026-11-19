@@ -40,6 +40,7 @@ const (
 	CloudRun
 	CloudRunJob
 	CloudRunWorkerPool
+	CloudRunInstance
 	CloudFunctions
 	AppEngineStandard
 	AppEngineFlex
@@ -90,6 +91,8 @@ func (d *Detector) CloudPlatform(ctx context.Context) Platform {
 		return CloudRunJob
 	case d.onCloudRunWorkerPool(ctx):
 		return CloudRunWorkerPool
+	case d.onCloudRunInstance(ctx):
+		return CloudRunInstance
 	case d.onAppEngineStandard(ctx):
 		return AppEngineStandard
 	case d.onAppEngine(ctx):
