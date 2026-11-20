@@ -71,6 +71,10 @@ func ExampleCarrier_childProcess() {
 	// Injection can omit TRACESTATE when the current trace state is empty.
 	prop := propagation.TraceContext{}
 	cmd.Env = cmd.Environ()
+
+	// Append an empty override for each normalized field. When cmd.Environ()
+	// resolves duplicates, it keeps the last entry for each name. Windows matches
+	// names case-insensitively, so TRACESTATE= replaces TraceState=old.
 	fields := prop.Fields()
 	placeholders := make(map[string]bool, len(fields))
 	for _, field := range fields {
@@ -79,9 +83,8 @@ func ExampleCarrier_childProcess() {
 		placeholders[entry] = true
 	}
 
-	// cmd.Environ() keeps the last entry for each variable name. On Windows,
-	// names match regardless of case, so TRACESTATE= replaces TraceState=old.
-	// Removing the placeholders then leaves those variables unset.
+	// Resolve duplicates before dropping the overrides so any field that
+	// injection omits stays unset.
 	cmd.Env = slices.DeleteFunc(cmd.Environ(), func(entry string) bool {
 		return placeholders[entry]
 	})
