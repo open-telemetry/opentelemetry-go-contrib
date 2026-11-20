@@ -49,7 +49,7 @@ func OTelFilter(service string, opts ...Option) restful.FilterFunction {
 		ScopeName,
 		metric.WithInstrumentationVersion(Version),
 	)
-	semconvServer := semconv.NewHTTPServer(meter)
+	semconvServer := semconv.NewHTTPServer(meter, true, true)
 
 	return func(req *restful.Request, resp *restful.Response, chain *restful.FilterChain) {
 		requestStartTime := time.Now()

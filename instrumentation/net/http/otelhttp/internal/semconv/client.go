@@ -27,18 +27,29 @@ import (
 )
 
 type HTTPClient struct {
-	requestBodySize httpconv.ClientRequestBodySize
-	requestDuration httpconv.ClientRequestDuration
-	activeRequests  httpconv.ClientActiveRequests
+	requestBodySize   httpconv.ClientRequestBodySize
+	requestDuration   httpconv.ClientRequestDuration
+	activeRequests    httpconv.ClientActiveRequests
+	recordRequestSize bool
+	recordURLScheme   bool
 }
 
-func NewHTTPClient(meter metric.Meter) HTTPClient {
-	client := HTTPClient{}
+func NewHTTPClient(meter metric.Meter, optIn ...bool) HTTPClient {
+	recordRequestSize := len(optIn) > 0 && optIn[0]
+	recordURLScheme := len(optIn) > 1 && optIn[1]
+
+	client := HTTPClient{
+		recordRequestSize: recordRequestSize,
+		recordURLScheme:   recordURLScheme,
+	}
+
+	if recordRequestSize {
+		var err error
+		client.requestBodySize, err = httpconv.NewClientRequestBodySize(meter)
+		handleErr(err)
+	}
 
 	var err error
-	client.requestBodySize, err = httpconv.NewClientRequestBodySize(meter)
-	handleErr(err)
-
 	client.requestDuration, err = httpconv.NewClientRequestDuration(
 		meter,
 		metric.WithExplicitBucketBoundaries(0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10),
@@ -263,15 +274,12 @@ func (HTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValue)
 	if method == "" {
 		return semconv.HTTPRequestMethodOther, attribute.KeyValue{}
 	}
+
 	if attr, ok := methodLookup[method]; ok {
 		return attr, attribute.KeyValue{}
 	}
 
-	orig := semconv.HTTPRequestMethodOriginal(method)
-	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
-		return attr, orig
-	}
-	return semconv.HTTPRequestMethodOther, orig
+	return semconv.HTTPRequestMethodOther, semconv.HTTPRequestMethodOriginal(method)
 }
 
 func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
@@ -289,7 +297,7 @@ func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, sta
 		proto = resp.Proto
 	}
 	protoName, protoVersion := netProtocol(proto)
-	if protoName != "" {
+	if protoName != "" && protoName != "http" {
 		num++
 	}
 	if protoVersion != "" {
@@ -305,13 +313,16 @@ func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, sta
 		attributes,
 		semconv.HTTPRequestMethodKey.String(standardizeHTTPMethod(req.Method)),
 		semconv.ServerAddress(requestHost),
-		n.scheme(req),
 	)
+
+	if n.recordURLScheme {
+		attributes = append(attributes, n.scheme(req))
+	}
 
 	if port > 0 {
 		attributes = append(attributes, semconv.ServerPort(port))
 	}
-	if protoName != "" {
+	if protoName != "" && protoName != "http" {
 		attributes = append(attributes, semconv.NetworkProtocolName(protoName))
 	}
 	if protoVersion != "" {
@@ -339,9 +350,12 @@ func (o MetricOpts) AddOptions() metric.AddOption {
 
 func (n HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
 	attributes := n.MetricAttributes(ma.Req, ma.Resp, ma.StatusCode, ma.AdditionalAttributes)
-	if ma.StatusCode == 0 && ma.Err != nil {
+	if ma.StatusCode != 0 && isErrorStatusCode(ma.StatusCode) {
+		attributes = append(attributes, semconv.ErrorTypeKey.String(strconv.Itoa(ma.StatusCode)))
+	} else if ma.StatusCode == 0 && ma.Err != nil {
 		attributes = append(attributes, n.ErrorType(ma.Err))
 	}
+
 	set := metric.WithAttributeSet(attribute.NewSet(attributes...))
 
 	return MetricOpts{
@@ -391,7 +405,9 @@ func (n HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts Metri
 	}()
 	*recordOpts = append(*recordOpts, opts.MeasurementOption())
 
-	n.requestBodySize.Inst().Record(ctx, md.RequestSize, *recordOpts...)
+	if n.recordRequestSize {
+		n.requestBodySize.Inst().Record(ctx, md.RequestSize, *recordOpts...)
+	}
 	n.requestDuration.Inst().Record(ctx, durationToSeconds(md.RequestDuration), *recordOpts...)
 }
 

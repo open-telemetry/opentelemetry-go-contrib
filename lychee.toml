@@ -1,6 +1,9 @@
 exclude_path = [
   "lychee.toml",
-  "zpages/internal/templates/summary.html" # This template's URLs are only expected to be valid on the compiled file
+  "zpages/internal/templates/summary.html", # This template's URLs are only expected to be valid on the compiled file
+  "instrumentation/net/http/otelhttp/internal/semconv/httpconvtest_test.go",
+  "internal/shared/semconv/httpconvtest_test.go.tmpl",
+  "instrumentation/github.com/emicklei/go-restful/otelrestful/internal/semconv/httpconvtest_test.go"
 ]
 
 exclude = [

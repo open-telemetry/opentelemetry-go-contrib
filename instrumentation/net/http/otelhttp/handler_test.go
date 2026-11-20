@@ -145,6 +145,11 @@ func TestHandlerBasics(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
+	t.Setenv(
+		"OTEL_GO_X_HTTP_METRICS_OPTIN",
+		"http.server.request.body.size,http.server.response.body.size",
+	)
+
 	h := NewHandler(
 		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			l, _ := LabelerFromContext(r.Context())
@@ -175,7 +180,6 @@ func TestHandlerBasics(t *testing.T) {
 		attribute.String("http.request.method", "GET"),
 		attribute.String("http.route", "/test"),
 		attribute.Int64("http.response.status_code", 200),
-		attribute.String("network.protocol.name", "http"),
 		attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
 		attribute.String("url.scheme", "http"),
 		attribute.String("test", "attribute"),
@@ -216,6 +220,10 @@ func TestHandlerResponseBodySizeReadFrom(t *testing.T) {
 
 	reader := sdkmetric.NewManualReader()
 	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	t.Setenv(
+		"OTEL_GO_X_HTTP_METRICS_OPTIN",
+		"http.server.response.body.size",
+	)
 	h := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		// NewHandler passes a httpsnoop-wrapped writer here.
 		// Without the ReadFrom hook, this call bypasses byte accounting.
@@ -822,6 +830,11 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
+		t.Setenv(
+			"OTEL_GO_X_HTTP_METRICS_OPTIN",
+			"http.server.request.body.size,http.server.response.body.size",
+		)
+
 		h := NewHandler(
 			http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(http.StatusOK)
@@ -871,6 +884,12 @@ func TestHandlerServeMuxRouteMetric(t *testing.T) {
 	mux.Handle("/foo/{id}", http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
 	}))
+
+	t.Setenv(
+		"OTEL_GO_X_HTTP_METRICS_OPTIN",
+		"http.server.request.body.size,http.server.response.body.size",
+	)
+
 	h := NewHandler(
 		mux,
 		"test_handler",
