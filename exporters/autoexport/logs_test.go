@@ -41,6 +41,8 @@ func TestLogExporterOTLP(t *testing.T) {
 	}{
 		{"http/protobuf", "atomic.Pointer[go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp.client]"},
 		{"grpc", "otlploggrpc.logClient"},
+		{"GRPC", "otlploggrpc.logClient"},
+		{"HTTP/Protobuf", "atomic.Pointer[go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp.client]"},
 		{"", "atomic.Pointer[go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp.client]"},
 	} {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
@@ -69,6 +71,8 @@ func TestLogExporterOTLPWithDedicatedProtocol(t *testing.T) {
 	}{
 		{"http/protobuf", "atomic.Pointer[go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp.client]"},
 		{"grpc", "otlploggrpc.logClient"},
+		{"GRPC", "otlploggrpc.logClient"},
+		{"HTTP/Protobuf", "atomic.Pointer[go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp.client]"},
 		{"", "atomic.Pointer[go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp.client]"},
 	} {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {

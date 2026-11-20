@@ -6,6 +6,7 @@ package autoexport
 import (
 	"context"
 	"os"
+	"strings"
 
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
 	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp"
@@ -44,6 +45,9 @@ func WithFallbackLogExporter(logExporterFactory func(ctx context.Context) (log.E
 // OTEL_EXPORTER_OTLP_LOGS_PROTOCOL defines OTLP exporter's transport protocol for the logs signal;
 // supported values are the same as OTEL_EXPORTER_OTLP_PROTOCOL.
 //
+// Environment variable values, including exporter names and protocols, are
+// matched case-insensitively.
+//
 // An error is returned if an environment value is set to an unhandled value.
 //
 // Use [RegisterLogExporter] to handle more values of OTEL_LOGS_EXPORTER.
@@ -59,6 +63,7 @@ func NewLogExporter(ctx context.Context, opts ...LogOption) (log.Exporter, error
 // RegisterLogExporter sets the log.Exporter factory to be used when the
 // OTEL_LOGS_EXPORTER environment variable contains the exporter name.
 // This will panic if name has already been registered.
+// Names are case-insensitive, so "Custom" and "custom" are the same name.
 func RegisterLogExporter(name string, factory func(context.Context) (log.Exporter, error)) {
 	must(logsSignal.registry.store(name, factory))
 }
@@ -75,7 +80,7 @@ func init() {
 			proto = "http/protobuf"
 		}
 
-		switch proto {
+		switch strings.ToLower(proto) {
 		case "grpc":
 			return otlploggrpc.New(ctx)
 		case "http/protobuf":

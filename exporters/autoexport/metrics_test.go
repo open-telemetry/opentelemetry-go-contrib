@@ -87,6 +87,8 @@ func TestMetricExporterOTLPWithDedicatedProtocol(t *testing.T) {
 		{"http/protobuf", "*otlpmetrichttp.Exporter"},
 		{"", "*otlpmetrichttp.Exporter"},
 		{"grpc", "*otlpmetricgrpc.Exporter"},
+		{"GRPC", "*otlpmetricgrpc.Exporter"},
+		{"HTTP/Protobuf", "*otlpmetrichttp.Exporter"},
 	} {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_METRICS_PROTOCOL", tc.protocol)
@@ -435,4 +437,8 @@ func TestMultipleMetricProducerWithOTLPExporter(t *testing.T) {
 	<-requestWaitChan
 	ts.Close()
 	goleak.VerifyNone(t)
+}
+
+func TestDedupedMetricProducersIsCaseInsensitive(t *testing.T) {
+	assert.Equal(t, []string{"prometheus"}, dedupedMetricProducers("prometheus,Prometheus,PROMETHEUS"))
 }

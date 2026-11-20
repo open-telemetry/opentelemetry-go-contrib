@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 )
 
@@ -40,7 +41,7 @@ var (
 func (r *registry[T]) load(ctx context.Context, key string) (T, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
-	factory, ok := r.names[key]
+	factory, ok := r.names[strings.ToLower(key)]
 	if !ok {
 		var zero T
 		return zero, errUnknownExporterProducer
@@ -53,6 +54,7 @@ func (r *registry[T]) load(ctx context.Context, key string) (T, error) {
 func (r *registry[T]) store(key string, factory func(context.Context) (T, error)) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	key = strings.ToLower(key)
 	if _, ok := r.names[key]; ok {
 		return fmt.Errorf("%w: %q", errDuplicateRegistration, key)
 	}
