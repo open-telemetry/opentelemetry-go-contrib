@@ -8,6 +8,9 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
+	"slices"
+	"strings"
 
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -64,9 +67,17 @@ func ExampleCarrier_childProcess() {
 	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
 
 	// Prepare a command that prints the TRACEPARENT environment variable.
-	// Each child process gets its own copy of the environment.
 	cmd := exec.CommandContext(context.Background(), "printenv", "TRACEPARENT")
-	cmd.Env = os.Environ()
+
+	// Clear inherited W3C trace context from the child's environment copy.
+	// Injection can omit TRACESTATE when the current trace state is empty.
+	cmd.Env = slices.DeleteFunc(cmd.Environ(), func(entry string) bool {
+		key, _, _ := strings.Cut(entry, "=")
+		if runtime.GOOS == "windows" {
+			key = strings.ToUpper(key)
+		}
+		return key == "TRACEPARENT" || key == "TRACESTATE"
+	})
 
 	// Create a carrier that injects trace context into the child
 	// process's environment rather than the current process's.
