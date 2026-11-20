@@ -114,6 +114,14 @@ var methodLookup = map[string]attribute.KeyValue{
 	http.MethodTrace:   semconvNew.HTTPRequestMethodTrace,
 }
 
+func httpMethodSpanName(method string) string {
+	method = strings.ToUpper(method)
+	if _, ok := methodLookup[method]; !ok {
+		return "HTTP"
+	}
+	return method
+}
+
 func handleErr(err error) {
 	if err != nil {
 		otel.Handle(err)

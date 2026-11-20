@@ -292,12 +292,8 @@ func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 // OpenTelemetry HTTP semantic conventions.
 // It returns "{method} {route}" when the request has a pattern,
 // or just "{method}" when no route is available.
-// Non-standard HTTP methods are replaced by "HTTP".
 func (HTTPServer) SpanName(r *http.Request) string {
-	method := strings.ToUpper(r.Method)
-	if _, ok := methodLookup[method]; !ok {
-		method = "HTTP"
-	}
+	method := httpMethodSpanName(r.Method)
 
 	route := httpRoute(r.Pattern)
 	if route != "" {
