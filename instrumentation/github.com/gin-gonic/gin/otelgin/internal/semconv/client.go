@@ -61,6 +61,12 @@ func (HTTPClient) Status(code int) (codes.Code, string) {
 	return codes.Unset, ""
 }
 
+// SpanName returns the span name for an HTTP request made by a client
+// following the OpenTelemetry HTTP semantic conventions.
+func (HTTPClient) SpanName(req *http.Request) string {
+	return httpMethodSpanName(req.Method)
+}
+
 // RequestTraceAttrs returns trace attributes for an HTTP request made by a client.
 func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 	/*
