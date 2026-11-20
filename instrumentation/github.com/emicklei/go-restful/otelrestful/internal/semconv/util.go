@@ -9,10 +9,10 @@ package semconv
 import (
 	"net"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
-	"os"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -106,16 +106,16 @@ func netProtocol(proto string) (name, version string) {
 const knownHTTPMethodsEnv = "OTEL_INSTRUMENTATION_HTTP_KNOWN_METHODS"
 
 var defaultKnownHTTPMethods = []string{
-    http.MethodConnect,
-    http.MethodDelete,
-    http.MethodGet,
-    http.MethodHead,
-    http.MethodOptions,
-    http.MethodPatch,
-    http.MethodPost,
-    http.MethodPut,
-    http.MethodTrace,
-    "QUERY",
+	http.MethodConnect,
+	http.MethodDelete,
+	http.MethodGet,
+	http.MethodHead,
+	http.MethodOptions,
+	http.MethodPatch,
+	http.MethodPost,
+	http.MethodPut,
+	http.MethodTrace,
+	"QUERY",
 }
 
 func newMethodLookup() map[string]attribute.KeyValue {
@@ -148,10 +148,10 @@ func handleErr(err error) {
 }
 
 func standardizeHTTPMethod(method string) string {
-    if _, ok := methodLookup[method]; ok {
-        return method
-    }
-    return "_OTHER"
+	if _, ok := methodLookup[method]; ok {
+		return method
+	}
+	return "_OTHER"
 }
 
 func durationToSeconds(d time.Duration) float64 {

@@ -112,7 +112,6 @@ func TestHTTPClientStatus(t *testing.T) {
 	}
 }
 
-
 func TestHTTPClient_MetricAttributes(t *testing.T) {
 	defaultRequest, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com/path?query=test", http.NoBody)
 	require.NoError(t, err)
@@ -230,7 +229,6 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 		})
 	}
 }
-
 
 func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 	tests := []struct {
