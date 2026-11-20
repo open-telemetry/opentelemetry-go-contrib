@@ -142,7 +142,8 @@ func InstrumentHandler(handlerFunc any, options ...Option) any {
 func (whf *wrappedHandlerFunction) wrapper(handlerFunc any) func(ctx context.Context, eventJSON []byte, event any, takesContext bool) []reflect.Value {
 	return func(ctx context.Context, eventJSON []byte, event any, takesContext bool) []reflect.Value {
 		ctx, span := whf.instrumentor.tracingBegin(ctx, eventJSON)
-		defer whf.instrumentor.tracingEnd(ctx, span)
+		var handlerErr error
+		defer func() { whf.instrumentor.tracingEnd(ctx, span, handlerErr) }()
 
 		handler := reflect.ValueOf(handlerFunc)
 		var args []reflect.Value
@@ -154,6 +155,11 @@ func (whf *wrappedHandlerFunction) wrapper(handlerFunc any) func(ctx context.Con
 		}
 
 		response := handler.Call(args)
+		if len(response) > 0 {
+			if errVal, ok := reflect.TypeAssert[error](response[len(response)-1]); ok {
+				handlerErr = errVal
+			}
+		}
 
 		return response
 	}

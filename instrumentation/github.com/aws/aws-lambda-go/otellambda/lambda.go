@@ -12,6 +12,7 @@ import (
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -89,12 +90,15 @@ func (i *instrumentor) tracingBegin(ctx context.Context, eventJSON []byte) (cont
 }
 
 // Logic to wrap up OTel Tracing.
-func (i *instrumentor) tracingEnd(ctx context.Context, span trace.Span) {
+func (i *instrumentor) tracingEnd(ctx context.Context, span trace.Span, err error) {
+	if err != nil {
+		span.SetAttributes(semconv.ErrorType(err))
+		span.SetStatus(codes.Error, err.Error())
+	}
 	span.End()
 
 	// force flush any tracing data since lambda may freeze
-	err := i.configuration.Flusher.ForceFlush(ctx)
-	if err != nil {
-		errorLogger.Println("failed to force a flush, lambda may freeze before instrumentation exported: ", err)
+	if flushErr := i.configuration.Flusher.ForceFlush(ctx); flushErr != nil {
+		errorLogger.Println("failed to force a flush, lambda may freeze before instrumentation exported: ", flushErr)
 	}
 }
