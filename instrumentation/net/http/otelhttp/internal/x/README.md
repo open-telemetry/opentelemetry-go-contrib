@@ -14,4 +14,4 @@ These metrics and attributes are opt-in in the semantic conventions and may chan
 To produce opt-in metrics and attributes of the HTTP conventions, list their names comma-separated:
 
 ```console
-export OTEL_GO_X_HTTP_METRICS_OPTIN=http.client.active_requests,http.client.request.body.size,http.server.request.body.size,http.server.response.body.size,url.scheme
+export OTEL_GO_X_HTTP_METRICS_OPTIN=http.client.active_requests,http.client.request.body.size,http.server.request.body.size,http.server.response.body.size,url.scheme.

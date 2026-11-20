@@ -123,6 +123,7 @@ func newMethodLookup() map[string]attribute.KeyValue {
 	return methodLookupFromEnv(methods, configured)
 }
 
+//nolint:revive // configured selects between defaultKnownHTTPMethods and comma-separated methods
 func methodLookupFromEnv(methods string, configured bool) map[string]attribute.KeyValue {
 	knownMethods := defaultKnownHTTPMethods
 	if configured {
