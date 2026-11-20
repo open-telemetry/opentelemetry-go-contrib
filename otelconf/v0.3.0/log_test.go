@@ -306,7 +306,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "invalid headers list: invalid key: \"\"",
+			wantErr: "invalid headers list",
 		},
 		{
 			name: "batch/otlp-grpc-bad-client-certificate",
@@ -508,7 +508,7 @@ func TestLogProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "invalid headers list: invalid key: \"\"",
+			wantErr: "invalid headers list",
 		},
 		{
 			name: "batch/otlp-http-exporter-with-path",

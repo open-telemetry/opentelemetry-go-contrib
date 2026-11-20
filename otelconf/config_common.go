@@ -5,7 +5,6 @@ package otelconf
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -289,7 +288,9 @@ func createHeadersConfig(headers []NameStringValuePair, headersList *string) (ma
 		// Parsing follows https://github.com/open-telemetry/opentelemetry-configuration/blob/568e5080816d40d75792eb754fc96bde09654159/schema/type_descriptions.yaml#L584.
 		headerslist, err := baggage.Parse(*headersList)
 		if err != nil {
-			return nil, errors.Join(newErrInvalid("invalid headers_list"), err)
+			// Do not wrap err: it quotes the offending list member, and
+			// header values are often credentials.
+			return nil, newErrInvalid("invalid headers_list")
 		}
 		for _, kv := range headerslist.Members() {
 			result[kv.Key()] = kv.Value()
