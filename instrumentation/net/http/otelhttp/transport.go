@@ -92,7 +92,7 @@ func (t *transport) applyConfig(c *config) {
 	t.filters = c.Filters
 	t.spanNameFormatter = c.SpanNameFormatter
 	t.clientTrace = c.ClientTrace
-	t.semconv = semconv.NewHTTPClient(c.Meter)
+	t.semconv = semconv.NewHTTPClient(c.Meter, x.OptInMetrics.Enabled("http.client.request.body.size"))
 	t.recordActiveRequests = x.OptInMetrics.Enabled(httpconv.ClientActiveRequests{}.Name())
 	t.metricAttributesFn = c.MetricAttributesFn
 }

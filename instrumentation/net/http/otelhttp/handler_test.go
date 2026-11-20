@@ -136,6 +136,7 @@ func TestHandlerResponseControllerFlushErrorOnly(t *testing.T) {
 }
 
 func TestHandlerBasics(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.server.request.body.size,http.server.response.body.size")
 	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 	rr := httptest.NewRecorder()
 
@@ -211,6 +212,7 @@ func (w readerFromResponseRecorder) ReadFrom(r io.Reader) (int64, error) {
 }
 
 func TestHandlerResponseBodySizeReadFrom(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.server.response.body.size")
 	body := "test"
 	bodysize := int64(len(body))
 
@@ -788,6 +790,7 @@ func TestSpanStatus(t *testing.T) {
 }
 
 func TestHandlerWithMetricAttributesFn(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.server.request.body.size,http.server.response.body.size")
 	const (
 		serverRequestSize  = "http.server.request.size"
 		serverResponseSize = "http.server.response.size"
@@ -860,6 +863,7 @@ func TestHandlerWithMetricAttributesFn(t *testing.T) {
 }
 
 func TestHandlerServeMuxRouteMetric(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.server.request.body.size,http.server.response.body.size")
 	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
 
 	reader := sdkmetric.NewManualReader()
@@ -1074,4 +1078,73 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 			}
 		})
 	}
+}
+
+func TestHandlerBodySizeMetricsOptIn(t *testing.T) {
+	tests := []struct {
+		name             string
+		optIn            string
+		wantRequestSize  bool
+		wantResponseSize bool
+	}{
+		{
+			name: "disabled by default",
+		},
+		{
+			name:            "request body size only",
+			optIn:           "http.server.request.body.size",
+			wantRequestSize: true,
+		},
+		{
+			name:             "response body size only",
+			optIn:            "http.server.response.body.size",
+			wantResponseSize: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", tt.optIn)
+
+			reader := sdkmetric.NewManualReader()
+			provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			handler := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, err := io.Copy(io.Discard, r.Body)
+				require.NoError(t, err)
+				_, err = io.WriteString(w, "response")
+				require.NoError(t, err)
+			}), "test", WithMeterProvider(provider))
+
+			req := httptest.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				"/",
+				strings.NewReader("request"),
+			)
+			handler.ServeHTTP(httptest.NewRecorder(), req)
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+
+			assertMetricPresence(t, rm, "http.server.request.body.size", tt.wantRequestSize)
+			assertMetricPresence(t, rm, "http.server.response.body.size", tt.wantResponseSize)
+			assertMetricPresence(t, rm, "http.server.request.duration", true)
+		})
+	}
+}
+
+func assertMetricPresence(t *testing.T, rm metricdata.ResourceMetrics, name string, want bool) {
+	t.Helper()
+
+	found := false
+	for _, scope := range rm.ScopeMetrics {
+		for _, metric := range scope.Metrics {
+			if metric.Name == name {
+				found = true
+			}
+		}
+	}
+
+	assert.Equal(t, want, found, "unexpected presence of metric %q", name)
 }
