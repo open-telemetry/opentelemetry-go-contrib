@@ -7,21 +7,15 @@ package diaglogger
 import (
 	"fmt"
 	"io"
-	"os"
 
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 )
 
 // New creates a logger whose verbosity matches the configured OpenTelemetry
-// severity. Unsupported or empty levels return an error. If an output writer
-// is provided, log messages are written to it; otherwise, os.Stderr is used.
-func New(level string, outputs ...io.Writer) (logr.Logger, error) {
-	output := io.Writer(os.Stderr)
-	if len(outputs) > 0 && outputs[0] != nil {
-		output = outputs[0]
-	}
-
+// severity. Unsupported or empty levels return an error. Log messages are
+// written to the provided output writer.
+func New(level string, output io.Writer) (logr.Logger, error) {
 	base := level
 	if base != "" {
 		last := base[len(base)-1]

@@ -157,7 +157,8 @@ func TestNewUnsupportedLevel(t *testing.T) {
 
 	for _, level := range tests {
 		t.Run(level, func(t *testing.T) {
-			_, err := New(level)
+			var output bytes.Buffer
+			_, err := New(level, &output)
 			require.EqualError(t, err, fmt.Sprintf("unsupported log_level %q", level))
 		})
 	}

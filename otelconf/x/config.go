@@ -31,10 +31,7 @@ import (
 	"go.opentelemetry.io/contrib/otelconf/internal/provider"
 )
 
-const (
-	envVarConfigFileDeprecated = "OTEL_EXPERIMENTAL_CONFIG_FILE"
-	envVarConfigFile           = "OTEL_CONFIG_FILE"
-)
+const envVarConfigFile = "OTEL_EXPERIMENTAL_CONFIG_FILE"
 
 // SDK is a struct that contains all the providers
 // configured via the configuration model.
@@ -117,9 +114,6 @@ func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 
 func newSDKWithDiagnosticWriter(output io.Writer, setLogger func(logr.Logger), opts ...ConfigurationOption) (SDK, error) {
 	filename, ok := os.LookupEnv(envVarConfigFile)
-	if !ok {
-		filename, ok = os.LookupEnv(envVarConfigFileDeprecated)
-	}
 
 	if ok {
 		opt, err := parseConfigFileFromEnvironment(filename)
