@@ -54,8 +54,24 @@ type configMap struct {
 
 // resourceDetector for detecting resources running on Amazon EKS.
 type resourceDetector struct {
-	utils detectorUtils
-	err   error
+	utils      detectorUtils
+	err        error
+	clusterARN *clusterARNDetector
+}
+
+type config struct {
+	clusterARN bool
+}
+
+// Option configures EKS resource detection.
+type Option interface {
+	apply(*config)
+}
+
+type optionFunc func(*config)
+
+func (f optionFunc) apply(c *config) {
+	f(c)
 }
 
 // Compile time assertion that resourceDetector implements the resource.Detector interface.
@@ -69,16 +85,36 @@ var containerIDRegex = regexp.MustCompile(`^.*/docker/(.+)$`)
 
 // NewResourceDetector returns a resource detector that will detect AWS EKS resources.
 func NewResourceDetector() resource.Detector {
+	return NewResourceDetectorWithOptions()
+}
+
+// NewResourceDetectorWithOptions returns a resource detector configured with opts.
+func NewResourceDetectorWithOptions(opts ...Option) resource.Detector {
 	utils, err := newK8sDetectorUtils()
-	return &resourceDetector{utils: utils, err: err}
+	return newResourceDetector(utils, err, opts...)
+}
+
+func newResourceDetector(utils *eksDetectorUtils, err error, opts ...Option) resource.Detector {
+	var cfg config
+	for _, opt := range opts {
+		opt.apply(&cfg)
+	}
+
+	detector := &resourceDetector{utils: utils, err: err}
+	if cfg.clusterARN && err == nil {
+		detector.clusterARN = &clusterARNDetector{utils: utils}
+	}
+	return detector
 }
 
 // Detect returns a Resource describing the Amazon EKS environment being run in.
 //
-// Detect performs up to two Kubernetes API requests, each bounded by a
-// 10-second timeout, so a single call can take up to ~20 seconds when the
-// API server is unresponsive. Provide a ctx with a shorter deadline to bound
-// the total duration.
+// The default detector performs up to two Kubernetes API requests, each bounded
+// by 10 seconds. WithClusterARN adds an OIDC discovery request bounded by 10
+// seconds and an AWS configuration plus DescribeCluster operation sharing a
+// separate 10-second bound. Provide a ctx with a shorter deadline to bound the
+// whole call. When ARN detection cannot establish an identity, Detect returns
+// the default EKS attributes together with [resource.ErrPartialResource].
 func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resource, error) {
 	if detector.err != nil {
 		if errors.Is(detector.err, rest.ErrNotInCluster) {
@@ -122,8 +158,20 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		attributes = append(attributes, semconv.ContainerID(containerID))
 	}
 
-	// Return new resource object with clusterName and containerID as attributes
-	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
+	var clusterARNErr error
+	if detector.clusterARN != nil {
+		var arn string
+		arn, clusterARNErr = detector.clusterARN.detect(ctx, clusterName)
+		if clusterARNErr == nil {
+			attributes = append(attributes, semconv.AWSEKSClusterARN(arn))
+		}
+	}
+
+	res := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
+	if clusterARNErr != nil {
+		return res, fmt.Errorf("%w: EKS cluster ARN: %w", resource.ErrPartialResource, clusterARNErr)
+	}
+	return res, nil
 }
 
 // isEKS checks if the current environment is running in EKS.
@@ -209,7 +257,7 @@ func getClusterName(ctx context.Context, utils detectorUtils) (string, error) {
 		return "", fmt.Errorf("getClusterName() error: %w", err)
 	}
 
-	return resp["cluster.name"], nil
+	return strings.TrimSpace(resp["cluster.name"]), nil
 }
 
 // getContainerID returns the containerID if currently running within a container.
