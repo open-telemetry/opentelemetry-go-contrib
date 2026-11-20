@@ -18,6 +18,7 @@ Collection of 3rd-party packages for [OpenTelemetry-Go](https://github.com/open-
 - [Samplers](./samplers/): Packages providing additional implementations of OpenTelemetry samplers.
 - [Bridges](./bridges/): Packages providing adapters for 3rd-party instrumentation frameworks.
 - [Processors](./processors/): Packages providing additional implementations of OpenTelemetry processors.
+- [OTelConf](./otelconf/): Package for parsing OpenTelemetry configuration files and constructing SDK components from the parsed configuration.
 
 ## Project Status
 
