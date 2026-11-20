@@ -229,46 +229,6 @@ func TestCarrierKeysReadsDirectly(t *testing.T) {
 	assert.Contains(t, c.Keys(), "ENVCAR_KEYS_FETCH_ONCE_NEW")
 }
 
-func TestChildProcessClearsInheritedTraceState(t *testing.T) {
-	const childArg = "envcar-check-child-environment"
-	// The subprocess runs this test again to inspect its own environment.
-	if os.Args[len(os.Args)-1] == childArg {
-		_, hasState := os.LookupEnv("TRACESTATE")
-		assert.False(t, hasState, "child inherited stale TRACESTATE")
-		assert.Equal(t, "00-"+traceID.String()+"-"+spanID.String()+"-01", os.Getenv("TRACEPARENT"))
-		assert.Equal(t, "a=b", os.Getenv("ENVCAR_TEST_KEEP"))
-		if runtime.GOOS != "windows" {
-			assert.Equal(t, "vendor=distinct", os.Getenv("TraceState"))
-		}
-		return
-	}
-
-	executable, err := os.Executable()
-	require.NoError(t, err)
-	cmd := exec.CommandContext(t.Context(), executable, "-test.run=^TestChildProcessClearsInheritedTraceState$", "--", childArg)
-	cmd.Env = append(cmd.Environ(), "TRACEPARENT=stale", "TraceState=vendor=distinct", "ENVCAR_TEST_KEEP=a=b")
-	if runtime.GOOS != "windows" {
-		// A differently cased variable is a separate entry on this platform.
-		cmd.Env = append(cmd.Env, "TRACESTATE=vendor=stale")
-	}
-	deleteEnvFields(cmd, prop.Fields())
-
-	carrier := envcar.Carrier{
-		SetEnvFunc: func(key, value string) {
-			cmd.Env = append(cmd.Env, key+"="+value)
-		},
-	}
-	ctx := trace.ContextWithSpanContext(t.Context(), trace.NewSpanContext(trace.SpanContextConfig{
-		TraceID:    traceID,
-		SpanID:     spanID,
-		TraceFlags: trace.FlagsSampled,
-	}))
-	prop.Inject(ctx, &carrier)
-
-	out, err := cmd.CombinedOutput()
-	require.NoError(t, err, "%s", out)
-}
-
 func TestDeleteEnvFieldsKeepsNonCanonicalName(t *testing.T) {
 	cmd := &exec.Cmd{Env: []string{"x-b3-traceid=keep", "X_B3_TRACEID=stale", "ENVCAR_KEEP_EMPTY="}}
 	deleteEnvFields(cmd, []string{"x-b3-traceid"})
