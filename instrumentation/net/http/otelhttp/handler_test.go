@@ -4,6 +4,7 @@
 package otelhttp
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -1038,19 +1039,20 @@ func TestMessageEventAttributes(t *testing.T) {
 func BenchmarkHandlerServeHTTP(b *testing.B) {
 	tp := sdktrace.NewTracerProvider()
 	mp := sdkmetric.NewMeterProvider()
-
-	r, err := http.NewRequestWithContext(b.Context(), http.MethodGet, "http://localhost/", http.NoBody)
-	require.NoError(b, err)
+	payload := []byte("payload")
 
 	for _, bb := range []struct {
 		name    string
 		handler http.Handler
+		method  string
+		body    []byte
 	}{
 		{
 			name: "without the otelhttp handler",
 			handler: http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				fmt.Fprint(w, "Hello World")
 			}),
+			method: http.MethodGet,
 		},
 		{
 			name: "with the otelhttp handler",
@@ -1062,15 +1064,141 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 				WithTracerProvider(tp),
 				WithMeterProvider(mp),
 			),
+			method: http.MethodGet,
+		},
+		{
+			name: "no body default",
+			handler: NewHandler(
+				http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}),
+				"test_handler",
+				WithTracerProvider(tp),
+				WithMeterProvider(mp),
+			),
+			method: http.MethodGet,
+		},
+		{
+			name: "no body with read events",
+			handler: NewHandler(
+				http.HandlerFunc(func(_ http.ResponseWriter, _ *http.Request) {}),
+				"test_handler",
+				WithTracerProvider(tp),
+				WithMeterProvider(mp),
+				WithMessageEvents(ReadEvents),
+			),
+			method: http.MethodGet,
+		},
+		{
+			name: "with body and read events",
+			handler: NewHandler(
+				http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+					_, _ = io.Copy(io.Discard, r.Body)
+				}),
+				"test_handler",
+				WithTracerProvider(tp),
+				WithMeterProvider(mp),
+				WithMessageEvents(ReadEvents),
+			),
+			method: http.MethodPost,
+			body:   payload,
 		},
 	} {
 		b.Run(bb.name, func(b *testing.B) {
 			rr := httptest.NewRecorder()
+			var reader *bytes.Reader
+			var reqBody io.Reader = http.NoBody
+			if bb.body != nil {
+				reader = bytes.NewReader(bb.body)
+				reqBody = reader
+			}
+
+			r, err := http.NewRequestWithContext(b.Context(), bb.method, "http://localhost/", reqBody)
+			require.NoError(b, err)
 
 			b.ReportAllocs()
 			b.ResetTimer()
 			for range b.N {
+				rr.Body.Reset()
+				if reader != nil {
+					reader.Reset(bb.body)
+				}
 				bb.handler.ServeHTTP(rr, r)
+			}
+		})
+	}
+}
+
+// TestReadEvents_BodyPresent verifies that exactly one read event is recorded
+// when a single, explicit Read() operation is executed on a valid body.
+func TestReadEvents_BodyPresent(t *testing.T) {
+	payload := []byte("payload")
+	exp := tracetest.NewInMemoryExporter()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exp))
+
+	handler := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			buf := make([]byte, 16)
+			n, err := r.Body.Read(buf)
+			assert.NoError(t, err)
+			assert.Equal(t, len(payload), n)
+			assert.Equal(t, payload, buf[:n])
+			w.WriteHeader(http.StatusOK)
+		}),
+		"test_handler",
+		WithTracerProvider(tp),
+		WithMessageEvents(ReadEvents),
+	)
+
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", bytes.NewReader(payload))
+	handler.ServeHTTP(httptest.NewRecorder(), req)
+
+	spans := exp.GetSpans()
+	require.Len(t, spans, 1)
+
+	var readEvents int
+	for _, event := range spans[0].Events {
+		if event.Name == "read" {
+			readEvents++
+		}
+	}
+	assert.Equal(t, 1, readEvents, "expected exactly one read event for a single read call")
+}
+
+func TestReadEvents_NoBody(t *testing.T) {
+	tests := []struct {
+		name string
+		body io.ReadCloser
+	}{
+		{name: "http.NoBody", body: http.NoBody},
+		{name: "nil body", body: nil},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			exp := tracetest.NewInMemoryExporter()
+			tp := sdktrace.NewTracerProvider(sdktrace.WithSyncer(exp))
+
+			handler := NewHandler(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				}),
+				"test_handler",
+				WithTracerProvider(tp),
+				WithMessageEvents(ReadEvents),
+			)
+
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
+			req.Body = tc.body
+			handler.ServeHTTP(httptest.NewRecorder(), req)
+
+			spans := exp.GetSpans()
+			require.Len(t, spans, 1)
+
+			for _, event := range spans[0].Events {
+				assert.NotEqual(t, "read", event.Name, "expected no read events for body-less request")
+			}
+
+			for _, attr := range spans[0].Attributes {
+				assert.NotEqual(t, "http.request.body.size", string(attr.Key), "expected request body size attribute not to be set")
 			}
 		})
 	}
