@@ -272,11 +272,11 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 	}
 
 	spanStartOptions := make([]trace.SpanStartOption, 0, len(t.spanStartOptions)+1)
+	spanStartOptions = append(spanStartOptions, t.spanStartOptions...)
 	spanStartOptions = append(
 		spanStartOptions,
 		trace.WithAttributes(t.semconv.RequestTraceAttrs(r)...),
 	)
-	spanStartOptions = append(spanStartOptions, t.spanStartOptions...)
 
 	ctx, span := tracer.Start(
 		r.Context(),
