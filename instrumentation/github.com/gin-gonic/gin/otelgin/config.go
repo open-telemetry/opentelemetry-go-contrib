@@ -24,6 +24,7 @@ type config struct {
 	Filters              []Filter
 	GinFilters           []GinFilter
 	SpanNameFormatter    SpanNameFormatter
+	SpanEndHook          SpanEndHook
 	MeterProvider        metric.MeterProvider
 	MetricAttributeFn    MetricAttributeFn
 	GinMetricAttributeFn GinMetricAttributeFn
@@ -66,6 +67,10 @@ type MetricAttributeFn func(*http.Request) []attribute.KeyValue
 // GinMetricAttributeFn is used to extract additional attributes from the gin.Context
 // and return them as a slice of attribute.KeyValue.
 type GinMetricAttributeFn func(*gin.Context) []attribute.KeyValue
+
+// SpanEndHook is called after the Gin handlers complete and can customize the
+// span before it ends.
+type SpanEndHook func(*gin.Context, oteltrace.Span)
 
 // Option specifies instrumentation configuration options.
 type Option interface {
@@ -131,6 +136,15 @@ func WithGinFilter(f ...GinFilter) Option {
 func WithSpanNameFormatter(f SpanNameFormatter) Option {
 	return optionFunc(func(c *config) {
 		c.SpanNameFormatter = f
+	})
+}
+
+// WithSpanEndHook configures a hook called after Gin handlers complete and
+// before the span ends. When configured, otelgin does not set the span status
+// or error.type attribute, leaving them to the hook.
+func WithSpanEndHook(hook SpanEndHook) Option {
+	return optionFunc(func(c *config) {
+		c.SpanEndHook = hook
 	})
 }
 
