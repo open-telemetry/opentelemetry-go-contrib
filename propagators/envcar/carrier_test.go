@@ -251,7 +251,7 @@ func TestChildProcessClearsInheritedTraceState(t *testing.T) {
 		// A differently cased variable is a separate entry on this platform.
 		cmd.Env = append(cmd.Env, "TRACESTATE=vendor=stale")
 	}
-	cmd.Env = deleteEnvFields(cmd.Env, prop.Fields())
+	deleteEnvFields(cmd, prop.Fields())
 
 	carrier := envcar.Carrier{
 		SetEnvFunc: func(key, value string) {
@@ -267,6 +267,15 @@ func TestChildProcessClearsInheritedTraceState(t *testing.T) {
 
 	out, err := cmd.CombinedOutput()
 	require.NoError(t, err, "%s", out)
+}
+
+func TestDeleteEnvFieldsKeepsNonCanonicalName(t *testing.T) {
+	cmd := &exec.Cmd{Env: []string{"x-b3-traceid=keep", "X_B3_TRACEID=stale", "ENVCAR_KEEP_EMPTY="}}
+	deleteEnvFields(cmd, []string{"x-b3-traceid"})
+	assert.Contains(t, cmd.Env, "x-b3-traceid=keep")
+	assert.Contains(t, cmd.Env, "ENVCAR_KEEP_EMPTY=")
+	assert.NotContains(t, cmd.Env, "X_B3_TRACEID=stale")
+	assert.NotContains(t, cmd.Env, "X_B3_TRACEID=")
 }
 
 func TestConcurrentChildProcesses(t *testing.T) {

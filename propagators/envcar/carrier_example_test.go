@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"runtime"
 	"slices"
-	"strings"
 
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -72,7 +70,7 @@ func ExampleCarrier_childProcess() {
 	// Clear inherited W3C trace context from the child's environment copy.
 	// Injection can omit TRACESTATE when the current trace state is empty.
 	prop := propagation.TraceContext{}
-	cmd.Env = deleteEnvFields(cmd.Environ(), prop.Fields())
+	deleteEnvFields(cmd, prop.Fields())
 
 	// Create a carrier that injects trace context into the child
 	// process's environment rather than the current process's.
@@ -96,23 +94,19 @@ func ExampleCarrier_childProcess() {
 	// Output: 00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01
 }
 
-// deleteEnvFields removes entries for the propagator's fields from env in place.
-func deleteEnvFields(env, fields []string) []string {
-	// Match the way os/exec compares environment variable names on Windows.
-	lookupKey := func(key string) string {
-		if runtime.GOOS == "windows" {
-			return strings.ToLower(key)
-		}
-		return key
+// deleteEnvFields removes entries for the propagator's fields from the child's environment.
+func deleteEnvFields(cmd *exec.Cmd, fields []string) {
+	cmd.Env = cmd.Environ()
+	placeholders := make(map[string]bool, len(fields))
+	for _, field := range fields {
+		entry := envcar.NormalizeKey(field) + "="
+		cmd.Env = append(cmd.Env, entry)
+		placeholders[entry] = true
 	}
 
-	names := make(map[string]struct{}, len(fields))
-	for _, field := range fields {
-		names[lookupKey(envcar.NormalizeKey(field))] = struct{}{}
-	}
-	return slices.DeleteFunc(env, func(entry string) bool {
-		name, _, hasValue := strings.Cut(entry, "=")
-		_, match := names[lookupKey(name)]
-		return hasValue && match
+	// Environ applies os/exec's platform-specific duplicate-key rules.
+	// The placeholders replace matching entries and can then be removed.
+	cmd.Env = slices.DeleteFunc(cmd.Environ(), func(entry string) bool {
+		return placeholders[entry]
 	})
 }
