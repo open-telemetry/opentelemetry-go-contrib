@@ -65,6 +65,11 @@ var _ http.RoundTripper = &transport{}
 //
 // A request is counted from the start of RoundTrip until the base
 // [http.RoundTripper] returns. This feature is experimental and may change.
+//
+// The default span name is the HTTP method for standard methods
+// (GET, HEAD, POST, PUT, PATCH, DELETE, CONNECT, OPTIONS, and TRACE),
+// or "HTTP" for other methods. This can be overridden with
+// [WithSpanNameFormatter].
 func NewTransport(base http.RoundTripper, opts ...Option) http.RoundTripper {
 	if base == nil {
 		base = http.DefaultTransport
@@ -98,20 +103,7 @@ func (t *transport) applyConfig(c *config) {
 }
 
 func defaultTransportFormatter(_ string, r *http.Request) string {
-	switch r.Method {
-	case http.MethodConnect,
-		http.MethodDelete,
-		http.MethodGet,
-		http.MethodHead,
-		http.MethodOptions,
-		http.MethodPatch,
-		http.MethodPost,
-		http.MethodPut,
-		http.MethodTrace:
-		return r.Method
-	default:
-		return "HTTP"
-	}
+	return semconv.HTTPClient{}.SpanName(r)
 }
 
 // requestTracker tracks the request body lifecycle of a single RoundTrip and
