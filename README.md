@@ -16,6 +16,8 @@ Collection of 3rd-party packages for [OpenTelemetry-Go](https://github.com/open-
 - [Detectors](./detectors/): Packages providing OpenTelemetry resource detectors for 3rd-party cloud computing environments.
 - [Exporters](./exporters/): Packages providing OpenTelemetry exporters for 3rd-party export formats.
 - [Samplers](./samplers/): Packages providing additional implementations of OpenTelemetry samplers.
+
+> **Passthrough example fix:** The exporter constructor is `stdouttrace.New(stdouttrace.WithPrettyPrint())`. Run with `cd examples/passthrough && go run .`
 - [Bridges](./bridges/): Packages providing adapters for 3rd-party instrumentation frameworks.
 - [Processors](./processors/): Packages providing additional implementations of OpenTelemetry processors.
 
