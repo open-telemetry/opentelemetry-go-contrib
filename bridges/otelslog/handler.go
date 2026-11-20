@@ -477,6 +477,10 @@ func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
 //
 // If attr is empty, it will be dropped.
 func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
+	if attr.Value.Kind() == slog.KindLogValuer {
+		attr.Value = attr.Value.Resolve()
+	}
+
 	if !b.keepErr && attr.Value.Kind() == slog.KindAny {
 		if err, ok := attr.Value.Any().(error); ok {
 			b.err = err
@@ -498,6 +502,22 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 			return true
 		}
 	}
+
+	if attr.Value.Kind() == slog.KindGroup {
+		group := attr.Value.Group()
+		buf := newKVBuffer(len(group))
+		buf.keepErr = true
+		buf.AddAttrs(group)
+		if buf.Len() == 0 {
+			return true
+		}
+		b.data = append(b.data, attribute.KeyValue{
+			Key:   attribute.Key(attr.Key),
+			Value: attribute.MapValue(buf.data...),
+		})
+		return true
+	}
+
 	b.data = append(b.data, attribute.KeyValue{
 		Key:   attribute.Key(attr.Key),
 		Value: convert(attr.Value),
