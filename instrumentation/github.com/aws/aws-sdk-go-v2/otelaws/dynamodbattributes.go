@@ -115,7 +115,9 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBProjection(*v.ProjectionExpression))
 		}
 
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBSelect(string(v.Select)))
+		if v.Select != "" {
+			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBSelect(string(v.Select)))
+		}
 
 	case *dynamodb.ScanInput:
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
@@ -136,7 +138,9 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBProjection(*v.ProjectionExpression))
 		}
 
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBSelect(string(v.Select)))
+		if v.Select != "" {
+			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBSelect(string(v.Select)))
+		}
 
 		if v.Segment != nil {
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBSegment(int(*v.Segment)))
