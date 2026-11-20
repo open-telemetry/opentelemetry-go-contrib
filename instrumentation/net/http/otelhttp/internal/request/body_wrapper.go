@@ -9,6 +9,7 @@
 package request
 
 import (
+	"errors"
 	"io"
 	"sync"
 )
@@ -53,7 +54,9 @@ func (w *BodyWrapper) updateReadData(n int64, err error) {
 	defer w.mu.Unlock()
 
 	w.read += n
-	if err != nil {
+	// Retain a non-EOF read failure; EOF alone is clean completion but must not
+	// replace an earlier real failure.
+	if err != nil && (w.err == nil || !errors.Is(err, io.EOF)) {
 		w.err = err
 	}
 }

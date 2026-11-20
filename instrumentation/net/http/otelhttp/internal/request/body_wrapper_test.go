@@ -63,6 +63,31 @@ func TestBodyWrapperWithErrors(t *testing.T) {
 	require.Equal(t, errorWrapper{}, bw.Error())
 }
 
+type errorThenEOFReader struct {
+	calls int
+}
+
+func (r *errorThenEOFReader) Read([]byte) (int, error) {
+	r.calls++
+	if r.calls == 1 {
+		return 0, errFirstCall
+	}
+
+	return 0, io.EOF
+}
+
+func TestBodyWrapperRetainsReadErrorAfterEOF(t *testing.T) {
+	bw := NewBodyWrapper(io.NopCloser(&errorThenEOFReader{}), func(int64) {})
+
+	_, err := io.ReadAll(bw)
+	require.ErrorIs(t, err, errFirstCall)
+	require.ErrorIs(t, bw.Error(), errFirstCall)
+
+	_, err = io.ReadAll(bw)
+	require.NoError(t, err)
+	assert.ErrorIs(t, bw.Error(), errFirstCall)
+}
+
 func TestConcurrentBodyWrapper(t *testing.T) {
 	bw := NewBodyWrapper(io.NopCloser(strings.NewReader("hello world")), func(int64) {})
 
