@@ -271,7 +271,18 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		}
 	}
 
-	ctx, span := tracer.Start(r.Context(), t.spanNameFormatter("", r), t.spanStartOptions...)
+	spanStartOptions := make([]trace.SpanStartOption, 0, len(t.spanStartOptions)+1)
+	spanStartOptions = append(
+		spanStartOptions,
+		trace.WithAttributes(t.semconv.RequestTraceAttrs(r)...),
+	)
+	spanStartOptions = append(spanStartOptions, t.spanStartOptions...)
+
+	ctx, span := tracer.Start(
+		r.Context(),
+		t.spanNameFormatter("", r),
+		spanStartOptions...,
+	)
 
 	if t.clientTrace != nil {
 		ctx = httptrace.WithClientTrace(ctx, t.clientTrace(ctx))
@@ -293,7 +304,6 @@ func (t *transport) RoundTrip(r *http.Request) (*http.Response, error) {
 		tracker = newRequestTracker(t, r)
 	}
 
-	span.SetAttributes(t.semconv.RequestTraceAttrs(r)...)
 	t.propagators.Inject(ctx, propagation.HeaderCarrier(r.Header))
 
 	// WithMetricAttributesFn runs once per request. It runs before RoundTrip

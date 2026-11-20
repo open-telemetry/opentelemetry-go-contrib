@@ -339,6 +339,22 @@ func (s *span) assert(t *testing.T, ended bool, err error, c codes.Code, d strin
 	assert.Equal(t, d, s.statusDesc, "status description not equal")
 }
 
+type recordingSampler struct {
+	attributes []attribute.KeyValue
+}
+
+func (s *recordingSampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.SamplingResult {
+	s.attributes = append([]attribute.KeyValue(nil), p.Attributes...)
+
+	return sdktrace.SamplingResult{
+		Decision: sdktrace.RecordAndSample,
+	}
+}
+
+func (*recordingSampler) Description() string {
+	return "recordingSampler"
+}
+
 func TestWrappedBodyRead(t *testing.T) {
 	s := new(span)
 	called := false
@@ -736,6 +752,50 @@ func TestTransportUsesFormatter(t *testing.T) {
 	if spanName != expectedName {
 		t.Fatalf("unexpected name: got %s, expected %s", spanName, expectedName)
 	}
+}
+
+func TestTransportRequestAttributesAvailableToSampler(t *testing.T) {
+	sampler := &recordingSampler{}
+	provider := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sampler),
+	)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		ts.URL,
+		http.NoBody,
+	)
+	require.NoError(t, err)
+
+	client := http.Client{
+		Transport: NewTransport(
+			http.DefaultTransport,
+			WithTracerProvider(provider),
+		),
+	}
+
+	resp, err := client.Do(req)
+	require.NoError(t, err)
+	require.NoError(t, resp.Body.Close())
+
+	attrs := make(map[string]attribute.Value, len(sampler.attributes))
+	for _, attr := range sampler.attributes {
+		attrs[string(attr.Key)] = attr.Value
+	}
+
+	method, ok := attrs["http.request.method"]
+	require.True(t, ok, "http.request.method must be available to the sampler")
+	assert.Equal(t, "GET", method.AsString())
+
+	serverAddress, ok := attrs["server.address"]
+	require.True(t, ok, "server.address must be available to the sampler")
+	assert.NotEmpty(t, serverAddress.AsString())
 }
 
 func TestTransportErrorStatus(t *testing.T) {
