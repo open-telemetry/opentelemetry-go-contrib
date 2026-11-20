@@ -46,7 +46,7 @@ var _ propagation.TextMapCarrier = (*Carrier)(nil)
 // lookup may match an environment variable whose name differs from the
 // normalized key only by case.
 func (*Carrier) Get(key string) string {
-	return os.Getenv(normalize(key))
+	return os.Getenv(NormalizeKey(key))
 }
 
 // Set stores the key-value pair by calling [Carrier.SetEnvFunc].
@@ -57,7 +57,7 @@ func (c *Carrier) Set(key, value string) {
 	if c.SetEnvFunc == nil {
 		return
 	}
-	k := normalize(key)
+	k := NormalizeKey(key)
 	c.SetEnvFunc(k, value)
 }
 

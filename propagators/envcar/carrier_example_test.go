@@ -71,13 +71,8 @@ func ExampleCarrier_childProcess() {
 
 	// Clear inherited W3C trace context from the child's environment copy.
 	// Injection can omit TRACESTATE when the current trace state is empty.
-	cmd.Env = slices.DeleteFunc(cmd.Environ(), func(entry string) bool {
-		key, _, _ := strings.Cut(entry, "=")
-		if runtime.GOOS == "windows" {
-			key = strings.ToUpper(key)
-		}
-		return key == "TRACEPARENT" || key == "TRACESTATE"
-	})
+	prop := propagation.TraceContext{}
+	cmd.Env = deleteEnvFields(cmd.Environ(), prop.Fields())
 
 	// Create a carrier that injects trace context into the child
 	// process's environment rather than the current process's.
@@ -88,7 +83,6 @@ func ExampleCarrier_childProcess() {
 	}
 
 	// Inject trace context into the child's environment copy.
-	prop := propagation.TraceContext{}
 	prop.Inject(ctx, &carrier)
 
 	// The child process now has trace context in its environment,
@@ -100,4 +94,25 @@ func ExampleCarrier_childProcess() {
 	}
 	fmt.Print(string(out))
 	// Output: 00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01
+}
+
+// deleteEnvFields removes entries for the propagator's fields from env in place.
+func deleteEnvFields(env, fields []string) []string {
+	// Match the way os/exec compares environment variable names on Windows.
+	lookupKey := func(key string) string {
+		if runtime.GOOS == "windows" {
+			return strings.ToLower(key)
+		}
+		return key
+	}
+
+	names := make(map[string]struct{}, len(fields))
+	for _, field := range fields {
+		names[lookupKey(envcar.NormalizeKey(field))] = struct{}{}
+	}
+	return slices.DeleteFunc(env, func(entry string) bool {
+		name, _, hasValue := strings.Cut(entry, "=")
+		_, match := names[lookupKey(name)]
+		return hasValue && match
+	})
 }
