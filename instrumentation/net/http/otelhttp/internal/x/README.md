@@ -4,7 +4,7 @@ The otelhttp package contains feature gates used to enable opt-in metrics and at
 
 These metrics and attributes are opt-in in the semantic conventions and may change in backwards-incompatible ways as feedback is applied.
 
-## Featuress
+## Features
 
 - [Include Opt-In Metrics](#include-opt-in-metrics)
 - [Known HTTP Methods](#known-http-methods)
@@ -14,4 +14,4 @@ These metrics and attributes are opt-in in the semantic conventions and may chan
 To produce opt-in metrics and attributes of the HTTP conventions, list their names comma-separated:
 
 ```console
-export OTEL_GO_X_HTTP_METRICS_OPTIN=http.client.request.body.size,http.server.request.body.size,http.server.response.body.size,url.scheme.
+export OTEL_GO_X_HTTP_METRICS_OPTIN=http.client.active_requests,http.client.request.body.size,http.server.request.body.size,http.server.response.body.size,url.scheme

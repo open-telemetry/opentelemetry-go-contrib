@@ -34,7 +34,10 @@ type HTTPClient struct {
 	recordURLScheme   bool
 }
 
-func NewHTTPClient(meter metric.Meter, recordRequestSize, recordURLScheme bool) HTTPClient {
+func NewHTTPClient(meter metric.Meter, optIn ...bool) HTTPClient {
+	recordRequestSize := len(optIn) > 0 && optIn[0]
+	recordURLScheme := len(optIn) > 1 && optIn[1]
+
 	client := HTTPClient{
 		recordRequestSize: recordRequestSize,
 		recordURLScheme:   recordURLScheme,

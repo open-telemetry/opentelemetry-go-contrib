@@ -44,10 +44,13 @@ type HTTPServer struct {
 	recordResponseSize        bool
 }
 
-func NewHTTPServer(meter metric.Meter, recordRequestSize, recordResponseSize bool) HTTPServer {
+func NewHTTPServer(meter metric.Meter, optIn ...bool) HTTPServer {
+	recordRequestSize := len(optIn) > 0 && optIn[0]
+	recordResponseSize := len(optIn) > 1 && optIn[1]
+
 	server := HTTPServer{
-    	recordRequestSize:  recordRequestSize,
-    	recordResponseSize: recordResponseSize,
+		recordRequestSize:  recordRequestSize,
+		recordResponseSize: recordResponseSize,
 	}
 
 	var err error

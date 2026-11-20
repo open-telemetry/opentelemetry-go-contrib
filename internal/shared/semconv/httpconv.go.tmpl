@@ -179,7 +179,7 @@ func (n CurrentHTTPServer) NetworkTransportAttr(network string) attribute.KeyVal
 	}
 }
 
-func (n CurrentHTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValue) {
+func (n CurrentHTTPServer) method(method string) (attribute.KeyValue, attribute.KeyValue) {
     if method == "" {
         return semconvNew.HTTPRequestMethodOther, attribute.KeyValue{}
     }
