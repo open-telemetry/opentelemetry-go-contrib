@@ -1,3 +1,4 @@
+// Deprecated: This package is no longer supported.
 module go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin
 
 go 1.26.0
