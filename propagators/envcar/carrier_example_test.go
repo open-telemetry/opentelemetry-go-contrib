@@ -79,8 +79,9 @@ func ExampleCarrier_childProcess() {
 		placeholders[entry] = true
 	}
 
-	// Environ applies os/exec's platform-specific duplicate-key rules.
-	// The placeholders replace matching entries and can then be removed.
+	// cmd.Environ() keeps the last entry for each variable name. On Windows,
+	// names match regardless of case, so TRACESTATE= replaces TraceState=old.
+	// Removing the placeholders then leaves those variables unset.
 	cmd.Env = slices.DeleteFunc(cmd.Environ(), func(entry string) bool {
 		return placeholders[entry]
 	})
