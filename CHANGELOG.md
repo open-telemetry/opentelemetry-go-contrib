@@ -73,6 +73,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Set the span status to `Error` and the `error.type` attribute when the handler returns an error in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#10355)
 - Fix response body size accounting for copies through `ReadFrom` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#10317)
 - Send the `Metadata` header as `true` instead of `True` in `go.opentelemetry.io/contrib/detectors/azure/azurevm`, as the Azure Instance Metadata Service rejects requests with `True`. (#10264)
 - Use the sampling endpoint in `go.opentelemetry.io/contrib/samplers/jaegerremote/example` so the example applies the remote sampling strategy. (#10089)

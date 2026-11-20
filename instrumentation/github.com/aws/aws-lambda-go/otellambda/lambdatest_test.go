@@ -6,6 +6,7 @@ package otellambda_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"reflect"
@@ -18,7 +19,9 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-lambda-go/lambdacontext"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -204,6 +207,67 @@ func TestWrapHandlerTracing(t *testing.T) {
 	assert.Len(t, memExporter.GetSpans(), 1)
 	stub := memExporter.GetSpans()[0]
 	assertStubEqualsIgnoreTime(t, expectedSpanStub, stub)
+}
+
+type failingHandler struct{ err error }
+
+func (h failingHandler) Invoke(context.Context, []byte) ([]byte, error) {
+	return nil, h.err
+}
+
+func TestInstrumentHandlerTracingError(t *testing.T) {
+	setEnvVars(t)
+	tp, memExporter := initMockTracerProvider()
+
+	handlerErr := errors.New("boom")
+	customerHandler := func() (string, error) {
+		return "", handlerErr
+	}
+
+	wrapped := otellambda.InstrumentHandler(customerHandler, otellambda.WithTracerProvider(tp))
+	resp := reflect.ValueOf(wrapped).Call([]reflect.Value{reflect.ValueOf(mockContext)})
+	assert.Len(t, resp, 2)
+	assert.Equal(t, handlerErr, resp[1].Interface())
+
+	require.Len(t, memExporter.GetSpans(), 1)
+	assertErrorSpan(t, memExporter.GetSpans()[0], handlerErr)
+}
+
+func TestInstrumentHandlerTracingErrorOnlyReturn(t *testing.T) {
+	setEnvVars(t)
+	tp, memExporter := initMockTracerProvider()
+
+	handlerErr := errors.New("boom")
+	customerHandler := func() error {
+		return handlerErr
+	}
+
+	wrapped := otellambda.InstrumentHandler(customerHandler, otellambda.WithTracerProvider(tp))
+	resp := reflect.ValueOf(wrapped).Call([]reflect.Value{reflect.ValueOf(mockContext)})
+	assert.Len(t, resp, 2)
+	assert.Equal(t, handlerErr, resp[1].Interface())
+
+	require.Len(t, memExporter.GetSpans(), 1)
+	assertErrorSpan(t, memExporter.GetSpans()[0], handlerErr)
+}
+
+func TestWrapHandlerTracingError(t *testing.T) {
+	setEnvVars(t)
+	tp, memExporter := initMockTracerProvider()
+
+	handlerErr := errors.New("boom")
+	wrapped := otellambda.WrapHandler(failingHandler{err: handlerErr}, otellambda.WithTracerProvider(tp))
+	_, err := wrapped.Invoke(mockContext, []byte{})
+	assert.Equal(t, handlerErr, err)
+
+	require.Len(t, memExporter.GetSpans(), 1)
+	assertErrorSpan(t, memExporter.GetSpans()[0], handlerErr)
+}
+
+func assertErrorSpan(t *testing.T, stub tracetest.SpanStub, handlerErr error) {
+	t.Helper()
+	assert.Equal(t, sdktrace.Status{Code: codes.Error, Description: handlerErr.Error()}, stub.Status)
+	assert.Contains(t, stub.Attributes, semconv.ErrorType(handlerErr))
 }
 
 type mockFlusher struct {
