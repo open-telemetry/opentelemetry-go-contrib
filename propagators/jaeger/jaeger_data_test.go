@@ -156,6 +156,31 @@ var extractHeaders = []extractTest{
 		},
 		false,
 	},
+	{
+		// Jaeger clients URL-encode the value when propagating over HTTP.
+		"url encoded",
+		map[string]string{
+			jaegerHeader: fmt.Sprintf("%s%%3A%s%%3A0%%3A1", traceID32Str, spanIDStr),
+		},
+		trace.SpanContextConfig{
+			TraceID:    traceID32,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
+		false,
+	},
+	{
+		"url encoded lower case",
+		map[string]string{
+			jaegerHeader: fmt.Sprintf("%s%%3a%s%%3a0%%3a3", traceID32Str, spanIDStr),
+		},
+		trace.SpanContextConfig{
+			TraceID:    traceID32,
+			SpanID:     spanID,
+			TraceFlags: trace.FlagsSampled,
+		},
+		true,
+	},
 }
 
 var invalidExtractHeaders = []extractTest{
@@ -193,6 +218,12 @@ var invalidExtractHeaders = []extractTest{
 		name: "invalid separator",
 		headers: map[string]string{
 			jaegerHeader: fmt.Sprintf("%s-%s-0-1", traceID32Str, spanIDStr),
+		},
+	},
+	{
+		name: "invalid url encoding",
+		headers: map[string]string{
+			jaegerHeader: fmt.Sprintf("%s%%3A%s%%3A0%%3A1%%zz", traceID32Str, spanIDStr),
 		},
 	},
 	{
