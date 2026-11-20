@@ -62,9 +62,14 @@ func TestRespWriterFlushWithError(t *testing.T) {
 	})
 
 	assert.ErrorIs(t, err, wantErr)
+	assert.ErrorIs(t, rw.Error(), wantErr)
 	assert.Equal(t, 1, flushCalls)
 	assert.Equal(t, http.StatusOK, rw.StatusCode())
 	assert.Equal(t, http.StatusOK, responseRecorder.Code)
+
+	err = rw.FlushWithError(func() error { return nil })
+	require.NoError(t, err)
+	assert.ErrorIs(t, rw.Error(), wantErr)
 }
 
 type nonFlushableResponseWriter struct{}
