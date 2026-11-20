@@ -229,15 +229,6 @@ func TestCarrierKeysReadsDirectly(t *testing.T) {
 	assert.Contains(t, c.Keys(), "ENVCAR_KEYS_FETCH_ONCE_NEW")
 }
 
-func TestDeleteEnvFieldsKeepsNonCanonicalName(t *testing.T) {
-	cmd := &exec.Cmd{Env: []string{"x-b3-traceid=keep", "X_B3_TRACEID=stale", "ENVCAR_KEEP_EMPTY="}}
-	deleteEnvFields(cmd, []string{"x-b3-traceid"})
-	assert.Contains(t, cmd.Env, "x-b3-traceid=keep")
-	assert.Contains(t, cmd.Env, "ENVCAR_KEEP_EMPTY=")
-	assert.NotContains(t, cmd.Env, "X_B3_TRACEID=stale")
-	assert.NotContains(t, cmd.Env, "X_B3_TRACEID=")
-}
-
 func TestConcurrentChildProcesses(t *testing.T) {
 	// Test that concurrent goroutines can each spawn child processes
 	// with their own unique trace context.

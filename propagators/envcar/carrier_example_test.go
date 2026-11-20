@@ -70,7 +70,20 @@ func ExampleCarrier_childProcess() {
 	// Clear inherited W3C trace context from the child's environment copy.
 	// Injection can omit TRACESTATE when the current trace state is empty.
 	prop := propagation.TraceContext{}
-	deleteEnvFields(cmd, prop.Fields())
+	cmd.Env = cmd.Environ()
+	fields := prop.Fields()
+	placeholders := make(map[string]bool, len(fields))
+	for _, field := range fields {
+		entry := envcar.NormalizeKey(field) + "="
+		cmd.Env = append(cmd.Env, entry)
+		placeholders[entry] = true
+	}
+
+	// Environ applies os/exec's platform-specific duplicate-key rules.
+	// The placeholders replace matching entries and can then be removed.
+	cmd.Env = slices.DeleteFunc(cmd.Environ(), func(entry string) bool {
+		return placeholders[entry]
+	})
 
 	// Create a carrier that injects trace context into the child
 	// process's environment rather than the current process's.
@@ -92,21 +105,4 @@ func ExampleCarrier_childProcess() {
 	}
 	fmt.Print(string(out))
 	// Output: 00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01
-}
-
-// deleteEnvFields removes entries for the propagator's fields from the child's environment.
-func deleteEnvFields(cmd *exec.Cmd, fields []string) {
-	cmd.Env = cmd.Environ()
-	placeholders := make(map[string]bool, len(fields))
-	for _, field := range fields {
-		entry := envcar.NormalizeKey(field) + "="
-		cmd.Env = append(cmd.Env, entry)
-		placeholders[entry] = true
-	}
-
-	// Environ applies os/exec's platform-specific duplicate-key rules.
-	// The placeholders replace matching entries and can then be removed.
-	cmd.Env = slices.DeleteFunc(cmd.Environ(), func(entry string) bool {
-		return placeholders[entry]
-	})
 }
