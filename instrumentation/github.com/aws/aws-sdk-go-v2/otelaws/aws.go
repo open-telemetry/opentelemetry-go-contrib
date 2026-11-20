@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
@@ -33,6 +34,7 @@ type otelMiddlewares struct {
 	tracer            trace.Tracer
 	propagator        propagation.TextMapPropagator
 	attributeBuilders []AttributeBuilder
+	metricRecorders   []MetricRecorder
 }
 
 func (otelMiddlewares) initializeMiddlewareBefore(stack *middleware.Stack) error {
@@ -61,9 +63,10 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 			RegionAttr(region),
 		}
 
+		start := ctx.Value(spanTimestampKey{}).(time.Time)
 		ctx, span := m.tracer.Start(
 			ctx, spanName(serviceID, operation),
-			trace.WithTimestamp(ctx.Value(spanTimestampKey{}).(time.Time)),
+			trace.WithTimestamp(start),
 			trace.WithSpanKind(trace.SpanKindClient),
 			trace.WithAttributes(attributes...),
 		)
@@ -74,6 +77,10 @@ func (m otelMiddlewares) initializeMiddlewareAfter(stack *middleware.Stack) erro
 		if err != nil {
 			span.SetAttributes(semconv.ErrorType(err))
 			span.SetStatus(codes.Error, err.Error())
+		}
+
+		for _, recorder := range m.metricRecorders {
+			recorder(ctx, in, out, err)
 		}
 
 		return out, metadata, err
@@ -145,6 +152,7 @@ func spanName(serviceID, operation string) string {
 func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Option) {
 	cfg := config{
 		TracerProvider:    otel.GetTracerProvider(),
+		MeterProvider:     otel.GetMeterProvider(),
 		TextMapPropagator: otel.GetTextMapPropagator(),
 	}
 	for _, opt := range opts {
@@ -155,11 +163,18 @@ func AppendMiddlewares(apiOptions *[]func(*middleware.Stack) error, opts ...Opti
 		cfg.AttributeBuilders = []AttributeBuilder{DefaultAttributeBuilder}
 	}
 
+	if cfg.MetricRecorders == nil {
+		meter := cfg.MeterProvider.Meter(ScopeName,
+			metric.WithInstrumentationVersion(Version))
+		cfg.MetricRecorders = []MetricRecorder{NewDefaultMetricRecorder(meter)}
+	}
+
 	m := otelMiddlewares{
 		tracer: cfg.TracerProvider.Tracer(ScopeName,
 			trace.WithInstrumentationVersion(Version)),
 		propagator:        cfg.TextMapPropagator,
 		attributeBuilders: cfg.AttributeBuilders,
+		metricRecorders:   cfg.MetricRecorders,
 	}
 	*apiOptions = append(*apiOptions, m.initializeMiddlewareBefore, m.initializeMiddlewareAfter, m.finalizeMiddlewareAfter, m.deserializeMiddleware)
 }
