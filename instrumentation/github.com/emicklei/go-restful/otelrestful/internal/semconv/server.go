@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -41,17 +40,29 @@ type HTTPServer struct {
 	requestBodySizeHistogram  httpconv.ServerRequestBodySize
 	responseBodySizeHistogram httpconv.ServerResponseBodySize
 	requestDurationHistogram  httpconv.ServerRequestDuration
+	recordRequestSize         bool
+	recordResponseSize        bool
 }
 
-func NewHTTPServer(meter metric.Meter) HTTPServer {
-	server := HTTPServer{}
+func NewHTTPServer(meter metric.Meter, optIn ...bool) HTTPServer {
+	recordRequestSize := len(optIn) > 0 && optIn[0]
+	recordResponseSize := len(optIn) > 1 && optIn[1]
+
+	server := HTTPServer{
+		recordRequestSize:  recordRequestSize,
+		recordResponseSize: recordResponseSize,
+	}
 
 	var err error
-	server.requestBodySizeHistogram, err = httpconv.NewServerRequestBodySize(meter)
-	handleErr(err)
+	if recordRequestSize {
+		server.requestBodySizeHistogram, err = httpconv.NewServerRequestBodySize(meter)
+		handleErr(err)
+	}
 
-	server.responseBodySizeHistogram, err = httpconv.NewServerResponseBodySize(meter)
-	handleErr(err)
+	if recordResponseSize {
+		server.responseBodySizeHistogram, err = httpconv.NewServerResponseBodySize(meter)
+		handleErr(err)
+	}
 
 	server.requestDurationHistogram, err = httpconv.NewServerRequestDuration(
 		meter,
@@ -61,6 +72,7 @@ func NewHTTPServer(meter metric.Meter) HTTPServer {
 		),
 	)
 	handleErr(err)
+
 	return server
 }
 
@@ -277,10 +289,10 @@ func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 	recordOpts := metricRecordOptionPool.Get().(*[]metric.RecordOption)
 	*recordOpts = append(*recordOpts, o)
-	if md.RequestSize >= 0 {
+	if md.RequestSize >= 0 && n.recordRequestSize {
 		n.requestBodySizeHistogram.Inst().Record(ctx, md.RequestSize, *recordOpts...)
 	}
-	if md.ResponseSize >= 0 {
+	if md.ResponseSize >= 0 && n.recordResponseSize {
 		n.responseBodySizeHistogram.Inst().Record(ctx, md.ResponseSize, *recordOpts...)
 	}
 	n.requestDurationHistogram.Inst().Record(ctx, durationToSeconds(md.RequestDuration), o)
@@ -294,7 +306,7 @@ func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 // or just "{method}" when no route is available.
 // Non-standard HTTP methods are replaced by "HTTP".
 func (HTTPServer) SpanName(r *http.Request) string {
-	method := strings.ToUpper(r.Method)
+	method := r.Method
 	if _, ok := methodLookup[method]; !ok {
 		method = "HTTP"
 	}
@@ -310,15 +322,12 @@ func (HTTPServer) method(method string) (attribute.KeyValue, attribute.KeyValue)
 	if method == "" {
 		return semconv.HTTPRequestMethodOther, attribute.KeyValue{}
 	}
+
 	if attr, ok := methodLookup[method]; ok {
 		return attr, attribute.KeyValue{}
 	}
 
-	orig := semconv.HTTPRequestMethodOriginal(method)
-	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
-		return attr, orig
-	}
-	return semconv.HTTPRequestMethodOther, orig
+	return semconv.HTTPRequestMethodOther, semconv.HTTPRequestMethodOriginal(method)
 }
 
 func (n HTTPServer) scheme(https bool) attribute.KeyValue { //nolint:revive // ignore linter
@@ -391,7 +400,7 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 		}
 	}
 	protoName, protoVersion := netProtocol(req.Proto)
-	if protoName != "" {
+	if protoName != "" && protoName != "http" {
 		num++
 	}
 	if protoVersion != "" {
@@ -419,7 +428,7 @@ func (n HTTPServer) MetricAttributes(server string, req *http.Request, statusCod
 	if hostPort > 0 {
 		attributes = append(attributes, semconv.ServerPort(hostPort))
 	}
-	if protoName != "" {
+	if protoName != "" && protoName != "http" {
 		attributes = append(attributes, semconv.NetworkProtocolName(protoName))
 	}
 	if protoVersion != "" {

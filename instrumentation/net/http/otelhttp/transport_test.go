@@ -351,7 +351,7 @@ func (s *recordingSampler) ShouldSample(p sdktrace.SamplingParameters) sdktrace.
 	}
 }
 
-func (s *recordingSampler) Description() string {
+func (*recordingSampler) Description() string {
 	return "recordingSampler"
 }
 

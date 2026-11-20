@@ -78,50 +78,51 @@ func TestStandardizeHTTPMethod(t *testing.T) {
 }
 
 func TestMethodLookupFromEnv(t *testing.T) {
-    tests := []struct {
-        name       string
-        methods    string
-        configured bool
-        want       []string
-    }{
-        {
-            name:       "default methods",
-            configured: false,
-            want:       []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE", "QUERY"},
-        },
-        {
-            name:       "custom methods replace defaults",
-            methods:    "FOO,BAR",
-            configured: true,
-            want:       []string{"FOO", "BAR"},
-        },
-        {
-            name:       "empty override",
-            methods:    "",
-            configured: true,
-            want:       []string{},
-        },
-        {
-            name:       "case sensitive methods",
-            methods:    "get,FOO",
-            configured: true,
-            want:       []string{"get", "FOO"},
-        },
-    }
+	tests := []struct {
+		name    string
+		methods []string
+		want    []string
+	}{
+		{
+			name:    "default methods",
+			methods: defaultKnownHTTPMethods,
+			want:    []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE", "QUERY"},
+		},
+		{
+			name:    "custom methods replace defaults",
+			methods: []string{"FOO", "BAR"},
+			want:    []string{"FOO", "BAR"},
+		},
+		{
+			name:    "empty override",
+			methods: []string{},
+			want:    []string{},
+		},
+		{
+			name:    "case sensitive methods",
+			methods: []string{"get", "FOO"},
+			want:    []string{"get", "FOO"},
+		},
+		{
+			name:    "empty entries are ignored",
+			methods: []string{"GET", "", "POST"},
+			want:    []string{"GET", "POST"},
+		},
+	}
 
-    for _, tt := range tests {
-        t.Run(tt.name, func(t *testing.T) {
-            got := methodLookupFromEnv(tt.methods, tt.configured)
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := methodLookupFromEnv(tt.methods)
 
-            if len(got) != len(tt.want) {
-                t.Fatalf("got %d methods, want %d", len(got), len(tt.want))
-            }
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %d methods, want %d", len(got), len(tt.want))
+			}
 
-            for _, method := range tt.want {
-                if _, ok := got[method]; !ok {
-                    t.Errorf("expected method %q in lookup", method)
-                }
-            }
-        })
-    }
+			for _, method := range tt.want {
+				if _, ok := got[method]; !ok {
+					t.Errorf("expected method %q in lookup", method)
+				}
+			}
+		})
+	}
 }
