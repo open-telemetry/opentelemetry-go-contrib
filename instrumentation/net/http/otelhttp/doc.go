@@ -1,6 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package otelhttp provides an http.Handler and functions that are intended
-// to be used to add tracing by wrapping existing handlers.
+// Package otelhttp provides tracing and metrics instrumentation for HTTP servers
+// and clients. Use [NewHandler] or [NewMiddleware] for servers and [NewTransport]
+// for clients.
 package otelhttp
