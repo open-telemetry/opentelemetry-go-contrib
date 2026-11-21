@@ -4,14 +4,20 @@
 package otelhttp_test
 
 import (
+	"context"
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/http/httptrace"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/metric/noop"
+	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
+	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 )
@@ -224,4 +230,42 @@ func TestWithServerName(t *testing.T) {
 			assert.True(t, found, "server.address attribute not found in span attributes")
 		})
 	}
+}
+
+func TestOptionTypes(t *testing.T) {
+	sharedOpts := []otelhttp.Option{
+		otelhttp.WithTracerProvider(trace.NewTracerProvider()),
+		otelhttp.WithMeterProvider(noop.NewMeterProvider()),
+		otelhttp.WithPropagators(propagation.NewCompositeTextMapPropagator()),
+		otelhttp.WithSpanOptions(oteltrace.WithSpanKind(oteltrace.SpanKindInternal)),
+		otelhttp.WithFilter(func(*http.Request) bool { return true }),
+		otelhttp.WithSpanNameFormatter(func(op string, _ *http.Request) string { return op }),
+		otelhttp.WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue { return nil }),
+	}
+
+	handlerOpts := []otelhttp.HandlerOption{
+		otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return false }),
+		otelhttp.WithMessageEvents(otelhttp.ReadEvents),
+		otelhttp.WithServerName("example.com"),
+		otelhttp.WithRouteTracking(),
+	}
+	for _, opt := range sharedOpts {
+		handlerOpts = append(handlerOpts, opt)
+	}
+
+	transportOpts := []otelhttp.TransportOption{
+		otelhttp.WithClientTrace(func(context.Context) *httptrace.ClientTrace { return nil }),
+	}
+	for _, opt := range sharedOpts {
+		transportOpts = append(transportOpts, opt)
+	}
+
+	h := otelhttp.NewHandler(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}), "op", handlerOpts...)
+	assert.NotNil(t, h)
+
+	mw := otelhttp.NewMiddleware("op", handlerOpts...)
+	assert.NotNil(t, mw)
+
+	tr := otelhttp.NewTransport(http.DefaultTransport, transportOpts...)
+	assert.NotNil(t, tr)
 }
