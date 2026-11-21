@@ -41,27 +41,40 @@ type HTTPServer struct {
 	requestBodySizeHistogram  httpconv.ServerRequestBodySize
 	responseBodySizeHistogram httpconv.ServerResponseBodySize
 	requestDurationHistogram  httpconv.ServerRequestDuration
+    recordRequestSize  bool
+    recordResponseSize bool
 }
 
-func NewHTTPServer(meter metric.Meter) HTTPServer {
-	server := HTTPServer{}
+func NewHTTPServer(meter metric.Meter, optIn ...bool) HTTPServer {
+    recordRequestSize := len(optIn) > 0 && optIn[0]
+    recordResponseSize := len(optIn) > 1 && optIn[1]
 
-	var err error
-	server.requestBodySizeHistogram, err = httpconv.NewServerRequestBodySize(meter)
-	handleErr(err)
+    server := HTTPServer{
+        recordRequestSize:  recordRequestSize,
+        recordResponseSize: recordResponseSize,
+    }
 
-	server.responseBodySizeHistogram, err = httpconv.NewServerResponseBodySize(meter)
-	handleErr(err)
+    var err error
+    if recordRequestSize {
+        server.requestBodySizeHistogram, err = httpconv.NewServerRequestBodySize(meter)
+        handleErr(err)
+    }
 
-	server.requestDurationHistogram, err = httpconv.NewServerRequestDuration(
-		meter,
-		metric.WithExplicitBucketBoundaries(
-			0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
-			0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
-		),
-	)
-	handleErr(err)
-	return server
+    if recordResponseSize {
+        server.responseBodySizeHistogram, err = httpconv.NewServerResponseBodySize(meter)
+        handleErr(err)
+    }
+
+    server.requestDurationHistogram, err = httpconv.NewServerRequestDuration(
+        meter,
+        metric.WithExplicitBucketBoundaries(
+            0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
+            0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
+        ),
+    )
+    handleErr(err)
+
+    return server
 }
 
 // Status returns a span status code and message for an HTTP status code
@@ -277,10 +290,10 @@ func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 	o := metric.WithAttributeSet(attribute.NewSet(attributes...))
 	recordOpts := metricRecordOptionPool.Get().(*[]metric.RecordOption)
 	*recordOpts = append(*recordOpts, o)
-	if md.RequestSize >= 0 {
+	if md.RequestSize >= 0 && n.recordRequestSize {
 		n.requestBodySizeHistogram.Inst().Record(ctx, md.RequestSize, *recordOpts...)
 	}
-	if md.ResponseSize >= 0 {
+	if md.ResponseSize >= 0 && n.recordResponseSize {
 		n.responseBodySizeHistogram.Inst().Record(ctx, md.ResponseSize, *recordOpts...)
 	}
 	n.requestDurationHistogram.Inst().Record(ctx, durationToSeconds(md.RequestDuration), o)

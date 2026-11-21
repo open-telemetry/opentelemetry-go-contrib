@@ -904,6 +904,7 @@ func TestWithHTTPTrace(t *testing.T) {
 }
 
 func TestTransportMetrics(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	requestBody := []byte("john")
 	responseBody := []byte("Hello, world!")
 
@@ -1118,6 +1119,7 @@ func TestTransportMetrics(t *testing.T) {
 }
 
 func TestTransportMetricsReportFinalRequestBodySize(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
@@ -1195,6 +1197,7 @@ func TestTransportMetricsReportFinalRequestBodySize(t *testing.T) {
 }
 
 func TestTransportMetricsReportFinalRequestBodySizeUnknownLength(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
@@ -1272,6 +1275,7 @@ func TestTransportMetricsReportFinalRequestBodySizeUnknownLength(t *testing.T) {
 }
 
 func TestTransportMetricsRecordedBeforeResponseBodyFinalized(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
@@ -1323,6 +1327,7 @@ func (tr *errAsyncBodyCloseTransport) RoundTrip(r *http.Request) (*http.Response
 }
 
 func TestTransportErrorReportsFinalRequestBodySize(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
@@ -1382,6 +1387,7 @@ func (tr *overDeclaredBodyTransport) RoundTrip(r *http.Request) (*http.Response,
 }
 
 func TestTransportMetricsReportActualSizeOverDeclaredContentLength(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
@@ -1456,6 +1462,7 @@ func (asyncBlockedCloseTransport) RoundTrip(r *http.Request) (*http.Response, er
 }
 
 func TestTransportMetricsRecordedWhenRequestBodyCloseBlocks(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
@@ -1510,6 +1517,7 @@ func (tr bodyReplayingTransport) RoundTrip(r *http.Request) (*http.Response, err
 }
 
 func TestTransportMetricsRecordedWhenRequestBodyDrainedWithoutClose(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
@@ -1937,6 +1945,7 @@ func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs at
 }
 
 func TestCustomAttributesHandling(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	var rm metricdata.ResourceMetrics
 	const (
 		clientRequestSize = "http.client.request.size"
@@ -2001,6 +2010,7 @@ func TestCustomAttributesHandling(t *testing.T) {
 }
 
 func TestMetricsExistenceOnRequestError(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	var rm metricdata.ResourceMetrics
 
 	ctx := t.Context()
@@ -2038,6 +2048,7 @@ func TestMetricsExistenceOnRequestError(t *testing.T) {
 }
 
 func TestDefaultAttributesHandling(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	var rm metricdata.ResourceMetrics
 	const (
 		clientRequestSize = "http.client.request.size"
@@ -2262,6 +2273,7 @@ func TestHandleErrorOnGetBodyError(t *testing.T) {
 }
 
 func TestTransportErrorTypeMetricAttribute(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "http.client.request.body.size")
 	ctx := t.Context()
 	reader := sdkmetric.NewManualReader()
 	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
@@ -2314,5 +2326,58 @@ func TestTransportErrorTypeMetricAttribute(t *testing.T) {
 		// specific named type is recorded rather than the generic "_OTHER" fallback.
 		assert.NotEmpty(t, errorTypeVal.AsString())
 		assert.NotEqual(t, "_OTHER", errorTypeVal.AsString())
+	}
+}
+
+func TestTransportRequestBodySizeMetricOptIn(t *testing.T) {
+	tests := []struct {
+		name     string
+		optIn    string
+		wantSize bool
+	}{
+		{
+			name: "disabled by default",
+		},
+		{
+			name:     "enabled",
+			optIn:    "http.client.request.body.size",
+			wantSize: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", tt.optIn)
+
+			reader := sdkmetric.NewManualReader()
+			provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = io.Copy(io.Discard, r.Body)
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
+
+			transport := NewTransport(http.DefaultTransport, WithMeterProvider(provider))
+			client := http.Client{Transport: transport}
+
+			req, err := http.NewRequestWithContext(
+				t.Context(),
+				http.MethodPost,
+				server.URL,
+				strings.NewReader("request body"),
+			)
+			require.NoError(t, err)
+
+			resp, err := client.Do(req)
+			require.NoError(t, err)
+			require.NoError(t, resp.Body.Close())
+
+			var rm metricdata.ResourceMetrics
+			require.NoError(t, reader.Collect(t.Context(), &rm))
+
+			assertMetricPresence(t, rm, "http.client.request.body.size", tt.wantSize)
+			assertMetricPresence(t, rm, "http.client.request.duration", true)
+		})
 	}
 }
