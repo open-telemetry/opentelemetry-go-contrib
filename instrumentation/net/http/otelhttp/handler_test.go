@@ -1111,9 +1111,15 @@ func TestHandlerBodySizeMetricsOptIn(t *testing.T) {
 
 			handler := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				_, err := io.Copy(io.Discard, r.Body)
-				require.NoError(t, err)
+				if err != nil {
+					t.Errorf("failed to read request body: %v", err)
+					return
+				}
+
 				_, err = io.WriteString(w, "response")
-				require.NoError(t, err)
+				if err != nil {
+					t.Errorf("failed to write response: %v", err)
+				}
 			}), "test", WithMeterProvider(provider))
 
 			req := httptest.NewRequestWithContext(
