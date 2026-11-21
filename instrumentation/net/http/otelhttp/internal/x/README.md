@@ -9,6 +9,7 @@ change in backwards incompatible ways as feedback is applied.
 ## Features
 
 - [Include Opt-In Metrics](#include-opt-in-metrics)
+- [Known HTTP Methods](#known-http-methods)
 
 ### Include Opt-In Metrics
 
