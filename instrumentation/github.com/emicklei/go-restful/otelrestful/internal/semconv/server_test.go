@@ -448,20 +448,20 @@ func TestRequestTraceAttrs_URLQuery(t *testing.T) {
 }
 
 func TestHTTPServer_MetricAttributes_NonHTTPProtocol(t *testing.T) {
-    req := httptest.NewRequestWithContext(
-        t.Context(), http.MethodGet,
-        "http://example.com/path", http.NoBody,
-    )
-    req.Proto = "SPDY/3.1"
+	req := httptest.NewRequestWithContext(
+		t.Context(), http.MethodGet,
+		"http://example.com/path", http.NoBody,
+	)
+	req.Proto = "SPDY/3.1"
 
-    got := HTTPServer{}.MetricAttributes("", req, 200, "", nil)
+	got := HTTPServer{}.MetricAttributes("", req, 200, "", nil)
 
-    require.Len(t, got, 5)
-    assert.ElementsMatch(t, []attribute.KeyValue{
-        attribute.String("http.request.method", "GET"),
-        attribute.String("url.scheme", "http"),
-        attribute.String("network.protocol.name", "spdy"),
-        attribute.String("network.protocol.version", "3.1"),
-        attribute.Int64("http.response.status_code", 200),
-    }, got)
+	require.Len(t, got, 5)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		attribute.String("http.request.method", "GET"),
+		attribute.String("url.scheme", "http"),
+		attribute.String("network.protocol.name", "spdy"),
+		attribute.String("network.protocol.version", "3.1"),
+		attribute.Int64("http.response.status_code", 200),
+	}, got)
 }

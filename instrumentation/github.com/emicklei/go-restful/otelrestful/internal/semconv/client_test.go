@@ -414,22 +414,22 @@ func TestHTTPClientNewMethod(t *testing.T) {
 }
 
 func TestHTTPClient_MetricAttributes_NonHTTPProtocol(t *testing.T) {
-    req, err := http.NewRequestWithContext(
-        t.Context(), http.MethodGet,
-        "http://example.com/path", http.NoBody,
-    )
-    require.NoError(t, err)
+	req, err := http.NewRequestWithContext(
+		t.Context(), http.MethodGet,
+		"http://example.com/path", http.NoBody,
+	)
+	require.NoError(t, err)
 
-    resp := &http.Response{Proto: "SPDY/3.1"}
-    got := HTTPClient{}.MetricAttributes(req, resp, 200, nil)
+	resp := &http.Response{Proto: "SPDY/3.1"}
+	got := HTTPClient{}.MetricAttributes(req, resp, 200, nil)
 
-    require.Len(t, got, 6)
-    assert.ElementsMatch(t, []attribute.KeyValue{
-        attribute.String("http.request.method", "GET"),
-        attribute.String("server.address", "example.com"),
-        attribute.String("url.scheme", "http"),
-        attribute.String("network.protocol.name", "spdy"),
-        attribute.String("network.protocol.version", "3.1"),
-        attribute.Int64("http.response.status_code", 200),
-    }, got)
+	require.Len(t, got, 6)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		attribute.String("http.request.method", "GET"),
+		attribute.String("server.address", "example.com"),
+		attribute.String("url.scheme", "http"),
+		attribute.String("network.protocol.name", "spdy"),
+		attribute.String("network.protocol.version", "3.1"),
+		attribute.Int64("http.response.status_code", 200),
+	}, got)
 }
