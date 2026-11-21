@@ -27,9 +27,9 @@ import (
 )
 
 type HTTPClient struct {
-	requestBodySize   httpconv.ClientRequestBodySize
-	requestDuration   httpconv.ClientRequestDuration
-	activeRequests    httpconv.ClientActiveRequests
+	requestBodySize       httpconv.ClientRequestBodySize
+	requestDuration       httpconv.ClientRequestDuration
+	activeRequests        httpconv.ClientActiveRequests
 	recordRequestBodySize bool
 }
 
