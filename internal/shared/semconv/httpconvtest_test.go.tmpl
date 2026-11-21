@@ -558,7 +558,9 @@ func TestNewClientRecordMetrics(t *testing.T) {
 		{
 			name: "With Meter",
 			clientFunc: func(mp metric.MeterProvider) semconv.HTTPClient {
-				return semconv.NewHTTPClient(mp.Meter("test"), true)
+				return semconv.NewHTTPClient(mp.Meter("test"), semconv.HTTPClientOptions{
+					RecordRequestBodySize: true,
+				})
 			},
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				require.Len(t, rm.ScopeMetrics, 1)

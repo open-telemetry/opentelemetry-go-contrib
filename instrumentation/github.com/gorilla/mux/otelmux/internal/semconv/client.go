@@ -30,14 +30,23 @@ type HTTPClient struct {
 	requestBodySize   httpconv.ClientRequestBodySize
 	requestDuration   httpconv.ClientRequestDuration
 	activeRequests    httpconv.ClientActiveRequests
-	recordRequestSize bool
+	recordRequestBodySize bool
 }
 
-func NewHTTPClient(meter metric.Meter, optIn ...bool) HTTPClient {
-	recordRequestSize := len(optIn) > 0 && optIn[0]
-	client := HTTPClient{recordRequestSize: recordRequestSize}
+// HTTPClientOptions configures optional HTTP client metric behavior.
+type HTTPClientOptions struct {
+	RecordRequestBodySize bool
+}
 
-	if recordRequestSize {
+func NewHTTPClient(meter metric.Meter, opts ...HTTPClientOptions) HTTPClient {
+	var options HTTPClientOptions
+	if len(opts) > 0 {
+		options = opts[0]
+	}
+
+	client := HTTPClient{recordRequestBodySize: options.RecordRequestBodySize}
+
+	if options.RecordRequestBodySize {
 		var err error
 		client.requestBodySize, err = httpconv.NewClientRequestBodySize(meter)
 		handleErr(err)
@@ -396,7 +405,7 @@ func (n HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts Metri
 	}()
 	*recordOpts = append(*recordOpts, opts.MeasurementOption())
 
-	if n.recordRequestSize {
+	if n.recordRequestBodySize {
 		n.requestBodySize.Inst().Record(ctx, md.RequestSize, *recordOpts...)
 	}
 	n.requestDuration.Inst().Record(ctx, durationToSeconds(md.RequestDuration), *recordOpts...)
