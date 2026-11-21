@@ -65,7 +65,7 @@ var _ http.RoundTripper = &transport{}
 //
 // A request is counted from the start of RoundTrip until the base
 // [http.RoundTripper] returns. This feature is experimental and may change.
-func NewTransport(base http.RoundTripper, opts ...Option) http.RoundTripper {
+func NewTransport(base http.RoundTripper, opts ...TransportOption) http.RoundTripper {
 	if base == nil {
 		base = http.DefaultTransport
 	}
@@ -74,18 +74,18 @@ func NewTransport(base http.RoundTripper, opts ...Option) http.RoundTripper {
 		rt: base,
 	}
 
-	defaultOpts := []Option{
+	defaultOpts := []TransportOption{
 		WithSpanOptions(trace.WithSpanKind(trace.SpanKindClient)),
 		WithSpanNameFormatter(defaultTransportFormatter),
 	}
 
-	c := newConfig(append(defaultOpts, opts...)...)
+	c := newTransportConfig(append(defaultOpts, opts...)...)
 	t.applyConfig(c)
 
 	return &t
 }
 
-func (t *transport) applyConfig(c *config) {
+func (t *transport) applyConfig(c *transportConfig) {
 	t.tracer = c.Tracer
 	t.propagators = c.Propagators
 	t.spanStartOptions = c.SpanStartOptions
