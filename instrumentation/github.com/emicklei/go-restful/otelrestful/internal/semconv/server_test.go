@@ -130,38 +130,41 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 }
 
 func TestNewMethod(t *testing.T) {
-	testCases := []struct {
+	tests := []struct {
 		method   string
-		n        int
 		want     attribute.KeyValue
 		wantOrig attribute.KeyValue
 	}{
 		{
 			method: http.MethodPost,
-			n:      1,
 			want:   attribute.String("http.request.method", "POST"),
 		},
 		{
-			method:   "",
-			n:        2,
-			want:     attribute.String("http.request.method", "_OTHER"),
-			wantOrig: attribute.KeyValue{},
+			method: "QUERY",
+			want:   attribute.String("http.request.method", "QUERY"),
+		},
+		{
+			method: "",
+			want:   attribute.String("http.request.method", "_OTHER"),
 		},
 		{
 			method:   "Put",
-			n:        3,
-			want:     attribute.String("http.request.method", "PUT"),
+			want:     attribute.String("http.request.method", "_OTHER"),
 			wantOrig: attribute.String("http.request.method_original", "Put"),
 		},
 		{
+			method:   "get",
+			want:     attribute.String("http.request.method", "_OTHER"),
+			wantOrig: attribute.String("http.request.method_original", "get"),
+		},
+		{
 			method:   "Unknown",
-			n:        4,
 			want:     attribute.String("http.request.method", "_OTHER"),
 			wantOrig: attribute.String("http.request.method_original", "Unknown"),
 		},
 	}
 
-	for _, tt := range testCases {
+	for _, tt := range tests {
 		t.Run(tt.method, func(t *testing.T) {
 			got, gotOrig := HTTPServer{}.method(tt.method)
 			assert.Equal(t, tt.want, got)
@@ -292,6 +295,16 @@ func TestHTTPServer_SpanName(t *testing.T) {
 			method:   http.MethodGet,
 			pattern:  "example.com/foo/{id}",
 			wantName: "GET /foo/{id}",
+		},
+		{
+			name:     "query method",
+			method:   "QUERY",
+			wantName: "QUERY",
+		},
+		{
+			name:     "lowercase method is not recognized",
+			method:   "get",
+			wantName: "HTTP",
 		},
 		{
 			name:     "nonstandard method, no pattern",

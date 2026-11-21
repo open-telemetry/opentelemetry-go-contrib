@@ -112,6 +112,7 @@ var methodLookup = map[string]attribute.KeyValue{
 	http.MethodPost:    semconvNew.HTTPRequestMethodPost,
 	http.MethodPut:     semconvNew.HTTPRequestMethodPut,
 	http.MethodTrace:   semconvNew.HTTPRequestMethodTrace,
+	"QUERY":             semconvNew.HTTPRequestMethodKey.String("QUERY"),
 }
 
 func handleErr(err error) {
@@ -121,13 +122,10 @@ func handleErr(err error) {
 }
 
 func standardizeHTTPMethod(method string) string {
-	method = strings.ToUpper(method)
-	switch method {
-	case http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace:
-	default:
-		method = "_OTHER"
+	if _, ok := methodLookup[method]; ok {
+		return method
 	}
-	return method
+	return "_OTHER"
 }
 
 func durationToSeconds(d time.Duration) float64 {

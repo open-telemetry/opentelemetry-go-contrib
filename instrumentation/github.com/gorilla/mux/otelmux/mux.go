@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/felixge/httpsnoop"
@@ -100,6 +99,7 @@ var validMethods = map[string]struct{}{
 	http.MethodConnect: {},
 	http.MethodOptions: {},
 	http.MethodTrace:   {},
+	"QUERY":            {},
 }
 
 // defaultSpanNameFunc returns the semconv based default span name.
@@ -107,10 +107,9 @@ func defaultSpanNameFunc(routeName string, r *http.Request) string {
 	return normalizeMethod(r.Method, "HTTP") + " " + routeName
 }
 
-// normalizeMethod returns the upper-cased m if it is a known HTTP method,
-// otherwise fallback. Upper-casing matches how http.request.method is recorded.
+// normalizeMethod returns m if it is a known HTTP method,
+// otherwise fallback.
 func normalizeMethod(m, fallback string) string {
-	m = strings.ToUpper(m)
 	if _, ok := validMethods[m]; !ok {
 		return fallback
 	}

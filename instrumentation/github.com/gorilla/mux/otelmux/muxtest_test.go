@@ -170,8 +170,8 @@ func TestSDKIntegration(t *testing.T) {
 			method:       "post",
 			path:         "/book/foo",
 			reqFunc:      nil,
-			wantSpanName: "POST /book/{title}",
-			wantMethod:   http.MethodPost,
+			wantSpanName: "HTTP /book/{title}",
+			wantMethod:   "_OTHER",
 			wantRoute:    "/book/{title}",
 		},
 		{
@@ -450,9 +450,9 @@ func TestRouteNotFoundMetricAttributesUseNormalizedMethod(t *testing.T) {
 		{
 			name:       "lowercase",
 			methods:    []string{"get"},
-			wantMethod: http.MethodGet,
-			wantRoute:  "HTTP GET route not found",
-			wantSpan:   "GET HTTP GET route not found",
+			wantMethod: "_OTHER",
+			wantRoute:  "HTTP _OTHER route not found",
+			wantSpan:   "HTTP HTTP _OTHER route not found",
 		},
 		{
 			name: "non-standard",
