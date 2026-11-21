@@ -207,6 +207,25 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 	}
 }
 
+func TestHTTPClient_MetricOptions_ErrorStatusCode(t *testing.T) {
+	req, err := http.NewRequestWithContext(
+		t.Context(),
+		http.MethodGet,
+		"http://example.com/path",
+		http.NoBody,
+	)
+	require.NoError(t, err)
+
+	opts := HTTPClient{}.MetricOptions(MetricAttributes{
+		Req:        req,
+		StatusCode: http.StatusInternalServerError,
+	})
+
+	got := metric.NewAddConfig([]metric.AddOption{opts.AddOptions()}).Attributes()
+
+	assert.Contains(t, got.ToSlice(), attribute.String("error.type", "500"))
+}
+
 func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 	tests := []struct {
 		name       string
