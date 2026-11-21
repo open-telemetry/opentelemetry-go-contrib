@@ -5,5 +5,7 @@ exclude_path = [
 
 exclude = [
   "https://compute\\.googleapis\\.com.*",
-  "https://www\\.googleapis\\.com.*"
+  "https://www\\.googleapis\\.com.*",
+  "https://bucket\\.s3\\.amazonaws\\.com/key\\?.*",
+  "https://storage\\.googleapis\\.com/bucket/object\\?.*"
 ]

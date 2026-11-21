@@ -289,7 +289,7 @@ func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, sta
 		proto = resp.Proto
 	}
 	protoName, protoVersion := netProtocol(proto)
-	if protoName != "" {
+	if protoName != "" && protoName != "http" {
 		num++
 	}
 	if protoVersion != "" {
@@ -311,7 +311,7 @@ func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, sta
 	if port > 0 {
 		attributes = append(attributes, semconv.ServerPort(port))
 	}
-	if protoName != "" {
+	if protoName != "" && protoName != "http" {
 		attributes = append(attributes, semconv.NetworkProtocolName(protoName))
 	}
 	if protoVersion != "" {
