@@ -121,6 +121,52 @@ func TestLogProcessorOnEmit(t *testing.T) {
 	}
 }
 
+func TestLogProcessorOverwritesRecordAttributesByDefault(t *testing.T) {
+	want := []attribute.KeyValue{
+		attribute.String("user.id", "bob"),
+		attribute.String("baggage.test", "baggage value"),
+	}
+	got := emitRecordWithUserID(t, NewLogProcessor(AllowAllMembers))
+	assert.ElementsMatch(t, want, got)
+}
+
+func TestLogProcessorKeepsRecordAttributes(t *testing.T) {
+	want := []attribute.KeyValue{
+		attribute.String("user.id", "alice"),
+		attribute.String("baggage.test", "baggage value"),
+	}
+	got := emitRecordWithUserID(t, NewLogProcessor(AllowAllMembers, WithOverwriteExistingAttributes(false)))
+	assert.ElementsMatch(t, want, got)
+}
+
+// emitRecordWithUserID emits a record that already has a user.id attribute, in
+// a context carrying baggage with the same key, and returns the attributes the
+// next processor sees.
+func emitRecordWithUserID(t *testing.T, proc *LogProcessor) []attribute.KeyValue {
+	b, _ := baggage.New()
+	b = addEntryToBaggage(t, b, "user.id", "bob")
+	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
+	ctx := baggage.ContextWithBaggage(t.Context(), b)
+
+	wrapped := &processor{}
+	lp := log.NewLoggerProvider(
+		log.WithProcessor(proc),
+		log.WithProcessor(wrapped),
+	)
+
+	var r api.Record
+	r.AddAttributes(attribute.String("user.id", "alice"))
+	lp.Logger("test").Emit(ctx, r)
+
+	require.Len(t, wrapped.records, 1)
+	var got []attribute.KeyValue
+	wrapped.records[0].WalkAttributes(func(kv attribute.KeyValue) bool {
+		got = append(got, kv)
+		return true
+	})
+	return got
+}
+
 func TestZeroLogProcessorNoPanic(t *testing.T) {
 	lp := new(LogProcessor)
 

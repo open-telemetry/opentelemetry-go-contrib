@@ -15,6 +15,7 @@ import (
 // members onto a log as attributes.
 type LogProcessor struct {
 	filter Filter
+	config config
 }
 
 var _ log.Processor = (*LogProcessor)(nil)
@@ -26,9 +27,13 @@ var _ log.Processor = (*LogProcessor)(nil)
 // The passed filter determines which baggage members are added to the span.
 //
 // If filter is nil, all baggage members will be added.
-func NewLogProcessor(filter Filter) *LogProcessor {
+//
+// A baggage member overwrites an attribute of the same key already set on the
+// log record unless [WithOverwriteExistingAttributes] is passed false.
+func NewLogProcessor(filter Filter, opts ...Option) *LogProcessor {
 	return &LogProcessor{
 		filter: filter,
+		config: newConfig(opts),
 	}
 }
 
@@ -47,12 +52,25 @@ func (processor LogProcessor) OnEmit(ctx context.Context, record *log.Record) er
 	}
 
 	for _, member := range baggage.FromContext(ctx).Members() {
-		if filter(member) {
-			record.AddAttributes(attribute.String(member.Key(), member.Value()))
+		if !filter(member) {
+			continue
 		}
+		if processor.config.keepExisting && hasAttribute(record, attribute.Key(member.Key())) {
+			continue
+		}
+		record.AddAttributes(attribute.String(member.Key(), member.Value()))
 	}
 
 	return nil
+}
+
+func hasAttribute(record *log.Record, key attribute.Key) bool {
+	var found bool
+	record.WalkAttributes(func(kv attribute.KeyValue) bool {
+		found = kv.Key == key
+		return !found
+	})
+	return found
 }
 
 // Shutdown is called when the [log.Processor] is shutting down and is a no-op for this processor.

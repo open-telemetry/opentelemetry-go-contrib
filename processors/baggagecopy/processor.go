@@ -5,6 +5,7 @@ package baggagecopy
 
 import (
 	"context"
+	"slices"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/baggage"
@@ -21,6 +22,7 @@ var AllowAllMembers Filter = func(baggage.Member) bool { return true }
 // members onto a span as attributes.
 type SpanProcessor struct {
 	filter Filter
+	config config
 }
 
 var _ trace.SpanProcessor = (*SpanProcessor)(nil)
@@ -32,9 +34,13 @@ var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 // The passed filter determines which baggage members are added to the span.
 //
 // If filter is nil, all baggage members will be added.
-func NewSpanProcessor(filter Filter) *SpanProcessor {
+//
+// A baggage member overwrites an attribute of the same key the span was
+// started with unless [WithOverwriteExistingAttributes] is passed false.
+func NewSpanProcessor(filter Filter, opts ...Option) *SpanProcessor {
 	return &SpanProcessor{
 		filter: filter,
+		config: newConfig(opts),
 	}
 }
 
@@ -45,10 +51,25 @@ func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWrite
 		filter = AllowAllMembers
 	}
 
-	for _, member := range baggage.FromContext(ctx).Members() {
-		if filter(member) {
-			span.SetAttributes(attribute.String(member.Key(), member.Value()))
+	members := baggage.FromContext(ctx).Members()
+	if len(members) == 0 {
+		return
+	}
+
+	var existing []attribute.KeyValue
+	if processor.config.keepExisting {
+		existing = span.Attributes()
+	}
+
+	for _, member := range members {
+		if !filter(member) {
+			continue
 		}
+		key := attribute.Key(member.Key())
+		if slices.ContainsFunc(existing, func(kv attribute.KeyValue) bool { return kv.Key == key }) {
+			continue
+		}
+		span.SetAttributes(attribute.String(member.Key(), member.Value()))
 	}
 }
 
