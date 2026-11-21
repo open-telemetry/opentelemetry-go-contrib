@@ -339,9 +339,7 @@ func (o MetricOpts) AddOptions() metric.AddOption {
 
 func (n HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
 	attributes := n.MetricAttributes(ma.Req, ma.Resp, ma.StatusCode, ma.AdditionalAttributes)
-	if ma.StatusCode != 0 && isErrorStatusCode(ma.StatusCode) {
-		attributes = append(attributes, semconv.ErrorTypeKey.String(strconv.Itoa(ma.StatusCode)))
-	} else if ma.StatusCode == 0 && ma.Err != nil {
+	if ma.StatusCode == 0 && ma.Err != nil {
 		attributes = append(attributes, n.ErrorType(ma.Err))
 	}
 	set := metric.WithAttributeSet(attribute.NewSet(attributes...))
