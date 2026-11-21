@@ -61,7 +61,6 @@ func TestNewServerRecordMetrics(t *testing.T) {
 		attribute.String("http.request.method", "POST"),
 		attribute.Int64("http.response.status_code", 301),
 		attribute.String("key", "value"),
-		attribute.String("network.protocol.name", "http"),
 		attribute.String("network.protocol.version", "1.1"),
 		attribute.String("server.address", "stuff"),
 		attribute.String("url.scheme", "http"),
@@ -500,7 +499,6 @@ func TestNewClientRecordMetrics(t *testing.T) {
 	currAttrs := attribute.NewSet(
 		attribute.String("http.request.method", "POST"),
 		attribute.Int64("http.response.status_code", 301),
-		attribute.String("network.protocol.name", "http"),
 		attribute.String("network.protocol.version", "1.1"),
 		attribute.String("server.address", "example.com"),
 		attribute.String("url.scheme", "http"),

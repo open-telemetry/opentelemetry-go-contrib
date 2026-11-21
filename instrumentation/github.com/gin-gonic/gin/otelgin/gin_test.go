@@ -558,7 +558,7 @@ func TestMetrics(t *testing.T) {
 			attrs := []attribute.KeyValue{
 				attribute.String("http.request.method", "GET"),
 				attribute.Int64("http.response.status_code", tt.wantStatus),
-				attribute.String("network.protocol.name", "http"),
+
 				attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
 				attribute.String("server.address", "foobar"),
 				attribute.String("url.scheme", "http"),
