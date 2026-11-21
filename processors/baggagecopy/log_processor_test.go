@@ -121,7 +121,28 @@ func TestLogProcessorOnEmit(t *testing.T) {
 	}
 }
 
-func TestLogProcessorDoesNotOverwriteRecordAttributes(t *testing.T) {
+func TestLogProcessorOverwritesRecordAttributesByDefault(t *testing.T) {
+	want := []attribute.KeyValue{
+		attribute.String("user.id", "bob"),
+		attribute.String("baggage.test", "baggage value"),
+	}
+	got := emitRecordWithUserID(t, NewLogProcessor(AllowAllMembers))
+	assert.ElementsMatch(t, want, got)
+}
+
+func TestLogProcessorKeepsRecordAttributes(t *testing.T) {
+	want := []attribute.KeyValue{
+		attribute.String("user.id", "alice"),
+		attribute.String("baggage.test", "baggage value"),
+	}
+	got := emitRecordWithUserID(t, NewLogProcessor(AllowAllMembers, WithOverwriteExistingAttributes(false)))
+	assert.ElementsMatch(t, want, got)
+}
+
+// emitRecordWithUserID emits a record that already has a user.id attribute, in
+// a context carrying baggage with the same key, and returns the attributes the
+// next processor sees.
+func emitRecordWithUserID(t *testing.T, proc *LogProcessor) []attribute.KeyValue {
 	b, _ := baggage.New()
 	b = addEntryToBaggage(t, b, "user.id", "bob")
 	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
@@ -129,7 +150,7 @@ func TestLogProcessorDoesNotOverwriteRecordAttributes(t *testing.T) {
 
 	wrapped := &processor{}
 	lp := log.NewLoggerProvider(
-		log.WithProcessor(NewLogProcessor(AllowAllMembers)),
+		log.WithProcessor(proc),
 		log.WithProcessor(wrapped),
 	)
 
@@ -143,11 +164,7 @@ func TestLogProcessorDoesNotOverwriteRecordAttributes(t *testing.T) {
 		got = append(got, kv)
 		return true
 	})
-	want := []attribute.KeyValue{
-		attribute.String("user.id", "alice"),
-		attribute.String("baggage.test", "baggage value"),
-	}
-	assert.ElementsMatch(t, want, got)
+	return got
 }
 
 func TestZeroLogProcessorNoPanic(t *testing.T) {

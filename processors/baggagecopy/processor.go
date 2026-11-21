@@ -22,6 +22,7 @@ var AllowAllMembers Filter = func(baggage.Member) bool { return true }
 // members onto a span as attributes.
 type SpanProcessor struct {
 	filter Filter
+	config config
 }
 
 var _ trace.SpanProcessor = (*SpanProcessor)(nil)
@@ -31,12 +32,15 @@ var _ trace.SpanProcessor = (*SpanProcessor)(nil)
 // The Baggage span processor duplicates onto a span the attributes found
 // in Baggage in the parent context at the moment the span is started.
 // The passed filter determines which baggage members are added to the span.
-// A baggage member never replaces an attribute the span was started with.
 //
 // If filter is nil, all baggage members will be added.
-func NewSpanProcessor(filter Filter) *SpanProcessor {
+//
+// A baggage member overwrites an attribute of the same key the span was
+// started with unless [WithOverwriteExistingAttributes] is passed false.
+func NewSpanProcessor(filter Filter, opts ...Option) *SpanProcessor {
 	return &SpanProcessor{
 		filter: filter,
+		config: newConfig(opts),
 	}
 }
 
@@ -52,9 +56,11 @@ func (processor SpanProcessor) OnStart(ctx context.Context, span trace.ReadWrite
 		return
 	}
 
-	// Baggage is commonly extracted from incoming requests, so it must not
-	// replace attributes set by the instrumentation that started the span.
-	existing := span.Attributes()
+	var existing []attribute.KeyValue
+	if processor.config.keepExisting {
+		existing = span.Attributes()
+	}
+
 	for _, member := range members {
 		if !filter(member) {
 			continue

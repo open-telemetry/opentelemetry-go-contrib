@@ -26,6 +26,11 @@
 //
 // Add the log processor when configuring the logger provider.
 //
+// A baggage member overwrites an attribute of the same key already set on the
+// span or the log record. Baggage usually originates from an incoming request,
+// so pass [WithOverwriteExistingAttributes] with false to keep the attributes
+// set by the instrumentation or the application instead.
+//
 // The convenience function [AllowAllBaggageKeys] is provided to
 // allow all baggage keys to be copied. Alternatively, you can
 // provide a custom baggage key predicate to select which baggage keys you want

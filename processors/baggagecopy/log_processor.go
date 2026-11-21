@@ -15,6 +15,7 @@ import (
 // members onto a log as attributes.
 type LogProcessor struct {
 	filter Filter
+	config config
 }
 
 var _ log.Processor = (*LogProcessor)(nil)
@@ -24,12 +25,15 @@ var _ log.Processor = (*LogProcessor)(nil)
 // The Baggage log processor adds attributes to a log record that are found
 // in Baggage in the parent context at the moment the log is emitted.
 // The passed filter determines which baggage members are added to the span.
-// A baggage member never replaces an attribute already set on the log record.
 //
 // If filter is nil, all baggage members will be added.
-func NewLogProcessor(filter Filter) *LogProcessor {
+//
+// A baggage member overwrites an attribute of the same key already set on the
+// log record unless [WithOverwriteExistingAttributes] is passed false.
+func NewLogProcessor(filter Filter, opts ...Option) *LogProcessor {
 	return &LogProcessor{
 		filter: filter,
+		config: newConfig(opts),
 	}
 }
 
@@ -51,9 +55,7 @@ func (processor LogProcessor) OnEmit(ctx context.Context, record *log.Record) er
 		if !filter(member) {
 			continue
 		}
-		// Baggage is commonly extracted from incoming requests, so it must
-		// not replace attributes the application set on the record.
-		if hasAttribute(record, attribute.Key(member.Key())) {
+		if processor.config.keepExisting && hasAttribute(record, attribute.Key(member.Key())) {
 			continue
 		}
 		record.AddAttributes(attribute.String(member.Key(), member.Value()))

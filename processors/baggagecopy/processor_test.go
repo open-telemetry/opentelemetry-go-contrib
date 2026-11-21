@@ -146,7 +146,28 @@ func TestOnlyAddsBaggageEntriesThatMatchPredicate(t *testing.T) {
 	require.Equal(t, want, exporter.spans[0].Attributes()[0])
 }
 
-func TestSpanProcessorDoesNotOverwriteStartAttributes(t *testing.T) {
+func TestSpanProcessorOverwritesStartAttributesByDefault(t *testing.T) {
+	want := []attribute.KeyValue{
+		attribute.String("network.peer.address", "10.0.0.1"),
+		attribute.String("baggage.test", "baggage value"),
+	}
+	got := startSpanWithPeerAddress(t, NewSpanProcessor(AllowAllMembers))
+	assert.ElementsMatch(t, want, got)
+}
+
+func TestSpanProcessorKeepsStartAttributes(t *testing.T) {
+	want := []attribute.KeyValue{
+		attribute.String("network.peer.address", "203.0.113.7"),
+		attribute.String("baggage.test", "baggage value"),
+	}
+	got := startSpanWithPeerAddress(t, NewSpanProcessor(AllowAllMembers, WithOverwriteExistingAttributes(false)))
+	assert.ElementsMatch(t, want, got)
+}
+
+// startSpanWithPeerAddress starts and ends a span that already has a
+// network.peer.address attribute, in a context carrying baggage with the same
+// key, and returns the exported attributes.
+func startSpanWithPeerAddress(t *testing.T, proc *SpanProcessor) []attribute.KeyValue {
 	b, _ := baggage.New()
 	b = addEntryToBaggage(t, b, "network.peer.address", "10.0.0.1")
 	b = addEntryToBaggage(t, b, "baggage.test", "baggage value")
@@ -154,7 +175,7 @@ func TestSpanProcessorDoesNotOverwriteStartAttributes(t *testing.T) {
 
 	exporter := NewTestExporter()
 	tp := trace.NewTracerProvider(
-		trace.WithSpanProcessor(NewSpanProcessor(AllowAllMembers)),
+		trace.WithSpanProcessor(proc),
 		trace.WithSpanProcessor(trace.NewSimpleSpanProcessor(exporter)),
 	)
 
@@ -164,11 +185,7 @@ func TestSpanProcessorDoesNotOverwriteStartAttributes(t *testing.T) {
 	span.End()
 
 	require.Len(t, exporter.spans, 1)
-	want := []attribute.KeyValue{
-		attribute.String("network.peer.address", "203.0.113.7"),
-		attribute.String("baggage.test", "baggage value"),
-	}
-	assert.ElementsMatch(t, want, exporter.spans[0].Attributes())
+	return exporter.spans[0].Attributes()
 }
 
 func addEntryToBaggage(t *testing.T, b baggage.Baggage, key, value string) baggage.Baggage {
@@ -196,6 +213,9 @@ func TestZeroSpanProcessorNoPanic(t *testing.T) {
 		_ = sp.ForceFlush(ctx)
 		_ = sp.Shutdown(ctx)
 	})
+
+	keep := NewSpanProcessor(nil, WithOverwriteExistingAttributes(false))
+	assert.NotPanics(t, func() { keep.OnStart(ctx, rwS) })
 }
 
 type rwSpan struct {
