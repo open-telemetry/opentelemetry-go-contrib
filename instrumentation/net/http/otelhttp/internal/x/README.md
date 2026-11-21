@@ -29,3 +29,38 @@ advisory parameter, this environment variable will be replaced by it.
 
 [opt-in metrics]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/general/metric-requirement-level.md#opt-in
 [HTTP metrics semantic conventions]: https://github.com/open-telemetry/semantic-conventions/blob/main/docs/http/http-metrics.md
+
+### Known HTTP Methods
+
+HTTP instrumentation recognizes a default set of HTTP request methods.
+You can override this list using the
+`OTEL_INSTRUMENTATION_HTTP_KNOWN_METHODS` environment variable.
+
+Specify a comma-separated, case-sensitive list:
+
+```console
+export OTEL_INSTRUMENTATION_HTTP_KNOWN_METHODS=GET,POST,QUERY
+```
+
+When the environment variable is unset, the default known methods are:
+
+- `CONNECT`
+- `DELETE`
+- `GET`
+- `HEAD`
+- `OPTIONS`
+- `PATCH`
+- `POST`
+- `PUT`
+- `TRACE`
+- `QUERY`
+
+When configured, the supplied list completely replaces the default list.
+An empty value disables recognition of all methods.
+
+Methods not present in the configured list are recorded as `_OTHER`.
+For non-empty methods, the original method is preserved in
+`http.request.method_original`.
+
+The environment variable is read during package initialization and must
+be configured before the application starts.

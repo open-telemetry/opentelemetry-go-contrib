@@ -49,27 +49,95 @@ func TestStandardizeHTTPMethod(t *testing.T) {
 		want   string
 	}{
 		{"GET", "GET"},
-		{"get", "GET"},
+		{"get", "_OTHER"},
 		{"POST", "POST"},
-		{"post", "POST"},
+		{"post", "_OTHER"},
 		{"PUT", "PUT"},
-		{"put", "PUT"},
+		{"put", "_OTHER"},
 		{"DELETE", "DELETE"},
-		{"delete", "DELETE"},
+		{"delete", "_OTHER"},
 		{"HEAD", "HEAD"},
-		{"head", "HEAD"},
+		{"head", "_OTHER"},
 		{"OPTIONS", "OPTIONS"},
-		{"options", "OPTIONS"},
+		{"options", "_OTHER"},
 		{"CONNECT", "CONNECT"},
-		{"connect", "CONNECT"},
+		{"connect", "_OTHER"},
 		{"TRACE", "TRACE"},
-		{"trace", "TRACE"},
+		{"trace", "_OTHER"},
 		{"PATCH", "PATCH"},
-		{"patch", "PATCH"},
+		{"patch", "_OTHER"},
+		{"QUERY", "QUERY"},
+		{"query", "_OTHER"},
 		{"unknown", "_OTHER"},
 		{"", "_OTHER"},
 	}
 	for _, test := range tests {
 		assert.Equal(t, test.want, standardizeHTTPMethod(test.method))
 	}
+}
+
+func TestMethodLookupFromEnv(t *testing.T) {
+	tests := []struct {
+		name       string
+		methods    string
+		configured bool
+		want       []string
+	}{
+		{
+			name: "default methods",
+			want: []string{
+				"CONNECT", "DELETE", "GET", "HEAD", "OPTIONS",
+				"PATCH", "POST", "PUT", "TRACE", "QUERY",
+			},
+		},
+		{
+			name:       "custom methods replace defaults",
+			methods:    "FOO,BAR",
+			configured: true,
+			want:       []string{"FOO", "BAR"},
+		},
+		{
+			name:       "empty override",
+			methods:    "",
+			configured: true,
+			want:       []string{},
+		},
+		{
+			name:       "case sensitive methods",
+			methods:    "get,FOO",
+			configured: true,
+			want:       []string{"get", "FOO"},
+		},
+		{
+			name:       "empty entries are ignored",
+			methods:    "GET,,POST",
+			configured: true,
+			want:       []string{"GET", "POST"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := methodLookupFromEnv(tt.methods, tt.configured)
+			assert.Len(t, got, len(tt.want))
+
+			for _, method := range tt.want {
+				assert.Contains(t, got, method)
+			}
+		})
+	}
+}
+
+func TestNewMethodLookupReadsEnvironment(t *testing.T) {
+	t.Setenv(knownHTTPMethodsEnv, "GET,FOO")
+
+	lookup := newMethodLookup()
+	assert.Contains(t, lookup, "GET")
+	assert.Contains(t, lookup, "FOO")
+	assert.NotContains(t, lookup, "POST")
+
+	t.Setenv(knownHTTPMethodsEnv, "")
+
+	lookup = newMethodLookup()
+	assert.Empty(t, lookup)
 }
