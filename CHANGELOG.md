@@ -55,6 +55,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Remove the deprecation notice from `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9881)
 - Add `ReadFrom` support to the internal response writer wrapper template shared by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to track copied bytes and the last non-nil error. (#9804)
 - The default span name formatter in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` upper-cases the request method before matching it against known methods, so a lowercase `get` request is named `GET <route>` instead of `HTTP <route>`, matching `http.request.method`. (#9939)
+- Make the `url.scheme` attribute opt-in for HTTP client metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, enabled by listing it in the `OTEL_GO_X_HTTP_METRICS_OPTIN` environment variable. (#10367)
 - Format the default server span name in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` as `{method} {http.route}` when a route matches and `{method}` when no route matches, following the HTTP semantic conventions. (#10053)
 - Change the return type of `NewTransport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` from `*Transport` to `http.RoundTripper`. (#9955)
 - Updated `example/dice` app based on updated specifications for the reference application. (#8099)

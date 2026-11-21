@@ -944,6 +944,7 @@ func TestTransportMetrics(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "url.scheme")
 		tr := NewTransport(
 			http.DefaultTransport,
 			WithMeterProvider(meterProvider),
@@ -1046,7 +1047,6 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.Int("http.response.status_code", 200),
 			attribute.String("server.address", host),
 			attribute.Int("server.port", port),
-			attribute.String("url.scheme", "http"),
 			attribute.String("network.protocol.name", "http"),
 			attribute.String("network.protocol.version", "1.1"),
 		)
@@ -1109,7 +1109,6 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.Int("http.response.status_code", 200),
 			attribute.String("server.address", host),
 			attribute.Int("server.port", port),
-			attribute.String("url.scheme", "http"),
 			attribute.String("network.protocol.name", "http"),
 			attribute.String("network.protocol.version", "1.1"),
 		)
