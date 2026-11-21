@@ -120,17 +120,20 @@ var defaultKnownHTTPMethods = []string{
 
 func newMethodLookup() map[string]attribute.KeyValue {
 	methods, configured := os.LookupEnv(knownHTTPMethodsEnv)
-	return methodLookupFromEnv(methods, configured)
-}
-
-func methodLookupFromEnv(methods string, configured bool) map[string]attribute.KeyValue {
-	knownMethods := defaultKnownHTTPMethods
-	if configured {
-		knownMethods = strings.Split(methods, ",")
+	if !configured {
+		return methodLookupFromEnv(nil)
 	}
 
-	lookup := make(map[string]attribute.KeyValue, len(knownMethods))
-	for _, method := range knownMethods {
+	return methodLookupFromEnv(strings.Split(methods, ","))
+}
+
+func methodLookupFromEnv(methods []string) map[string]attribute.KeyValue {
+	if methods == nil {
+		methods = defaultKnownHTTPMethods
+	}
+
+	lookup := make(map[string]attribute.KeyValue, len(methods))
+	for _, method := range methods {
 		if method == "" {
 			continue
 		}
