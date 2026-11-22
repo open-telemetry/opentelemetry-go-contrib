@@ -25,8 +25,8 @@ const ScopeName = "go.opentelemetry.io/contrib/instrumentation/google.golang.org
 // Deprecated: Use stats handlers instead.
 type InterceptorFilter func(*InterceptorInfo) bool
 
-// Filter is a predicate used to determine whether a given request in
-// should be instrumented by the attached RPC tag info.
+// Filter is a predicate used to determine whether a request should be
+// instrumented, based on the attached RPC tag info.
 // A Filter must return true if the request should be instrumented.
 type Filter func(*stats.RPCTagInfo) bool
 
@@ -137,7 +137,7 @@ func WithTracerProvider(tp trace.TracerProvider) Option {
 }
 
 // WithMeterProvider returns an Option to use the MeterProvider when
-// creating a Meter. If this option is not provide the global MeterProvider will be used.
+// creating a Meter. If this option is not provided, the global MeterProvider will be used.
 func WithMeterProvider(mp metric.MeterProvider) Option {
 	return optionFunc(func(c *config) {
 		if mp != nil {
