@@ -185,5 +185,3 @@ replace go.opentelemetry.io/contrib/detectors/openstack/nova => ../openstack/nov
 replace go.opentelemetry.io/contrib/detectors/scaleway => ../scaleway
 
 replace go.opentelemetry.io/contrib/detectors/azure/azureaks => ../azure/azureaks
-
-replace go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp => ../../instrumentation/net/http/otelhttp
