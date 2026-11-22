@@ -249,12 +249,20 @@ func TestOptionTypes(t *testing.T) {
 		otelhttp.WithServerName("example.com"),
 		otelhttp.WithRouteTracking(),
 	}
+	for _, opt := range handlerOpts {
+		_, implementsTransport := opt.(otelhttp.TransportOption)
+		assert.Falsef(t, implementsTransport, "handler-only option %T must not implement TransportOption", opt)
+	}
 	for _, opt := range sharedOpts {
 		handlerOpts = append(handlerOpts, opt)
 	}
 
 	transportOpts := []otelhttp.TransportOption{
 		otelhttp.WithClientTrace(func(context.Context) *httptrace.ClientTrace { return nil }),
+	}
+	for _, opt := range transportOpts {
+		_, implementsHandler := opt.(otelhttp.HandlerOption)
+		assert.Falsef(t, implementsHandler, "transport-only option %T must not implement HandlerOption", opt)
 	}
 	for _, opt := range sharedOpts {
 		transportOpts = append(transportOpts, opt)
