@@ -53,7 +53,8 @@ var defaultSpanNameFormatter SpanNameFormatter = func(c *gin.Context) string {
 // be traced. A Filter must return true if the request should be traced.
 type Filter func(*http.Request) bool
 
-// GinFilter filters an [net/http.Request] based on content of a [gin.Context].
+// GinFilter is a predicate used to determine whether a request should be
+// instrumented based on its [gin.Context].
 type GinFilter func(*gin.Context) bool
 
 // SpanNameFormatter is used by `WithSpanNameFormatter` to customize the request's span name.
