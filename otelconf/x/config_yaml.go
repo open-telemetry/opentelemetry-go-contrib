@@ -45,6 +45,9 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	if hasYAMLMapKey(node, "aws.eks") && plain.AWSEKS == nil {
 		plain.AWSEKS = ExperimentalAWSEKSResourceDetector{}
 	}
+	if hasYAMLMapKey(node, "aws.lambda") && plain.AWSLambda == nil {
+		plain.AWSLambda = ExperimentalAWSLambdaResourceDetector{}
+	}
 	if hasYAMLMapKey(node, "azure.vm") && plain.AzureVM == nil {
 		plain.AzureVM = ExperimentalAzureVMResourceDetector{}
 	}
@@ -325,9 +328,6 @@ func (j *SpanLimits) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPHttpMetricExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPHttpMetricExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
@@ -342,9 +342,6 @@ func (j *OTLPHttpMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPGrpcMetricExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPGrpcMetricExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
@@ -359,9 +356,6 @@ func (j *OTLPGrpcMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPHttpExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPHttpExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
@@ -376,9 +370,6 @@ func (j *OTLPHttpExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPGrpcExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPGrpcExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {

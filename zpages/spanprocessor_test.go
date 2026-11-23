@@ -59,6 +59,7 @@ func TestSpanProcessor(t *testing.T) {
 	spansPM := zsp.spansPerMethod()
 	require.Len(t, spansPM, 1)
 	assert.Equal(t, numSpans, spansPM[spanName].activeSpans)
+	assert.Equal(t, make([]int, defaultBoundaries.numBuckets()), spansPM[spanName].latencySpans)
 
 	// End all Spans, they will end pretty fast, so we can only check that we have at least one in
 	// errors and one in latency samples.

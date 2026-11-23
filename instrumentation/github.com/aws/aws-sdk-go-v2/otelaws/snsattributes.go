@@ -26,6 +26,9 @@ func SNSAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ mid
 			semconv.MessagingOperationName("publish_batch_input"),
 			semconv.MessagingBatchMessageCount(len(v.PublishBatchRequestEntries)),
 		)
+		if v.TopicArn != nil && *v.TopicArn != "" {
+			snsAttributes = append(snsAttributes, semconv.AWSSNSTopicARN(*v.TopicArn))
+		}
 	case *sns.PublishInput:
 		snsAttributes = append(
 			snsAttributes,
@@ -33,6 +36,9 @@ func SNSAttributeBuilder(_ context.Context, in middleware.InitializeInput, _ mid
 			semconv.MessagingOperationTypeSend,
 			semconv.MessagingOperationName("publish_input"),
 		)
+		if v.TopicArn != nil && *v.TopicArn != "" {
+			snsAttributes = append(snsAttributes, semconv.AWSSNSTopicARN(*v.TopicArn))
+		}
 	}
 
 	return snsAttributes

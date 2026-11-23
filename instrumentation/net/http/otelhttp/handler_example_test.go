@@ -93,3 +93,26 @@ func ExampleNewHandler() {
 		log.Fatal(err)
 	}
 }
+
+func ExampleNewMiddleware() {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprintln(w, "hello")
+	})
+	instrumentedHandler := otelhttp.NewMiddleware("server")(handler)
+	_ = http.ListenAndServe(":8080", instrumentedHandler)
+}
+
+func ExampleRouteMiddleware() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /items/{id}", func(w http.ResponseWriter, _ *http.Request) {
+		fmt.Fprintln(w, "item details")
+	})
+
+	handler := otelhttp.NewHandler(
+		otelhttp.RouteMiddleware(mux),
+		"server",
+		otelhttp.WithRouteTracking(),
+	)
+
+	_ = http.ListenAndServe(":8080", handler)
+}

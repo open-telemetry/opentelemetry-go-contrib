@@ -5,15 +5,20 @@ package otelmux
 
 import (
 	"fmt"
+	"io"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/felixge/httpsnoop"
 	"github.com/gorilla/mux"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"
@@ -99,11 +104,17 @@ var validMethods = map[string]struct{}{
 
 // defaultSpanNameFunc returns the semconv based default span name.
 func defaultSpanNameFunc(routeName string, r *http.Request) string {
-	method := r.Method
-	if _, ok := validMethods[method]; !ok {
-		method = "HTTP"
+	return normalizeMethod(r.Method, "HTTP") + " " + routeName
+}
+
+// normalizeMethod returns the upper-cased m if it is a known HTTP method,
+// otherwise fallback. Upper-casing matches how http.request.method is recorded.
+func normalizeMethod(m, fallback string) string {
+	m = strings.ToUpper(m)
+	if _, ok := validMethods[m]; !ok {
+		return fallback
 	}
-	return method + " " + routeName
+	return m
 }
 
 // ServeHTTP implements the http.Handler interface. It does the actual
@@ -135,7 +146,10 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	routeStr := extractRoute(r)
 
 	if routeStr == "" {
-		routeStr = fmt.Sprintf("HTTP %s route not found", r.Method)
+		// routeStr is recorded as http.route on metrics, so it must not
+		// carry the raw, client-controlled method.
+		method := normalizeMethod(r.Method, "_OTHER")
+		routeStr = fmt.Sprintf("HTTP %s route not found", method)
 	} else {
 		rAttr := tw.semconv.Route(routeStr)
 		opts = append(opts, trace.WithAttributes(rAttr))
@@ -170,6 +184,9 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Write: func(httpsnoop.WriteFunc) httpsnoop.WriteFunc {
 			return rww.Write
 		},
+		ReadFrom: func(httpsnoop.ReadFromFunc) httpsnoop.ReadFromFunc {
+			return rww.ReadFrom
+		},
 		WriteHeader: func(httpsnoop.WriteHeaderFunc) httpsnoop.WriteHeaderFunc {
 			return rww.WriteHeader
 		},
@@ -193,20 +210,47 @@ func (tw traceware) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r.MultipartForm = rCtx.MultipartForm
 	}
 	statusCode := rww.StatusCode()
-	span.SetStatus(tw.semconv.Status(statusCode))
+	spanCode, spanMsg := tw.semconv.Status(statusCode)
+	var errorType attribute.KeyValue
+	writeErr := rww.Error()
+	readErr := bw.Error()
+	cause := writeErr
+	// A fully read body leaves io.EOF as the last read error.
+	if cause == nil && readErr != nil && readErr != io.EOF { //nolint:errorlint // io.ReadAll treats only literal io.EOF as clean completion. errors.Is matches wrapped io.EOF as well.
+		cause = readErr
+	}
+	if cause == nil {
+		// Use ctx, not rCtx.Context(): downstream middleware may replace and cancel the request context.
+		cause = ctx.Err()
+	}
+	if cause != nil {
+		spanCode, spanMsg = codes.Error, cause.Error()
+		errorType = otelsemconv.ErrorType(cause)
+	} else if spanCode == codes.Error {
+		errorType = otelsemconv.ErrorTypeKey.String(strconv.Itoa(statusCode))
+	}
+	span.SetStatus(spanCode, spanMsg)
 	span.SetAttributes(tw.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: statusCode,
 		ReadBytes:  bw.BytesRead(),
-		ReadError:  bw.Error(),
+		ReadError:  readErr,
 		WriteBytes: rww.BytesWritten(),
-		WriteError: rww.Error(),
+		WriteError: writeErr,
 	})...)
+	if errorType.Valid() {
+		span.SetAttributes(errorType)
+	}
 
+	additionalAttributes := tw.metricAttributesFromRequest(r)
+	if errorType.Valid() {
+		// Prepend so an error.type from metricAttributesFn takes precedence.
+		additionalAttributes = append([]attribute.KeyValue{errorType}, additionalAttributes...)
+	}
 	metricAttributes := semconv.MetricAttributes{
 		Req:                  r,
 		StatusCode:           statusCode,
 		Route:                routeStr,
-		AdditionalAttributes: tw.metricAttributesFromRequest(r),
+		AdditionalAttributes: additionalAttributes,
 	}
 
 	tw.semconv.RecordMetrics(ctx, semconv.ServerMetricData{

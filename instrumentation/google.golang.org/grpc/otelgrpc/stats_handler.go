@@ -104,9 +104,11 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 
 	if record {
-		// Make a new slice to avoid aliasing into the same attrs slice used by metrics.
-		spanAttributes := make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
-		spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
+		spanAttributes := attrs
+		if len(h.SpanAttributes) > 0 {
+			spanAttributes = make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
+			spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
+		}
 		opts := []trace.SpanStartOption{
 			trace.WithSpanKind(h.SpanKind),
 			trace.WithAttributes(spanAttributes...),
@@ -125,8 +127,16 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		)
 	}
 
+	var metricAttrs []attribute.KeyValue
+	if len(h.MetricAttributes) == 0 {
+		metricAttrs = attrs
+	} else {
+		metricAttrs = make([]attribute.KeyValue, 0, len(attrs)+len(h.MetricAttributes))
+		metricAttrs = append(append(metricAttrs, attrs...), h.MetricAttributes...)
+	}
+
 	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.MetricAttributes...),
+		metricAttrs: metricAttrs,
 		record:      record,
 	}
 
@@ -201,9 +211,11 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 
 	if record {
-		// Make a new slice to avoid aliasing into the same attrs slice used by metrics.
-		spanAttributes := make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
-		spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
+		spanAttributes := attrs
+		if len(h.SpanAttributes) > 0 {
+			spanAttributes = make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
+			spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
+		}
 		ctx, _ = h.tracer.Start(
 			ctx,
 			name,
@@ -212,8 +224,16 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		)
 	}
 
+	var metricAttrs []attribute.KeyValue
+	if len(h.MetricAttributes) == 0 {
+		metricAttrs = attrs
+	} else {
+		metricAttrs = make([]attribute.KeyValue, 0, len(attrs)+len(h.MetricAttributes))
+		metricAttrs = append(append(metricAttrs, attrs...), h.MetricAttributes...)
+	}
+
 	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.MetricAttributes...),
+		metricAttrs: metricAttrs,
 		record:      record,
 	}
 

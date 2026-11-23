@@ -173,7 +173,7 @@ func (eksUtils eksDetectorUtils) getConfigMap(ctx context.Context, namespace, na
 	ctx, cancel := context.WithTimeout(ctx, configMapTimeout)
 	defer cancel()
 
-	u, err := url.JoinPath(eksUtils.host, "api", "v1", "namespaces", namespace, "configmaps", name)
+	u, err := url.JoinPath(eksUtils.host, "api", "v1", "namespaces", url.PathEscape(namespace), "configmaps", url.PathEscape(name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to build ConfigMap URL for %s/%s: %w", namespace, name, err)
 	}

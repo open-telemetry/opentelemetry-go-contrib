@@ -3,7 +3,7 @@
 
 services:
   otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.163.1@sha256:1175b03003053962012f5a231f5567f66a3e8fdb960c7835c0e48f7aa1555806
+    image: otel/opentelemetry-collector-contrib:0.165.0@sha256:e40d61f10c9a617cca1ffd1be4d7e2b3a4b0f0001798ff07e58cabe82e618cea
     command: ["--config=/etc/otel-collector.yaml"]
     volumes:
       - ./otel-collector.yaml:/etc/otel-collector.yaml
@@ -11,13 +11,13 @@ services:
       - 4317:4317
 
   prometheus:
-    image: prom/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e
+    image: prom/prometheus:v3.16.0@sha256:e04987641b57704f408e31f6373ba4138ecf27cb4a165d24aabb6c38fddd0f06
     volumes:
       - ./prometheus.yaml:/etc/prometheus/prometheus.yml
     ports:
       - 9090:9090
 
   jaeger:
-    image: jaegertracing/jaeger:2.22.0@sha256:836b967b5abcf1f7758066aa6b348619267a2f1459f72d472840570f9bd88a17
+    image: jaegertracing/jaeger:2.23.0@sha256:3823829974ccfc2485d2e48b165579091f32295022ae80ca49704e2f4834116e
     ports:
       - 16686:16686

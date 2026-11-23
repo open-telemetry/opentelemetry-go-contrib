@@ -20,6 +20,7 @@ package jaegerremote
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -70,11 +71,20 @@ func getEnvOptions() ([]Option, []error) {
 		case "endpoint":
 			options = append(options, WithSamplingServerURL(value))
 		case "pollingIntervalMs":
-			intervalMs, err := strconv.Atoi(value)
+			intervalMs, err := strconv.ParseInt(value, 10, 64)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("%s parsing failed with :%w", key, err))
 				continue
 			}
+			if intervalMs <= 0 {
+				errs = append(errs, fmt.Errorf("%s must be positive, got %d", key, intervalMs))
+				continue
+			}
+			if intervalMs > math.MaxInt64/int64(time.Millisecond) {
+				errs = append(errs, fmt.Errorf("%s value %q is out of range", key, value))
+				continue
+			}
+
 			options = append(options, WithSamplingRefreshInterval(time.Duration(intervalMs)*time.Millisecond))
 		case "initialSamplingRate":
 			samplingRate, err := strconv.ParseFloat(value, 64)
@@ -182,9 +192,15 @@ func WithOperationNameLateBinding(enable bool) Option {
 
 // WithSamplingRefreshInterval creates a Option that sets how often the
 // sampler will poll local agent for the appropriate sampling strategy.
+// A non-positive value is ignored, preserving the previously configured
+// interval, or the default when none was configured.
 func WithSamplingRefreshInterval(samplingRefreshInterval time.Duration) Option {
 	return optionFunc(func(c *config) {
-		c.samplingRefreshInterval = samplingRefreshInterval
+		// time.NewTicker panics on a non-positive interval, so ignore one here
+		// rather than overwriting the default or an earlier valid value.
+		if samplingRefreshInterval > 0 {
+			c.samplingRefreshInterval = samplingRefreshInterval
+		}
 	})
 }
 

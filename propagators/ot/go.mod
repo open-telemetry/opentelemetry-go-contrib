@@ -1,3 +1,6 @@
+// Deprecated: OpenTracing is deprecated.
+// v1.48.0 is the final planned release of this module.
+// Migrate to native OpenTelemetry APIs and SDKs with W3C Trace Context and W3C Baggage propagation.
 module go.opentelemetry.io/contrib/propagators/ot
 
 go 1.26.0
@@ -14,7 +17,7 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.2 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
