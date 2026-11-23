@@ -8,6 +8,10 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+This release contains the first stable release of `go.opentelemetry.io/contrib/zpages`.
+Our project stability guarantees now apply to the `go.opentelemetry.io/contrib/zpages` module.
+See our [versioning policy](https://github.com/open-telemetry/opentelemetry-go/blob/main/VERSIONING.md) for more information about these stability guarantees.
+
 ### Added
 
 - Add the `cloud.resource_id` resource attribute for Cloud Run services, Cloud Run jobs, and Cloud Functions in `go.opentelemetry.io/contrib/detectors/gcp`. (#10258)
@@ -45,6 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Stabilize the `go.opentelemetry.io/contrib/zpages` module. (#10272)
 - Reduce heap allocations and latency during header extraction in `go.opentelemetry.io/contrib/propagators/jaeger`. (#10022)
 - `NewMetricProducer` in `go.opentelemetry.io/contrib/bridges/prometheus` returns the exported concrete type `*Producer` instead of `metric.Producer`. (#10043)
 - Reduce heap allocations and latency during context tagging in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#10007)
