@@ -371,6 +371,7 @@ func TestNewResourceDetectorDisablesProxy(t *testing.T) {
 	transport, ok := utils.client.Transport.(*http.Transport)
 	require.True(t, ok)
 	assert.Nil(t, transport.Proxy)
+	assert.True(t, transport.DisableKeepAlives)
 }
 
 func TestLogsAttributesErrors(t *testing.T) {

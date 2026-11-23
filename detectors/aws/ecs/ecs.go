@@ -69,10 +69,11 @@ func NewResourceDetector() resource.Detector {
 	// agent that must never be reached via an HTTP(S) proxy: doing so would
 	// send task metadata to the proxy and let it answer with forged metadata
 	// in environments where users set HTTP_PROXY/HTTPS_PROXY for outbound
-	// traffic.
+	// traffic. Keep-alive is disabled because the transport has no shutdown
+	// path: an idle connection would otherwise outlive the detector.
 	return &resourceDetector{
 		utils: ecsDetectorUtils{
-			client: &http.Client{Transport: &http.Transport{Proxy: nil}},
+			client: &http.Client{Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}},
 		},
 	}
 }
