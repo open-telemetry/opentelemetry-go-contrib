@@ -3,3 +3,7 @@
 <!--[![Go Reference][goref-image]][goref-url]-->
 <!--[goref-image]: https://pkg.go.dev/badge/go.opentelemetry.io/contrib/detectors/hetzner.svg-->
 <!--[goref-url]: https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/hetzner-->
+
+Detects resource attributes for Hetzner Cloud servers using instance metadata.
+
+[Package documentation](https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/hetzner)
