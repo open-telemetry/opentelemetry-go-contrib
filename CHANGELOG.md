@@ -10,6 +10,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Added
 
+- Add detection for Cloud Run instances and add the `cloud.resource_id` resource attribute for Cloud Run worker pools and Cloud Run instances in `go.opentelemetry.io/contrib/detectors/gcp`. (#10350)
 - Add the `cloud.resource_id` resource attribute for Cloud Run services, Cloud Run jobs, and Cloud Functions in `go.opentelemetry.io/contrib/detectors/gcp`. (#10258)
 - Record the `url.query` attribute on HTTP server spans (with `X-Amz-Signature`, `X-Amz-Credential`, `X-Amz-Security-Token`, `sig`, and `X-Goog-Signature` query parameter values redacted to `REDACTED`) in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, `go.opentelemetry.io/contrib/instrumentation/net/http/httptrace/otelhttptrace`, `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`, `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`, and `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful`. (#10122)
 - Add `WithIMDSTags` option to `go.opentelemetry.io/contrib/detectors/aws/ec2/v2` to add EC2 instance tags read from the instance metadata service as `ec2.tag.<key>` resource attributes. (#10086)
@@ -38,6 +39,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `go.opentelemetry.io/contrib/detectors/alibaba/ecs`, a new resource detector for Alibaba Cloud Elastic Compute Service (ECS) instances, ported from `processor/resourcedetectionprocessor/internal/alibaba/ecs` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.region`, `cloud.availability_zone`, `host.id`, `host.name`, `host.image.id`, and `host.type`. (#9495)
 - Add `go.opentelemetry.io/contrib/detectors/scaleway`, a new resource detector for Scaleway Instances, ported from `processor/resourcedetectionprocessor/internal/scaleway` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.availability_zone`, `cloud.region`, `host.id`, `host.image.id`, `host.image.name`, `host.name`, and `host.type`. (#9489)
 - Add `go.opentelemetry.io/contrib/detectors/consul`, a new resource detector that reads attributes from a Consul agent, ported from `processor/resourcedetectionprocessor/internal/consul` in `opentelemetry-collector-contrib`. Detects `host.name`, `cloud.region`, and `host.id`, plus opt-in `consul.meta.<key>` attributes for the Consul node meta entries selected with `WithMetaKeyFilter`. (#9388)
+- Add `go.opentelemetry.io/contrib/detectors/tencent/cvm`, a new resource detector for Tencent Cloud CVM instances, ported from `github.com/open-telemetry/opentelemetry-collector-contrib/processor/resourcedetectionprocessor/internal/tencent/cvm`. Detects `cloud.provider`, `cloud.platform`, `cloud.account.id`, `cloud.region`, `cloud.availability_zone`, `host.id`, `host.name`, `host.image.id`, and `host.type`. (#9497)
 - Add `go.opentelemetry.io/contrib/detectors/dynatrace`, a resource detector for hosts monitored by the Dynatrace OneAgent, ported from `processor/resourcedetectionprocessor/internal/dynatrace` in `opentelemetry-collector-contrib`. It reads the OneAgent host enrichment file `dt_host_metadata.properties` and sets the `dt.entity.host`, `host.name`, and `dt.smartscape.host` attributes. (#9491)
 - Add `aws.sns.topic.arn` from `TopicArn` to SNS `Publish` and `PublishBatch` spans in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9954)
 - Add the opt-in `http.client.active_requests` metric to `Transport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, enabled by listing it in the `OTEL_GO_X_HTTP_METRICS_OPTIN` environment variable. (#10069)
@@ -45,6 +47,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Detect Cloud Run functions and Cloud Functions (2nd gen) (where both `K_CONFIGURATION` and `FUNCTION_TARGET` are set) as `gcp_cloud_run` with a `//run.googleapis.com/.../services/{name}` `cloud.resource_id` instead of `gcp_cloud_functions` in `go.opentelemetry.io/contrib/detectors/gcp`. (#10350)
 - Reduce heap allocations and latency during header extraction in `go.opentelemetry.io/contrib/propagators/jaeger`. (#10022)
 - `NewMetricProducer` in `go.opentelemetry.io/contrib/bridges/prometheus` returns the exported concrete type `*Producer` instead of `metric.Producer`. (#10043)
 - Reduce heap allocations and latency during context tagging in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#10007)
@@ -54,6 +57,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - `NewResourceDetector` in `go.opentelemetry.io/contrib/detectors/aws/lambda` returns the exported concrete type `*ResourceDetector` instead of `resource.Detector`. (#9606)
 - Remove the deprecation notice from `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9881)
 - Make HTTP client request attributes available to samplers at span creation time in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#10356)
+- Preserve unknown custom component configuration during JSON and YAML unmarshalling in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`. (#9982)
 - Add `ReadFrom` support to the internal response writer wrapper template shared by `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` and `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` to track copied bytes and the last non-nil error. (#9804)
 - The default span name formatter in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` upper-cases the request method before matching it against known methods, so a lowercase `get` request is named `GET <route>` instead of `HTTP <route>`, matching `http.request.method`. (#9939)
 - Format the default server span name in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` as `{method} {http.route}` when a route matches and `{method}` when no route matches, following the HTTP semantic conventions. (#10053)
@@ -81,6 +85,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Propagate the caller's context to metadata requests in `go.opentelemetry.io/contrib/detectors/gcp` so `Detect` honors context cancellation and deadlines. (#10085)
 - Record the `db.namespace` attribute on the `db.client.operation.duration` metric for failed commands in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`, as is already done for successful commands. (#10288)
 - Format bracketed IPv6 MongoDB peer addresses without an explicit port correctly in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` and `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#10101)
+- Do not add resource attributes as metric labels in the Prometheus exporter of `go.opentelemetry.io/contrib/otelconf/x`, `go.opentelemetry.io/contrib/otelconf/v0.3.0` and `go.opentelemetry.io/contrib/otelconf/v0.2.0` when `with_resource_constant_labels` sets neither `included` nor `excluded`.
+  Before, an empty `with_resource_constant_labels: {}` added every resource attribute; list the attributes to keep under `included`. (#10238)
 - Fall back to the `DockerId` from the task metadata endpoint v4 for the `container.id` resource attribute in `go.opentelemetry.io/contrib/detectors/aws/ecs` when the cgroup parser finds no ID, and omit `container.id` instead of setting it to an empty string.
   The parser only matches 64-hex IDs, so it finds none on Fargate, and it may also find none when `/proc/self/cgroup` has no `/ecs/` path. (#10128)
 - Do not include the port in the `network.peer.address` attribute in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo`, it is recorded as `network.peer.port`. (#10110)
@@ -99,6 +105,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Fix response body size accounting for copies through `ReadFrom` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#9998)
 - Type `AdditionalProperties` as `map[string]any` in the generated config structs of `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x` so `mapstructure`'s `,remain` decoder no longer fails on a bare `interface{}`. (#8850)
 - Prevent recording negative metric values for unknown request/response sizes in `go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin`. (#9433)
+- Configure the global diagnostic logger from `log_level` in `go.opentelemetry.io/contrib/otelconf` and `go.opentelemetry.io/contrib/otelconf/x`, defaulting to `info` when unspecified and rejecting unsupported levels. (#9965)
 - Prevent integer overflow when configuring the polling interval for the Jaeger remote sampler via the `OTEL_TRACES_SAMPLER_ARG` environment variable in `go.opentelemetry.io/contrib/samplers/jaegerremote`. (#10027)
 - Match exact key names during header extraction in `go.opentelemetry.io/contrib/propagators/aws/xray` to prevent auxiliary fields with prefix-sharing keys from dropping trace contexts. (#9879)
 - Reject null entries in `resource.attributes` during YAML and JSON parsing in `go.opentelemetry.io/contrib/otelconf`, `go.opentelemetry.io/contrib/otelconf/x` and `go.opentelemetry.io/contrib/otelconf/v0.3.0`. (#9970)

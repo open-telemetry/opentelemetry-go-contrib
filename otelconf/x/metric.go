@@ -474,8 +474,10 @@ func prometheusReaderOpts(prometheusConfig *ExperimentalPrometheusMetricExporter
 		}
 		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.TranslationStrategyOption(*prometheusConfig.TranslationStrategy)))
 	}
-	if prometheusConfig.WithResourceConstantLabels != nil {
-		f, err := newIncludeExcludeFilter(prometheusConfig.WithResourceConstantLabels)
+	// An empty filter would include every attribute. With no lists set, keep the
+	// exporter default of adding no resource attributes as labels.
+	if rcl := prometheusConfig.WithResourceConstantLabels; rcl != nil && (len(rcl.Included) > 0 || len(rcl.Excluded) > 0) {
+		f, err := newIncludeExcludeFilter(rcl)
 		if err != nil {
 			return nil, err
 		}
