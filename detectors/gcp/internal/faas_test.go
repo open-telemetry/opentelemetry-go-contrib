@@ -57,6 +57,17 @@ func TestFaaSWorkerPoolName(t *testing.T) {
 	assert.Equal(t, "my-service", name)
 }
 
+func TestFaaSInstanceName(t *testing.T) {
+	d := NewTestDetector(&FakeMetadataTransport{}, &FakeOSProvider{
+		Vars: map[string]string{
+			cloudRunInstanceEnv: "my-instance",
+		},
+	})
+	name, err := d.FaaSName(t.Context())
+	assert.NoError(t, err)
+	assert.Equal(t, "my-instance", name)
+}
+
 func TestFaaSNameErr(t *testing.T) {
 	d := NewTestDetector(&FakeMetadataTransport{}, &FakeOSProvider{
 		Vars: map[string]string{},

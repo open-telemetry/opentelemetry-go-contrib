@@ -51,9 +51,11 @@ Notes:
 ## Example
 
 [example/](./example) shows how to host remote sampling strategies using the OpenTelemetry Collector.
-The Collector uses the Jaeger receiver to host the strategy file. Note you do not need to run Jaeger to make use of the Jaeger remote sampling protocol. However, you do need Jaeger backend if you want to utilize its adaptive sampling engine that auto-calculates remote sampling strategies.
+The Collector uses the `jaegerremotesampling` extension to serve the strategy file.
+Note you do not need to run Jaeger to make use of the Jaeger remote sampling protocol. However, you do need Jaeger backend if you want to utilize its adaptive sampling engine that auto-calculates remote sampling strategies.
 
-Run the OpenTelemetry Collector using docker-compose:
+Run the following commands from `samplers/jaegerremote/example`.
+Start the OpenTelemetry Collector using docker-compose:
 
 ```shell
 docker-compose up -d
@@ -72,4 +74,10 @@ It will print the entire Jaeger remote sampler structure every 10 seconds, this 
 
 ```shell
 go run .
+```
+
+When finished, stop the Go program with Ctrl+C, then clean up the Collector:
+
+```shell
+docker-compose down
 ```
