@@ -45,6 +45,17 @@ func ExampleNewSpanProcessor_keysMatchingRegex() {
 	)
 }
 
+func ExampleNewSpanProcessor_keepExistingAttributes() {
+	trace.NewTracerProvider(
+		trace.WithSpanProcessor(
+			baggagecopy.NewSpanProcessor(
+				baggagecopy.AllowAllMembers,
+				baggagecopy.WithOverwriteExistingAttributes(false),
+			),
+		),
+	)
+}
+
 func ExampleNewLogProcessor_allKeys() {
 	log.NewLoggerProvider(
 		log.WithProcessor(baggagecopy.NewLogProcessor(baggagecopy.AllowAllMembers)),
@@ -71,6 +82,17 @@ func ExampleNewLogProcessor_keysMatchingRegex() {
 				func(m baggage.Member) bool {
 					return expr.MatchString(m.Key())
 				},
+			),
+		),
+	)
+}
+
+func ExampleNewLogProcessor_keepExistingAttributes() {
+	log.NewLoggerProvider(
+		log.WithProcessor(
+			baggagecopy.NewLogProcessor(
+				baggagecopy.AllowAllMembers,
+				baggagecopy.WithOverwriteExistingAttributes(false),
 			),
 		),
 	)
