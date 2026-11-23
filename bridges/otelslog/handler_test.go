@@ -759,9 +759,12 @@ func TestHandlerRecordAttrsBufferSize(t *testing.T) {
 		firstErr := errors.New("first")
 		lastErr := errors.New("last")
 
+		// The record has n attributes: n-3 integers, two errors, and an
+		// empty-key group. The buffer is sized from the record's attribute
+		// count, before errors are promoted and groups flattened.
 		var attrs []slog.Attr
 		var want []attribute.KeyValue
-		for i := range n {
+		for i := range n - 3 {
 			key := fmt.Sprintf("k%d", i)
 			attrs = append(attrs, slog.Int(key, i))
 			want = append(want, attribute.Int(key, i))
@@ -774,6 +777,7 @@ func TestHandlerRecordAttrsBufferSize(t *testing.T) {
 			slog.Any("err", lastErr),
 		)
 		want = append(want, attribute.String("flat", "v"))
+		require.Len(t, attrs, n)
 
 		emit := func(t *testing.T, h slog.Handler, r *recorder) log.Record {
 			t.Helper()
