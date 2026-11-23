@@ -11,18 +11,18 @@ require (
 	github.com/itchyny/gojq v0.12.20
 	github.com/stretchr/testify v1.12.1
 	github.com/wadey/gocovmerge v0.0.0-20160331181800-b5bfa59ec0ad
-	go.opentelemetry.io/build-tools/crosslink v0.30.0
-	go.opentelemetry.io/build-tools/gotmpl v0.30.0
-	go.opentelemetry.io/build-tools/multimod v0.30.0
-	golang.org/x/exp v0.0.0-20261109185158-a52e3aef5920
-	golang.org/x/tools v0.52.1-0.20261109220859-588ada3c4d4d
-	golang.org/x/vuln v1.9.0
+	go.opentelemetry.io/build-tools/crosslink v0.31.0
+	go.opentelemetry.io/build-tools/gotmpl v0.31.0
+	go.opentelemetry.io/build-tools/multimod v0.31.0
+	golang.org/x/exp v0.0.0-20261121134650-e1094eeca1b5
+	golang.org/x/tools v0.53.0
+	golang.org/x/vuln v1.10.0
 )
 
 require (
 	4d63.com/gocheckcompilerdirectives v1.4.0 // indirect
 	4d63.com/gochecknoglobals v0.2.2 // indirect
-	charm.land/lipgloss/v2 v2.0.6 // indirect
+	charm.land/lipgloss/v2 v2.1.1 // indirect
 	codeberg.org/chavacava/garif v0.2.1 // indirect
 	codeberg.org/polyfloyd/go-errorlint v1.9.1 // indirect
 	dario.cat/mergo v1.0.2 // indirect
@@ -67,8 +67,8 @@ require (
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/charithe/durationcheck v0.0.11 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
-	github.com/charmbracelet/ultraviolet v0.0.0-20261023060817-a45b7c86333f // indirect
-	github.com/charmbracelet/x/ansi v0.11.9 // indirect
+	github.com/charmbracelet/ultraviolet v0.0.0-20261119151026-8ecbcf0e188c // indirect
+	github.com/charmbracelet/x/ansi v0.11.10 // indirect
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/charmbracelet/x/termios v0.1.1 // indirect
 	github.com/charmbracelet/x/windows v0.2.2 // indirect
@@ -81,7 +81,7 @@ require (
 	github.com/daixiang0/gci v0.14.0 // indirect
 	github.com/dave/dst v0.28.0 // indirect
 	github.com/denis-tingaikin/go-header v0.5.0 // indirect
-	github.com/dlclark/regexp2/v2 v2.13.0 // indirect
+	github.com/dlclark/regexp2/v2 v2.13.2 // indirect
 	github.com/emirpasic/gods v1.18.1 // indirect
 	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
@@ -177,7 +177,7 @@ require (
 	github.com/pjbgf/sha1cd v0.7.0 // indirect
 	github.com/prometheus/client_golang v1.25.0 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
-	github.com/prometheus/common v0.73.1 // indirect
+	github.com/prometheus/common v0.74.0 // indirect
 	github.com/prometheus/procfs v0.23.0 // indirect
 	github.com/quasilyte/go-ruleguard v0.4.5 // indirect
 	github.com/quasilyte/go-ruleguard/dsl v0.3.23 // indirect
@@ -197,13 +197,13 @@ require (
 	github.com/sashamelentyev/interfacebloat v1.1.0 // indirect
 	github.com/sashamelentyev/usestdlibvars v1.29.0 // indirect
 	github.com/securego/gosec/v2 v2.30.0 // indirect
-	github.com/sergi/go-diff v1.4.0 // indirect
+	github.com/sergi/go-diff v1.4.5 // indirect
 	github.com/sirupsen/logrus v1.10.2 // indirect
 	github.com/sivchari/containedctx v1.0.3 // indirect
 	github.com/skeema/knownhosts v1.3.3 // indirect
 	github.com/sonatard/noctx v0.5.1 // indirect
 	github.com/sosodev/duration v1.4.0 // indirect
-	github.com/sourcegraph/go-diff v0.9.0 // indirect
+	github.com/sourcegraph/go-diff v0.10.0 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
@@ -233,17 +233,17 @@ require (
 	go-simpler.org/sloglint v0.12.0 // indirect
 	go.augendre.info/arangolint v0.4.0 // indirect
 	go.augendre.info/fatcontext v0.10.1 // indirect
-	go.opentelemetry.io/build-tools v0.30.0 // indirect
+	go.opentelemetry.io/build-tools v0.31.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.28.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.6 // indirect
-	golang.org/x/crypto v0.58.0 // indirect
-	golang.org/x/exp/typeparams v0.0.0-20261109185158-a52e3aef5920 // indirect
+	golang.org/x/crypto v0.59.0 // indirect
+	golang.org/x/exp/typeparams v0.0.0-20261121134650-e1094eeca1b5 // indirect
 	golang.org/x/mod v0.43.0 // indirect
-	golang.org/x/net v0.62.0 // indirect
+	golang.org/x/net v0.63.0 // indirect
 	golang.org/x/sync v0.25.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
-	golang.org/x/telemetry v0.0.0-20261109170223-bc0f59dd170a // indirect
+	golang.org/x/telemetry v0.0.0-20261119160235-508b12de1089 // indirect
 	golang.org/x/text v0.44.0 // indirect
 	google.golang.org/protobuf v1.36.12 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect

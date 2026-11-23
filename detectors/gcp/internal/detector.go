@@ -40,6 +40,7 @@ const (
 	CloudRun
 	CloudRunJob
 	CloudRunWorkerPool
+	CloudRunInstance
 	CloudFunctions
 	AppEngineStandard
 	AppEngineFlex
@@ -73,40 +74,45 @@ func NewDetector() *Detector {
 }
 
 // CloudPlatform returns the platform on which this program is running.
-func (d *Detector) CloudPlatform() Platform {
+func (d *Detector) CloudPlatform(ctx context.Context) Platform {
 	switch {
-	case d.onBareMetalSolution():
+	case d.onBareMetalSolution(ctx):
 		return BareMetalSolution
-	case d.onGKE():
+	case d.onGKE(ctx):
 		return GKE
-	case d.onCloudFunctions():
-		return CloudFunctions
-	case d.onCloudRun():
+	// Check Cloud Run before Cloud Functions because Cloud Run functions
+	// (including Cloud Functions 2nd gen) set both K_CONFIGURATION and
+	// FUNCTION_TARGET, whereas Cloud Functions 1st gen only sets FUNCTION_TARGET.
+	case d.onCloudRun(ctx):
 		return CloudRun
-	case d.onCloudRunJob():
+	case d.onCloudFunctions(ctx):
+		return CloudFunctions
+	case d.onCloudRunJob(ctx):
 		return CloudRunJob
-	case d.onCloudRunWorkerPool():
+	case d.onCloudRunWorkerPool(ctx):
 		return CloudRunWorkerPool
-	case d.onAppEngineStandard():
+	case d.onCloudRunInstance(ctx):
+		return CloudRunInstance
+	case d.onAppEngineStandard(ctx):
 		return AppEngineStandard
-	case d.onAppEngine():
+	case d.onAppEngine(ctx):
 		return AppEngineFlex
-	case d.onGCE():
+	case d.onGCE(ctx):
 		return GCE
 	}
 	return UnknownPlatform
 }
 
 // ProjectID returns the ID of the project in which this program is running.
-func (d *Detector) ProjectID() (string, error) {
-	// N.B. d.metadata.ProjectIDWithContext(context.TODO()) is cached globally, so if we use it here it's untestable.
-	s, err := d.metadata.GetWithContext(context.TODO(), "project/project-id")
+func (d *Detector) ProjectID(ctx context.Context) (string, error) {
+	// N.B. d.metadata.ProjectIDWithContext(ctx) is cached globally, so if we use it here it's untestable.
+	s, err := d.metadata.GetWithContext(ctx, "project/project-id")
 	return strings.TrimSpace(s), err
 }
 
 // instanceID returns the ID of the instance on which this program is running.
-func (d *Detector) instanceID() (string, error) {
-	// N.B. d.metadata.InstanceIDWithContext(context.TODO()) is cached globally, so if we use it here it's untestable.
-	s, err := d.metadata.GetWithContext(context.TODO(), "instance/id")
+func (d *Detector) instanceID(ctx context.Context) (string, error) {
+	// N.B. d.metadata.InstanceIDWithContext(ctx) is cached globally, so if we use it here it's untestable.
+	s, err := d.metadata.GetWithContext(ctx, "instance/id")
 	return strings.TrimSpace(s), err
 }

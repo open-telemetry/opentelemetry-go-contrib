@@ -8,11 +8,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.yaml.in/yaml/v3"
+
 	lognoop "go.opentelemetry.io/otel/log/noop"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
@@ -20,8 +25,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
-	"go.yaml.in/yaml/v3"
 
+	"go.opentelemetry.io/contrib/otelconf/internal/diaglogger"
 	"go.opentelemetry.io/contrib/otelconf/internal/testtls"
 )
 
@@ -473,6 +478,34 @@ func TestNewSDK(t *testing.T) {
 			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
 		{
+			name: "invalid-log-level",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: new(SeverityNumber("invalid")),
+				}),
+			},
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
+			wantErr:            newErrInvalid(`unsupported log_level "invalid"`),
+		},
+		{
+			name: "empty-log-level",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: new(SeverityNumber("")),
+				}),
+			},
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
+			wantErr:            newErrInvalid(`unsupported log_level ""`),
+		},
+		{
 			name: "with-sdk-disabled",
 			cfg: []ConfigurationOption{
 				WithContext(t.Context()),
@@ -489,15 +522,162 @@ func TestNewSDK(t *testing.T) {
 			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
 	}
+
 	for _, tt := range tests {
-		sdk, err := NewSDK(tt.cfg...)
-		require.Equal(t, tt.wantErr, err)
-		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
-		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
-		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
-		assert.IsType(t, tt.wantPropagator, sdk.Propagator())
-		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
+		t.Run(tt.name, func(t *testing.T) {
+			sdk, err := NewSDK(tt.cfg...)
+
+			if tt.wantErr != nil {
+				require.Equal(t, tt.wantErr, err)
+
+				// NewSDK returns noopSDK when configuration is invalid.
+				assert.IsType(t, tracenoop.NewTracerProvider(), sdk.TracerProvider())
+				assert.IsType(t, metricnoop.NewMeterProvider(), sdk.MeterProvider())
+				assert.IsType(t, lognoop.NewLoggerProvider(), sdk.LoggerProvider())
+				assert.IsType(t, propagation.NewCompositeTextMapPropagator(), sdk.Propagator())
+				require.NoError(t, sdk.Shutdown(t.Context()))
+				return
+			}
+
+			require.NoError(t, err)
+			assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
+			assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
+			assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
+			assert.IsType(t, tt.wantPropagator, sdk.Propagator())
+			require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
+		})
 	}
+}
+
+func TestNewSDKDiagnosticLogger(t *testing.T) {
+	tests := []struct {
+		name            string
+		logLevel        *SeverityNumber
+		wantInfoEnabled bool
+	}{
+		{
+			name:            "explicit warn level",
+			logLevel:        new(SeverityNumberWarn),
+			wantInfoEnabled: false,
+		},
+		{
+			name:            "omitted level defaults to info",
+			wantInfoEnabled: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var output bytes.Buffer
+			var installedLogger logr.Logger
+
+			sdk, err := newSDKWithDiagnosticWriter(
+				&output,
+				func(logger logr.Logger) {
+					installedLogger = logger
+				},
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: tt.logLevel,
+				}),
+			)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.wantInfoEnabled, installedLogger.V(4).Enabled())
+			assert.True(t, installedLogger.V(1).Enabled())
+
+			installedLogger.V(4).Info("info marker")
+			installedLogger.V(1).Info("warn marker")
+
+			got := output.String()
+			assert.Equal(t, tt.wantInfoEnabled, strings.Contains(got, "info marker"))
+			assert.Contains(t, got, "warn marker")
+
+			require.NoError(t, sdk.Shutdown(t.Context()))
+		})
+	}
+}
+
+func TestNewSDKGlobalDiagnosticLogger(t *testing.T) {
+	const childProcessEnv = "OTELCONF_GLOBAL_LOGGER_TEST"
+
+	if os.Getenv(childProcessEnv) == "1" {
+		level := os.Getenv("OTELCONF_TEST_LOG_LEVEL")
+
+		var opts []ConfigurationOption
+		if level != "" {
+			opts = append(opts, WithOpenTelemetryConfiguration(
+				OpenTelemetryConfiguration{
+					LogLevel: new(SeverityNumber(level)),
+				},
+			))
+		}
+
+		sdk, err := NewSDK(opts...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := sdk.Shutdown(t.Context()); err != nil {
+				t.Error(err)
+			}
+		}()
+
+		sdktrace.NewTracerProvider()
+
+		return
+	}
+
+	tests := []struct {
+		name     string
+		level    string
+		wantInfo bool
+	}{
+		{
+			name:     "explicit warn level",
+			level:    "warn",
+			wantInfo: false,
+		},
+		{
+			name:     "default info level",
+			wantInfo: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := exec.CommandContext(
+				t.Context(),
+				os.Args[0],
+				"-test.v",
+				"-test.run=^TestNewSDKGlobalDiagnosticLogger$",
+			)
+
+			cmd.Env = append(os.Environ(),
+				childProcessEnv+"=1",
+				"OTELCONF_TEST_LOG_LEVEL="+tt.level,
+			)
+
+			output, err := cmd.CombinedOutput()
+			require.NoError(t, err, string(output))
+
+			if tt.wantInfo {
+				assert.Contains(t, string(output), `"msg":"TracerProvider created"`)
+			} else {
+				assert.NotContains(t, string(output), `"msg":"TracerProvider created"`)
+			}
+		})
+	}
+}
+
+func TestWriterCapture(t *testing.T) {
+	var output bytes.Buffer
+
+	logger, err := diaglogger.New("info", &output)
+	require.NoError(t, err)
+
+	logger.Info("capture test")
+	require.Contains(t, output.String(), "capture test")
 }
 
 func TestNewSDKWithEnvVar(t *testing.T) {
@@ -507,23 +687,26 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 			TracerProvider: nil,
 		}),
 	}
-	// test a non existent file
+
+	// Test a non-existent file.
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "file_missing.yaml"))
 	_, err := NewSDK(cfg...)
 	require.Error(t, err)
-	// test a file that causes a parse error
+
+	// Test a file that causes a parse error.
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))
 	_, err = NewSDK(cfg...)
 	require.Error(t, err)
 	require.ErrorIs(t, err, newErrRequired(&NameStringValuePair{}, "name"))
-	// test a valid file, error is returned from the SDK instantiation
-	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0.yaml"))
+
+	// Clear the current variable before testing the deprecated variable.
+	require.NoError(t, os.Unsetenv(envVarConfigFile))
+
+	// Validate that use of the deprecated environment variable returns an error.
+	t.Setenv("OTEL_EXPERIMENTAL_CONFIG_FILE", filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))
 	_, err = NewSDK(cfg...)
-	require.ErrorIs(t, err, newErrInvalid("otlp_file/development"))
-	// validate that use of deprecated env var returns an error
-	t.Setenv(envVarConfigFileDeprecated, filepath.Join("testdata", "v1.0.0.yaml"))
-	_, err = NewSDK(cfg...)
-	require.ErrorIs(t, err, errDeprecatedEnvVarUsed)
+	require.ErrorContains(t, err,
+		"OTEL_EXPERIMENTAL_CONFIG_FILE is no longer supported, use OTEL_CONFIG_FILE instead")
 }
 
 func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfiguration {
@@ -1690,10 +1873,22 @@ func TestUnmarshalOTLPHttpExporter(t *testing.T) {
 			wantExporter: OTLPHttpExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPHttpExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPHttpExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPHttpExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPHttpExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1743,10 +1938,22 @@ func TestUnmarshalOTLPGrpcExporter(t *testing.T) {
 			wantExporter: OTLPGrpcExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPGrpcExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPGrpcExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPGrpcExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPGrpcExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1796,10 +2003,22 @@ func TestUnmarshalOTLPHttpMetricExporter(t *testing.T) {
 			wantExporter: OTLPHttpMetricExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPHttpMetricExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPHttpMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPHttpMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPHttpMetricExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1849,10 +2068,22 @@ func TestUnmarshalOTLPGrpcMetricExporter(t *testing.T) {
 			wantExporter: OTLPGrpcMetricExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPGrpcMetricExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPGrpcMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPGrpcMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPGrpcMetricExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
