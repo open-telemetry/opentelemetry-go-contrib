@@ -125,6 +125,8 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Set `error.type` on the server span and on the request-duration, request-body-size, and response-body-size metrics in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux` when a request fails.
   A detected cause also sets span status to `Error`, even for non-5xx responses. (#9754)
 - Accept any 2xx status for the instance identity token request in `go.opentelemetry.io/contrib/detectors/ibmcloud/vpc`. The IMDS Identity API returns 201 Created for the token PUT, which the detector previously rejected, silently returning an empty resource on real IBM Cloud VPC instances. (#9671)
+- Honor a standalone `without_type_suffix` or `without_units` Prometheus option in `go.opentelemetry.io/contrib/otelconf/v0.3.0`.
+  Previously the option was silently ignored unless both were set together. (#9717)
 
 ### Removed
 
