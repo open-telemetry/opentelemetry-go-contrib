@@ -6,6 +6,7 @@ package otelslog
 import (
 	"errors"
 	"log/slog"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -225,5 +226,30 @@ func BenchmarkHandlerErrorField(b *testing.B) {
 				}
 			}
 		})
+	}
+}
+
+func BenchmarkHandlerHandleAttrs(b *testing.B) {
+	ctx := b.Context()
+	for _, n := range []int{1, 5, 10, 20, 40} {
+		record := slog.NewRecord(time.Now(), slog.LevelInfo, "body", 0)
+		for i := range n {
+			record.AddAttrs(slog.Int("k"+strconv.Itoa(i), i))
+		}
+
+		for _, bc := range []struct {
+			name string
+			h    slog.Handler
+		}{
+			{"NoGroup", NewHandler("")},
+			{"WithGroup", NewHandler("").WithGroup("g")},
+		} {
+			b.Run(bc.name+"/"+strconv.Itoa(n), func(b *testing.B) {
+				b.ReportAllocs()
+				for b.Loop() {
+					_ = bc.h.Handle(ctx, record)
+				}
+			})
+		}
 	}
 }
