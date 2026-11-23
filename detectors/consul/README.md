@@ -3,3 +3,7 @@
 <!--[![Go Reference][goref-image]][goref-url]-->
 <!--[goref-image]: https://pkg.go.dev/badge/go.opentelemetry.io/contrib/detectors/consul.svg-->
 <!--[goref-url]: https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/consul-->
+
+Detects resource attributes from a Consul agent's configuration. The Consul datacenter is reported as cloud.region.
+
+[Package documentation](https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/consul)
