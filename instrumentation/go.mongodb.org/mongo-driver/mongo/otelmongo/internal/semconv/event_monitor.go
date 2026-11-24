@@ -14,7 +14,7 @@ import (
 	"go.mongodb.org/mongo-driver/event"
 	"go.opentelemetry.io/otel/attribute"
 	semconv1210 "go.opentelemetry.io/otel/semconv/v1.21.0"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 // Constants for environment variable keys and versions.
@@ -102,6 +102,10 @@ func peerInfo(evt *event.CommandStartedEvent) (hostname string, port int) {
 	host, _, _ := strings.Cut(evt.ConnectionID, "[-")
 	hostname, portStr, err := net.SplitHostPort(host)
 	if err != nil {
+		if len(host) > 2 && host[0] == '[' && host[len(host)-1] == ']' &&
+			net.ParseIP(host[1:len(host)-1]) != nil {
+			host = host[1 : len(host)-1]
+		}
 		// If there's an error (likely because there's no port), assume default port
 		// and use the stripped host as hostname
 		return host, port
@@ -144,7 +148,7 @@ func commandStartedTraceAttrs(evt *event.CommandStartedEvent, setters ...Attribu
 	attrs = append(
 		attrs,
 		semconv.NetworkPeerPort(port),
-		semconv.NetworkPeerAddress(net.JoinHostPort(hostname, strconv.Itoa(port))),
+		semconv.NetworkPeerAddress(hostname),
 	)
 
 	if !opts.commandAttributeDisabled {

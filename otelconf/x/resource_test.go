@@ -14,7 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 func TestNewResource(t *testing.T) {
@@ -220,6 +220,10 @@ func TestResourceOptsWithAWSDetectors(t *testing.T) {
 		{
 			name:     "aws.eks",
 			detector: ExperimentalResourceDetector{AWSEKS: ExperimentalAWSEKSResourceDetector{}},
+		},
+		{
+			name:     "aws.lambda",
+			detector: ExperimentalResourceDetector{AWSLambda: ExperimentalAWSLambdaResourceDetector{}},
 		},
 	}
 

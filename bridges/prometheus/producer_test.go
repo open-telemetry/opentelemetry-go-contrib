@@ -23,6 +23,11 @@ const (
 	spanIDStr  = "00f067aa0ba902b7"
 )
 
+var (
+	expectedTraceID = []byte{0x4b, 0xf9, 0x2f, 0x35, 0x77, 0xb3, 0x4d, 0xa6, 0xa3, 0xce, 0x92, 0x9d, 0x0e, 0x0e, 0x47, 0x36}
+	expectedSpanID  = []byte{0x00, 0xf0, 0x67, 0xaa, 0x0b, 0xa9, 0x02, 0xb7}
+)
+
 func TestProduce(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -138,8 +143,55 @@ func TestProduce(t *testing.T) {
 									Exemplars: []metricdata.Exemplar[float64]{
 										{
 											Value:              245.3,
-											TraceID:            []byte(traceIDStr),
-											SpanID:             []byte(spanIDStr),
+											TraceID:            expectedTraceID,
+											SpanID:             expectedSpanID,
+											FilteredAttributes: []attribute.KeyValue{attribute.String("other_attribute", "abcd")},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
+			name: "counter with invalid exemplar trace_id and span_id",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewCounter(prometheus.CounterOpts{
+					Name: "test_counter_metric",
+					Help: "A counter metric for testing",
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+				metric.(prometheus.ExemplarAdder).AddWithExemplar(
+					245.3, prometheus.Labels{
+						"trace_id":        "not-a-valid-trace-id",
+						"span_id":         "0000000000000000",
+						"other_attribute": "abcd",
+					},
+				)
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_counter_metric",
+						Description: "A counter metric for testing",
+						Data: metricdata.Sum[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							IsMonotonic: true,
+							DataPoints: []metricdata.DataPoint[float64]{
+								{
+									Attributes: attribute.NewSet(attribute.String("foo", "bar")),
+									Value:      245.3,
+									Exemplars: []metricdata.Exemplar[float64]{
+										{
+											Value:              245.3,
 											FilteredAttributes: []attribute.KeyValue{attribute.String("other_attribute", "abcd")},
 										},
 									},
@@ -305,8 +357,69 @@ func TestProduce(t *testing.T) {
 									Exemplars: []metricdata.Exemplar[float64]{
 										{
 											Value:   578.3,
-											TraceID: []byte(traceIDStr),
-											SpanID:  []byte(spanIDStr),
+											TraceID: expectedTraceID,
+											SpanID:  expectedSpanID,
+											FilteredAttributes: []attribute.KeyValue{
+												attribute.String("other_attribute", "efgh"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			}},
+		},
+		{
+			name: "exponential histogram with exemplar",
+			testFn: func(reg *prometheus.Registry) {
+				metric := prometheus.NewHistogram(prometheus.HistogramOpts{
+					Name: "test_exponential_histogram_metric_with_exemplar",
+					Help: "An exponential histogram metric for testing",
+					// This enables collection of native histograms in the prometheus client.
+					NativeHistogramBucketFactor: 1.5,
+					ConstLabels: prometheus.Labels(map[string]string{
+						"foo": "bar",
+					}),
+				})
+				reg.MustRegister(metric)
+				metric.(prometheus.ExemplarObserver).ObserveWithExemplar(
+					78.3, prometheus.Labels{
+						"trace_id":        traceIDStr,
+						"span_id":         spanIDStr,
+						"other_attribute": "efgh",
+					},
+				)
+			},
+			expected: []metricdata.ScopeMetrics{{
+				Scope: instrumentation.Scope{
+					Name: scopeName,
+				},
+				Metrics: []metricdata.Metrics{
+					{
+						Name:        "test_exponential_histogram_metric_with_exemplar",
+						Description: "An exponential histogram metric for testing",
+						Data: metricdata.ExponentialHistogram[float64]{
+							Temporality: metricdata.CumulativeTemporality,
+							DataPoints: []metricdata.ExponentialHistogramDataPoint[float64]{
+								{
+									Count:     1,
+									Sum:       78.3,
+									Scale:     1,
+									ZeroCount: 0,
+									PositiveBucket: metricdata.ExponentialBucket{
+										Offset: 12,
+										Counts: []uint64{1},
+									},
+									NegativeBucket: metricdata.ExponentialBucket{},
+									Attributes:     attribute.NewSet(attribute.String("foo", "bar")),
+									ZeroThreshold:  prometheus.DefNativeHistogramZeroThreshold,
+									Exemplars: []metricdata.Exemplar[float64]{
+										{
+											Value:   78.3,
+											TraceID: expectedTraceID,
+											SpanID:  expectedSpanID,
 											FilteredAttributes: []attribute.KeyValue{
 												attribute.String("other_attribute", "efgh"),
 											},
@@ -843,5 +956,76 @@ func dataPointTimes(aggr metricdata.Aggregation) []time.Time {
 		return times
 	default:
 		return nil
+	}
+}
+
+func TestProduceUnit(t *testing.T) {
+	testCases := []struct {
+		unit         string
+		expectedUnit string
+	}{
+		{unit: "", expectedUnit: ""},
+		{unit: "days", expectedUnit: "d"},
+		{unit: "hours", expectedUnit: "h"},
+		{unit: "minutes", expectedUnit: "min"},
+		{unit: "seconds", expectedUnit: "s"},
+		{unit: "milliseconds", expectedUnit: "ms"},
+		{unit: "microseconds", expectedUnit: "us"},
+		{unit: "nanoseconds", expectedUnit: "ns"},
+		{unit: "bytes", expectedUnit: "By"},
+		{unit: "kibibytes", expectedUnit: "KiBy"},
+		{unit: "mebibytes", expectedUnit: "MiBy"},
+		{unit: "gibibytes", expectedUnit: "GiBy"},
+		{unit: "tebibytes", expectedUnit: "TiBy"},
+		{unit: "kilobytes", expectedUnit: "kBy"},
+		{unit: "megabytes", expectedUnit: "MBy"},
+		{unit: "gigabytes", expectedUnit: "GBy"},
+		{unit: "terabytes", expectedUnit: "TBy"},
+		{unit: "meters", expectedUnit: "m"},
+		{unit: "volts", expectedUnit: "V"},
+		{unit: "amperes", expectedUnit: "A"},
+		{unit: "joules", expectedUnit: "J"},
+		{unit: "watts", expectedUnit: "W"},
+		{unit: "grams", expectedUnit: "g"},
+		{unit: "celsius", expectedUnit: "Cel"},
+		{unit: "hertz", expectedUnit: "Hz"},
+		{unit: "percent", expectedUnit: "%"},
+		{unit: "bytes_per_second", expectedUnit: "By/s"},
+		{unit: "requests_per_minute", expectedUnit: "requests/min"},
+		{unit: "meters_per_hour", expectedUnit: "m/h"},
+		{unit: "bytes_per_day", expectedUnit: "By/d"},
+		{unit: "bytes_per_week", expectedUnit: "By/wk"},
+		{unit: "bytes_per_month", expectedUnit: "By/mo"},
+		{unit: "bytes_per_year", expectedUnit: "By/a"},
+		{unit: "bytes_per_", expectedUnit: "By"},
+		{unit: "per_second", expectedUnit: "per_second"},
+		{unit: "_per_second", expectedUnit: "/s"},
+		{unit: "bytes_per_request", expectedUnit: "By/request"},
+		{unit: "meters_per_second_per_second", expectedUnit: "m/second_per_second"},
+		{unit: "requests", expectedUnit: "requests"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.unit, func(t *testing.T) {
+			p := NewMetricProducer(WithGatherer(gathererFunc(func() ([]*dto.MetricFamily, error) {
+				return []*dto.MetricFamily{
+					{
+						Name: new("test_gauge"),
+						Help: new("A gauge metric for testing"),
+						Unit: new(tc.unit),
+						Type: dto.MetricType_GAUGE.Enum(),
+						Metric: []*dto.Metric{
+							{Gauge: &dto.Gauge{Value: new(1.0)}},
+						},
+					},
+				}, nil
+			})))
+
+			output, err := p.Produce(t.Context())
+			require.NoError(t, err)
+			require.Len(t, output, 1)
+			require.Len(t, output[0].Metrics, 1)
+			assert.Equal(t, tc.expectedUnit, output[0].Metrics[0].Unit)
+		})
 	}
 }

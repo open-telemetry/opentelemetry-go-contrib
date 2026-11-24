@@ -177,7 +177,6 @@ func TestHandlerBasics(t *testing.T) {
 		attribute.Int64("http.response.status_code", 200),
 		attribute.String("network.protocol.name", "http"),
 		attribute.String("network.protocol.version", fmt.Sprintf("1.%d", r.ProtoMinor)),
-		attribute.String("server.address", r.Host),
 		attribute.String("url.scheme", "http"),
 		attribute.String("test", "attribute"),
 	)
@@ -203,6 +202,40 @@ func TestHandlerBasics(t *testing.T) {
 		t.Fatalf("got %q, expected %q", got, expected)
 	}
 	assert.Equal(t, startTime, spans[0].StartTime())
+}
+
+type readerFromResponseRecorder struct{ *httptest.ResponseRecorder }
+
+func (w readerFromResponseRecorder) ReadFrom(r io.Reader) (int64, error) {
+	return io.Copy(w.ResponseRecorder, r)
+}
+
+func TestHandlerResponseBodySizeReadFrom(t *testing.T) {
+	body := "test"
+	bodysize := int64(len(body))
+
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	h := NewHandler(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		// NewHandler passes a httpsnoop-wrapped writer here.
+		// Without the ReadFrom hook, this call bypasses byte accounting.
+		_, err := w.(io.ReaderFrom).ReadFrom(strings.NewReader(body))
+		assert.NoError(t, err)
+	}), "test_handler", WithMeterProvider(provider))
+	// Expose ReadFrom so httpsnoop preserves it on the wrapped writer.
+	w := readerFromResponseRecorder{httptest.NewRecorder()}
+	h.ServeHTTP(w, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody))
+
+	var metrics metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(t.Context(), &metrics))
+	for _, metric := range metrics.ScopeMetrics[0].Metrics {
+		if metric.Name == "http.server.response.body.size" {
+			histogram := metric.Data.(metricdata.Histogram[int64])
+			assert.Equal(t, bodysize, histogram.DataPoints[0].Sum)
+			return
+		}
+	}
+	t.Fatal("response body size metric missing")
 }
 
 func assertScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
@@ -868,6 +901,48 @@ func TestHandlerServeMuxRouteMetric(t *testing.T) {
 			t.Fatalf("unexpected metric data type %T for metric %s", m.Data, m.Name)
 		}
 	}
+}
+
+func TestHandlerMetricsIgnoreRequestHost(t *testing.T) {
+	t.Setenv("OTEL_METRICS_EXEMPLAR_FILTER", "always_off")
+
+	reader := sdkmetric.NewManualReader()
+	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+
+	h := NewHandler(
+		http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			w.WriteHeader(http.StatusOK)
+		}),
+		"test_handler",
+		WithMeterProvider(meterProvider),
+	)
+
+	for _, host := range []string{"a.example", "b.example:8080", "c.example:9090"} {
+		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", http.NoBody)
+		r.Host = host
+		h.ServeHTTP(httptest.NewRecorder(), r)
+	}
+
+	rm := metricdata.ResourceMetrics{}
+	require.NoError(t, reader.Collect(t.Context(), &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var found bool
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name != "http.server.request.duration" {
+			continue
+		}
+		found = true
+		data, ok := m.Data.(metricdata.Histogram[float64])
+		require.True(t, ok)
+		require.Len(t, data.DataPoints, 1, "distinct Host values must not create new series")
+		assert.Equal(t, uint64(3), data.DataPoints[0].Count)
+		_, ok = data.DataPoints[0].Attributes.Value("server.address")
+		assert.False(t, ok)
+		_, ok = data.DataPoints[0].Attributes.Value("server.port")
+		assert.False(t, ok)
+	}
+	assert.True(t, found, "http.server.request.duration not recorded")
 }
 
 func TestHandlerMetricAttributesFnSeesRoutedRequest(t *testing.T) {

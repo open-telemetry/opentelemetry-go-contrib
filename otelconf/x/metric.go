@@ -271,9 +271,14 @@ func otlpGRPCMetricExporter(ctx context.Context, otlpConfig *OTLPGrpcMetricExpor
 	var opts []otlpmetricgrpc.Option
 
 	if otlpConfig.Endpoint != nil {
-		u, err := url.ParseRequestURI(*otlpConfig.Endpoint)
+		endpoint := *otlpConfig.Endpoint
+		u, err := url.ParseRequestURI(endpoint)
 		if err != nil {
-			return nil, errors.Join(newErrInvalid("endpoint parsing failed"), err)
+			if _, _, splitErr := net.SplitHostPort(endpoint); splitErr != nil {
+				return nil, errors.Join(newErrInvalid("endpoint parsing failed"), err)
+			}
+
+			u = &url.URL{Host: endpoint}
 		}
 		// ParseRequestURI leaves the Host field empty when no
 		// scheme is specified (i.e. localhost:4317). This check is
@@ -469,8 +474,10 @@ func prometheusReaderOpts(prometheusConfig *ExperimentalPrometheusMetricExporter
 		}
 		opts = append(opts, otelprom.WithTranslationStrategy(otlptranslator.TranslationStrategyOption(*prometheusConfig.TranslationStrategy)))
 	}
-	if prometheusConfig.WithResourceConstantLabels != nil {
-		f, err := newIncludeExcludeFilter(prometheusConfig.WithResourceConstantLabels)
+	// An empty filter would include every attribute. With no lists set, keep the
+	// exporter default of adding no resource attributes as labels.
+	if rcl := prometheusConfig.WithResourceConstantLabels; rcl != nil && (len(rcl.Included) > 0 || len(rcl.Excluded) > 0) {
+		f, err := newIncludeExcludeFilter(rcl)
 		if err != nil {
 			return nil, err
 		}

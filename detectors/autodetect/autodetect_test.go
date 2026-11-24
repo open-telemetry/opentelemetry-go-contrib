@@ -106,6 +106,21 @@ func TestAkamaiDetectorRegistered(t *testing.T) {
 	}
 }
 
+func TestAlibabaECSDetectorRegistered(t *testing.T) {
+	detector, err := Detector(IDAlibabaECS)
+	if err != nil {
+		t.Fatalf("got error: %v, expected no error", err)
+	}
+
+	c, ok := detector.(*composite)
+	if !ok {
+		t.Fatalf("got %T, expected composite detector", detector)
+	}
+	if len(c.detectors) != 1 {
+		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
+	}
+}
+
 func TestDigitalOceanDetectorRegistered(t *testing.T) {
 	detector, err := Detector(IDDigitalOcean)
 	if err != nil {
@@ -181,6 +196,21 @@ func TestConsulDetectorRegistered(t *testing.T) {
 	}
 }
 
+func TestDynatraceDetectorRegistered(t *testing.T) {
+	detector, err := Detector(IDDynatrace)
+	if err != nil {
+		t.Fatalf("got error: %v, expected no error", err)
+	}
+
+	c, ok := detector.(*composite)
+	if !ok {
+		t.Fatalf("got %T, expected composite detector", detector)
+	}
+	if len(c.detectors) != 1 {
+		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
+	}
+}
+
 func TestKubeadmDetectorRegistered(t *testing.T) {
 	detector, err := Detector(IDKubeadm)
 	if err != nil {
@@ -228,6 +258,21 @@ func TestOpenStackNovaDetectorRegistered(t *testing.T) {
 
 func TestScalewayDetectorRegistered(t *testing.T) {
 	detector, err := Detector(IDScaleway)
+	if err != nil {
+		t.Fatalf("got error: %v, expected no error", err)
+	}
+
+	c, ok := detector.(*composite)
+	if !ok {
+		t.Fatalf("got %T, expected composite detector", detector)
+	}
+	if len(c.detectors) != 1 {
+		t.Fatalf("got %d detectors, expected 1 detector", len(c.detectors))
+	}
+}
+
+func TestTencentCVMDetectorRegistered(t *testing.T) {
+	detector, err := Detector(IDTencentCVM)
 	if err != nil {
 		t.Fatalf("got error: %v, expected no error", err)
 	}

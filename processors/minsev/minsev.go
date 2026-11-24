@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package minsev provides an [log.Processor] that will not log any record with
+// Package minsev provides a [log.Processor] that will not log any record with
 // a severity below a configured threshold.
 package minsev
 
@@ -36,7 +36,7 @@ func NewLogProcessor(downstream log.Processor, severity Severitier) *LogProcesso
 	}
 }
 
-// LogProcessor is an [log.Processor] implementation that wraps another
+// LogProcessor is a [log.Processor] implementation that wraps another
 // [log.Processor]. It will pass-through calls to OnEmit and Enabled for
 // records with severity greater than or equal to a minimum. All other method
 // calls are passed to the wrapped [log.Processor].
@@ -55,8 +55,8 @@ type LogProcessor struct {
 var _ log.Processor = (*LogProcessor)(nil)
 
 // OnEmit passes ctx and r to the [log.Processor] that p wraps if the severity
-// of record is greater than or equal to p.Minimum. Otherwise, record is
-// dropped.
+// of record is greater than or equal to the configured minimum severity.
+// Otherwise, record is dropped.
 func (p *LogProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 	if record.Severity() >= p.sev.Severity() {
 		return p.Processor.OnEmit(ctx, record)
@@ -64,9 +64,9 @@ func (p *LogProcessor) OnEmit(ctx context.Context, record *log.Record) error {
 	return nil
 }
 
-// Enabled returns if the [log.Processor] that p wraps is enabled if the
-// severity of param is greater than or equal to p.Minimum. Otherwise false is
-// returned.
+// Enabled reports whether the severity of param is greater than or equal to
+// the configured minimum severity and, if p wraps a [log.Processor], whether
+// that processor is also enabled.
 func (p *LogProcessor) Enabled(ctx context.Context, param log.EnabledParameters) bool {
 	sev := param.Severity
 	if p.wrapped != nil {

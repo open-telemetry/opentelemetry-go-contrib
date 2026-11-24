@@ -305,19 +305,33 @@ func TestDetectHonorsLongerCallerDeadline(t *testing.T) {
 	assert.Contains(t, res.Attributes(), semconv.HostName("sample-droplet"))
 }
 
-// The client timeout does not stop a TCP dial in progress, so the dial must be
-// bounded by the detection deadline on its own, without relying on the context
-// passed to DialContext.
-func TestTransportDialHonorsDeadline(t *testing.T) {
+// The transport detaches the context it passes to DialContext from request
+// cancellation, so the dial must be bound to the detection context on its own:
+// both its deadline and its cancellation.
+func TestTransportDialHonorsDetectionContext(t *testing.T) {
 	ln, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
 	require.NoError(t, err)
 	t.Cleanup(func() { _ = ln.Close() })
 
-	tr := newTransport(time.Now().Add(-time.Second))
-	_, err = tr.DialContext(t.Context(), "tcp", ln.Addr().String())
-	var netErr net.Error
-	require.ErrorAs(t, err, &netErr)
-	assert.True(t, netErr.Timeout())
+	expired, cancelExpired := context.WithDeadline(t.Context(), time.Now().Add(-time.Second))
+	defer cancelExpired()
+	canceled, cancel := context.WithTimeout(t.Context(), time.Hour)
+	cancel()
+
+	for name, tc := range map[string]struct {
+		ctx  context.Context
+		want error
+	}{
+		"deadline": {expired, context.DeadlineExceeded},
+		"canceled": {canceled, context.Canceled},
+	} {
+		t.Run(name, func(t *testing.T) {
+			// The dial is given a live context, as the transport does, so only
+			// the detection context can end it.
+			_, err := newTransport(tc.ctx).DialContext(t.Context(), "tcp", ln.Addr().String())
+			require.ErrorIs(t, err, tc.want)
+		})
+	}
 }
 
 // Each detection creates its own transport with no shutdown path, so a

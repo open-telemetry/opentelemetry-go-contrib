@@ -34,6 +34,9 @@ const (
 	//
 	// Cloud Run worker pool env vars:
 	// https://cloud.google.com/run/docs/container-contract#worker-pools-env-vars
+	//
+	// Cloud Run instances env vars:
+	// https://cloud.google.com/run/docs/instances/create-and-manage-instances
 	cloudFunctionsTargetEnv  = "FUNCTION_TARGET"
 	cloudRunConfigurationEnv = "K_CONFIGURATION"
 	cloudRunJobsEnv          = "CLOUD_RUN_JOB"
@@ -43,31 +46,37 @@ const (
 	cloudRunJobTaskIndexEnv  = "CLOUD_RUN_TASK_INDEX"
 	cloudRunWorkerPoolEnv    = "CLOUD_RUN_WORKER_POOL"
 	cloudRunRevisionEnv      = "CLOUD_RUN_REVISION"
+	cloudRunInstanceEnv      = "CLOUD_RUN_INSTANCE"
 	regionMetadataAttr       = "instance/region"
 )
 
-func (d *Detector) onCloudFunctions() bool {
+func (d *Detector) onCloudFunctions(_ context.Context) bool {
 	_, found := d.os.LookupEnv(cloudFunctionsTargetEnv)
 	return found
 }
 
-func (d *Detector) onCloudRun() bool {
+func (d *Detector) onCloudRun(_ context.Context) bool {
 	_, found := d.os.LookupEnv(cloudRunConfigurationEnv)
 	return found
 }
 
-func (d *Detector) onCloudRunJob() bool {
+func (d *Detector) onCloudRunJob(_ context.Context) bool {
 	_, found := d.os.LookupEnv(cloudRunJobsEnv)
 	return found
 }
 
-func (d *Detector) onCloudRunWorkerPool() bool {
+func (d *Detector) onCloudRunWorkerPool(_ context.Context) bool {
 	_, found := d.os.LookupEnv(cloudRunWorkerPoolEnv)
 	return found
 }
 
-// FaaSName returns the name of the Cloud Run, Cloud Run jobs or Cloud Functions service.
-func (d *Detector) FaaSName() (string, error) {
+func (d *Detector) onCloudRunInstance(_ context.Context) bool {
+	_, found := d.os.LookupEnv(cloudRunInstanceEnv)
+	return found
+}
+
+// FaaSName returns the name of the Cloud Run, Cloud Run jobs, Cloud Run worker pool, Cloud Run instance, or Cloud Functions service.
+func (d *Detector) FaaSName(_ context.Context) (string, error) {
 	if name, found := d.os.LookupEnv(faasServiceEnv); found {
 		return name, nil
 	}
@@ -77,11 +86,14 @@ func (d *Detector) FaaSName() (string, error) {
 	if name, found := d.os.LookupEnv(cloudRunWorkerPoolEnv); found {
 		return name, nil
 	}
+	if name, found := d.os.LookupEnv(cloudRunInstanceEnv); found {
+		return name, nil
+	}
 	return "", errEnvVarNotFound
 }
 
 // FaaSVersion returns the revision of the Cloud Run or Cloud Functions service.
-func (d *Detector) FaaSVersion() (string, error) {
+func (d *Detector) FaaSVersion(_ context.Context) (string, error) {
 	if version, found := d.os.LookupEnv(cloudRunRevisionEnv); found {
 		return version, nil
 	}
@@ -92,7 +104,7 @@ func (d *Detector) FaaSVersion() (string, error) {
 }
 
 // CloudRunJobExecution returns the execution id of the Cloud Run jobs.
-func (d *Detector) CloudRunJobExecution() (string, error) {
+func (d *Detector) CloudRunJobExecution(_ context.Context) (string, error) {
 	if eid, found := d.os.LookupEnv(cloudRunJobExecutionEnv); found {
 		return eid, nil
 	}
@@ -100,7 +112,7 @@ func (d *Detector) CloudRunJobExecution() (string, error) {
 }
 
 // CloudRunJobTaskIndex returns the task index for the execution of the Cloud Run jobs.
-func (d *Detector) CloudRunJobTaskIndex() (string, error) {
+func (d *Detector) CloudRunJobTaskIndex(_ context.Context) (string, error) {
 	if tidx, found := d.os.LookupEnv(cloudRunJobTaskIndexEnv); found {
 		return tidx, nil
 	}
@@ -108,16 +120,16 @@ func (d *Detector) CloudRunJobTaskIndex() (string, error) {
 }
 
 // FaaSID returns the instance id of the Cloud Run or Cloud Function.
-func (d *Detector) FaaSID() (string, error) {
-	return d.instanceID()
+func (d *Detector) FaaSID(ctx context.Context) (string, error) {
+	return d.instanceID(ctx)
 }
 
 // FaaSCloudRegion detects region from the metadata server.
 // It is in the format /projects/<project_number>/regions/<region>.
 //
 // https://cloud.google.com/run/docs/reference/container-contract#metadata-server
-func (d *Detector) FaaSCloudRegion() (string, error) {
-	region, err := d.metadata.GetWithContext(context.TODO(), regionMetadataAttr)
+func (d *Detector) FaaSCloudRegion(ctx context.Context) (string, error) {
+	region, err := d.metadata.GetWithContext(ctx, regionMetadataAttr)
 	if err != nil {
 		return "", err
 	}

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -352,10 +351,14 @@ func BenchmarkPropagatorExtract(b *testing.B) {
 
 func BenchmarkPropagatorInject(b *testing.B) {
 	propagator := Propagator{}
-	tracer := otel.Tracer("test")
 
 	req, _ := http.NewRequestWithContext(b.Context(), http.MethodGet, "http://example.com", http.NoBody)
-	ctx, _ := tracer.Start(b.Context(), "Parent operation...")
+	sc := trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16},
+		SpanID:     trace.SpanID{1, 2, 3, 4, 5, 6, 7, 8},
+		TraceFlags: trace.FlagsSampled,
+	})
+	ctx := trace.ContextWithSpanContext(b.Context(), sc)
 
 	b.ResetTimer()
 	for range b.N {

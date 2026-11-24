@@ -133,7 +133,7 @@ func (*ResourceDetector) metadata(ctx context.Context) (*do.Metadata, int, error
 	// traffic. The client of the metadata package does not disable it.
 	// Keep-alive is disabled because each transport serves one request: an
 	// idle connection would only stay open after Detect returns.
-	tr := &statusTransport{ctx: ctx, base: newTransport(deadline)}
+	tr := &statusTransport{ctx: ctx, base: newTransport(ctx)}
 	client := newClient(do.WithHTTPClient(&http.Client{
 		Timeout:   timeout,
 		Transport: tr,
@@ -161,14 +161,19 @@ func (*ResourceDetector) metadata(ctx context.Context) (*do.Metadata, int, error
 	}
 }
 
-// newTransport returns a transport whose TCP dials end at deadline. The client
-// timeout does not stop a dial in progress, so without this an unanswered dial
-// would run until the operating system gives up.
-func newTransport(deadline time.Time) *http.Transport {
+// newTransport returns a transport whose TCP dials are bound to ctx, which must
+// carry a deadline. The transport detaches the context it passes to DialContext
+// from request cancellation, and the client timeout does not stop a dial in
+// progress, so without this a dial would outlive Detect until the operating
+// system gives up.
+func newTransport(ctx context.Context) *http.Transport {
+	var d net.Dialer
 	return &http.Transport{
 		Proxy:             nil,
 		DisableKeepAlives: true,
-		DialContext:       (&net.Dialer{Deadline: deadline}).DialContext,
+		DialContext: func(_ context.Context, network, addr string) (net.Conn, error) {
+			return d.DialContext(ctx, network, addr)
+		},
 	}
 }
 

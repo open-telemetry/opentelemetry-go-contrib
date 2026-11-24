@@ -16,7 +16,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 const testInstanceJSON = `{
@@ -95,6 +95,20 @@ func TestDetect(t *testing.T) {
 	_, err = detector.Detect(t.Context())
 	require.NoError(t, err)
 	assert.Equal(t, int32(1), tokenRequests.Load(), "second detection should reuse the metadata token")
+}
+
+func TestDetectTokenCreatedStatus(t *testing.T) {
+	var tokenRequests atomic.Int32
+	srv := newMetadataServerWithTokenResponse(t, &tokenRequests, http.StatusCreated, `{"access_token":"test-token","expires_in":300}`, http.StatusOK, testInstanceJSON)
+	defer srv.Close()
+
+	detector := NewResourceDetector()
+	detector.endpoint = srv.URL
+
+	res, err := detector.Detect(t.Context())
+	require.NoError(t, err)
+	assert.NotEmpty(t, res.Attributes(), "a 201 Created token response must be accepted")
+	assert.Equal(t, int32(1), tokenRequests.Load())
 }
 
 func TestDetectReusesShortLivedToken(t *testing.T) {

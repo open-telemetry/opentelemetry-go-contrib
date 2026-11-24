@@ -15,6 +15,7 @@ import (
 	"go.opentelemetry.io/otel/sdk/resource"
 
 	"go.opentelemetry.io/contrib/detectors/akamai"
+	alibabaecs "go.opentelemetry.io/contrib/detectors/alibaba/ecs"
 	"go.opentelemetry.io/contrib/detectors/aws/ec2/v2"
 	"go.opentelemetry.io/contrib/detectors/aws/ecs"
 	"go.opentelemetry.io/contrib/detectors/aws/eks"
@@ -26,6 +27,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/consul"
 	"go.opentelemetry.io/contrib/detectors/digitalocean"
 	"go.opentelemetry.io/contrib/detectors/docker"
+	"go.opentelemetry.io/contrib/detectors/dynatrace"
 	"go.opentelemetry.io/contrib/detectors/gcp"
 	"go.opentelemetry.io/contrib/detectors/hetzner"
 	"go.opentelemetry.io/contrib/detectors/ibmcloud/classic"
@@ -35,6 +37,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/openshift"
 	"go.opentelemetry.io/contrib/detectors/openstack/nova"
 	"go.opentelemetry.io/contrib/detectors/scaleway"
+	"go.opentelemetry.io/contrib/detectors/tencent/cvm"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -43,6 +46,10 @@ var (
 	// attributes on Akamai Connected Cloud compute instances (see
 	// akamai.NewResourceDetector for details).
 	IDAkamai = ID("akamai")
+	// IDAlibabaECS is the ID for the Alibaba Cloud ECS detector that detects
+	// resource attributes on Alibaba Cloud Elastic Compute Service (ECS)
+	// instances (see alibabaecs.NewResourceDetector for details).
+	IDAlibabaECS = ID("alibaba.ecs")
 	// IDAWSEC2 is the ID for the AWS EC2 detector that detects resource
 	// attributes on Amazon Web Services (AWS) EC2 instances (see
 	// ec2.NewResourceDetector for details).
@@ -83,6 +90,10 @@ var (
 	// resource attributes on DigitalOcean Droplets (see
 	// digitalocean.NewResourceDetector for details).
 	IDDigitalOcean = ID("digitalocean")
+	// IDDynatrace is the ID for the Dynatrace detector that detects resource
+	// attributes from the enrichment files written by the Dynatrace OneAgent
+	// (see dynatrace.NewResourceDetector for details).
+	IDDynatrace = ID("dynatrace")
 	// IDGCP is the ID for the GCP detector that detects resource attributes on
 	// Google Cloud Platform (GCP) environments (see gcp.NewDetector for
 	// details).
@@ -119,6 +130,10 @@ var (
 	// attributes on Scaleway Instances (see scaleway.NewResourceDetector for
 	// details).
 	IDScaleway = ID("scaleway")
+	// IDTencentCVM is the ID for the Tencent Cloud CVM detector that detects
+	// resource attributes on Tencent Cloud CVM instances (see
+	// cvm.NewResourceDetector for details).
+	IDTencentCVM = ID("tencent.cvm")
 	// IDVultr is the ID for the Vultr detector that detects resource attributes
 	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
 	// details).
@@ -198,7 +213,8 @@ var (
 var (
 	registryMu sync.Mutex
 	registry   = map[ID]func() resource.Detector{
-		IDAkamai: func() resource.Detector { return akamai.NewResourceDetector() },
+		IDAkamai:     func() resource.Detector { return akamai.NewResourceDetector() },
+		IDAlibabaECS: func() resource.Detector { return alibabaecs.NewResourceDetector() },
 
 		IDAWSEC2:              ec2.NewResourceDetector,
 		IDAWSECS:              ecs.NewResourceDetector,
@@ -216,6 +232,7 @@ var (
 
 		IDConsul:       func() resource.Detector { return consul.NewResourceDetector() },
 		IDDigitalOcean: func() resource.Detector { return digitalocean.NewResourceDetector() },
+		IDDynatrace:    func() resource.Detector { return dynatrace.NewResourceDetector() },
 
 		IDGCP: gcp.NewDetector,
 
@@ -231,7 +248,8 @@ var (
 		IDOpenShift:     func() resource.Detector { return openshift.NewResourceDetector() },
 		IDOpenStackNova: func() resource.Detector { return nova.NewResourceDetector() },
 
-		IDScaleway: func() resource.Detector { return scaleway.NewResourceDetector() },
+		IDScaleway:   func() resource.Detector { return scaleway.NewResourceDetector() },
+		IDTencentCVM: func() resource.Detector { return cvm.NewResourceDetector() },
 
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 
