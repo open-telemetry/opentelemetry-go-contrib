@@ -4,6 +4,8 @@
 package otellogrus
 
 import (
+	"context"
+	"io"
 	"testing"
 	"time"
 
@@ -22,6 +24,36 @@ type mockLoggerProvider struct {
 
 func (mockLoggerProvider) Logger(string, ...log.LoggerOption) log.Logger {
 	return nil
+}
+
+func TestHookFireContext(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		ctx  context.Context
+	}{
+		{name: "default"},
+		{name: "explicit", ctx: t.Context()},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			recorder := logtest.NewRecorder()
+			logger := logrus.New()
+			logger.SetOutput(io.Discard)
+			logger.AddHook(NewHook("test", WithLoggerProvider(recorder)))
+			entry := logrus.NewEntry(logger)
+			if tt.ctx != nil {
+				entry = entry.WithContext(tt.ctx)
+			}
+			entry.Info("message")
+			ctx := recorder.Result()[logtest.Scope{Name: "test"}][0].Context
+			if tt.ctx == nil {
+				if assert.NotNil(t, ctx) {
+					assert.Nil(t, ctx.Done())
+				}
+			} else {
+				assert.Same(t, tt.ctx, ctx)
+			}
+		})
+	}
 }
 
 func TestNewConfig(t *testing.T) {
@@ -150,6 +182,7 @@ func TestHookLevels(t *testing.T) {
 
 func TestHookFire(t *testing.T) {
 	const name = "name"
+	ctx := t.Context()
 	now := time.Now()
 	var nilPointer *struct{}
 
@@ -167,6 +200,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal4,
 						SeverityText: "panic",
 						Body:         attribute.StringValue(""),
@@ -182,6 +216,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal4,
 						SeverityText: "panic",
 						Body:         attribute.StringValue(""),
@@ -198,6 +233,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal4,
 						SeverityText: "panic",
 						Body:         attribute.StringValue(""),
@@ -213,6 +249,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal,
 						SeverityText: "fatal",
 						Body:         attribute.StringValue(""),
@@ -228,6 +265,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityError,
 						SeverityText: "error",
 						Body:         attribute.StringValue(""),
@@ -243,6 +281,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityWarn,
 						SeverityText: "warning",
 						Body:         attribute.StringValue(""),
@@ -258,6 +297,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityInfo,
 						SeverityText: "info",
 						Body:         attribute.StringValue(""),
@@ -273,6 +313,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityDebug,
 						SeverityText: "debug",
 						Body:         attribute.StringValue(""),
@@ -288,6 +329,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityTrace,
 						SeverityText: "trace",
 						Body:         attribute.StringValue(""),
@@ -305,6 +347,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal4,
 						SeverityText: "panic",
 						Attributes: []attribute.KeyValue{
@@ -325,6 +368,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityFatal4,
 						SeverityText: "panic",
 						Attributes: []attribute.KeyValue{
@@ -347,6 +391,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityError,
 						SeverityText: "error",
 						Error:        assert.AnError,
@@ -369,6 +414,7 @@ func TestHookFire(t *testing.T) {
 			want: logtest.Recording{
 				logtest.Scope{Name: name}: {
 					{
+						Context:      ctx,
 						Severity:     log.SeverityInfo,
 						SeverityText: "info",
 						Attributes: []attribute.KeyValue{
@@ -383,6 +429,7 @@ func TestHookFire(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			rec := logtest.NewRecorder()
 
+			tt.entry.Context = ctx
 			err := NewHook(name, WithLoggerProvider(rec)).Fire(tt.entry)
 			assert.Equal(t, tt.wantErr, err)
 

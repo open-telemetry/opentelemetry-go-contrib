@@ -16,6 +16,7 @@ import (
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
 	"go.opentelemetry.io/otel/log/logtest"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type mockLoggerProvider struct {
@@ -453,6 +454,69 @@ func TestLogSinkContext(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestLogSinkWithValuesSiblings(t *testing.T) {
+	rec := logtest.NewRecorder()
+	parent := logr.New(NewLogSink("name", WithLoggerProvider(rec))).
+		WithValues("a", 1).
+		WithValues("b", 2).
+		WithValues("c", 3)
+
+	c1 := parent.WithValues("child", "one")
+	c2 := parent.WithValues("child", "two")
+	c1.Info("msg")
+	c2.Info("msg")
+
+	want := logtest.Recording{
+		logtest.Scope{Name: "name"}: {
+			{Attributes: []attribute.KeyValue{
+				attribute.Int64("a", 1),
+				attribute.Int64("b", 2),
+				attribute.Int64("c", 3),
+				attribute.String("child", "one"),
+			}},
+			{Attributes: []attribute.KeyValue{
+				attribute.Int64("a", 1),
+				attribute.Int64("b", 2),
+				attribute.Int64("c", 3),
+				attribute.String("child", "two"),
+			}},
+		},
+	}
+	logtest.AssertEqual(t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			return logtest.Record{Attributes: r.Attributes}
+		}),
+	)
+}
+
+func TestLogSinkEnabledWithContext(t *testing.T) {
+	ctx := trace.ContextWithSpanContext(t.Context(), trace.NewSpanContext(trace.SpanContextConfig{
+		TraceID:    trace.TraceID{1},
+		SpanID:     trace.SpanID{1},
+		TraceFlags: trace.FlagsSampled,
+	}))
+	enabledFunc := func(ctx context.Context, param log.EnabledParameters) bool {
+		return trace.SpanContextFromContext(ctx).IsSampled() && param.Severity == log.SeverityInfo
+	}
+	rec := logtest.NewRecorder(logtest.WithEnabledFunc(enabledFunc))
+	parent := logr.New(NewLogSink("name", WithLoggerProvider(rec)))
+	logger := parent.WithValues("ctx", ctx).WithValues("key", "value").WithName("child")
+	assert.True(t, logger.Enabled())
+	assert.False(t, logger.V(1).Enabled())
+	logger.Info("msg")
+	logtest.AssertEqual(t, logtest.Recording{
+		logtest.Scope{Name: "name"}: nil,
+		logtest.Scope{Name: "name/child"}: {{
+			Context:    ctx,
+			Body:       attribute.StringValue("msg"),
+			Severity:   log.SeverityInfo,
+			Attributes: []attribute.KeyValue{attribute.String("key", "value")},
+		}},
+	}, rec.Result())
+	assert.False(t, parent.Enabled())
+	assert.False(t, logger.WithValues("ctx", t.Context()).Enabled())
 }
 
 func TestLogSinkEnabled(t *testing.T) {

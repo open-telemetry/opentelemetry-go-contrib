@@ -26,6 +26,18 @@ func hasYAMLMapKey(node *yaml.Node, key string) bool {
 	return false
 }
 
+func yamlMappingToMap(node *yaml.Node) (map[string]any, error) {
+	raw := make(map[string]any)
+	if node == nil || node.Kind != yaml.MappingNode {
+		return raw, nil
+	}
+
+	if err := node.Decode(&raw); err != nil {
+		return nil, err
+	}
+	return raw, nil
+}
+
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	type Plain ExperimentalResourceDetector
@@ -45,6 +57,9 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	if hasYAMLMapKey(node, "aws.eks") && plain.AWSEKS == nil {
 		plain.AWSEKS = ExperimentalAWSEKSResourceDetector{}
 	}
+	if hasYAMLMapKey(node, "aws.lambda") && plain.AWSLambda == nil {
+		plain.AWSLambda = ExperimentalAWSLambdaResourceDetector{}
+	}
 	if hasYAMLMapKey(node, "azure.vm") && plain.AzureVM == nil {
 		plain.AzureVM = ExperimentalAzureVMResourceDetector{}
 	}
@@ -60,6 +75,27 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 	if hasYAMLMapKey(node, "service") && plain.Service == nil {
 		plain.Service = ExperimentalServiceResourceDetector{}
 	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "aws.ec2")
+	delete(raw, "gcp")
+	delete(raw, "aws.ecs")
+	delete(raw, "aws.eks")
+	delete(raw, "aws.lambda")
+	delete(raw, "azure.vm")
+	delete(raw, "container")
+	delete(raw, "host")
+	delete(raw, "process")
+	delete(raw, "service")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
 	*j = ExperimentalResourceDetector(plain)
 	return nil
 }
@@ -67,14 +103,31 @@ func (j *ExperimentalResourceDetector) UnmarshalYAML(node *yaml.Node) error {
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PushMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 	type Plain PushMetricExporter
+
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
-	// console can be nil, must check and set here
+
+	// console can be nil, must check and set here.
 	if hasYAMLMapKey(node, "console") && plain.Console == nil {
 		plain.Console = &ConsoleMetricExporter{}
 	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp_file/development")
+	delete(raw, "otlp_grpc")
+	delete(raw, "otlp_http")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
 	*j = PushMetricExporter(plain)
 	return nil
 }
@@ -154,9 +207,24 @@ func (j *SpanExporter) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
 	// console can be nil, must check and set here
 	if hasYAMLMapKey(node, "console") && plain.Console == nil {
 		plain.Console = ConsoleExporter{}
+	}
+
+	delete(raw, "console")
+	delete(raw, "otlp_file/development")
+	delete(raw, "otlp_grpc")
+	delete(raw, "otlp_http")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
 	}
 	*j = SpanExporter(plain)
 	return nil
@@ -169,10 +237,26 @@ func (j *LogRecordExporter) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
 	// console can be nil, must check and set here
 	if hasYAMLMapKey(node, "console") && plain.Console == nil {
 		plain.Console = ConsoleExporter{}
 	}
+
+	delete(raw, "console")
+	delete(raw, "otlp_file/development")
+	delete(raw, "otlp_grpc")
+	delete(raw, "otlp_http")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
 	*j = LogRecordExporter(plain)
 	return nil
 }
@@ -184,6 +268,12 @@ func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
 	if err := node.Decode(&plain); err != nil {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
 	// b3 can be nil, must check and set here
 	if hasYAMLMapKey(node, "b3") && plain.B3 == nil {
 		plain.B3 = B3Propagator{}
@@ -208,6 +298,18 @@ func (j *TextMapPropagator) UnmarshalYAML(node *yaml.Node) error {
 	if hasYAMLMapKey(node, "tracecontext") && plain.Tracecontext == nil {
 		plain.Tracecontext = TraceContextPropagator{}
 	}
+
+	delete(raw, "b3")
+	delete(raw, "b3multi")
+	delete(raw, "baggage")
+	delete(raw, "jaeger")
+	delete(raw, "ottrace")
+	delete(raw, "tracecontext")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
 	*j = TextMapPropagator(plain)
 	return nil
 }
@@ -279,6 +381,56 @@ func (j *BatchSpanProcessor) UnmarshalYAML(node *yaml.Node) error {
 }
 
 // UnmarshalYAML implements yaml.Unmarshaler.
+func (j *LogRecordProcessor) UnmarshalYAML(node *yaml.Node) error {
+	type Plain LogRecordProcessor
+	var plain Plain
+
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return err
+	}
+
+	delete(raw, "batch")
+	delete(raw, "simple")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = LogRecordProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *SpanProcessor) UnmarshalYAML(node *yaml.Node) error {
+	type Plain SpanProcessor
+	var plain Plain
+
+	if err := node.Decode(&plain); err != nil {
+		return err
+	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return err
+	}
+
+	delete(raw, "batch")
+	delete(raw, "simple")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = SpanProcessor(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
 func (j *PeriodicMetricReader) UnmarshalYAML(node *yaml.Node) error {
 	if !hasYAMLMapKey(node, "exporter") {
 		return newErrRequired(j, "exporter")
@@ -325,9 +477,6 @@ func (j *SpanLimits) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPHttpMetricExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPHttpMetricExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
@@ -342,9 +491,6 @@ func (j *OTLPHttpMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPGrpcMetricExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPGrpcMetricExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
@@ -359,9 +505,6 @@ func (j *OTLPGrpcMetricExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPHttpExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPHttpExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
@@ -376,9 +519,6 @@ func (j *OTLPHttpExporter) UnmarshalYAML(node *yaml.Node) error {
 
 // UnmarshalYAML implements yaml.Unmarshaler.
 func (j *OTLPGrpcExporter) UnmarshalYAML(node *yaml.Node) error {
-	if !hasYAMLMapKey(node, "endpoint") {
-		return newErrRequired(j, "endpoint")
-	}
 	type Plain OTLPGrpcExporter
 	var plain Plain
 	if err := node.Decode(&plain); err != nil {
@@ -560,5 +700,29 @@ func (j *PullMetricReader) UnmarshalYAML(node *yaml.Node) error {
 		return errors.Join(newErrUnmarshal(j), err)
 	}
 	*j = PullMetricReader(plain)
+	return nil
+}
+
+// UnmarshalYAML implements yaml.Unmarshaler.
+func (j *PullMetricExporter) UnmarshalYAML(node *yaml.Node) error {
+	type Plain PullMetricExporter
+
+	var plain Plain
+	if err := node.Decode(&plain); err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	raw, err := yamlMappingToMap(node)
+	if err != nil {
+		return errors.Join(newErrUnmarshal(j), err)
+	}
+
+	delete(raw, "prometheus/development")
+
+	if len(raw) > 0 {
+		plain.AdditionalProperties = raw
+	}
+
+	*j = PullMetricExporter(plain)
 	return nil
 }

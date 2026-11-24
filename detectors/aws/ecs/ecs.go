@@ -17,7 +17,7 @@ import (
 	ecsmetadata "github.com/brunoscheufler/aws-ecs-metadata-go"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 const (
@@ -87,7 +87,6 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
 		semconv.ContainerName(hostName),
-		semconv.ContainerID(containerID),
 	}
 
 	if metadataURIV4 != "" {
@@ -158,9 +157,28 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 			semconv.AWSECSTaskFamily(taskMetadata.Family),
 			semconv.AWSECSTaskRevision(taskMetadata.Revision),
 		)
+
+		if taskID := taskIDFromARNResource(arnParts[5]); taskID != "" {
+			attributes = append(attributes, semconv.AWSECSTaskID(taskID))
+		}
+
+		if containerID == "" {
+			// The cgroup parser only matches 64-hex IDs under /ecs/, so it finds none on Fargate.
+			containerID = containerMetadata.DockerID
+		}
+	}
+
+	if containerID != "" {
+		attributes = append(attributes, semconv.ContainerID(containerID))
 	}
 
 	return resource.NewWithAttributes(semconv.SchemaURL, attributes...), nil
+}
+
+// taskIDFromARNResource returns the task ID from the resource part of a task
+// ARN, which is "task/<id>" (legacy) or "task/<cluster>/<id>".
+func taskIDFromARNResource(arnResource string) string {
+	return arnResource[strings.LastIndex(arnResource, "/")+1:]
 }
 
 func (*resourceDetector) getBaseArn(arns ...string) string {

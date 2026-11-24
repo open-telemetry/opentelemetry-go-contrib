@@ -4,4 +4,4 @@
 package otelmux
 
 // Version is the current release version of the gorilla/mux instrumentation.
-const Version = "0.71.0"
+const Version = "0.72.0"

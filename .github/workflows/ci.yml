@@ -4,6 +4,7 @@ on:
     branches:
       - main
   pull_request:
+  merge_group:
 permissions:
   contents: read
 env:
@@ -27,7 +28,7 @@ jobs:
         persist-credentials: false
         fetch-depth: 0 ## Needed for "Set tools/go.mod timestamp" step.
     - name: Install Go
-      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
         check-latest: true
@@ -65,7 +66,7 @@ jobs:
         persist-credentials: false
         fetch-depth: 0 ## Needed for "Set tools/go.mod timestamp" step.
     - name: Install Go
-      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
         check-latest: true
@@ -96,7 +97,7 @@ jobs:
       with:
         persist-credentials: false
     - name: Install Go
-      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
         check-latest: true
@@ -112,7 +113,7 @@ jobs:
       with:
         persist-credentials: false
     - name: Install Go
-      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
       with:
         go-version: ${{ env.DEFAULT_GO_VERSION }}
         check-latest: true
@@ -131,7 +132,7 @@ jobs:
         files: ./coverage.txt
         verbose: true
     - name: Store coverage test output
-      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
       with:
         name: opentelemetry-go-contrib-test-output
         path: ${{ env.TEST_RESULTS }}
@@ -160,7 +161,7 @@ jobs:
       with:
         persist-credentials: false
     - name: Install Go
-      uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+      uses: actions/setup-go@d8cbb8045d7f43706b9177cceb36c1f91a6644d5 # v7.1.0
       with:
         go-version: ${{ matrix.go-version }}
         check-latest: true

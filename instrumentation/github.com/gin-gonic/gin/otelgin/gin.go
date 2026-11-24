@@ -15,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gin-gonic/gin/otelgin/internal/semconv"
@@ -167,9 +167,11 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 			additionalAttributes = append(additionalAttributes, cfg.GinMetricAttributeFn(c)...)
 		}
 
+		respSize := max(int64(c.Writer.Size()), 0)
+
 		sc.RecordMetrics(ctx, semconv.ServerMetricData{
 			ServerName:   service,
-			ResponseSize: int64(c.Writer.Size()),
+			ResponseSize: respSize,
 			MetricAttributes: semconv.MetricAttributes{
 				Req:                  c.Request,
 				StatusCode:           status,

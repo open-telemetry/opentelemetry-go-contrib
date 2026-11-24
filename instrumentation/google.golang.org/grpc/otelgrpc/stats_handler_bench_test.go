@@ -211,17 +211,48 @@ func BenchmarkServerHandler_HandleRPC_End_WithReader(b *testing.B) {
 	benchmarkServerHandlerHandleRPCEnd(b, nil)
 }
 
-// BenchmarkServerHandler_HandleRPC_End_Error_WithReader measures a failed RPC
-// completion (the error.type attribute path) with the duration histogram
-// enabled.
-func BenchmarkServerHandler_HandleRPC_End_Error_WithReader(b *testing.B) {
-	benchmarkServerHandlerHandleRPCEnd(b, status.Error(codes.Internal, "internal"))
-}
-
 // BenchmarkServerHandler_HandleRPC_End_Error_OldMode_WithReader measures a
 // failed RPC completion in rpc/old mode: only the legacy histogram is
 // enabled, so the stable error.type attribute must not be built.
 func BenchmarkServerHandler_HandleRPC_End_Error_OldMode_WithReader(b *testing.B) {
 	b.Setenv("OTEL_SEMCONV_STABILITY_OPT_IN", "rpc/old")
 	benchmarkServerHandlerHandleRPCEnd(b, status.Error(codes.Internal, "internal"))
+}
+
+// BenchmarkHandleRPC_TagAndEnd measures a full TagRPC and End cycle per
+// iteration so that each End reaches a recording span and exercises the span
+// status path.
+func BenchmarkHandleRPC_TagAndEnd(b *testing.B) {
+	notFound := status.Error(codes.NotFound, "not found")
+	newHandlers := map[string]func(...Option) stats.Handler{
+		"Client": NewClientHandler,
+		"Server": NewServerHandler,
+	}
+	for _, kind := range []string{"Client", "Server"} {
+		for _, bc := range []struct {
+			name string
+			err  error
+			opts []Option
+		}{
+			{name: "OK"},
+			{name: "NotFound", err: notFound},
+			{name: "NotFound_NonErrorCodes", err: notFound, opts: []Option{WithNonErrorCodes(codes.NotFound)}},
+		} {
+			b.Run(kind+"/"+bc.name, func(b *testing.B) {
+				opts := append([]Option{
+					WithTracerProvider(trace.NewTracerProvider(trace.WithSampler(trace.AlwaysSample()))),
+					WithMeterProvider(metric.NewMeterProvider(metric.WithReader(metric.NewManualReader()))),
+				}, bc.opts...)
+				handler := newHandlers[kind](opts...)
+				tagInfo := &stats.RPCTagInfo{FullMethodName: "/package.service/method"}
+				end := &stats.End{EndTime: time.Now(), Error: bc.err}
+
+				b.ReportAllocs()
+				for b.Loop() {
+					ctx := handler.TagRPC(b.Context(), tagInfo)
+					handler.HandleRPC(ctx, end)
+				}
+			})
+		}
+	}
 }

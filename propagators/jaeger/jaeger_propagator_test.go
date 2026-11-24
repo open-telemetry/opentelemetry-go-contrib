@@ -12,6 +12,8 @@ import (
 	"go.opentelemetry.io/otel/trace"
 )
 
+const deprecatedParentSpanID = "0"
+
 var (
 	traceID        = trace.TraceID{0, 0, 0, 0, 0, 0, 0, 0, 0xb, 0, 0, 0, 0, 0, 0x1, 0xc8}
 	traceID128Str  = "00000000000000000b000000000001c8"

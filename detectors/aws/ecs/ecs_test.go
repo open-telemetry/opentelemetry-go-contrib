@@ -5,15 +5,17 @@ package ecs
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"testing"
 
 	metadata "github.com/brunoscheufler/aws-ecs-metadata-go"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 // Create interface for functions that need to be mocked.
@@ -104,6 +106,7 @@ func TestDetectV4(t *testing.T) {
 		semconv.ContainerID("0123456789A"),
 		semconv.AWSECSClusterARN("arn:aws:ecs:us-west-2:111122223333:cluster/default"),
 		semconv.AWSECSTaskARN("arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3"),
+		semconv.AWSECSTaskID("e9028f8d5d8e4f258373e7b93ce9a3c3"),
 		semconv.AWSECSLaunchtypeKey.String("fargate"),
 		semconv.AWSECSTaskFamily("curltest"),
 		semconv.AWSECSTaskRevision("3"),
@@ -114,6 +117,48 @@ func TestDetectV4(t *testing.T) {
 	res, _ := detector.Detect(t.Context())
 
 	assert.Equal(t, expectedResource, res, "Resource returned is incorrect")
+}
+
+func TestDetectV4TaskID(t *testing.T) {
+	tests := []struct {
+		name    string
+		taskARN string
+		want    string
+	}{
+		{name: "long ARN format", taskARN: "arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3", want: "e9028f8d5d8e4f258373e7b93ce9a3c3"},
+		{name: "legacy ARN format", taskARN: "arn:aws:ecs:us-west-2:111122223333:task/e9028f8d5d8e4f258373e7b93ce9a3c3", want: "e9028f8d5d8e4f258373e7b93ce9a3c3"},
+		{name: "task ID only", taskARN: "e9028f8d5d8e4f258373e7b93ce9a3c3", want: "e9028f8d5d8e4f258373e7b93ce9a3c3"},
+		{name: "empty resource", taskARN: "arn:aws:ecs:us-west-2:111122223333:"},
+		{name: "resource ends with slash", taskARN: "arn:aws:ecs:us-west-2:111122223333:task/"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(metadataV4EnvVar, "4")
+
+			detectorUtils := new(MockDetectorUtils)
+			detectorUtils.On("getContainerName").Return("container-Name", nil)
+			detectorUtils.On("getContainerID").Return("0123456789A", nil)
+			detectorUtils.On("getContainerMetadataV4").Return(&metadata.ContainerMetadataV4{
+				ContainerARN: "arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1",
+			}, nil)
+			detectorUtils.On("getTaskMetadataV4").Return(&metadata.TaskMetadataV4{
+				Cluster: "default",
+				TaskARN: tt.taskARN,
+			}, nil)
+
+			detector := &resourceDetector{utils: detectorUtils}
+			res, err := detector.Detect(t.Context())
+			require.NoError(t, err)
+
+			got, ok := res.Set().Value(semconv.AWSECSTaskIDKey)
+			if tt.want == "" {
+				assert.False(t, ok, "aws.ecs.task.id should be omitted when the ID is empty")
+				return
+			}
+			require.True(t, ok, "aws.ecs.task.id is missing")
+			assert.Equal(t, tt.want, got.AsString())
+		})
+	}
 }
 
 // returns empty resource when detector receives a bad task ARN from the Metadata v4 endpoint.
@@ -148,6 +193,48 @@ func TestDetectBadARNsv4(t *testing.T) {
 	assert.Equal(t, errCannotParseTaskArn, err)
 }
 
+func TestDetectV4ContainerID(t *testing.T) {
+	tests := []struct {
+		name     string
+		cgroupID string
+		dockerID string
+		want     string
+	}{
+		{name: "cgroup ID", cgroupID: "0123456789A", dockerID: "0123456789B", want: "0123456789A"},
+		{name: "Fargate DockerId", dockerID: "cd189a933e5849daa93386466019ab50-2495160603", want: "cd189a933e5849daa93386466019ab50-2495160603"},
+		{name: "no ID"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(metadataV4EnvVar, "4")
+
+			detectorUtils := new(MockDetectorUtils)
+			detectorUtils.On("getContainerName").Return("container-Name", nil)
+			detectorUtils.On("getContainerID").Return(tt.cgroupID, nil)
+			detectorUtils.On("getContainerMetadataV4").Return(&metadata.ContainerMetadataV4{
+				ContainerARN: "arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1",
+				DockerID:     tt.dockerID,
+			}, nil)
+			detectorUtils.On("getTaskMetadataV4").Return(&metadata.TaskMetadataV4{
+				Cluster: "default",
+				TaskARN: "arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3",
+			}, nil)
+
+			detector := &resourceDetector{utils: detectorUtils}
+			res, err := detector.Detect(t.Context())
+			require.NoError(t, err)
+
+			got, ok := res.Set().Value(semconv.ContainerIDKey)
+			if tt.want == "" {
+				assert.False(t, ok, "container.id should be omitted when the ID is empty")
+				return
+			}
+			require.True(t, ok, "container.id is missing")
+			assert.Equal(t, tt.want, got.AsString())
+		})
+	}
+}
+
 // returns empty resource when detector cannot read container ID.
 func TestDetectCannotReadContainerID(t *testing.T) {
 	t.Setenv(metadataV3EnvVar, "3")
@@ -162,7 +249,6 @@ func TestDetectCannotReadContainerID(t *testing.T) {
 		semconv.CloudProviderAWS,
 		semconv.CloudPlatformAWSECS,
 		semconv.ContainerName("container-Name"),
-		semconv.ContainerID(""),
 	}
 	expectedResource := resource.NewWithAttributes(semconv.SchemaURL, attributes...)
 	detector := &resourceDetector{utils: detectorUtils}
@@ -257,6 +343,201 @@ func TestCgroupContainerID(t *testing.T) {
 		t.Run(c.cgroupPath, func(t *testing.T) {
 			containerID := getCgroupContainerID([]byte(c.cgroupPath))
 			assert.Equal(t, c.wantContainerID, containerID)
+		})
+	}
+}
+
+func TestNewResourceDetector(t *testing.T) {
+	detector := NewResourceDetector()
+	require.NotNil(t, detector)
+
+	res, err := detector.Detect(t.Context())
+	assert.NoError(t, err)
+	assert.Nil(t, res)
+}
+
+func TestLogsAttributesErrors(t *testing.T) {
+	detector := &resourceDetector{utils: nil}
+
+	tests := []struct {
+		name          string
+		metadata      *metadata.ContainerMetadataV4
+		expectedAttrs []attribute.KeyValue
+		expectedErr   error
+	}{
+		{
+			name: "non-awslogs driver returns empty slice without error",
+			metadata: &metadata.ContainerMetadataV4{
+				LogDriver: "json-file",
+			},
+			expectedAttrs: []attribute.KeyValue{},
+		},
+		{
+			name: "missing awslogs group returns error",
+			metadata: &metadata.ContainerMetadataV4{
+				LogDriver: "awslogs",
+				LogOptions: struct {
+					AwsLogsCreateGroup string `json:"awslogs-create-group"`
+					AwsLogsGroup       string `json:"awslogs-group"`
+					AwsLogsStream      string `json:"awslogs-stream"`
+					AwsRegion          string `json:"awslogs-region"`
+				}{
+					AwsLogsGroup:  "",
+					AwsLogsStream: "valid-stream",
+				},
+				ContainerARN: "arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1",
+			},
+			expectedErr: errCannotRetrieveLogsGroupMetadataV4,
+		},
+		{
+			name: "missing awslogs stream returns error",
+			metadata: &metadata.ContainerMetadataV4{
+				LogDriver: "awslogs",
+				LogOptions: struct {
+					AwsLogsCreateGroup string `json:"awslogs-create-group"`
+					AwsLogsGroup       string `json:"awslogs-group"`
+					AwsLogsStream      string `json:"awslogs-stream"`
+					AwsRegion          string `json:"awslogs-region"`
+				}{
+					AwsLogsGroup:  "valid-group",
+					AwsLogsStream: "",
+				},
+				ContainerARN: "arn:aws:ecs:us-west-2:111122223333:container/05966557-f16c-49cb-9352-24b3a0dcd0e1",
+			},
+			expectedErr: errCannotRetrieveLogsStreamMetadataV4,
+		},
+		{
+			name: "malformed container ARN with fewer than 6 segments",
+			metadata: &metadata.ContainerMetadataV4{
+				LogDriver: "awslogs",
+				LogOptions: struct {
+					AwsLogsCreateGroup string `json:"awslogs-create-group"`
+					AwsLogsGroup       string `json:"awslogs-group"`
+					AwsLogsStream      string `json:"awslogs-stream"`
+					AwsRegion          string `json:"awslogs-region"`
+				}{
+					AwsLogsGroup:  "valid-group",
+					AwsLogsStream: "valid-stream",
+				},
+				ContainerARN: "arn:aws:ecs:us-west-2",
+			},
+			expectedErr: errCannotRetrieveLogsStreamMetadataV4,
+		},
+		{
+			name: "fallback to container ARN region when log options region is empty",
+			metadata: &metadata.ContainerMetadataV4{
+				LogDriver: "awslogs",
+				LogOptions: struct {
+					AwsLogsCreateGroup string `json:"awslogs-create-group"`
+					AwsLogsGroup       string `json:"awslogs-group"`
+					AwsLogsStream      string `json:"awslogs-stream"`
+					AwsRegion          string `json:"awslogs-region"`
+				}{
+					AwsLogsGroup:  "my-group",
+					AwsLogsStream: "my-stream",
+					AwsRegion:     "",
+				},
+				ContainerARN: "arn:aws:ecs:us-east-1:123456789012:container/abc",
+			},
+			expectedAttrs: []attribute.KeyValue{
+				semconv.AWSLogGroupNames("my-group"),
+				semconv.AWSLogGroupARNs("arn:aws:logs:us-east-1:123456789012:log-group:my-group:*"),
+				semconv.AWSLogStreamNames("my-stream"),
+				semconv.AWSLogStreamARNs("arn:aws:logs:us-east-1:123456789012:log-group:my-group:log-stream:my-stream"),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			attrs, err := detector.getLogsAttributes(tt.metadata)
+			if tt.expectedErr != nil {
+				assert.ErrorIs(t, err, tt.expectedErr)
+				assert.Nil(t, attrs)
+			} else {
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedAttrs, attrs)
+			}
+		})
+	}
+}
+
+func TestDetectErrorsV4(t *testing.T) {
+	t.Setenv(metadataV4EnvVar, "4")
+
+	var (
+		nilContainerMeta *metadata.ContainerMetadataV4
+		nilTaskMeta      *metadata.TaskMetadataV4
+	)
+
+	errLookup := errors.New("lookup failed")
+
+	tests := []struct {
+		name        string
+		setupUtils  func(*MockDetectorUtils)
+		expectedErr error
+	}{
+		{
+			name: "container ID lookup error",
+			setupUtils: func(m *MockDetectorUtils) {
+				m.On("getContainerName").Return("my-container", nil)
+				m.On("getContainerID").Return("", errLookup)
+			},
+			expectedErr: errLookup,
+		},
+		{
+			name: "container metadata v4 lookup error",
+			setupUtils: func(m *MockDetectorUtils) {
+				m.On("getContainerName").Return("my-container", nil)
+				m.On("getContainerID").Return("12345", nil)
+				m.On("getContainerMetadataV4").Return(nilContainerMeta, errLookup)
+			},
+			expectedErr: errLookup,
+		},
+		{
+			name: "task metadata v4 lookup error",
+			setupUtils: func(m *MockDetectorUtils) {
+				m.On("getContainerName").Return("my-container", nil)
+				m.On("getContainerID").Return("12345", nil)
+				m.On("getContainerMetadataV4").Return(&metadata.ContainerMetadataV4{
+					ContainerARN: "arn:aws:ecs:us-west-2:111122223333:container/05966557",
+				}, nil)
+				m.On("getTaskMetadataV4").Return(nilTaskMeta, errLookup)
+			},
+			expectedErr: errLookup,
+		},
+		{
+			name: "logs attributes extraction error",
+			setupUtils: func(m *MockDetectorUtils) {
+				m.On("getContainerName").Return("my-container", nil)
+				m.On("getContainerID").Return("12345", nil)
+				m.On("getContainerMetadataV4").Return(&metadata.ContainerMetadataV4{
+					ContainerARN: "arn:aws:ecs:us-west-2:111122223333:container/05966557",
+					LogDriver:    "awslogs",
+					// Empty AwsLogsGroup triggers errCannotRetrieveLogsGroupMetadataV4.
+				}, nil)
+				m.On("getTaskMetadataV4").Return(&metadata.TaskMetadataV4{
+					Cluster:  "arn:aws:ecs:us-west-2:111122223333:cluster/default",
+					TaskARN:  "arn:aws:ecs:us-west-2:111122223333:task/default/e9028f8d5d8e4f258373e7b93ce9a3c3",
+					Family:   "test",
+					Revision: "1",
+				}, nil)
+			},
+			expectedErr: errCannotRetrieveLogsGroupMetadataV4,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := new(MockDetectorUtils)
+			tt.setupUtils(m)
+
+			detector := &resourceDetector{utils: m}
+			res, err := detector.Detect(t.Context())
+
+			assert.ErrorIs(t, err, tt.expectedErr)
+			assert.Equal(t, resource.Empty(), res)
+			m.AssertExpectations(t)
 		})
 	}
 }

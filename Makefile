@@ -244,13 +244,34 @@ test-bench:   ARGS=-run=xxxxxMatchNothingxxxxx -test.benchtime=1ms -bench=.
 test-short:   ARGS=-short
 test-verbose: ARGS=-v
 $(TEST_TARGETS): test
-test: $(OTEL_GO_MOD_DIRS:%=test/%)
+test: $(OTEL_GO_MOD_DIRS:%=test/%) test-omit-tags
 test/%: DIR=$*
 test/%:
 	@echo "$(GO) test -timeout $(TIMEOUT)s $(ARGS) $(DIR)/..." \
 		&& cd $(DIR) \
 		&& $(GO) list ./... \
 		| xargs $(GO) test -timeout $(TIMEOUT)s $(ARGS)
+
+# Build tags that omit optional resource detectors from otelconf, read from
+# the build constraints of the *_omit.go files.
+OTELCONF_OMIT_TAGS = $(shell sed -n 's|^//go:build ||p' otelconf/internal/detectors/*_omit.go)
+
+# Test each omit tag on its own, then all of them together. Other otelconf
+# tests expect the detectors, so with every tag set we only check that the
+# module still builds.
+.PHONY: test-omit-tags
+test-omit-tags:
+	@set -e; \
+		cd otelconf; \
+		for tag in $(OTELCONF_OMIT_TAGS); do \
+			echo "$(GO) test -tags=$$tag $(ARGS) ./internal/detectors/..."; \
+			$(GO) test -timeout $(TIMEOUT)s -tags=$$tag $(ARGS) ./internal/detectors/...; \
+		done; \
+		ALL_TAGS=$$(echo "$(OTELCONF_OMIT_TAGS)" | tr ' ' ','); \
+		echo "$(GO) test -tags=$$ALL_TAGS $(ARGS) ./internal/detectors/..."; \
+		$(GO) test -timeout $(TIMEOUT)s -tags=$$ALL_TAGS $(ARGS) ./internal/detectors/...; \
+		echo "$(GO) build -tags=$$ALL_TAGS ./..."; \
+		$(GO) build -tags=$$ALL_TAGS ./...
 
 COVERAGE_MODE    = atomic
 COVERAGE_PROFILE = coverage.out
@@ -340,6 +361,7 @@ genjsonschema: genjsonschema-cleanup $(GOJSONSCHEMA)
 	perl -0pi -e 's/type ExperimentalGCPResourceDetector map\[string\]interface\{\}\n(type ExperimentalAWSECSResourceDetector)/type ExperimentalGCPResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
 	perl -0pi -e 's/type ExperimentalAWSECSResourceDetector map\[string\]interface\{\}\n(type ExperimentalAWSEKSResourceDetector)/type ExperimentalAWSECSResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
 	perl -0pi -e 's/type ExperimentalAWSEKSResourceDetector map\[string\]interface\{\}\n(type ExperimentalAzureVMResourceDetector)/type ExperimentalAWSEKSResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
+	perl -0pi -e 's/type ExperimentalAWSLambdaResourceDetector map\[string\]interface\{\}\n(type ExperimentalAzureVMResourceDetector)/type ExperimentalAWSLambdaResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
 	perl -0pi -e 's/type ExperimentalAzureVMResourceDetector map\[string\]interface\{\}\n(type ExperimentalServiceResourceDetector)/type ExperimentalAzureVMResourceDetector map[string]interface{}\n\n$$1/' ${GENERATED_EXPERIMENTAL_CONFIG}
 	sed -f ./otelconf/remove_experimental_patch.sed ${GENERATED_EXPERIMENTAL_CONFIG}.tmp > ${GENERATED_STABLE_CONFIG}.tmp
 	rm ${GENERATED_EXPERIMENTAL_CONFIG}.tmp

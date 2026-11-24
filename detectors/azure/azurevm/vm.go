@@ -7,15 +7,21 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
+	"time"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
-const defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
+const (
+	defaultAzureVMMetadataEndpoint = "http://169.254.169.254/metadata/instance/compute?api-version=2021-12-13&format=json"
+	defaultMetadataTimeout         = 10 * time.Second
+	maxResponseSize                = 1024 * 1024 // 1 MiB
+)
 
 // Azure-specific resource attribute keys that are not (yet) part of the
 // semantic conventions package.
@@ -85,6 +91,7 @@ func WithTagKeyFilter(filter func(key string) bool) Option {
 // ResourceDetector collects resource information of Azure VMs.
 type ResourceDetector struct {
 	endpoint string
+	timeout  time.Duration
 	cfg      config
 }
 
@@ -105,7 +112,7 @@ func NewResourceDetector(opts ...Option) *ResourceDetector {
 	for _, opt := range opts {
 		opt.apply(&cfg)
 	}
-	return &ResourceDetector{endpoint: defaultAzureVMMetadataEndpoint, cfg: cfg}
+	return &ResourceDetector{endpoint: defaultAzureVMMetadataEndpoint, timeout: defaultMetadataTimeout, cfg: cfg}
 }
 
 // Detect detects associated resources when running on an Azure VM.
@@ -198,14 +205,14 @@ func (detector *ResourceDetector) Detect(ctx context.Context) (*resource.Resourc
 func (detector *ResourceDetector) getJSONMetadata(ctx context.Context) ([]byte, bool, error) {
 	pTransport := &http.Transport{Proxy: nil}
 
-	client := http.Client{Transport: pTransport}
+	client := http.Client{Transport: pTransport, Timeout: detector.timeout}
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, detector.endpoint, http.NoBody)
 	if err != nil {
 		return nil, false, err
 	}
 
-	req.Header.Add("Metadata", "True")
+	req.Header.Add("Metadata", "true")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -214,8 +221,14 @@ func (detector *ResourceDetector) getJSONMetadata(ctx context.Context) ([]byte, 
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		bytes, err := io.ReadAll(resp.Body)
-		return bytes, true, err
+		bytes, err := io.ReadAll(io.LimitReader(resp.Body, maxResponseSize+1))
+		if len(bytes) > maxResponseSize {
+			return nil, true, fmt.Errorf("azure VM metadata response exceeds %d bytes", maxResponseSize)
+		}
+		if err != nil {
+			return nil, true, err
+		}
+		return bytes, true, nil
 	}
 
 	runningInAzure := resp.StatusCode < 400 || resp.StatusCode > 499

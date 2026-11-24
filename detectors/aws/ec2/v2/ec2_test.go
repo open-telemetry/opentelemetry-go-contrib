@@ -9,11 +9,14 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
 	aws "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
@@ -25,7 +28,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 type mockClient struct {
@@ -126,9 +129,11 @@ func TestNewResourceDetectorWithOptions(t *testing.T) {
 	logger := logging.NewStandardLogger(io.Discard)
 
 	testCases := []struct {
-		name           string
-		opts           []Option
-		expectedLogger logging.Logger
+		name                string
+		opts                []Option
+		expectedLogger      logging.Logger
+		expectedMaxAttempts *int
+		expectedMaxBackoff  *time.Duration
 	}{
 		{
 			name: "no options",
@@ -138,13 +143,25 @@ func TestNewResourceDetectorWithOptions(t *testing.T) {
 			opts:           []Option{WithAWSLogger(logger)},
 			expectedLogger: logger,
 		},
+		{
+			name: "with retry settings",
+			opts: []Option{
+				WithMaxAttempts(5),
+				WithMaxBackoff(3 * time.Second),
+			},
+			expectedMaxAttempts: new(5),
+			expectedMaxBackoff:  new(3 * time.Second),
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			detector := NewResourceDetectorWithOptions(tc.opts...)
 			require.NotNil(t, detector)
-			assert.Equal(t, tc.expectedLogger, detector.(*resourceDetector).cfg.logger)
+			cfg := detector.(*resourceDetector).cfg
+			assert.Equal(t, tc.expectedLogger, cfg.logger)
+			assert.Equal(t, tc.expectedMaxAttempts, cfg.maxAttempts)
+			assert.Equal(t, tc.expectedMaxBackoff, cfg.maxBackoff)
 		})
 	}
 }
@@ -158,7 +175,7 @@ func TestDetectReturnsClientError(t *testing.T) {
 		func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 			return aws.Config{}, errLoad
 		},
-		func(aws.Config) client {
+		func(aws.Config, ...func(*imds.Options)) client {
 			t.Fatal("newIMDSClient should not be called")
 			return nil
 		},
@@ -175,7 +192,7 @@ func TestNewClient(t *testing.T) {
 			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 				return aws.Config{}, errors.New("load failed")
 			},
-			func(aws.Config) client {
+			func(aws.Config, ...func(*imds.Options)) client {
 				t.Fatal("newIMDSClient should not be called")
 				return nil
 			},
@@ -199,7 +216,7 @@ func TestNewClient(t *testing.T) {
 				actualLogger = lo.Logger
 				return aws.Config{}, nil
 			},
-			func(aws.Config) client { return new(mockClient) },
+			func(aws.Config, ...func(*imds.Options)) client { return new(mockClient) },
 		)
 
 		_, err := newClient(t.Context(), config{logger: logger})
@@ -214,8 +231,10 @@ func TestNewClient(t *testing.T) {
 			func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 				return aws.Config{Region: "us-west-2"}, nil
 			},
-			func(cfg aws.Config) client {
+			func(cfg aws.Config, optFns ...func(*imds.Options)) client {
 				assert.Equal(t, "us-west-2", cfg.Region)
+				assert.Nil(t, cfg.Retryer)
+				assert.Empty(t, optFns)
 				return fakeClient
 			},
 		)
@@ -223,6 +242,101 @@ func TestNewClient(t *testing.T) {
 		c, err := newClient(t.Context(), config{})
 		require.NoError(t, err)
 		assert.Same(t, fakeClient, c)
+	})
+
+	t.Run("applies configured retry limits", func(t *testing.T) {
+		maxAttempts := 5
+		maxBackoff := 3 * time.Second
+		baseRetryer := retry.NewStandard()
+		testCases := []struct {
+			name                    string
+			cfg                     config
+			wantMaxAttempts         int
+			wantMaxBackoff          time.Duration
+			wantDisableDefaultLimit bool
+		}{
+			{
+				name:            "max attempts only",
+				cfg:             config{maxAttempts: &maxAttempts},
+				wantMaxAttempts: maxAttempts,
+			},
+			{
+				name:                    "max backoff only",
+				cfg:                     config{maxBackoff: &maxBackoff},
+				wantMaxAttempts:         baseRetryer.MaxAttempts(),
+				wantMaxBackoff:          maxBackoff,
+				wantDisableDefaultLimit: true,
+			},
+			{
+				name:                    "both limits",
+				cfg:                     config{maxAttempts: &maxAttempts, maxBackoff: &maxBackoff},
+				wantMaxAttempts:         maxAttempts,
+				wantMaxBackoff:          maxBackoff,
+				wantDisableDefaultLimit: true,
+			},
+		}
+
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				var actualRetryer aws.Retryer
+				var imdsOptions imds.Options
+				stubClientSeams(
+					t,
+					func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+						return aws.Config{Retryer: func() aws.Retryer { return baseRetryer }}, nil
+					},
+					func(cfg aws.Config, optFns ...func(*imds.Options)) client {
+						actualRetryer = cfg.Retryer()
+						for _, fn := range optFns {
+							fn(&imdsOptions)
+						}
+						return new(mockClient)
+					},
+				)
+
+				_, err := newClient(t.Context(), tc.cfg)
+				require.NoError(t, err)
+				require.NotNil(t, actualRetryer)
+				assert.Equal(t, tc.wantMaxAttempts, actualRetryer.MaxAttempts())
+				assert.Equal(t, tc.wantDisableDefaultLimit, imdsOptions.DisableDefaultMaxBackoff)
+
+				if tc.wantMaxBackoff > 0 {
+					delay, err := actualRetryer.RetryDelay(10, nil)
+					require.NoError(t, err)
+					assert.LessOrEqual(t, delay, tc.wantMaxBackoff)
+				}
+			})
+		}
+	})
+
+	t.Run("rejects invalid retry limits", func(t *testing.T) {
+		testCases := []struct {
+			name string
+			cfg  config
+		}{
+			{name: "zero attempts", cfg: config{maxAttempts: new(0)}},
+			{name: "negative attempts", cfg: config{maxAttempts: new(-1)}},
+			{name: "zero backoff", cfg: config{maxBackoff: new(time.Duration(0))}},
+			{name: "negative backoff", cfg: config{maxBackoff: new(-time.Second)}},
+		}
+		for _, tc := range testCases {
+			t.Run(tc.name, func(t *testing.T) {
+				stubClientSeams(
+					t,
+					func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
+						t.Fatal("loadDefaultConfig should not be called")
+						return aws.Config{}, nil
+					},
+					func(aws.Config, ...func(*imds.Options)) client {
+						t.Fatal("newIMDSClient should not be called")
+						return nil
+					},
+				)
+
+				_, err := newClient(t.Context(), tc.cfg)
+				assert.Error(t, err)
+			})
+		}
 	})
 
 	t.Run("passes context to config load", func(t *testing.T) {
@@ -234,7 +348,7 @@ func TestNewClient(t *testing.T) {
 				gotCtx = c
 				return aws.Config{}, nil
 			},
-			func(aws.Config) client { return new(mockClient) },
+			func(aws.Config, ...func(*imds.Options)) client { return new(mockClient) },
 		)
 
 		_, err := newClient(ctx, config{})
@@ -257,7 +371,7 @@ func TestDetectCachesClient(t *testing.T) {
 			loadCalls++
 			return aws.Config{}, nil
 		},
-		func(aws.Config) client {
+		func(aws.Config, ...func(*imds.Options)) client {
 			newCalls++
 			return fake
 		},
@@ -291,7 +405,7 @@ func TestDetectRetriesFailedClientConstruction(t *testing.T) {
 			}
 			return aws.Config{}, nil
 		},
-		func(aws.Config) client {
+		func(aws.Config, ...func(*imds.Options)) client {
 			return fake
 		},
 	)
@@ -320,7 +434,7 @@ func TestDetectPassesContextToConfigLoad(t *testing.T) {
 			gotCtx = c
 			return aws.Config{}, nil
 		},
-		func(aws.Config) client { return fake },
+		func(aws.Config, ...func(*imds.Options)) client { return fake },
 	)
 
 	_, err := NewResourceDetector().Detect(ctx)
@@ -333,7 +447,7 @@ func TestDetectPassesContextToConfigLoad(t *testing.T) {
 func stubClientSeams(
 	t *testing.T,
 	load func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error),
-	newIMDS func(aws.Config) client,
+	newIMDS func(aws.Config, ...func(*imds.Options)) client,
 ) {
 	t.Helper()
 	origLoad, origNew := loadDefaultConfig, newIMDSClient
@@ -347,16 +461,122 @@ func stubClientSeams(
 
 // detectWithClient runs Detect with c injected as the IMDS client via the
 // construction seams.
-func detectWithClient(t *testing.T, c client) (*resource.Resource, error) {
+func detectWithClient(t *testing.T, c client, opts ...Option) (*resource.Resource, error) {
 	t.Helper()
 	stubClientSeams(
 		t,
 		func(context.Context, ...func(*awsconfig.LoadOptions) error) (aws.Config, error) {
 			return aws.Config{}, nil
 		},
-		func(aws.Config) client { return c },
+		func(aws.Config, ...func(*imds.Options)) client { return c },
 	)
-	return NewResourceDetector().Detect(t.Context())
+	return NewResourceDetectorWithOptions(opts...).Detect(t.Context())
+}
+
+func TestDetectIMDSTags(t *testing.T) {
+	baseAttrs := []attribute.KeyValue{
+		semconv.CloudProviderAWS,
+		semconv.CloudPlatformAWSEC2,
+		semconv.CloudRegion("us-west-2"),
+		semconv.CloudAvailabilityZone("us-west-2b"),
+		semconv.CloudAccountID("123456789012"),
+		semconv.HostID("i-1234567890abcdef0"),
+		semconv.HostImageID("ami-5fb8c835"),
+		semconv.HostType("t2.micro"),
+		semconv.HostName("ip-12-34-56-78.us-west-2.compute.internal"),
+	}
+	type metadataResponse struct {
+		value string
+		err   error
+	}
+
+	testCases := []struct {
+		name          string
+		opts          []Option
+		metadata      map[string]metadataResponse
+		expectedAttrs []attribute.KeyValue
+		expectedErr   error
+	}{
+		{
+			name:          "disabled by default",
+			expectedAttrs: baseAttrs,
+		},
+		{
+			name: "no patterns",
+			opts: []Option{WithIMDSTags()},
+			// tags/instance must not be requested.
+			expectedAttrs: baseAttrs,
+		},
+		{
+			name: "matching tags",
+			opts: []Option{WithIMDSTags(regexp.MustCompile("^Name$"), regexp.MustCompile("^env"), nil)},
+			metadata: map[string]metadataResponse{
+				// team must not be requested because it does not match.
+				"tags/instance":             {value: "Name\nenvironment\nteam\n"},
+				"tags/instance/Name":        {value: "web-1"},
+				"tags/instance/environment": {value: "prod"},
+			},
+			expectedAttrs: append(slices.Clone(baseAttrs),
+				attribute.String("ec2.tag.Name", "web-1"),
+				attribute.String("ec2.tag.environment", "prod"),
+			),
+		},
+		{
+			name: "tags not enabled in instance metadata",
+			opts: []Option{WithIMDSTags(regexp.MustCompile(".*"))},
+			metadata: map[string]metadataResponse{
+				"tags/instance": {err: newAwsResponseError(http.StatusNotFound)},
+			},
+			expectedAttrs: baseAttrs,
+		},
+		{
+			name: "tag list error",
+			opts: []Option{WithIMDSTags(regexp.MustCompile(".*"))},
+			metadata: map[string]metadataResponse{
+				"tags/instance": {err: newAwsResponseError(http.StatusBadGateway)},
+			},
+			expectedAttrs: baseAttrs,
+			expectedErr:   resource.ErrPartialResource,
+		},
+		{
+			name: "tag value error",
+			opts: []Option{WithIMDSTags(regexp.MustCompile(".*"))},
+			metadata: map[string]metadataResponse{
+				"tags/instance":      {value: "Name\nenv"},
+				"tags/instance/Name": {err: newAwsResponseError(http.StatusBadGateway)},
+				"tags/instance/env":  {value: "prod"},
+			},
+			expectedAttrs: append(slices.Clone(baseAttrs), attribute.String("ec2.tag.env", "prod")),
+			expectedErr:   resource.ErrPartialResource,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			clientMock := new(mockClient)
+			clientMock.On("GetInstanceIdentityDocument", mock.Anything, mock.Anything, mock.Anything).
+				Return(validIdentityDocument(), nil)
+			clientMock.On("GetMetadata", mock.Anything, &imds.GetMetadataInput{Path: "hostname"}, mock.Anything).
+				Return(mockMetadataOutput("ip-12-34-56-78.us-west-2.compute.internal"), nil)
+			for path, resp := range tc.metadata {
+				out := mockMetadataOutput(resp.value)
+				if resp.err != nil {
+					out = nil
+				}
+				clientMock.On("GetMetadata", mock.Anything, &imds.GetMetadataInput{Path: path}, mock.Anything).
+					Return(out, resp.err).Once()
+			}
+
+			res, err := detectWithClient(t, clientMock, tc.opts...)
+			if tc.expectedErr != nil {
+				assert.ErrorIs(t, err, tc.expectedErr)
+			} else {
+				assert.NoError(t, err)
+			}
+			assert.Equal(t, resource.NewWithAttributes(semconv.SchemaURL, tc.expectedAttrs...), res)
+			clientMock.AssertExpectations(t)
+		})
+	}
 }
 
 func TestRecordErrors(t *testing.T) {

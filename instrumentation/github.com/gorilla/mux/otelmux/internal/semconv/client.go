@@ -12,21 +12,24 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"net/url"
 	"reflect"
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/httpconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/httpconv"
 )
 
 type HTTPClient struct {
 	requestBodySize httpconv.ClientRequestBodySize
 	requestDuration httpconv.ClientRequestDuration
+	activeRequests  httpconv.ClientActiveRequests
 }
 
 func NewHTTPClient(meter metric.Meter) HTTPClient {
@@ -40,6 +43,9 @@ func NewHTTPClient(meter metric.Meter) HTTPClient {
 		meter,
 		metric.WithExplicitBucketBoundaries(0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10),
 	)
+	handleErr(err)
+
+	client.activeRequests, err = httpconv.NewClientActiveRequests(meter)
 	handleErr(err)
 
 	return client
@@ -69,20 +75,7 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 	*/
 	numOfAttributes := 3 // URL, server address, proto, and method.
 
-	var urlHost string
-	if req.URL != nil {
-		urlHost = req.URL.Host
-	}
-	var requestHost string
-	var requestPort int
-	for _, hostport := range []string{urlHost, req.Header.Get("Host")} {
-		requestHost, requestPort = SplitHostPort(hostport)
-		if requestHost != "" || requestPort > 0 {
-			break
-		}
-	}
-
-	eligiblePort := requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", requestPort)
+	requestHost, eligiblePort := serverAddressPort(req)
 	if eligiblePort > 0 {
 		numOfAttributes++
 	}
@@ -113,12 +106,25 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 
 	var u string
 	if req.URL != nil {
-		// Remove any username/password info that may be in the URL.
-		userinfo := req.URL.User
-		req.URL.User = nil
-		u = req.URL.String()
-		// Restore any username/password info that was removed.
-		req.URL.User = userinfo
+		// Remove any username/password info that may be in the URL and
+		// redact the values of sensitive query parameters. Work on a copy so
+		// the request, which a RoundTripper must not modify, is left as-is.
+		c := *req.URL
+		c.User = nil
+		// An opaque URL can carry its own query, which String and the
+		// request both emit as-is, joined to RawQuery by '?'. Redact them as
+		// one query so a sensitive value spanning the join is covered.
+		if path, query, ok := strings.Cut(c.Opaque, "?"); ok {
+			if c.RawQuery != "" || c.ForceQuery {
+				query += "?" + c.RawQuery
+			}
+			if r := redactQuery(query); r != query {
+				c.Opaque, c.RawQuery, c.ForceQuery = path+"?"+r, "", false
+			}
+		} else {
+			c.RawQuery = redactQuery(c.RawQuery)
+		}
+		u = c.String()
 	}
 	attrs = append(attrs, semconv.URLFull(u), semconv.ServerAddress(requestHost))
 	if eligiblePort > 0 {
@@ -133,6 +139,72 @@ func (n HTTPClient) RequestTraceAttrs(req *http.Request) []attribute.KeyValue {
 	}
 
 	return attrs
+}
+
+// sensitiveQueryKey reports whether key is a query parameter key whose value
+// the semantic conventions require to be redacted from url.full and url.query
+// by default. Matching is case-sensitive and done on the decoded key, so a
+// percent-encoded name like "%73ig" is still matched.
+func sensitiveQueryKey(key string) bool {
+	if strings.IndexByte(key, '%') >= 0 {
+		if k, err := url.QueryUnescape(key); err == nil {
+			key = k
+		}
+	}
+	switch key {
+	case "X-Amz-Signature", "X-Amz-Credential", "X-Amz-Security-Token", "sig", "X-Goog-Signature":
+		return true
+	}
+	return false
+}
+
+// redactQuery returns rawQuery with the value of every sensitive query
+// parameter replaced by "REDACTED". Keys, parameter order, and all other
+// values are preserved as-is. rawQuery is returned unchanged, without
+// allocating, when it has no sensitive parameter.
+//
+// Sensitive keys are detected after ';' and '?' as well as '&'. net/url only
+// uses '&', but other servers and proxies may also accept ';', and an opaque
+// URL joins its own query to RawQuery with '?'. Since the separator in use is
+// ambiguous, a sensitive value is redacted up to the next '&' or the end of
+// the query, so any ';'- or '?'-delimited content after it is dropped rather
+// than leaked.
+func redactQuery(rawQuery string) string {
+	var b strings.Builder
+	redacted := false
+	for pos := 0; ; {
+		end := len(rawQuery)
+		if i := strings.IndexAny(rawQuery[pos:], "&;?"); i >= 0 {
+			end = pos + i
+		}
+		param := rawQuery[pos:end]
+		if key, _, hasValue := strings.Cut(param, "="); hasValue && sensitiveQueryKey(key) {
+			if !redacted {
+				redacted = true
+				b.Grow(len(rawQuery))
+				_, _ = b.WriteString(rawQuery[:pos])
+			}
+			_, _ = b.WriteString(key)
+			_, _ = b.WriteString("=REDACTED")
+			end = len(rawQuery)
+			if i := strings.IndexByte(rawQuery[pos:], '&'); i >= 0 {
+				end = pos + i
+			}
+		} else if redacted {
+			_, _ = b.WriteString(param)
+		}
+		if end == len(rawQuery) {
+			break
+		}
+		if redacted {
+			_ = b.WriteByte(rawQuery[end])
+		}
+		pos = end + 1
+	}
+	if !redacted {
+		return rawQuery
+	}
+	return b.String()
 }
 
 // ResponseTraceAttrs returns trace attributes for an HTTP response made by a client.
@@ -204,20 +276,7 @@ func (HTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValue)
 
 func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
 	num := len(additionalAttributes) + 2
-	var h string
-	if req.URL != nil {
-		h = req.URL.Host
-	}
-	var requestHost string
-	var requestPort int
-	for _, hostport := range []string{h, req.Header.Get("Host")} {
-		requestHost, requestPort = SplitHostPort(hostport)
-		if requestHost != "" || requestPort > 0 {
-			break
-		}
-	}
-
-	port := requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", requestPort)
+	requestHost, port := serverAddressPort(req)
 	if port > 0 {
 		num++
 	}
@@ -334,6 +393,77 @@ func (n HTTPClient) RecordMetrics(ctx context.Context, md MetricData, opts Metri
 
 	n.requestBodySize.Inst().Record(ctx, md.RequestSize, *recordOpts...)
 	n.requestDuration.Inst().Record(ctx, durationToSeconds(md.RequestDuration), *recordOpts...)
+}
+
+// ActiveRequestsOption returns the attributes of the
+// http.client.active_requests metric for req, with additionalAttributes. The
+// same option must be passed to both the increment and the decrement of a
+// request.
+func (HTTPClient) ActiveRequestsOption(req *http.Request, additionalAttributes []attribute.KeyValue) metric.AddOption {
+	requestHost, port := requestHostPort(req)
+	if port <= 0 && req.URL != nil {
+		// server.port is required for this metric, and it has no url.scheme
+		// to tell http and https apart, so default ports are kept.
+		switch req.URL.Scheme {
+		case "http":
+			port = 80
+		case "https":
+			port = 443
+		}
+	}
+	// The constant capacity keeps the slice off the heap when there are no
+	// additional attributes.
+	attributes := append(make([]attribute.KeyValue, 0, 3), additionalAttributes...)
+	attributes = append(
+		attributes,
+		semconv.HTTPRequestMethodKey.String(standardizeHTTPMethod(req.Method)),
+		semconv.ServerAddress(requestHost),
+	)
+	if port > 0 {
+		attributes = append(attributes, semconv.ServerPort(port))
+	}
+	return metric.WithAttributeSet(attribute.NewSet(attributes...))
+}
+
+var metricAddOptionPool = &sync.Pool{
+	New: func() any {
+		return &[]metric.AddOption{}
+	},
+}
+
+// AddActiveRequests adds incr to the http.client.active_requests metric.
+func (n HTTPClient) AddActiveRequests(ctx context.Context, incr int64, opt metric.AddOption) {
+	addOpts := metricAddOptionPool.Get().(*[]metric.AddOption)
+	defer func() {
+		*addOpts = (*addOpts)[:0]
+		metricAddOptionPool.Put(addOpts)
+	}()
+	*addOpts = append(*addOpts, opt)
+
+	n.activeRequests.Inst().Add(ctx, incr, *addOpts...)
+}
+
+// serverAddressPort returns the server.address and server.port of req. The
+// port is -1 when it is unknown or the default port of the scheme.
+func serverAddressPort(req *http.Request) (host string, port int) {
+	host, port = requestHostPort(req)
+	return host, requiredHTTPPort(req.URL != nil && req.URL.Scheme == "https", port)
+}
+
+// requestHostPort returns the host and port of req as written in its URL or
+// Host header. The port is -1 when it is not set.
+func requestHostPort(req *http.Request) (host string, port int) {
+	var urlHost string
+	if req.URL != nil {
+		urlHost = req.URL.Host
+	}
+	for _, hostport := range []string{urlHost, req.Header.Get("Host")} {
+		host, port = SplitHostPort(hostport)
+		if host != "" || port > 0 {
+			break
+		}
+	}
+	return host, port
 }
 
 // TraceAttributes returns attributes for httptrace.

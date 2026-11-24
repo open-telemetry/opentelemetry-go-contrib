@@ -10,22 +10,27 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"regexp"
+	"slices"
+	"strings"
 	"sync"
+	"time"
 
 	aws "github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/retry"
 	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/feature/ec2/imds"
 	"github.com/aws/smithy-go/logging"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 var (
 	loadDefaultConfig = awsconfig.LoadDefaultConfig
-	newIMDSClient     = func(cfg aws.Config) client {
-		return imds.NewFromConfig(cfg)
+	newIMDSClient     = func(cfg aws.Config, optFns ...func(*imds.Options)) client {
+		return imds.NewFromConfig(cfg, optFns...)
 	}
 )
 
@@ -72,6 +77,35 @@ func WithAWSLogger(logger logging.Logger) Option {
 	})
 }
 
+// WithMaxAttempts sets the maximum number of attempts for EC2 metadata
+// requests. The value must be greater than zero; invalid values cause
+// resource detection to return an error.
+func WithMaxAttempts(attempts int) Option {
+	return optionFunc(func(c *config) {
+		c.maxAttempts = &attempts
+	})
+}
+
+// WithMaxBackoff sets the maximum delay between retries for EC2 metadata
+// requests. The value must be greater than zero; invalid values cause
+// resource detection to return an error.
+func WithMaxBackoff(backoff time.Duration) Option {
+	return optionFunc(func(c *config) {
+		c.maxBackoff = &backoff
+	})
+}
+
+// WithIMDSTags adds the EC2 instance tags whose keys match any of the
+// patterns as "ec2.tag.<key>" resource attributes. Tags are read from the
+// instance metadata service, which requires access to tags in instance
+// metadata to be enabled for the instance. If it is not enabled, no tag
+// attributes are added. Tags are not read if no patterns are provided.
+func WithIMDSTags(patterns ...*regexp.Regexp) Option {
+	return optionFunc(func(c *config) {
+		c.tagPatterns = patterns
+	})
+}
+
 // Option configures an AWS SDK client.
 type Option interface {
 	apply(*config)
@@ -82,7 +116,10 @@ type optionFunc func(*config)
 func (f optionFunc) apply(c *config) { f(c) }
 
 type config struct {
-	logger logging.Logger
+	logger      logging.Logger
+	maxAttempts *int
+	maxBackoff  *time.Duration
+	tagPatterns []*regexp.Regexp
 }
 
 func (detector *resourceDetector) getClient(ctx context.Context) (client, error) {
@@ -126,6 +163,9 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 
 	m := &metadata{client: client}
 	m.add(ctx, semconv.HostNameKey, "hostname")
+	if len(detector.cfg.tagPatterns) > 0 {
+		m.addTags(ctx, detector.cfg.tagPatterns)
+	}
 
 	attributes = append(attributes, m.attributes...)
 
@@ -137,6 +177,13 @@ func (detector *resourceDetector) Detect(ctx context.Context) (*resource.Resourc
 }
 
 func newClient(ctx context.Context, c config) (client, error) {
+	if c.maxAttempts != nil && *c.maxAttempts <= 0 {
+		return nil, fmt.Errorf("max attempts must be greater than zero: %d", *c.maxAttempts)
+	}
+	if c.maxBackoff != nil && *c.maxBackoff <= 0 {
+		return nil, fmt.Errorf("max backoff must be greater than zero: %s", *c.maxBackoff)
+	}
+
 	var optFns []func(*awsconfig.LoadOptions) error
 	if c.logger != nil {
 		optFns = append(optFns, awsconfig.WithLogger(c.logger))
@@ -147,7 +194,31 @@ func newClient(ctx context.Context, c config) (client, error) {
 		return nil, err
 	}
 
-	return newIMDSClient(cfg), nil
+	if c.maxAttempts != nil || c.maxBackoff != nil {
+		retryer := cfg.Retryer
+		if retryer == nil {
+			retryer = func() aws.Retryer { return retry.NewStandard() }
+		}
+		cfg.Retryer = func() aws.Retryer {
+			r := retryer()
+			if c.maxAttempts != nil {
+				r = retry.AddWithMaxAttempts(r, *c.maxAttempts)
+			}
+			if c.maxBackoff != nil {
+				r = retry.AddWithMaxBackoffDelay(r, *c.maxBackoff)
+			}
+			return r
+		}
+	}
+
+	var imdsOptFns []func(*imds.Options)
+	if c.maxBackoff != nil {
+		imdsOptFns = append(imdsOptFns, func(o *imds.Options) {
+			o.DisableDefaultMaxBackoff = true
+		})
+	}
+
+	return newIMDSClient(cfg, imdsOptFns...), nil
 }
 
 type metadata struct {
@@ -157,18 +228,41 @@ type metadata struct {
 }
 
 func (m *metadata) add(ctx context.Context, k attribute.Key, n string) {
+	if v, ok := m.get(ctx, n); ok {
+		m.attributes = append(m.attributes, k.String(v))
+	}
+}
+
+func (m *metadata) addTags(ctx context.Context, patterns []*regexp.Regexp) {
+	keys, ok := m.get(ctx, "tags/instance")
+	if !ok {
+		return
+	}
+	for key := range strings.SplitSeq(keys, "\n") {
+		key = strings.TrimSpace(key)
+		if key == "" || !slices.ContainsFunc(patterns, func(re *regexp.Regexp) bool {
+			return re != nil && re.MatchString(key)
+		}) {
+			continue
+		}
+		m.add(ctx, attribute.Key("ec2.tag."+key), "tags/instance/"+key)
+	}
+}
+
+func (m *metadata) get(ctx context.Context, n string) (string, bool) {
 	metadataInput := &imds.GetMetadataInput{Path: n}
 	md, err := m.client.GetMetadata(ctx, metadataInput)
 	if err != nil {
 		m.recordError(n, err)
-		return
+		return "", false
 	}
+	defer md.Content.Close()
 	data, err := io.ReadAll(md.Content)
 	if err != nil {
 		m.recordError(n, err)
-		return
+		return "", false
 	}
-	m.attributes = append(m.attributes, k.String(string(data)))
+	return string(data), true
 }
 
 func (m *metadata) recordError(path string, err error) {

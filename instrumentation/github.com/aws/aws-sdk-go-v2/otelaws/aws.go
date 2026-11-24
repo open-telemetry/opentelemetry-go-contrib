@@ -2,8 +2,6 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package otelaws provides instrumentation for the AWS SDK.
-//
-// Deprecated: This package is no longer supported.
 package otelaws
 
 import (
@@ -17,7 +15,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 	"go.opentelemetry.io/otel/trace"
 )
 
