@@ -25,6 +25,7 @@ import (
 //   - Cloud Run.
 //   - Cloud Run jobs.
 //   - Cloud Run worker pools.
+//   - Cloud Run instances.
 //   - Cloud Functions.
 //   - Bare Metal Solution (BMS).
 func NewDetector() resource.Detector {
@@ -95,7 +96,8 @@ func hasErr(errs []error, target error) bool {
 }
 
 // Detect detects associated resources when running on GCE, GKE, GAE,
-// Cloud Run, Cloud Run jobs, Cloud Run worker pools, Cloud Functions, and Bare Metal Solution.
+// Cloud Run, Cloud Run jobs, Cloud Run worker pools, Cloud Run instances,
+// Cloud Functions, and Bare Metal Solution.
 func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 	projectID, err1 := d.detector.BareMetalSolutionProjectID(ctx)
 	region, err2 := d.detector.BareMetalSolutionCloudRegion(ctx)
@@ -138,10 +140,17 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		b.addCloudResourceID("//run.googleapis.com/projects/%s/locations/%s/services/%s", projectID, region, faasName)
 	case internal.CloudRunWorkerPool:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
-		b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
+		faasName := b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
 		b.add(ctx, semconv.FaaSVersionKey, d.detector.FaaSVersion)
 		b.add(ctx, semconv.FaaSInstanceKey, d.detector.FaaSID)
-		b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		region := b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		b.addCloudResourceID("//run.googleapis.com/projects/%s/locations/%s/workerPools/%s", projectID, region, faasName)
+	case internal.CloudRunInstance:
+		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
+		faasName := b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
+		b.add(ctx, semconv.FaaSInstanceKey, d.detector.FaaSID)
+		region := b.add(ctx, semconv.CloudRegionKey, d.detector.FaaSCloudRegion)
+		b.addCloudResourceID("//run.googleapis.com/projects/%s/locations/%s/instances/%s", projectID, region, faasName)
 	case internal.CloudRunJob:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPCloudRun)
 		faasName := b.add(ctx, semconv.FaaSNameKey, d.detector.FaaSName)
