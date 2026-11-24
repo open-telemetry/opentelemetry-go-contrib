@@ -904,6 +904,8 @@ func TestWithHTTPTrace(t *testing.T) {
 }
 
 func TestTransportMetrics(t *testing.T) {
+	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "")
+
 	requestBody := []byte("john")
 	responseBody := []byte("Hello, world!")
 
