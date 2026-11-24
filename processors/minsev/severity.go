@@ -106,7 +106,7 @@ func (s Severity) Severity() log.Severity {
 
 // String returns a name for the severity level. If the severity level has a
 // name, then that name in uppercase is returned. If the severity level is
-// outside named values, then an signed integer is appended to the uppercased
+// outside named values, then a signed integer is appended to the uppercased
 // name.
 //
 // Examples:
@@ -169,7 +169,7 @@ func (s *Severity) UnmarshalJSON(data []byte) error {
 }
 
 // AppendText implements [encoding.TextAppender] by calling [Severity.String].
-func (s Severity) AppendText(b []byte) ([]byte, error) {
+func (s Severity) AppendText(b []byte, error) {
 	return append(b, s.String()...), nil
 }
 
@@ -182,7 +182,7 @@ func (s Severity) MarshalText() ([]byte, error) {
 // UnmarshalText implements [encoding.TextUnmarshaler]. It accepts any string
 // produced by [Severity.MarshalText], ignoring case. It also accepts numeric
 // offsets that would result in a different string on output. For example,
-// "ERROR-8" will marshal as [SeverityInfo].
+// "ERROR-8" will unmarshal as [SeverityInfo].
 func (s *Severity) UnmarshalText(data []byte) error {
 	return s.parse(string(data))
 }
@@ -200,7 +200,7 @@ func (s *Severity) UnmarshalText(data []byte) error {
 // "iNfO", etc. are all equivalent to "INFO".
 //
 // Fine-grained severity levels are expected to be in the range of 1 to 4,
-// where 1 is the base severity level, and 2, 3, and 4 are more fine-grained
+// where the base severity level is 1, and 2, 3, and 4 are more fine-grained
 // levels. However, fine-grained levels greater than 4 are also accepted, and
 // they will be treated as a 1-based offset from the base severity level.
 //
@@ -324,8 +324,8 @@ func (v *SeverityVar) String() string {
 
 // AppendText implements [encoding.TextAppender]
 // by calling [Severity.AppendText].
-func (v *SeverityVar) AppendText(b []byte) ([]byte, error) {
-	return Severity(int(v.val.Load())).AppendText(b)
+func (v *SeverityVar) AppendText(b []byte, error) {
+	return Severity(int(v.val.Load())).AppendText(b), nil
 }
 
 // MarshalText implements [encoding.TextMarshaler]
