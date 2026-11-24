@@ -15,8 +15,8 @@ import (
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
 	"go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/sdk/trace/tracetest"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/rpcconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/rpcconv"
 	grpc_codes "google.golang.org/grpc/codes"
 	"google.golang.org/grpc/stats"
 	"google.golang.org/grpc/status"
@@ -37,115 +37,115 @@ var serverChecks = []struct {
 	grpcCode                  grpc_codes.Code
 	wantSpanCode              otelcode.Code
 	wantSpanStatusDescription string
-	wantRPCResponseStatusCode string
+	wantRPCStatusCode         string
 }{
 	{
 		grpcCode:                  grpc_codes.OK,
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "OK",
+		wantRPCStatusCode:         "OK",
 	},
 	{
 		grpcCode:                  grpc_codes.Canceled,
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "CANCELLED",
+		wantRPCStatusCode:         "CANCELLED",
 	},
 	{
 		grpcCode:                  grpc_codes.Unknown,
 		wantSpanCode:              otelcode.Error,
 		wantSpanStatusDescription: grpc_codes.Unknown.String(),
-		wantRPCResponseStatusCode: "UNKNOWN",
+		wantRPCStatusCode:         "UNKNOWN",
 	},
 	{
 		grpcCode:                  grpc_codes.InvalidArgument,
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "INVALID_ARGUMENT",
+		wantRPCStatusCode:         "INVALID_ARGUMENT",
 	},
 	{
 		grpcCode:                  grpc_codes.DeadlineExceeded,
 		wantSpanCode:              otelcode.Error,
 		wantSpanStatusDescription: grpc_codes.DeadlineExceeded.String(),
-		wantRPCResponseStatusCode: "DEADLINE_EXCEEDED",
+		wantRPCStatusCode:         "DEADLINE_EXCEEDED",
 	},
 	{
 		grpcCode:                  grpc_codes.NotFound,
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "NOT_FOUND",
+		wantRPCStatusCode:         "NOT_FOUND",
 	},
 	{
 		grpcCode:                  grpc_codes.AlreadyExists,
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "ALREADY_EXISTS",
+		wantRPCStatusCode:         "ALREADY_EXISTS",
 	},
 	{
 		grpcCode:                  grpc_codes.PermissionDenied,
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "PERMISSION_DENIED",
+		wantRPCStatusCode:         "PERMISSION_DENIED",
 	},
 	{
 		grpcCode:                  grpc_codes.ResourceExhausted,
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "RESOURCE_EXHAUSTED",
+		wantRPCStatusCode:         "RESOURCE_EXHAUSTED",
 	},
 	{
 		grpcCode:                  grpc_codes.FailedPrecondition,
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "FAILED_PRECONDITION",
+		wantRPCStatusCode:         "FAILED_PRECONDITION",
 	},
 	{
 		grpcCode:                  grpc_codes.Aborted,
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "ABORTED",
+		wantRPCStatusCode:         "ABORTED",
 	},
 	{
 		grpcCode:                  grpc_codes.OutOfRange,
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "OUT_OF_RANGE",
+		wantRPCStatusCode:         "OUT_OF_RANGE",
 	},
 	{
 		grpcCode:                  grpc_codes.Unimplemented,
 		wantSpanCode:              otelcode.Error,
 		wantSpanStatusDescription: grpc_codes.Unimplemented.String(),
-		wantRPCResponseStatusCode: "UNIMPLEMENTED",
+		wantRPCStatusCode:         "UNIMPLEMENTED",
 	},
 	{
 		grpcCode:                  grpc_codes.Internal,
 		wantSpanCode:              otelcode.Error,
 		wantSpanStatusDescription: grpc_codes.Internal.String(),
-		wantRPCResponseStatusCode: "INTERNAL",
+		wantRPCStatusCode:         "INTERNAL",
 	},
 	{
 		grpcCode:                  grpc_codes.Unavailable,
 		wantSpanCode:              otelcode.Error,
 		wantSpanStatusDescription: grpc_codes.Unavailable.String(),
-		wantRPCResponseStatusCode: "UNAVAILABLE",
+		wantRPCStatusCode:         "UNAVAILABLE",
 	},
 	{
 		grpcCode:                  grpc_codes.DataLoss,
 		wantSpanCode:              otelcode.Error,
 		wantSpanStatusDescription: grpc_codes.DataLoss.String(),
-		wantRPCResponseStatusCode: "DATA_LOSS",
+		wantRPCStatusCode:         "DATA_LOSS",
 	},
 	{
 		grpcCode:                  grpc_codes.Unauthenticated,
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "UNAUTHENTICATED",
+		wantRPCStatusCode:         "UNAUTHENTICATED",
 	},
 	{
 		grpcCode:                  grpc_codes.Code(9999),
 		wantSpanCode:              otelcode.Unset,
 		wantSpanStatusDescription: "",
-		wantRPCResponseStatusCode: "CODE(9999)",
+		wantRPCStatusCode:         "CODE(9999)",
 	},
 }
 
@@ -182,10 +182,10 @@ func TestStatsHandlerHandleRPCServerErrors(t *testing.T) {
 			// validate span
 			span, ok := getSpanFromRecorder(sr, methodName)
 			require.True(t, ok, "missing span %s", methodName)
-			assertServerSpan(t, check.wantSpanCode, check.wantSpanStatusDescription, check.wantRPCResponseStatusCode, span)
+			assertServerSpan(t, check.wantSpanCode, check.wantSpanStatusDescription, check.wantRPCStatusCode, span)
 
 			// validate metric
-			assertStatsHandlerServerMetrics(t, mr, serviceName, name, check.wantRPCResponseStatusCode)
+			assertStatsHandlerServerMetrics(t, mr, serviceName, name, check.wantRPCStatusCode)
 		})
 	}
 }
@@ -198,7 +198,7 @@ func assertServerSpan(t *testing.T, wantSpanCode otelcode.Code, wantSpanStatusDe
 	// validate grpc code span attribute
 	var codeAttr attribute.KeyValue
 	for _, a := range span.Attributes() {
-		if a.Key == semconv.RPCResponseStatusCodeKey {
+		if a.Key == semconv.RPCStatusCodeKey {
 			codeAttr = a
 			break
 		}
@@ -249,7 +249,7 @@ func TestStatsHandlerHandleRPCClientErrors(t *testing.T) {
 			assert.Equal(t, wantSpanCode, span.Status().Code)
 
 			// validate metric
-			assertStatsHandlerClientMetrics(t, mr, serviceName, name, check.wantRPCResponseStatusCode)
+			assertStatsHandlerClientMetrics(t, mr, serviceName, name, check.wantRPCStatusCode)
 		})
 	}
 }
@@ -258,7 +258,7 @@ func assertStatsHandlerClientMetrics(t *testing.T, reader metric.Reader, service
 	attrs := []attribute.KeyValue{
 		semconv.RPCMethod(serviceName + "/" + name),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(code),
+		semconv.RPCStatusCode(code),
 		testMetricAttr,
 	}
 	// error.type is Conditionally Required on the duration metric if and only
@@ -297,7 +297,7 @@ func assertStatsHandlerServerMetrics(t *testing.T, reader metric.Reader, service
 	attrs := []attribute.KeyValue{
 		semconv.RPCMethod(serviceName + "/" + name),
 		semconv.RPCSystemNameGRPC,
-		semconv.RPCResponseStatusCode(code),
+		semconv.RPCStatusCode(code),
 		testMetricAttr,
 	}
 	// error.type is Conditionally Required on the duration metric if and only
