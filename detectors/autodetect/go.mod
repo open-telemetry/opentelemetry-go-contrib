@@ -26,6 +26,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/openshift v0.19.0
 	go.opentelemetry.io/contrib/detectors/openstack/nova v0.19.0
 	go.opentelemetry.io/contrib/detectors/scaleway v0.19.0
+	go.opentelemetry.io/contrib/detectors/tencent/cvm v0.19.0
 	go.opentelemetry.io/contrib/detectors/vultr v0.19.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/sdk v1.47.0
@@ -111,14 +112,14 @@ require (
 	github.com/prometheus/common v0.74.0 // indirect
 	github.com/prometheus/procfs v0.23.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
+	go.opentelemetry.io/auto/sdk v1.2.2 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0 // indirect
 	go.opentelemetry.io/otel/log v1.47.0 // indirect
 	go.opentelemetry.io/otel/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.5 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/exp v0.0.0-20261119141654-b15d094f3610 // indirect
+	golang.org/x/exp v0.0.0-20261121134650-e1094eeca1b5 // indirect
 	golang.org/x/net v0.63.0 // indirect
 	golang.org/x/oauth2 v0.38.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
@@ -183,6 +184,8 @@ replace go.opentelemetry.io/contrib/detectors/akamai => ../akamai
 replace go.opentelemetry.io/contrib/detectors/openstack/nova => ../openstack/nova
 
 replace go.opentelemetry.io/contrib/detectors/scaleway => ../scaleway
+
+replace go.opentelemetry.io/contrib/detectors/tencent/cvm => ../tencent/cvm
 
 replace go.opentelemetry.io/contrib/detectors/azure/azureaks => ../azure/azureaks
 
