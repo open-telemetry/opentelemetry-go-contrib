@@ -169,7 +169,7 @@ func (s *Severity) UnmarshalJSON(data []byte) error {
 }
 
 // AppendText implements [encoding.TextAppender] by calling [Severity.String].
-func (s Severity) AppendText(b []byte, error) {
+func (s Severity) AppendText(b []byte) ([]byte, error) {
 	return append(b, s.String()...), nil
 }
 
@@ -200,7 +200,7 @@ func (s *Severity) UnmarshalText(data []byte) error {
 // "iNfO", etc. are all equivalent to "INFO".
 //
 // Fine-grained severity levels are expected to be in the range of 1 to 4,
-// where the base severity level is 1, and 2, 3, and 4 are more fine-grained
+// where 1 is the base severity level, and 2, 3, and 4 are more fine-grained
 // levels. However, fine-grained levels greater than 4 are also accepted, and
 // they will be treated as a 1-based offset from the base severity level.
 //
@@ -324,8 +324,8 @@ func (v *SeverityVar) String() string {
 
 // AppendText implements [encoding.TextAppender]
 // by calling [Severity.AppendText].
-func (v *SeverityVar) AppendText(b []byte, error) {
-	return Severity(int(v.val.Load())).AppendText(b), nil
+func (v *SeverityVar) AppendText(b []byte) ([]byte, error) {
+	return Severity(int(v.val.Load())).AppendText(b)
 }
 
 // MarshalText implements [encoding.TextMarshaler]
