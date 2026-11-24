@@ -6,9 +6,11 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
+	cerrdefs "github.com/containerd/errdefs"
 	"github.com/moby/moby/client"
 )
 
@@ -51,6 +53,7 @@ type provider interface {
 
 type dockerProviderImpl struct {
 	dockerClient *client.Client
+	openFile     func(string) (io.ReadCloser, error)
 }
 
 func (d *dockerProviderImpl) Info(ctx context.Context) (hostInfo, error) {
@@ -62,17 +65,25 @@ func (d *dockerProviderImpl) Info(ctx context.Context) (hostInfo, error) {
 }
 
 func (d *dockerProviderImpl) ContainerInfo(ctx context.Context) (containerInfo, error) {
-	// Docker sets the container hostname to the first 12 characters of the
-	// container ID by default, which ContainerInspect can resolve. This breaks
-	// when a custom hostname is set via --hostname or an orchestrator (e.g.
-	// Kubernetes pod.spec.hostname), in which case ContainerInspect returns
-	// "no such container" (a NotFound error) and Detect treats this the same
-	// as not running in a Docker container: an empty resource, no error.
-	hostname, err := os.Hostname()
+	containerRef, err := d.containerIDFromFiles()
+	if err != nil || containerRef == "" {
+		// Fall back to the hostname for platforms where cgroup detection is
+		// unavailable and to preserve support for older Docker setups.
+		containerRef, err = os.Hostname()
+	}
 	if err != nil {
 		return containerInfo{}, err
 	}
-	result, err := d.dockerClient.ContainerInspect(ctx, hostname, client.ContainerInspectOptions{})
+	result, err := d.dockerClient.ContainerInspect(ctx, containerRef, client.ContainerInspectOptions{})
+	if cerrdefs.IsNotFound(err) {
+		hostname, hostnameErr := os.Hostname()
+		if hostnameErr != nil {
+			return containerInfo{}, hostnameErr
+		}
+		if hostname != containerRef {
+			result, err = d.dockerClient.ContainerInspect(ctx, hostname, client.ContainerInspectOptions{})
+		}
+	}
 	if err != nil {
 		return containerInfo{}, fmt.Errorf("failed to fetch container information: %w", err)
 	}
@@ -133,5 +144,10 @@ func newProvider(opts ...client.Opt) (provider, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not initialize Docker client: %w", err)
 	}
-	return &dockerProviderImpl{dockerClient: cli}, nil
+	return &dockerProviderImpl{
+		dockerClient: cli,
+		openFile: func(path string) (io.ReadCloser, error) {
+			return os.Open(path)
+		},
+	}, nil
 }

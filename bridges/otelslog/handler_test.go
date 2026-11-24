@@ -25,7 +25,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/embedded"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 var now = time.Now()
@@ -472,6 +472,22 @@ func TestSlogtest(t *testing.T) {
 	}, func(*testing.T) map[string]any {
 		return r.Results()[0]
 	})
+}
+
+func TestHandlerWithSourceWithoutPC(t *testing.T) {
+	r := new(recorder)
+	h := NewHandler("", WithLoggerProvider(r), WithSource(true))
+	record := slog.NewRecord(time.Time{}, slog.LevelInfo, "msg", 0)
+
+	require.NoError(t, h.Handle(t.Context(), record))
+	require.Len(t, r.Records, 1)
+	for _, key := range []string{
+		string(semconv.CodeFilePathKey),
+		string(semconv.CodeFunctionNameKey),
+		string(semconv.CodeLineNumberKey),
+	} {
+		assert.NotContains(t, r.Results()[0], key)
+	}
 }
 
 func TestNewHandlerConfiguration(t *testing.T) {

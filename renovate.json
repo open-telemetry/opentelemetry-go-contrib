@@ -8,13 +8,30 @@
   "labels": ["Skip Changelog", "dependencies"],
   "separateMajorMinor": true,
   "postUpdateOptions" : [
-    "gomodTidy"
+    "gomodTidyAll",
+    "gomodUpdateImportPaths"
   ],
   "packageRules": [
     {
       "matchManagers": ["gomod"],
       "matchDepTypes": ["indirect"],
+      "abandonmentThreshold": "50 years",
       "enabled": true
+    },
+    {
+      "matchManagers": ["gomod"],
+      "matchDepTypes": ["indirect"],
+      "matchUpdateTypes": [
+        "major"
+      ],
+      "enabled": false
+    },
+    {
+      "description": "Ensure source compatibility with Go version used by this project",
+      "matchManagers": [
+        "gomod"
+      ],
+      "constraintsFiltering": "strict"
     },
     {
       "matchPackageNames": ["go.opentelemetry.io/build-tools/**"],

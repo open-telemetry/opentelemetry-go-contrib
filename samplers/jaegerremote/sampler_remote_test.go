@@ -149,6 +149,32 @@ func TestRemoteSamplerOptionsDefaults(t *testing.T) {
 	assert.NotZero(t, options.samplingRefreshInterval)
 }
 
+func TestRemoteSamplerNonPositiveRefreshInterval(t *testing.T) {
+	// time.NewTicker panics for a non-positive interval, so the sampler
+	// must never be configured with one.
+	for _, d := range []time.Duration{0, -time.Second} {
+		cfg := newConfig(WithSamplingRefreshInterval(d))
+		assert.Equal(t, defaultSamplingRefreshInterval, cfg.samplingRefreshInterval, "option %v", d)
+	}
+
+	// A non-positive value must be ignored, not overwrite an earlier valid one.
+	for _, d := range []time.Duration{0, -time.Second} {
+		cfg := newConfig(WithSamplingRefreshInterval(5*time.Second), WithSamplingRefreshInterval(d))
+		assert.Equal(t, 5*time.Second, cfg.samplingRefreshInterval, "option %v", d)
+	}
+
+	for _, v := range []string{"0", "-5"} {
+		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "pollingIntervalMs="+v)
+
+		_, errs := getEnvOptions()
+		require.Len(t, errs, 1, "pollingIntervalMs=%s", v)
+		assert.ErrorContains(t, errs[0], "pollingIntervalMs must be positive")
+
+		cfg := newConfig()
+		assert.Equal(t, defaultSamplingRefreshInterval, cfg.samplingRefreshInterval, "pollingIntervalMs=%s", v)
+	}
+}
+
 func initAgent(t *testing.T) (*testutils.MockAgent, *Sampler) {
 	agent, err := testutils.StartMockAgent()
 	require.NoError(t, err)
@@ -796,5 +822,32 @@ func TestEnvVarSettingForNewTracer(t *testing.T) {
 				require.Empty(t, opts)
 			})
 		}
+	})
+
+	t.Run("polling interval overflow uses default", func(t *testing.T) {
+		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "pollingIntervalMs=18446744073710")
+		_, errs := getEnvOptions()
+		require.NotEmpty(t, errs)
+		assert.ErrorContains(t, errs[0], "pollingIntervalMs")
+
+		cfg := newConfig()
+
+		assert.Equal(t, defaultSamplingRefreshInterval, cfg.samplingRefreshInterval)
+	})
+
+	t.Run("maximum valid polling interval", func(t *testing.T) {
+		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "pollingIntervalMs=9223372036854")
+
+		cfg := newConfig()
+
+		assert.Equal(t, time.Duration(9223372036854)*time.Millisecond, cfg.samplingRefreshInterval)
+	})
+
+	t.Run("explicit option overrides overflowing environment value", func(t *testing.T) {
+		t.Setenv("OTEL_TRACES_SAMPLER_ARG", "pollingIntervalMs=18446744073710")
+
+		cfg := newConfig(WithSamplingRefreshInterval(5 * time.Second))
+
+		assert.Equal(t, 5*time.Second, cfg.samplingRefreshInterval)
 	})
 }

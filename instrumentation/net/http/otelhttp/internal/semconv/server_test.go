@@ -21,6 +21,7 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 	defaultRequest := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com/path?query=test", http.NoBody)
 	reqWithPattern := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/path/abc123", http.NoBody)
 	reqWithPattern.Pattern = "/path/abc123"
+	reqWithHostPort := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://attacker.example:8443/", http.NoBody)
 
 	tests := []struct {
 		name                 string
@@ -39,11 +40,10 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 			route:                "",
 			additionalAttributes: []attribute.KeyValue{attribute.String("test", "test")},
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 7)
+				require.Len(t, attrs, 6)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("url.scheme", "http"),
-					attribute.String("server.address", "example.com"),
 					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
 					attribute.Int64("http.response.status_code", 200),
@@ -73,14 +73,46 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 			},
 		},
 		{
-			name: "use route from request pattern",
-			req:  reqWithPattern,
+			name:       "ignore request host with server name",
+			server:     "example.com",
+			req:        reqWithHostPort,
+			statusCode: 200,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
 				require.Len(t, attrs, 6)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("url.scheme", "http"),
 					attribute.String("server.address", "example.com"),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "1.1"),
+					attribute.Int64("http.response.status_code", 200),
+				}, attrs)
+			},
+		},
+		{
+			name:       "omit server port without server address",
+			server:     ":8080",
+			req:        defaultRequest,
+			statusCode: 200,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 5)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("url.scheme", "http"),
+					attribute.String("network.protocol.name", "http"),
+					attribute.String("network.protocol.version", "1.1"),
+					attribute.Int64("http.response.status_code", 200),
+				}, attrs)
+			},
+		},
+		{
+			name: "use route from request pattern",
+			req:  reqWithPattern,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 5)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("url.scheme", "http"),
 					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
 					attribute.String("http.route", "/path/abc123"),
@@ -281,6 +313,141 @@ func TestHTTPServer_SpanName(t *testing.T) {
 
 			got := HTTPServer{}.SpanName(req)
 			assert.Equal(t, tt.wantName, got)
+		})
+	}
+}
+
+func TestHTTPServer_NetworkTransportAttr(t *testing.T) {
+	tests := []struct {
+		name    string
+		network string
+		want    attribute.KeyValue
+	}{
+		{name: "tcp", network: "tcp", want: attribute.String("network.transport", "tcp")},
+		{name: "tcp4", network: "tcp4", want: attribute.String("network.transport", "tcp")},
+		{name: "tcp6", network: "tcp6", want: attribute.String("network.transport", "tcp")},
+		{name: "udp", network: "udp", want: attribute.String("network.transport", "udp")},
+		{name: "udp4", network: "udp4", want: attribute.String("network.transport", "udp")},
+		{name: "udp6", network: "udp6", want: attribute.String("network.transport", "udp")},
+		{name: "unix", network: "unix", want: attribute.String("network.transport", "unix")},
+		{name: "unixgram", network: "unixgram", want: attribute.String("network.transport", "unix")},
+		{name: "unixpacket", network: "unixpacket", want: attribute.String("network.transport", "unix")},
+		{name: "empty defaults to pipe", network: "", want: attribute.String("network.transport", "pipe")},
+		{name: "unknown defaults to pipe", network: "ip", want: attribute.String("network.transport", "pipe")},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := HTTPServer{}.NetworkTransportAttr(tt.network)
+			assert.Equal(t, []attribute.KeyValue{tt.want}, got)
+		})
+	}
+}
+
+func TestRequestTraceAttrs_URLQuery(t *testing.T) {
+	assertNoURLQuery := func(t *testing.T, attrs []attribute.KeyValue) {
+		t.Helper()
+		s := attribute.NewSet(attrs...)
+		assert.False(t, s.HasValue("url.query"))
+	}
+
+	t.Run("nil URL omits url.query", func(t *testing.T) {
+		req := &http.Request{Method: http.MethodGet}
+		attrs := (HTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
+		assertNoURLQuery(t, attrs)
+	})
+
+	testCases := []struct {
+		name      string
+		target    string
+		wantQuery string
+		wantOmit  bool
+	}{
+		{
+			name:     "no query",
+			target:   "/foo",
+			wantOmit: true,
+		},
+		{
+			name:     "empty query with trailing question mark",
+			target:   "/foo?",
+			wantOmit: true,
+		},
+		{
+			name:      "no sensitive parameters",
+			target:    "/foo?stuff=morestuff&other=1",
+			wantQuery: "stuff=morestuff&other=1",
+		},
+		{
+			name:      "aws sigv4 presigned url",
+			target:    "/key?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAEXAMPLE%2F20260101%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Security-Token=token&X-Amz-Signature=abc123",
+			wantQuery: "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=REDACTED&X-Amz-Security-Token=REDACTED&X-Amz-Signature=REDACTED",
+		},
+		{
+			name:      "azure sas token",
+			target:    "/container/blob?sv=2024-11-04&sig=abc%2F123%3D&se=2026-01-01",
+			wantQuery: "sv=2024-11-04&sig=REDACTED&se=2026-01-01",
+		},
+		{
+			name:      "gcs signed url",
+			target:    "/bucket/object?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Signature=abc123",
+			wantQuery: "X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Signature=REDACTED",
+		},
+		{
+			name:      "matching is case sensitive",
+			target:    "/foo?SIG=abc&Sig=def&x-amz-signature=ghi",
+			wantQuery: "SIG=abc&Sig=def&x-amz-signature=ghi",
+		},
+		{
+			name:      "key without value is preserved",
+			target:    "/foo?sig&stuff=morestuff",
+			wantQuery: "sig&stuff=morestuff",
+		},
+		{
+			name:      "percent-encoded key",
+			target:    "/foo?%73ig=abc&X-Amz-%53ignature=def&stuff=morestuff",
+			wantQuery: "%73ig=REDACTED&X-Amz-%53ignature=REDACTED&stuff=morestuff",
+		},
+		{
+			name:      "semicolon separator",
+			target:    "/foo?a=1;sig=abc&stuff=morestuff;X-Amz-Signature=def",
+			wantQuery: "a=1;sig=REDACTED&stuff=morestuff;X-Amz-Signature=REDACTED",
+		},
+		{
+			name:      "semicolon inside sensitive value",
+			target:    "/foo?sig=prefix;SECRET_SUFFIX&other=1",
+			wantQuery: "sig=REDACTED&other=1",
+		},
+		{
+			name:      "question mark separator",
+			target:    "/foo?a=1?sig=abc&stuff=morestuff",
+			wantQuery: "a=1?sig=REDACTED&stuff=morestuff",
+		},
+		{
+			name:      "empty value is redacted",
+			target:    "/foo?sig=&stuff=morestuff",
+			wantQuery: "sig=REDACTED&stuff=morestuff",
+		},
+		{
+			name:      "repeated key",
+			target:    "/foo?sig=abc&sig=def",
+			wantQuery: "sig=REDACTED&sig=REDACTED",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.target, http.NoBody)
+			origRawQuery := req.URL.RawQuery
+
+			attrs := (HTTPServer{}).RequestTraceAttrs("", req, RequestTraceAttrsOpts{})
+			if tc.wantOmit {
+				assertNoURLQuery(t, attrs)
+			} else {
+				assert.Contains(t, attrs, attribute.String("url.query", tc.wantQuery))
+			}
+			// The incoming request must not be modified.
+			assert.Equal(t, origRawQuery, req.URL.RawQuery)
 		})
 	}
 }

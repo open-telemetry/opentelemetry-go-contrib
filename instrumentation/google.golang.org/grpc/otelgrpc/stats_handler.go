@@ -12,8 +12,8 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/rpcconv"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/rpcconv"
 	"go.opentelemetry.io/otel/trace"
 
 	grpc_codes "google.golang.org/grpc/codes"
@@ -68,8 +68,11 @@ func NewServerHandler(opts ...Option) stats.Handler {
 	h.duration, err = rpcconv.NewServerCallDuration(
 		meter,
 		metric.WithExplicitBucketBoundaries(
-			0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
-			0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
+			0, 0.00001, 0.00005, 0.0001, 0.0003, 0.0006, 0.0008,
+			0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.008, 0.01,
+			0.013, 0.016, 0.02, 0.025, 0.03, 0.04, 0.05, 0.065,
+			0.08, 0.1, 0.13, 0.16, 0.2, 0.25, 0.3, 0.4, 0.5,
+			0.65, 0.8, 1, 2, 5, 10, 20, 50, 100,
 		),
 	)
 	if err != nil {
@@ -104,9 +107,11 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 
 	if record {
-		// Make a new slice to avoid aliasing into the same attrs slice used by metrics.
-		spanAttributes := make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
-		spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
+		spanAttributes := attrs
+		if len(h.SpanAttributes) > 0 {
+			spanAttributes = make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
+			spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
+		}
 		opts := []trace.SpanStartOption{
 			trace.WithSpanKind(h.SpanKind),
 			trace.WithAttributes(spanAttributes...),
@@ -125,8 +130,16 @@ func (h *serverHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		)
 	}
 
+	var metricAttrs []attribute.KeyValue
+	if len(h.MetricAttributes) == 0 {
+		metricAttrs = attrs
+	} else {
+		metricAttrs = make([]attribute.KeyValue, 0, len(attrs)+len(h.MetricAttributes))
+		metricAttrs = append(append(metricAttrs, attrs...), h.MetricAttributes...)
+	}
+
 	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.MetricAttributes...),
+		metricAttrs: metricAttrs,
 		record:      record,
 	}
 
@@ -176,8 +189,11 @@ func NewClientHandler(opts ...Option) stats.Handler {
 	h.duration, err = rpcconv.NewClientCallDuration(
 		meter,
 		metric.WithExplicitBucketBoundaries(
-			0.005, 0.01, 0.025, 0.05, 0.075, 0.1,
-			0.25, 0.5, 0.75, 1, 2.5, 5, 7.5, 10,
+			0, 0.00001, 0.00005, 0.0001, 0.0003, 0.0006, 0.0008,
+			0.001, 0.002, 0.003, 0.004, 0.005, 0.006, 0.008, 0.01,
+			0.013, 0.016, 0.02, 0.025, 0.03, 0.04, 0.05, 0.065,
+			0.08, 0.1, 0.13, 0.16, 0.2, 0.25, 0.3, 0.4, 0.5,
+			0.65, 0.8, 1, 2, 5, 10, 20, 50, 100,
 		),
 	)
 	if err != nil {
@@ -201,9 +217,11 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 	}
 
 	if record {
-		// Make a new slice to avoid aliasing into the same attrs slice used by metrics.
-		spanAttributes := make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
-		spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
+		spanAttributes := attrs
+		if len(h.SpanAttributes) > 0 {
+			spanAttributes = make([]attribute.KeyValue, 0, len(attrs)+len(h.SpanAttributes))
+			spanAttributes = append(append(spanAttributes, attrs...), h.SpanAttributes...)
+		}
 		ctx, _ = h.tracer.Start(
 			ctx,
 			name,
@@ -212,8 +230,16 @@ func (h *clientHandler) TagRPC(ctx context.Context, info *stats.RPCTagInfo) cont
 		)
 	}
 
+	var metricAttrs []attribute.KeyValue
+	if len(h.MetricAttributes) == 0 {
+		metricAttrs = attrs
+	} else {
+		metricAttrs = make([]attribute.KeyValue, 0, len(attrs)+len(h.MetricAttributes))
+		metricAttrs = append(append(metricAttrs, attrs...), h.MetricAttributes...)
+	}
+
 	gctx := gRPCContext{
-		metricAttrs: append(attrs, h.MetricAttributes...),
+		metricAttrs: metricAttrs,
 		record:      record,
 	}
 
@@ -303,9 +329,9 @@ func (c *config) handleRPC(
 		var s *status.Status
 		if rs.Error != nil {
 			s, _ = status.FromError(rs.Error)
-			rpcStatusAttr = semconv.RPCResponseStatusCode(canonicalString(s.Code()))
+			rpcStatusAttr = semconv.RPCStatusCode(canonicalString(s.Code()))
 		} else {
-			rpcStatusAttr = semconv.RPCResponseStatusCode(canonicalString(grpc_codes.OK))
+			rpcStatusAttr = semconv.RPCStatusCode(canonicalString(grpc_codes.OK))
 		}
 
 		if span.IsRecording() {
