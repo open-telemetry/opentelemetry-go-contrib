@@ -11,7 +11,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 
 	"go.opentelemetry.io/contrib/detectors/gcp/internal"
 )
@@ -210,6 +210,27 @@ func TestDetect(t *testing.T) {
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPCloudRun,
 				semconv.CloudRegion("us-central1"),
+				semconv.CloudResourceID("//run.googleapis.com/projects/my-project/locations/us-central1/services/my-service"),
+				semconv.FaaSName("my-service"),
+				semconv.FaaSVersion("123456"),
+				semconv.FaaSInstance("1472385723456792345"),
+			),
+		},
+		{
+			desc: "Cloud Run missing region omits cloud.resource_id",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:     "my-project",
+				cloudPlatform: internal.CloudRun,
+				faaSID:        "1472385723456792345",
+				faaSName:      "my-service",
+				faaSVersion:   "123456",
+			}},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPCloudRun,
+				semconv.CloudRegion(""),
 				semconv.FaaSName("my-service"),
 				semconv.FaaSVersion("123456"),
 				semconv.FaaSInstance("1472385723456792345"),
@@ -232,6 +253,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPCloudRun,
 				semconv.CloudRegion("us-central1"),
+				semconv.CloudResourceID("//run.googleapis.com/projects/my-project/locations/us-central1/jobs/my-service"),
 				semconv.FaaSName("my-service"),
 				semconv.GCPCloudRunJobExecution("my-service-ekdih"),
 				semconv.GCPCloudRunJobTaskIndex(0),
@@ -255,6 +277,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPCloudRun,
 				semconv.CloudRegion("us-central1"),
+				semconv.CloudResourceID("//run.googleapis.com/projects/my-project/locations/us-central1/jobs/my-service"),
 				semconv.FaaSName("my-service"),
 				semconv.GCPCloudRunJobExecution("my-service-ekdih"),
 				semconv.FaaSInstance("1472385723456792345"),
@@ -277,6 +300,7 @@ func TestDetect(t *testing.T) {
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPCloudFunctions,
 				semconv.CloudRegion("us-central1"),
+				semconv.CloudResourceID("//cloudfunctions.googleapis.com/projects/my-project/locations/us-central1/functions/my-service"),
 				semconv.FaaSName("my-service"),
 				semconv.FaaSVersion("123456"),
 				semconv.FaaSInstance("1472385723456792345"),
@@ -475,8 +499,67 @@ func TestDetect(t *testing.T) {
 				semconv.CloudAccountID("my-project"),
 				semconv.CloudPlatformGCPCloudRun,
 				semconv.CloudRegion("us-central1"),
+				semconv.CloudResourceID("//run.googleapis.com/projects/my-project/locations/us-central1/workerPools/my-service"),
 				semconv.FaaSName("my-service"),
 				semconv.FaaSVersion("123456"),
+				semconv.FaaSInstance("1472385723456792345"),
+			),
+		},
+		{
+			desc: "Cloud Run Worker Pool missing region omits cloud.resource_id",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:     "my-project",
+				cloudPlatform: internal.CloudRunWorkerPool,
+				faaSID:        "1472385723456792345",
+				faaSName:      "my-service",
+				faaSVersion:   "123456",
+			}},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPCloudRun,
+				semconv.CloudRegion(""),
+				semconv.FaaSName("my-service"),
+				semconv.FaaSVersion("123456"),
+				semconv.FaaSInstance("1472385723456792345"),
+			),
+		},
+		{
+			desc: "Cloud Run Instance",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:       "my-project",
+				cloudPlatform:   internal.CloudRunInstance,
+				faaSID:          "1472385723456792345",
+				faaSCloudRegion: "us-west1",
+				faaSName:        "my-instance",
+			}},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPCloudRun,
+				semconv.CloudRegion("us-west1"),
+				semconv.CloudResourceID("//run.googleapis.com/projects/my-project/locations/us-west1/instances/my-instance"),
+				semconv.FaaSName("my-instance"),
+				semconv.FaaSInstance("1472385723456792345"),
+			),
+		},
+		{
+			desc: "Cloud Run Instance missing region omits cloud.resource_id",
+			detector: &detector{detector: &fakeGCPDetector{
+				projectID:     "my-project",
+				cloudPlatform: internal.CloudRunInstance,
+				faaSID:        "1472385723456792345",
+				faaSName:      "my-instance",
+			}},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPCloudRun,
+				semconv.CloudRegion(""),
+				semconv.FaaSName("my-instance"),
 				semconv.FaaSInstance("1472385723456792345"),
 			),
 		},

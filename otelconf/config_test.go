@@ -8,11 +8,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.yaml.in/yaml/v3"
+
 	lognoop "go.opentelemetry.io/otel/log/noop"
 	metricnoop "go.opentelemetry.io/otel/metric/noop"
 	"go.opentelemetry.io/otel/propagation"
@@ -20,8 +25,8 @@ import (
 	sdkmetric "go.opentelemetry.io/otel/sdk/metric"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	tracenoop "go.opentelemetry.io/otel/trace/noop"
-	"go.yaml.in/yaml/v3"
 
+	"go.opentelemetry.io/contrib/otelconf/internal/diaglogger"
 	"go.opentelemetry.io/contrib/otelconf/internal/testtls"
 )
 
@@ -61,6 +66,95 @@ func TestUnmarshalSpanExporterInvalidData(t *testing.T) {
 	cl = SpanExporter{}
 	err = yaml.Unmarshal([]byte("console: !!str str"), &cl)
 	assert.ErrorIs(t, err, newErrUnmarshal(&SpanExporter{}))
+}
+
+func TestUnmarshalCustomSpanExporter(t *testing.T) {
+	want := SpanExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{
+		"custom": {
+			"endpoint": "http://localhost:4318"
+		}
+	}`)
+	yamlConfig := []byte(`custom:
+  endpoint: http://localhost:4318
+`)
+
+	var fromJSON SpanExporter
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML SpanExporter
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalCustomLogRecordExporter(t *testing.T) {
+	want := LogRecordExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{"custom":{"endpoint":"http://localhost:4318"}}`)
+	yamlConfig := []byte("custom:\n  endpoint: http://localhost:4318\n")
+
+	var fromJSON LogRecordExporter
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML LogRecordExporter
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalCustomTextMapPropagator(t *testing.T) {
+	want := TextMapPropagator{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"header": "x-trace-id",
+			},
+		},
+	}
+
+	jsonConfig := []byte(`{"custom":{"header":"x-trace-id"}}`)
+	yamlConfig := []byte("custom:\n  header: x-trace-id\n")
+
+	var fromJSON TextMapPropagator
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML TextMapPropagator
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalCustomSpanExporterYAMLMergeKey(t *testing.T) {
+	input := []byte(`
+<<: {custom: {endpoint: http://localhost:4318}}
+`)
+
+	var got SpanExporter
+	err := yaml.Unmarshal(input, &got)
+	require.NoError(t, err)
+
+	want := SpanExporter{
+		AdditionalProperties: map[string]any{
+			"custom": map[string]any{
+				"endpoint": "http://localhost:4318",
+			},
+		},
+	}
+
+	require.Equal(t, want, got)
 }
 
 func TestUnmarshalTextMapPropagator(t *testing.T) {
@@ -384,6 +478,34 @@ func TestNewSDK(t *testing.T) {
 			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
 		{
+			name: "invalid-log-level",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: new(SeverityNumber("invalid")),
+				}),
+			},
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
+			wantErr:            newErrInvalid(`unsupported log_level "invalid"`),
+		},
+		{
+			name: "empty-log-level",
+			cfg: []ConfigurationOption{
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: new(SeverityNumber("")),
+				}),
+			},
+			wantTracerProvider: tracenoop.NewTracerProvider(),
+			wantMeterProvider:  metricnoop.NewMeterProvider(),
+			wantLoggerProvider: lognoop.NewLoggerProvider(),
+			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
+			wantErr:            newErrInvalid(`unsupported log_level ""`),
+		},
+		{
 			name: "with-sdk-disabled",
 			cfg: []ConfigurationOption{
 				WithContext(t.Context()),
@@ -400,15 +522,162 @@ func TestNewSDK(t *testing.T) {
 			wantPropagator:     propagation.NewCompositeTextMapPropagator(),
 		},
 	}
+
 	for _, tt := range tests {
-		sdk, err := NewSDK(tt.cfg...)
-		require.Equal(t, tt.wantErr, err)
-		assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
-		assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
-		assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
-		assert.IsType(t, tt.wantPropagator, sdk.Propagator())
-		require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
+		t.Run(tt.name, func(t *testing.T) {
+			sdk, err := NewSDK(tt.cfg...)
+
+			if tt.wantErr != nil {
+				require.Equal(t, tt.wantErr, err)
+
+				// NewSDK returns noopSDK when configuration is invalid.
+				assert.IsType(t, tracenoop.NewTracerProvider(), sdk.TracerProvider())
+				assert.IsType(t, metricnoop.NewMeterProvider(), sdk.MeterProvider())
+				assert.IsType(t, lognoop.NewLoggerProvider(), sdk.LoggerProvider())
+				assert.IsType(t, propagation.NewCompositeTextMapPropagator(), sdk.Propagator())
+				require.NoError(t, sdk.Shutdown(t.Context()))
+				return
+			}
+
+			require.NoError(t, err)
+			assert.IsType(t, tt.wantTracerProvider, sdk.TracerProvider())
+			assert.IsType(t, tt.wantMeterProvider, sdk.MeterProvider())
+			assert.IsType(t, tt.wantLoggerProvider, sdk.LoggerProvider())
+			assert.IsType(t, tt.wantPropagator, sdk.Propagator())
+			require.Equal(t, tt.wantShutdownErr, sdk.Shutdown(t.Context()))
+		})
 	}
+}
+
+func TestNewSDKDiagnosticLogger(t *testing.T) {
+	tests := []struct {
+		name            string
+		logLevel        *SeverityNumber
+		wantInfoEnabled bool
+	}{
+		{
+			name:            "explicit warn level",
+			logLevel:        new(SeverityNumberWarn),
+			wantInfoEnabled: false,
+		},
+		{
+			name:            "omitted level defaults to info",
+			wantInfoEnabled: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var output bytes.Buffer
+			var installedLogger logr.Logger
+
+			sdk, err := newSDKWithDiagnosticWriter(
+				&output,
+				func(logger logr.Logger) {
+					installedLogger = logger
+				},
+				WithContext(t.Context()),
+				WithOpenTelemetryConfiguration(OpenTelemetryConfiguration{
+					LogLevel: tt.logLevel,
+				}),
+			)
+			require.NoError(t, err)
+
+			assert.Equal(t, tt.wantInfoEnabled, installedLogger.V(4).Enabled())
+			assert.True(t, installedLogger.V(1).Enabled())
+
+			installedLogger.V(4).Info("info marker")
+			installedLogger.V(1).Info("warn marker")
+
+			got := output.String()
+			assert.Equal(t, tt.wantInfoEnabled, strings.Contains(got, "info marker"))
+			assert.Contains(t, got, "warn marker")
+
+			require.NoError(t, sdk.Shutdown(t.Context()))
+		})
+	}
+}
+
+func TestNewSDKGlobalDiagnosticLogger(t *testing.T) {
+	const childProcessEnv = "OTELCONF_GLOBAL_LOGGER_TEST"
+
+	if os.Getenv(childProcessEnv) == "1" {
+		level := os.Getenv("OTELCONF_TEST_LOG_LEVEL")
+
+		var opts []ConfigurationOption
+		if level != "" {
+			opts = append(opts, WithOpenTelemetryConfiguration(
+				OpenTelemetryConfiguration{
+					LogLevel: new(SeverityNumber(level)),
+				},
+			))
+		}
+
+		sdk, err := NewSDK(opts...)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer func() {
+			if err := sdk.Shutdown(t.Context()); err != nil {
+				t.Error(err)
+			}
+		}()
+
+		sdktrace.NewTracerProvider()
+
+		return
+	}
+
+	tests := []struct {
+		name     string
+		level    string
+		wantInfo bool
+	}{
+		{
+			name:     "explicit warn level",
+			level:    "warn",
+			wantInfo: false,
+		},
+		{
+			name:     "default info level",
+			wantInfo: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := exec.CommandContext(
+				t.Context(),
+				os.Args[0],
+				"-test.v",
+				"-test.run=^TestNewSDKGlobalDiagnosticLogger$",
+			)
+
+			cmd.Env = append(os.Environ(),
+				childProcessEnv+"=1",
+				"OTELCONF_TEST_LOG_LEVEL="+tt.level,
+			)
+
+			output, err := cmd.CombinedOutput()
+			require.NoError(t, err, string(output))
+
+			if tt.wantInfo {
+				assert.Contains(t, string(output), `"msg":"TracerProvider created"`)
+			} else {
+				assert.NotContains(t, string(output), `"msg":"TracerProvider created"`)
+			}
+		})
+	}
+}
+
+func TestWriterCapture(t *testing.T) {
+	var output bytes.Buffer
+
+	logger, err := diaglogger.New("info", &output)
+	require.NoError(t, err)
+
+	logger.Info("capture test")
+	require.Contains(t, output.String(), "capture test")
 }
 
 func TestNewSDKWithEnvVar(t *testing.T) {
@@ -418,29 +687,33 @@ func TestNewSDKWithEnvVar(t *testing.T) {
 			TracerProvider: nil,
 		}),
 	}
-	// test a non existent file
+
+	// Test a non-existent file.
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "file_missing.yaml"))
 	_, err := NewSDK(cfg...)
 	require.Error(t, err)
-	// test a file that causes a parse error
+
+	// Test a file that causes a parse error.
 	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))
 	_, err = NewSDK(cfg...)
 	require.Error(t, err)
 	require.ErrorIs(t, err, newErrRequired(&NameStringValuePair{}, "name"))
-	// test a valid file, error is returned from the SDK instantiation
-	t.Setenv(envVarConfigFile, filepath.Join("testdata", "v1.0.0.yaml"))
+
+	// Clear the current variable before testing the deprecated variable.
+	require.NoError(t, os.Unsetenv(envVarConfigFile))
+
+	// Validate that use of the deprecated environment variable returns an error.
+	t.Setenv("OTEL_EXPERIMENTAL_CONFIG_FILE", filepath.Join("testdata", "v1.0.0_invalid_nil_name.yaml"))
 	_, err = NewSDK(cfg...)
-	require.ErrorIs(t, err, newErrInvalid("otlp_file/development"))
-	// validate that use of deprecated env var returns an error
-	t.Setenv(envVarConfigFileDeprecated, filepath.Join("testdata", "v1.0.0.yaml"))
-	_, err = NewSDK(cfg...)
-	require.ErrorIs(t, err, errDeprecatedEnvVarUsed)
+	require.ErrorContains(t, err,
+		"OTEL_EXPERIMENTAL_CONFIG_FILE is no longer supported, use OTEL_CONFIG_FILE instead")
 }
 
 func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfiguration {
 	material.CACertPath = filepath.ToSlash(material.CACertPath)
 	material.ClientCertPath = filepath.ToSlash(material.ClientCertPath)
 	material.ClientKeyPath = filepath.ToSlash(material.ClientKeyPath)
+
 	return &OpenTelemetryConfiguration{
 		Disabled:   new(false),
 		FileFormat: "1.0-rc.2",
@@ -448,7 +721,6 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 			AttributeCountLimit:       new(128),
 			AttributeValueLengthLimit: new(4096),
 		},
-
 		LogLevel: new(SeverityNumberInfo),
 		LoggerProvider: &LoggerProvider{
 			Limits: &LogRecordLimits{
@@ -504,12 +776,24 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 				},
 				{
 					Batch: &BatchLogRecordProcessor{
-						Exporter: LogRecordExporter{},
+						Exporter: LogRecordExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "file:///var/log/logs.jsonl",
+								},
+							},
+						},
 					},
 				},
 				{
 					Batch: &BatchLogRecordProcessor{
-						Exporter: LogRecordExporter{},
+						Exporter: LogRecordExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "stdout",
+								},
+							},
+						},
 					},
 				},
 				{
@@ -541,7 +825,20 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 							ObservableUpDownCounter: new(2000),
 							UpDownCounter:           new(2000),
 						},
-						Exporter: PullMetricExporter{},
+						Exporter: PullMetricExporter{
+							AdditionalProperties: map[string]any{
+								"prometheus/development": map[string]any{
+									"host":                 "localhost",
+									"port":                 9464,
+									"translation_strategy": "underscore_escaping_with_suffixes",
+									"with_resource_constant_labels": map[string]any{
+										"excluded": []any{"service.attr1"},
+										"included": []any{"service*"},
+									},
+									"without_scope_info": false,
+								},
+							},
+						},
 					},
 				},
 				{
@@ -611,12 +908,28 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 				},
 				{
 					Periodic: &PeriodicMetricReader{
-						Exporter: PushMetricExporter{},
+						Exporter: PushMetricExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream":                 "file:///var/log/metrics.jsonl",
+									"default_histogram_aggregation": "base2_exponential_bucket_histogram",
+									"temporality_preference":        "delta",
+								},
+							},
+						},
 					},
 				},
 				{
 					Periodic: &PeriodicMetricReader{
-						Exporter: PushMetricExporter{},
+						Exporter: PushMetricExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream":                 "stdout",
+									"default_histogram_aggregation": "base2_exponential_bucket_histogram",
+									"temporality_preference":        "delta",
+								},
+							},
+						},
 					},
 				},
 				{
@@ -657,24 +970,12 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 		},
 		Propagator: &Propagator{
 			Composite: []TextMapPropagator{
-				{
-					Tracecontext: TraceContextPropagator{},
-				},
-				{
-					Baggage: BaggagePropagator{},
-				},
-				{
-					B3: B3Propagator{},
-				},
-				{
-					B3Multi: B3MultiPropagator{},
-				},
-				{
-					Jaeger: JaegerPropagator{},
-				},
-				{
-					Ottrace: OpenTracingPropagator{},
-				},
+				{Tracecontext: TraceContextPropagator{}},
+				{Baggage: BaggagePropagator{}},
+				{B3: B3Propagator{}},
+				{B3Multi: B3MultiPropagator{}},
+				{Jaeger: JaegerPropagator{}},
+				{Ottrace: OpenTracingPropagator{}},
 			},
 			CompositeList: new("tracecontext,baggage,b3,b3multi,jaeger,ottrace,xray"),
 		},
@@ -750,12 +1051,24 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 				},
 				{
 					Batch: &BatchSpanProcessor{
-						Exporter: SpanExporter{},
+						Exporter: SpanExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "file:///var/log/traces.jsonl",
+								},
+							},
+						},
 					},
 				},
 				{
 					Batch: &BatchSpanProcessor{
-						Exporter: SpanExporter{},
+						Exporter: SpanExporter{
+							AdditionalProperties: map[string]any{
+								"otlp_file/development": map[string]any{
+									"output_stream": "stdout",
+								},
+							},
+						},
 					},
 				},
 				{
@@ -768,12 +1081,8 @@ func newV10OpenTelemetryConfig(material testtls.Material) *OpenTelemetryConfigur
 			},
 			Sampler: &Sampler{
 				ParentBased: &ParentBasedSampler{
-					LocalParentNotSampled: &Sampler{
-						AlwaysOff: AlwaysOffSampler{},
-					},
-					LocalParentSampled: &Sampler{
-						AlwaysOn: AlwaysOnSampler{},
-					},
+					LocalParentNotSampled: &Sampler{AlwaysOff: AlwaysOffSampler{}},
+					LocalParentSampled:    &Sampler{AlwaysOn: AlwaysOnSampler{}},
 					RemoteParentNotSampled: &Sampler{
 						AlwaysOff: AlwaysOffSampler{},
 					},
@@ -907,6 +1216,7 @@ func TestParseFiles(t *testing.T) {
 				assert.Equal(t, tt.wantType, got)
 			}
 		})
+
 		t.Run("json: "+tt.name, func(t *testing.T) {
 			b, err := os.ReadFile(filepath.Join("testdata", fmt.Sprintf("%s.json", tt.input)))
 			require.NoError(t, err)
@@ -914,6 +1224,25 @@ func TestParseFiles(t *testing.T) {
 			var got OpenTelemetryConfiguration
 			err = json.Unmarshal(replaceCertPaths(b), &got)
 			require.ErrorIs(t, err, tt.wantErr)
+
+			if err == nil && tt.wantErr == nil && got.MeterProvider != nil {
+				for i := range got.MeterProvider.Readers {
+					reader := &got.MeterProvider.Readers[i]
+					if reader.Pull == nil {
+						continue
+					}
+
+					prometheus, ok := reader.Pull.Exporter.AdditionalProperties["prometheus/development"].(map[string]any)
+					if !ok {
+						continue
+					}
+
+					if port, ok := prometheus["port"].(float64); ok {
+						prometheus["port"] = int(port)
+					}
+				}
+			}
+
 			assert.Equal(t, tt.wantType, &got)
 		})
 	}
@@ -1544,10 +1873,22 @@ func TestUnmarshalOTLPHttpExporter(t *testing.T) {
 			wantExporter: OTLPHttpExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPHttpExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPHttpExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPHttpExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPHttpExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1597,10 +1938,22 @@ func TestUnmarshalOTLPGrpcExporter(t *testing.T) {
 			wantExporter: OTLPGrpcExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPGrpcExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPGrpcExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPGrpcExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPGrpcExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1650,10 +2003,22 @@ func TestUnmarshalOTLPHttpMetricExporter(t *testing.T) {
 			wantExporter: OTLPHttpMetricExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPHttpMetricExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPHttpMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPHttpMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPHttpMetricExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
@@ -1703,10 +2068,22 @@ func TestUnmarshalOTLPGrpcMetricExporter(t *testing.T) {
 			wantExporter: OTLPGrpcMetricExporter{Endpoint: new("localhost:4318")},
 		},
 		{
-			name:       "missing required endpoint field",
-			jsonConfig: []byte(`{}`),
-			yamlConfig: []byte("{}"),
-			wantErrT:   newErrRequired(&OTLPGrpcMetricExporter{}, "endpoint"),
+			name:         "omitted endpoint",
+			jsonConfig:   []byte(`{}`),
+			yamlConfig:   []byte("{}"),
+			wantExporter: OTLPGrpcMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "null endpoint",
+			jsonConfig:   []byte(`{"endpoint": null}`),
+			yamlConfig:   []byte("endpoint: null"),
+			wantExporter: OTLPGrpcMetricExporter{Endpoint: nil},
+		},
+		{
+			name:         "empty endpoint",
+			jsonConfig:   []byte(`{"endpoint": ""}`),
+			yamlConfig:   []byte(`endpoint: ""`),
+			wantExporter: OTLPGrpcMetricExporter{Endpoint: new("")},
 		},
 		{
 			name:         "valid with zero timeout",
@@ -2023,10 +2400,14 @@ func TestUnmarshalPullMetricReader(t *testing.T) {
 		wantExporter PullMetricExporter
 	}{
 		{
-			name:         "valid with proemtheus exporter",
-			jsonConfig:   []byte(`{"exporter":{"prometheus/development":{}}}`),
-			yamlConfig:   []byte("exporter:\n  prometheus/development: {}"),
-			wantExporter: PullMetricExporter{},
+			name:       "valid with prometheus exporter",
+			jsonConfig: []byte(`{"exporter":{"prometheus/development":{}}}`),
+			yamlConfig: []byte("exporter:\n  prometheus/development: {}"),
+			wantExporter: PullMetricExporter{
+				AdditionalProperties: map[string]any{
+					"prometheus/development": map[string]any{},
+				},
+			},
 		},
 		{
 			name:       "missing required exporter field",
@@ -2166,4 +2547,234 @@ func TestUnmarshalJSONRejectsNullResourceAttribute(t *testing.T) {
 	var cfg OpenTelemetryConfiguration
 	err := json.Unmarshal([]byte(input), &cfg)
 	require.ErrorContains(t, err, "name")
+}
+
+func TestUnmarshalSamplerAdditionalProperties(t *testing.T) {
+	jsonConfig := []byte(`{
+        "always_on": {},
+        "custom_sampler/development": {
+            "parameter": "value"
+        }
+    }`)
+
+	yamlConfig := []byte(`
+always_on: {}
+custom_sampler/development:
+  parameter: value
+`)
+
+	want := Sampler{
+		AlwaysOn: AlwaysOnSampler{},
+		AdditionalProperties: map[string]any{
+			"custom_sampler/development": map[string]any{
+				"parameter": "value",
+			},
+		},
+	}
+
+	var fromJSON Sampler
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML Sampler
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalSpanProcessorWithoutAdditionalProperties(t *testing.T) {
+	jsonConfig := []byte(`{
+        "batch": {
+            "exporter": {
+                "console": {}
+            }
+        }
+    }`)
+
+	yamlConfig := []byte(`
+batch:
+  exporter:
+    console: {}
+`)
+
+	want := SpanProcessor{
+		Batch: &BatchSpanProcessor{
+			Exporter: SpanExporter{
+				Console: ConsoleExporter{},
+			},
+		},
+	}
+
+	var fromJSON SpanProcessor
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML SpanProcessor
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalLogRecordProcessorWithoutAdditionalProperties(t *testing.T) {
+	jsonConfig := []byte(`{
+        "batch": {
+            "exporter": {
+                "console": {}
+            }
+        }
+    }`)
+
+	yamlConfig := []byte(`
+batch:
+  exporter:
+    console: {}
+`)
+
+	want := LogRecordProcessor{
+		Batch: &BatchLogRecordProcessor{
+			Exporter: LogRecordExporter{
+				Console: ConsoleExporter{},
+			},
+		},
+	}
+
+	var fromJSON LogRecordProcessor
+	require.NoError(t, json.Unmarshal(jsonConfig, &fromJSON))
+	assert.Equal(t, want, fromJSON)
+
+	var fromYAML LogRecordProcessor
+	require.NoError(t, yaml.Unmarshal(yamlConfig, &fromYAML))
+	assert.Equal(t, want, fromYAML)
+}
+
+func TestUnmarshalSpanProcessorAdditionalProperties(t *testing.T) {
+	tests := []struct {
+		name      string
+		unmarshal func([]byte, any) error
+		input     string
+	}{
+		{
+			name:      "JSON",
+			unmarshal: json.Unmarshal,
+			input: `{
+				"custom_span_processor": {
+					"parameter": "value"
+				}
+			}`,
+		},
+		{
+			name:      "YAML",
+			unmarshal: yaml.Unmarshal,
+			input: `
+custom_span_processor:
+  parameter: value
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got SpanProcessor
+
+			if err := tt.unmarshal([]byte(tt.input), &got); err != nil {
+				t.Fatalf("unmarshal failed: %v", err)
+			}
+
+			custom, ok := got.AdditionalProperties["custom_span_processor"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected custom_span_processor in AdditionalProperties, got: %#v",
+					got.AdditionalProperties)
+			}
+
+			if custom["parameter"] != "value" {
+				t.Errorf("expected parameter = %q, got %v", "value", custom["parameter"])
+			}
+		})
+	}
+}
+
+func TestUnmarshalLogRecordProcessorAdditionalProperties(t *testing.T) {
+	tests := []struct {
+		name      string
+		unmarshal func([]byte, any) error
+		input     string
+	}{
+		{
+			name:      "JSON",
+			unmarshal: json.Unmarshal,
+			input: `{
+				"custom_log_processor": {
+					"parameter": "value"
+				}
+			}`,
+		},
+		{
+			name:      "YAML",
+			unmarshal: yaml.Unmarshal,
+			input: `
+custom_log_processor:
+  parameter: value
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var got LogRecordProcessor
+
+			if err := tt.unmarshal([]byte(tt.input), &got); err != nil {
+				t.Fatalf("unmarshal failed: %v", err)
+			}
+
+			custom, ok := got.AdditionalProperties["custom_log_processor"].(map[string]any)
+			if !ok {
+				t.Fatalf("expected custom_log_processor in AdditionalProperties, got: %#v",
+					got.AdditionalProperties)
+			}
+
+			if custom["parameter"] != "value" {
+				t.Errorf("expected parameter = %q, got %v", "value", custom["parameter"])
+			}
+		})
+	}
+}
+
+func TestYAMLMappingToMap(t *testing.T) {
+	t.Run("nil node", func(t *testing.T) {
+		got, err := yamlMappingToMap(nil)
+
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("non-mapping node", func(t *testing.T) {
+		node := &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!str",
+			Value: "value",
+		}
+
+		got, err := yamlMappingToMap(node)
+
+		require.NoError(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("invalid mapping key", func(t *testing.T) {
+		node := &yaml.Node{
+			Kind: yaml.MappingNode,
+			Content: []*yaml.Node{
+				{
+					Kind: yaml.SequenceNode,
+					Tag:  "!!seq",
+					Content: []*yaml.Node{
+						{Kind: yaml.ScalarNode, Tag: "!!str", Value: "key"},
+					},
+				},
+				{Kind: yaml.ScalarNode, Tag: "!!str", Value: "value"},
+			},
+		}
+
+		_, err := yamlMappingToMap(node)
+
+		require.Error(t, err)
+	})
 }

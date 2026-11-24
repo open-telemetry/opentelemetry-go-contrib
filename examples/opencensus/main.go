@@ -18,7 +18,7 @@ import (
 	"go.opencensus.io/tag"
 	octrace "go.opencensus.io/trace"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/bridge/opencensus"
+	"go.opentelemetry.io/otel/bridge/opencensus" //nolint:staticcheck // Demonstrate the deprecated bridge until it is removed.
 	"go.opentelemetry.io/otel/exporters/stdout/stdoutmetric"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/metric"

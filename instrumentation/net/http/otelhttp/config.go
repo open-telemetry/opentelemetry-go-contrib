@@ -28,6 +28,7 @@ type config struct {
 	PublicEndpointFn  func(*http.Request) bool
 	ReadEvent         bool
 	WriteEvent        bool
+	RouteTracking     bool
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
 	ClientTrace       func(context.Context) *httptrace.ClientTrace
@@ -191,5 +192,25 @@ func WithClientTrace(f func(context.Context) *httptrace.ClientTrace) Option {
 func WithServerName(server string) Option {
 	return optionFunc(func(c *config) {
 		c.ServerName = server
+	})
+}
+
+// WithMetricAttributesFn returns an Option to set a function that maps an HTTP request to a slice of attribute.KeyValue.
+// These attributes will be included in metrics for every request.
+//
+// Deprecated: WithMetricAttributesFn is deprecated and will be removed in a
+// future release. Use [Labeler] instead.
+func WithMetricAttributesFn(metricAttributesFn func(r *http.Request) []attribute.KeyValue) Option {
+	return optionFunc(func(c *config) {
+		c.MetricAttributesFn = metricAttributesFn
+	})
+}
+
+// WithRouteTracking enables [RouteMiddleware] to record matched routes on the
+// server span and metrics created by [NewHandler] or [NewMiddleware] when
+// intervening middleware copies the request.
+func WithRouteTracking() Option {
+	return optionFunc(func(c *config) {
+		c.RouteTracking = true
 	})
 }
