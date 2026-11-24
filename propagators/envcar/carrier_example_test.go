@@ -64,13 +64,16 @@ func ExampleCarrier_childProcess() {
 	})
 	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
 
-	// Prepare a command that prints the TRACEPARENT environment variable.
-	cmd := exec.CommandContext(context.Background(), "printenv", "TRACEPARENT")
+	// Prepare a command that prints the trace context it receives.
+	cmd := exec.CommandContext(context.Background(), "sh", "-c",
+		`printf 'TRACEPARENT=%s\nTRACESTATE=%s\n' "$TRACEPARENT" "${TRACESTATE-unset}"`)
+
+	// Simulate stale trace state in the child's copy of the parent environment.
+	cmd.Env = append(cmd.Environ(), "TRACESTATE=vendor=stale")
 
 	// Clear inherited W3C trace context from the child's environment copy.
 	// Injection can omit TRACESTATE when the current trace state is empty.
 	prop := propagation.TraceContext{}
-	cmd.Env = cmd.Environ()
 
 	// Append an empty override for each normalized field. When cmd.Environ()
 	// resolves duplicates, it keeps the last entry for each name. Windows matches
@@ -108,5 +111,7 @@ func ExampleCarrier_childProcess() {
 		return
 	}
 	fmt.Print(string(out))
-	// Output: 00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01
+	// Output:
+	// TRACEPARENT=00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01
+	// TRACESTATE=unset
 }
