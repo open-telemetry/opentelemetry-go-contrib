@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/compute/metadata v0.10.0
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/otel v1.47.1-0.20261119094326-34915e1fc1ec
+	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
 	go.opentelemetry.io/otel/sdk v1.47.1-0.20261119094326-34915e1fc1ec
 	golang.org/x/oauth2 v0.38.0
 )
