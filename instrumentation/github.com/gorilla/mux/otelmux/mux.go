@@ -18,7 +18,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
-	otelsemconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	otelsemconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 	"go.opentelemetry.io/otel/trace"
 
 	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux/internal/request"

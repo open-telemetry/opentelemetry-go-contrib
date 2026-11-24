@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"go.opentelemetry.io/otel/sdk/resource"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 	"k8s.io/client-go/rest"
 )
 
