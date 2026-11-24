@@ -18,6 +18,9 @@ import (
 //   - All other characters are replaced with _.
 //   - If the result would start with a digit, an underscore is prepended.
 //
+// The child-process example for [Carrier] uses NormalizeKey to identify which
+// environment variables to clear before injecting trace context.
+//
 // [OpenTelemetry specification]: https://opentelemetry.io/docs/specs/otel/context/env-carriers/#key-name-normalization
 func NormalizeKey(s string) string {
 	if s == "" {
