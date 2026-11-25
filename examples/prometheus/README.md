@@ -1,5 +1,7 @@
 # Prometheus exporter example
 
+[![Go Reference](https://pkg.go.dev/badge/go.opentelemetry.io/contrib/examples/prometheus.svg)](https://pkg.go.dev/go.opentelemetry.io/contrib/examples/prometheus)
+
 Exposes OpenTelemetry metrics through a Prometheus scrape endpoint.
 
 From the repository root:
