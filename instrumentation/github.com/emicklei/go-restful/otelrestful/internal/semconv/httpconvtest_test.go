@@ -498,7 +498,7 @@ func TestClientResponse(t *testing.T) {
 
 func TestNewClientRecordMetrics(t *testing.T) {
 	const recordURLScheme = true
-	
+
 	currAttrs := attribute.NewSet(
 		attribute.String("http.request.method", "POST"),
 		attribute.Int64("http.response.status_code", 301),
