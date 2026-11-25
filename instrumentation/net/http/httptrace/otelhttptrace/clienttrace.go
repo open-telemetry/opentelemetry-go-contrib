@@ -162,7 +162,7 @@ func NewClientTrace(ctx context.Context, opts ...ClientTraceOption) *httptrace.C
 		},
 		addHeaders: true,
 		useSpans:   true,
-		semconv:    semconv.NewHTTPClient(nil),
+		semconv:    semconv.NewHTTPClient(nil, false),
 	}
 
 	if span := trace.SpanFromContext(ctx); span.SpanContext().IsValid() {

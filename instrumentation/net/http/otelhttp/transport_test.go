@@ -904,8 +904,6 @@ func TestWithHTTPTrace(t *testing.T) {
 }
 
 func TestTransportMetrics(t *testing.T) {
-	t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "")
-
 	requestBody := []byte("john")
 	responseBody := []byte("Hello, world!")
 
@@ -989,6 +987,7 @@ func TestTransportMetrics(t *testing.T) {
 	})
 
 	t.Run("make http request and buffer response", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "")
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
@@ -1056,6 +1055,7 @@ func TestTransportMetrics(t *testing.T) {
 	})
 
 	t.Run("make http request and close body before reading completely", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "")
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 

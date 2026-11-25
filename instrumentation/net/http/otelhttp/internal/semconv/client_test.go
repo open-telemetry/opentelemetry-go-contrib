@@ -328,7 +328,7 @@ func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 func TestHTTPClient_AddActiveRequests(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
-	client := NewHTTPClient(mp.Meter("test"))
+	client := NewHTTPClient(mp.Meter("test"), false)
 
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com:8080/path", http.NoBody)
 	require.NoError(t, err)

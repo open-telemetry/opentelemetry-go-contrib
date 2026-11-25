@@ -33,12 +33,8 @@ type HTTPClient struct {
 	recordURLScheme bool
 }
 
-func NewHTTPClient(meter metric.Meter, recordURLScheme ...bool) HTTPClient {
-	var recordScheme bool
-	if len(recordURLScheme) > 0 {
-		recordScheme = recordURLScheme[0]
-	}
-	client := HTTPClient{recordURLScheme: recordScheme}
+func NewHTTPClient(meter metric.Meter, recordURLScheme bool) HTTPClient {
+	client := HTTPClient{recordURLScheme: recordURLScheme}
 
 	var err error
 	client.requestBodySize, err = httpconv.NewClientRequestBodySize(meter)
