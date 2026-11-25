@@ -11,9 +11,11 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -910,36 +912,90 @@ func TestClientDisconnectCustomErrorTypeAttribute(t *testing.T) {
 	assert.Equal(t, "custom_error_type", errorType.AsString(), "the caller-supplied error.type must take precedence over the disconnect-derived one")
 }
 
-// TestMiddlewarePropagatesMultipartFormBack asserts that the MultipartForm
-// populated on gin's context-carrying request is copied back onto the
-// http.Request the server handed us, so net/http's finishRequest cleanup
-// can reach it instead of leaking the temp files (#5946).
-func TestMiddlewarePropagatesMultipartFormBack(t *testing.T) {
-	body := &bytes.Buffer{}
-	w := multipart.NewWriter(body)
-	part, err := w.CreateFormFile("file", "sample.bin")
-	require.NoError(t, err)
-	_, err = part.Write(bytes.Repeat([]byte("x"), 1024))
-	require.NoError(t, err)
-	require.NoError(t, w.Close())
+type multipartParseResult struct {
+	tmpPath string
+	err     error
+}
 
-	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/upload", body)
-	r.Header.Set("Content-Type", w.FormDataContentType())
-	r.ContentLength = int64(body.Len())
+// multipartDiskBackedTmpPath parses the request with maxMemory of 0 so the
+// file part spills to a disk-backed temp file, and returns that file's path.
+func multipartDiskBackedTmpPath(r *http.Request) (string, error) {
+	if err := r.ParseMultipartForm(0); err != nil {
+		return "", err
+	}
+	files := r.MultipartForm.File["file"]
+	if len(files) == 0 {
+		return "", errors.New("missing file part")
+	}
+	f, err := files[0].Open()
+	if err != nil {
+		return "", err
+	}
+	name := ""
+	if of, ok := f.(*os.File); ok {
+		name = of.Name()
+	}
+	if err := f.Close(); err != nil {
+		return "", err
+	}
+	if name == "" {
+		return "", errors.New("file part should be disk-backed given maxMemory of 0")
+	}
+	return name, nil
+}
 
+// TestMiddlewareMultipartTempFileCleanup verifies that net/http removes the
+// temp file of a multipart upload parsed downstream of the middleware once
+// the request completes (#5946).
+func TestMiddlewareMultipartTempFileCleanup(t *testing.T) {
+	resultCh := make(chan multipartParseResult, 1)
 	router := gin.New()
 	router.Use(otelgin.Middleware("test"))
 	router.POST("/upload", func(c *gin.Context) {
-		_, err := c.FormFile("file")
-		require.NoError(t, err)
+		path, err := multipartDiskBackedTmpPath(c.Request)
+		resultCh <- multipartParseResult{tmpPath: path, err: err}
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
 		c.Status(http.StatusOK)
 	})
 
-	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, r)
+	srv := httptest.NewServer(router)
+	defer srv.Close()
 
-	require.Equal(t, http.StatusOK, rec.Code)
-	require.NotNil(t, r.MultipartForm, "original request's MultipartForm must be restored so net/http can clean its temp files")
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+"/upload", &body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := srv.Client().Do(req)
+	require.NoError(t, err)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	require.NoError(t, resp.Body.Close())
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result multipartParseResult
+	select {
+	case result = <-resultCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("handler never reported temp file path")
+	}
+	require.NoError(t, result.err)
+	require.NotEmpty(t, result.tmpPath)
+	tmpPath := result.tmpPath
+	t.Cleanup(func() { _ = os.Remove(tmpPath) })
+
+	require.Eventually(t, func() bool {
+		_, statErr := os.Stat(tmpPath)
+		return os.IsNotExist(statErr)
+	}, 2*time.Second, 20*time.Millisecond, "multipart temp file was not cleaned up: %s", tmpPath)
 }
 
 func TestUnknownContentLengthMetric(t *testing.T) {
