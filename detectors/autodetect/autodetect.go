@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/consul"
+	"go.opentelemetry.io/contrib/detectors/digitalocean"
 	"go.opentelemetry.io/contrib/detectors/docker"
 	"go.opentelemetry.io/contrib/detectors/dynatrace"
 	"go.opentelemetry.io/contrib/detectors/gcp"
@@ -37,6 +38,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/openstack/nova"
 	"go.opentelemetry.io/contrib/detectors/scaleway"
 	"go.opentelemetry.io/contrib/detectors/tencent/cvm"
+	"go.opentelemetry.io/contrib/detectors/upcloud"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -85,6 +87,10 @@ var (
 	// attributes from a Consul agent (see consul.NewResourceDetector for
 	// details).
 	IDConsul = ID("consul")
+	// IDDigitalOcean is the ID for the DigitalOcean detector that detects
+	// resource attributes on DigitalOcean Droplets (see
+	// digitalocean.NewResourceDetector for details).
+	IDDigitalOcean = ID("digitalocean")
 	// IDDynatrace is the ID for the Dynatrace detector that detects resource
 	// attributes from the enrichment files written by the Dynatrace OneAgent
 	// (see dynatrace.NewResourceDetector for details).
@@ -129,6 +135,10 @@ var (
 	// resource attributes on Tencent Cloud CVM instances (see
 	// cvm.NewResourceDetector for details).
 	IDTencentCVM = ID("tencent.cvm")
+	// IDUpCloud is the ID for the UpCloud detector that detects resource
+	// attributes on UpCloud Cloud Servers (see upcloud.NewResourceDetector for
+	// details).
+	IDUpCloud = ID("upcloud")
 	// IDVultr is the ID for the Vultr detector that detects resource attributes
 	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
 	// details).
@@ -225,8 +235,9 @@ var (
 			return azurevm.New()
 		},
 
-		IDConsul:    func() resource.Detector { return consul.NewResourceDetector() },
-		IDDynatrace: func() resource.Detector { return dynatrace.NewResourceDetector() },
+		IDConsul:       func() resource.Detector { return consul.NewResourceDetector() },
+		IDDigitalOcean: func() resource.Detector { return digitalocean.NewResourceDetector() },
+		IDDynatrace:    func() resource.Detector { return dynatrace.NewResourceDetector() },
 
 		IDGCP: gcp.NewDetector,
 
@@ -244,6 +255,7 @@ var (
 
 		IDScaleway:   func() resource.Detector { return scaleway.NewResourceDetector() },
 		IDTencentCVM: func() resource.Detector { return cvm.NewResourceDetector() },
+		IDUpCloud:    func() resource.Detector { return upcloud.NewResourceDetector() },
 
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 

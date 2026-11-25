@@ -15,6 +15,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps v0.19.0
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.19.0
 	go.opentelemetry.io/contrib/detectors/consul v0.19.0
+	go.opentelemetry.io/contrib/detectors/digitalocean v0.19.0
 	go.opentelemetry.io/contrib/detectors/docker v0.19.0
 	go.opentelemetry.io/contrib/detectors/dynatrace v0.19.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
@@ -27,8 +28,9 @@ require (
 	go.opentelemetry.io/contrib/detectors/openstack/nova v0.19.0
 	go.opentelemetry.io/contrib/detectors/scaleway v0.19.0
 	go.opentelemetry.io/contrib/detectors/tencent/cvm v0.19.0
+	go.opentelemetry.io/contrib/detectors/upcloud v0.19.0
 	go.opentelemetry.io/contrib/detectors/vultr v0.19.0
-	go.opentelemetry.io/otel v1.47.1-0.20261119094326-34915e1fc1ec
+	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
 	go.opentelemetry.io/otel/sdk v1.47.1-0.20261119094326-34915e1fc1ec
 )
 
@@ -48,13 +50,14 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.39.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.53.0 // indirect
-	github.com/aws/smithy-go v1.28.9 // indirect
+	github.com/aws/smithy-go v1.28.10 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/brunoscheufler/aws-ecs-metadata-go v0.0.0-20221221133751-67e37ae746cd // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
+	github.com/digitalocean/go-metadata v0.0.0-20250129100319-e3650a3df44b // indirect
 	github.com/distribution/reference v0.6.0 // indirect
 	github.com/docker/go-connections v0.8.2 // indirect
 	github.com/docker/go-units v0.5.0 // indirect
@@ -119,7 +122,7 @@ require (
 	go.opentelemetry.io/otel/trace v1.47.1-0.20261119094326-34915e1fc1ec // indirect
 	go.yaml.in/yaml/v2 v2.4.5 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/exp v0.0.0-20261121134650-e1094eeca1b5 // indirect
+	golang.org/x/exp v0.0.0-20261124000051-d6646c509b6d // indirect
 	golang.org/x/net v0.63.0 // indirect
 	golang.org/x/oauth2 v0.38.0 // indirect
 	golang.org/x/sys v0.50.0 // indirect
@@ -167,6 +170,8 @@ replace go.opentelemetry.io/contrib/detectors/aws/ec2/v2 => ../aws/ec2/v2
 
 replace go.opentelemetry.io/contrib/detectors/consul => ../consul
 
+replace go.opentelemetry.io/contrib/detectors/digitalocean => ../digitalocean
+
 replace go.opentelemetry.io/contrib/detectors/ibmcloud/classic => ../ibmcloud/classic
 
 replace go.opentelemetry.io/contrib/detectors/docker => ../docker
@@ -186,6 +191,8 @@ replace go.opentelemetry.io/contrib/detectors/openstack/nova => ../openstack/nov
 replace go.opentelemetry.io/contrib/detectors/scaleway => ../scaleway
 
 replace go.opentelemetry.io/contrib/detectors/tencent/cvm => ../tencent/cvm
+
+replace go.opentelemetry.io/contrib/detectors/upcloud => ../upcloud
 
 replace go.opentelemetry.io/contrib/detectors/azure/azureaks => ../azure/azureaks
 

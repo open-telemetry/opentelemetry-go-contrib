@@ -31,7 +31,7 @@ require (
 	github.com/opencontainers/image-spec v1.1.1 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.2 // indirect
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0 // indirect
-	go.opentelemetry.io/otel v1.47.1-0.20261119094326-34915e1fc1ec
+	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
 	go.opentelemetry.io/otel/metric v1.47.1-0.20261119094326-34915e1fc1ec // indirect
 	go.opentelemetry.io/otel/sdk v1.47.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/trace v1.47.1-0.20261119094326-34915e1fc1ec // indirect
