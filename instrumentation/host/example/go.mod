@@ -6,10 +6,10 @@ replace go.opentelemetry.io/contrib/instrumentation/host => ../
 
 require (
 	go.opentelemetry.io/contrib/instrumentation/host v0.72.0
-	go.opentelemetry.io/otel v1.47.0
-	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.47.0
-	go.opentelemetry.io/otel/sdk v1.47.0
-	go.opentelemetry.io/otel/sdk/metric v1.47.0
+	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
+	go.opentelemetry.io/otel/exporters/stdout/stdoutmetric v1.47.1-0.20261119094326-34915e1fc1ec
+	go.opentelemetry.io/otel/sdk v1.47.1-0.20261119094326-34915e1fc1ec
+	go.opentelemetry.io/otel/sdk/metric v1.47.1-0.20261119094326-34915e1fc1ec
 )
 
 require (
@@ -26,8 +26,8 @@ require (
 	github.com/tklauser/numcpus v0.12.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.4 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.2 // indirect
-	go.opentelemetry.io/otel/log v1.47.0 // indirect
-	go.opentelemetry.io/otel/metric v1.47.0 // indirect
-	go.opentelemetry.io/otel/trace v1.47.0 // indirect
+	go.opentelemetry.io/otel/log v1.47.1-0.20261119094326-34915e1fc1ec // indirect
+	go.opentelemetry.io/otel/metric v1.47.1-0.20261119094326-34915e1fc1ec // indirect
+	go.opentelemetry.io/otel/trace v1.47.1-0.20261119094326-34915e1fc1ec // indirect
 	golang.org/x/sys v0.50.0 // indirect
 )

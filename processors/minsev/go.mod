@@ -4,8 +4,8 @@ go 1.26.0
 
 require (
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/otel/log v1.47.0
-	go.opentelemetry.io/otel/sdk/log v1.47.0
+	go.opentelemetry.io/otel/log v1.47.1-0.20261119094326-34915e1fc1ec
+	go.opentelemetry.io/otel/sdk/log v1.47.1-0.20261119094326-34915e1fc1ec
 )
 
 require (
@@ -14,10 +14,10 @@ require (
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.2 // indirect
-	go.opentelemetry.io/otel v1.47.0 // indirect
-	go.opentelemetry.io/otel/metric v1.47.0 // indirect
-	go.opentelemetry.io/otel/sdk v1.47.0 // indirect
-	go.opentelemetry.io/otel/trace v1.47.0 // indirect
+	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be // indirect
+	go.opentelemetry.io/otel/metric v1.47.1-0.20261119094326-34915e1fc1ec // indirect
+	go.opentelemetry.io/otel/sdk v1.47.1-0.20261119094326-34915e1fc1ec // indirect
+	go.opentelemetry.io/otel/trace v1.47.1-0.20261119094326-34915e1fc1ec // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sys v0.50.0 // indirect
 )

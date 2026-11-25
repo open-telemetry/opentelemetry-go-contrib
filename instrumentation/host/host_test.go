@@ -6,14 +6,15 @@ package host_test
 import (
 	"testing"
 
+	"github.com/shirou/gopsutil/v4/mem"
 	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/sdk/instrumentation"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata"
 	"go.opentelemetry.io/otel/sdk/metric/metricdata/metricdatatest"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/processconv"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/systemconv"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/processconv"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/systemconv"
 
 	"go.opentelemetry.io/contrib/instrumentation/host"
 )
@@ -84,7 +85,7 @@ func TestHostMetrics(t *testing.T) {
 							systemconv.MemoryUsage{}.AttrMemoryState(systemconv.MemoryStateUsed),
 						)},
 						{Attributes: attribute.NewSet(
-							systemconv.MemoryUsage{}.AttrMemoryState(systemconv.MemoryStateFree),
+							systemconv.MemoryUsage{}.AttrMemoryState(systemconv.MemoryStateAvailable),
 						)},
 					},
 					Temporality: metricdata.CumulativeTemporality,
@@ -101,7 +102,7 @@ func TestHostMetrics(t *testing.T) {
 							systemconv.MemoryUtilization{}.AttrMemoryState(systemconv.MemoryStateUsed),
 						)},
 						{Attributes: attribute.NewSet(
-							systemconv.MemoryUtilization{}.AttrMemoryState(systemconv.MemoryStateFree),
+							systemconv.MemoryUtilization{}.AttrMemoryState(systemconv.MemoryStateAvailable),
 						)},
 					},
 				},
@@ -126,4 +127,23 @@ func TestHostMetrics(t *testing.T) {
 		},
 	}
 	metricdatatest.AssertEqual(t, want, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+	vmStats, err := mem.VirtualMemoryWithContext(t.Context())
+	require.NoError(t, err)
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		switch m.Name {
+		case (systemconv.MemoryUsage{}).Name():
+			var total int64
+			for _, dp := range m.Data.(metricdata.Sum[int64]).DataPoints {
+				total += dp.Value
+			}
+			require.EqualValues(t, vmStats.Total, total)
+		case (systemconv.MemoryUtilization{}).Name():
+			var total float64
+			for _, dp := range m.Data.(metricdata.Gauge[float64]).DataPoints {
+				total += dp.Value
+			}
+			require.InDelta(t, 1, total, 1e-12)
+		}
+	}
 }
