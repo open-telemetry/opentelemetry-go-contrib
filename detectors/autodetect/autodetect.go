@@ -25,6 +25,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/azure/azurecontainerapps"
 	"go.opentelemetry.io/contrib/detectors/azure/azurevm"
 	"go.opentelemetry.io/contrib/detectors/consul"
+	"go.opentelemetry.io/contrib/detectors/digitalocean"
 	"go.opentelemetry.io/contrib/detectors/docker"
 	"go.opentelemetry.io/contrib/detectors/dynatrace"
 	"go.opentelemetry.io/contrib/detectors/gcp"
@@ -86,6 +87,10 @@ var (
 	// attributes from a Consul agent (see consul.NewResourceDetector for
 	// details).
 	IDConsul = ID("consul")
+	// IDDigitalOcean is the ID for the DigitalOcean detector that detects
+	// resource attributes on DigitalOcean Droplets (see
+	// digitalocean.NewResourceDetector for details).
+	IDDigitalOcean = ID("digitalocean")
 	// IDDynatrace is the ID for the Dynatrace detector that detects resource
 	// attributes from the enrichment files written by the Dynatrace OneAgent
 	// (see dynatrace.NewResourceDetector for details).
@@ -230,8 +235,9 @@ var (
 			return azurevm.New()
 		},
 
-		IDConsul:    func() resource.Detector { return consul.NewResourceDetector() },
-		IDDynatrace: func() resource.Detector { return dynatrace.NewResourceDetector() },
+		IDConsul:       func() resource.Detector { return consul.NewResourceDetector() },
+		IDDigitalOcean: func() resource.Detector { return digitalocean.NewResourceDetector() },
+		IDDynatrace:    func() resource.Detector { return dynatrace.NewResourceDetector() },
 
 		IDGCP: gcp.NewDetector,
 
