@@ -58,6 +58,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Rename the Lambda span attribute `faas.invocation_id` to `faas.invocation.id` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-lambda-go/otellambda`. (#10343)
 - Detect Cloud Run functions and Cloud Functions (2nd gen) (where both `K_CONFIGURATION` and `FUNCTION_TARGET` are set) as `gcp_cloud_run` with a `//run.googleapis.com/.../services/{name}` `cloud.resource_id` instead of `gcp_cloud_functions` in `go.opentelemetry.io/contrib/detectors/gcp`. (#10350)
 - Reduce heap allocations and latency during header extraction in `go.opentelemetry.io/contrib/propagators/jaeger`. (#10022)
+- Reduce heap allocations when converting `slog.Record` attributes in `go.opentelemetry.io/contrib/bridges/otelslog`. (#XXXX)
 - `NewMetricProducer` in `go.opentelemetry.io/contrib/bridges/prometheus` returns the exported concrete type `*Producer` instead of `metric.Producer`. (#10043)
 - Reduce heap allocations and latency during context tagging in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#10007)
 - Reduce heap allocations and latency during context injection in `go.opentelemetry.io/contrib/propagators/aws/xray`. (#9938)

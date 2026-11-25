@@ -230,13 +230,13 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 		}
 
 		if n > 0 {
-			buf := newKVBuffer(n)
-			r.Attrs(buf.AddAttr)
-			if buf.err != nil {
-				record.SetErr(buf.err)
+			var stack [recordAttrsBufferSize]attribute.KeyValue
+			kvs, err := appendRecordAttrs(recordAttrsBuffer(stack[:0], n), &r)
+			if err != nil {
+				record.SetErr(err)
 			}
-			if buf.Len() > 0 {
-				record.AddAttributes(h.group.KeyValue(buf.KeyValues()...))
+			if len(kvs) > 0 {
+				record.AddAttributes(h.group.KeyValue(kvs...))
 			} else {
 				// A Handler should not output groups if there are no attributes.
 				g := h.group.NextNonEmpty()
@@ -252,12 +252,12 @@ func (h *Handler) convertRecord(r slog.Record) log.Record {
 			}
 		}
 	} else if n > 0 {
-		buf := newKVBuffer(n)
-		r.Attrs(buf.AddAttr)
-		if buf.err != nil {
-			record.SetErr(buf.err)
+		var stack [recordAttrsBufferSize]attribute.KeyValue
+		kvs, err := appendRecordAttrs(recordAttrsBuffer(stack[:0], n), &r)
+		if err != nil {
+			record.SetErr(err)
 		}
-		record.AddAttributes(buf.KeyValues()...)
+		record.AddAttributes(kvs...)
 	}
 
 	return record
@@ -418,16 +418,37 @@ func (g *group) AddAttrs(attrs []slog.Attr) {
 type kvBuffer struct {
 	data []attribute.KeyValue
 	err  error
-	// keepErr, when true, keeps an error-valued attribute as a normal
-	// attribute instead of promoting it to err. It is set when converting a
-	// group value, because a group maps to an attribute.MAP that has no
-	// dedicated error slot like a record does, so a promoted error would be
-	// silently dropped.
-	keepErr bool
 }
 
 func newKVBuffer(n int) *kvBuffer {
 	return &kvBuffer{data: make([]attribute.KeyValue, 0, n)}
+}
+
+// recordAttrsBufferSize is the number of record attributes convertRecord can
+// convert without allocating.
+const recordAttrsBufferSize = 16
+
+// recordAttrsBuffer returns an empty slice to convert n record attributes
+// into. It returns stack if n fits, so callers can back stack with an array on
+// their stack. This is only safe because the converted attributes are copied
+// by [log.Record.AddAttributes] and [attribute.Map], so the buffer is not
+// referenced after convertRecord returns.
+func recordAttrsBuffer(stack []attribute.KeyValue, n int) []attribute.KeyValue {
+	if n > cap(stack) {
+		return make([]attribute.KeyValue, 0, n)
+	}
+	return stack[:0]
+}
+
+// appendRecordAttrs appends the converted attributes of r to dst. It returns
+// the last error-valued attribute of r, if any.
+func appendRecordAttrs(dst []attribute.KeyValue, r *slog.Record) ([]attribute.KeyValue, error) {
+	var err error
+	r.Attrs(func(a slog.Attr) bool {
+		dst = appendAttr(dst, a, &err)
+		return true
+	})
+	return dst, err
 }
 
 // Len returns the number of [attribute.KeyValue] held by b.
@@ -443,7 +464,7 @@ func (b *kvBuffer) Clone() *kvBuffer {
 	if b == nil {
 		return nil
 	}
-	return &kvBuffer{data: slices.Clone(b.data), err: b.err, keepErr: b.keepErr}
+	return &kvBuffer{data: slices.Clone(b.data), err: b.err}
 }
 
 // KeyValues returns kvs appended to the [attribute.KeyValue] held by b. The
@@ -462,25 +483,27 @@ func (b *kvBuffer) KeyValues(kvs ...attribute.KeyValue) []attribute.KeyValue {
 
 // AddAttrs adds attrs to b.
 func (b *kvBuffer) AddAttrs(attrs []slog.Attr) {
-	b.data = slices.Grow(b.data, len(attrs))
+	data := slices.Grow(b.data, len(attrs))
 	for _, a := range attrs {
-		_ = b.AddAttr(a)
+		data = appendAttr(data, a, &b.err)
 	}
+	b.data = data
 }
 
-// AddAttr adds attr to b and returns true.
+// appendAttr appends the conversion of attr to data and returns the result.
 //
-// This is designed to be passed to the AddAttributes method of an
-// [slog.Record].
+// If errp is not nil, an error-valued attr is stored in *errp instead of being
+// appended. If attr is a group with an empty key, its values are flattened. If
+// attr is empty, it is dropped.
 //
-// If attr is a group with an empty key, its values will be flattened.
-//
-// If attr is empty, it will be dropped.
-func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
-	if !b.keepErr && attr.Value.Kind() == slog.KindAny {
+// appendAttr is a function rather than a kvBuffer method, and convert does
+// not call kvBuffer methods, so that data can be backed by a stack-allocated
+// array.
+func appendAttr(data []attribute.KeyValue, attr slog.Attr, errp *error) []attribute.KeyValue { //nolint:gocritic // errp is an optional out-parameter.
+	if errp != nil && attr.Value.Kind() == slog.KindAny {
 		if err, ok := attr.Value.Any().(error); ok {
-			b.err = err
-			return true
+			*errp = err
+			return data
 		}
 	}
 
@@ -488,21 +511,20 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 		if attr.Value.Kind() == slog.KindGroup {
 			// A Handler should inline the Attrs of a group with an empty key.
 			for _, a := range attr.Value.Group() {
-				_ = b.AddAttr(a)
+				data = appendAttr(data, a, errp)
 			}
-			return true
+			return data
 		}
 
 		if attr.Value.Any() == nil {
 			// A Handler should ignore an empty Attr.
-			return true
+			return data
 		}
 	}
-	b.data = append(b.data, attribute.KeyValue{
+	return append(data, attribute.KeyValue{
 		Key:   attribute.Key(attr.Key),
 		Value: convert(attr.Value),
 	})
-	return true
 }
 
 func convert(v slog.Value) attribute.Value {
@@ -530,10 +552,14 @@ func convert(v slog.Value) attribute.Value {
 		return attribute.Int64Value(int64(u))
 	case slog.KindGroup:
 		g := v.Group()
-		buf := newKVBuffer(len(g))
-		buf.keepErr = true
-		buf.AddAttrs(g)
-		return attribute.MapValue(buf.data...)
+		kvs := make([]attribute.KeyValue, 0, len(g))
+		for _, a := range g {
+			// Keep error-valued attributes: a group maps to an attribute.MAP
+			// that has no dedicated error slot like a record does, so a
+			// promoted error would be silently dropped.
+			kvs = appendAttr(kvs, a, nil)
+		}
+		return attribute.MapValue(kvs...)
 	case slog.KindLogValuer:
 		return convert(v.Resolve())
 	default:

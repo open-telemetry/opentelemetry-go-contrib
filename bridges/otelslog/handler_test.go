@@ -14,6 +14,7 @@ import (
 	"log/slog"
 	"reflect"
 	"runtime"
+	"slices"
 	"sync"
 	"testing"
 	"testing/slogtest"
@@ -748,4 +749,64 @@ func TestHandlerWithEmptyGroup(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestHandlerRecordAttrsBufferSize converts records with attribute counts
+// around recordAttrsBufferSize, so that both the stack buffer and the heap
+// fallback are exercised.
+func TestHandlerRecordAttrsBufferSize(t *testing.T) {
+	for _, n := range []int{recordAttrsBufferSize - 1, recordAttrsBufferSize, recordAttrsBufferSize + 1, 40} {
+		firstErr := errors.New("first")
+		lastErr := errors.New("last")
+
+		// The record has n attributes: n-3 integers, two errors, and an
+		// empty-key group. The buffer is sized from the record's attribute
+		// count, before errors are promoted and groups flattened.
+		var attrs []slog.Attr
+		var want []attribute.KeyValue
+		for i := range n - 3 {
+			key := fmt.Sprintf("k%d", i)
+			attrs = append(attrs, slog.Int(key, i))
+			want = append(want, attribute.Int(key, i))
+		}
+		// An error-valued attribute is promoted to the record error (the last
+		// one wins), and an empty-key group is flattened.
+		attrs = slices.Insert(attrs, 1, slog.Any("err", firstErr))
+		attrs = append(attrs,
+			slog.Group("", slog.String("flat", "v")),
+			slog.Any("err", lastErr),
+		)
+		want = append(want, attribute.String("flat", "v"))
+		require.Len(t, attrs, n)
+
+		emit := func(t *testing.T, h slog.Handler, r *recorder) log.Record {
+			t.Helper()
+			slog.New(h).LogAttrs(t.Context(), slog.LevelInfo, "msg", attrs...)
+			require.Len(t, r.Records, 1)
+			return r.Records[0]
+		}
+
+		t.Run(fmt.Sprintf("NoGroup/%d", n), func(t *testing.T) {
+			r := new(recorder)
+			got := emit(t, NewHandler("", WithLoggerProvider(r)), r)
+			assert.Equal(t, want, collectAttrs(got))
+			assert.Equal(t, lastErr, got.Err())
+		})
+
+		t.Run(fmt.Sprintf("WithGroup/%d", n), func(t *testing.T) {
+			r := new(recorder)
+			got := emit(t, NewHandler("", WithLoggerProvider(r)).WithGroup("g"), r)
+			assert.Equal(t, []attribute.KeyValue{attribute.Map("g", want...)}, collectAttrs(got))
+			assert.Equal(t, lastErr, got.Err())
+		})
+	}
+}
+
+func collectAttrs(r log.Record) []attribute.KeyValue {
+	var out []attribute.KeyValue
+	r.WalkAttributes(func(kv attribute.KeyValue) bool {
+		out = append(out, kv)
+		return true
+	})
+	return out
 }
