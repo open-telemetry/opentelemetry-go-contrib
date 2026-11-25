@@ -187,6 +187,7 @@ replace go.opentelemetry.io/contrib/detectors/openstack/nova => ../openstack/nov
 replace go.opentelemetry.io/contrib/detectors/scaleway => ../scaleway
 
 replace go.opentelemetry.io/contrib/detectors/tencent/cvm => ../tencent/cvm
+
 replace go.opentelemetry.io/contrib/detectors/upcloud => ../upcloud
 
 replace go.opentelemetry.io/contrib/detectors/azure/azureaks => ../azure/azureaks
