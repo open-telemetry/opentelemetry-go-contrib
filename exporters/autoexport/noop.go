@@ -59,12 +59,12 @@ func newNoopMetricProducer() noopMetricProducer {
 	return noopMetricProducer{}
 }
 
-// noopLogExporter is an implementation of log.SpanExporter that performs no operations.
+// noopLogExporter is an implementation of log.Exporter that performs no operations.
 type noopLogExporter struct{}
 
 var _ log.Exporter = noopLogExporter{}
 
-// ExportSpans is part of log.Exporter interface.
+// Export is part of the log.Exporter interface.
 func (noopLogExporter) Export(context.Context, []log.Record) error {
 	return nil
 }
@@ -80,7 +80,7 @@ func (noopLogExporter) ForceFlush(context.Context) error {
 }
 
 // IsNoneLogExporter returns true for the exporter returned by [NewLogExporter]
-// when OTEL_LOGSS_EXPORTER environment variable is set to "none".
+// when OTEL_LOGS_EXPORTER environment variable is set to "none".
 func IsNoneLogExporter(e log.Exporter) bool {
 	_, ok := e.(noopLogExporter)
 	return ok
