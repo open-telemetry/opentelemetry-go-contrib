@@ -44,6 +44,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Add `aws.sns.topic.arn` from `TopicArn` to SNS `Publish` and `PublishBatch` spans in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`. (#9954)
 - Add the opt-in `http.client.active_requests` metric to `Transport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`, enabled by listing it in the `OTEL_GO_X_HTTP_METRICS_OPTIN` environment variable. (#10069)
 - Add the `aws.ecs.task.id` resource attribute, parsed from the task ARN, to `go.opentelemetry.io/contrib/detectors/aws/ecs`, matching the `ecs` detector of the `resourcedetectionprocessor` in `opentelemetry-collector-contrib`. (#10087)
+- Add `go.opentelemetry.io/contrib/detectors/upcloud`, a new resource detector for UpCloud Cloud Servers, ported from `processor/resourcedetectionprocessor/internal/upcloud` in `opentelemetry-collector-contrib`. Detects `cloud.provider`, `cloud.region`, `host.id`, and `host.name`. (#9498)
 
 ### Changed
 

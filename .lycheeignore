@@ -24,3 +24,4 @@ http://169.254.42.42
 http://[fd00:42::42]
 http://metadata.tencentyun.com/latest/meta-data
 https://cloud-native.slack.com/archives/C01NPAXACKT
+http://169.254.169.254/metadata/v1.json

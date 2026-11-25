@@ -37,6 +37,7 @@ import (
 	"go.opentelemetry.io/contrib/detectors/openstack/nova"
 	"go.opentelemetry.io/contrib/detectors/scaleway"
 	"go.opentelemetry.io/contrib/detectors/tencent/cvm"
+	"go.opentelemetry.io/contrib/detectors/upcloud"
 	"go.opentelemetry.io/contrib/detectors/vultr"
 )
 
@@ -129,6 +130,10 @@ var (
 	// resource attributes on Tencent Cloud CVM instances (see
 	// cvm.NewResourceDetector for details).
 	IDTencentCVM = ID("tencent.cvm")
+	// IDUpCloud is the ID for the UpCloud detector that detects resource
+	// attributes on UpCloud Cloud Servers (see upcloud.NewResourceDetector for
+	// details).
+	IDUpCloud = ID("upcloud")
 	// IDVultr is the ID for the Vultr detector that detects resource attributes
 	// on Vultr Cloud Compute instances (see vultr.NewResourceDetector for
 	// details).
@@ -244,6 +249,7 @@ var (
 
 		IDScaleway:   func() resource.Detector { return scaleway.NewResourceDetector() },
 		IDTencentCVM: func() resource.Detector { return cvm.NewResourceDetector() },
+		IDUpCloud:    func() resource.Detector { return upcloud.NewResourceDetector() },
 
 		IDVultr: func() resource.Detector { return vultr.NewResourceDetector() },
 
