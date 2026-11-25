@@ -19,7 +19,7 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 
 	switch v := in.Parameters.(type) {
 	case *dynamodb.GetItemInput:
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName), semconv.DBOperationName("GetItem"))
 
 		if v.ConsistentRead != nil {
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBConsistentRead(*v.ConsistentRead))
@@ -34,17 +34,17 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 		for k := range v.RequestItems {
 			tableNames = append(tableNames, k)
 		}
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(tableNames...))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(tableNames...), semconv.DBOperationName("BatchGetItem"))
 
 	case *dynamodb.BatchWriteItemInput:
 		tableNames := make([]string, 0, len(v.RequestItems))
 		for k := range v.RequestItems {
 			tableNames = append(tableNames, k)
 		}
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(tableNames...))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(tableNames...), semconv.DBOperationName("BatchWriteItem"))
 
 	case *dynamodb.CreateTableInput:
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName), semconv.DBOperationName("CreateTable"))
 
 		if v.GlobalSecondaryIndexes != nil {
 			idx := make([]string, 0, len(v.GlobalSecondaryIndexes))
@@ -72,15 +72,16 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 		}
 
 	case *dynamodb.DeleteItemInput:
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName), semconv.DBOperationName("DeleteItem"))
 
 	case *dynamodb.DeleteTableInput:
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName), semconv.DBOperationName("DeleteTable"))
 
 	case *dynamodb.DescribeTableInput:
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName), semconv.DBOperationName("DescribeTable"))
 
 	case *dynamodb.ListTablesInput:
+		dynamodbAttributes = append(dynamodbAttributes, semconv.DBOperationName("ListTables"))
 		if v.ExclusiveStartTableName != nil {
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBExclusiveStartTable(*v.ExclusiveStartTableName))
 		}
@@ -90,10 +91,10 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 		}
 
 	case *dynamodb.PutItemInput:
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName), semconv.DBOperationName("PutItem"))
 
 	case *dynamodb.QueryInput:
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName), semconv.DBOperationName("Query"))
 
 		if v.ConsistentRead != nil {
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBConsistentRead(*v.ConsistentRead))
@@ -118,7 +119,7 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBSelect(string(v.Select)))
 
 	case *dynamodb.ScanInput:
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName), semconv.DBOperationName("Scan"))
 
 		if v.ConsistentRead != nil {
 			dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBConsistentRead(*v.ConsistentRead))
@@ -147,10 +148,10 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 		}
 
 	case *dynamodb.UpdateItemInput:
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName), semconv.DBOperationName("UpdateItem"))
 
 	case *dynamodb.UpdateTableInput:
-		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName))
+		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(*v.TableName), semconv.DBOperationName("UpdateTable"))
 
 		if v.AttributeDefinitions != nil {
 			def := make([]string, 0, len(v.AttributeDefinitions))

@@ -31,6 +31,7 @@ func TestDynamodbTagsBatchGetItemInput(t *testing.T) {
 
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "BatchGetItem"))
 	assert.Contains(t, attributes, attribute.StringSlice("aws.dynamodb.table_names", []string{"table1"}))
 }
 
@@ -60,6 +61,7 @@ func TestDynamodbTagsBatchWriteItemInput(t *testing.T) {
 
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "BatchWriteItem"))
 	assert.Contains(t, attributes, attribute.StringSlice("aws.dynamodb.table_names", []string{"table1"}))
 }
 
@@ -114,6 +116,7 @@ func TestDynamodbTagsCreateTableInput(t *testing.T) {
 
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "CreateTable"))
 	assert.Contains(t, attributes, attribute.StringSlice(
 		"aws.dynamodb.table_names", []string{"table1"},
 	))
@@ -144,6 +147,7 @@ func TestDynamodbTagsDeleteItemInput(t *testing.T) {
 	}
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "DeleteItem"))
 	assert.Contains(t, attributes, attribute.StringSlice(
 		"aws.dynamodb.table_names", []string{"table1"},
 	))
@@ -157,6 +161,7 @@ func TestDynamodbTagsDeleteTableInput(t *testing.T) {
 	}
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "DeleteTable"))
 	assert.Contains(t, attributes, attribute.StringSlice(
 		"aws.dynamodb.table_names", []string{"table1"},
 	))
@@ -170,6 +175,7 @@ func TestDynamodbTagsDescribeTableInput(t *testing.T) {
 	}
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "DescribeTable"))
 	assert.Contains(t, attributes, attribute.StringSlice(
 		"aws.dynamodb.table_names", []string{"table1"},
 	))
@@ -184,6 +190,7 @@ func TestDynamodbTagsListTablesInput(t *testing.T) {
 	}
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "ListTables"))
 	assert.Contains(t, attributes, attribute.String("aws.dynamodb.exclusive_start_table", "table1"))
 	assert.Contains(t, attributes, attribute.Int("aws.dynamodb.limit", 10))
 }
@@ -202,6 +209,7 @@ func TestDynamodbTagsPutItemInput(t *testing.T) {
 
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "PutItem"))
 	assert.Contains(t, attributes, attribute.StringSlice(
 		"aws.dynamodb.table_names", []string{"table1"},
 	))
@@ -230,6 +238,7 @@ func TestDynamodbTagsQueryInput(t *testing.T) {
 
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "Query"))
 	assert.Contains(t, attributes, attribute.StringSlice(
 		"aws.dynamodb.table_names", []string{"table1"},
 	))
@@ -257,6 +266,7 @@ func TestDynamodbTagsScanInput(t *testing.T) {
 
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "Scan"))
 	assert.Contains(t, attributes, attribute.StringSlice(
 		"aws.dynamodb.table_names", []string{"my-table"},
 	))
@@ -285,6 +295,7 @@ func TestDynamodbTagsUpdateItemInput(t *testing.T) {
 
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "UpdateItem"))
 	assert.Contains(t, attributes, attribute.StringSlice(
 		"aws.dynamodb.table_names", []string{"my-table"},
 	))
@@ -326,6 +337,7 @@ func TestDynamodbTagsUpdateTableInput(t *testing.T) {
 
 	attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
 
+	assert.Contains(t, attributes, attribute.String("db.operation.name", "UpdateTable"))
 	assert.Contains(t, attributes, attribute.StringSlice(
 		"aws.dynamodb.table_names", []string{"my-table"},
 	))
