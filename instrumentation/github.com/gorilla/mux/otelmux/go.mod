@@ -6,7 +6,7 @@ require (
 	github.com/felixge/httpsnoop v1.1.0
 	github.com/gorilla/mux v1.8.1
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/otel v1.47.1-0.20261119094326-34915e1fc1ec
+	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.47.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/metric v1.47.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/sdk v1.47.1-0.20261119094326-34915e1fc1ec

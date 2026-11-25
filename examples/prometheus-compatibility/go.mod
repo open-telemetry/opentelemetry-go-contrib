@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/prometheus/client_golang v1.25.0
-	go.opentelemetry.io/otel v1.47.1-0.20261119094326-34915e1fc1ec
+	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetrichttp v1.47.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/metric v1.47.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/sdk/metric v1.47.1-0.20261119094326-34915e1fc1ec
