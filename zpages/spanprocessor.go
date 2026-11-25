@@ -40,6 +40,9 @@ type perMethodSummary struct {
 // It tracks all active spans, and stores samples of spans based on latency for non errored spans,
 // and samples for errored spans.
 type SpanProcessor struct {
+	mu      sync.RWMutex
+	stopped bool
+
 	// Cannot keep track of the active Spans per name because the Span interface,
 	// allows the name to be changed, and that will leak memory.
 	activeSpansStore sync.Map
@@ -52,15 +55,27 @@ func NewSpanProcessor() *SpanProcessor {
 }
 
 // OnStart adds span as active and reports it with zpages.
+// Calls after Shutdown are ignored.
 func (ssm *SpanProcessor) OnStart(_ context.Context, span sdktrace.ReadWriteSpan) {
+	ssm.mu.RLock()
+	defer ssm.mu.RUnlock()
+	if ssm.stopped {
+		return
+	}
 	sc := span.SpanContext()
 	if sc.IsValid() {
 		ssm.activeSpansStore.Store(spanKey(sc), span)
 	}
 }
 
-// OnEnd processes all spans and reports them with zpages.
+// OnEnd removes span from active spans and records it as a completed sample.
+// Calls after Shutdown are ignored.
 func (ssm *SpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
+	ssm.mu.RLock()
+	defer ssm.mu.RUnlock()
+	if ssm.stopped {
+		return
+	}
 	sc := span.SpanContext()
 	if sc.IsValid() {
 		ssm.activeSpansStore.Delete(spanKey(sc))
@@ -74,9 +89,20 @@ func (ssm *SpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
 	value.(*sampleStore).sampleSpan(span)
 }
 
-// Shutdown does nothing.
-func (*SpanProcessor) Shutdown(context.Context) error {
-	// Do nothing
+// Shutdown stops processing span lifecycle events and releases all stored
+// active and completed span state.
+//
+// Calls to OnStart and OnEnd after Shutdown are ignored. Subsequent calls to
+// Shutdown are no-ops.
+func (ssm *SpanProcessor) Shutdown(context.Context) error {
+	ssm.mu.Lock()
+	defer ssm.mu.Unlock()
+	if ssm.stopped {
+		return nil
+	}
+	ssm.stopped = true
+	ssm.activeSpansStore.Clear()
+	ssm.spanSampleStores.Clear()
 	return nil
 }
 
