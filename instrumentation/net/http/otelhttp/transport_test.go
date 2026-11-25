@@ -1886,17 +1886,29 @@ func TestTransportNetworkProtocolVersionFromResponse(t *testing.T) {
 	require.Len(t, rm.ScopeMetrics, 1)
 	require.NotEmpty(t, rm.ScopeMetrics[0].Metrics)
 
+	foundDurationMetric := false
+
 	for _, m := range rm.ScopeMetrics[0].Metrics {
-		hist, ok := m.Data.(metricdata.Histogram[int64])
+		hist, ok := m.Data.(metricdata.Histogram[float64])
 		if !ok {
 			continue
 		}
+
+		if m.Name != "http.client.request.duration" {
+			continue
+		}
+
+		foundDurationMetric = true
 		require.NotEmpty(t, hist.DataPoints)
-		_, ok = hist.DataPoints[0].Attributes.Value(attribute.Key("network.protocol.version"))
+
+		version, ok := hist.DataPoints[0].Attributes.Value(attribute.Key("network.protocol.version"))
 		require.True(t, ok, "metric %s missing network.protocol.version", m.Name)
-		version, _ := hist.DataPoints[0].Attributes.Value(attribute.Key("network.protocol.version"))
-		assert.Equal(t, "2.0", version.AsString(), "metric %s should report the negotiated wire protocol, not req.Proto", m.Name)
+
+		assert.Equal(t, "2.0", version.AsString(),
+			"metric %s should report the negotiated wire protocol, not req.Proto", m.Name)
 	}
+
+	require.True(t, foundDurationMetric, "http.client.request.duration metric was not recorded")
 }
 
 func assertClientScopeMetrics(t *testing.T, sm metricdata.ScopeMetrics, attrs attribute.Set) {
