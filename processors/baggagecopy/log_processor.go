@@ -23,7 +23,7 @@ var _ log.Processor = (*LogProcessor)(nil)
 //
 // The Baggage log processor adds attributes to a log record that are found
 // in Baggage in the parent context at the moment the log is emitted.
-// The passed filter determines which baggage members are added to the span.
+// The passed filter determines which baggage members are added to the log record.
 //
 // If filter is nil, all baggage members will be added.
 func NewLogProcessor(filter Filter) *LogProcessor {
@@ -58,5 +58,5 @@ func (processor LogProcessor) OnEmit(ctx context.Context, record *log.Record) er
 // Shutdown is called when the [log.Processor] is shutting down and is a no-op for this processor.
 func (LogProcessor) Shutdown(context.Context) error { return nil }
 
-// ForceFlush is called to ensure all logs are flushed to the output and is a no-op for this processor.
+// ForceFlush is a no-op for this processor.
 func (LogProcessor) ForceFlush(context.Context) error { return nil }
