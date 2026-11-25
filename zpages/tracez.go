@@ -50,7 +50,6 @@ type summaryTableData struct {
 	Header             []string
 	LatencyBucketNames []string
 	Links              bool
-	TracesEndpoint     string
 	Rows               []summaryTableRowData
 }
 
@@ -131,8 +130,7 @@ func (th *tracezHandler) getTraceTableData(spanName string, spanType, latencyBuc
 
 func (th *tracezHandler) getSummaryTableData() summaryTableData {
 	data := summaryTableData{
-		Links:          true,
-		TracesEndpoint: "tracez",
+		Links: true,
 	}
 	data.Header = []string{"Name", "active"}
 	// An implicit 0 lower bound latency bucket is always present.

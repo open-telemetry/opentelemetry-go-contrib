@@ -88,6 +88,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Fixed
 
+- Use relative query links in the tracez summary table of `go.opentelemetry.io/contrib/zpages` so links work when the handler is mounted on custom paths. (#10414)
 - Use the standardized SNS system value `aws.sns` instead of the custom value `aws_sns` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`.
   This corrects an existing mismatch with the semantic conventions; the standardized SNS value was already `aws.sns` before v1.45.0. (#10343)
 - Bound Azure VM metadata requests to ten seconds and reject responses over 1 MiB in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. (#10299)
