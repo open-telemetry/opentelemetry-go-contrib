@@ -82,6 +82,7 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/azure/azurefunctions
       - go.opentelemetry.io/contrib/detectors/azure/azurevm
       - go.opentelemetry.io/contrib/detectors/consul
+      - go.opentelemetry.io/contrib/detectors/digitalocean
       - go.opentelemetry.io/contrib/detectors/docker
       - go.opentelemetry.io/contrib/detectors/dynatrace
       - go.opentelemetry.io/contrib/detectors/hetzner
@@ -92,6 +93,8 @@ module-sets:
       - go.opentelemetry.io/contrib/detectors/openshift
       - go.opentelemetry.io/contrib/detectors/openstack/nova
       - go.opentelemetry.io/contrib/detectors/scaleway
+      - go.opentelemetry.io/contrib/detectors/tencent/cvm
+      - go.opentelemetry.io/contrib/detectors/upcloud
       - go.opentelemetry.io/contrib/detectors/aws/elasticbeanstalk
       - go.opentelemetry.io/contrib/detectors/vultr
       - go.opentelemetry.io/contrib/detectors/akamai

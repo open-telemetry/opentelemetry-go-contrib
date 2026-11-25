@@ -29,6 +29,7 @@ type config struct {
 	PublicEndpointFn  func(*http.Request) bool
 	ReadEvent         bool
 	WriteEvent        bool
+	RouteTracking     bool
 	Filters           []Filter
 	SpanNameFormatter func(string, *http.Request) string
 	ClientTrace       func(context.Context) *httptrace.ClientTrace
@@ -113,7 +114,7 @@ func WithPropagators(ps propagation.TextMapPropagator) Option {
 }
 
 // WithSpanOptions configures an additional set of
-// trace.SpanOptions, which are applied to each new span.
+// [trace.SpanStartOption] values, which are applied to each new span.
 func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 	return optionFunc(func(c *config) {
 		c.SpanStartOptions = append(c.SpanStartOptions, opts...)
@@ -204,5 +205,14 @@ func WithServerName(server string) Option {
 func WithMetricAttributesFn(metricAttributesFn func(r *http.Request) []attribute.KeyValue) Option {
 	return optionFunc(func(c *config) {
 		c.MetricAttributesFn = metricAttributesFn
+	})
+}
+
+// WithRouteTracking enables [RouteMiddleware] to record matched routes on the
+// server span and metrics created by [NewHandler] or [NewMiddleware] when
+// intervening middleware copies the request.
+func WithRouteTracking() Option {
+	return optionFunc(func(c *config) {
+		c.RouteTracking = true
 	})
 }
