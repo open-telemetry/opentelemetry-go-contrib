@@ -9,7 +9,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.12.1
 	go.opencensus.io v0.24.0
-	go.opentelemetry.io/otel v1.47.1-0.20261119094326-34915e1fc1ec
+	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
 	go.opentelemetry.io/otel/bridge/opencensus v1.47.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/trace v1.47.1-0.20261119094326-34915e1fc1ec
 )

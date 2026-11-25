@@ -3,7 +3,7 @@ module go.opentelemetry.io/contrib/examples/passthrough
 go 1.26.0
 
 require (
-	go.opentelemetry.io/otel v1.47.1-0.20261119094326-34915e1fc1ec
+	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
 	go.opentelemetry.io/otel/exporters/stdout/stdouttrace v1.47.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/sdk v1.47.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/trace v1.47.1-0.20261119094326-34915e1fc1ec
