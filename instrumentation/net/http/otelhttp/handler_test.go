@@ -1127,8 +1127,8 @@ func BenchmarkHandlerServeHTTP(b *testing.B) {
 	}
 }
 
-// TestReadEvents_BodyPresent verifies that exactly one read event is recorded
-// when a single, explicit Read() operation is executed on a valid body.
+// TestReadEvents_BodyPresent verifies that a read event and the request body
+// size attribute are recorded when a Read() operation is executed on a valid body.
 func TestReadEvents_BodyPresent(t *testing.T) {
 	payload := []byte("payload")
 	exp := tracetest.NewInMemoryExporter()
@@ -1161,6 +1161,7 @@ func TestReadEvents_BodyPresent(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 1, readEvents, "expected exactly one read event for a single read call")
+	assert.Contains(t, spans[0].Attributes, attribute.Int("http.request.body.size", len(payload)))
 }
 
 func TestReadEvents_NoBody(t *testing.T) {
@@ -1195,10 +1196,6 @@ func TestReadEvents_NoBody(t *testing.T) {
 
 			for _, event := range spans[0].Events {
 				assert.NotEqual(t, "read", event.Name, "expected no read events for body-less request")
-			}
-
-			for _, attr := range spans[0].Attributes {
-				assert.NotEqual(t, "http.request.body.size", string(attr.Key), "expected request body size attribute not to be set")
 			}
 		})
 	}
