@@ -71,6 +71,54 @@ func TestDetect(t *testing.T) {
 			),
 		},
 		{
+			desc: "zonal GKE cluster with host.name enabled",
+			detector: &detector{
+				detector: &fakeGCPDetector{
+					projectID:           "my-project",
+					cloudPlatform:       internal.GKE,
+					gkeHostID:           "1472385723456792345",
+					gceHostName:         "my-gke-node-1234",
+					gkeClusterName:      "my-cluster",
+					gkeAvailabilityZone: "us-central1-c",
+				},
+				cfg: config{gkeHostName: true},
+			},
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPKubernetesEngine,
+				semconv.K8SClusterName("my-cluster"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				semconv.HostID("1472385723456792345"),
+				semconv.HostName("my-gke-node-1234"),
+			),
+		},
+		{
+			desc: "zonal GKE cluster with host.name error",
+			detector: &detector{
+				detector: &fakeGCPDetector{
+					projectID:           "my-project",
+					cloudPlatform:       internal.GKE,
+					gkeHostID:           "1472385723456792345",
+					gceHostNameErr:      fmt.Errorf("instance/name unavailable"),
+					gkeClusterName:      "my-cluster",
+					gkeAvailabilityZone: "us-central1-c",
+				},
+				cfg: config{gkeHostName: true},
+			},
+			expectErr: true,
+			expectedResource: resource.NewWithAttributes(
+				semconv.SchemaURL,
+				semconv.CloudProviderGCP,
+				semconv.CloudAccountID("my-project"),
+				semconv.CloudPlatformGCPKubernetesEngine,
+				semconv.K8SClusterName("my-cluster"),
+				semconv.CloudAvailabilityZone("us-central1-c"),
+				semconv.HostID("1472385723456792345"),
+			),
+		},
+		{
 			desc: "regional GKE cluster",
 			detector: &detector{detector: &fakeGCPDetector{
 				projectID:      "my-project",
@@ -667,10 +715,12 @@ func TestNewDetectorWithOptions(t *testing.T) {
 	filter := func(k string) bool { return k == "env" }
 	d, ok := NewDetectorWithOptions(
 		WithGKEHostType(),
+		WithGKEHostName(),
 		WithGCEInstanceLabelKeyFilter(filter),
 	).(*detector)
 	assert.True(t, ok)
 	assert.True(t, d.cfg.gkeHostType)
+	assert.True(t, d.cfg.gkeHostName)
 	assert.NotNil(t, d.cfg.gceLabelKeyFilter)
 	assert.True(t, d.cfg.gceLabelKeyFilter("env"))
 	assert.False(t, d.cfg.gceLabelKeyFilter("other"))
@@ -678,6 +728,7 @@ func TestNewDetectorWithOptions(t *testing.T) {
 	defaultDetector, ok := NewDetector().(*detector)
 	assert.True(t, ok)
 	assert.False(t, defaultDetector.cfg.gkeHostType)
+	assert.False(t, defaultDetector.cfg.gkeHostName)
 	assert.Nil(t, defaultDetector.cfg.gceLabelKeyFilter)
 }
 
@@ -851,6 +902,7 @@ type fakeGCPDetector struct {
 	err                             error
 	migErr                          error
 	gceLabelsErr                    error
+	gceHostNameErr                  error
 	cloudPlatformCalls              int
 	cloudPlatformCtx                context.Context
 	onProjectID                     func(context.Context) (string, error)
@@ -1045,6 +1097,9 @@ func (f *fakeGCPDetector) GCEHostID(_ context.Context) (string, error) {
 func (f *fakeGCPDetector) GCEHostName(_ context.Context) (string, error) {
 	if f.err != nil {
 		return "", f.err
+	}
+	if f.gceHostNameErr != nil {
+		return "", f.gceHostNameErr
 	}
 	return f.gceHostName, nil
 }
