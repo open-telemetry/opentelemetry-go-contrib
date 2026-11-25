@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"os"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -102,17 +103,43 @@ func netProtocol(proto string) (name, version string) {
 	return name, version
 }
 
-var methodLookup = map[string]attribute.KeyValue{
-	http.MethodConnect: semconvNew.HTTPRequestMethodConnect,
-	http.MethodDelete:  semconvNew.HTTPRequestMethodDelete,
-	http.MethodGet:     semconvNew.HTTPRequestMethodGet,
-	http.MethodHead:    semconvNew.HTTPRequestMethodHead,
-	http.MethodOptions: semconvNew.HTTPRequestMethodOptions,
-	http.MethodPatch:   semconvNew.HTTPRequestMethodPatch,
-	http.MethodPost:    semconvNew.HTTPRequestMethodPost,
-	http.MethodPut:     semconvNew.HTTPRequestMethodPut,
-	http.MethodTrace:   semconvNew.HTTPRequestMethodTrace,
+const knownHTTPMethodsEnv = "OTEL_INSTRUMENTATION_HTTP_KNOWN_METHODS"
+
+var defaultKnownHTTPMethods = []string{
+    http.MethodConnect,
+    http.MethodDelete,
+    http.MethodGet,
+    http.MethodHead,
+    http.MethodOptions,
+    http.MethodPatch,
+    http.MethodPost,
+    http.MethodPut,
+    http.MethodTrace,
+    "QUERY",
 }
+
+func newMethodLookup() map[string]attribute.KeyValue {
+	methods, configured := os.LookupEnv(knownHTTPMethodsEnv)
+	if !configured {
+		methods = strings.Join(defaultKnownHTTPMethods, ",")
+	}
+
+	return methodLookupFromEnv(strings.Split(methods, ","))
+}
+
+func methodLookupFromEnv(methods []string) map[string]attribute.KeyValue {
+	lookup := make(map[string]attribute.KeyValue, len(methods))
+	for _, method := range methods {
+		if method == "" {
+			continue
+		}
+		lookup[method] = semconvNew.HTTPRequestMethodKey.String(method)
+	}
+
+	return lookup
+}
+
+var methodLookup = newMethodLookup()
 
 func handleErr(err error) {
 	if err != nil {
@@ -121,13 +148,10 @@ func handleErr(err error) {
 }
 
 func standardizeHTTPMethod(method string) string {
-	method = strings.ToUpper(method)
-	switch method {
-	case http.MethodConnect, http.MethodDelete, http.MethodGet, http.MethodHead, http.MethodOptions, http.MethodPatch, http.MethodPost, http.MethodPut, http.MethodTrace:
-	default:
-		method = "_OTHER"
-	}
-	return method
+    if _, ok := methodLookup[method]; ok {
+        return method
+    }
+    return "_OTHER"
 }
 
 func durationToSeconds(d time.Duration) float64 {

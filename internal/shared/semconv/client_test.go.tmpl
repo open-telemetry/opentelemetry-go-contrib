@@ -112,6 +112,7 @@ func TestHTTPClientStatus(t *testing.T) {
 	}
 }
 
+
 func TestHTTPClient_MetricAttributes(t *testing.T) {
 	defaultRequest, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com/path?query=test", http.NoBody)
 	require.NoError(t, err)
@@ -124,6 +125,7 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 		req                  *http.Request
 		resp                 *http.Response
 		statusCode           int
+		recordURLScheme      bool
 		additionalAttributes []attribute.KeyValue
 		wantFunc             func(t *testing.T, attrs []attribute.KeyValue)
 	}{
@@ -133,12 +135,10 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 			statusCode:           200,
 			additionalAttributes: []attribute.KeyValue{attribute.String("test", "test")},
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 7)
+				require.Len(t, attrs, 5)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("server.address", "example.com"),
-					attribute.String("url.scheme", "http"),
-					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
 					attribute.Int64("http.response.status_code", 200),
 					attribute.String("test", "test"),
@@ -146,53 +146,75 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 			},
 		},
 		{
-			name:                 "use server address",
-			req:                  defaultRequest,
-			statusCode:           200,
-			additionalAttributes: nil,
+			name:       "use server address",
+			req:        defaultRequest,
+			statusCode: 200,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 6)
+				require.Len(t, attrs, 4)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("server.address", "example.com"),
-					attribute.String("url.scheme", "http"),
-					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
 					attribute.Int64("http.response.status_code", 200),
 				}, attrs)
 			},
 		},
 		{
-			name:                 "https scheme",
-			req:                  httpsRequest,
-			statusCode:           200,
-			additionalAttributes: nil,
+			name:       "https scheme disabled by default",
+			req:        httpsRequest,
+			statusCode: 200,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 6)
+				require.Len(t, attrs, 4)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("server.address", "example.com"),
+					attribute.String("network.protocol.version", "1.1"),
+					attribute.Int64("http.response.status_code", 200),
+				}, attrs)
+			},
+		},
+		{
+			name:       "protocol negotiated by the response overrides the request",
+			req:        defaultRequest,
+			resp:       &http.Response{Proto: "HTTP/2.0"},
+			statusCode: 200,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 4)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("server.address", "example.com"),
+					attribute.String("network.protocol.version", "2.0"),
+					attribute.Int64("http.response.status_code", 200),
+				}, attrs)
+			},
+		},
+		{
+			name:       "non-HTTP protocol name is retained",
+			req:        defaultRequest,
+			resp:       &http.Response{Proto: "SPDY/3.1"},
+			statusCode: http.StatusOK,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("server.address", "example.com"),
+					attribute.String("network.protocol.name", "spdy"),
+					attribute.String("network.protocol.version", "3.1"),
+					attribute.Int64("http.response.status_code", 200),
+				}, attrs)
+			},
+		},
+		{
+			name:            "url scheme opt-in",
+			req:             httpsRequest,
+			statusCode:      http.StatusOK,
+			recordURLScheme: true,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 5)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("server.address", "example.com"),
 					attribute.String("url.scheme", "https"),
-					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
-					attribute.Int64("http.response.status_code", 200),
-				}, attrs)
-			},
-		},
-		{
-			name:                 "protocol negotiated by the response overrides the request",
-			req:                  defaultRequest,
-			resp:                 &http.Response{Proto: "HTTP/2.0"},
-			statusCode:           200,
-			additionalAttributes: nil,
-			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 6)
-				assert.ElementsMatch(t, []attribute.KeyValue{
-					attribute.String("http.request.method", "GET"),
-					attribute.String("server.address", "example.com"),
-					attribute.String("url.scheme", "http"),
-					attribute.String("network.protocol.name", "http"),
-					attribute.String("network.protocol.version", "2.0"),
 					attribute.Int64("http.response.status_code", 200),
 				}, attrs)
 			},
@@ -201,11 +223,14 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := HTTPClient{}.MetricAttributes(tt.req, tt.resp, tt.statusCode, tt.additionalAttributes)
+			got := HTTPClient{recordURLScheme: tt.recordURLScheme}.MetricAttributes(
+				tt.req, tt.resp, tt.statusCode, tt.additionalAttributes,
+			)
 			tt.wantFunc(t, got)
 		})
 	}
 }
+
 
 func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 	tests := []struct {
@@ -315,7 +340,7 @@ func TestHTTPClient_ActiveRequestsOption(t *testing.T) {
 func TestHTTPClient_AddActiveRequests(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
 	mp := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
-	client := NewHTTPClient(mp.Meter("test"))
+	client := NewHTTPClient(mp.Meter("test"), false, false)
 
 	req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com:8080/path", http.NoBody)
 	require.NoError(t, err)

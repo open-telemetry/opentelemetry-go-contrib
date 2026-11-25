@@ -23,6 +23,13 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 	reqWithPattern.Pattern = "/path/abc123"
 	reqWithHostPort := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://attacker.example:8443/", http.NoBody)
 
+	reqWithSPDY := httptest.NewRequestWithContext(
+		t.Context(), http.MethodGet, "http://example.com/path", http.NoBody,
+	)
+	reqWithSPDY.Proto = "SPDY/3.1"
+	reqWithSPDY.ProtoMajor = 3
+	reqWithSPDY.ProtoMinor = 1
+
 	tests := []struct {
 		name                 string
 		server               string
@@ -40,11 +47,10 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 			route:                "",
 			additionalAttributes: []attribute.KeyValue{attribute.String("test", "test")},
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 6)
+				require.Len(t, attrs, 5)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("url.scheme", "http"),
-					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
 					attribute.Int64("http.response.status_code", 200),
 					attribute.String("test", "test"),
@@ -59,13 +65,12 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 			route:                "/path/${id}",
 			additionalAttributes: nil,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 8)
+				require.Len(t, attrs, 7)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("url.scheme", "http"),
 					attribute.String("server.address", "example.com"),
 					attribute.Int("server.port", 9999),
-					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
 					attribute.Int64("http.response.status_code", 200),
 					attribute.String("http.route", "/path/${id}"),
@@ -78,12 +83,11 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 			req:        reqWithHostPort,
 			statusCode: 200,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 6)
+				require.Len(t, attrs, 5)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("url.scheme", "http"),
 					attribute.String("server.address", "example.com"),
-					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
 					attribute.Int64("http.response.status_code", 200),
 				}, attrs)
@@ -95,11 +99,10 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 			req:        defaultRequest,
 			statusCode: 200,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 5)
+				require.Len(t, attrs, 4)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("url.scheme", "http"),
-					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
 					attribute.Int64("http.response.status_code", 200),
 				}, attrs)
@@ -109,13 +112,27 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 			name: "use route from request pattern",
 			req:  reqWithPattern,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
+				require.Len(t, attrs, 4)
+				assert.ElementsMatch(t, []attribute.KeyValue{
+					attribute.String("http.request.method", "GET"),
+					attribute.String("url.scheme", "http"),
+					attribute.String("network.protocol.version", "1.1"),
+					attribute.String("http.route", "/path/abc123"),
+				}, attrs)
+			},
+		},
+		{
+			name:       "non-HTTP protocol name is retained",
+			req:        reqWithSPDY,
+			statusCode: 200,
+			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
 				require.Len(t, attrs, 5)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("url.scheme", "http"),
-					attribute.String("network.protocol.name", "http"),
-					attribute.String("network.protocol.version", "1.1"),
-					attribute.String("http.route", "/path/abc123"),
+					attribute.String("network.protocol.name", "spdy"),
+					attribute.String("network.protocol.version", "3.1"),
+					attribute.Int64("http.response.status_code", 200),
 				}, attrs)
 			},
 		},
@@ -150,7 +167,7 @@ func TestNewMethod(t *testing.T) {
 		{
 			method:   "Put",
 			n:        3,
-			want:     attribute.String("http.request.method", "PUT"),
+			want:     attribute.String("http.request.method", "_OTHER"),
 			wantOrig: attribute.String("http.request.method_original", "Put"),
 		},
 		{

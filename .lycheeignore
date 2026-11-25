@@ -22,5 +22,8 @@ https://api.service.softlayer.com/rest/v3.1/SoftLayer_Resource_Metadata
 http://bar.baz
 http://169.254.42.42
 http://[fd00:42::42]
+https://cloud-native.slack.com/archives/C01NPAXACKT
+instrumentation/net/http/otelhttp/internal/semconv/httpconvtest_test.go
+internal/shared/semconv/httpconvtest_test.go.tmpl
 http://metadata.tencentyun.com/latest/meta-data
 https://cloud-native.slack.com/archives/C01NPAXACKT

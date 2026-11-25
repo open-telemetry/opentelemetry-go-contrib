@@ -180,18 +180,15 @@ func (n CurrentHTTPServer) NetworkTransportAttr(network string) attribute.KeyVal
 }
 
 func (n CurrentHTTPServer) method(method string) (attribute.KeyValue, attribute.KeyValue) {
-	if method == "" {
-		return semconvNew.HTTPRequestMethodGet, attribute.KeyValue{}
-	}
-	if attr, ok := methodLookup[method]; ok {
-		return attr, attribute.KeyValue{}
-	}
+    if method == "" {
+        return semconvNew.HTTPRequestMethodOther, attribute.KeyValue{}
+    }
 
-	orig := semconvNew.HTTPRequestMethodOriginal(method)
-	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
-		return attr, orig
-	}
-	return semconvNew.HTTPRequestMethodGet, orig
+    if attr, ok := methodLookup[method]; ok {
+        return attr, attribute.KeyValue{}
+    }
+
+    return semconvNew.HTTPRequestMethodOther, semconvNew.HTTPRequestMethodOriginal(method)
 }
 
 func (n CurrentHTTPServer) scheme(https bool) attribute.KeyValue { //nolint:revive // ignore linter
@@ -434,18 +431,15 @@ func (n CurrentHTTPClient) ErrorType(err error) attribute.KeyValue {
 }
 
 func (n CurrentHTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValue) {
-	if method == "" {
-		return semconvNew.HTTPRequestMethodGet, attribute.KeyValue{}
-	}
-	if attr, ok := methodLookup[method]; ok {
-		return attr, attribute.KeyValue{}
-	}
+    if method == "" {
+        return semconvNew.HTTPRequestMethodOther, attribute.KeyValue{}
+    }
 
-	orig := semconvNew.HTTPRequestMethodOriginal(method)
-	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
-		return attr, orig
-	}
-	return semconvNew.HTTPRequestMethodGet, orig
+    if attr, ok := methodLookup[method]; ok {
+        return attr, attribute.KeyValue{}
+    }
+
+    return semconvNew.HTTPRequestMethodOther, semconvNew.HTTPRequestMethodOriginal(method)
 }
 
 func (n CurrentHTTPClient) MetricAttributes(req *http.Request, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {

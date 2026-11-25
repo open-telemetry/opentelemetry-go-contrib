@@ -49,27 +49,80 @@ func TestStandardizeHTTPMethod(t *testing.T) {
 		want   string
 	}{
 		{"GET", "GET"},
-		{"get", "GET"},
+		{"get", "_OTHER"},
 		{"POST", "POST"},
-		{"post", "POST"},
+		{"post", "_OTHER"},
 		{"PUT", "PUT"},
-		{"put", "PUT"},
+		{"put", "_OTHER"},
 		{"DELETE", "DELETE"},
-		{"delete", "DELETE"},
+		{"delete", "_OTHER"},
 		{"HEAD", "HEAD"},
-		{"head", "HEAD"},
+		{"head", "_OTHER"},
 		{"OPTIONS", "OPTIONS"},
-		{"options", "OPTIONS"},
+		{"options", "_OTHER"},
 		{"CONNECT", "CONNECT"},
-		{"connect", "CONNECT"},
+		{"connect", "_OTHER"},
 		{"TRACE", "TRACE"},
-		{"trace", "TRACE"},
+		{"trace", "_OTHER"},
 		{"PATCH", "PATCH"},
-		{"patch", "PATCH"},
+		{"patch", "_OTHER"},
+		{"QUERY", "QUERY"},
+		{"query", "_OTHER"},
 		{"unknown", "_OTHER"},
 		{"", "_OTHER"},
 	}
+
 	for _, test := range tests {
 		assert.Equal(t, test.want, standardizeHTTPMethod(test.method))
+	}
+}
+
+func TestMethodLookupFromEnv(t *testing.T) {
+	tests := []struct {
+		name    string
+		methods []string
+		want    []string
+	}{
+		{
+			name:    "default methods",
+			methods: defaultKnownHTTPMethods,
+			want:    []string{"GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS", "CONNECT", "TRACE", "QUERY"},
+		},
+		{
+			name:    "custom methods replace defaults",
+			methods: []string{"FOO", "BAR"},
+			want:    []string{"FOO", "BAR"},
+		},
+		{
+			name:    "empty override",
+			methods: []string{},
+			want:    []string{},
+		},
+		{
+			name:    "case sensitive methods",
+			methods: []string{"get", "FOO"},
+			want:    []string{"get", "FOO"},
+		},
+		{
+			name:    "empty entries are ignored",
+			methods: []string{"GET", "", "POST"},
+			want:    []string{"GET", "POST"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := methodLookupFromEnv(tt.methods)
+
+			if len(got) != len(tt.want) {
+				t.Fatalf("got %d methods, want %d", len(got), len(tt.want))
+			}
+
+			for _, method := range tt.want {
+				if _, ok := got[method]; !ok {
+					t.Errorf("expected method %q in lookup", method)
+				}
+			}
+		})
 	}
 }
