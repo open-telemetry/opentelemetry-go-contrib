@@ -5,10 +5,14 @@ package zpages
 
 import (
 	"context"
+	"html"
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
+	"regexp"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -347,16 +351,185 @@ func TestTracezHandler_ActiveOnlySpan(t *testing.T) {
 	body := w.Body.String()
 
 	// Verify the active span is shown with active count = 1.
-	assert.Contains(t, body, `<a href="tracez?zspanname=active-only-span&ztype=0">1</a>`)
+	assert.Contains(t, body, `<a href="?zspanname=active-only-span&ztype=0">1</a>`)
 
 	// Verify all 9 latency buckets are rendered as cells with 0 count.
 	for i := range defaultBoundaries.numBuckets() {
-		expectedCell := `<a href="tracez?zspanname=active-only-span&ztype=1&zlatencybucket=` + strconv.Itoa(i) + `">0</a>`
+		expectedCell := `<a href="?zspanname=active-only-span&ztype=1&zlatencybucket=` + strconv.Itoa(i) + `">0</a>`
 		assert.Contains(t, body, expectedCell)
 	}
 
 	// Verify error cell renders with closing </a> tag.
-	assert.Contains(t, body, `<a href="tracez?zspanname=active-only-span&ztype=2&zlatencybucket=0">0</a></td>`)
+	assert.Contains(t, body, `<a href="?zspanname=active-only-span&ztype=2&zlatencybucket=0">0</a></td>`)
+}
+
+func TestTracezHandler_CustomMountPaths(t *testing.T) {
+	sp := NewSpanProcessor()
+	defer func() {
+		require.NoError(t, sp.Shutdown(t.Context()))
+	}()
+
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSpanProcessor(sp),
+	)
+	defer func() {
+		require.NoError(t, tp.Shutdown(t.Context()))
+	}()
+
+	tracer := tp.Tracer("test-tracer")
+	ctx := t.Context()
+
+	_, activeSpan := tracer.Start(ctx, "active-span")
+	defer activeSpan.End()
+
+	t0 := time.Unix(1000, 0)
+	latencyDuration := 2 * time.Second
+	latencyBucket := defaultBoundaries.getBucketIndex(latencyDuration)
+	_, latencySpan := tracer.Start(ctx, "latency-span", trace.WithTimestamp(t0))
+	latencySpan.SetAttributes(attribute.String("mount.case", "latency"))
+	latencySpan.End(trace.WithTimestamp(t0.Add(latencyDuration)))
+
+	specialSpanName := `GET /items?a=1&b=2+3"<>`
+	_, errorSpan := tracer.Start(ctx, specialSpanName)
+	errorSpan.SetStatus(codes.Error, "custom mount error")
+	errorSpan.End()
+
+	handler := NewTracezHandler(sp)
+	anchorHrefRe := regexp.MustCompile(`<a href="([^"]+)">`)
+
+	tests := []struct {
+		name         string
+		mountPattern string
+		handler      http.Handler
+		requestURL   string
+		wantPath     string
+	}{
+		{
+			name:         "custom path without trailing slash",
+			mountPattern: "/debug/custom",
+			handler:      handler,
+			requestURL:   "http://example.com/debug/custom",
+			wantPath:     "/debug/custom",
+		},
+		{
+			name:         "custom path with trailing slash",
+			mountPattern: "/debug/custom/",
+			handler:      handler,
+			requestURL:   "http://example.com/debug/custom/",
+			wantPath:     "/debug/custom/",
+		},
+		{
+			name:         "root mount path",
+			mountPattern: "/",
+			handler:      handler,
+			requestURL:   "http://example.com/",
+			wantPath:     "/",
+		},
+		{
+			name:         "custom path with existing query params",
+			mountPattern: "/debug/custom",
+			handler:      handler,
+			requestURL:   "http://example.com/debug/custom?zspanname=other&ztype=1&zlatencybucket=0",
+			wantPath:     "/debug/custom",
+		},
+		{
+			name:         "custom path behind StripPrefix",
+			mountPattern: "/admin/v1/custom",
+			handler:      http.StripPrefix("/admin/v1", handler),
+			requestURL:   "http://example.com/admin/v1/custom",
+			wantPath:     "/admin/v1/custom",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mux := http.NewServeMux()
+			mux.Handle(tt.mountPattern, tt.handler)
+
+			req := httptest.NewRequestWithContext(ctx, http.MethodGet, tt.requestURL, http.NoBody)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			resp := w.Result()
+			defer resp.Body.Close()
+			require.Equal(t, http.StatusOK, resp.StatusCode)
+
+			body := w.Body.String()
+			assert.NotContains(t, body, `href="tracez?`)
+
+			matches := anchorHrefRe.FindAllStringSubmatch(body, -1)
+			require.NotEmpty(t, matches)
+
+			baseURL, err := url.Parse(tt.requestURL)
+			require.NoError(t, err)
+
+			var activeHref, latencyHref, errorHref string
+			for _, m := range matches {
+				rawHref := html.UnescapeString(m[1])
+				assert.True(t, strings.HasPrefix(rawHref, "?"), "expected relative query href, got %q", rawHref)
+
+				parsed, err := url.Parse(rawHref)
+				require.NoError(t, err)
+				q := parsed.Query()
+				switch {
+				case q.Get(spanNameQueryField) == "active-span" && q.Get(spanTypeQueryField) == "0":
+					activeHref = rawHref
+				case q.Get(spanNameQueryField) == "latency-span" &&
+					q.Get(spanTypeQueryField) == "1" &&
+					q.Get(spanLatencyBucketQueryField) == strconv.Itoa(latencyBucket):
+					latencyHref = rawHref
+				case q.Get(spanNameQueryField) == specialSpanName && q.Get(spanTypeQueryField) == "2":
+					errorHref = rawHref
+				}
+			}
+
+			linkChecks := []struct {
+				name        string
+				href        string
+				wantContain []string
+			}{
+				{
+					name:        "active span link",
+					href:        activeHref,
+					wantContain: []string{"Span Name: active-span", "1 Requests"},
+				},
+				{
+					name:        "latency span link",
+					href:        latencyHref,
+					wantContain: []string{"Span Name: latency-span", "1 Requests", "mount.case=latency"},
+				},
+				{
+					name:        "error span link with special characters",
+					href:        errorHref,
+					wantContain: []string{`Span Name: GET /items?a=1&amp;b=2&#43;3&#34;&lt;&gt;`, "1 Requests", "custom mount error"},
+				},
+			}
+
+			for _, lc := range linkChecks {
+				t.Run(lc.name, func(t *testing.T) {
+					require.NotEmpty(t, lc.href, "missing link for %s", lc.name)
+
+					refURL, err := url.Parse(lc.href)
+					require.NoError(t, err)
+					resolved := baseURL.ResolveReference(refURL)
+					assert.Equal(t, tt.wantPath, resolved.Path)
+
+					followReq := httptest.NewRequestWithContext(t.Context(), http.MethodGet, resolved.String(), http.NoBody)
+					followW := httptest.NewRecorder()
+					mux.ServeHTTP(followW, followReq)
+
+					followResp := followW.Result()
+					defer followResp.Body.Close()
+					require.Equal(t, http.StatusOK, followResp.StatusCode)
+
+					followBody := followW.Body.String()
+					for _, want := range lc.wantContain {
+						assert.Contains(t, followBody, want)
+					}
+				})
+			}
+		})
+	}
 }
 
 func TestSpanRows_DoesNotMutateSpan(t *testing.T) {
