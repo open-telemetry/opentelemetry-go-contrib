@@ -18,6 +18,8 @@ import (
 // ScopeName is the instrumentation scope name.
 const ScopeName = "go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
+// baseConfig represents the shared configuration options available for both
+// HTTP handlers and transports.
 type baseConfig struct {
 	Tracer             trace.Tracer
 	Meter              metric.Meter
@@ -28,6 +30,13 @@ type baseConfig struct {
 	TracerProvider     trace.TracerProvider
 	MeterProvider      metric.MeterProvider
 	MetricAttributesFn func(*http.Request) []attribute.KeyValue
+}
+
+func newBaseConfig() baseConfig {
+	return baseConfig{
+		Propagators:   otel.GetTextMapPropagator(),
+		MeterProvider: otel.GetMeterProvider(),
+	}
 }
 
 func (c *baseConfig) init() {
@@ -103,10 +112,7 @@ func (o transportOptionFunc) applyTransport(c *transportConfig) {
 // newHandlerConfig creates a new handlerConfig struct and applies opts to it.
 func newHandlerConfig(opts ...HandlerOption) *handlerConfig {
 	c := &handlerConfig{
-		baseConfig: baseConfig{
-			Propagators:   otel.GetTextMapPropagator(),
-			MeterProvider: otel.GetMeterProvider(),
-		},
+		baseConfig: newBaseConfig(),
 	}
 	for _, opt := range opts {
 		opt.applyHandler(c)
@@ -118,10 +124,7 @@ func newHandlerConfig(opts ...HandlerOption) *handlerConfig {
 // newTransportConfig creates a new transportConfig struct and applies opts to it.
 func newTransportConfig(opts ...TransportOption) *transportConfig {
 	c := &transportConfig{
-		baseConfig: baseConfig{
-			Propagators:   otel.GetTextMapPropagator(),
-			MeterProvider: otel.GetMeterProvider(),
-		},
+		baseConfig: newBaseConfig(),
 	}
 	for _, opt := range opts {
 		opt.applyTransport(c)
@@ -160,8 +163,8 @@ func WithPublicEndpointFn(fn func(*http.Request) bool) HandlerOption {
 	})
 }
 
-// WithPropagators configures specific propagators. If this
-// option isn't specified, then the global TextMapPropagator is used.
+// WithPropagators configures specific propagators used by the handler or transport.
+// If this option isn't specified, then the global TextMapPropagator is used.
 func WithPropagators(ps propagation.TextMapPropagator) Option {
 	return optionFunc(func(c *baseConfig) {
 		if ps != nil {
@@ -171,7 +174,7 @@ func WithPropagators(ps propagation.TextMapPropagator) Option {
 }
 
 // WithSpanOptions configures an additional set of
-// trace.SpanOptions, which are applied to each new span.
+// trace.SpanOptions, which are applied to each new span created by the handler or transport.
 func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 	return optionFunc(func(c *baseConfig) {
 		c.SpanStartOptions = append(c.SpanStartOptions, opts...)
@@ -224,7 +227,8 @@ func WithMessageEvents(events ...Event) HandlerOption {
 }
 
 // WithSpanNameFormatter takes a function that will be called on every
-// request and the returned string will become the Span Name.
+// request processed by the handler or transport, and the returned string will
+// become the Span Name.
 //
 // When using [http.ServeMux] (or any middleware that sets the Pattern of [http.Request]),
 // the span name formatter will run twice. Once when the span is created, and

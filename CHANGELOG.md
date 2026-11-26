@@ -128,6 +128,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Removed
 
+- Remove support for passing `Option` directly to `NewHandler`, `NewMiddleware`, and `NewTransport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Use `HandlerOption` and `TransportOption` instead. (#10364)
 - Remove the deprecated runtime metrics and the `OTEL_GO_X_DEPRECATED_RUNTIME_METRICS` environment variable in `go.opentelemetry.io/contrib/instrumentation/runtime`. (#10060)
 - Remove support for the `rpc/old` and `rpc/dup` values of `OTEL_SEMCONV_STABILITY_OPT_IN` in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`. (#9908)
 - Remove the exported `Transport` type from `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. Use the `http.RoundTripper` returned by `NewTransport` instead. (#9955)
