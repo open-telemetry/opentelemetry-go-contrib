@@ -1,9 +1,9 @@
 module go.opentelemetry.io/contrib/detectors/consul
 
-go 1.26.0
+go 1.26.10
 
 require (
-	github.com/hashicorp/consul/api v1.32.1
+	github.com/hashicorp/consul/api v1.35.1
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
 	go.opentelemetry.io/otel/sdk v1.47.1-0.20261119094326-34915e1fc1ec
@@ -14,6 +14,7 @@ require (
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
+	github.com/go-viper/mapstructure/v2 v2.5.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
@@ -27,7 +28,6 @@ require (
 	github.com/mattn/go-colorable v0.1.16 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
-	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.2 // indirect
 	go.opentelemetry.io/otel/log v1.47.1-0.20261119094326-34915e1fc1ec // indirect
 	go.opentelemetry.io/otel/metric v1.47.1-0.20261119094326-34915e1fc1ec // indirect
