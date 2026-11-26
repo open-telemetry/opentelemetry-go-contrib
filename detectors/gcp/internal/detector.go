@@ -40,6 +40,7 @@ const (
 	CloudRun
 	CloudRunJob
 	CloudRunWorkerPool
+	CloudRunInstance
 	CloudFunctions
 	AppEngineStandard
 	AppEngineFlex
@@ -79,14 +80,19 @@ func (d *Detector) CloudPlatform(ctx context.Context) Platform {
 		return BareMetalSolution
 	case d.onGKE(ctx):
 		return GKE
-	case d.onCloudFunctions(ctx):
-		return CloudFunctions
+	// Check Cloud Run before Cloud Functions because Cloud Run functions
+	// (including Cloud Functions 2nd gen) set both K_CONFIGURATION and
+	// FUNCTION_TARGET, whereas Cloud Functions 1st gen only sets FUNCTION_TARGET.
 	case d.onCloudRun(ctx):
 		return CloudRun
+	case d.onCloudFunctions(ctx):
+		return CloudFunctions
 	case d.onCloudRunJob(ctx):
 		return CloudRunJob
 	case d.onCloudRunWorkerPool(ctx):
 		return CloudRunWorkerPool
+	case d.onCloudRunInstance(ctx):
+		return CloudRunInstance
 	case d.onAppEngineStandard(ctx):
 		return AppEngineStandard
 	case d.onAppEngine(ctx):

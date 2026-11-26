@@ -54,7 +54,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 )
 
 // NewLogger returns a new [slog.Logger] backed by a new [Handler]. See
@@ -485,6 +485,11 @@ func (b *kvBuffer) AddAttr(attr slog.Attr) bool {
 	}
 
 	if attr.Key == "" {
+		// A LogValuer can resolve to a group or to nothing, so resolve before
+		// applying the empty-key rules below. Named LogValuer attributes are
+		// resolved in convert.
+		attr.Value = attr.Value.Resolve()
+
 		if attr.Value.Kind() == slog.KindGroup {
 			// A Handler should inline the Attrs of a group with an empty key.
 			for _, a := range attr.Value.Group() {

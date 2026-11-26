@@ -14,7 +14,7 @@ import (
 	"context"
 
 	ocpropagation "go.opencensus.io/trace/propagation"
-	"go.opentelemetry.io/otel/bridge/opencensus"
+	"go.opentelemetry.io/otel/bridge/opencensus" //nolint:staticcheck // Retain OpenCensus compatibility until this propagator is removed.
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 )
