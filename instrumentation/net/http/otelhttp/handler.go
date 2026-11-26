@@ -203,6 +203,7 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	}
 
 	rCtx := r.WithContext(ctx)
+	var routeUpdated bool
 	defer func() {
 		// Copy MultipartForm back to the original request so net/http can
 		// find and remove any temp files ParseMultipartForm created on the
@@ -212,18 +213,14 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 		if rCtx.MultipartForm != nil {
 			r.MultipartForm = rCtx.MultipartForm
 		}
+		if !routeUpdated {
+			h.updateSpanRoute(span, route, r, rCtx)
+		}
 	}()
 	next.ServeHTTP(w, rCtx)
 
-	var capturedRoute string
-	if route != nil {
-		route.RLock()
-		capturedRoute = route.route
-		route.RUnlock()
-	}
-	if capturedRoute == "" && rCtx.Pattern != "" {
-		span.SetName(h.spanNameFormatter(h.operation, rCtx))
-	}
+	routeUpdated = true
+	capturedRoute := h.updateSpanRoute(span, route, r, rCtx)
 
 	statusCode := rww.StatusCode()
 	bytesWritten := rww.BytesWritten()
@@ -251,6 +248,26 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 			RequestDuration: time.Since(requestStartTime),
 		},
 	})
+}
+
+func (h *middleware) updateSpanRoute(span trace.Span, route *routeContext, origReq, rCtx *http.Request) string {
+	var capturedRoute string
+	if route != nil {
+		route.RLock()
+		capturedRoute = route.route
+		route.RUnlock()
+	}
+	if capturedRoute == "" && rCtx.Pattern != "" {
+		span.SetName(h.spanNameFormatter(h.operation, rCtx))
+		// RequestTraceAttrs already set http.route from origReq.Pattern before
+		// spanStartOptions; only update it when Pattern changed during ServeHTTP.
+		if rCtx.Pattern != origReq.Pattern {
+			if routeStr := semconv.HTTPRoute(rCtx.Pattern); routeStr != "" {
+				span.SetAttributes(h.semconv.Route(routeStr))
+			}
+		}
+	}
+	return capturedRoute
 }
 
 func (h *middleware) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {

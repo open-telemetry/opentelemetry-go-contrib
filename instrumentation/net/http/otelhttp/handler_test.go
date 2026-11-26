@@ -889,6 +889,11 @@ func TestHandlerServeMuxRouteMetric(t *testing.T) {
 	require.Len(t, rm.ScopeMetrics[0].Metrics, 3)
 
 	wantRoute := attribute.String("http.route", "/foo/{id}")
+	spans := spanRecorder.Ended()
+	require.Len(t, spans, 1)
+	assert.Equal(t, "GET /foo/{id}", spans[0].Name())
+	assert.Contains(t, spans[0].Attributes(), wantRoute, "server span should carry http.route")
+
 	for _, m := range rm.ScopeMetrics[0].Metrics {
 		switch data := m.Data.(type) {
 		case metricdata.Histogram[int64]:
@@ -901,6 +906,177 @@ func TestHandlerServeMuxRouteMetric(t *testing.T) {
 			t.Fatalf("unexpected metric data type %T for metric %s", m.Data, m.Name)
 		}
 	}
+}
+
+func TestHandlerServeMuxRouteSpanAttribute(t *testing.T) {
+	testCases := []struct {
+		name           string
+		handler        func() http.Handler
+		opts           []Option
+		method         string
+		target         string
+		initialPattern string
+		wantSpanName   string
+		wantRoute      string
+		wantHasRoute   bool
+	}{
+		{
+			name: "method-prefixed ServeMux pattern sets http.route",
+			handler: func() http.Handler {
+				mux := http.NewServeMux()
+				mux.HandleFunc("GET /items/{id}", func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				})
+				return mux
+			},
+			method:       http.MethodGet,
+			target:       "http://example.com/items/42",
+			wantSpanName: "GET /items/{id}",
+			wantRoute:    "/items/{id}",
+			wantHasRoute: true,
+		},
+		{
+			name: "host-prefixed ServeMux pattern strips host from http.route",
+			handler: func() http.Handler {
+				mux := http.NewServeMux()
+				mux.HandleFunc("example.com/items/{id}", func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				})
+				return mux
+			},
+			method:       http.MethodGet,
+			target:       "http://example.com/items/42",
+			wantSpanName: "GET /items/{id}",
+			wantRoute:    "/items/{id}",
+			wantHasRoute: true,
+		},
+		{
+			name: "nested ServeMux updates http.route to matched inner pattern",
+			handler: func() http.Handler {
+				inner := http.NewServeMux()
+				inner.HandleFunc("GET /api/users/{id}", func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				})
+				return inner
+			},
+			method:         http.MethodGet,
+			target:         "http://example.com/api/users/99",
+			initialPattern: "/api/",
+			wantSpanName:   "GET /api/users/{id}",
+			wantRoute:      "/api/users/{id}",
+			wantHasRoute:   true,
+		},
+		{
+			name: "unmatched ServeMux request omits http.route",
+			handler: func() http.Handler {
+				mux := http.NewServeMux()
+				mux.HandleFunc("GET /items/{id}", func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				})
+				return mux
+			},
+			method:       http.MethodGet,
+			target:       "http://example.com/unknown",
+			wantSpanName: "GET",
+			wantHasRoute: false,
+		},
+		{
+			name: "pattern without slash omits empty http.route",
+			handler: func() http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					r.Pattern = "example.com"
+					w.WriteHeader(http.StatusOK)
+				})
+			},
+			method:       http.MethodGet,
+			target:       "http://example.com/items/42",
+			wantSpanName: "GET",
+			wantHasRoute: false,
+		},
+		{
+			name: "unchanged pre-populated pattern preserves WithSpanOptions http.route",
+			handler: func() http.Handler {
+				return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				})
+			},
+			opts: []Option{
+				WithSpanOptions(trace.WithAttributes(attribute.String("http.route", "/custom"))),
+			},
+			method:         http.MethodGet,
+			target:         "http://example.com/items/42",
+			initialPattern: "GET /items/{id}",
+			wantSpanName:   "GET /items/{id}",
+			wantRoute:      "/custom",
+			wantHasRoute:   true,
+		},
+		{
+			name: "RouteMiddleware inner route takes precedence over outer ServeMux pattern",
+			handler: func() http.Handler {
+				inner := http.NewServeMux()
+				inner.HandleFunc("GET /api/users/{id}", func(w http.ResponseWriter, _ *http.Request) {
+					w.WriteHeader(http.StatusOK)
+				})
+				outer := http.NewServeMux()
+				outer.Handle("/api/", copyRouteRequest(RouteMiddleware(inner)))
+				return outer
+			},
+			opts: []Option{
+				WithRouteTracking(),
+			},
+			method:       http.MethodGet,
+			target:       "http://example.com/api/users/99",
+			wantSpanName: "GET /api/users/{id}",
+			wantRoute:    "/api/users/{id}",
+			wantHasRoute: true,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			sr := tracetest.NewSpanRecorder()
+			tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+			opts := append([]Option{WithTracerProvider(tp)}, tc.opts...)
+			h := NewHandler(tc.handler(), "test_handler", opts...)
+
+			r := httptest.NewRequestWithContext(t.Context(), tc.method, tc.target, http.NoBody)
+			r.Pattern = tc.initialPattern
+			h.ServeHTTP(httptest.NewRecorder(), r)
+
+			spans := sr.Ended()
+			require.Len(t, spans, 1)
+			assert.Equal(t, tc.wantSpanName, spans[0].Name())
+
+			attrSet := attribute.NewSet(spans[0].Attributes()...)
+			gotRoute, ok := attrSet.Value("http.route")
+			assert.Equal(t, tc.wantHasRoute, ok)
+			if tc.wantHasRoute {
+				assert.Equal(t, tc.wantRoute, gotRoute.AsString())
+			}
+		})
+	}
+}
+
+func TestHandlerServeMuxRouteSpanAttribute_PanicPreservation(t *testing.T) {
+	sr := tracetest.NewSpanRecorder()
+	tp := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(sr))
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("GET /panic/{id}", func(http.ResponseWriter, *http.Request) {
+		panic("handler panic")
+	})
+	h := NewHandler(mux, "test_handler", WithTracerProvider(tp))
+
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com/panic/123", http.NoBody)
+	assert.Panics(t, func() {
+		h.ServeHTTP(httptest.NewRecorder(), r)
+	})
+
+	spans := sr.Ended()
+	require.Len(t, spans, 1)
+	assert.Equal(t, "GET /panic/{id}", spans[0].Name())
+	assert.Contains(t, spans[0].Attributes(), attribute.String("http.route", "/panic/{id}"))
 }
 
 func TestHandlerMetricsIgnoreRequestHost(t *testing.T) {
