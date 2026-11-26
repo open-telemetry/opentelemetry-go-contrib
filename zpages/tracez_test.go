@@ -359,6 +359,73 @@ func TestTracezHandler_ActiveOnlySpan(t *testing.T) {
 	assert.Contains(t, body, `<a href="tracez?zspanname=active-only-span&ztype=2&zlatencybucket=0">0</a></td>`)
 }
 
+func TestTracezHandler_AfterTracerProviderShutdown(t *testing.T) {
+	sp := NewSpanProcessor()
+	tp := sdktrace.NewTracerProvider(
+		sdktrace.WithSampler(sdktrace.AlwaysSample()),
+		sdktrace.WithSpanProcessor(sp),
+	)
+
+	tracer := tp.Tracer("test-tracer")
+	ctx := t.Context()
+
+	_, completedSpan := tracer.Start(ctx, "mixed-span")
+	completedSpan.SetStatus(codes.Error, "recorded before shutdown")
+	completedSpan.End()
+
+	_, activeMixed := tracer.Start(ctx, "mixed-span")
+	_, activeOnly := tracer.Start(ctx, "active-only-span")
+
+	handler := NewTracezHandler(sp)
+
+	// Before shutdown, both active spans are reported.
+	req := httptest.NewRequestWithContext(ctx, http.MethodGet, "/tracez", http.NoBody)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	resp := w.Result()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
+	assert.Contains(t, w.Body.String(), `<a href="tracez?zspanname=active-only-span&ztype=0">1</a>`)
+	assert.Contains(t, w.Body.String(), `<a href="tracez?zspanname=mixed-span&ztype=0">1</a>`)
+
+	// Shut down the TracerProvider while spans are still active.
+	require.NoError(t, tp.Shutdown(ctx))
+
+	// End the spans after provider shutdown; the handler outlives the provider.
+	activeMixed.End()
+	activeOnly.End()
+
+	// Summary page omits both active-only and previously completed spans after shutdown.
+	req = httptest.NewRequestWithContext(ctx, http.MethodGet, "/tracez", http.NoBody)
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	resp = w.Result()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
+	body := w.Body.String()
+	assert.NotContains(t, body, "active-only-span")
+	assert.NotContains(t, body, "mixed-span")
+
+	// Querying active spans for active-only-span returns 0 requests.
+	req = httptest.NewRequestWithContext(ctx, http.MethodGet, "/tracez?zspanname=active-only-span&ztype=0", http.NoBody)
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	resp = w.Result()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
+	assert.Contains(t, w.Body.String(), "0 Requests")
+
+	// Querying completed error samples for mixed-span returns 0 requests after shutdown.
+	req = httptest.NewRequestWithContext(ctx, http.MethodGet, "/tracez?zspanname=mixed-span&ztype=2", http.NoBody)
+	w = httptest.NewRecorder()
+	handler.ServeHTTP(w, req)
+	resp = w.Result()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
+	assert.Contains(t, w.Body.String(), "0 Requests")
+	assert.NotContains(t, w.Body.String(), "recorded before shutdown")
+}
+
 func TestSpanRows_DoesNotMutateSpan(t *testing.T) {
 	sp := NewSpanProcessor()
 	defer func() {
