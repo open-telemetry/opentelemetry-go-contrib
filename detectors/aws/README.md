@@ -1,5 +1,10 @@
 # AWS Resource Detectors
 
+The following AWS detectors also have their own documentation:
+
+- [AWS Lambda](./lambda/README.md)
+- [AWS Elastic Beanstalk](./elasticbeanstalk/README.md)
+
 ## EC2
 
 Sample code snippet to initialize EC2 resource detector
