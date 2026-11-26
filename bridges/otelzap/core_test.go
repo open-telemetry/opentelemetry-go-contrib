@@ -376,6 +376,36 @@ func TestCore(t *testing.T) {
 		})
 	})
 
+	t.Run("WithEmptyNamespace", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.With(zap.String("x", "1")).
+			With(zap.Namespace(""), zap.String("y", "2")).
+			With(zap.String("z", "3")).
+			Info(testMessage, zap.String("w", "4"))
+
+		// OpenTelemetry drops a top-level attribute with an empty key, so
+		// an empty namespace opened by With is closed at the end of that
+		// call. The fields of later calls stay top-level attributes.
+		assertNamespaceRecord(t, rec, []attribute.KeyValue{
+			attribute.String("x", "1"),
+			attribute.Map("", attribute.String("y", "2")),
+			attribute.String("z", "3"),
+			attribute.String("w", "4"),
+		})
+	})
+
+	t.Run("WithNamespaceSkip", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.With(zap.Namespace("a"), zap.String("x", "1")).
+			Info(testMessage, zap.Skip(), zap.Error(nil))
+
+		assertNamespaceRecord(t, rec, []attribute.KeyValue{
+			attribute.Map("a", attribute.String("x", "1")),
+		})
+	})
+
 	t.Run("Named", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 

@@ -64,10 +64,21 @@ func namespaceAttrs(ns *namespace) []attribute.KeyValue {
 	if ns == nil {
 		return nil
 	}
-	m := newObjectEncoder(1)
-	m.open(ns, 0)
-	m.calculate(m.root)
-	return m.root.attrs
+	return []attribute.KeyValue{namespaceAttr(ns)}
+}
+
+// namespaceAttr returns the namespace chain ns as a map attribute. The maps
+// are built from the innermost namespace outward. [attribute.Map] copies its
+// arguments, so the attributes of a namespace are copied only to append the
+// map of its child.
+func namespaceAttr(ns *namespace) attribute.KeyValue {
+	if ns.next == nil {
+		return attribute.Map(ns.name, ns.attrs...)
+	}
+	attrs := make([]attribute.KeyValue, len(ns.attrs), len(ns.attrs)+1)
+	copy(attrs, ns.attrs)
+	attrs = append(attrs, namespaceAttr(ns.next))
+	return attribute.Map(ns.name, attrs...)
 }
 
 // It iterates to the end of the linked list and appends namespace data.

@@ -188,9 +188,18 @@ func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 			cloned.ctx = ctx
 		}
 		if enc != nil {
+			ns := enc.root.next
+			if ns != nil && ns.name == "" {
+				// OpenTelemetry drops a top-level attribute with an empty
+				// key, so fields added to an empty namespace by later calls
+				// would be lost. Close it at the end of this call and add
+				// later fields to the root.
+				enc.calculate(enc.root)
+				ns = nil
+			}
 			cloned.attr = append(cloned.attr, enc.root.attrs...)
-			cloned.ns = enc.root.next
-			cloned.nsAttr = namespaceAttrs(cloned.ns)
+			cloned.ns = ns
+			cloned.nsAttr = namespaceAttrs(ns)
 		}
 		if err != nil {
 			cloned.err = err
@@ -304,6 +313,10 @@ func convertField(fields []zapcore.Field, ns *namespace) (context.Context, *obje
 	var enc *objectEncoder
 	var errField error
 	for _, field := range fields {
+		if field.Type == zapcore.SkipType {
+			// zap.Skip, also returned by zap.Error(nil), adds nothing.
+			continue
+		}
 		if ctxFld, ok := field.Interface.(context.Context); ok {
 			ctx = ctxFld
 			continue
