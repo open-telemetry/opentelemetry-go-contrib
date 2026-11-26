@@ -187,9 +187,11 @@ func (o *Core) With(fields []zapcore.Field) zapcore.Core {
 		if ctx != nil {
 			cloned.ctx = ctx
 		}
-		cloned.attr = append(cloned.attr, enc.root.attrs...)
-		cloned.ns = enc.root.next
-		cloned.nsAttr = namespaceAttrs(cloned.ns)
+		if enc != nil {
+			cloned.attr = append(cloned.attr, enc.root.attrs...)
+			cloned.ns = enc.root.next
+			cloned.nsAttr = namespaceAttrs(cloned.ns)
+		}
 		if err != nil {
 			cloned.err = err
 		}
@@ -248,14 +250,22 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 		if ctx != nil {
 			emitCtx = ctx
 		}
-		enc.calculate(enc.root)
-		attrbuf = enc.root.attrs
+		if enc != nil {
+			enc.calculate(enc.root)
+			attrbuf = enc.root.attrs
+		}
 		if err != nil {
 			recErr = err
 		}
 	}
 
 	r.AddAttributes(o.attr...)
+	if o.ns != nil {
+		// The fields of the log call belong to the namespace opened by With,
+		// so attrbuf only holds that namespace. Emit it with the other bound
+		// attributes, before the caller and stack attributes.
+		r.AddAttributes(attrbuf...)
+	}
 	if ent.Caller.Defined {
 		r.AddAttributes(
 			attribute.String(string(semconv.CodeFilePathKey), ent.Caller.File),
@@ -270,7 +280,9 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 		}
 		r.AddAttributes(attribute.String(string(stacktraceKey), ent.Stack))
 	}
-	r.AddAttributes(attrbuf...)
+	if o.ns == nil {
+		r.AddAttributes(attrbuf...)
+	}
 	if recErr != nil {
 		r.SetErr(recErr)
 	}
@@ -285,11 +297,11 @@ func (o *Core) Write(ent zapcore.Entry, fields []zapcore.Field) error {
 
 // convertField adds fields to an encoder that continues the namespace ns, if
 // any. The namespaces are left open: the attributes of enc.root do not
-// include them until [objectEncoder.calculate] is called.
+// include them until [objectEncoder.calculate] is called. The encoder is nil
+// if all fields are consumed as the context or the error.
 func convertField(fields []zapcore.Field, ns *namespace) (context.Context, *objectEncoder, error) {
 	var ctx context.Context
-	enc := newObjectEncoder(len(fields))
-	enc.open(ns, len(fields))
+	var enc *objectEncoder
 	var errField error
 	for _, field := range fields {
 		if ctxFld, ok := field.Interface.(context.Context); ok {
@@ -302,10 +314,26 @@ func convertField(fields []zapcore.Field, ns *namespace) (context.Context, *obje
 			}
 			continue
 		}
+		if enc == nil {
+			enc = newFieldEncoder(ns, len(fields))
+		}
 		field.AddTo(enc)
 	}
 
 	return ctx, enc, errField
+}
+
+// newFieldEncoder returns an encoder for n fields that continues the
+// namespace ns, if any.
+func newFieldEncoder(ns *namespace, n int) *objectEncoder {
+	if ns == nil {
+		return newObjectEncoder(n)
+	}
+	// The fields go to the innermost namespace, and calculate only adds the
+	// outermost one to the root.
+	enc := newObjectEncoder(1)
+	enc.open(ns, n)
+	return enc
 }
 
 func hasExceptionAttributes(attrs []attribute.KeyValue) bool {
