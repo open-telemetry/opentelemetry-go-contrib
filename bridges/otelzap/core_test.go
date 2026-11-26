@@ -480,6 +480,47 @@ func TestCoreErrorFieldSetErrBehavior(t *testing.T) {
 	})
 }
 
+func TestCoreSkipFieldContext(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc)
+
+	// A zap tee can pass the context in a field that the other cores skip.
+	skipCtx := func(ctx context.Context) zap.Field {
+		return zap.Field{Type: zapcore.SkipType, Interface: ctx}
+	}
+	withCtx := context.WithValue(t.Context(), testEntry, true)
+	writeCtx := context.WithValue(t.Context(), testEntry, false)
+
+	logger.With(skipCtx(withCtx)).Info(testMessage)
+	logger.Info(testMessage, skipCtx(writeCtx))
+
+	want := logtest.Recording{
+		logtest.Scope{Name: loggerName}: {
+			{
+				Context:      withCtx,
+				Body:         attribute.StringValue(testMessage),
+				Severity:     log.SeverityInfo,
+				SeverityText: zap.InfoLevel.String(),
+			},
+			{
+				Context:      writeCtx,
+				Body:         attribute.StringValue(testMessage),
+				Severity:     log.SeverityInfo,
+				SeverityText: zap.InfoLevel.String(),
+			},
+		},
+	}
+	logtest.AssertEqual(
+		t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+			return cp
+		}),
+	)
+}
+
 func TestCoreWriteContextConcurrentSafe(t *testing.T) {
 	rec := logtest.NewRecorder()
 	zc := NewCore(loggerName, WithLoggerProvider(rec))

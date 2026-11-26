@@ -313,12 +313,13 @@ func convertField(fields []zapcore.Field, ns *namespace) (context.Context, *obje
 	var enc *objectEncoder
 	var errField error
 	for _, field := range fields {
-		if field.Type == zapcore.SkipType {
-			// zap.Skip, also returned by zap.Error(nil), adds nothing.
-			continue
-		}
 		if ctxFld, ok := field.Interface.(context.Context); ok {
 			ctx = ctxFld
+			continue
+		}
+		if field.Type == zapcore.SkipType {
+			// zap.Skip, also returned by zap.Error(nil), adds no
+			// attribute. A skipped field can still carry the context.
 			continue
 		}
 		if field.Type == zapcore.ErrorType && field.Key == "error" {
