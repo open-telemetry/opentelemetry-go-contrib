@@ -46,7 +46,7 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/log"
-	semconv "go.opentelemetry.io/otel/semconv/v1.43.0"
+	semconv "go.opentelemetry.io/otel/semconv/v1.45.0"
 	"go.uber.org/zap/zapcore"
 )
 

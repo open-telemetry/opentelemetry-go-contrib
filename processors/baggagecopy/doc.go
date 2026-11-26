@@ -13,9 +13,9 @@
 // If the external services also have a Baggage span processor, the keys and
 // values will appear in those child spans as well.
 //
-// The LogProcessor retrieves [Baggage] from the the context provided when
+// The LogProcessor retrieves [Baggage] from the context provided when
 // emitting the log and adds them as attributes to the log.
-// Baggage may be propagated to external services via propagation headers.
+// Baggage may be propagated to external services via propagation headers
 // and be used to add context to logs if the service also has a Baggage log processor.
 //
 // Do not put sensitive information in Baggage.
@@ -26,7 +26,7 @@
 //
 // Add the log processor when configuring the logger provider.
 //
-// The convenience function [AllowAllBaggageKeys] is provided to
+// The convenience function [AllowAllMembers] is provided to
 // allow all baggage keys to be copied. Alternatively, you can
 // provide a custom baggage key predicate to select which baggage keys you want
 // to copy.
