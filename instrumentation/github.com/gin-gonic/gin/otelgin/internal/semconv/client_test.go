@@ -416,3 +416,61 @@ func TestHTTPClientNewMethod(t *testing.T) {
 		})
 	}
 }
+
+func TestHTTPClient_SpanName(t *testing.T) {
+	tests := []struct {
+		name     string
+		method   string
+		wantName string
+	}{
+		{
+			name:     "standard method",
+			method:   http.MethodGet,
+			wantName: "GET",
+		},
+		{
+			name:     "lowercase standard method",
+			method:   "get",
+			wantName: "GET",
+		},
+		{
+			name:     "unknown method",
+			method:   "CUSTOM",
+			wantName: "HTTP",
+		},
+		{
+			name:     "empty method",
+			method:   "",
+			wantName: "HTTP",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := &http.Request{Method: tt.method}
+
+			got := HTTPClient{}.SpanName(req)
+			assert.Equal(t, tt.wantName, got)
+		})
+	}
+}
+
+func TestHTTPMethodSpanName(t *testing.T) {
+	tests := []struct {
+		name   string
+		method string
+		want   string
+	}{
+		{name: "GET", method: "GET", want: "GET"},
+		{name: "lowercase GET", method: "get", want: "GET"},
+		{name: "POST", method: "POST", want: "POST"},
+		{name: "unknown method", method: "CUSTOM", want: "HTTP"},
+		{name: "empty method", method: "", want: "HTTP"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, httpMethodSpanName(tt.method))
+		})
+	}
+}

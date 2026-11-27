@@ -42,63 +42,27 @@ func TestTransportFormatter(t *testing.T) {
 		method   string
 		expected string
 	}{
-		{
-			"GET method",
-			http.MethodGet,
-			"HTTP GET",
-		},
-		{
-			"HEAD method",
-			http.MethodHead,
-			"HTTP HEAD",
-		},
-		{
-			"POST method",
-			http.MethodPost,
-			"HTTP POST",
-		},
-		{
-			"PUT method",
-			http.MethodPut,
-			"HTTP PUT",
-		},
-		{
-			"PATCH method",
-			http.MethodPatch,
-			"HTTP PATCH",
-		},
-		{
-			"DELETE method",
-			http.MethodDelete,
-			"HTTP DELETE",
-		},
-		{
-			"CONNECT method",
-			http.MethodConnect,
-			"HTTP CONNECT",
-		},
-		{
-			"OPTIONS method",
-			http.MethodOptions,
-			"HTTP OPTIONS",
-		},
-		{
-			"TRACE method",
-			http.MethodTrace,
-			"HTTP TRACE",
-		},
+		{"GET method", http.MethodGet, "GET"},
+		{"HEAD method", http.MethodHead, "HEAD"},
+		{"POST method", http.MethodPost, "POST"},
+		{"PUT method", http.MethodPut, "PUT"},
+		{"PATCH method", http.MethodPatch, "PATCH"},
+		{"DELETE method", http.MethodDelete, "DELETE"},
+		{"CONNECT method", http.MethodConnect, "CONNECT"},
+		{"OPTIONS method", http.MethodOptions, "OPTIONS"},
+		{"TRACE method", http.MethodTrace, "TRACE"},
+		{"unknown method", "CUSTOM", "HTTP"},
+		{"empty method", "", "HTTP"},
 	}
 
 	for _, tc := range httpMethods {
 		t.Run(tc.name, func(t *testing.T) {
-			r, err := http.NewRequestWithContext(t.Context(), tc.method, "http://localhost/", http.NoBody)
-			if err != nil {
-				t.Fatal(err)
-			}
-			formattedName := "HTTP " + r.Method
+			r := &http.Request{Method: tc.method}
+
+			formattedName := defaultTransportFormatter("", r)
 
 			if formattedName != tc.expected {
-				t.Fatalf("unexpected name: got %s, expected %s", formattedName, tc.expected)
+				t.Errorf("unexpected name: got %q, want %q", formattedName, tc.expected)
 			}
 		})
 	}
@@ -732,7 +696,7 @@ func TestTransportUsesFormatter(t *testing.T) {
 	spans := spanRecorder.Ended()
 	require.NotEmpty(t, spans)
 	spanName := spans[0].Name()
-	expectedName := "HTTP GET"
+	expectedName := "GET"
 	if spanName != expectedName {
 		t.Fatalf("unexpected name: got %s, expected %s", spanName, expectedName)
 	}
@@ -834,7 +798,7 @@ func TestTransportRequestWithTraceContext(t *testing.T) {
 	require.Len(t, spans, 2)
 
 	assert.Equal(t, "test_span", spans[0].Name())
-	assert.Equal(t, "HTTP GET", spans[1].Name())
+	assert.Equal(t, "GET", spans[1].Name())
 	assert.NotEmpty(t, spans[1].Parent().SpanID())
 	assert.Equal(t, spans[0].SpanContext().SpanID(), spans[1].Parent().SpanID())
 }
@@ -896,7 +860,7 @@ func TestWithHTTPTrace(t *testing.T) {
 
 	assert.Equal(t, "httptrace.GetConn", spans[0].Name())
 	assert.Equal(t, "test_span", spans[1].Name())
-	assert.Equal(t, "HTTP GET", spans[2].Name())
+	assert.Equal(t, "GET", spans[2].Name())
 	assert.NotEmpty(t, spans[0].Parent().SpanID())
 	assert.NotEmpty(t, spans[2].Parent().SpanID())
 	assert.Equal(t, spans[2].SpanContext().SpanID(), spans[0].Parent().SpanID())
