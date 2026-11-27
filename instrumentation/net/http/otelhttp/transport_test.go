@@ -2316,3 +2316,49 @@ func TestTransportErrorTypeMetricAttribute(t *testing.T) {
 		assert.NotEqual(t, "_OTHER", errorTypeVal.AsString())
 	}
 }
+
+func TestTransportHTTPStatusErrorTypeMetricAttribute(t *testing.T) {
+	ctx := t.Context()
+	reader := sdkmetric.NewManualReader()
+	provider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
+	defer func() {
+		assert.NoError(t, provider.Shutdown(ctx))
+	}()
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer ts.Close()
+
+	r, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL, http.NoBody)
+	require.NoError(t, err)
+
+	transport := NewTransport(http.DefaultTransport, WithMeterProvider(provider))
+	client := http.Client{Transport: transport}
+
+	resp, err := client.Do(r)
+	require.NoError(t, err)
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+	require.NoError(t, resp.Body.Close())
+
+	var rm metricdata.ResourceMetrics
+	require.NoError(t, reader.Collect(ctx, &rm))
+	require.Len(t, rm.ScopeMetrics, 1)
+
+	var durationMetric metricdata.Metrics
+	for _, m := range rm.ScopeMetrics[0].Metrics {
+		if m.Name == "http.client.request.duration" {
+			durationMetric = m
+			break
+		}
+	}
+	require.Equal(t, "http.client.request.duration", durationMetric.Name)
+
+	hist, ok := durationMetric.Data.(metricdata.Histogram[float64])
+	require.True(t, ok)
+	require.Len(t, hist.DataPoints, 1)
+
+	errorTypeVal, hasErrorType := hist.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
+	require.True(t, hasErrorType, "error.type attribute should be present for HTTP error status")
+	assert.Equal(t, "500", errorTypeVal.AsString())
+}
