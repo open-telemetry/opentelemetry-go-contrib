@@ -6,6 +6,8 @@ package otelaws
 import (
 	"context"
 	"encoding/json"
+	"maps"
+	"slices"
 
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/smithy-go/middleware"
@@ -30,17 +32,15 @@ func DynamoDBAttributeBuilder(_ context.Context, in middleware.InitializeInput, 
 		}
 
 	case *dynamodb.BatchGetItemInput:
-		tableNames := make([]string, 0, len(v.RequestItems))
-		for k := range v.RequestItems {
-			tableNames = append(tableNames, k)
-		}
+		// Map iteration order is random, so sort to keep the attribute stable
+		// across identical requests.
+		tableNames := slices.Sorted(maps.Keys(v.RequestItems))
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(tableNames...))
 
 	case *dynamodb.BatchWriteItemInput:
-		tableNames := make([]string, 0, len(v.RequestItems))
-		for k := range v.RequestItems {
-			tableNames = append(tableNames, k)
-		}
+		// Map iteration order is random, so sort to keep the attribute stable
+		// across identical requests.
+		tableNames := slices.Sorted(maps.Keys(v.RequestItems))
 		dynamodbAttributes = append(dynamodbAttributes, semconv.AWSDynamoDBTableNames(tableNames...))
 
 	case *dynamodb.CreateTableInput:

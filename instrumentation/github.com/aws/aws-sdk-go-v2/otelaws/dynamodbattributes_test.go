@@ -342,3 +342,27 @@ func TestDynamodbTagsUpdateTableInput(t *testing.T) {
 	assert.Contains(t, attributes, attribute.Float64("aws.dynamodb.provisioned_read_capacity", 123))
 	assert.Contains(t, attributes, attribute.Float64("aws.dynamodb.provisioned_write_capacity", 456))
 }
+
+func TestDynamodbTagsBatchTableNamesAreSorted(t *testing.T) {
+	want := attribute.StringSlice("aws.dynamodb.table_names", []string{"a", "b", "c", "d", "e", "f", "g", "h"})
+
+	getItems := map[string]dtypes.KeysAndAttributes{}
+	writeItems := map[string][]dtypes.WriteRequest{}
+	for _, name := range want.Value.AsStringSlice() {
+		getItems[name] = dtypes.KeysAndAttributes{}
+		writeItems[name] = nil
+	}
+
+	inputs := map[string]middleware.InitializeInput{
+		"BatchGetItem":   {Parameters: &dynamodb.BatchGetItemInput{RequestItems: getItems}},
+		"BatchWriteItem": {Parameters: &dynamodb.BatchWriteItemInput{RequestItems: writeItems}},
+	}
+	for name, input := range inputs {
+		t.Run(name, func(t *testing.T) {
+			for range 20 {
+				attributes := DynamoDBAttributeBuilder(t.Context(), input, middleware.InitializeOutput{})
+				assert.Contains(t, attributes, want)
+			}
+		})
+	}
+}

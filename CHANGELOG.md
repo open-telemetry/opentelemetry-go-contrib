@@ -92,6 +92,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Use the standardized SNS system value `aws.sns` instead of the custom value `aws_sns` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`.
   This corrects an existing mismatch with the semantic conventions; the standardized SNS value was already `aws.sns` before v1.45.0. (#10343)
 - Bound Azure VM metadata requests to ten seconds and reject responses over 1 MiB in `go.opentelemetry.io/contrib/detectors/azure/azurevm`. (#10299)
+- Sort the `aws.dynamodb.table_names` attribute for `BatchGetItem` and `BatchWriteItem` in `go.opentelemetry.io/contrib/instrumentation/github.com/aws/aws-sdk-go-v2/otelaws`, so identical requests no longer produce a different value on each call. (#10338)
 - Fix response body size accounting for copies through `ReadFrom` in `go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux`. (#10317)
 - Send the `Metadata` header as `true` instead of `True` in `go.opentelemetry.io/contrib/detectors/azure/azurevm`, as the Azure Instance Metadata Service rejects requests with `True`. (#10264)
 - Use the sampling endpoint in `go.opentelemetry.io/contrib/samplers/jaegerremote/example` so the example applies the remote sampling strategy. (#10089)
