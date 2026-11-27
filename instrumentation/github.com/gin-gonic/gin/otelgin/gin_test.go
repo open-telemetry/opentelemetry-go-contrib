@@ -998,6 +998,59 @@ func TestMiddlewareMultipartTempFileCleanup(t *testing.T) {
 	}, 2*time.Second, 20*time.Millisecond, "multipart temp file was not cleaned up: %s", tmpPath)
 }
 
+// TestMiddlewareMultipartTempFileCleanupOnPanic verifies that the temp file is
+// still removed when the handler panics after parsing the upload and an outer
+// recovery middleware turns the panic into a 500 response (#5946).
+func TestMiddlewareMultipartTempFileCleanupOnPanic(t *testing.T) {
+	resultCh := make(chan multipartParseResult, 1)
+	router := gin.New()
+	router.Use(gin.CustomRecoveryWithWriter(io.Discard, func(c *gin.Context, _ any) {
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}))
+	router.Use(otelgin.Middleware("test"))
+	router.POST("/upload", func(c *gin.Context) {
+		path, err := multipartDiskBackedTmpPath(c.Request)
+		resultCh <- multipartParseResult{tmpPath: path, err: err}
+		panic("test panic after multipart parse")
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+"/upload", &body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := srv.Client().Do(req)
+	require.NoError(t, err)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	require.NoError(t, resp.Body.Close())
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	var result multipartParseResult
+	select {
+	case result = <-resultCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("handler never reported temp file path")
+	}
+	require.NoError(t, result.err)
+	require.NotEmpty(t, result.tmpPath)
+	tmpPath := result.tmpPath
+	t.Cleanup(func() { _ = os.Remove(tmpPath) })
+
+	require.Eventually(t, func() bool {
+		_, statErr := os.Stat(tmpPath)
+		return os.IsNotExist(statErr)
+	}, 2*time.Second, 20*time.Millisecond, "multipart temp file was not cleaned up after panic: %s", tmpPath)
+}
+
 func TestUnknownContentLengthMetric(t *testing.T) {
 	reader := sdkmetric.NewManualReader()
 	meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
