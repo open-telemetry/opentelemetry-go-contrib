@@ -3,3 +3,7 @@
 <!--[![Go Reference][goref-image]][goref-url]-->
 <!--[goref-image]: https://pkg.go.dev/badge/go.opentelemetry.io/contrib/detectors/vultr.svg-->
 <!--[goref-url]: https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/vultr-->
+
+Detects resource attributes for Vultr Cloud Compute instances using instance metadata.
+
+[Package documentation](https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/vultr)
