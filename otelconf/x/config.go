@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"slices"
 
 	"github.com/go-logr/logr"
 	"go.opentelemetry.io/otel"
@@ -108,6 +109,8 @@ func parseConfigFileFromEnvironment(filename string) (ConfigurationOption, error
 // uses the file set in the variable `OTEL_EXPERIMENTAL_CONFIG_FILE` to configure the SDK automatically.
 // Any file defined by `OTEL_EXPERIMENTAL_CONFIG_FILE` will supersede all files passed with
 // [WithOpenTelemetryConfiguration].
+// Customizers registered with [WithConfigurationCustomizer] run on the
+// resulting configuration model before any component is created.
 func NewSDK(opts ...ConfigurationOption) (SDK, error) {
 	return newSDKWithDiagnosticWriter(os.Stderr, otel.SetLogger, opts...)
 }
@@ -120,13 +123,18 @@ func newSDKWithDiagnosticWriter(output io.Writer, setLogger func(logr.Logger), o
 		if err != nil {
 			return noopSDK, err
 		}
-		opts = append(opts, opt)
+		opts = append(slices.Clip(opts), opt)
 	}
 	o := configOptions{
 		ctx: context.Background(),
 	}
 	for _, opt := range opts {
 		o = opt.apply(o)
+	}
+	for _, customize := range o.customizers {
+		if err := customize(&o.opentelemetryConfig); err != nil {
+			return noopSDK, err
+		}
 	}
 	if o.opentelemetryConfig.Disabled != nil && *o.opentelemetryConfig.Disabled {
 		return noopSDK, nil
@@ -207,6 +215,25 @@ func WithContext(ctx context.Context) ConfigurationOption {
 func WithOpenTelemetryConfiguration(cfg OpenTelemetryConfiguration) ConfigurationOption {
 	return configurationOptionFunc(func(c configOptions) configOptions {
 		c.opentelemetryConfig = cfg
+		return c
+	})
+}
+
+// WithConfigurationCustomizer registers fn to modify the configuration model
+// before the SDK components are created from it. fn runs after the
+// configuration file named by the environment variable has been parsed, so
+// it also applies to a model that supersedes the one passed with
+// [WithOpenTelemetryConfiguration]. Use it for what the application, not the
+// configuration file, knows, such as resource attributes only known at runtime,
+// or to supply defaults for sections the file leaves out.
+//
+// fn may modify the model in place. Pointers and slices in the model may be
+// shared with the configuration passed to [WithOpenTelemetryConfiguration].
+// Customizers run in the order they are registered. An error returned by fn
+// is returned by [NewSDK].
+func WithConfigurationCustomizer(fn func(*OpenTelemetryConfiguration) error) ConfigurationOption {
+	return configurationOptionFunc(func(c configOptions) configOptions {
+		c.customizers = append(c.customizers, fn)
 		return c
 	})
 }
