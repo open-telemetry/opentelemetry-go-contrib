@@ -182,7 +182,7 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 	case internal.GCE:
 		b.attrs = append(b.attrs, semconv.CloudPlatformGCPComputeEngine)
 		b.addZoneAndRegion(ctx, d.detector.GCEAvailabilityZoneAndRegion)
-		b.add(ctx, semconv.HostTypeKey, d.detector.GCEHostType)
+		b.add(ctx, semconv.HostTypeKey, d.gceHostType)
 		b.add(ctx, semconv.HostIDKey, d.detector.GCEHostID)
 		b.add(ctx, semconv.HostNameKey, d.detector.GCEHostName)
 		b.add(ctx, semconv.GCPGCEInstanceNameKey, d.detector.GCEInstanceName)
@@ -200,6 +200,11 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		// We don't support this platform yet, so just return with what we have
 	}
 	return b.build()
+}
+
+func (d *detector) gceHostType(ctx context.Context) (string, error) {
+	t, err := d.detector.GCEHostType(ctx)
+	return machineType(t), err
 }
 
 // resourceBuilder simplifies constructing resources using GCP detection
