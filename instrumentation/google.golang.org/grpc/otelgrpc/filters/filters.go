@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package filters provides a set of filters useful with the
-// [otelgrpc.WithFilter] option to control which inbound requests are instrumented.
+// [otelgrpc.WithFilter] option to control which RPCs are instrumented.
 package filters
 
 import (
@@ -94,7 +94,7 @@ func MethodPrefix(pre string) otelgrpc.Filter {
 }
 
 // FullMethodName returns a Filter that returns true if the request's
-// full RPC method string, i.e. /package.service/method, starts with
+// full RPC method string, i.e. /package.service/method, matches
 // the provided string n.
 func FullMethodName(n string) otelgrpc.Filter {
 	return func(i *stats.RPCTagInfo) bool {
