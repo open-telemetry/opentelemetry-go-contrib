@@ -106,7 +106,7 @@ func (s Severity) Severity() log.Severity {
 
 // String returns a name for the severity level. If the severity level has a
 // name, then that name in uppercase is returned. If the severity level is
-// outside named values, then an signed integer is appended to the uppercased
+// outside named values, then a signed integer is appended to the uppercased
 // name.
 //
 // Examples:
@@ -182,7 +182,7 @@ func (s Severity) MarshalText() ([]byte, error) {
 // UnmarshalText implements [encoding.TextUnmarshaler]. It accepts any string
 // produced by [Severity.MarshalText], ignoring case. It also accepts numeric
 // offsets that would result in a different string on output. For example,
-// "ERROR-8" will marshal as [SeverityInfo].
+// "ERROR-8" will unmarshal as [SeverityInfo].
 func (s *Severity) UnmarshalText(data []byte) error {
 	return s.parse(string(data))
 }
