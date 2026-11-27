@@ -8,6 +8,7 @@ package request
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
@@ -86,6 +87,31 @@ func TestBodyWrapperRetainsReadErrorAfterEOF(t *testing.T) {
 	_, err = io.ReadAll(bw)
 	require.NoError(t, err)
 	assert.ErrorIs(t, bw.Error(), errFirstCall)
+}
+
+type cleanEOFThenWrappedEOFReader struct {
+	calls int
+}
+
+func (r *cleanEOFThenWrappedEOFReader) Read([]byte) (int, error) {
+	r.calls++
+	if r.calls == 1 {
+		return 0, io.EOF
+	}
+
+	return 0, fmt.Errorf("upload failed: %w", io.EOF)
+}
+
+func TestBodyWrapperReplacesCleanEOFWithWrappedEOFFailure(t *testing.T) {
+	bw := NewBodyWrapper(io.NopCloser(&cleanEOFThenWrappedEOFReader{}), func(int64) {})
+
+	_, err := io.ReadAll(bw)
+	require.NoError(t, err)
+	require.Equal(t, io.EOF, bw.Error())
+
+	_, err = io.ReadAll(bw)
+	require.ErrorIs(t, err, io.EOF)
+	assert.Equal(t, "upload failed: EOF", bw.Error().Error())
 }
 
 func TestConcurrentBodyWrapper(t *testing.T) {
