@@ -7,14 +7,22 @@ import (
 	"unicode/utf8"
 )
 
-// normalize converts s to a valid POSIX environment variable name.
+// NormalizeKey converts a propagator key to its canonical environment variable
+// name according to the [OpenTelemetry specification]. The conversion is
+// independent of the operating system.
+//
 // The conversion rules are:
 //   - Empty input is converted to _.
 //   - A–Z, 0–9, and _ are kept as-is.
 //   - a–z are uppercased.
 //   - All other characters are replaced with _.
 //   - If the result would start with a digit, an underscore is prepended.
-func normalize(s string) string {
+//
+// The child-process example for [Carrier] uses NormalizeKey to identify which
+// environment variables to clear before injecting trace context.
+//
+// [OpenTelemetry specification]: https://opentelemetry.io/docs/specs/otel/context/env-carriers/#key-name-normalization
+func NormalizeKey(s string) string {
 	if s == "" {
 		return "_"
 	}
@@ -54,7 +62,7 @@ func normalized(s string) bool {
 	if s == "" {
 		return false
 	}
-	// Normalized names cannot start with a digit; normalize would prepend '_'.
+	// Normalized names cannot start with a digit.
 	if s[0] >= '0' && s[0] <= '9' {
 		return false
 	}

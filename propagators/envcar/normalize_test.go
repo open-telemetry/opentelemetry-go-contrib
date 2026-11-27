@@ -29,10 +29,10 @@ var normalizeCases = []struct {
 	{"Mój Bagaż", "M_J_BAGA_"},
 }
 
-func TestNormalize(t *testing.T) {
+func TestNormalizeKey(t *testing.T) {
 	for _, tc := range normalizeCases {
 		t.Run(tc.in, func(t *testing.T) {
-			assert.Equal(t, tc.want, normalize(tc.in))
+			assert.Equal(t, tc.want, NormalizeKey(tc.in))
 		})
 	}
 }
@@ -45,12 +45,12 @@ func TestNormalized(t *testing.T) {
 	}
 }
 
-func BenchmarkNormalize(b *testing.B) {
+func BenchmarkNormalizeKey(b *testing.B) {
 	for _, tc := range normalizeCases {
 		b.Run(tc.in, func(b *testing.B) {
 			b.ReportAllocs()
 			for b.Loop() {
-				normalize(tc.in)
+				NormalizeKey(tc.in)
 			}
 		})
 	}

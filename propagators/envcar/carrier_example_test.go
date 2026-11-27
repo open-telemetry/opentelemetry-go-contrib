@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -63,10 +64,33 @@ func ExampleCarrier_childProcess() {
 	})
 	ctx := trace.ContextWithSpanContext(context.Background(), spanCtx)
 
-	// Prepare a command that prints the TRACEPARENT environment variable.
-	// Each child process gets its own copy of the environment.
-	cmd := exec.CommandContext(context.Background(), "printenv", "TRACEPARENT")
-	cmd.Env = os.Environ()
+	// Prepare a command that prints the trace context it receives.
+	cmd := exec.CommandContext(context.Background(), "sh", "-c",
+		`printf 'TRACEPARENT=%s\nTRACESTATE=%s\n' "$TRACEPARENT" "${TRACESTATE-unset}"`)
+
+	// Simulate stale trace state in the child's copy of the parent environment.
+	cmd.Env = append(cmd.Environ(), "TRACESTATE=vendor=stale")
+
+	// Clear inherited W3C trace context from the child's environment copy.
+	// Injection can omit TRACESTATE when the current trace state is empty.
+	prop := propagation.TraceContext{}
+
+	// Append an empty override for each normalized field. When cmd.Environ()
+	// resolves duplicates, it keeps the last entry for each name. Windows matches
+	// names case-insensitively, so TRACESTATE= replaces TraceState=old.
+	fields := prop.Fields()
+	placeholders := make(map[string]bool, len(fields))
+	for _, field := range fields {
+		entry := envcar.NormalizeKey(field) + "="
+		cmd.Env = append(cmd.Env, entry)
+		placeholders[entry] = true
+	}
+
+	// Resolve duplicates before dropping the overrides so any field that
+	// injection omits stays unset.
+	cmd.Env = slices.DeleteFunc(cmd.Environ(), func(entry string) bool {
+		return placeholders[entry]
+	})
 
 	// Create a carrier that injects trace context into the child
 	// process's environment rather than the current process's.
@@ -77,7 +101,6 @@ func ExampleCarrier_childProcess() {
 	}
 
 	// Inject trace context into the child's environment copy.
-	prop := propagation.TraceContext{}
 	prop.Inject(ctx, &carrier)
 
 	// The child process now has trace context in its environment,
@@ -88,5 +111,7 @@ func ExampleCarrier_childProcess() {
 		return
 	}
 	fmt.Print(string(out))
-	// Output: 00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01
+	// Output:
+	// TRACEPARENT=00-0102030405060708090a0b0c0d0e0f10-0102030405060708-01
+	// TRACESTATE=unset
 }
