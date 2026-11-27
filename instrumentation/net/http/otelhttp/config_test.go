@@ -240,83 +240,77 @@ func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) {
 
 func TestOptionTypes(t *testing.T) {
 	t.Run("type exclusivity", func(t *testing.T) {
+		type optionKind int
+		const (
+			handlerOnly optionKind = iota
+			transportOnly
+			shared
+		)
+
 		testCases := []struct {
-			name               string
-			opt                any
-			expectHandlerOpt   bool
-			expectTransportOpt bool
+			name string
+			opt  any
+			kind optionKind
 		}{
 			{
-				name:               "WithPublicEndpointFn",
-				opt:                otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return false }),
-				expectHandlerOpt:   true,
-				expectTransportOpt: false,
+				name: "WithPublicEndpointFn",
+				opt:  otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return false }),
+				kind: handlerOnly,
 			},
 			{
-				name:               "WithMessageEvents",
-				opt:                otelhttp.WithMessageEvents(otelhttp.ReadEvents),
-				expectHandlerOpt:   true,
-				expectTransportOpt: false,
+				name: "WithMessageEvents",
+				opt:  otelhttp.WithMessageEvents(otelhttp.ReadEvents),
+				kind: handlerOnly,
 			},
 			{
-				name:               "WithServerName",
-				opt:                otelhttp.WithServerName("example.com"),
-				expectHandlerOpt:   true,
-				expectTransportOpt: false,
+				name: "WithServerName",
+				opt:  otelhttp.WithServerName("example.com"),
+				kind: handlerOnly,
 			},
 			{
-				name:               "WithRouteTracking",
-				opt:                otelhttp.WithRouteTracking(),
-				expectHandlerOpt:   true,
-				expectTransportOpt: false,
+				name: "WithRouteTracking",
+				opt:  otelhttp.WithRouteTracking(),
+				kind: handlerOnly,
 			},
 			{
-				name:               "WithClientTrace",
-				opt:                otelhttp.WithClientTrace(func(context.Context) *httptrace.ClientTrace { return nil }),
-				expectHandlerOpt:   false,
-				expectTransportOpt: true,
+				name: "WithClientTrace",
+				opt:  otelhttp.WithClientTrace(func(context.Context) *httptrace.ClientTrace { return nil }),
+				kind: transportOnly,
 			},
 			{
-				name:               "WithTracerProvider",
-				opt:                otelhttp.WithTracerProvider(trace.NewTracerProvider()),
-				expectHandlerOpt:   true,
-				expectTransportOpt: true,
+				name: "WithTracerProvider",
+				opt:  otelhttp.WithTracerProvider(trace.NewTracerProvider()),
+				kind: shared,
 			},
 			{
-				name:               "WithMeterProvider",
-				opt:                otelhttp.WithMeterProvider(noop.NewMeterProvider()),
-				expectHandlerOpt:   true,
-				expectTransportOpt: true,
+				name: "WithMeterProvider",
+				opt:  otelhttp.WithMeterProvider(noop.NewMeterProvider()),
+				kind: shared,
 			},
 			{
-				name:               "WithPropagators",
-				opt:                otelhttp.WithPropagators(propagation.TraceContext{}),
-				expectHandlerOpt:   true,
-				expectTransportOpt: true,
+				name: "WithPropagators",
+				opt:  otelhttp.WithPropagators(propagation.TraceContext{}),
+				kind: shared,
 			},
 			{
-				name:               "WithSpanOptions",
-				opt:                otelhttp.WithSpanOptions(oteltrace.WithAttributes(attribute.String("custom", "val"))),
-				expectHandlerOpt:   true,
-				expectTransportOpt: true,
+				name: "WithSpanOptions",
+				opt:  otelhttp.WithSpanOptions(oteltrace.WithAttributes(attribute.String("custom", "val"))),
+				kind: shared,
 			},
 			{
-				name:               "WithFilter",
-				opt:                otelhttp.WithFilter(func(*http.Request) bool { return true }),
-				expectHandlerOpt:   true,
-				expectTransportOpt: true,
+				name: "WithFilter",
+				opt:  otelhttp.WithFilter(func(*http.Request) bool { return true }),
+				kind: shared,
 			},
 			{
-				name:               "WithSpanNameFormatter",
-				opt:                otelhttp.WithSpanNameFormatter(func(op string, _ *http.Request) string { return op }),
-				expectHandlerOpt:   true,
-				expectTransportOpt: true,
+				name: "WithSpanNameFormatter",
+				opt:  otelhttp.WithSpanNameFormatter(func(op string, _ *http.Request) string { return op }),
+				kind: shared,
 			},
 			{
-				name:               "WithMetricAttributesFn",
-				opt:                otelhttp.WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue { return nil }),
-				expectHandlerOpt:   true,
-				expectTransportOpt: true,
+				name: "WithMetricAttributesFn",
+				opt:  otelhttp.WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue { return nil }),
+				kind: shared,
 			},
 		}
 
@@ -324,8 +318,8 @@ func TestOptionTypes(t *testing.T) {
 			t.Run(tc.name, func(t *testing.T) {
 				_, isHandler := tc.opt.(otelhttp.HandlerOption)
 				_, isTransport := tc.opt.(otelhttp.TransportOption)
-				assert.Equal(t, tc.expectHandlerOpt, isHandler)
-				assert.Equal(t, tc.expectTransportOpt, isTransport)
+				assert.Equal(t, tc.kind == handlerOnly || tc.kind == shared, isHandler)
+				assert.Equal(t, tc.kind == transportOnly || tc.kind == shared, isTransport)
 			})
 		}
 	})
@@ -334,19 +328,22 @@ func TestOptionTypes(t *testing.T) {
 		const incomingTraceID = "4bf92f3577b34da6a3ce929d0e0e4736"
 		const incomingTraceparent = "00-" + incomingTraceID + "-00f067aa0ba902b7-01"
 
+		baseHandlerOpts := []otelhttp.HandlerOption{
+			otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return false }),
+			otelhttp.WithMessageEvents(otelhttp.ReadEvents),
+			otelhttp.WithServerName("example.com"),
+			otelhttp.WithRouteTracking(),
+		}
+
 		testCases := []struct {
 			name string
-			run  func(t *testing.T, sharedOpts []otelhttp.Option) (traceID string)
+			run  func(t *testing.T, spanRecorder *tracetest.SpanRecorder, sharedOpts []otelhttp.Option)
 		}{
 			{
 				name: "NewHandler",
-				run: func(t *testing.T, sharedOpts []otelhttp.Option) string {
-					hOpts := []otelhttp.HandlerOption{
-						otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return false }),
-						otelhttp.WithMessageEvents(otelhttp.ReadEvents),
-						otelhttp.WithServerName("example.com"),
-						otelhttp.WithRouteTracking(),
-					}
+				run: func(t *testing.T, spanRecorder *tracetest.SpanRecorder, sharedOpts []otelhttp.Option) {
+					hOpts := append([]otelhttp.HandlerOption(nil), baseHandlerOpts...)
+					// Go does not allow spreading []Option into []HandlerOption directly.
 					for _, opt := range sharedOpts {
 						hOpts = append(hOpts, opt)
 					}
@@ -357,18 +354,18 @@ func TestOptionTypes(t *testing.T) {
 					req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com/", http.NoBody)
 					req.Header.Set("Traceparent", incomingTraceparent)
 					h.ServeHTTP(rr, req)
-					return incomingTraceID
+
+					spans := spanRecorder.Ended()
+					if assert.Len(t, spans, 1) {
+						assert.Equal(t, incomingTraceID, spans[0].SpanContext().TraceID().String())
+					}
 				},
 			},
 			{
 				name: "NewMiddleware",
-				run: func(t *testing.T, sharedOpts []otelhttp.Option) string {
-					hOpts := []otelhttp.HandlerOption{
-						otelhttp.WithPublicEndpointFn(func(*http.Request) bool { return false }),
-						otelhttp.WithMessageEvents(otelhttp.ReadEvents),
-						otelhttp.WithServerName("example.com"),
-						otelhttp.WithRouteTracking(),
-					}
+				run: func(t *testing.T, spanRecorder *tracetest.SpanRecorder, sharedOpts []otelhttp.Option) {
+					hOpts := append([]otelhttp.HandlerOption(nil), baseHandlerOpts...)
+					// Go does not allow spreading []Option into []HandlerOption directly.
 					for _, opt := range sharedOpts {
 						hOpts = append(hOpts, opt)
 					}
@@ -380,12 +377,16 @@ func TestOptionTypes(t *testing.T) {
 					req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "http://example.com/", http.NoBody)
 					req.Header.Set("Traceparent", incomingTraceparent)
 					h.ServeHTTP(rr, req)
-					return incomingTraceID
+
+					spans := spanRecorder.Ended()
+					if assert.Len(t, spans, 1) {
+						assert.Equal(t, incomingTraceID, spans[0].SpanContext().TraceID().String())
+					}
 				},
 			},
 			{
 				name: "NewTransport",
-				run: func(t *testing.T, sharedOpts []otelhttp.Option) string {
+				run: func(t *testing.T, _ *tracetest.SpanRecorder, sharedOpts []otelhttp.Option) {
 					var clientTraceCalled bool
 					tOpts := []otelhttp.TransportOption{
 						otelhttp.WithClientTrace(func(context.Context) *httptrace.ClientTrace {
@@ -393,6 +394,7 @@ func TestOptionTypes(t *testing.T) {
 							return &httptrace.ClientTrace{}
 						}),
 					}
+					// Go does not allow spreading []Option into []TransportOption directly.
 					for _, opt := range sharedOpts {
 						tOpts = append(tOpts, opt)
 					}
@@ -414,7 +416,6 @@ func TestOptionTypes(t *testing.T) {
 					}
 					assert.True(t, clientTraceCalled, "expected WithClientTrace to take effect")
 					assert.NotEmpty(t, injectedTraceparent, "expected WithPropagators to inject Traceparent")
-					return ""
 				},
 			},
 		}
@@ -440,16 +441,13 @@ func TestOptionTypes(t *testing.T) {
 					otelhttp.WithMetricAttributesFn(func(*http.Request) []attribute.KeyValue { return nil }),
 				}
 
-				expectedTraceID := tc.run(t, sharedOpts)
+				tc.run(t, spanRecorder, sharedOpts)
 				assert.True(t, filterCalled, "expected WithFilter to take effect")
 
 				spans := spanRecorder.Ended()
 				if assert.Len(t, spans, 1) {
 					assert.Equal(t, "custom-span-name", spans[0].Name())
 					assert.Contains(t, spans[0].Attributes(), attribute.String("custom.opt", "applied"))
-					if expectedTraceID != "" {
-						assert.Equal(t, expectedTraceID, spans[0].SpanContext().TraceID().String())
-					}
 				}
 			})
 		}
