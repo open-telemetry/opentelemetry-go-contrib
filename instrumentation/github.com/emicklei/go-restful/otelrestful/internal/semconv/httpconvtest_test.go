@@ -285,7 +285,7 @@ func TestNewTraceRequest_Client(t *testing.T) {
 		attribute.Int("server.port", 8888),
 		attribute.String("network.protocol.version", "1.1"),
 	}
-	client := semconv.NewHTTPClient(nil)
+	client := semconv.NewHTTPClient(nil, false)
 	assert.ElementsMatch(t, want, client.RequestTraceAttrs(req))
 }
 
@@ -315,7 +315,7 @@ func TestNewTraceResponse_Client(t *testing.T) {
 	}
 
 	for _, tt := range testcases {
-		client := semconv.NewHTTPClient(nil)
+		client := semconv.NewHTTPClient(nil, false)
 		assert.ElementsMatch(t, tt.want, client.ResponseTraceAttrs(&tt.resp))
 	}
 }
@@ -497,6 +497,8 @@ func TestClientResponse(t *testing.T) {
 }
 
 func TestNewClientRecordMetrics(t *testing.T) {
+	const recordURLScheme = true
+
 	currAttrs := attribute.NewSet(
 		attribute.String("http.request.method", "POST"),
 		attribute.Int64("http.response.status_code", 301),
@@ -549,7 +551,7 @@ func TestNewClientRecordMetrics(t *testing.T) {
 		{
 			name: "No environment variable set, and no Meter",
 			clientFunc: func(metric.MeterProvider) semconv.HTTPClient {
-				return semconv.NewHTTPClient(nil)
+				return semconv.NewHTTPClient(nil, false)
 			},
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				assert.Empty(t, rm.ScopeMetrics)
@@ -558,13 +560,15 @@ func TestNewClientRecordMetrics(t *testing.T) {
 		{
 			name: "With Meter",
 			clientFunc: func(mp metric.MeterProvider) semconv.HTTPClient {
-				return semconv.NewHTTPClient(mp.Meter("test"))
+				return semconv.NewHTTPClient(mp.Meter("test"), recordURLScheme)
 			},
 			wantFunc: func(t *testing.T, rm metricdata.ResourceMetrics) {
 				require.Len(t, rm.ScopeMetrics, 1)
 
 				require.Len(t, rm.ScopeMetrics[0].Metrics, 2)
 				metricdatatest.AssertEqual(t, expectedCurrentScopeMetric, rm.ScopeMetrics[0], metricdatatest.IgnoreTimestamp(), metricdatatest.IgnoreValue())
+
+				require.Contains(t, rm.ScopeMetrics[0].Metrics[0].Data.(metricdata.Histogram[int64]).DataPoints[0].Attributes.ToSlice(), attribute.String("url.scheme", "http"))
 			},
 		},
 	}

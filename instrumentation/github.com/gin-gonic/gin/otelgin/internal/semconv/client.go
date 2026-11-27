@@ -30,10 +30,11 @@ type HTTPClient struct {
 	requestBodySize httpconv.ClientRequestBodySize
 	requestDuration httpconv.ClientRequestDuration
 	activeRequests  httpconv.ClientActiveRequests
+	recordURLScheme bool
 }
 
-func NewHTTPClient(meter metric.Meter) HTTPClient {
-	client := HTTPClient{}
+func NewHTTPClient(meter metric.Meter, recordURLScheme bool) HTTPClient {
+	client := HTTPClient{recordURLScheme: recordURLScheme}
 
 	var err error
 	client.requestBodySize, err = httpconv.NewClientRequestBodySize(meter)
@@ -276,6 +277,9 @@ func (HTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValue)
 
 func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {
 	num := len(additionalAttributes) + 2
+	if n.recordURLScheme {
+		num++
+	}
 	requestHost, port := serverAddressPort(req)
 	if port > 0 {
 		num++
@@ -305,8 +309,10 @@ func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, sta
 		attributes,
 		semconv.HTTPRequestMethodKey.String(standardizeHTTPMethod(req.Method)),
 		semconv.ServerAddress(requestHost),
-		n.scheme(req),
 	)
+	if n.recordURLScheme {
+		attributes = append(attributes, n.scheme(req))
+	}
 
 	if port > 0 {
 		attributes = append(attributes, semconv.ServerPort(port))

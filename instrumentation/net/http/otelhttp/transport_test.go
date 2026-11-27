@@ -944,6 +944,7 @@ func TestTransportMetrics(t *testing.T) {
 			t.Fatal(err)
 		}
 
+		t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "url.scheme")
 		tr := NewTransport(
 			http.DefaultTransport,
 			WithMeterProvider(meterProvider),
@@ -986,6 +987,7 @@ func TestTransportMetrics(t *testing.T) {
 	})
 
 	t.Run("make http request and buffer response", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "")
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
@@ -1046,7 +1048,6 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.Int("http.response.status_code", 200),
 			attribute.String("server.address", host),
 			attribute.Int("server.port", port),
-			attribute.String("url.scheme", "http"),
 			attribute.String("network.protocol.name", "http"),
 			attribute.String("network.protocol.version", "1.1"),
 		)
@@ -1054,6 +1055,7 @@ func TestTransportMetrics(t *testing.T) {
 	})
 
 	t.Run("make http request and close body before reading completely", func(t *testing.T) {
+		t.Setenv("OTEL_GO_X_HTTP_METRICS_OPTIN", "")
 		reader := sdkmetric.NewManualReader()
 		meterProvider := sdkmetric.NewMeterProvider(sdkmetric.WithReader(reader))
 
@@ -1109,7 +1111,6 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.Int("http.response.status_code", 200),
 			attribute.String("server.address", host),
 			attribute.Int("server.port", port),
-			attribute.String("url.scheme", "http"),
 			attribute.String("network.protocol.name", "http"),
 			attribute.String("network.protocol.version", "1.1"),
 		)

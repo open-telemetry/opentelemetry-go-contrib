@@ -69,7 +69,7 @@ func BenchmarkHTTPClientRequest(b *testing.B) {
 		{name: "Query", rawQuery: "stuff=morestuff&other=1"},
 		{name: "SensitiveQuery", rawQuery: "X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAEXAMPLE%2F20260101%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Signature=abc123"},
 	}
-	client := NewHTTPClient(nil)
+	client := NewHTTPClient(nil, false)
 
 	for _, tc := range testCases {
 		req := &http.Request{
