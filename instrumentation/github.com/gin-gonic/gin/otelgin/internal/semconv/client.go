@@ -344,6 +344,7 @@ func (n HTTPClient) MetricOptions(ma MetricAttributes) MetricOpts {
 	} else if ma.StatusCode == 0 && ma.Err != nil {
 		attributes = append(attributes, n.ErrorType(ma.Err))
 	}
+
 	set := metric.WithAttributeSet(attribute.NewSet(attributes...))
 
 	return MetricOpts{
