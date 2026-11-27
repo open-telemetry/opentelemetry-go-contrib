@@ -174,7 +174,7 @@ func WithPropagators(ps propagation.TextMapPropagator) Option {
 }
 
 // WithSpanOptions configures an additional set of
-// trace.SpanOptions, which are applied to each new span created by the handler or transport.
+// [trace.SpanStartOption] values, which are applied to each new span created by the handler or transport.
 func WithSpanOptions(opts ...trace.SpanStartOption) Option {
 	return optionFunc(func(c *baseConfig) {
 		c.SpanStartOptions = append(c.SpanStartOptions, opts...)

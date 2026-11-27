@@ -142,8 +142,7 @@ func (ssm *SpanProcessor) errorSpans(name string) []sdktrace.ReadOnlySpan {
 
 // spansByLatency returns a sample of successful spans.
 //
-// minLatency is the minimum latency of spans to be returned.
-// maxDuration, if nonzero, is the maximum latency of spans to be returned.
+// latencyBucketIndex selects the latency bucket to return.
 func (ssm *SpanProcessor) spansByLatency(name string, latencyBucketIndex int) []sdktrace.ReadOnlySpan {
 	s := ssm.spanStoreForName(name)
 	if s == nil {
@@ -152,7 +151,7 @@ func (ssm *SpanProcessor) spansByLatency(name string, latencyBucketIndex int) []
 	return s.spansByLatency(latencyBucketIndex)
 }
 
-// sampleStore stores a sampled of spans for a particular span name.
+// sampleStore stores samples of spans for a particular span name.
 //
 // It contains sample of spans for error requests (status code is codes.Error);
 // and a sample of spans for successful requests, bucketed by latency.
@@ -200,7 +199,7 @@ func (ss *sampleStore) errorSpans() []sdktrace.ReadOnlySpan {
 	return ss.errors.spans()
 }
 
-// sampleSpan removes adds to the corresponding latency or error bucket.
+// sampleSpan adds a span to the corresponding latency or error bucket.
 func (ss *sampleStore) sampleSpan(span sdktrace.ReadOnlySpan) {
 	code := span.Status().Code
 

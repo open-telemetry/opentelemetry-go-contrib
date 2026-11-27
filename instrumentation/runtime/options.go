@@ -8,7 +8,7 @@ import (
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/metric"
-	"go.opentelemetry.io/otel/semconv/v1.43.0/goconv"
+	"go.opentelemetry.io/otel/semconv/v1.45.0/goconv"
 
 	"go.opentelemetry.io/contrib/instrumentation/runtime/internal/x"
 )
