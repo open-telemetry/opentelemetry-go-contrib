@@ -47,7 +47,9 @@ type detectorUtils interface {
 }
 
 // struct implements detectorUtils interface.
-type ecsDetectorUtils struct{}
+type ecsDetectorUtils struct {
+	client *http.Client
+}
 
 // resource detector collects resource information from Elastic Container Service environment.
 type resourceDetector struct {
@@ -62,8 +64,17 @@ var _ resource.Detector = (*resourceDetector)(nil)
 
 // NewResourceDetector returns a resource detector that will detect AWS ECS resources.
 func NewResourceDetector() resource.Detector {
+	// Use a transport with Proxy explicitly disabled. The task metadata
+	// endpoint is a link-local address (169.254.170.2) served by the ECS
+	// agent that must never be reached via an HTTP(S) proxy: doing so would
+	// send task metadata to the proxy and let it answer with forged metadata
+	// in environments where users set HTTP_PROXY/HTTPS_PROXY for outbound
+	// traffic. Keep-alive is disabled because the transport has no shutdown
+	// path: an idle connection would otherwise outlive the detector.
 	return &resourceDetector{
-		utils: ecsDetectorUtils{},
+		utils: ecsDetectorUtils{
+			client: &http.Client{Transport: &http.Transport{Proxy: nil, DisableKeepAlives: true}},
+		},
 	}
 }
 
@@ -243,13 +254,13 @@ func (*resourceDetector) getLogsAttributes(metadata *ecsmetadata.ContainerMetada
 }
 
 // returns metadata v4 for the container.
-func (ecsDetectorUtils) getContainerMetadataV4(ctx context.Context) (*ecsmetadata.ContainerMetadataV4, error) {
-	return ecsmetadata.GetContainerV4(ctx, &http.Client{})
+func (e ecsDetectorUtils) getContainerMetadataV4(ctx context.Context) (*ecsmetadata.ContainerMetadataV4, error) {
+	return ecsmetadata.GetContainerV4(ctx, e.client)
 }
 
 // returns metadata v4 for the task.
-func (ecsDetectorUtils) getTaskMetadataV4(ctx context.Context) (*ecsmetadata.TaskMetadataV4, error) {
-	return ecsmetadata.GetTaskV4(ctx, &http.Client{})
+func (e ecsDetectorUtils) getTaskMetadataV4(ctx context.Context) (*ecsmetadata.TaskMetadataV4, error) {
+	return ecsmetadata.GetTaskV4(ctx, e.client)
 }
 
 // returns docker container ID from default c group path.

@@ -98,6 +98,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Render all latency columns for active spans and add the missing closing anchor tag for error counts in the summary table of `go.opentelemetry.io/contrib/zpages`. (#10074)
 - Propagate the caller's context to metadata requests in `go.opentelemetry.io/contrib/detectors/gcp` so `Detect` honors context cancellation and deadlines. (#10085)
 - Record the `db.namespace` attribute on the `db.client.operation.duration` metric for failed commands in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`, as is already done for successful commands. (#10288)
+- Do not send task metadata requests through the `HTTP_PROXY`/`HTTPS_PROXY` proxy in `go.opentelemetry.io/contrib/detectors/aws/ecs`. (#10308)
 - Format bracketed IPv6 MongoDB peer addresses without an explicit port correctly in `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` and `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/v2/mongo/otelmongo`. (#10101)
 - Do not add resource attributes as metric labels in the Prometheus exporter of `go.opentelemetry.io/contrib/otelconf/x`, `go.opentelemetry.io/contrib/otelconf/v0.3.0` and `go.opentelemetry.io/contrib/otelconf/v0.2.0` when `with_resource_constant_labels` sets neither `included` nor `excluded`.
   Before, an empty `with_resource_constant_labels: {}` added every resource attribute; list the attributes to keep under `included`. (#10238)
