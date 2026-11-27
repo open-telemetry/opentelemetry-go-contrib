@@ -133,12 +133,11 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 			statusCode:           200,
 			additionalAttributes: []attribute.KeyValue{attribute.String("test", "test")},
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 7)
+				require.Len(t, attrs, 6)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("server.address", "example.com"),
 					attribute.String("url.scheme", "http"),
-					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
 					attribute.Int64("http.response.status_code", 200),
 					attribute.String("test", "test"),
@@ -151,12 +150,11 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 			statusCode:           200,
 			additionalAttributes: nil,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 6)
+				require.Len(t, attrs, 5)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("server.address", "example.com"),
 					attribute.String("url.scheme", "http"),
-					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
 					attribute.Int64("http.response.status_code", 200),
 				}, attrs)
@@ -168,12 +166,11 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 			statusCode:           200,
 			additionalAttributes: nil,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 6)
+				require.Len(t, attrs, 5)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("server.address", "example.com"),
 					attribute.String("url.scheme", "https"),
-					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "1.1"),
 					attribute.Int64("http.response.status_code", 200),
 				}, attrs)
@@ -186,12 +183,11 @@ func TestHTTPClient_MetricAttributes(t *testing.T) {
 			statusCode:           200,
 			additionalAttributes: nil,
 			wantFunc: func(t *testing.T, attrs []attribute.KeyValue) {
-				require.Len(t, attrs, 6)
+				require.Len(t, attrs, 5)
 				assert.ElementsMatch(t, []attribute.KeyValue{
 					attribute.String("http.request.method", "GET"),
 					attribute.String("server.address", "example.com"),
 					attribute.String("url.scheme", "http"),
-					attribute.String("network.protocol.name", "http"),
 					attribute.String("network.protocol.version", "2.0"),
 					attribute.Int64("http.response.status_code", 200),
 				}, attrs)
@@ -415,4 +411,25 @@ func TestHTTPClientNewMethod(t *testing.T) {
 			assert.Equal(t, tt.wantOrig, gotOrig)
 		})
 	}
+}
+
+func TestHTTPClient_MetricAttributes_NonHTTPProtocol(t *testing.T) {
+	req, err := http.NewRequestWithContext(
+		t.Context(), http.MethodGet,
+		"http://example.com/path", http.NoBody,
+	)
+	require.NoError(t, err)
+
+	resp := &http.Response{Proto: "SPDY/3.1"}
+	got := HTTPClient{}.MetricAttributes(req, resp, 200, nil)
+
+	require.Len(t, got, 6)
+	assert.ElementsMatch(t, []attribute.KeyValue{
+		attribute.String("http.request.method", "GET"),
+		attribute.String("server.address", "example.com"),
+		attribute.String("url.scheme", "http"),
+		attribute.String("network.protocol.name", "spdy"),
+		attribute.String("network.protocol.version", "3.1"),
+		attribute.Int64("http.response.status_code", 200),
+	}, got)
 }

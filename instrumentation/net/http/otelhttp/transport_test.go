@@ -979,7 +979,7 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.String("server.address", host),
 			attribute.Int("server.port", port),
 			attribute.String("url.scheme", "http"),
-			attribute.String("network.protocol.name", "http"),
+
 			attribute.String("network.protocol.version", "1.1"),
 		)
 		assertClientScopeMetrics(t, collectClientMetrics(t, reader), attrs)
@@ -1047,7 +1047,7 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.String("server.address", host),
 			attribute.Int("server.port", port),
 			attribute.String("url.scheme", "http"),
-			attribute.String("network.protocol.name", "http"),
+
 			attribute.String("network.protocol.version", "1.1"),
 		)
 		assertClientScopeMetrics(t, collectClientMetrics(t, reader), attrs)
@@ -1110,7 +1110,7 @@ func TestTransportMetrics(t *testing.T) {
 			attribute.String("server.address", host),
 			attribute.Int("server.port", port),
 			attribute.String("url.scheme", "http"),
-			attribute.String("network.protocol.name", "http"),
+
 			attribute.String("network.protocol.version", "1.1"),
 		)
 		assertClientScopeMetrics(t, collectClientMetrics(t, reader), attrs)
