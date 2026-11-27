@@ -6,12 +6,16 @@
 package otelgin_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -906,6 +910,145 @@ func TestClientDisconnectCustomErrorTypeAttribute(t *testing.T) {
 	errorType, ok := durationHistogram.DataPoints[0].Attributes.Value(semconv.ErrorTypeKey)
 	require.True(t, ok, "expected error.type attribute on the http.server.request.duration metric")
 	assert.Equal(t, "custom_error_type", errorType.AsString(), "the caller-supplied error.type must take precedence over the disconnect-derived one")
+}
+
+type multipartParseResult struct {
+	tmpPath string
+	err     error
+}
+
+// multipartDiskBackedTmpPath parses the request with maxMemory of 0 so the
+// file part spills to a disk-backed temp file, and returns that file's path.
+func multipartDiskBackedTmpPath(r *http.Request) (string, error) {
+	if err := r.ParseMultipartForm(0); err != nil {
+		return "", err
+	}
+	files := r.MultipartForm.File["file"]
+	if len(files) == 0 {
+		return "", errors.New("missing file part")
+	}
+	f, err := files[0].Open()
+	if err != nil {
+		return "", err
+	}
+	name := ""
+	if of, ok := f.(*os.File); ok {
+		name = of.Name()
+	}
+	if err := f.Close(); err != nil {
+		return "", err
+	}
+	if name == "" {
+		return "", errors.New("file part should be disk-backed given maxMemory of 0")
+	}
+	return name, nil
+}
+
+// TestMiddlewareMultipartTempFileCleanup verifies that net/http removes the
+// temp file of a multipart upload parsed downstream of the middleware once
+// the request completes (#5946).
+func TestMiddlewareMultipartTempFileCleanup(t *testing.T) {
+	resultCh := make(chan multipartParseResult, 1)
+	router := gin.New()
+	router.Use(otelgin.Middleware("test"))
+	router.POST("/upload", func(c *gin.Context) {
+		path, err := multipartDiskBackedTmpPath(c.Request)
+		resultCh <- multipartParseResult{tmpPath: path, err: err}
+		if err != nil {
+			c.Status(http.StatusInternalServerError)
+			return
+		}
+		c.Status(http.StatusOK)
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+"/upload", &body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := srv.Client().Do(req)
+	require.NoError(t, err)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	require.NoError(t, resp.Body.Close())
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result multipartParseResult
+	select {
+	case result = <-resultCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("handler never reported temp file path")
+	}
+	require.NoError(t, result.err)
+	require.NotEmpty(t, result.tmpPath)
+	tmpPath := result.tmpPath
+	t.Cleanup(func() { _ = os.Remove(tmpPath) })
+
+	require.Eventually(t, func() bool {
+		_, statErr := os.Stat(tmpPath)
+		return os.IsNotExist(statErr)
+	}, 2*time.Second, 20*time.Millisecond, "multipart temp file was not cleaned up: %s", tmpPath)
+}
+
+// TestMiddlewareMultipartTempFileCleanupOnPanic verifies that the temp file is
+// still removed when the handler panics after parsing the upload and an outer
+// recovery middleware turns the panic into a 500 response (#5946).
+func TestMiddlewareMultipartTempFileCleanupOnPanic(t *testing.T) {
+	resultCh := make(chan multipartParseResult, 1)
+	router := gin.New()
+	router.Use(gin.CustomRecoveryWithWriter(io.Discard, func(c *gin.Context, _ any) {
+		c.AbortWithStatus(http.StatusInternalServerError)
+	}))
+	router.Use(otelgin.Middleware("test"))
+	router.POST("/upload", func(c *gin.Context) {
+		path, err := multipartDiskBackedTmpPath(c.Request)
+		resultCh <- multipartParseResult{tmpPath: path, err: err}
+		panic("test panic after multipart parse")
+	})
+
+	srv := httptest.NewServer(router)
+	defer srv.Close()
+
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+	part, err := writer.CreateFormFile("file", "test.txt")
+	require.NoError(t, err)
+	_, err = part.Write([]byte("hello"))
+	require.NoError(t, err)
+	require.NoError(t, writer.Close())
+
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, srv.URL+"/upload", &body)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	resp, err := srv.Client().Do(req)
+	require.NoError(t, err)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	require.NoError(t, resp.Body.Close())
+	require.Equal(t, http.StatusInternalServerError, resp.StatusCode)
+
+	var result multipartParseResult
+	select {
+	case result = <-resultCh:
+	case <-time.After(5 * time.Second):
+		t.Fatal("handler never reported temp file path")
+	}
+	require.NoError(t, result.err)
+	require.NotEmpty(t, result.tmpPath)
+	tmpPath := result.tmpPath
+	t.Cleanup(func() { _ = os.Remove(tmpPath) })
+
+	require.Eventually(t, func() bool {
+		_, statErr := os.Stat(tmpPath)
+		return os.IsNotExist(statErr)
+	}, 2*time.Second, 20*time.Millisecond, "multipart temp file was not cleaned up after panic: %s", tmpPath)
 }
 
 func TestUnknownContentLengthMetric(t *testing.T) {
