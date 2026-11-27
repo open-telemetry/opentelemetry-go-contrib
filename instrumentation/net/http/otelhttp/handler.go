@@ -16,6 +16,7 @@ import (
 
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/request"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/semconv"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp/internal/x"
 )
 
 // middleware is an http middleware which wraps the next handler in a span.
@@ -82,7 +83,11 @@ func (h *middleware) configure(c *config) {
 	h.spanNameFormatter = c.SpanNameFormatter
 	h.publicEndpointFn = c.PublicEndpointFn
 	h.server = c.ServerName
-	h.semconv = semconv.NewHTTPServer(c.Meter)
+	h.semconv = semconv.NewHTTPServer(
+		c.Meter,
+		x.OptInMetrics.Enabled("http.server.request.body.size"),
+		x.OptInMetrics.Enabled("http.server.response.body.size"),
+	)
 	h.metricAttributesFn = c.MetricAttributesFn
 }
 

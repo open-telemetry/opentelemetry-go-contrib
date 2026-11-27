@@ -16,13 +16,17 @@ To produce the [opt-in metrics] of the HTTP metrics conventions, list them
 comma-separated:
 
 ```console
-export OTEL_GO_X_HTTP_METRICS_OPTIN=http.client.active_requests
+export OTEL_GO_X_HTTP_METRICS_OPTIN=http.client.active_requests,http.client.request.body.size,http.server.request.body.size,http.server.response.body.size
 ```
 
 The supported metrics are:
 
 - `http.client.active_requests`, produced by `Transport`. A request is counted
   from the start of `RoundTrip` until the underlying `RoundTripper` returns.
+- `http.client.request.body.size`, produced by `Transport`.
+- `http.server.request.body.size` and `http.server.response.body.size`, produced by `Handler` and `Middleware`.
+
+The body-size metrics are disabled by default and can be enabled independently.
 
 Unknown names are ignored. Once the metrics API supports the opt-in metric
 advisory parameter, this environment variable will be replaced by it.

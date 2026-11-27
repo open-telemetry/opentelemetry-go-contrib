@@ -49,6 +49,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Changed
 
+- Make HTTP body-size metrics in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` opt-in through `OTEL_GO_X_HTTP_METRICS_OPTIN`. (#10359)
 - Update active instrumentation, resource detectors, examples, and shared templates to Semantic Conventions v1.45.0, and align resource schema URLs with the OTel Go SDK.
   The legacy v1.21.0 attributes emitted by `go.opentelemetry.io/contrib/instrumentation/go.mongodb.org/mongo-driver/mongo/otelmongo` with `OTEL_SEMCONV_STABILITY_OPT_IN=database/dup` remain supported. (#10343)
 - Rename `rpc.response.status_code` to `rpc.status_code` on spans and metrics in `go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc`.

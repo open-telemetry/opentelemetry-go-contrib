@@ -58,7 +58,7 @@ func Middleware(service string, opts ...Option) gin.HandlerFunc {
 		metric.WithInstrumentationVersion(Version),
 	)
 
-	sc := semconv.NewHTTPServer(meter)
+	sc := semconv.NewHTTPServer(meter, true, true)
 
 	return func(c *gin.Context) {
 		requestStartTime := time.Now()
