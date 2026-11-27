@@ -12,6 +12,7 @@ Collection of 3rd-party packages for [OpenTelemetry-Go](https://github.com/open-
 
 - [Examples](./examples/): Examples of OpenTelemetry libraries usage.
 - [Instrumentation](./instrumentation/): Packages providing OpenTelemetry instrumentation for 3rd-party libraries.
+  - Note: The `otelmongo` package instruments version 1 of the MongoDB Go driver.
 - [Propagators](./propagators/): Packages providing OpenTelemetry context propagators for 3rd-party propagation formats.
 - [Detectors](./detectors/): Packages providing OpenTelemetry resource detectors for 3rd-party cloud computing environments.
 - [Exporters](./exporters/): Packages providing OpenTelemetry exporters for 3rd-party export formats.
