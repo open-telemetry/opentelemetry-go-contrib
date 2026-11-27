@@ -579,7 +579,7 @@ func TestWithSpanNameFormatter(t *testing.T) {
 				sdktrace.WithSpanProcessor(spanRecorder),
 			)
 
-			opts := []Option{
+			opts := []HandlerOption{
 				WithTracerProvider(provider),
 			}
 			if tt.formatter != nil {
