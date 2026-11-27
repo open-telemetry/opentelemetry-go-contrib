@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"go.opentelemetry.io/otel/exporters/otlp/otlptrace"
 	"go.opentelemetry.io/otel/exporters/stdout/stdouttrace"
 	"go.opentelemetry.io/otel/sdk/trace"
@@ -43,6 +44,8 @@ func TestSpanExporterOTLP(t *testing.T) {
 		{"http/protobuf", "*otlptracehttp.client"},
 		{"", "*otlptracehttp.client"},
 		{"grpc", "*otlptracegrpc.client"},
+		{"GRPC", "*otlptracegrpc.client"},
+		{"HTTP/Protobuf", "*otlptracehttp.client"},
 	} {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", tc.protocol)
@@ -71,6 +74,8 @@ func TestSpanExporterOTLPWithDedicatedProtocol(t *testing.T) {
 		{"http/protobuf", "*otlptracehttp.client"},
 		{"", "*otlptracehttp.client"},
 		{"grpc", "*otlptracegrpc.client"},
+		{"GRPC", "*otlptracegrpc.client"},
+		{"HTTP/Protobuf", "*otlptracehttp.client"},
 	} {
 		t.Run(fmt.Sprintf("protocol=%q", tc.protocol), func(t *testing.T) {
 			t.Setenv("OTEL_EXPORTER_OTLP_TRACES_PROTOCOL", tc.protocol)
@@ -143,4 +148,42 @@ func TestSpanExporterFallback(t *testing.T) {
 			tc.verify(t, got)
 		})
 	}
+}
+
+func TestSpanExporterEnvIsCaseInsensitive(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		check func(*testing.T, trace.SpanExporter)
+	}{
+		{"Console", func(t *testing.T, exp trace.SpanExporter) {
+			assert.IsType(t, &stdouttrace.Exporter{}, exp)
+		}},
+		{"NONE", func(t *testing.T, exp trace.SpanExporter) {
+			assert.True(t, IsNoneSpanExporter(exp))
+		}},
+	} {
+		t.Run(tc.value, func(t *testing.T) {
+			t.Setenv("OTEL_TRACES_EXPORTER", tc.value)
+			exp, err := NewSpanExporter(t.Context())
+			require.NoError(t, err)
+			t.Cleanup(func() {
+				//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+				assert.NoError(t, exp.Shutdown(context.Background()))
+			})
+			tc.check(t, exp)
+		})
+	}
+}
+
+func TestSpanExporterOTLPEnvIsCaseInsensitive(t *testing.T) {
+	t.Setenv("OTEL_TRACES_EXPORTER", "OTLP")
+	t.Setenv("OTEL_EXPORTER_OTLP_PROTOCOL", "GRPC")
+
+	exp, err := NewSpanExporter(t.Context())
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		//nolint:usetesting // required to avoid getting a canceled context at cleanup.
+		assert.NoError(t, exp.Shutdown(context.Background()))
+	})
+	assert.IsType(t, &otlptrace.Exporter{}, exp)
 }
