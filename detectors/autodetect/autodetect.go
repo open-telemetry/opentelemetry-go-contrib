@@ -1,7 +1,7 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package autodetect provides functionality to configures and use a set of
+// Package autodetect provides functionality to configure and use a set of
 // resource detectors at runtime.
 package autodetect
 
