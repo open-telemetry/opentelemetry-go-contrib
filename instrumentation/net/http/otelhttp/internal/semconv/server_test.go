@@ -130,38 +130,47 @@ func TestHTTPServer_MetricAttributes(t *testing.T) {
 }
 
 func TestNewMethod(t *testing.T) {
-	testCases := []struct {
+	tests := []struct {
 		method   string
-		n        int
 		want     attribute.KeyValue
 		wantOrig attribute.KeyValue
 	}{
 		{
 			method: http.MethodPost,
-			n:      1,
 			want:   attribute.String("http.request.method", "POST"),
 		},
 		{
-			method:   "",
-			n:        2,
-			want:     attribute.String("http.request.method", "_OTHER"),
-			wantOrig: attribute.KeyValue{},
+			method: "QUERY",
+			want:   attribute.String("http.request.method", "QUERY"),
 		},
 		{
-			method:   "Put",
-			n:        3,
-			want:     attribute.String("http.request.method", "PUT"),
-			wantOrig: attribute.String("http.request.method_original", "Put"),
+			method: "",
+			want:   attribute.String("http.request.method", "_OTHER"),
 		},
 		{
-			method:   "Unknown",
-			n:        4,
-			want:     attribute.String("http.request.method", "_OTHER"),
-			wantOrig: attribute.String("http.request.method_original", "Unknown"),
+			method: "Put",
+			want:   attribute.String("http.request.method", "_OTHER"),
+			wantOrig: attribute.String(
+				"http.request.method_original", "Put",
+			),
+		},
+		{
+			method: "get",
+			want:   attribute.String("http.request.method", "_OTHER"),
+			wantOrig: attribute.String(
+				"http.request.method_original", "get",
+			),
+		},
+		{
+			method: "Unknown",
+			want:   attribute.String("http.request.method", "_OTHER"),
+			wantOrig: attribute.String(
+				"http.request.method_original", "Unknown",
+			),
 		},
 	}
 
-	for _, tt := range testCases {
+	for _, tt := range tests {
 		t.Run(tt.method, func(t *testing.T) {
 			got, gotOrig := HTTPServer{}.method(tt.method)
 			assert.Equal(t, tt.want, got)
@@ -294,6 +303,16 @@ func TestHTTPServer_SpanName(t *testing.T) {
 			wantName: "GET /foo/{id}",
 		},
 		{
+			name:     "query method",
+			method:   "QUERY",
+			wantName: "QUERY",
+		},
+		{
+			name:     "lowercase method is not recognized",
+			method:   "get",
+			wantName: "HTTP",
+		},
+		{
 			name:     "nonstandard method, no pattern",
 			method:   "CUSTOM",
 			wantName: "HTTP",
@@ -308,7 +327,9 @@ func TestHTTPServer_SpanName(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(t.Context(), tt.method, "/foo/123", http.NoBody)
+			req := httptest.NewRequestWithContext(
+				t.Context(), tt.method, "/foo/123", http.NoBody,
+			)
 			req.Pattern = tt.pattern
 
 			got := HTTPServer{}.SpanName(req)

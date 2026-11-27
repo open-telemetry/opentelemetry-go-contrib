@@ -13,7 +13,6 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -294,7 +293,7 @@ func (n HTTPServer) RecordMetrics(ctx context.Context, md ServerMetricData) {
 // or just "{method}" when no route is available.
 // Non-standard HTTP methods are replaced by "HTTP".
 func (HTTPServer) SpanName(r *http.Request) string {
-	method := strings.ToUpper(r.Method)
+	method := r.Method
 	if _, ok := methodLookup[method]; !ok {
 		method = "HTTP"
 	}
@@ -310,15 +309,12 @@ func (HTTPServer) method(method string) (attribute.KeyValue, attribute.KeyValue)
 	if method == "" {
 		return semconv.HTTPRequestMethodOther, attribute.KeyValue{}
 	}
+
 	if attr, ok := methodLookup[method]; ok {
 		return attr, attribute.KeyValue{}
 	}
 
-	orig := semconv.HTTPRequestMethodOriginal(method)
-	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
-		return attr, orig
-	}
-	return semconv.HTTPRequestMethodOther, orig
+	return semconv.HTTPRequestMethodOther, semconv.HTTPRequestMethodOriginal(method)
 }
 
 func (n HTTPServer) scheme(https bool) attribute.KeyValue { //nolint:revive // ignore linter

@@ -263,15 +263,12 @@ func (HTTPClient) method(method string) (attribute.KeyValue, attribute.KeyValue)
 	if method == "" {
 		return semconv.HTTPRequestMethodOther, attribute.KeyValue{}
 	}
+
 	if attr, ok := methodLookup[method]; ok {
 		return attr, attribute.KeyValue{}
 	}
 
-	orig := semconv.HTTPRequestMethodOriginal(method)
-	if attr, ok := methodLookup[strings.ToUpper(method)]; ok {
-		return attr, orig
-	}
-	return semconv.HTTPRequestMethodOther, orig
+	return semconv.HTTPRequestMethodOther, semconv.HTTPRequestMethodOriginal(method)
 }
 
 func (n HTTPClient) MetricAttributes(req *http.Request, resp *http.Response, statusCode int, additionalAttributes []attribute.KeyValue) []attribute.KeyValue {

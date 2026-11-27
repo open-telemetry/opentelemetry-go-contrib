@@ -278,7 +278,7 @@ func TestNewTraceRequest_Client(t *testing.T) {
 	req.Header.Set("User-Agent", "go-test-agent")
 
 	want := []attribute.KeyValue{
-		attribute.String("http.request.method", "POST"),
+		attribute.String("http.request.method", "_OTHER"),
 		attribute.String("http.request.method_original", "pOST"),
 		attribute.String("url.full", url),
 		attribute.String("server.address", "example.com"),
@@ -327,7 +327,7 @@ func TestClientRequest(t *testing.T) {
 	req.Header.Set("User-Agent", "go-test-agent")
 
 	want := []attribute.KeyValue{
-		attribute.String("http.request.method", "POST"),
+		attribute.String("http.request.method", "_OTHER"),
 		attribute.String("http.request.method_original", "pOST"),
 		attribute.String("url.full", url),
 		attribute.String("server.address", "example.com"),
