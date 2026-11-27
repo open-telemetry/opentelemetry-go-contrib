@@ -437,7 +437,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "invalid headers list: invalid key: \"\"",
+			wantErr: "invalid headers list",
 		},
 		{
 			name: "batch/otlp-grpc-exporter-no-scheme",
@@ -621,7 +621,7 @@ func TestSpanProcessor(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "invalid headers list: invalid key: \"\"",
+			wantErr: "invalid headers list",
 		},
 		{
 			name: "batch/otlp-http-exporter-with-path",

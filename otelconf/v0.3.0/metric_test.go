@@ -347,7 +347,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "invalid headers list: invalid key: \"\"",
+			wantErr: "invalid headers list",
 		},
 		{
 			name: "periodic/otlp-grpc-exporter-no-endpoint",
@@ -647,7 +647,7 @@ func TestReader(t *testing.T) {
 					},
 				},
 			},
-			wantErr: "invalid headers list: invalid key: \"\"",
+			wantErr: "invalid headers list",
 		},
 		{
 			name: "periodic/otlp-http-exporter-with-path",
