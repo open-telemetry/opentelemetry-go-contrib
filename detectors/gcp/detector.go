@@ -52,6 +52,7 @@ func (f optionFunc) apply(c *config) { f(c) }
 
 type config struct {
 	gkeHostType       bool
+	gkeHostName       bool
 	gceLabelKeyFilter func(key string) bool
 }
 
@@ -63,6 +64,16 @@ type config struct {
 func WithGKEHostType() Option {
 	return optionFunc(func(c *config) {
 		c.gkeHostType = true
+	})
+}
+
+// WithGKEHostName enables detection of the host.name resource attribute on
+// Google Kubernetes Engine (GKE) from the node's instance name. It is disabled
+// by default because it requires access to instance/name metadata, which is
+// unavailable under GKE Workload Identity.
+func WithGKEHostName() Option {
+	return optionFunc(func(c *config) {
+		c.gkeHostName = true
 	})
 }
 
@@ -126,6 +137,9 @@ func (d *detector) Detect(ctx context.Context) (*resource.Resource, error) {
 		b.addZoneOrRegion(ctx, d.detector.GKEAvailabilityZoneOrRegion)
 		b.add(ctx, semconv.K8SClusterNameKey, d.detector.GKEClusterName)
 		b.add(ctx, semconv.HostIDKey, d.detector.GKEHostID)
+		if d.cfg.gkeHostName {
+			b.add(ctx, semconv.HostNameKey, d.detector.GCEHostName)
+		}
 		if d.cfg.gkeHostType {
 			b.add(ctx, semconv.HostTypeKey, func(ctx context.Context) (string, error) {
 				return d.detector.GKEHostType(ctx)
