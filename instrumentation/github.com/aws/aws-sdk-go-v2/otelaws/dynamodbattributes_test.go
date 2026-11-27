@@ -342,3 +342,22 @@ func TestDynamodbTagsUpdateTableInput(t *testing.T) {
 	assert.Contains(t, attributes, attribute.Float64("aws.dynamodb.provisioned_read_capacity", 123))
 	assert.Contains(t, attributes, attribute.Float64("aws.dynamodb.provisioned_write_capacity", 456))
 }
+
+func TestDynamodbSelectOmittedWhenUnset(t *testing.T) {
+	for name, params := range map[string]any{
+		"Query": &dynamodb.QueryInput{TableName: aws.String("table1")},
+		"Scan":  &dynamodb.ScanInput{TableName: aws.String("table1")},
+	} {
+		t.Run(name, func(t *testing.T) {
+			attributes := DynamoDBAttributeBuilder(
+				t.Context(),
+				middleware.InitializeInput{Parameters: params},
+				middleware.InitializeOutput{},
+			)
+
+			for _, kv := range attributes {
+				assert.NotEqual(t, attribute.Key("aws.dynamodb.select"), kv.Key)
+			}
+		})
+	}
+}
