@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	otelsemconv "go.opentelemetry.io/otel/semconv/v1.45.0"
@@ -28,13 +27,12 @@ import (
 type transport struct {
 	rt http.RoundTripper
 
-	tracer             trace.Tracer
-	propagators        propagation.TextMapPropagator
-	spanStartOptions   []trace.SpanStartOption
-	filters            []Filter
-	spanNameFormatter  func(string, *http.Request) string
-	clientTrace        func(context.Context) *httptrace.ClientTrace
-	metricAttributesFn func(*http.Request) []attribute.KeyValue
+	tracer            trace.Tracer
+	propagators       propagation.TextMapPropagator
+	spanStartOptions  []trace.SpanStartOption
+	filters           []Filter
+	spanNameFormatter func(string, *http.Request) string
+	clientTrace       func(context.Context) *httptrace.ClientTrace
 
 	semconv              semconv.HTTPClient
 	recordActiveRequests bool

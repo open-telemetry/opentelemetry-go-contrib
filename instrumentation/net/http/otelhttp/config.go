@@ -9,7 +9,6 @@ import (
 	"net/http/httptrace"
 
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/metric"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
@@ -34,9 +33,8 @@ type config struct {
 	SpanNameFormatter func(string, *http.Request) string
 	ClientTrace       func(context.Context) *httptrace.ClientTrace
 
-	TracerProvider     trace.TracerProvider
-	MeterProvider      metric.MeterProvider
-	MetricAttributesFn func(*http.Request) []attribute.KeyValue
+	TracerProvider trace.TracerProvider
+	MeterProvider  metric.MeterProvider
 }
 
 // Option interface used for setting optional config properties.

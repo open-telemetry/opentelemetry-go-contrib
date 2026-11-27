@@ -10,7 +10,6 @@ import (
 
 	"github.com/felixge/httpsnoop"
 	"go.opentelemetry.io/otel"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/propagation"
 	"go.opentelemetry.io/otel/trace"
 
@@ -83,7 +82,6 @@ func (h *middleware) configure(c *config) {
 	h.publicEndpointFn = c.PublicEndpointFn
 	h.server = c.ServerName
 	h.semconv = semconv.NewHTTPServer(c.Meter)
-	h.metricAttributesFn = c.MetricAttributesFn
 }
 
 // serveHTTP sets up tracing and calls the given next http.Handler with the span
@@ -251,12 +249,4 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 			RequestDuration: time.Since(requestStartTime),
 		},
 	})
-}
-
-func (h *middleware) metricAttributesFromRequest(r *http.Request) []attribute.KeyValue {
-	var attributeForRequest []attribute.KeyValue
-	if h.metricAttributesFn != nil {
-		attributeForRequest = h.metricAttributesFn(r)
-	}
-	return attributeForRequest
 }
