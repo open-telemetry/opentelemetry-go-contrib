@@ -6,6 +6,7 @@ package otelzap
 import (
 	"context"
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -260,6 +261,151 @@ func TestCore(t *testing.T) {
 		)
 	})
 
+	t.Run("WithNamespace", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		l := logger.With(zap.String("test1", "value1"), zap.Namespace("ns"), zap.String("test2", "value2"))
+		sibling := l.With(zap.String("other", "value"))
+		l = l.With(zap.String("test3", "value3"))
+		l.Info(testMessage, zap.String("test4", "value4"))
+		sibling.Info(testMessage)
+		logger.Info(testMessage, zap.String("test5", "value5"))
+
+		want := logtest.Recording{
+			logtest.Scope{Name: loggerName}: {
+				{
+					Body:         attribute.StringValue(testMessage),
+					Severity:     log.SeverityInfo,
+					SeverityText: zap.InfoLevel.String(),
+					Attributes: []attribute.KeyValue{
+						attribute.String("test1", "value1"),
+						attribute.Map("ns",
+							attribute.String("test2", "value2"),
+							attribute.String("test3", "value3"),
+							attribute.String("test4", "value4"),
+						),
+					},
+				},
+				{
+					Body:         attribute.StringValue(testMessage),
+					Severity:     log.SeverityInfo,
+					SeverityText: zap.InfoLevel.String(),
+					Attributes: []attribute.KeyValue{
+						attribute.String("test1", "value1"),
+						attribute.Map("ns",
+							attribute.String("test2", "value2"),
+							attribute.String("other", "value"),
+						),
+					},
+				},
+				{
+					Body:         attribute.StringValue(testMessage),
+					Severity:     log.SeverityInfo,
+					SeverityText: zap.InfoLevel.String(),
+					Attributes: []attribute.KeyValue{
+						attribute.String("test5", "value5"),
+					},
+				},
+			},
+		}
+		logtest.AssertEqual(
+			t, want, rec.Result(),
+			logtest.Transform(func(r logtest.Record) logtest.Record {
+				cp := r.Clone()
+				cp.Context = nil           // Ignore context for comparison.
+				cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+				return cp
+			}),
+		)
+	})
+
+	t.Run("WithNamespaces", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		l := logger.With(zap.String("top", "0"),
+			zap.Namespace("a"), zap.String("x", "1"),
+			zap.Namespace("b"), zap.String("y", "2"),
+			zap.Namespace("c"), zap.String("z", "3"))
+		l.Info(testMessage, zap.String("w", "4"))
+
+		assertNamespaceRecord(t, rec, []attribute.KeyValue{
+			attribute.String("top", "0"),
+			attribute.Map("a",
+				attribute.String("x", "1"),
+				attribute.Map("b",
+					attribute.String("y", "2"),
+					attribute.Map("c",
+						attribute.String("z", "3"),
+						attribute.String("w", "4"),
+					),
+				),
+			),
+		})
+	})
+
+	t.Run("WithNamespaceAndWriteNamespace", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.With(zap.Namespace("a"), zap.String("x", "1")).
+			Info(testMessage, zap.Namespace("b"), zap.String("y", "2"))
+
+		assertNamespaceRecord(t, rec, []attribute.KeyValue{
+			attribute.Map("a",
+				attribute.String("x", "1"),
+				attribute.Map("b",
+					attribute.String("y", "2"),
+				),
+			),
+		})
+	})
+
+	t.Run("WithNamespaceAcrossWith", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.With(zap.Namespace("a")).
+			With(zap.Namespace("b"), zap.String("x", "1")).
+			Info(testMessage, zap.String("y", "2"))
+
+		assertNamespaceRecord(t, rec, []attribute.KeyValue{
+			attribute.Map("a",
+				attribute.Map("b",
+					attribute.String("x", "1"),
+					attribute.String("y", "2"),
+				),
+			),
+		})
+	})
+
+	t.Run("WithEmptyNamespace", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.With(zap.String("x", "1")).
+			With(zap.Namespace(""), zap.String("y", "2")).
+			With(zap.String("z", "3")).
+			Info(testMessage, zap.String("w", "4"))
+
+		// OpenTelemetry drops a top-level attribute with an empty key, so
+		// an empty namespace opened by With is closed at the end of that
+		// call. The fields of later calls stay top-level attributes.
+		assertNamespaceRecord(t, rec, []attribute.KeyValue{
+			attribute.String("x", "1"),
+			attribute.Map("", attribute.String("y", "2")),
+			attribute.String("z", "3"),
+			attribute.String("w", "4"),
+		})
+	})
+
+	t.Run("WithNamespaceSkip", func(t *testing.T) {
+		t.Cleanup(rec.Reset)
+
+		logger.With(zap.Namespace("a"), zap.String("x", "1")).
+			Info(testMessage, zap.Skip(), zap.Error(nil))
+
+		assertNamespaceRecord(t, rec, []attribute.KeyValue{
+			attribute.Map("a", attribute.String("x", "1")),
+		})
+	})
+
 	t.Run("Named", func(t *testing.T) {
 		t.Cleanup(rec.Reset)
 
@@ -332,6 +478,47 @@ func TestCoreErrorFieldSetErrBehavior(t *testing.T) {
 		require.Contains(t, r.attrs, attribute.String("db.error", "db failure"))
 		require.NotContains(t, r.attrs, attribute.String("error", "top level error"))
 	})
+}
+
+func TestCoreSkipFieldContext(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc)
+
+	// A zap tee can pass the context in a field that the other cores skip.
+	skipCtx := func(ctx context.Context) zap.Field {
+		return zap.Field{Type: zapcore.SkipType, Interface: ctx}
+	}
+	withCtx := context.WithValue(t.Context(), testEntry, true)
+	writeCtx := context.WithValue(t.Context(), testEntry, false)
+
+	logger.With(skipCtx(withCtx)).Info(testMessage)
+	logger.Info(testMessage, skipCtx(writeCtx))
+
+	want := logtest.Recording{
+		logtest.Scope{Name: loggerName}: {
+			{
+				Context:      withCtx,
+				Body:         attribute.StringValue(testMessage),
+				Severity:     log.SeverityInfo,
+				SeverityText: zap.InfoLevel.String(),
+			},
+			{
+				Context:      writeCtx,
+				Body:         attribute.StringValue(testMessage),
+				Severity:     log.SeverityInfo,
+				SeverityText: zap.InfoLevel.String(),
+			},
+		},
+	}
+	logtest.AssertEqual(
+		t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+			return cp
+		}),
+	)
 }
 
 func TestCoreWriteContextConcurrentSafe(t *testing.T) {
@@ -467,6 +654,83 @@ func TestCoreWithCaller(t *testing.T) {
 			return cp
 		}),
 	)
+}
+
+func TestCoreWithCallerAndNamespace(t *testing.T) {
+	rec := logtest.NewRecorder()
+	zc := NewCore(loggerName, WithLoggerProvider(rec))
+	logger := zap.New(zc, zap.AddCaller())
+
+	l := logger.With(zap.Namespace("request"), zap.String("id", "r1"))
+	l.Info(testMessage)
+	l.Info(testMessage, zap.String("status", "ok"), zap.Any("ctx", t.Context()))
+	logger.Info(testMessage, zap.Namespace("call"), zap.String("k", "v"))
+
+	caller := []attribute.KeyValue{
+		attribute.String(string(semconv.CodeFilePathKey), "core_test.go"),
+		attribute.Int64(string(semconv.CodeLineNumberKey), 1),
+		attribute.String(string(semconv.CodeFunctionNameKey), "go.opentelemetry.io/contrib/bridges/otelzap."+t.Name()),
+	}
+	record := func(attrs ...attribute.KeyValue) logtest.Record {
+		return logtest.Record{
+			Body:         attribute.StringValue(testMessage),
+			Severity:     log.SeverityInfo,
+			SeverityText: zap.InfoLevel.String(),
+			Attributes:   attrs,
+		}
+	}
+	want := logtest.Recording{
+		logtest.Scope{Name: loggerName}: {
+			// A namespace opened by With is emitted with the other bound
+			// attributes, before the caller.
+			record(append([]attribute.KeyValue{
+				attribute.Map("request", attribute.String("id", "r1")),
+			}, caller...)...),
+			record(append([]attribute.KeyValue{
+				attribute.Map("request", attribute.String("id", "r1"), attribute.String("status", "ok")),
+			}, caller...)...),
+			// A namespace opened by the log call stays with its fields.
+			record(append(slices.Clone(caller),
+				attribute.Map("call", attribute.String("k", "v")),
+			)...),
+		},
+	}
+	logtest.AssertEqual(
+		t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Context = nil
+			cp.Timestamp = time.Time{}
+			for i, attr := range cp.Attributes {
+				if attr.Key == semconv.CodeLineNumberKey {
+					cp.Attributes[i].Value = attribute.Int64Value(1)
+				}
+				if attr.Key == semconv.CodeFilePathKey && strings.HasSuffix(attr.Value.AsString(), "core_test.go") {
+					cp.Attributes[i].Value = attribute.StringValue("core_test.go")
+				}
+			}
+			return cp
+		}),
+	)
+
+	// AssertEqual ignores the order of the attributes, so check it here.
+	keys := func(r logtest.Record) []string {
+		var k []string
+		for _, attr := range r.Attributes {
+			k = append(k, string(attr.Key))
+		}
+		return k
+	}
+	callerKeys := []string{
+		string(semconv.CodeFilePathKey),
+		string(semconv.CodeLineNumberKey),
+		string(semconv.CodeFunctionNameKey),
+	}
+	got := rec.Result()[logtest.Scope{Name: loggerName}]
+	require.Len(t, got, 3)
+	require.Equal(t, append([]string{"request"}, callerKeys...), keys(got[0]))
+	require.Equal(t, append([]string{"request"}, callerKeys...), keys(got[1]))
+	require.Equal(t, append(slices.Clone(callerKeys), "call"), keys(got[2]))
 }
 
 func TestCoreWithStacktrace(t *testing.T) {
@@ -719,4 +983,29 @@ func TestCoreEnabledWithContext(t *testing.T) {
 			require.Nil(t, rebound.Check(zap.InfoLevel, testMessage))
 		})
 	}
+}
+
+// assertNamespaceRecord asserts that rec holds a single info record of
+// testMessage with the attributes attrs.
+func assertNamespaceRecord(t *testing.T, rec *logtest.Recorder, attrs []attribute.KeyValue) {
+	t.Helper()
+	want := logtest.Recording{
+		logtest.Scope{Name: loggerName}: {
+			{
+				Body:         attribute.StringValue(testMessage),
+				Severity:     log.SeverityInfo,
+				SeverityText: zap.InfoLevel.String(),
+				Attributes:   attrs,
+			},
+		},
+	}
+	logtest.AssertEqual(
+		t, want, rec.Result(),
+		logtest.Transform(func(r logtest.Record) logtest.Record {
+			cp := r.Clone()
+			cp.Context = nil           // Ignore context for comparison.
+			cp.Timestamp = time.Time{} // Ignore timestamp for comparison.
+			return cp
+		}),
+	)
 }
