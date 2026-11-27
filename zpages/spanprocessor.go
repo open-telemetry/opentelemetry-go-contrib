@@ -20,11 +20,17 @@ package zpages
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"go.opentelemetry.io/otel/codes"
 	sdktrace "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
+
+// maxSpanNames is the maximum number of span names samples are stored for.
+// Span names can be derived from request data, so they are not guaranteed to
+// be low cardinality.
+const maxSpanNames = 2000
 
 var _ sdktrace.SpanProcessor = (*SpanProcessor)(nil)
 
@@ -38,12 +44,14 @@ type perMethodSummary struct {
 // SpanProcessor is an sdktrace.SpanProcessor implementation that exposes zpages functionality for opentelemetry-go.
 //
 // It tracks all active spans, and stores samples of spans based on latency for non errored spans,
-// and samples for errored spans.
+// and samples for errored spans. Samples are stored for at most 2000 distinct span names; ended
+// spans with any other name are not sampled.
 type SpanProcessor struct {
 	// Cannot keep track of the active Spans per name because the Span interface,
 	// allows the name to be changed, and that will leak memory.
 	activeSpansStore sync.Map
 	spanSampleStores sync.Map
+	numSpanNames     atomic.Int64 // number of entries in spanSampleStores
 }
 
 // NewSpanProcessor returns a new SpanProcessor.
@@ -69,7 +77,17 @@ func (ssm *SpanProcessor) OnEnd(span sdktrace.ReadOnlySpan) {
 	name := span.Name()
 	value, ok := ssm.spanSampleStores.Load(name)
 	if !ok {
-		value, _ = ssm.spanSampleStores.LoadOrStore(name, newSampleStore(defaultBucketCapacity, defaultBucketCapacity))
+		// Reserve a slot before storing so concurrent calls cannot exceed
+		// maxSpanNames.
+		if ssm.numSpanNames.Add(1) > maxSpanNames {
+			ssm.numSpanNames.Add(-1)
+			return
+		}
+		var loaded bool
+		value, loaded = ssm.spanSampleStores.LoadOrStore(name, newSampleStore(defaultBucketCapacity, defaultBucketCapacity))
+		if loaded {
+			ssm.numSpanNames.Add(-1)
+		}
 	}
 	value.(*sampleStore).sampleSpan(span)
 }
