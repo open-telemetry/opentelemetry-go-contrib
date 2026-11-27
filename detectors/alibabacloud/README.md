@@ -3,3 +3,7 @@
 <!--[![Go Reference][goref-image]][goref-url]-->
 <!--[goref-image]: https://pkg.go.dev/badge/go.opentelemetry.io/contrib/detectors/alibabacloud.svg-->
 <!--[goref-url]: https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/alibabacloud-->
+
+Detects resource attributes for Alibaba Cloud ECS instances and Elastic Container Instance workloads using instance metadata.
+
+[Package documentation](https://pkg.go.dev/go.opentelemetry.io/contrib/detectors/alibabacloud)
