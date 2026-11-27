@@ -73,6 +73,7 @@ This project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - Format the default server span name in `go.opentelemetry.io/contrib/instrumentation/github.com/emicklei/go-restful/otelrestful` as `{method} {http.route}` when a route matches and `{method}` when no route matches, following the HTTP semantic conventions. (#10053)
 - Change the return type of `NewTransport` in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp` from `*Transport` to `http.RoundTripper`. (#9955)
 - Updated `example/dice` app based on updated specifications for the reference application. (#8099)
+- Avoid unnecessary `BodyWrapper` and callback heap allocations on body-less requests in `go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp`. (#10316)
 
 ### Deprecated
 

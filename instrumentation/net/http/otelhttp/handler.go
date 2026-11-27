@@ -130,18 +130,21 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	ctx, span := tracer.Start(ctx, h.spanNameFormatter(h.operation, r), opts...)
 	defer span.End()
 
-	readRecordFunc := func(int64) {}
-	if h.readEvent {
-		readRecordFunc = func(int64) {
-			span.AddEvent("read")
-		}
-	}
-
 	// if request body is nil or NoBody, we don't want to mutate the body as it
 	// will affect the identity of it in an unforeseeable way because we assert
 	// ReadCloser fulfills a certain interface and it is indeed nil or NoBody.
-	bw := request.NewBodyWrapper(r.Body, readRecordFunc)
+	var bw *request.BodyWrapper
+
 	if r.Body != nil && r.Body != http.NoBody {
+		readRecordFunc := func(int64) {}
+		if h.readEvent {
+			readRecordFunc = func(int64) {
+				span.AddEvent("read")
+			}
+		}
+
+		bw = request.NewBodyWrapper(r.Body, readRecordFunc)
+
 		origReq := r
 		prevBody := r.Body
 		r.Body = bw
@@ -228,11 +231,18 @@ func (h *middleware) serveHTTP(w http.ResponseWriter, r *http.Request, next http
 	statusCode := rww.StatusCode()
 	bytesWritten := rww.BytesWritten()
 	span.SetStatus(h.semconv.Status(statusCode))
-	bytesRead := bw.BytesRead()
+	var bytesRead int64
+	var readError error
+
+	if bw != nil {
+		bytesRead = bw.BytesRead()
+		readError = bw.Error()
+	}
+
 	span.SetAttributes(h.semconv.ResponseTraceAttrs(semconv.ResponseTelemetry{
 		StatusCode: statusCode,
 		ReadBytes:  bytesRead,
-		ReadError:  bw.Error(),
+		ReadError:  readError,
 		WriteBytes: bytesWritten,
 		WriteError: rww.Error(),
 	})...)
