@@ -9,11 +9,17 @@
 package request
 
 import (
+	"errors"
 	"io"
 	"sync"
 )
 
 var _ io.ReadCloser = &BodyWrapper{}
+
+func isLiteralEOF(err error) bool {
+	_, wrapped := err.(interface{ Unwrap() error })
+	return err != nil && !wrapped && errors.Is(err, io.EOF)
+}
 
 // BodyWrapper wraps a http.Request.Body (an io.ReadCloser) to track the number
 // of bytes read and the last error.
@@ -53,8 +59,13 @@ func (w *BodyWrapper) updateReadData(n int64, err error) {
 	defer w.mu.Unlock()
 
 	w.read += n
+	// Only a literal io.EOF is clean completion; a wrapped EOF is a failure.
+	// A clean EOF must not erase an earlier failure, but a later failure must
+	// replace one that was recorded as clean completion.
 	if err != nil {
-		w.err = err
+		if !isLiteralEOF(err) || w.err == nil || isLiteralEOF(w.err) {
+			w.err = err
+		}
 	}
 }
 
