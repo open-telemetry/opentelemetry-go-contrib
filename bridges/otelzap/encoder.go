@@ -43,7 +43,7 @@ func newObjectEncoder(n int) *objectEncoder {
 
 // open adds a copy of the namespace chain ns to the encoder, so that
 // subsequent fields are added to the innermost namespace of the chain. The
-// copies have room for the attribute calculate appends to an outer namespace
+// copies have room for the attributes [objectEncoder.calculate] appends to an outer namespace
 // and for n more attributes in the innermost one.
 func (m *objectEncoder) open(ns *namespace, n int) {
 	for ; ns != nil; ns = ns.next {
