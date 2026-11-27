@@ -76,13 +76,13 @@ func NewMetricReader(ctx context.Context, opts ...MetricOption) (metric.Reader, 
 }
 
 // RegisterMetricReader sets the MetricReader factory to be used when the
-// OTEL_METRICS_EXPORTERS environment variable contains the exporter name. This
+// OTEL_METRICS_EXPORTER environment variable contains the exporter name. This
 // will panic if name has already been registered.
 func RegisterMetricReader(name string, factory func(context.Context) (metric.Reader, error)) {
 	must(metricsSignal.registry.store(name, factory))
 }
 
-// RegisterMetricProducer sets the MetricReader factory to be used when the
+// RegisterMetricProducer sets the metric.Producer factory to be used when the
 // OTEL_METRICS_PRODUCERS environment variable contains the producer name. This
 // will panic if name has already been registered.
 func RegisterMetricProducer(name string, factory func(context.Context) (metric.Producer, error)) {
