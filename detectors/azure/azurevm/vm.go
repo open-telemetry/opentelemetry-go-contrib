@@ -231,7 +231,7 @@ func (detector *ResourceDetector) getJSONMetadata(ctx context.Context) ([]byte, 
 		return bytes, true, nil
 	}
 
-	runningInAzure := resp.StatusCode < 400 || resp.StatusCode > 499
+	runningInAzure := resp.StatusCode != http.StatusNotFound
 
 	return nil, runningInAzure, errors.New(http.StatusText(resp.StatusCode))
 }
