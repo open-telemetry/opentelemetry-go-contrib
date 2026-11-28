@@ -3,26 +3,26 @@ module go.opentelemetry.io/contrib/detectors/aws/ec2/v2
 go 1.26.0
 
 require (
-	github.com/aws/aws-sdk-go-v2 v1.48.1
-	github.com/aws/aws-sdk-go-v2/config v1.33.22
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.10
-	github.com/aws/smithy-go v1.28.10
+	github.com/aws/aws-sdk-go-v2 v1.48.2
+	github.com/aws/aws-sdk-go-v2/config v1.33.23
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.11
+	github.com/aws/smithy-go v1.28.11
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
 	go.opentelemetry.io/otel/sdk v1.47.1-0.20261119094326-34915e1fc1ec
 )
 
 require (
-	github.com/aws/aws-sdk-go-v2/credentials v1.21.4 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.13 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.13 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.13 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.26 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.13 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.14.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.39.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sts v1.53.1 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.21.5 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.5.14 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.8.14 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.5.14 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.27 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.14 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.14.2 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.39.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.44.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sts v1.53.2 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
