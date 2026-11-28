@@ -11,10 +11,10 @@ import (
 	"go.opentelemetry.io/otel/sdk/trace"
 )
 
-// Filter returns true if the baggage member should be added to a span.
+// Filter returns true if the baggage member should be copied to a span or log record.
 type Filter func(member baggage.Member) bool
 
-// AllowAllMembers allows all baggage members to be added to a span.
+// AllowAllMembers allows all baggage members to be copied to a span or log record.
 var AllowAllMembers Filter = func(baggage.Member) bool { return true }
 
 // SpanProcessor is a [trace.SpanProcessor] implementation that adds baggage
@@ -58,6 +58,5 @@ func (SpanProcessor) OnEnd(trace.ReadOnlySpan) {}
 // Shutdown is called when the SDK shuts down and is a no-op for this processor.
 func (SpanProcessor) Shutdown(context.Context) error { return nil }
 
-// ForceFlush exports all ended spans to the configured Exporter that have not yet
-// been exported and is a no-op for this processor.
+// ForceFlush is a no-op for this processor.
 func (SpanProcessor) ForceFlush(context.Context) error { return nil }
