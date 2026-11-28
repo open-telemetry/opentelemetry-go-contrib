@@ -15,7 +15,7 @@ require (
 	go.opentelemetry.io/contrib/detectors/azure/azurevm v0.19.0
 	go.opentelemetry.io/contrib/detectors/gcp v1.47.0
 	go.opentelemetry.io/contrib/propagators/autoprop v0.72.0
-	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
+	go.opentelemetry.io/otel v1.47.1-0.20261127133057-2b79af723220
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc v0.23.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.23.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc v1.47.1-0.20261119094326-34915e1fc1ec
