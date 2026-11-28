@@ -8,7 +8,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.20.10
 	github.com/aws/smithy-go v1.28.10
 	github.com/stretchr/testify v1.12.1
-	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
+	go.opentelemetry.io/otel v1.47.1-0.20261127133057-2b79af723220
 	go.opentelemetry.io/otel/sdk v1.47.1-0.20261119094326-34915e1fc1ec
 )
 

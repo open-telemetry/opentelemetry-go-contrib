@@ -25,8 +25,8 @@ go.mongodb.org/mongo-driver/v2 v2.10.1 h1:FScYVU+0h/zERnvYemJix3ZDgeU2QGmC8EuXLS
 go.mongodb.org/mongo-driver/v2 v2.10.1/go.mod h1:PxPyIAlsI1jkYZvUNfTr++ggyBP+RSaxHYctt6TcZc4=
 go.opentelemetry.io/auto/sdk v1.2.2 h1:ErNn7NW2t1F9CFBLb9iyPMyLRbcEd07l5m/StCe9AEE=
 go.opentelemetry.io/auto/sdk v1.2.2/go.mod h1:Ca3X8ec6gdTYjAirla//dnp05ECtQPfN4Ut74OJLVsQ=
-go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be h1:Va2uPyqEIPcUuuvXORgEtHZRIAl7Mu3WgLU6eWiNKdA=
-go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be/go.mod h1:nUt+L/m1fZSCLuEnCuzfLpS2KzVNhmhbZF1CYv9u2ng=
+go.opentelemetry.io/otel v1.47.1-0.20261127133057-2b79af723220 h1:P+GW1FXkBmKIvc2XGMMEIxuRI2prLtt+00eAA2NuSPo=
+go.opentelemetry.io/otel v1.47.1-0.20261127133057-2b79af723220/go.mod h1:nUt+L/m1fZSCLuEnCuzfLpS2KzVNhmhbZF1CYv9u2ng=
 go.opentelemetry.io/otel/log v1.47.1-0.20261119094326-34915e1fc1ec h1:fPi1Ctxn5OEgzbXj9x8fFLKouB89d03oe58+cCrzQj8=
 go.opentelemetry.io/otel/log v1.47.1-0.20261119094326-34915e1fc1ec/go.mod h1:9byitSQ5pLC6PpqwGXjqdMKya6ZTswHRZh2vvXT33nw=
 go.opentelemetry.io/otel/metric v1.47.1-0.20261119094326-34915e1fc1ec h1:dvw0+3VC9DuuOYcEcJCnnH+UQ3uHi9kEGKlH4uA8NPw=

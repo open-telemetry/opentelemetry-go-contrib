@@ -6,7 +6,7 @@ require (
 	github.com/google/go-cmp v0.7.0
 	github.com/stretchr/testify v1.12.1
 	go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp v0.72.0
-	go.opentelemetry.io/otel v1.47.1-0.20261123090150-69dad8df23be
+	go.opentelemetry.io/otel v1.47.1-0.20261127133057-2b79af723220
 	go.opentelemetry.io/otel/metric v1.47.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/sdk v1.47.1-0.20261119094326-34915e1fc1ec
 	go.opentelemetry.io/otel/sdk/metric v1.47.1-0.20261119094326-34915e1fc1ec
